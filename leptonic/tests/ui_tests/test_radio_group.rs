@@ -37,6 +37,8 @@ impl BrowserTest<str> for RadioGroupTests {
         disabled_group(&page).await?;
         read_only_group(&page).await?;
         validation(&page).await?;
+        controlled(&page).await?;
+        label_context_stays_inside(&page).await?;
 
         Ok(())
     }
@@ -291,5 +293,32 @@ async fn virtual_click(page: &Page<'_>, element: &WebElement) -> Result<(), Repo
     page.driver
         .execute("arguments[0].click()", vec![element.to_json()?])
         .await?;
+    Ok(())
+}
+
+/// "should support controlled value": the group shows its bound value, reports changes to it and
+/// follows it; without a setter, selecting changes nothing.
+async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+    assert_that!(radio(page, "Bound B").await?.is_selected().await?).is_true();
+    label(page, "Bound A").await?.click().await?;
+    page.wait_for_text("test-rg-bound-value", "a").await?;
+    assert_that!(radio(page, "Bound A").await?.is_selected().await?).is_true();
+
+    page.element("test-rg-bound-set-c").await?.click().await?;
+    page.wait_for_text("test-rg-bound-value", "c").await?;
+    assert_that!(radio(page, "Bound C").await?.is_selected().await?).is_true();
+    assert_that!(radio(page, "Bound A").await?.is_selected().await?).is_false();
+
+    label(page, "Fixed B").await?.click().await?;
+    assert_that!(radio(page, "Fixed A").await?.is_selected().await?).is_true();
+    assert_that!(radio(page, "Fixed B").await?.is_selected().await?).is_false();
+    Ok(())
+}
+
+/// A `Label` after a group (outside it) is a plain label: the group's label context doesn't leak
+/// to its siblings.
+async fn label_context_stays_inside(page: &Page<'_>) -> Result<(), Report> {
+    let standalone = label(page, "Standalone label").await?;
+    assert_that!(attr(&standalone, "id").await?).is_none();
     Ok(())
 }

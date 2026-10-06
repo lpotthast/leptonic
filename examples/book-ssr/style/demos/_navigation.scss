@@ -1,67 +1,86 @@
-// Demo styles of the Navigation pages.
+// Navigation: demos of Breadcrumbs, Disclosure, Link and Tabs.
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
-.demo-hint      { margin-left: var(--book-space-s); font-size: var(--book-font-size-s); opacity: 0.7; }
+// -- Link --
 
-/* Links */
-.demo-link                       { color: var(--brand-color); cursor: pointer; }
-
-.demo-link[aria-disabled="true"] { color: var(--book-muted-color); cursor: not-allowed; }
-
-.demo-link-underlined            { text-decoration: underline; }
-
-.demo-link-icon                  { margin-left: var(--book-space-xs); }
-
-.demo-anchor-target              { margin-top: var(--book-space-m); padding: var(--book-space-m); border: 1px solid var(--brand-color); border-radius: var(--book-radius-s); }
-
-/* Press feedback: toggle `.demo-pressed` from a hook's `is_pressed` signal */
-.demo-pressable              { display: inline-block; transition: transform 100ms; @media (prefers-reduced-motion: reduce) { transition: none; } }
-
-.demo-pressable.demo-pressed { transform: scale(0.95); }
-
-/* Menu */
-.demo-menu-trigger            { display: flex; align-items: center; gap: var(--book-space-s); }
-
-.demo-disclosure-arrow        { display: inline-block; transition: transform 0.2s; @media (prefers-reduced-motion: reduce) { transition: none; } }
-
-.demo-disclosure-arrow.open   { transform: rotate(180deg); }
-
-// Menu demo.
-.demo-overlays-menu-list {
-    min-width: 180px;
-    margin: 0;
-    padding: var(--book-space-xs) 0;
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color);
-    color: var(--main-color);
-    box-shadow: var(--book-shadow);
-}
-
-.demo-overlays-menu-item {
-    padding: var(--book-space-s) var(--book-space-m);
-    list-style: none;
+// Atom demos: the state comes from the data attributes of the `Link` and `AnchorLink` atoms, the current page from
+// the router's `aria-current`.
+.demo-link-atom {
+    color: var(--book-brand-text-color);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
     cursor: pointer;
-    transition: background var(--book-transition);
+    transition: color var(--book-transition);
 
-    &.focused {
-        background: var(--brand-color-subtle);
-    }
-
-    &.focus-visible {
-        outline: 2px solid var(--book-focus-color);
-        outline-offset: -2px;
-    }
-
-    &.disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-    }
+    &[data-hovered] { text-decoration-thickness: 2px; }
+    &[data-pressed] { color: var(--main-color); }
+    &[aria-current="page"] { color: var(--main-color); font-weight: 600; text-decoration: none; cursor: default; }
+    &[data-disabled] { color: var(--book-muted-color); text-decoration: none; cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
 }
 
-// Breadcrumbs.
-.demo-navigation-breadcrumbs ol {
+// A row of links, e.g. the pages of a concept.
+.demo-link-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-s) var(--book-space-l);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+// The `LinkButton` atom, on top of the shared `.demo-btn`: an anchor that looks like a button.
+.demo-link-button {
+    display: inline-block;
+    text-decoration: none;
+}
+
+// The heading of the anchor link demos.
+.demo-anchor-heading {
+    display: flex;
+    gap: var(--book-space-s);
+    align-items: baseline;
+}
+
+// Hook demos: the state comes from the ARIA attributes `use_link` sets, focus from its `data-focus-visible`.
+.demo-link {
+    color: var(--book-brand-text-color);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+
+    &[aria-disabled="true"] { color: var(--book-muted-color); text-decoration: none; cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
+}
+
+// An icon or arrow after the link text.
+.demo-link-icon { margin-left: var(--book-space-xs); }
+
+// A link rendered as another element, underlined like an anchor.
+.demo-link-underlined { text-decoration: underline; }
+
+// Press feedback from the hook's `is_pressed`, rendered as `data-pressed`.
+.demo-pressable {
+    display: inline-block;
+    transition: transform var(--book-transition);
+
+    &[data-pressed] { transform: scale(0.95); }
+
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+
+// The element an anchor link scrolls to.
+.demo-anchor-target {
+    margin-top: var(--book-space-m);
+    padding: var(--book-space-m);
+    border: 1px solid var(--brand-color);
+    border-radius: var(--book-radius-s);
+}
+
+// -- Breadcrumbs --
+
+.demo-breadcrumbs {
     display: flex;
     flex-wrap: wrap;
     gap: var(--book-space-s);
@@ -70,94 +89,171 @@
     list-style: none;
 }
 
-.demo-navigation-breadcrumb {
-    color: var(--brand-color);
-    text-decoration: none;
-    cursor: pointer;
-
-    &[aria-current="page"] {
-        color: var(--main-color);
-        font-weight: 600;
-        cursor: default;
-    }
-
-    &[aria-disabled="true"] {
-        color: var(--book-muted-color);
-        cursor: not-allowed;
-    }
-}
-
-.demo-navigation-separator {
+// The separators: hidden from assistive technology by the empty alternative text.
+.demo-breadcrumb:not(:last-child)::after {
+    content: "/" / "";
     margin-left: var(--book-space-s);
     color: var(--book-muted-color);
 }
 
-// Frame around the heading of the anchor link demo.
-.demo-navigation-frame {
-    padding: var(--book-space-m);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-s);
-}
-
-// Icon-only link of the link demos. Icons are sized in `em`.
-.demo-navigation-icon-large {
-    font-size: 3em;
-}
-
-.demo-overlays-menu-section {
-    list-style: none;
-
-    ul {
-        margin: 0;
-        padding: 0;
-    }
-
-    & + &,
-    .demo-overlays-menu-item + & {
-        border-top: 1px solid var(--book-border-color);
-    }
-}
-
-.demo-overlays-menu-heading {
-    display: block;
-    padding: var(--book-space-s) var(--book-space-m) var(--book-space-xs);
-    color: var(--book-muted-color);
-    font-size: var(--book-font-size-s);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.demo-overlays-menu-item {
-    display: flex;
-    align-items: center;
-    gap: var(--book-space-s);
-}
-
-.demo-overlays-menu-check {
-    width: 1em;
-    color: var(--brand-color);
-}
-
-// Menu atoms demo: items styled through their data attributes.
-.demo-menu-atom-item {
-    display: flex;
-    align-items: center;
-    gap: var(--book-space-s);
-    padding: var(--book-space-s) var(--book-space-m);
+// Atom demos: the `Link` atom's data attributes, the current item from the `Breadcrumb`'s `data-current`. The current
+// item is disabled too, so its rule comes last.
+.demo-breadcrumb-link {
+    color: var(--book-brand-text-color);
+    text-decoration: none;
     cursor: pointer;
-    outline: none;
 
-    &[data-focused] { background: var(--brand-color-subtle); }
-    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
-    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
-    &[aria-checked="true"]::before { content: "\2713"; color: var(--brand-color); }
-    &[aria-checked]::before { width: 1em; }
-    &[aria-checked="false"]::before { content: ""; }
+    &[data-hovered] { text-decoration: underline; }
+    &[data-disabled] { color: var(--book-muted-color); cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
+
+    .demo-breadcrumb[data-current] & { color: var(--main-color); font-weight: 600; cursor: default; }
 }
 
-.demo-menu-atom-shortcut {
-    margin-left: auto;
-    padding-left: var(--book-space-l);
+// Hook demos: the ARIA attributes of `use_breadcrumb_item`. The current item is disabled too, so its rule comes last.
+.demo-navigation-breadcrumb {
+    color: var(--book-brand-text-color);
+    text-decoration: none;
+    cursor: pointer;
+
+    &[aria-disabled="true"] { color: var(--book-muted-color); cursor: not-allowed; }
+    &[aria-current="page"] { color: var(--main-color); font-weight: 600; cursor: default; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
+}
+
+// -- Disclosure --
+
+// The collapsed panel is hidden by its `hidden` attribute (`until-found`, so its box stays: the padding sits on the
+// content).
+.demo-disclosure {
+    max-width: 500px;
+    margin: var(--book-space-m) 0;
+    overflow: hidden;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+}
+
+// The heading around the trigger: a section of the page, found by heading navigation.
+.demo-disclosure-heading { margin: 0; font-size: var(--book-font-size-m); }
+
+// The trigger. Atom demos: the `Button` atom's data attributes.
+.demo-disclosure-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: var(--book-space-m);
+    border: none;
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-disabled] { color: var(--book-muted-color); cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+// Hook demos: the trigger's `disabled` attribute.
+.demo-hook-disclosure-trigger[disabled] { color: var(--book-muted-color); cursor: not-allowed; }
+
+// Turned while expanded: the atoms' `data-expanded` on the disclosure, the hook's `aria-expanded` on the trigger.
+.demo-disclosure-chevron {
+    transition: transform var(--book-transition);
+
+    .demo-disclosure[data-expanded] &,
+    .demo-hook-disclosure-trigger[aria-expanded="true"] & { transform: rotate(180deg); }
+
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+
+.demo-disclosure-panel {
+    background: var(--book-surface-color);
+
+    p { margin: 0; padding: var(--book-space-m); }
+}
+
+// -- Tabs --
+
+// The tab list: a row of tabs on a bottom line. Tabs that don't fit scroll instead of widening the page. The selected
+// tab draws `--demo-tab-indicator` over the line.
+.demo-tab-list {
+    --demo-tab-indicator: inset 0 -3px 0 var(--brand-color);
+    display: flex;
+    overflow-x: auto;
+    box-shadow: inset 0 -2px 0 var(--book-border-color);
+}
+
+// Atom demos: vertical tabs lay out from the `data-orientation` of `Tabs`.
+.demo-tabs[data-orientation="vertical"] {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+
+    .demo-tab-list {
+        --demo-tab-indicator: inset -3px 0 0 var(--brand-color);
+        flex: none;
+        flex-direction: column;
+        overflow-x: visible;
+        box-shadow: inset -2px 0 0 var(--book-border-color);
+    }
+
+    .demo-tab-panel { flex: 1; min-width: 0; padding-top: var(--book-space-s); }
+}
+
+// Hook demos: vertical tabs lay out from the tab list's `aria-orientation`, beside the panel.
+.demo-tabs-vertical {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+
+    .demo-tab-list[aria-orientation="vertical"] {
+        --demo-tab-indicator: inset -3px 0 0 var(--brand-color);
+        flex: none;
+        flex-direction: column;
+        overflow-x: visible;
+        box-shadow: inset -2px 0 0 var(--book-border-color);
+    }
+
+    .demo-tab-panel { flex: 1; min-width: 0; padding-top: var(--book-space-s); }
+}
+
+// A tab: the layout, shared by the atom (`.demo-tab`) and hook (`.demo-hook-tab`) demos. Tabs have no hovered or
+// focus-visible attribute yet, hence `:hover` and `:focus-visible`.
+.demo-tab,
+.demo-hook-tab {
+    flex: none;
+    padding: var(--book-space-s) clamp(0.5em, 2vw, 1em);
     color: var(--book-muted-color);
-    font-size: var(--book-font-size-s);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover { color: var(--main-color); }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -5px; }
+}
+
+// Atom demos: the state comes from the data attributes of the `Tab` atom.
+.demo-tab {
+    &[data-selected] { color: var(--book-brand-text-color); font-weight: 600; box-shadow: var(--demo-tab-indicator); }
+    &[data-pressed] { background: var(--brand-color-subtle); }
+    &[data-disabled] { color: var(--book-muted-color); opacity: 0.5; cursor: not-allowed; }
+}
+
+// Hook demos: the state comes from the ARIA attributes `use_tab` renders.
+.demo-hook-tab {
+    &[aria-selected="true"] { color: var(--book-brand-text-color); font-weight: 600; box-shadow: var(--demo-tab-indicator); }
+    &[aria-disabled="true"] { color: var(--book-muted-color); opacity: 0.5; cursor: not-allowed; }
+}
+
+// The panel. Without tabbable content it is a tab stop itself, so it shows keyboard focus.
+.demo-tab-panel {
+    padding: var(--book-space-m) var(--book-space-xs) var(--book-space-xs);
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
+    h4 { margin: 0 0 var(--book-space-s) 0; }
+    p { margin: 0; color: var(--book-muted-color); }
 }

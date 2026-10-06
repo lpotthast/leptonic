@@ -3,29 +3,38 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SliderPopoverDemo() -> impl IntoView {
-    let (on_interaction, set_on_interaction) = signal(50.0);
-    let (always, set_always) = signal(30.0);
-    let (range_from, set_range_from) = signal(20.0);
-    let (range_to, set_range_to) = signal(80.0);
+    let on_interaction = RwSignal::new(50_u8);
+    let always = RwSignal::new(30_u8);
+    let range = RwSignal::new(20_u8..=80);
 
     view! {
         <div class="demo-control-stack">
-            <Slider min=0.0 max=100.0 step=1.0
-                value=on_interaction set_value=set_on_interaction
+            <Slider
+                value=on_interaction
+                set_value=on_interaction
+                min_value=0
+                max_value=100
                 popover=SliderPopover::When { hovered: true, dragged: true }
-                value_display=move |v| format!("{v:.0}")/>
-
-            <Slider min=0.0 max=100.0 step=1.0
-                value=always set_value=set_always
-                popover=SliderPopover::Always
-                value_display=move |v| format!("{v:.0}")/>
-
+                aria_label="Shown on interaction"
+            />
+            <Slider value=always set_value=always min_value=0 max_value=100 popover=SliderPopover::Always aria_label="Always shown"/>
             <RangeSlider
-                value_a=range_from set_value_a=set_range_from
-                value_b=range_to set_value_b=set_range_to
-                min=0.0 max=100.0 step=1.0
+                value=range
+                set_value=range
+                min_value=0
+                max_value=100
                 popover=SliderPopover::When { hovered: true, dragged: true }
-                value_display=move |v| format!("{v:.0}")/>
+                aria_label="Range"
+            />
         </div>
+        <p class="demo-status">
+            {move || format!(
+                "Values: {}, {} and {} to {}.",
+                on_interaction.get(),
+                always.get(),
+                range.with(|range| *range.start()),
+                range.with(|range| *range.end()),
+            )}
+        </p>
     }
 }

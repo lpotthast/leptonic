@@ -3,10 +3,10 @@ use std::sync::Arc;
 use leptonic::{
     atoms::focus_scope::FocusScope,
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, PlacementX, PlacementY,
-        PopoverModality, SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
-        UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
-        UseMenuTriggerStateInput, UsePopoverInput, UsePopoverReturn,
+        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, PopoverModality,
+        SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn,
+        UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerStateInput,
+        UsePopoverInput, UsePopoverReturn,
         collections::{
             AutoFocus, CollectionBuilder, CollectionOptions, Key, NodeKind, Selection,
             SelectionOptions, UseListStateInput, use_collection, use_list_state,
@@ -96,14 +96,13 @@ fn MenuButton(
         trigger_props: popover_trigger_props,
         ..
     } = use_popover(UsePopoverInput {
-        placement_x: Signal::stored(PlacementX::Left),
-        placement_y: Signal::stored(PlacementY::Below),
+        placement: Signal::stored(Placement::BottomLeft),
         offset: Signal::stored(4.0),
         cross_offset: Signal::stored(0.0),
         container_padding: Signal::stored(12.0),
         should_flip: Signal::stored(true),
         modality: PopoverModality::Modal,
-        is_keyboard_dismiss_disabled: false,
+        is_keyboard_dismiss_disabled: false.into(),
         should_close_on_interact_outside: None,
         ..UsePopoverInput::new(state.overlay)
     });
@@ -237,6 +236,7 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
         menu,
         key,
         should_close_on_select: None,
+        submenu_trigger: None,
     });
     let (attrs, styles) = props.into_parts();
 

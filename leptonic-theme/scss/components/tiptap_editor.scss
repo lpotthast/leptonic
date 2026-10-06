@@ -12,7 +12,7 @@
         gap: 0.3em;
         padding: 1em;
 
-        .leptonic-btn[variant="filled"].leptonic-tiptap-btn {
+        .leptonic-btn.leptonic-tiptap-btn {
             display: flex;
             justify-content: flex-start;
             align-items: center;
@@ -25,8 +25,13 @@
             user-select: none;
             cursor: pointer;
 
-            &.active,
-            &:hover {
+            &[data-focus-visible] {
+                outline: 2px solid var(--brand-color);
+                outline-offset: 1px;
+            }
+
+            &[aria-pressed="true"],
+            &[data-hovered] {
                 color: var(--tiptap-editor-active-btn-color);
                 background-color: var(--tiptap-editor-active-btn-background-color);
                 border-color: transparent;
@@ -36,9 +41,13 @@
 
     leptos-tiptap-instance {
 
-        // Reset
+        // The instance's border shows focus instead of the text's outline.
         .ProseMirror:focus {
             outline: none;
+        }
+
+        &:focus-within {
+            border-color: var(--brand-color);
         }
 
         border: 1px solid var(--tiptap-editor-border-color);

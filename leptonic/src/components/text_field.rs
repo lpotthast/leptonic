@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
+    Out,
     atoms::{
         field::{Description, FieldError, Label, TextElement},
         input::{Input, TextArea},
@@ -11,7 +12,7 @@ use crate::{
         text_field::{TextField as TextFieldAtom, TextFieldProps as TextFieldAtomProps},
     },
     components::icon::Icon,
-    hooks::{InputMode, InputType, TextFieldState, ValidateFn, ValidationBehavior},
+    hooks::{InputMode, InputType, ValidateFn, ValidationBehavior},
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -38,8 +39,8 @@ fn field_parts(
 
 /// A text field with its label, description and validation errors.
 ///
-/// Its value starts at `default_value` and is reported through `on_change`; bind it to app state
-/// with `state=rw_signal` (or `state=(read, write)`). `multiline` renders a `<textarea>`.
+/// Its value starts at `default_value` and is reported through `on_change`; or it is `value`, and
+/// changes go to `set_value` (e.g. both an `RwSignal<String>`). `multiline` renders a `<textarea>`.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn TextField(
@@ -49,9 +50,12 @@ pub fn TextField(
     #[prop(into, optional)] description: MaybeProp<String>,
     #[prop(into, optional)] default_value: String,
     #[prop(into, optional)] on_change: Option<Callback<String>>,
-    /// External value state, replacing `default_value`.
+    /// The value (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<TextFieldState>,
+    value: Option<Signal<String>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<String>>,
     /// The `<input>`'s type; reactive, e.g. for a "show password" toggle.
     #[prop(into, optional)]
     input_type: Signal<InputType>,
@@ -106,7 +110,8 @@ pub fn TextField(
         .children(Box::new(move || field_parts(label, description, input)))
         .build();
     props.on_change = on_change;
-    props.state = state;
+    props.value = value;
+    props.set_value = set_value;
     props.validate = validate;
     props.validation_behavior = validation_behavior;
     props.name = name;
@@ -133,9 +138,12 @@ pub fn SearchField(
     #[prop(into, optional)] description: MaybeProp<String>,
     #[prop(into, optional)] default_value: String,
     #[prop(into, optional)] on_change: Option<Callback<String>>,
-    /// External value state, replacing `default_value`.
+    /// The value (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<TextFieldState>,
+    value: Option<Signal<String>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<String>>,
     #[prop(into, optional)] on_submit: Option<Callback<String>>,
     #[prop(into, optional)] on_clear: Option<Callback<()>>,
     #[prop(into, optional)] placeholder: MaybeProp<String>,
@@ -188,7 +196,8 @@ pub fn SearchField(
         .children(Box::new(move || field_parts(label, description, input)))
         .build();
     props.on_change = on_change;
-    props.state = state;
+    props.value = value;
+    props.set_value = set_value;
     props.on_submit = on_submit;
     props.on_clear = on_clear;
     props.validate = validate;

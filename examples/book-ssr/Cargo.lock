@@ -411,6 +411,8 @@ dependencies = [
 [[package]]
 name = "browser-test"
 version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "921b10ad63dfe6538b324e2c6a8927dd55ba7cafad2ac25e83848cf6d0d7d8ff"
 dependencies = [
  "async-trait",
  "chrome-for-testing-manager",
@@ -519,6 +521,8 @@ dependencies = [
 [[package]]
 name = "chrome-for-testing-manager"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69cc366cd3f23378bc593a4cf8585255641699f59ba85fce02a6335fcdb6dd70"
 dependencies = [
  "chrome-for-testing",
  "directories",
@@ -2392,6 +2396,7 @@ dependencies = [
  "icu_locale",
  "icu_normalizer",
  "icu_plurals",
+ "icu_provider",
  "icu_time",
  "indoc",
  "itertools",
@@ -2402,7 +2407,6 @@ dependencies = [
  "leptos-element-capture",
  "leptos-styles",
  "leptos-tiptap",
- "leptos-tiptap-build",
  "leptos-use",
  "leptos_meta",
  "leptos_reactive",
@@ -2553,24 +2557,22 @@ dependencies = [
 
 [[package]]
 name = "leptos-tiptap"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad6e354a8146be780f02f6b421becfe86b78bad09939ba35ef3c7f017f41484a"
+checksum = "3e2a6479f332386ef29a9ff98f9aeee543583bcfcc1042cc178e183f6f8f8c54"
 dependencies = [
  "cfg-if",
  "leptos",
+ "leptos-element-capture",
+ "rootcause",
  "send_wrapper",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
+ "thiserror 2.0.18",
  "tracing",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "leptos-tiptap-build"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50cb656c88beb5243d5bfd3dde3a433596bed7cbab6828148687a1ae6ffa0bda"
 
 [[package]]
 name = "leptos-use"
@@ -4868,9 +4870,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-process-tools"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "559a2934c72973f30261dcfa311834fcfff21be5877931cc6752bf2b6ccbb542"
+checksum = "525a22a4c2b878347c184b08db73c74bee55778c9aca6be67a02b2c59a51eb59"
 dependencies = [
  "bytes",
  "memchr",

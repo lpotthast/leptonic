@@ -395,11 +395,11 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 || has_primary_action.get()
                 || (should_use_virtual_focus && !is_disabled.get()))
         }),
-        prevent_focus_on_press: should_use_virtual_focus,
-        on_press: Callback::new(move |e: PressEvent| {
+        prevent_focus_on_press: Signal::stored(should_use_virtual_focus),
+        on_press: Some(Callback::new(move |e: PressEvent| {
             virtually_focus(&e, true);
             on_press.run(e);
-        }),
+        })),
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             virtually_focus(&e, false);
             on_press_start.run(e);

@@ -1,6 +1,8 @@
 pub mod aria;
 pub(crate) mod aria_hide_outside;
 pub mod callback;
+#[cfg(feature = "clipboard")]
+pub mod clipboard;
 pub use leptos_classes as classes;
 pub mod color;
 pub mod css;
@@ -61,7 +63,7 @@ pub mod visually_hidden;
 pub(crate) mod syntax_highlight;
 
 // Re-exports from aria_hide_outside
-pub use aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside, keep_visible};
+pub use aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible};
 // Re-exports from dom_ext
 pub use dom_ext::ContainsTarget;
 pub(crate) use dom_ext::{
@@ -70,9 +72,6 @@ pub(crate) use dom_ext::{
 pub use event_handler::EventHandler;
 pub use event_wrapper::EventWrapper;
 pub use focusability::will_open_keyboard;
-pub use number_value::NumberValue;
-pub use point::Point;
-pub use value_binding::ValueBinding;
 // Re-exports from interaction_rect
 pub use interaction_rect::{InteractionRect, RectPrecise, is_over};
 pub use leptos_element_capture as element_capture;
@@ -80,9 +79,12 @@ pub use leptos_element_capture::{CapturedElement, ElementCaptureAttr, ElementCap
 pub use merge::{MergeWith, MergeWithExt};
 // Re-exports from modifiers
 pub use modifiers::{EventModifiers, Modifiers};
+pub use number_value::NumberValue;
+pub use point::Point;
 // Re-exports from propagation_control
 pub use propagation_control::{Propagation, PropagationControl};
 pub use slot_id::{Slot, SlotAttrs, SlotProps, join_slot_ids, use_slot, use_slot_id};
+pub use value_binding::ValueBinding;
 
 /// A warning about API misuse for developers, as react-aria's `NODE_ENV !== 'production'`
 /// warnings: logged in debug builds only.

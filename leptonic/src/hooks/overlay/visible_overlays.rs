@@ -15,18 +15,21 @@ thread_local! {
 }
 
 /// Push an overlay element onto the stack. Skips if already present.
+///
+/// One entry per open overlay: the overlays of a group (a root popover and its submenus' popovers)
+/// share their group's element, which stays on the stack while any of them is open.
 pub(super) fn push_overlay(element: &web_sys::Element) {
     VISIBLE_OVERLAYS.with_borrow_mut(|stack| {
-        if !stack.iter().any(|el| **el == *element) {
-            stack.push(SendWrapper::new(element.clone()));
-        }
+        stack.push(SendWrapper::new(element.clone()));
     });
 }
 
-/// Remove an overlay element from the stack.
+/// Remove one entry of an overlay element from the stack.
 pub(super) fn remove_overlay(element: &web_sys::Element) {
     VISIBLE_OVERLAYS.with_borrow_mut(|stack| {
-        stack.retain(|el| **el != *element);
+        if let Some(index) = stack.iter().rposition(|el| **el == *element) {
+            stack.remove(index);
+        }
     });
 }
 

@@ -1,66 +1,49 @@
 use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
-use leptos_classes::Classes;
 use ringbuf::{
     HeapRb,
-    traits::{Consumer, RingBuffer},
+    traits::{Consumer, Observer, RingBuffer},
 };
 
 #[component]
 pub fn FocusDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
     let (is_focused, set_is_focused) = signal(false);
+    let (events, set_events) = signal(HeapRb::<String>::new(50));
 
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
+    let log = move |entry: String| {
+        set_events.update(|events| {
+            events.push_overwrite(entry);
+        });
+    };
 
     let UseFocusReturn { props } = use_focus(UseFocusInput {
         is_disabled: disabled.into(),
-        on_focus: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Focus: {e:?}")));
-            });
-        })),
-        on_blur: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Blur: {e:?}")));
-            });
-        })),
+        on_focus: Some(Callback::new(move |_| log("on_focus".to_string()))),
+        on_blur: Some(Callback::new(move |_| log("on_blur".to_string()))),
         on_focus_change: Some(Callback::new(move |focused: bool| {
             set_is_focused.set(focused);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Changed: {focused}")));
-            });
+            log(format!("on_focus_change: {focused}"));
         })),
     });
 
     view! {
-        <div
-            tabindex=0
-            {..props.into_attrs()}
-            class=Classes::builder().with_toggle(is_focused, "demo-container-active", "demo-container-inactive").build()
-        >
-            <strong class=Classes::builder().with_toggle(is_focused, "demo-state-active", "demo-state-inactive").build()>
-                { move || if is_focused.get() { "Focused" } else { "Not focused" } }
-            </strong>
-            " \u{2014} click here or press Tab"
-        </div>
+        <label class="demo-focus-label">
+            "Name "
+            <input type="text" class="demo-focus-item" {..props.into_attrs()}/>
+        </label>
 
-        <p>"Last " { move || events.with(ringbuf::traits::Observer::occupied_len) } " events: "</p>
+        <p class="demo-status">
+            {move || if is_focused.get() { "The field has focus." } else { "The field doesn\u{2019}t have focus." }}
+        </p>
 
-        <pre class=Classes::from("demo-event-log")>
-            { move || string.get() }
+        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <pre class="demo-event-log">
+            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
 
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

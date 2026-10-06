@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use leptonic::{
-    components::prelude::*,
-    hooks::{collections::Key, *},
-};
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 const TOPPINGS: [&str; 4] = ["Cheese", "Mushrooms", "Olives", "Peppers"];
@@ -28,7 +25,7 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
         ..UseCheckboxGroupStateInput::default()
     });
     let group = use_checkbox_group(UseCheckboxGroupInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseCheckboxGroupInput::new(state)
     });
     let data = group.data;
@@ -55,12 +52,12 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
         <p class="demo-status">
             {move || {
                 let toppings = state.value.get().iter().map(ToString::to_string).collect::<Vec<_>>();
-                if toppings.is_empty() { "No toppings".to_owned() } else { format!("Toppings: {}", toppings.join(", ")) }
+                if toppings.is_empty() { "No toppings.".to_owned() } else { format!("Toppings: {}.", toppings.join(", ")) }
             }}
         </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disable the group"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

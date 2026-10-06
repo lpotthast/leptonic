@@ -26,6 +26,7 @@ use crate::{
         focus::focus_safely,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
         i18n::use_direction,
+        key::{KeyboardEventKey, KeyboardKey},
         locale::WritingDirection,
         node_contains,
         owner_alive::OwnerAlive,
@@ -474,7 +475,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         let on_row = e
             .target()
             .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &row);
-        if !on_row && e.key() != "Tab" {
+        if !on_row && e.typed_key() != KeyboardKey::Tab {
             // Keys typed into a child (e.g. a text field) stay there.
             e.stop_propagation();
             return;
@@ -484,7 +485,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         {
             return;
         }
-        if e.key() == "Tab"
+        if e.typed_key() == KeyboardKey::Tab
             && let Some(active) = row.owner_document().as_ref().and_then(get_active_element)
             && let Some(mut walker) = get_focusable_tree_walker(
                 &row,

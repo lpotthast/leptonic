@@ -3,16 +3,20 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ChipDismissibleDemo() -> impl IntoView {
-    let (dismissed, set_dismissed) = signal(false);
+    let (is_filtering, set_filtering) = signal(true);
 
     view! {
+        // The chip doesn't remove itself: stop rendering it when it is dismissed.
         <Show
-            when=move || !dismissed.get()
-            fallback=move || view! { <Button on_press=move |_| set_dismissed.set(false)>"Reveal chip"</Button>}
+            when=move || is_filtering.get()
+            fallback=move || view! { <Button on_press=move |_| set_filtering.set(true)>"Show open issues only"</Button> }
         >
-            <Chip color=ChipColor::Secondary dismissible=move |_| set_dismissed.set(true)>
-                "Dismissible"
+            <Chip color=ChipColor::Secondary on_dismiss=move |()| set_filtering.set(false) dismiss_label="Remove filter">
+                "Status: open"
             </Chip>
         </Show>
+        <p class="demo-status">
+            {move || if is_filtering.get() { "Showing open issues." } else { "Showing all issues." }}
+        </p>
     }
 }

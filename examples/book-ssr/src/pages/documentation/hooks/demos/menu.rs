@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::focus_scope::FocusScope,
+    components::prelude::Checkbox,
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, PlacementX, PlacementY,
-        PopoverModality, SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
-        UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
-        UseMenuTriggerStateInput, UsePopoverInput, UsePopoverReturn,
+        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn,
+        UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerStateInput,
+        UsePopoverInput, UsePopoverReturn,
         collections::{
             AutoFocus, CollectionBuilder, CollectionOptions, Key, NodeKind, Selection,
             SelectionOptions, UseListStateInput, use_collection, use_list_state,
@@ -14,7 +14,7 @@ use leptonic::{
         use_button, use_menu, use_menu_item, use_menu_section, use_menu_trigger,
         use_menu_trigger_state, use_popover,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -23,15 +23,31 @@ type MenuContents = Arc<dyn Fn(&mut CollectionBuilder) + Send + Sync>;
 
 #[component]
 pub fn MenuDemo() -> impl IntoView {
+    // App state: the last action, and the checked items of the View menu. The menu is created anew on every
+    // opening, so its selection lives here, bound with `selection`, and survives closing the menu.
     let last_action = RwSignal::new(None::<Key>);
-    let view_selection = RwSignal::new(String::from("none"));
+    let view_selection = RwSignal::new(Selection::keys([Key::from("sidebar")]));
+    let disabled = RwSignal::new(false);
+
+    let status = move || {
+        let action = last_action.get().map_or_else(|| "none".to_owned(), |key| key.to_string());
+        let view = view_selection.with(|selection| match selection {
+            Selection::All => "all".to_owned(),
+            Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
+            Selection::Keys(keys) => {
+                let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
+                keys.sort();
+                keys.join(", ")
+            }
+        });
+        format!("Last action: {action}. View: {view}.")
+    };
 
     view! {
         <div class="demo-flex-center-row">
             // An action menu: items trigger actions, nothing stays selected.
             <MenuButton
                 label="Actions"
-                selection_mode=SelectionMode::None
                 contents=Arc::new(|b: &mut CollectionBuilder| {
                     b.item("edit", "Edit");
                     b.item("duplicate", "Duplicate");
@@ -39,12 +55,11 @@ pub fn MenuDemo() -> impl IntoView {
                     b.item("delete", "Delete");
                 })
                 on_action=Callback::new(move |key| last_action.set(Some(key)))
-                on_selection_change=Callback::new(|_| {})
+                is_disabled=disabled
             />
             // A menu with sections whose items can be checked.
             <MenuButton
                 label="View"
-                selection_mode=SelectionMode::Multiple
                 contents=Arc::new(|b: &mut CollectionBuilder| {
                     b.section("panels", |s| {
                         s.header("panels-header", "Panels");
@@ -56,29 +71,14 @@ pub fn MenuDemo() -> impl IntoView {
                         s.item("fit", "Fit to window");
                     });
                 })
-                on_action=Callback::new(|_| {})
-                on_selection_change=Callback::new(move |selection| {
-                    view_selection.set(describe(&selection));
-                })
+                selection=view_selection
+                is_disabled=disabled
             />
         </div>
-        <p>
-            "Last action: "
-            <strong>{move || last_action.get().map_or_else(|| "none".to_owned(), |key| key.to_string())}</strong>
-            ". View: "<strong>{view_selection}</strong>"."
-        </p>
-    }
-}
-
-fn describe(selection: &Selection) -> String {
-    match selection {
-        Selection::All => "all".to_owned(),
-        Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
-        Selection::Keys(keys) => {
-            let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
-            keys.sort();
-            keys.join(", ")
-        }
+        <p class="demo-status">{status}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -87,15 +87,17 @@ fn describe(selection: &Selection) -> String {
 #[component]
 fn MenuButton(
     label: &'static str,
-    selection_mode: SelectionMode,
     contents: MenuContents,
-    on_action: Callback<Key>,
-    on_selection_change: Callback<Selection>,
+    #[prop(optional)] on_action: Option<Callback<Key>>,
+    /// The checked items; without them, the menu is a menu of actions.
+    #[prop(optional)]
+    selection: Option<RwSignal<Selection>>,
+    #[prop(into)] is_disabled: Signal<bool>,
 ) -> impl IntoView {
     let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
         menu_type: OverlayTriggerType::Menu,
-        is_disabled: false.into(),
+        is_disabled,
         trigger: MenuTriggerType::Press,
         state,
     });
@@ -107,15 +109,8 @@ fn MenuButton(
         trigger_props: popover_trigger_props,
         ..
     } = use_popover(UsePopoverInput {
-        placement_x: Signal::stored(PlacementX::Start),
-        placement_y: Signal::stored(PlacementY::Below),
+        placement: Signal::stored(Placement::BottomStart),
         offset: Signal::stored(4.0),
-        cross_offset: Signal::stored(0.0),
-        container_padding: Signal::stored(12.0),
-        should_flip: Signal::stored(true),
-        modality: PopoverModality::Modal,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
         ..UsePopoverInput::new(state.overlay)
     });
     let (popover_attrs, popover_styles) = popover_props.into_parts();
@@ -129,7 +124,7 @@ fn MenuButton(
             style=trigger_styles
         >
             {label}
-            <span class=Classes::from("demo-disclosure-arrow").add_reactive("open", state.overlay.is_open)>"\u{25bc}"</span>
+            <span class="demo-menu-arrow" aria-hidden="true">"\u{25bc}"</span>
         </button>
         <Show when=move || state.is_open()>
             {
@@ -142,10 +137,9 @@ fn MenuButton(
                                 id=menu_props.id
                                 labelled_by=menu_props.aria_labelledby
                                 auto_focus=menu_props.auto_focus
-                                selection_mode=selection_mode
                                 contents=contents.get_value()
                                 on_action=on_action
-                                on_selection_change=on_selection_change
+                                selection=selection
                                 on_close=Callback::new(move |()| state.close())
                             />
                         </FocusScope>
@@ -162,18 +156,17 @@ fn Menu(
     id: Signal<String>,
     labelled_by: Signal<String>,
     auto_focus: Signal<Option<AutoFocus>>,
-    selection_mode: SelectionMode,
     contents: MenuContents,
-    on_action: Callback<Key>,
-    on_selection_change: Callback<Selection>,
+    on_action: Option<Callback<Key>>,
+    selection: Option<RwSignal<Selection>>,
     on_close: Callback<()>,
 ) -> impl IntoView {
     let collection = use_collection(move |b| contents(b));
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
-            selection_mode: Signal::stored(selection_mode),
-            on_selection_change: Some(on_selection_change),
+            selection_mode: Signal::stored(if selection.is_some() { SelectionMode::Multiple } else { SelectionMode::None }),
+            selection: selection.map(Into::into),
             ..SelectionOptions::default()
         },
     });
@@ -185,7 +178,7 @@ fn Menu(
             should_focus_wrap: true,
             ..CollectionOptions::default()
         },
-        on_action: Some(on_action),
+        on_action,
         on_close: Some(on_close),
         ..UseMenuInput::new(state, CapturedElement::new())
     });
@@ -205,7 +198,7 @@ fn Menu(
     });
 
     view! {
-        <ul {..props.into_attrs()} class="demo-overlays-menu-list">
+        <ul {..props.into_attrs()} class="demo-menu-list">
             {nodes
                 .into_iter()
                 .map(|(key, kind, items)| match kind {
@@ -230,9 +223,9 @@ fn MenuSection(menu: MenuData, key: Key, items: Vec<Key>) -> impl IntoView {
     });
 
     view! {
-        <li {..item_props.into_attrs()} class="demo-overlays-menu-section">
+        <li {..item_props.into_attrs()} class="demo-menu-section">
             {heading_props.map(|props| view! {
-                <span {..props.into_attrs()} class="demo-overlays-menu-heading">{heading}</span>
+                <span {..props.into_attrs()} class="demo-menu-heading">{heading}</span>
             })}
             <ul {..group_props.into_attrs()}>
                 {items.into_iter().map(|key| view! { <MenuItem menu=menu.clone() key/> }).collect_view()}
@@ -255,26 +248,25 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
         is_focused,
         is_focus_visible,
         is_selected,
-        is_disabled,
         ..
     } = use_menu_item(UseMenuItemInput {
         menu,
         key,
         should_close_on_select: None,
+        submenu_trigger: None,
     });
     let (attrs, styles) = props.into_parts();
 
     view! {
         <li
             {..attrs}
-            class=Classes::from("demo-overlays-menu-item")
-                .add_reactive("focused", is_focused)
-                .add_reactive("focus-visible", is_focus_visible)
-                .add_reactive("disabled", is_disabled)
+            data-focused=move || is_focused.get().then_some("")
+            data-focus-visible=move || is_focus_visible.get().then_some("")
+            class="demo-menu-item"
             style=styles
         >
             {selectable.then(|| view! {
-                <span class="demo-overlays-menu-check" aria-hidden="true">
+                <span class="demo-menu-check" aria-hidden="true">
                     {move || if is_selected.get() { "\u{2713}" } else { "" }}
                 </span>
             })}

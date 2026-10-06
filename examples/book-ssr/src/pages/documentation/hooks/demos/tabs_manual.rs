@@ -20,7 +20,7 @@ fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> imp
     let UseTabReturn { tab_props, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
     let (attrs, styles) = tab_props.into_parts();
 
-    view! { <div {..attrs} class="demo-tab demo-hook-tab" style=styles>{label}</div> }
+    view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
 }
 
 #[component]
@@ -64,11 +64,9 @@ pub fn TabsManualDemo() -> impl IntoView {
             <p>{content}</p>
         </div>
 
-        <div class="demo-tabs-controls">
-            <p class="demo-tabs-status">
-                "Focused: " {move || key_text(selection.is_focused().then(|| selection.focused_key()).flatten())}
-                " \u{b7} Selected: " {move || key_text(state.selected_key())}
-            </p>
-        </div>
+        <p class="demo-status">
+            "Focused: " {move || key_text(selection.is_focused().then(|| selection.focused_key()).flatten())}
+            " \u{b7} Selected: " {move || key_text(state.selected_key())}
+        </p>
     }
 }

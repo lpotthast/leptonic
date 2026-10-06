@@ -1,21 +1,28 @@
-use leptonic::{components::prelude::*, utils::color::HSV};
+use leptonic::{
+    components::prelude::*,
+    utils::color::{ColorValue, HSV, HsvChannel},
+};
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorPaletteDemo() -> impl IntoView {
-    let (hsv, set_hsv) = signal(HSV::new());
+    let color = RwSignal::new(HSV::new());
 
     view! {
         <ColorPalette
-            hsv=hsv
-            set_saturation=move |s| set_hsv.update(|hsv| hsv.saturation = s)
-            set_value=move |v| set_hsv.update(|hsv| hsv.value = v)
+            value=color
+            set_value=color
+            aria_label="Saturation and brightness"
             classes="demo-color-palette-small"
         />
         <p class="demo-status">
             {move || {
-                let hsv = hsv.get();
-                format!("Saturation: {:.2}, value: {:.2}", hsv.saturation, hsv.value)
+                let c = color.get();
+                format!(
+                    "Saturation: {}, brightness: {}",
+                    c.format_channel_value(HsvChannel::Saturation),
+                    c.format_channel_value(HsvChannel::Brightness),
+                )
             }}
         </p>
     }

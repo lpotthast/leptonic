@@ -13,7 +13,7 @@ use leptos::prelude::*;
 pub fn PageHookTextField() -> impl IntoView {
     let state = use_text_field_state(UseTextFieldStateInput {
         default_value: "Ada".to_owned(),
-        on_change: None,
+        ..UseTextFieldStateInput::default()
     });
     let UseTextFieldReturn {
         label_props,
@@ -24,7 +24,7 @@ pub fn PageHookTextField() -> impl IntoView {
         validation_errors,
         ..
     } = use_text_field(UseTextFieldInput {
-        has_label: true,
+        has_label: true.into(),
         name: Some("name".to_owned()),
         validate: Some(Arc::new(|value: &String| {
             if value.chars().count() < 3 {

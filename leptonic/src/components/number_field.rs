@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
+    Out,
     atoms::{
         field::{Description, FieldError, Label, TextElement},
         input::Input,
@@ -11,17 +12,15 @@ use crate::{
     },
     components::icon::Icon,
     hooks::{CommitBehavior, ValidateFn, ValidationBehavior},
-    utils::{
-        NumberValue, ValueBinding, classes::Classes, number_formatter::NumberFormatOptions,
-        styles::Styles,
-    },
+    utils::number_value::OptionalNumberSignal,
+    utils::{NumberValue, classes::Classes, number_formatter::NumberFormatOptions, styles::Styles},
 };
 
 /// A number field for values of type `T` (any primitive integer or float) with its label,
 /// description, stepper buttons and validation errors.
 ///
-/// Its value starts at `default_value` and is reported through `on_change`; bind it to a signal
-/// with `state=rw_signal` (an `RwSignal<Option<T>>`).
+/// Its value starts at `default_value` and is reported through `on_change`; or it is `value`, and
+/// changes go to `set_value` (e.g. both an `RwSignal<Option<T>>`).
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn NumberField<T: NumberValue>(
@@ -30,9 +29,13 @@ pub fn NumberField<T: NumberValue>(
     label: MaybeProp<String>,
     #[prop(into, optional)] description: MaybeProp<String>,
     #[prop(optional)] default_value: Option<T>,
-    /// External value state, replacing `default_value`.
+    /// The value (controlled), replacing `default_value`: a number, an `Option` (`None`: empty),
+    /// or any signal of them.
     #[prop(into, optional)]
-    state: Option<ValueBinding<Option<T>>>,
+    value: Option<OptionalNumberSignal<T>>,
+    /// Receives the new value: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Option<T>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<T>>>,
     #[prop(into, optional)] min_value: MaybeProp<T>,
     #[prop(into, optional)] max_value: MaybeProp<T>,
@@ -96,7 +99,8 @@ pub fn NumberField<T: NumberValue>(
         .children(Box::new(children))
         .build();
     props.default_value = default_value;
-    props.state = state;
+    props.value = value;
+    props.set_value = set_value;
     props.on_change = on_change;
     props.validate = validate;
     props.validation_behavior = validation_behavior;

@@ -3,14 +3,12 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SeparatorHorizontalDemo() -> impl IntoView {
-    let horizontal_sep = use_separator(UseSeparatorInput {
-        orientation: Orientation::Horizontal,
-        element_type: SeparatorElementType::Hr,
-    });
+    // The default: a horizontal separator on an <hr>.
+    let separator = use_separator(UseSeparatorInput::default());
 
     view! {
         <p>"Content above the separator"</p>
-        <hr {..horizontal_sep.separator_props.into_attrs()} class="demo-separator-line"/>
+        <hr {..separator.props.into_attrs()} class="demo-separator-line"/>
         <p>"Content below the separator"</p>
     }
 }

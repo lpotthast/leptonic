@@ -9,10 +9,15 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
+const MAX_LENGTH: u32 = 20;
+
 #[component]
 pub fn TextFieldBasicDemo() -> impl IntoView {
     // The hook owns the value; read it from `username.value`, change it with `username.set_value`.
-    let username = use_text_field_state(UseTextFieldStateInput::default());
+    let username = use_text_field_state(UseTextFieldStateInput {
+        default_value: "ferris".to_owned(),
+        ..UseTextFieldStateInput::default()
+    });
     let disabled = RwSignal::new(false);
 
     let UseTextFieldReturn {
@@ -24,11 +29,11 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
         validation_errors,
         ..
     } = use_text_field(UseTextFieldInput {
-        has_label: true,
+        has_label: true.into(),
         is_disabled: disabled.into(),
         is_required: true.into(),
         placeholder: "Enter a username".into(),
-        max_length: Some(20),
+        max_length: Some(MAX_LENGTH),
         validate: Some(Arc::new(|value: &String| {
             if value.chars().count() >= 3 && value.chars().all(char::is_alphanumeric) {
                 Ok(())
@@ -44,7 +49,7 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
             <label class="demo-field-label" {..label_props.into_attrs()}>"Username"</label>
             <input class="demo-input demo-text-input" {..input_props.into_attrs()}/>
             <p class="demo-field-description" {..description_props.into_attrs()}>"3 to 20 letters or digits."</p>
-            // The error message is referenced by the input only while it is rendered.
+            // The input references the error message only while it is rendered.
             <Show when=move || is_invalid.get()>
                 <p class="demo-field-error" {..error_message_props.clone().into_attrs()}>
                     {move || validation_errors.get().join(" ")}
@@ -52,14 +57,15 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
             </Show>
         </div>
 
-        <p>
-            "Value: \u{201c}"{move || username.value.get()}"\u{201d} ("
-            {move || username.value.get().chars().count()}"/20)"
+        <p class="demo-status">
+            {move || username.value.with(|value| {
+                format!("Value: \u{201c}{value}\u{201d} ({} of {MAX_LENGTH} characters)", value.chars().count())
+            })}
         </p>
 
-        <div class="demo-flex-center-row">
+        <div class="demo-controls">
             <Button on_press=move |_| username.set_value(String::new())>"Clear"</Button>
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

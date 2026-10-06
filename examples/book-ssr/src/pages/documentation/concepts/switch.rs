@@ -13,9 +13,8 @@ pub fn PageSwitchOverview() -> impl IntoView {
                 "contrast, are usually part of a form that is submitted later."
             </p>
             <p>
-                "Leptonic\u{2019}s switches are native "<Code inline=true>"<input type=\"checkbox\" role=\"switch\">"</Code>
-                " elements inside a "<Code inline=true>"<label>"</Code>", visually hidden behind a drawn track. They still "
-                "submit, reset and validate like checkboxes."
+                "Leptonic\u{2019}s switches are native checkbox inputs with the switch role, inside their label and visually "
+                "hidden behind a drawn track. They still submit, reset and validate like checkboxes."
             </p>
 
             <Section title="When to Use">
@@ -47,26 +46,29 @@ pub fn PageSwitchOverview() -> impl IntoView {
                 </p>
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::switch::Hook.materialize()>"Switch hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></TableCell>
                         <TableCell>
                             <Code inline=true>"use_switch"</Code>" (and the underlying "<Code inline=true>"use_toggle"</Code>
                             "): switch semantics, form integration and validation for an input and label you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::switch::Atom.materialize()>"Switch atom"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></TableCell>
                         <TableCell>"An unstyled "<Code inline=true>"Switch"</Code>" you draw with your children, styled through data attributes."</TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::switch::Component.materialize()>"Switch component"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></TableCell>
                         <TableCell>"A themed switch with sizes, a sliding or stationary variant and optional on/off icons."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
-                <p>"Bind the component to a signal with "<Code inline=true>"state"</Code>" and pass the label as children:"</p>
-                <Demo description="Wi-Fi switch bound to a signal, showing its state" source=include_str!("demos/switch.rs") source_open=true>
+                <p>
+                    "Pass the component an "<Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"is_selected"</Code>
+                    " and "<Code inline=true>"set_selected"</Code>", and the label as children:"
+                </p>
+                <Demo description="Wi-Fi switch kept in a signal, showing its state, with a disabled toggle" source=include_str!("demos/switch.rs") source_open=true>
                     <SwitchConceptDemo/>
                 </Demo>
             </Section>
@@ -74,7 +76,7 @@ pub fn PageSwitchOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "Switches follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/switch/" target=LinkTarget::_Blank>"Switch pattern"</LinkExt>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/switch/" target=LinkTarget::Blank>"Switch pattern"</Link>
                     "."
                 </p>
                 <ul>
@@ -96,6 +98,14 @@ pub fn PageSwitchOverview() -> impl IntoView {
                     <KeyRow keys="Space">"Turns the switch on or off."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
+                <li><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></li>
+                <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link></li>
+                <li><Link href=routes::doc::ToggleButton.materialize()>"Toggle Button"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

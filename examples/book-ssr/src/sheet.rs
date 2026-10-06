@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::prelude::{Dialog, ModalBackdrop, ModalContent},
     components::prelude::{Button, ButtonVariant, Icon},
-    prelude::{ValueBinding, icondata},
+    prelude::icondata,
 };
 use leptos::prelude::*;
 
@@ -37,7 +37,8 @@ pub fn Sheet(
 
     view! {
         <ModalBackdrop
-            state=ValueBinding::new(is_open, Callback::new(move |open: bool| if !open { on_close.run(()) }))
+            is_open
+            set_open=move |open: bool| if !open { on_close.run(()) }
             is_dismissable=true
             classes="book-sheet-backdrop">
             <ModalContent classes=["book-sheet", side.class()]>

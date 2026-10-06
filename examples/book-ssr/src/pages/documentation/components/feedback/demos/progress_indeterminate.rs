@@ -3,7 +3,9 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ProgressIndeterminateDemo() -> impl IntoView {
+    // `None`: the progress isn't known.
+    let progress: Option<f64> = None;
     view! {
-        <ProgressBar progress=Signal::stored(None)/>
+        <ProgressBar value=progress label="Connecting" />
     }
 }

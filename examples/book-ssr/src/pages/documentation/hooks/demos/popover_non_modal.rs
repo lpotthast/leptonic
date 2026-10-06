@@ -1,39 +1,36 @@
 use leptonic::{
-    components::prelude::*,
-    hooks::{PlacementX, PlacementY, *},
+    atoms::prelude::FocusScope,
+    components::prelude::{Button, ButtonVariant},
+    hooks::*,
+    utils::id::use_id,
 };
 use leptos::{portal::Portal, prelude::*};
 
 #[component]
 pub fn NonModalPopoverDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (counter, set_counter) = signal(0);
+    let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
+    let is_open = state.is_open;
+    let items = RwSignal::new(0_u32);
+    let title_id = use_id("cart-title");
 
+    // Non-modal: the page stays usable, so there is no underlay. Moving focus out of the popover
+    // or scrolling the page closes it.
     let UsePopoverReturn {
         props,
         trigger_props,
         id,
         ..
     } = use_popover(UsePopoverInput {
-        placement_x: Signal::stored(PlacementX::OuterRight),
-        placement_y: Signal::stored(PlacementY::Top),
-        offset: 0.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        // The page stays interactive, so no underlay is needed. Scrolling the page closes the popover.
+        placement: Signal::stored(Placement::Top),
+        offset: Signal::stored(8.0),
         modality: PopoverModality::NonModal,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-        ..UsePopoverInput::new(OverlayTriggerState::from((is_open, set_is_open)))
+        ..UsePopoverInput::new(state)
     });
 
-    // The trigger: a button toggling the popover, announcing it with `aria-haspopup`, `aria-expanded` and
-    // `aria-controls`.
     let UseOverlayTriggerReturn {
         props: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open.into(),
+        show: is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -41,10 +38,7 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
         props: button_props,
         ..
     } = use_button(UseButtonInput {
-        on_press: Some(Callback::new(move |_| {
-            set_is_open.update(|open| *open = !*open);
-        })),
-        aria_haspopup: Signal::stored(overlay_trigger.aria_haspopup),
+        on_press: Some(Callback::new(move |_| state.toggle())),
         aria_expanded: overlay_trigger.aria_expanded,
         aria_controls: overlay_trigger.aria_controls,
         ..UseButtonInput::default()
@@ -54,31 +48,46 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
     let (popover_attrs, popover_styles) = props.into_parts();
     let popover_attrs = StoredValue::new(popover_attrs);
     let popover_styles = StoredValue::new(popover_styles);
+    let title_id = StoredValue::new(title_id);
 
     view! {
         <div class="demo-button-row-centered">
-            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn-primary">
-                {move || if is_open.get() { "Close" } else { "Open Non-Modal" }}
+            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn">
+                "Cart"
             </button>
-
-            <Button on_press=move |_| set_counter.update(|c| *c += 1) variant=ButtonVariant::Outlined>
-                {move || format!("Counter: {}", counter.get())}
+            // A press on the page reaches it. Here it also moves focus out of the popover, which
+            // closes it.
+            <Button variant=ButtonVariant::Outlined on_press=move |_| items.update(|n| *n += 1)>
+                "Add item"
             </Button>
         </div>
-
-        <p class="demo-overlays-caption demo-overlays-centered">
-            "The counter stays clickable while the popover is open."
+        <p class="demo-status">
+            {move || {
+                let count = items.get();
+                format!(
+                    "{count} {} in the cart. The popover is {}.",
+                    if count == 1 { "item" } else { "items" },
+                    if is_open.get() { "open" } else { "closed" },
+                )
+            }}
         </p>
 
         <Portal>
             <Show when=move || is_open.get()>
-                <div
-                    {..popover_attrs.get_value()}
-                    style=popover_styles.get_value()
-                    class="demo-overlays-popover demo-overlays-popover-narrow"
-                >
-                    <p class="demo-overlays-text">"A non-modal popover. The rest of the page stays interactive."</p>
-                </div>
+                // Moves focus into the popover and back to the trigger, without containing it.
+                <FocusScope restore_focus=true auto_focus=true>
+                    <div
+                        {..popover_attrs.get_value()}
+                        style=popover_styles.get_value()
+                        class="demo-popover demo-popover-narrow"
+                        role="dialog"
+                        aria-labelledby=title_id.get_value()
+                        tabindex="-1"
+                    >
+                        <h2 id=title_id.get_value() class="demo-overlay-title">"Cart"</h2>
+                        <p class="demo-overlay-text">"Free shipping from three items."</p>
+                    </div>
+                </FocusScope>
             </Show>
         </Portal>
     }

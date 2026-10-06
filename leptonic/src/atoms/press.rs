@@ -1,62 +1,85 @@
-// Upstream: react-aria/src/interactions/PressResponder.tsx @ 6f664fe911
+// Upstream: react-aria/src/interactions/PressResponder.tsx @ 99e6102368
+// Upstream: react-aria/src/interactions/Pressable.tsx @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
+    atoms::focusable::{ChildKind, focusable_child_attrs, manage_child},
     hooks::*,
-    utils::{
-        classes::Classes, keyboard_shortcut::KeyboardShortcuts, scoped_context::scoped_view,
-        styles::Styles,
-    },
+    utils::{keyboard_shortcut::KeyboardShortcuts, scoped_context::scoped_view},
 };
 
+/// Makes its child element pressable (react-aria's `Pressable`): the press and focus handlers go
+/// onto the child itself, which becomes focusable and must have an interactive role (a `<button>`,
+/// or a `<span role="button">`). A surrounding [`PressResponder`] applies to it.
+///
+/// ```ignore
+/// <Pressable on_press=move |_| log!("pressed")>
+///     <span role="button">"Press me"</span>
+/// </Pressable>
+/// ```
 #[component]
-pub fn Pressable(
+pub fn Pressable<V>(
     #[prop(into, optional)] is_disabled: Signal<bool>,
-    on_press: Callback<PressEvent>,
-    #[prop(into, optional)] classes: Classes,
-    #[prop(into, optional)] styles: Styles,
-    children: Children,
-) -> impl IntoView {
-    let UsePressReturn {
-        props: press_props,
-        is_pressed: _,
-    } = use_press(UsePressInput {
+    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_start: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_end: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_up: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_press_change: Option<Callback<bool>>,
+    /// The pressable element.
+    children: TypedChildren<V>,
+) -> impl IntoView
+where
+    V: IntoView + 'static,
+{
+    use leptos::{ev, tachys::html::style::style};
+
+    let press = use_press(UsePressInput {
         is_disabled,
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
         on_press,
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-        long_press_disabled: Signal::stored(false),
+        on_press_up,
+        on_press_start,
+        on_press_end,
+        on_press_change,
+        ..UsePressInput::default()
     });
+    let (press, _) = press.props.into_inner();
+    let element = crate::utils::CapturedElement::new();
+    // An overlay trigger's props from a surrounding `PressResponder` (a `DialogTrigger`'s), as
+    // react-aria's `usePress` merges them: the ARIA attributes, and the element to position at.
+    let trigger = use_context::<PressResponderContext>()
+        .and_then(|ctx| ctx.trigger)
+        .unwrap_or_else(PressResponderTrigger::empty);
+    let focusable = use_focusable(UseFocusableInput {
+        is_disabled,
+        ..UseFocusableInput::default()
+    })
+    .props;
 
-    let (press_attrs, press_styles) = press_props.into_parts();
-    let styles = press_styles
-        .merge(styles)
-        .add_unchecked("display", "contents");
+    manage_child(ChildKind::Pressable, element, focusable.tabindex, false);
+    let (focusable, on_keydown) =
+        focusable_child_attrs(focusable, element, Some(press.aria_describedby));
 
-    view! {
-        <div
-            {..press_attrs}
-            data-pressable="true"
-            class=classes
-            style=styles
-        >
-            {children()}
-        </div>
-    }
+    children.into_inner()().add_any_attr((
+        (
+            focusable,
+            trigger.element.attr(),
+            leptos::attr::Attr(leptos::attr::AriaHaspopup, trigger.aria_haspopup),
+            leptos::attr::Attr(leptos::attr::AriaExpanded, trigger.aria_expanded),
+            leptos::attr::Attr(leptos::attr::AriaControls, trigger.aria_controls),
+            // Keyboard handlers before press handling, as `use_button`.
+            on_keydown.chain(press.on_keydown).into_on(ev::keydown),
+        ),
+        (
+            press.on_click.into_on(ev::click),
+            press.on_pointerdown.into_on(ev::pointerdown),
+            press.on_pointerup.into_on(ev::pointerup),
+            press.on_mousedown.into_on(ev::mousedown),
+            press.on_dragstart.into_on(ev::dragstart),
+            press.on_dblclick.into_on(ev::dblclick),
+            // One property, so the child's own styles stay (`use_press`' touch action).
+            style(("touch-action", "pan-x pan-y pinch-zoom")),
+        ),
+    ))
 }
 
 /// Provides [`PressResponderContext`] to descendant pressable elements.
@@ -96,18 +119,21 @@ pub fn PressResponder(
     #[prop(into, optional)] on_long_press_end: Option<Callback<LongPressEvent>>,
     /// Describes the long-press action to assistive technology.
     #[prop(into, optional)]
-    long_press_accessibility_description: Option<Oco<'static, str>>,
+    long_press_accessibility_description: MaybeProp<String>,
     #[prop(into, optional)] is_disabled: Option<Signal<bool>>,
     #[prop(into, optional)] force_is_pressed: Option<Signal<bool>>,
-    #[prop(optional)] prevent_focus_on_press: Option<bool>,
-    #[prop(optional)] should_cancel_on_pointer_exit: Option<bool>,
-    #[prop(optional)] allow_text_selection_on_press: Option<bool>,
+    #[prop(into, optional)] prevent_focus_on_press: Option<Signal<bool>>,
+    #[prop(into, optional)] should_cancel_on_pointer_exit: Option<Signal<bool>>,
+    #[prop(into, optional)] allow_text_selection_on_press: Option<Signal<bool>>,
     /// The props of an overlay trigger for the pressable element (see `DialogTrigger`).
     #[prop(optional)]
     trigger: Option<PressResponderTrigger>,
     /// Keyboard shortcuts for the pressable element, handled after its own (see `MenuTrigger`).
     #[prop(optional)]
     shortcuts: Option<KeyboardShortcuts>,
+    /// Called when the pressable element requests a context menu (see `MenuTrigger`).
+    #[prop(into, optional)]
+    on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
     children: Children,
 ) -> impl IntoView {
     // Nesting: read parent context and merge (parent callbacks chain before ours).
@@ -158,11 +184,17 @@ pub fn PressResponder(
         on_long_press_start,
         on_long_press,
         on_long_press_end,
-        long_press_accessibility_description: long_press_accessibility_description
-            .map(StoredValue::new)
-            .or(parent_ctx
+        long_press_accessibility_description: {
+            let parent = parent_ctx
                 .as_ref()
-                .and_then(|c| c.long_press_accessibility_description)),
+                .map(|c| c.long_press_accessibility_description)
+                .unwrap_or_default();
+            MaybeProp::derive(move || {
+                long_press_accessibility_description
+                    .get()
+                    .or_else(|| parent.get())
+            })
+        },
         is_disabled: is_disabled.or(parent_ctx.as_ref().and_then(|c| c.is_disabled)),
         force_is_pressed: force_is_pressed.or(parent_ctx.as_ref().and_then(|c| c.force_is_pressed)),
         prevent_focus_on_press: prevent_focus_on_press
@@ -177,9 +209,23 @@ pub fn PressResponder(
         shortcuts: shortcuts
             .map(StoredValue::new)
             .or(parent_ctx.as_ref().and_then(|c| c.shortcuts)),
+        on_context_menu: chain_optional_callbacks(
+            parent_ctx.as_ref().and_then(|c| c.on_context_menu),
+            on_context_menu,
+        ),
         registered,
     };
 
+    // Once rendered (client only), something below must have taken the press props
+    // (react-aria-components warns likewise).
+    Effect::new(move || {
+        if !registered.get_value() {
+            crate::utils::dev_warn!(
+                "A PressResponder was rendered without a pressable child. Either call \
+                 use_press (e.g. through a Button) below it, or remove the PressResponder."
+            );
+        }
+    });
     scoped_view(move || provide_context(context), children)
 }
 
@@ -204,4 +250,20 @@ pub fn PressResponder(
 #[component]
 pub fn ClearPressResponder(children: Children) -> impl IntoView {
     scoped_view(|| provide_context(PressResponderContext::empty()), children)
+}
+
+/// An overlay's content (popover, modal, tooltip) is no trigger of what surrounds the overlay: its
+/// buttons neither press through the trigger's [`PressResponder`] nor become a tooltip's trigger.
+#[component]
+pub(crate) fn ClearTriggerContexts(children: Children) -> impl IntoView {
+    scoped_view(
+        || {
+            provide_context(PressResponderContext::empty());
+            provide_context(FocusableContext::default());
+            // Popovers inside take no defaults of the trigger around this overlay.
+            provide_context(None::<super::popover::PopoverDefaults>);
+            provide_context(None::<super::popover::SubmenuPopoverContext>);
+        },
+        children,
+    )
 }

@@ -4,6 +4,7 @@ use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 use time::{OffsetDateTime, Weekday};
 
+// leptonic has no segment atom yet: the demos share this component built from `use_date_segment`.
 use super::date_segments::{DateSegments, SegmentControls};
 
 #[component]
@@ -47,11 +48,12 @@ pub fn DateFieldDemo() -> impl IntoView {
             </span>
         </div>
 
-        <Checkbox state=disabled>"Disabled"</Checkbox>
-
-        <p class="demo-mt-half">
-            "Value: "
-            <code>{move || value.get().map_or_else(|| "None".to_owned(), |date| date.date().to_string())}</code>
+        <p class="demo-status">
+            {move || value.get().map_or_else(|| "No date entered".to_owned(), |date| format!("Delivery on {}", date.date()))}
         </p>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

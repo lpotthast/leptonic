@@ -41,6 +41,8 @@ use crate::{
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         orientation::Orientation,
         pointer_type::PointerType,
+        shadow_dom::get_active_element,
+        virtual_focus::dispatch_virtual_focus,
     },
 };
 
@@ -73,7 +75,7 @@ pub struct UseComboBoxInput {
     pub is_read_only: Signal<bool>,
     pub is_required: bool,
     /// Whether a visible label is rendered.
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -98,7 +100,7 @@ impl UseComboBoxInput {
             is_disabled: Signal::stored(false),
             is_read_only: Signal::stored(false),
             is_required: false,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -308,7 +310,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             return;
         }
         if let Some(on_blur) = on_blur {
-            on_blur.run(e);
+            on_blur.try_run(e);
         }
         state.set_focused(false);
     });
@@ -343,6 +345,29 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         element: input_element,
         initial_value: state.default_value(),
         on_reset: Callback::new(move |value| state.set_value(value)),
+    });
+
+    // Re-show the focus ring when no item is virtually focused any more (react-aria): a virtual
+    // focus event on the focused input lets its focus ring show again.
+    Effect::new(move |previous: Option<bool>| {
+        let has_focused_item = state
+            .list
+            .selection
+            .focused_key()
+            .is_some_and(|key| state.list.collection.with(|c| c.contains_key(&key)));
+        if previous.is_some_and(|had| had != has_focused_item)
+            && !has_focused_item
+            && let Some(input) = input_element.get_untracked()
+            && input
+                .owner_document()
+                .as_ref()
+                .and_then(get_active_element)
+                .as_ref()
+                == Some(&*input)
+        {
+            dispatch_virtual_focus(&input, None);
+        }
+        has_focused_item
     });
 
     let text_field_state = TextFieldState::new(
@@ -397,16 +422,27 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         }
     };
     let focus_for_press_start = focus_input.clone();
-    let label = label_id.clone();
+    // The button and the listbox are named by the field's labels: the visible label only while
+    // there is one.
+    let field_labelledby = {
+        let label_id = label_id.clone();
+        Signal::derive(move || {
+            aria_labelledby
+                .clone()
+                .or_else(|| has_label.get().then(|| label_id.clone()))
+        })
+    };
     let button = UseButtonInput {
         aria_label: "Show suggestions".into(),
-        aria_labelledby: Some(
-            format!(
-                "{button_id} {}",
-                aria_labelledby.clone().unwrap_or_else(|| label.clone())
-            )
-            .into(),
-        ),
+        aria_labelledby: {
+            let button_id = button_id.clone();
+            Signal::derive(move || {
+                Some(match field_labelledby.get() {
+                    Some(labelledby) => format!("{button_id} {labelledby}"),
+                    None => button_id.clone(),
+                })
+            })
+        },
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true,
         is_disabled: Signal::derive(move || is_disabled.get() || is_read_only.get()),
@@ -518,7 +554,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
     let listbox = UseListBoxInput {
         id: Some(listbox_id),
         aria_label: "Suggestions".into(),
-        aria_labelledby: Some(aria_labelledby.unwrap_or(label_id)),
+        aria_labelledby: field_labelledby,
         options: CollectionOptions {
             auto_focus: Signal::derive(move || {
                 Some(match state.focus_strategy() {

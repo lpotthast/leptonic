@@ -1,36 +1,45 @@
-use leptonic::hooks::*;
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
-use leptos_classes::Classes;
 
-#[component]
-pub fn FocusVisibleDemo() -> impl IntoView {
-    let UseFocusVisibleReturn {
-        focus_should_be_visible,
-        modality,
-    } = use_focus_visible(UseFocusVisibleInput::default());
-
-    let modality_display = Memo::new(move |_| match modality.get() {
+fn modality_name(modality: Modality) -> &'static str {
+    match modality {
         Modality::Unknown => "Unknown",
         Modality::Pointer => "Pointer",
         Modality::Keyboard => "Keyboard",
         Modality::Virtual => "Virtual",
+    }
+}
+
+#[component]
+pub fn FocusVisibleDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
+
+    let UseFocusVisibleReturn {
+        focus_should_be_visible,
+        modality,
+    } = use_focus_visible(UseFocusVisibleInput {
+        is_disabled: disabled.into(),
+        ..Default::default()
     });
 
     view! {
-        <button class=Classes::from(["demo-focus-item", "demo-focus-modality"]).add_reactive("focus-visible", focus_should_be_visible)>
-            "Interact with me"
+        // The hook sets no attribute: the demo exposes its state, and the CSS outlines the focused button
+        // only while `data-focus-visible` is present.
+        <button
+            type="button"
+            class="demo-focus-modality"
+            data-focus-visible=move || focus_should_be_visible.get().then_some("true")
+        >
+            "Click me, then tab away and back"
         </button>
 
-        <p class=Classes::from("demo-mt-1")>
-            "Focus should be visible: "
-            <strong class=Classes::builder().with_toggle(focus_should_be_visible, "demo-state-active", "demo-state-inactive").build()>
-                { move || focus_should_be_visible.get().to_string() }
-            </strong>
+        <p class="demo-status">
+            "Modality: " {move || modality_name(modality.get())} ". Focus should be visible: "
+            {move || if focus_should_be_visible.get() { "yes" } else { "no" }} "."
         </p>
 
-        <p>
-            "Current modality: "
-            <strong>{ move || modality_display.get() }</strong>
-        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

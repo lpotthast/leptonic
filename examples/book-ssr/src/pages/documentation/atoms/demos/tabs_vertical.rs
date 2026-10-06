@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::tabs::{Tab, TabList, TabPanel, Tabs},
-    hooks::{KeyboardActivation, Orientation, use_collection},
+    hooks::{Key, KeyboardActivation, Orientation, use_collection},
 };
 use leptos::prelude::*;
 
@@ -16,6 +16,7 @@ const TABS: [(&str, &str, &str); 3] = [
 
 #[component]
 pub fn TabsVerticalAtomDemo() -> impl IntoView {
+    let selected = RwSignal::new(Key::from("profile"));
     let collection = use_collection(|b| {
         for (key, label, _) in TABS {
             b.item(key, label);
@@ -28,11 +29,13 @@ pub fn TabsVerticalAtomDemo() -> impl IntoView {
             collection=collection
             orientation=Orientation::Vertical
             keyboard_activation=KeyboardActivation::Manual
-            classes="demo-tabs-vertical"
+            selected_key=selected
+            set_selected_key=selected
+            classes="demo-tabs"
         >
             <TabList aria_label="Settings" classes="demo-tab-list">
                 {TABS
-                    .map(|(key, label, _)| view! { <Tab key=key classes=["demo-tab", "demo-atom-tab"]>{label}</Tab> })
+                    .map(|(key, label, _)| view! { <Tab key=key classes="demo-tab">{label}</Tab> })
                     .collect_view()}
             </TabList>
             {TABS
@@ -45,5 +48,7 @@ pub fn TabsVerticalAtomDemo() -> impl IntoView {
                 })
                 .collect_view()}
         </Tabs>
+
+        <p class="demo-status">"Selected: " {move || selected.get().to_string()}</p>
     }
 }

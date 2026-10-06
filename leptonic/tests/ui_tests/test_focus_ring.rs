@@ -1,3 +1,4 @@
+// Upstream: react-aria/test/interactions/useFocusVisible.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -27,6 +28,7 @@ impl BrowserTest<str> for FocusRingTests {
         test_modality_switch(&page).await?;
         test_arrow_key_keyboard_modality(&page).await?;
         test_disabled_focus_ring(&page).await?;
+        test_atom_text_input(&page).await?;
 
         Ok(())
     }
@@ -166,5 +168,48 @@ async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report
     assert_that!(page.read_disabled_is_focused().await?).is_equal_to(false);
     assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
 
+    Ok(())
+}
+
+/// The `FocusRing` atom: `data-focused` follows focus. Typing after a click makes focus visible,
+/// but not on a text input (only Tab and Escape do there; upstream's "emits on modality change
+/// (text input)").
+async fn test_atom_text_input(page: &FocusRingPage<'_>) -> Result<(), Report> {
+    page.goto().await?;
+    for (id, is_text_input) in [("test-fr-atom", false), ("test-fr-atom-text", true)] {
+        let el = page.element(id).await?;
+        el.click().await?;
+        page.wait_for_attr(&el, "data-focused", Some("true"))
+            .await?;
+        assert_that!(el.attr("data-focus-visible").await?).is_none();
+
+        page.send_keys_to_active("a").await?;
+        if is_text_input {
+            // Give a wrong `data-focus-visible` the chance to appear.
+            page.wait_for_attr(&el, "data-focused", Some("true"))
+                .await?;
+            assert_that!(el.attr("data-focus-visible").await?).is_none();
+            page.send_keys_to_active(Key::Escape).await?;
+        }
+        page.wait_for_attr(&el, "data-focus-visible", Some("true"))
+            .await?;
+    }
+    page.click_elsewhere().await?;
+    let el = page.element("test-fr-atom-text").await?;
+    page.wait_for_attr(&el, "data-focused", None).await?;
+
+    // Disabled while focused: no longer focused.
+    let el = page.element("test-fr-atom-disable").await?;
+    el.click().await?;
+    page.wait_for_attr(&el, "data-focused", Some("true"))
+        .await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-fr-atom-disable-toggle').click();",
+            vec![],
+        )
+        .await?;
+    page.wait_for_attr(&el, "data-focused", None).await?;
+    page.wait_for_active_id("test-fr-atom-disable").await?;
     Ok(())
 }

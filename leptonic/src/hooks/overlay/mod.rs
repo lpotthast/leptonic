@@ -34,6 +34,7 @@
 //!   provided as a component/atom (`<FocusScope>`) that wraps modal content.
 
 mod calculate_position;
+pub mod overlay_focus_contain;
 pub mod use_close_on_scroll;
 pub mod use_overlay;
 pub mod use_overlay_position;
@@ -42,6 +43,7 @@ pub mod use_overlay_trigger_state;
 pub mod use_popover;
 mod visible_overlays;
 
+pub use overlay_focus_contain::*;
 pub use use_close_on_scroll::*;
 pub use use_overlay::*;
 pub use use_overlay_position::*;

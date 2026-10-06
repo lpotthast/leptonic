@@ -13,9 +13,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
             <p>
                 "The checkbox hooks give a native "<Code inline=true>"<input type=\"checkbox\">"</Code>" inside a "
                 <Code inline=true>"<label>"</Code>" its behavior, validation and form integration: "
-                <Code inline=true>"use_toggle_state"</Code>" holds whether it is checked, "<Code inline=true>"use_checkbox"</Code>
-                " wires up one checkbox, and "<Code inline=true>"use_checkbox_group"</Code>" with "
-                <Code inline=true>"use_checkbox_group_item"</Code>" manages a group selecting a set of values. See the "
+                <AnchorLink href="#use-toggle-state">"use_toggle_state"</AnchorLink>" holds whether it is checked, "
+                <AnchorLink href="#use-checkbox">"use_checkbox"</AnchorLink>" wires up one checkbox, and "
+                <AnchorLink href="#use-checkbox-group-state">"use_checkbox_group_state"</AnchorLink>", "
+                <AnchorLink href="#use-checkbox-group">"use_checkbox_group"</AnchorLink>" and "
+                <AnchorLink href="#use-checkbox-group-item">"use_checkbox_group_item"</AnchorLink>
+                " manage a group selecting a set of values. See the "
                 <Link href=routes::doc::Checkbox.materialize()>"Checkbox overview"</Link>" for concept guidance."
             </p>
             <ReactAria hook="useCheckbox"/>
@@ -25,13 +28,17 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     "Creates the state of a toggle \u{2014} a checkbox, "<Link href=routes::doc::switch::Hook.materialize()>"switch"</Link>
                     " or "<Link href=routes::doc::toggle_button::Hook.materialize()>"toggle button"</Link>
                     ": whether it is selected. The hook owns the selection; you read it from "
-                    <Code inline=true>"is_selected"</Code>" and hear about changes through "<Code inline=true>"on_change"</Code>"."
+                    <Code inline=true>"is_selected"</Code>" and hear about changes through "<Code inline=true>"on_change"</Code>
+                    ", or keep it in your app\u{2019}s state with "<Code inline=true>"value"</Code>"."
                 </p>
 
                 <Section title="Input" id="use-toggle-state-input">
                     <ApiTable kind=ApiKind::Input of="UseToggleStateInput">
                         <ApiRow name="default_selected" ty="bool" default="false">
                             "Whether the toggle starts selected. Also the value a form reset restores."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<bool>>" default="None">
+                            "The selection as app state, replacing "<Code inline=true>"default_selected"</Code>"."
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">
                             "Called with the new selection when it changes."
@@ -42,12 +49,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="ToggleState">
+                <Section title="Return" id="use-toggle-state-return">
                     <p>
                         <Code inline=true>"use_toggle_state"</Code>" returns a "<Code inline=true>"ToggleState"</Code>
                         ". It is "<Code inline=true>"Copy"</Code>", so you can hand it to the hook and keep reading it."
                     </p>
-                    <ApiTable kind=ApiKind::Fields of="ToggleState">
+                    <ApiTable kind=ApiKind::Return of="ToggleState">
                         <ApiRow name="is_selected" ty="Signal<bool>">"Whether the toggle is selected."</ApiRow>
                         <ApiRow name="default_selected" ty="bool">"The initial selection, restored on form reset."</ApiRow>
                     </ApiTable>
@@ -61,6 +68,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                             <TableCell>"Flips the selection."</TableCell>
                         </TableRow>
                         <TableRow>
+                            <TableCell><Code inline=true>"with_on_change(Callback<bool>)"</Code></TableCell>
+                            <TableCell>"The same state, also calling the callback with each changed selection."</TableCell>
+                        </TableRow>
+                        <TableRow>
                             <TableCell><Code inline=true>"new(is_selected, default_selected, set_selected)"</Code></TableCell>
                             <TableCell>
                                 "A state whose selection lives elsewhere: it reads "<Code inline=true>"is_selected"</Code>
@@ -69,11 +80,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         </TableRow>
                     </DocTable>
                     <p>
-                        "To bind a toggle to a signal of your app, convert the signal: "
-                        <Code inline=true>"ToggleState::from(rw_signal)"</Code>" or "
+                        "To bind a toggle to a signal of your app without "<Code inline=true>"use_toggle_state"</Code>
+                        ", convert the signal: "<Code inline=true>"ToggleState::from(rw_signal)"</Code>" or "
                         <Code inline=true>"ToggleState::from((read, write))"</Code>
                         ". The toggle then reads and writes the signal, like Leptos\u{2019} "
-                        <Code inline=true>"bind:checked"</Code>"."
+                        <Code inline=true>"bind:checked"</Code>". The Checkbox atom and component take your state as their "
+                        <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" props instead."
                     </p>
                 </Section>
             </Section>
@@ -91,12 +103,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         "with struct update syntax."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseCheckboxInput">
-                        <ApiRow name="state" ty="ToggleState">"The checkbox\u{2019}s state, from "<Code inline=true>"use_toggle_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="ToggleState">"The checkbox\u{2019}s state, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
                         <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">
                             "Shows the checkbox as neither checked nor unchecked. Purely visual: the state stays as it is."
                         </ApiRow>
                         <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
-                            "Everything else, shared with the other toggles: see "<a href="#toggleoptions">"ToggleOptions"</a>"."
+                            "Everything else, shared with the other toggles: see "<AnchorLink href="#toggleoptions">"ToggleOptions"</AnchorLink>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -210,6 +222,9 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 <Section title="Input" id="use-checkbox-group-state-input">
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupStateInput">
                         <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">"The initially checked values, restored on form reset."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<Vec<Key>>>" default="None">
+                            "The checked values as app state, replacing "<Code inline=true>"default_value"</Code>"."
+                        </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
                             "Called with the checked values when they change."
                         </ApiRow>
@@ -228,8 +243,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="CheckboxGroupState">
-                    <ApiTable kind=ApiKind::Fields of="CheckboxGroupState">
+                <Section title="Return" id="use-checkbox-group-state-return">
+                    <p>
+                        <Code inline=true>"use_checkbox_group_state"</Code>" returns a "<Code inline=true>"CheckboxGroupState"</Code>
+                        ", which is "<Code inline=true>"Copy"</Code>"."
+                    </p>
+                    <ApiTable kind=ApiKind::Return of="CheckboxGroupState">
                         <ApiRow name="value" ty="Signal<Vec<Key>>">"The checked values, in the order they were checked."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>">"The group\u{2019}s settings."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>">"Whether a value is still required: the group is required and nothing is checked."</ApiRow>
@@ -252,12 +271,13 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                     "Gives the group element "<Code inline=true>"role=\"group\""</Code>", its label and description. "
                     "The group\u{2019}s description and error message also describe each checkbox."
                 </p>
+                <ReactAria hook="useCheckboxGroup"/>
 
                 <Section title="Input" id="use-checkbox-group-input">
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupInput">
-                        <ApiRow name="state" ty="CheckboxGroupState">"From "<Code inline=true>"use_checkbox_group_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="CheckboxGroupState">"From "<Code inline=true>"use_checkbox_group_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
                             "Further labelling and describing elements."
@@ -292,15 +312,15 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
             <Section title="use_checkbox_group_item">
                 <p>
                     "Makes a checkbox part of the group: it is checked while the group contains its value, and checking it adds the "
-                    "value. It returns the same "<a href="#use-checkbox-return">"UseToggleReturn"</a>" as "
+                    "value. It returns the same "<AnchorLink href="#use-checkbox-return">"UseToggleReturn"</AnchorLink>" as "
                     <Code inline=true>"use_checkbox"</Code>"."
                 </p>
 
                 <Section title="Input" id="use-checkbox-group-item-input">
                     <p>"Create it with "<Code inline=true>"UseCheckboxGroupItemInput::new(group.data, key)"</Code>"."</p>
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupItemInput">
-                        <ApiRow name="group" ty="CheckboxGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_checkbox_group"</Code>"."</ApiRow>
-                        <ApiRow name="value" ty="Key">"The checkbox\u{2019}s value in the group, also its form value."</ApiRow>
+                        <ApiRow name="group" ty="CheckboxGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_checkbox_group"</Code>". Required."</ApiRow>
+                        <ApiRow name="value" ty="Key">"The checkbox\u{2019}s value in the group, also its form value. Required."</ApiRow>
                         <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">"Shows the checkbox as partially checked."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">"Called when this checkbox is checked or unchecked."</ApiRow>
                         <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">"Validates this checkbox; its errors join the group\u{2019}s."</ApiRow>
@@ -315,7 +335,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
                 <Section title="Example" id="use-checkbox-group-example">
                     <p>
-                        "Each checkbox is a small component calling "<Code inline=true>"use_checkbox_group_item"</Code>
+                        "Each checkbox is a small Leptos component calling "<Code inline=true>"use_checkbox_group_item"</Code>
                         ". Uncheck all toppings to see the error message."
                     </p>
                     <Demo
@@ -346,6 +366,11 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use std::sync::Arc;
+
+                        use leptonic::hooks::*;
+                        use leptos::prelude::*;
+
                         let state = use_toggle_state(UseToggleStateInput::default());
                         let checkbox = use_checkbox(UseCheckboxInput {
                             options: ToggleOptions {
@@ -361,19 +386,13 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 </Code>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus to the next checkbox."</KeyRow>
-                    <KeyRow keys="Space">"Toggles the focused checkbox."</KeyRow>
-                </KeyboardTable>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox overview"</Link></li>
-                <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox atoms"</Link></li>
-                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox component"</Link></li>
-                <li><Link href=routes::doc::switch::Hook.materialize()>"Switch hooks"</Link></li>
-                <li><Link href=routes::doc::Forms.materialize()>"Forms"</Link></li>
+                <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
+                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
+                <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
+                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

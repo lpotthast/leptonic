@@ -1,15 +1,17 @@
 use leptonic::{
     hooks::*,
     utils::{
-        css::{CssDimension, LengthPercentageAuto, try_px},
+        css::{LengthPercentageAuto, computed_px},
+        data_attributes::flag,
         style::{LeftProperty, TopProperty},
         styles::Styles,
     },
 };
 use leptos::prelude::*;
 
+/// A pixel offset. Measured sizes are `NaN` before the first layout, which renders as `0px`.
 fn offset(px: f64) -> LengthPercentageAuto {
-    LengthPercentageAuto::from(try_px(px).unwrap_or(CssDimension::Zero))
+    LengthPercentageAuto::from(computed_px(px))
 }
 
 /// A constrained movable element that only moves along `axis`.
@@ -20,36 +22,32 @@ fn AxisArea(
     handle_class: &'static str,
     label: &'static str,
 ) -> impl IntoView {
-    let UseMoveReturn {
+    let UseConstrainedMoveReturn {
         props,
         is_moving,
-        constraint,
-    } = use_move(UseMoveInput {
-        is_disabled: false.into(),
-        axis: Signal::stored(Some(axis)),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        on_position_change: None,
-        constraint: Some(MoveConstraint::Bounds),
-        allow_container_click: false,
-        initial_position: None,
-    });
-    let constraint = constraint.expect("`constraint` is set, so the constraint return is present");
-    let pixel_position = constraint.pixel_position;
+        container_props,
+        pixel_position,
+        ..
+    } = use_constrained_move(
+        UseMoveInput {
+            axis: Signal::stored(axis),
+            ..UseMoveInput::default()
+        },
+        MoveConstraintOptions::new(MoveConstraint::Bounds),
+    );
 
     let handle_styles = Styles::builder()
-        .with_reactive(move || LeftProperty.declare(offset(pixel_position.get().0)))
-        .with_reactive(move || TopProperty.declare(offset(pixel_position.get().1)))
+        .with_reactive(move || LeftProperty.declare(offset(pixel_position.get().x)))
+        .with_reactive(move || TopProperty.declare(offset(pixel_position.get().y)))
         .build();
 
     view! {
-        <div {..constraint.container_props.into_attrs()} class=area_class>
+        <div {..container_props.into_attrs()} class=area_class>
             <div
                 {..props.into_attrs()}
                 tabindex="0"
                 class=handle_class
-                class:moving=move || is_moving.get()
+                data-moving=flag(is_moving)
                 style=handle_styles
             >
                 {label}
@@ -68,7 +66,7 @@ pub fn AxisExample() -> impl IntoView {
                     axis=MoveAxis::Horizontal
                     area_class="demo-move-area demo-move-area-short"
                     handle_class="demo-move-handle demo-move-handle-small demo-move-handle-horizontal"
-                    label="H"
+                    label="Horizontal"
                 />
             </div>
             <div class="demo-move-column">
@@ -77,7 +75,7 @@ pub fn AxisExample() -> impl IntoView {
                     axis=MoveAxis::Vertical
                     area_class="demo-move-area demo-move-area-medium"
                     handle_class="demo-move-handle demo-move-handle-small demo-move-handle-vertical"
-                    label="V"
+                    label="Vertical"
                 />
             </div>
         </div>

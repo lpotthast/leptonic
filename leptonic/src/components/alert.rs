@@ -73,7 +73,13 @@ pub fn Alert(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     view! {
-        <div class=classes.add("leptonic-alert") style=styles data-variant=variant.to_str()>
+        <div
+            class=classes.add("leptonic-alert")
+            style=styles
+            data-variant=variant.to_str()
+            // Announced when it appears (react-spectrum's `InlineAlert`).
+            role="alert"
+        >
             {match alert_prepend {
                 Some(slot) => {
                     view! {

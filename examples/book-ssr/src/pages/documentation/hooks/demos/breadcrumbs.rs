@@ -1,50 +1,52 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{components::prelude::Checkbox, hooks::*};
 use leptos::prelude::*;
 
-use crate::routes;
+/// One item of the trail: a link, or the current page.
+#[component]
+fn Crumb(
+    href: &'static str,
+    is_current: bool,
+    is_disabled: Signal<bool>,
+    children: Children,
+) -> impl IntoView {
+    // The current item is a disabled link with `aria-current="page"`: it keeps its element, but loses its `href`.
+    let (attrs, styles) = use_breadcrumb_item(UseBreadcrumbItemInput {
+        link: UseLinkInput {
+            href: Signal::stored(Some(href.to_owned())),
+            is_disabled,
+            ..UseLinkInput::default()
+        },
+        is_current: Signal::stored(is_current),
+        ..UseBreadcrumbItemInput::default()
+    })
+    .props
+    .into_parts();
 
-/// The breadcrumb trail of this page.
+    view! {
+        <li class="demo-breadcrumb">
+            <a {..attrs} style=styles class="demo-navigation-breadcrumb">{children()}</a>
+        </li>
+    }
+}
+
 #[component]
 pub fn BreadcrumbsDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
-
-    let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
-        label: Some("Breadcrumbs".to_string()),
-    });
-
-    let docs = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some(routes::doc::Overview.materialize()),
-        is_disabled: disabled.into(),
-        ..Default::default()
-    });
-    let navigation = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some(routes::doc::Navigation.materialize()),
-        is_disabled: disabled.into(),
-        ..Default::default()
-    });
-    // The current page: no `href`, `aria-current="page"`.
-    let current = use_breadcrumb_item(UseBreadcrumbItemInput {
-        is_current: true,
-        ..Default::default()
-    });
+    let breadcrumbs = use_breadcrumbs(UseBreadcrumbsInput::default());
 
     view! {
-        <nav {..nav_props.into_attrs()} class="demo-navigation-breadcrumbs">
-            <ol>
-                <li>
-                    <a {..docs.link_props.into_attrs()} class="demo-navigation-breadcrumb">"Docs"</a>
-                    <span class="demo-navigation-separator" aria-hidden="true">"/"</span>
-                </li>
-                <li>
-                    <a {..navigation.link_props.into_attrs()} class="demo-navigation-breadcrumb">"Navigation"</a>
-                    <span class="demo-navigation-separator" aria-hidden="true">"/"</span>
-                </li>
-                <li>
-                    <a {..current.link_props.into_attrs()} class="demo-navigation-breadcrumb">"use_breadcrumbs"</a>
-                </li>
+        // The separators are drawn in CSS, hidden from assistive technology.
+        <nav aria-label="Breadcrumbs">
+            <ol {..breadcrumbs.props.into_attrs()} class="demo-breadcrumbs">
+                <Crumb href="/doc/overview" is_current=false is_disabled=disabled.into()>"Docs"</Crumb>
+                <Crumb href="/doc/navigation" is_current=false is_disabled=disabled.into()>"Navigation"</Crumb>
+                <Crumb href="/doc/breadcrumbs" is_current=false is_disabled=disabled.into()>"Breadcrumbs"</Crumb>
+                <Crumb href="/doc/breadcrumbs/hook" is_current=true is_disabled=disabled.into()>"Hooks"</Crumb>
             </ol>
         </nav>
 
-        <Checkbox state=disabled>"Disable links"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

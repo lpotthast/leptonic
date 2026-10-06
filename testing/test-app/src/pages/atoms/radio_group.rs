@@ -1,6 +1,8 @@
-use leptonic::atoms::field::{Description, FieldError, Label};
 use leptonic::{
-    atoms::radio::{Radio, RadioGroup},
+    atoms::{
+        field::{Description, FieldError, Label},
+        radio::{Radio, RadioGroup},
+    },
     hooks::{Orientation, ValidationBehavior, collections::Key},
 };
 use leptos::prelude::*;
@@ -9,6 +11,7 @@ use leptos::prelude::*;
 #[component]
 pub fn PageAtomRadioGroup() -> impl IntoView {
     let selected = RwSignal::new(String::new());
+    let bound = RwSignal::new(Some(Key::from("b")));
 
     view! {
         <h1>"Radio Group"</h1>
@@ -22,6 +25,8 @@ pub fn PageAtomRadioGroup() -> impl IntoView {
             <Radio value="dragons">"Dragons"</Radio>
             <Description>"Pick one."</Description>
         </RadioGroup>
+        // A label outside any field: the group's label context must not reach it.
+        <Label>"Standalone label"</Label>
         <div>"Selected: " <span id="test-rg-value">{selected}</span></div>
         <button id="test-rg-after">"After"</button>
 
@@ -44,6 +49,27 @@ pub fn PageAtomRadioGroup() -> impl IntoView {
         <RadioGroup aria_label="Read-only group" is_read_only=true default_value="a">
             <Radio value="a">"Read-only A"</Radio>
             <Radio value="b">"Read-only B"</Radio>
+        </RadioGroup>
+
+        // Controlled: bound to a signal, which a button changes from outside.
+        <RadioGroup aria_label="Bound" value=bound set_value=bound>
+            <Radio value="a">"Bound A"</Radio>
+            <Radio value="b">"Bound B"</Radio>
+            <Radio value="c">"Bound C"</Radio>
+        </RadioGroup>
+        <div>
+            "Bound: "
+            <span id="test-rg-bound-value">
+                {move || bound.get().map(|v| v.to_string()).unwrap_or_default()}
+            </span>
+        </div>
+        <button id="test-rg-bound-set-c" on:click=move |_| bound.set(Some(Key::from("c")))>
+            "Select C"
+        </button>
+        // A value without a setter: selecting changes nothing.
+        <RadioGroup aria_label="Fixed" value=Some(Key::from("a"))>
+            <Radio value="a">"Fixed A"</Radio>
+            <Radio value="b">"Fixed B"</Radio>
         </RadioGroup>
 
         <form id="test-rg-form">

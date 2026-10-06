@@ -3,24 +3,26 @@ use std::collections::HashSet;
 use leptos::{context::Provider, prelude::*};
 
 use super::{
-    field::{FieldContext, FieldLabelProps},
+    field::{FieldContext, LabelContext},
     form::use_validation_behavior,
     input::{InputContext, InputState},
     listbox::ListBoxParent,
     popover::{PopoverDialogLabel, PopoverParts, render_popover},
 };
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
-        ComboBoxFilter, ComboBoxMenuTrigger, ComboBoxState, ComboBoxValue, IntoAttrs, PlacementX,
-        PlacementY, PopoverModality, SelectMode, UseButtonInput, UseComboBoxInput,
-        UseComboBoxReturn, UseComboBoxStateInput, UsePopoverInput, UsePopoverReturn,
-        UseTextFieldReturn, ValidateFn, ValidationBehavior,
+        ComboBoxFilter, ComboBoxMenuTrigger, ComboBoxState, ComboBoxValue, IntoAttrs, Placement,
+        PopoverModality, SelectMode, UseButtonInput, UseComboBoxInput, UseComboBoxReturn,
+        UseComboBoxStateInput, UsePopoverInput, UsePopoverReturn, UseTextFieldReturn, ValidateFn,
+        ValidationBehavior,
         collections::{CollectionMemo, Key},
         use_button, use_combobox, use_combobox_state, use_popover, use_text_field,
     },
-    utils::ValueBinding,
-    utils::data_attributes::flag,
-    utils::{CapturedElement, classes::Classes, styles::Styles},
+    utils::{
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+    },
 };
 
 /// Context from [`ComboBox`] to its parts.
@@ -66,17 +68,23 @@ pub fn ComboBox(
     /// The initially selected keys (at most one in `Single` mode). Ignored when `value` is bound.
     #[prop(into, optional)]
     default_value: Vec<Key>,
-    /// The selected keys as app state (e.g. an `RwSignal<Vec<Key>>`), replacing `default_value`.
+    /// The selected keys (controlled): a value or any signal.
     #[prop(into, optional)]
-    value: Option<ValueBinding<Vec<Key>>>,
+    value: Option<Signal<Vec<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Vec<Key>>>,
     #[prop(into, optional)] on_change: Option<Callback<Vec<Key>>>,
     /// The initial input text. Default: the selected option's text. Ignored when `input_value` is
     /// bound.
     #[prop(into, optional)]
     default_input_value: Option<String>,
-    /// The input text as app state (e.g. an `RwSignal<String>`), replacing `default_input_value`.
+    /// The input's text (controlled): a value or any signal.
     #[prop(into, optional)]
-    input_value: Option<ValueBinding<String>>,
+    input_value: Option<Signal<String>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_input_value: Option<Out<String>>,
     #[prop(into, optional)] on_input_change: Option<Callback<String>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] menu_trigger: ComboBoxMenuTrigger,
@@ -102,6 +110,9 @@ pub fn ComboBox(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (input_value, on_input_change) =
+        ValueBinding::from_state_props(input_value, set_input_value, on_input_change);
+    let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let state = use_combobox_state(UseComboBoxStateInput {
         filter,
@@ -126,7 +137,8 @@ pub fn ComboBox(
 
     let popover = CapturedElement::new();
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let UseComboBoxReturn {
         input,
         input_props,
@@ -182,8 +194,8 @@ pub fn ComboBox(
             is_focus_visible,
         },
     );
+    let label = LabelContext::label(label_props).with_presence(label_presence);
     let field = FieldContext {
-        label: FieldLabelProps::label(label_props),
         description: description_props,
         error_message: error_message_props,
         is_invalid,
@@ -198,7 +210,7 @@ pub fn ComboBox(
     view! {
         <Provider value=ctx>
             <Provider value=listbox_parent>
-                <Provider value=field>
+                <Provider value=label><Provider value=field>
                     <Provider value=input>
                     <div
                         class=classes
@@ -210,7 +222,7 @@ pub fn ComboBox(
                         {children()}
                     </div>
                     </Provider>
-                </Provider>
+                </Provider></Provider>
             </Provider>
         </Provider>
     }
@@ -249,8 +261,12 @@ pub fn ComboBoxButton(
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn ComboBoxPopover(
-    #[prop(into, default = Signal::stored(PlacementX::Left))] placement_x: Signal<PlacementX>,
-    #[prop(into, default = Signal::stored(PlacementY::Below))] placement_y: Signal<PlacementY>,
+    /// Where the popover goes relative to the input.
+    #[prop(into, default = Signal::stored(Placement::BottomStart))]
+    placement: Signal<Placement>,
+    /// The popover's maximum height. Default: the room available.
+    #[prop(into, optional)]
+    max_height: Signal<Option<f64>>,
     /// The distance from the input, in pixels.
     #[prop(into, optional)]
     offset: Signal<f64>,
@@ -268,13 +284,14 @@ pub fn ComboBoxPopover(
     let ctx = expect_context::<ComboBoxCtx>();
     let UsePopoverReturn {
         props,
-        resolved_placement_x,
-        resolved_placement_y,
+        arrow_props,
+        placement: resolved_placement,
+        trigger_anchor_point,
         ..
     } = use_popover(UsePopoverInput {
         trigger: ctx.anchor,
-        placement_x,
-        placement_y,
+        placement,
+        max_height,
         offset,
         cross_offset,
         container_padding,
@@ -286,11 +303,15 @@ pub fn ComboBoxPopover(
         ctx.state,
         PopoverParts {
             props,
-            resolved_placement_x,
-            resolved_placement_y,
+            arrow_props,
+            placement: resolved_placement,
+            trigger_anchor_point,
+            trigger: ctx.anchor,
+            trigger_name: Some("ComboBox"),
         },
         PopoverModality::NonModal,
         ctx.popover,
+        super::popover::PopoverGroup::Root(CapturedElement::new()),
         // Non-modal: never a dialog.
         PopoverDialogLabel {
             aria_label: MaybeProp::default(),

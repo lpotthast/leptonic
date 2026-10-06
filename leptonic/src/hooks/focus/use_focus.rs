@@ -31,7 +31,7 @@ use crate::{
 //   Our `EventHandler` always attaches a listener but checks the disabled
 //   state inside the handler. The overhead is negligible.
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.
     pub is_disabled: Signal<bool>,
@@ -149,13 +149,15 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
                 }
             });
 
+            // Removing a focused element blurs it after its owner was disposed: the callbacks
+            // may be gone then (`try_run`).
             if e.expect_target() == e.expect_current_target() && !is_disabled {
                 if let Some(on_blur) = on_blur {
-                    on_blur.run(e);
+                    on_blur.try_run(e);
                 }
 
                 if let Some(on_focus_change) = on_focus_change {
-                    on_focus_change.run(false);
+                    on_focus_change.try_run(false);
                 }
             }
         };

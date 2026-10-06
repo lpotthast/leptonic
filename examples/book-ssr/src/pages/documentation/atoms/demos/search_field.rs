@@ -14,6 +14,18 @@ pub fn SearchFieldAtomDemo() -> impl IntoView {
     let (cleared, set_cleared) = signal(0_u32);
     let disabled = RwSignal::new(false);
 
+    let status = move || {
+        let submitted = submitted
+            .get()
+            .map_or_else(|| "Nothing submitted yet.".to_owned(), |query| format!("Submitted: \u{201c}{query}\u{201d}."));
+        let cleared = match cleared.get() {
+            0 => "Never cleared.".to_owned(),
+            1 => "Cleared 1 time.".to_owned(),
+            n => format!("Cleared {n} times."),
+        };
+        format!("{submitted} {cleared}")
+    };
+
     view! {
         // `data-empty` on the field hides the clear button while there is nothing to clear.
         <SearchField
@@ -24,23 +36,19 @@ pub fn SearchFieldAtomDemo() -> impl IntoView {
             classes=["demo-field", "demo-search-field"]
         >
             <Label classes="demo-field-label">"Search"</Label>
-            <div class="demo-search-field-row">
-                <Input classes=["demo-input", "demo-text-input", "demo-atom-input"]/>
-                <SearchFieldClearButton classes=["demo-btn", "demo-search-field-clear"]>"\u{2715}"</SearchFieldClearButton>
+            <div class="demo-input-row">
+                <Input classes="demo-atom-input"/>
+                // The button is labelled "Clear search"; the glyph is decoration.
+                <SearchFieldClearButton classes=["demo-btn", "demo-search-field-clear"]>
+                    <span aria-hidden="true">"\u{2715}"</span>
+                </SearchFieldClearButton>
             </div>
         </SearchField>
 
-        <p class="demo-status">
-            {move || match submitted.get() {
-                Some(query) => format!("Submitted: {query}"),
-                None => "Nothing submitted yet.".to_owned(),
-            }}
-            {move || format!(" Cleared {} times.", cleared.get())}
-        </p>
-        <p class="demo-caption">"Press Enter to submit, Escape to clear."</p>
+        <p class="demo-status">{status}</p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

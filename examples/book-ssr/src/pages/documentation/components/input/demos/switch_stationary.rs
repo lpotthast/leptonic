@@ -3,16 +3,16 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SwitchStationaryDemo() -> impl IntoView {
-    let (locked, set_locked) = signal(true);
+    let locked = RwSignal::new(true);
 
     view! {
         <Switch
-            state=(locked, set_locked)
+            is_selected=locked set_selected=locked
             variant=SwitchVariant::Stationary
             icons=SwitchIcons { off: icondata::BsUnlock, on: icondata::BsLock }
         >
             "Lock the layout"
         </Switch>
-        <p class="demo-status">{move || if locked.get() { "Locked" } else { "Unlocked" }}</p>
+        <p class="demo-status">{move || if locked.get() { "The layout is locked." } else { "The layout is unlocked." }}</p>
     }
 }

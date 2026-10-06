@@ -20,7 +20,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "A select built from the hooks, with a popover from "<Code inline=true>"use_overlay"</Code>
+                    "A select built from the hooks, with a popover from "
+                    <Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>
                     ". Open it with the mouse or the keyboard, or focus the trigger and type a letter."
                 </p>
 
@@ -32,7 +33,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
             <Section title="use_select_state">
                 <p>
                     "Owns everything a select knows: its options (a collection, see the "
-                    <Link href=routes::doc::listbox::Hook.materialize()>"listbox hooks"</Link>
+                    <Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link>
                     "), the selected keys, whether the popover is open, focus and validation. "
                     "The value is a list of keys in both modes: at most one in "<Code inline=true>"SelectMode::Single"</Code>
                     " (the default), any number in "<Code inline=true>"SelectMode::Multiple"</Code>"."
@@ -154,6 +155,9 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-select-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
+                            use leptonic::hooks::{Key, UseSelectStateInput, use_select_state};
+                            use leptos::{logging::log, prelude::*};
+
                             let state = use_select_state(UseSelectStateInput {
                                 default_value: vec![Key::from("banana")],
                                 on_change: Some(Callback::new(|keys: Vec<Key>| log!("{keys:?}"))),
@@ -189,7 +193,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="is_required" ty="bool" default="false">
                             "Whether a value is required. Enforced by the hidden select with native validation."
                         </ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name without a visible label."</ApiRow>
@@ -243,6 +247,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-select-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
+                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, use_button, use_select};
+
                             let UseSelectReturn {
                                 label_props,
                                 trigger,
@@ -252,7 +258,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 hidden_select,
                                 ..
                             } = use_select(UseSelectInput {
-                                has_label: true,
+                                has_label: true.into(),
                                 name: Some("fruit".to_owned()),
                                 ..UseSelectInput::new(state)
                             });
@@ -282,7 +288,10 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 </ul>
 
                 <Section title="Input" id="use-hidden-select-input">
-                    <p>"Usually "<Code inline=true>"use_select"</Code>"\u{2019}s "<Code inline=true>"hidden_select"</Code>"."</p>
+                    <p>
+                        "Usually "<Code inline=true>"use_select"</Code>"\u{2019}s "<Code inline=true>"hidden_select"</Code>
+                        ". The struct has no constructor, so building it yourself means setting every field."
+                    </p>
 
                     <ApiTable kind=ApiKind::Input of="UseHiddenSelectInput">
                         <ApiRow name="state" ty="SelectState">"The select\u{2019}s state. Required."</ApiRow>
@@ -331,6 +340,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-hidden-select-example">
                     <Code language=Language::Rust>
                         {indoc!(r"
+                            use leptonic::hooks::{IntoAttrs, UseHiddenSelectReturn, use_hidden_select};
+
                             let UseHiddenSelectReturn { container_props, select_props, options, .. } =
                                 use_hidden_select(hidden_select);
 
@@ -348,32 +359,13 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Keyboard">
-                <p>"On the closed trigger:"</p>
-
-                <KeyboardTable>
-                    <KeyRow keys="Enter / Space / ArrowDown">"Open the popover and focus the selected option, or else the first one."</KeyRow>
-                    <KeyRow keys="ArrowUp">"Open the popover and focus the selected option, or else the last one."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Select the previous or next option without opening (single selection)."</KeyRow>
-                    <KeyRow keys="Any character">"Type-ahead: select the first option starting with the typed text (single selection)."</KeyRow>
-                </KeyboardTable>
-
-                <p>"In the open popover:"</p>
-
-                <KeyboardTable>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move between options."</KeyRow>
-                    <KeyRow keys="Home / End">"Jump to the first or last option."</KeyRow>
-                    <KeyRow keys="Enter / Space">"Select the focused option."</KeyRow>
-                    <KeyRow keys="Escape">"Close the popover."</KeyRow>
-                    <KeyRow keys="Any character">"Type-ahead: focus the first option starting with the typed text."</KeyRow>
-                </KeyboardTable>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Select.materialize()>"Select overview"</Link></li>
-                <li><Link href=routes::doc::select::Component.materialize()>"Select component"</Link></li>
-                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox hooks"</Link></li>
-                <li><Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
+                <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
+                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+                <li><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,87 +1,56 @@
-use leptonic::{
-    atoms::focus_ring::FocusRing,
-    components::prelude::*,
-    hooks::*,
-    utils::Propagation,
-    utils::{classes::Classes, css::em},
-};
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
+use ringbuf::{
+    HeapRb,
+    traits::{Consumer, Observer, RingBuffer},
+};
 
 #[component]
 pub fn FocusableDemo() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
-    let (exclude_from_tab, set_exclude_from_tab) = signal(false);
-    let (focus_count, set_focus_count) = signal(0);
-    let (blur_count, set_blur_count) = signal(0);
+    let disabled = RwSignal::new(false);
+    let exclude_from_tab_order = RwSignal::new(false);
     let (is_focused, set_is_focused) = signal(false);
-    let (key_events, set_key_events) = signal(Vec::<String>::new());
+    let (keys, set_keys) = signal(HeapRb::<String>::new(50));
 
+    // A scrollable region must be focusable, so keyboard users can scroll it with the arrow keys.
     let UseFocusableReturn {
         props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
         is_disabled: disabled.into(),
-        auto_focus: false,
-        exclude_from_tab_order: exclude_from_tab.into(),
-        on_focus: Some(Callback::new(move |_| {
-            set_focus_count.update(|c| *c += 1);
-        })),
-        on_blur: Some(Callback::new(move |_| {
-            set_blur_count.update(|c| *c += 1);
-        })),
-        on_focus_change: Some(Callback::new(move |focused: bool| {
-            set_is_focused.set(focused);
-        })),
+        exclude_from_tab_order: exclude_from_tab_order.into(),
+        on_focus_change: Some(Callback::new(move |focused| set_is_focused.set(focused))),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
-            set_key_events.update(|events| {
-                events.push(format!("Key: {}", e.key_value()));
-                if events.len() > 5 {
-                    events.remove(0);
-                }
+            // The hook doesn't prevent the default: the arrow keys still scroll the region.
+            set_keys.update(|keys| {
+                keys.push_overwrite(e.key_value());
             });
-            e.continue_propagation();
         })),
-        on_key_up: None,
         ..Default::default()
     });
-    let attrs = props.into_attrs();
 
     view! {
-        <div class=Classes::from("demo-flex-center-row")>
-            <FocusRing>
-                <div
-                    {..attrs}
-                    role="button"
-                    class="demo-focus-target"
-                >
-                    "Custom Focusable Element"
-                </div>
-            </FocusRing>
-
-            <Button on_press=move |_| focus_handle.focus()>"Click to focus"</Button>
+        <div role="region" aria-label="Release notes" class="demo-focusable-region" {..props.into_attrs()}>
+            <p><strong>"Release notes"</strong></p>
+            <p>"Version 3 adds keyboard support to every collection: arrow keys move between items, Home and End jump to the ends."</p>
+            <p>"Dialogs now restore focus to the element that opened them, and tooltips open on keyboard focus."</p>
+            <p>"Focus rings show only for keyboard users, so pointer users no longer see outlines after a click."</p>
+            <p>"Screen reader users hear a description of long-press actions."</p>
         </div>
 
-        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) classes="demo-mt-1">
-            <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
-
-            <Checkbox state=(exclude_from_tab, set_exclude_from_tab) classes="demo-form-row">"Exclude from tab order (tabindex=-1)"</Checkbox>
-        </Stack>
-
-        <div class=Classes::from("demo-flex-gap")>
-            <p>"Focus count: " { move || focus_count.get() }</p>
-            <p>"Blur count: " { move || blur_count.get() }</p>
-            <p class=Classes::builder().with_toggle(is_focused, "demo-state-active", "demo-state-inactive").build()>
-                { move || if is_focused.get() { "Focused" } else { "Not focused" } }
-            </p>
+        <div class="demo-controls">
+            <Button on_press=move |_| focus_handle.focus()>"Focus the notes"</Button>
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=exclude_from_tab_order set_selected=exclude_from_tab_order>"Exclude from tab order"</Checkbox>
         </div>
 
-        <p>"Last key events: " { move || {
-            let events = key_events.get();
-            if events.is_empty() {
-                "(none)".to_string()
-            } else {
-                events.join(", ")
-            }
-        }}</p>
+        <p class="demo-status">
+            {move || if is_focused.get() { "The notes have focus." } else { "The notes don\u{2019}t have focus." }}
+        </p>
+
+        <p>"Last " {move || keys.with(Observer::occupied_len)} " keys:"</p>
+        <pre class="demo-event-log">
+            {move || keys.with(|keys| keys.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+        </pre>
     }
 }

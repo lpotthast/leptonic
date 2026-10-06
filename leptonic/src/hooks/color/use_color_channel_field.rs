@@ -1,73 +1,57 @@
-// Upstream: react-aria/src/color/useColorChannelField.ts @ 6f664fe911
+// Upstream: react-aria/src/color/useColorChannelField.ts @ 99e6102368
 use leptos::prelude::*;
 
-use super::use_color_channel_field_state::UseColorChannelFieldStateReturn;
+use super::use_color_channel_field_state::ColorChannelFieldState;
 use crate::{
-    hooks::form::{
-        use_form_validation_state::ValidationBehavior,
-        use_number_field::{UseNumberFieldInput, UseNumberFieldReturn, use_number_field},
-        use_number_field_state::{UseNumberFieldStateInput, use_number_field_state},
-    },
-    utils::{ValueBinding, color::ColorValue},
+    hooks::form::use_number_field::{UseNumberFieldInput, UseNumberFieldReturn, use_number_field},
+    utils::color::ColorValue,
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorChannelField.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Delegates to `use_number_field_state` (the channel value bound as its value) +
-//   `use_number_field` with channel-derived parameters.
-//   Auto-generates aria-label from channel name if none provided.
+// ## API DIFFERENCES
+// - Takes the number field's input around the state's number field (react-aria: the props
+//   object, minus the value props).
+//
+// =============================================================================
 
-/// Input parameters for `use_color_channel_field`.
+/// Input of [`use_color_channel_field`]: the state, and the number field's other settings.
 #[derive(Clone)]
 pub struct UseColorChannelFieldInput<C: ColorValue> {
-    /// The channel field state (from `use_color_channel_field_state`).
-    pub state: UseColorChannelFieldStateReturn<C>,
-
-    /// Whether the field is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the field is read-only.
-    pub is_read_only: Signal<bool>,
-
-    /// An optional aria-label. If not provided, the channel name is used.
-    pub aria_label: Option<&'static str>,
+    pub state: ColorChannelFieldState<C>,
+    /// The number field's settings (its `state` is replaced by the channel's).
+    pub field: UseNumberFieldInput<f64>,
 }
 
-/// Creates behavior and ARIA props for a single-channel numeric input.
-///
-/// This is a thin wrapper around `use_number_field_state` + `use_number_field`
-/// that provides channel-specific default labels and range parameters.
+impl<C: ColorValue> UseColorChannelFieldInput<C> {
+    pub fn new(state: ColorChannelFieldState<C>) -> Self {
+        Self {
+            state,
+            field: UseNumberFieldInput::new(state.number),
+        }
+    }
+}
+
+/// Behavior and accessibility of a field editing one channel of a color: a number field whose
+/// label defaults to the channel's name when there is no other label.
 pub fn use_color_channel_field<C: ColorValue>(
     input: UseColorChannelFieldInput<C>,
 ) -> UseNumberFieldReturn {
-    let UseColorChannelFieldInput {
-        state,
-        is_disabled,
-        is_read_only,
-        aria_label,
-    } = input;
-
-    let label = aria_label.unwrap_or_else(|| C::get_channel_name(state.channel));
-
-    // The number field edits the channel value directly.
-    let number_state = use_number_field_state(UseNumberFieldStateInput {
-        value: Some(ValueBinding::new(
-            state.channel_value,
-            state.set_channel_value,
-        )),
-        min_value: Signal::stored(Some(state.min_value)),
-        max_value: Signal::stored(Some(state.max_value)),
-        step: Signal::stored(Some(state.step)),
-        is_disabled,
-        is_read_only,
-        validation_behavior: ValidationBehavior::Aria,
-        ..UseNumberFieldStateInput::default()
-    });
-
+    let UseColorChannelFieldInput { state, field } = input;
+    let channel = state.channel;
+    let aria_label = field.aria_label;
+    let has_label = field.has_label;
+    let has_labelledby = field.aria_labelledby.is_some();
     use_number_field(UseNumberFieldInput {
-        aria_label: label.into(),
-        ..UseNumberFieldInput::new(number_state)
+        state: state.number,
+        aria_label: MaybeProp::derive(move || {
+            aria_label.get().or_else(|| {
+                (!has_label.get() && !has_labelledby)
+                    .then(|| C::get_channel_name(channel).to_owned())
+            })
+        }),
+        ..field
     })
 }

@@ -3,8 +3,8 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ToolbarVerticalDemo() -> impl IntoView {
-    let vertical_toolbar = use_toolbar(UseToolbarInput {
-        aria_label: "Actions".into(),
+    let toolbar = use_toolbar(UseToolbarInput {
+        aria_label: "File".into(),
         orientation: Orientation::Vertical,
         ..UseToolbarInput::default()
     });
@@ -12,14 +12,17 @@ pub fn ToolbarVerticalDemo() -> impl IntoView {
 
     // ArrowUp and ArrowDown move focus between the buttons; Tab leaves the toolbar.
     view! {
-        <div class="demo-flex-center-row">
-            <div {..vertical_toolbar.props.into_attrs()} class="demo-toolbar demo-toolbar-vertical">
-                <ActionButton name="New" last_action=last_action/>
-                <ActionButton name="Save" last_action=last_action/>
-                <ActionButton name="Export" last_action=last_action/>
-            </div>
-            <p>"Last action: " <strong>{move || last_action.get().unwrap_or("none")}</strong></p>
+        <div {..toolbar.props.into_attrs()} class="demo-toolbar demo-toolbar-vertical">
+            <ActionButton name="New" last_action/>
+            <ActionButton name="Save" last_action/>
+            <ActionButton name="Export" last_action/>
         </div>
+        <p class="demo-status">
+            {move || match last_action.get() {
+                Some(action) => format!("Last action: {action}."),
+                None => "No action yet.".to_owned(),
+            }}
+        </p>
     }
 }
 
@@ -31,5 +34,15 @@ fn ActionButton(name: &'static str, last_action: RwSignal<Option<&'static str>>)
         ..UseButtonInput::default()
     });
     let (attrs, styles) = button.props.into_parts();
-    view! { <button {..attrs} style=styles class="demo-toolbar-button">{name}</button> }
+    view! {
+        <button
+            {..attrs}
+            style=styles
+            class="demo-toolbar-button"
+            data-hovered=button.is_hovered
+            data-focus-visible=button.is_focus_visible
+        >
+            {name}
+        </button>
+    }
 }

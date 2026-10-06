@@ -1,0 +1,415 @@
+// Pickers: demos of the Combobox and Select concepts.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// -- Combobox --
+
+// The combobox: a label above an input with an attached button. `.demo-combo-input` and `.demo-combo-button` are
+// the hook demo's, styled through native state (the hooks render no data attributes).
+.demo-combo {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    width: 16em;
+    max-width: 100%;
+}
+
+.demo-combo-label {
+    font-weight: 600;
+}
+
+.demo-combo-field {
+    display: flex;
+}
+
+.demo-combo-input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-right: none;
+    border-radius: var(--book-radius-m) 0 0 var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+
+    &:focus {
+        border-color: var(--brand-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+.demo-combo-button {
+    padding: 0 var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: 0 var(--book-radius-m) var(--book-radius-m) 0;
+    background: var(--book-surface-color-raised);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        color: var(--book-brand-text-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+}
+
+
+// The atom demo's input and button, styled through the data attributes of the `Input` atom and the
+// `ComboBoxButton` (`data-open`, `data-pressed`) and the `ComboBox` (`data-disabled`). The button renders no
+// hover attribute, so `:hover` stands in.
+.demo-combo-atom-input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-right: none;
+    border-radius: var(--book-radius-m) 0 0 var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+
+    &[data-hovered], &[data-focused] { border-color: var(--brand-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &[data-invalid] { border-color: var(--danger-color); }
+    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+}
+
+.demo-combo-atom-button {
+    padding: 0 var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: 0 var(--book-radius-m) var(--book-radius-m) 0;
+    background: var(--book-surface-color-raised);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    cursor: pointer;
+
+    &:hover { color: var(--book-brand-text-color); }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-open] span { display: inline-block; transform: rotate(180deg); }
+
+    .demo-combo[data-disabled] & { cursor: not-allowed; opacity: 0.5; }
+}
+
+// The popover's frame. The atom positions it; the hook demo places it below the field with `demo-combo-below`.
+.demo-combo-popover {
+    min-width: 16em;
+    max-height: 15em;
+    overflow-y: auto;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-combo-below {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--book-space-xs);
+}
+
+// Focus stays in the input while the listbox shows which option is focused; it moves into the listbox only when
+// the list is focused directly.
+.demo-combo-listbox {
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+}
+
+// An option of the hook demo, styled through the ARIA attributes `use_option` sets and `data-focused`, which the
+// demo renders from the hook's `is_focused`.
+.demo-combo-option {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &[data-focused] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[aria-selected="true"] {
+        font-weight: 600;
+    }
+
+    &[aria-disabled="true"] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+.demo-combo-check {
+    width: 1em;
+    color: var(--book-brand-text-color);
+}
+
+// An option of the atom demo, styled through the data attributes `ListBoxItem` renders.
+.demo-combo-item {
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &[data-focused] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[data-selected] {
+        color: var(--book-brand-text-color);
+        font-weight: 600;
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+
+
+// -- Select hooks --
+
+// The label above the trigger, the popover positioned below it (inline, no portal).
+.demo-select {
+    position: relative;
+    display: inline-block;
+    min-width: 200px;
+}
+
+.demo-select-label {
+    display: block;
+    margin-bottom: var(--book-space-xs);
+}
+
+.demo-select-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--book-space-m);
+    width: 100%;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--brand-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &:disabled { cursor: not-allowed; opacity: 0.5; }
+}
+
+.demo-select-popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: var(--book-space-xs);
+    overflow: hidden;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-select-option {
+    padding: var(--book-space-s) var(--book-space-m);
+    cursor: pointer;
+
+    // `aria-selected` comes from `use_option`; the demo renders `data-focused` from the hook's `is_focused`.
+    &[data-focused] { background: var(--brand-color-subtle); }
+    &[aria-selected="true"] { background: var(--brand-color); color: var(--book-on-brand-color); }
+
+}
+
+// -- Select atoms --
+
+// The select: label, trigger and description, stacked.
+.demo-sel {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    width: 16em;
+    max-width: 100%;
+}
+
+.demo-sel-label {
+    font-weight: 600;
+    cursor: default;
+}
+
+.demo-sel-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    // `SelectTrigger` renders no hover attribute, so `:hover` stands in.
+    &:hover:not([data-disabled]),
+    &[data-open] {
+        border-color: var(--brand-color);
+    }
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+
+    &[data-pressed] {
+        background: var(--book-surface-color-raised);
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    &[data-invalid] {
+        border-color: var(--danger-color);
+    }
+}
+
+// The selected option's text, or the placeholder.
+.demo-sel-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &[data-placeholder] {
+        color: var(--book-muted-color);
+    }
+}
+
+.demo-sel-caret {
+    display: inline-block;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+
+    [data-open] > & {
+        transform: rotate(180deg);
+    }
+}
+
+.demo-sel-description {
+    display: block;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+}
+
+// The popover is rendered into the document body and positioned by the atom.
+.demo-sel-popover {
+    min-width: 16em;
+    max-height: 18em;
+    overflow-y: auto;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+// Focus moves to the options; the listbox itself only has it while it is empty.
+.demo-sel-listbox {
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+}
+
+.demo-sel-heading {
+    padding: var(--book-space-s) var(--book-space-s) var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+// An option. The option under the pointer or the arrow keys has `data-focused`; `data-focus-visible` is
+// added while the keyboard is in use.
+.demo-sel-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--book-space-m);
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &[data-focused] {
+        background: var(--brand-color-subtle);
+    }
+
+    // Replaces the theme's generic focus ring, which would be clipped by the popover.
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[data-selected] {
+        color: var(--book-brand-text-color);
+        font-weight: 600;
+    }
+
+    &[data-selected]::after {
+        content: "\2713";
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+.demo-sel-note {
+    margin-left: auto;
+    font-size: var(--book-font-size-s);
+}
+
+// The form around the select in the form demo.
+.demo-sel-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+}

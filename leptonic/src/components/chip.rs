@@ -1,10 +1,9 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::prelude::*;
-use web_sys::MouseEvent;
 
 use crate::{
-    Out,
+    atoms::button::Button,
     components::icon::Icon,
     utils::{classes::Classes, styles::Styles},
 };
@@ -39,33 +38,35 @@ impl Display for ChipColor {
     }
 }
 
+/// A small label, optionally with a button dismissing it.
 #[component]
 pub fn Chip(
-    #[prop(into, optional)] color: Option<Signal<ChipColor>>,
-    #[prop(into, optional)] dismissible: Option<Out<MouseEvent, LocalStorage>>,
+    #[prop(into, optional)] color: Signal<ChipColor>,
+    /// Called when the dismiss button is pressed. With it, the chip renders a dismiss button.
+    #[prop(into, optional)]
+    on_dismiss: Option<Callback<()>>,
+    /// Names the dismiss button. Default: "Dismiss".
+    #[prop(into, optional)]
+    dismiss_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let color = color.unwrap_or_default();
-
-    // TODO: use use_press instead of on:click.
+    let dismiss_label = MaybeProp::derive(move || {
+        Some(dismiss_label.get().unwrap_or_else(|| "Dismiss".to_owned()))
+    });
     view! {
-        <div class=classes.add("leptonic-chip") style=styles data-color=move || { color.get().as_str() }>
+        <div class=classes.add("leptonic-chip") style=styles data-color=move || color.get().as_str()>
             {children()}
-            {match dismissible {
-                Some(callback) => {
-                    view! {
-                        <Icon
-                            attr:class="dismiss"
-                            icon=icondata::BsXCircleFill
-                            on:click=move |e| callback.set(e)
-                        />
-                    }
-                        .into_any()
-                }
-                None => ().into_any(),
-            }}
+            {on_dismiss.map(|on_dismiss| view! {
+                <Button
+                    classes="leptonic-chip-dismiss"
+                    aria_label=dismiss_label
+                    on_press=move |_| on_dismiss.run(())
+                >
+                    <Icon icon=icondata::BsXCircleFill />
+                </Button>
+            })}
         </div>
     }
 }

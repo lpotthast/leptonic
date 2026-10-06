@@ -19,8 +19,8 @@ pub fn AppBar(
         None => styles,
     };
     view! {
-        <div class=classes.add("leptonic-app-bar") style=styles>
+        <header class=classes.add("leptonic-app-bar") style=styles>
             {children()}
-        </div>
+        </header>
     }
 }

@@ -3,12 +3,15 @@ use leptos::prelude::*;
 
 use super::form::use_validation_behavior;
 use crate::{
+    Out,
     hooks::{
-        IntoAttrs, ToggleOptions, ToggleState, UseHoverInput, UseSwitchInput, UseToggleStateInput,
-        ValidateFn, ValidationBehavior, use_hover, use_switch, use_toggle_state,
+        IntoAttrs, ToggleOptions, UseHoverInput, UseSwitchInput, UseToggleStateInput, ValidateFn,
+        ValidationBehavior, use_hover, use_switch, use_toggle_state,
     },
-    utils::data_attributes::flag,
-    utils::{classes::Classes, styles::Styles, visually_hidden::visually_hidden_styles},
+    utils::{
+        ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        visually_hidden::visually_hidden_styles,
+    },
 };
 
 // =============================================================================
@@ -16,8 +19,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - No controlled `isSelected` (hook-owned state, project-wide convention): a switch bound to
-//   app state takes a `state` (`ToggleState::from(rw_signal)`, or `ToggleState::new`).
+// - Selection (C4): `default_selected` + `on_change`, or `is_selected` + `set_selected`
+//   (react-aria: `isSelected` + `onChange`).
 // - Render props become `data-*` attributes plus plain children.
 //
 // =============================================================================
@@ -35,10 +38,12 @@ pub fn Switch(
     /// Called when the switch is turned on or off.
     #[prop(into, optional)]
     on_change: Option<Callback<bool>>,
-    /// External selection state, replacing `default_selected`. Bind a signal with
-    /// `state=ToggleState::from(rw_signal)`.
+    /// Whether the toggle is selected (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ToggleState>,
+    is_selected: Option<Signal<bool>>,
+    /// Receives the selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -65,15 +70,13 @@ pub fn Switch(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let validation_behavior = use_validation_behavior(validation_behavior);
-    let state = if let Some(state) = state {
-        on_change.map_or(state, |on_change| state.with_on_change(on_change))
-    } else {
-        use_toggle_state(UseToggleStateInput {
-            default_selected,
-            on_change,
-            is_read_only,
-        })
-    };
+    let (value, on_change) = ValueBinding::from_state_props(is_selected, set_selected, on_change);
+    let state = use_toggle_state(UseToggleStateInput {
+        default_selected,
+        value,
+        on_change,
+        is_read_only,
+    });
     let switch = use_switch(UseSwitchInput {
         options: ToggleOptions {
             id,

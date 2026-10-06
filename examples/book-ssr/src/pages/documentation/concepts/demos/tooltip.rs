@@ -6,11 +6,12 @@ use leptos::prelude::*;
 #[component]
 pub fn TooltipConceptDemo() -> impl IntoView {
     view! {
-        <div class="demo-overlays-stage">
-            // The tooltip describes the button while it is hovered or focused.
-            <TooltipTrigger delay=Duration::from_millis(300)>
-                <Button classes="demo-btn-primary">"Hover me"</Button>
-                <Tooltip offset=4.0 classes="demo-overlays-tooltip">"This is a tooltip!"</Tooltip>
+        <div class="demo-tooltip-stage">
+            // The tooltip describes the button while it is hovered or focused. Hovering opens it after
+            // half a second (default: 1.5 s).
+            <TooltipTrigger delay=Duration::from_millis(500)>
+                <Button classes="demo-btn">"Publish"</Button>
+                <Tooltip offset=6.0 classes="demo-tooltip">"Make the post visible to everyone"</Tooltip>
             </TooltipTrigger>
         </div>
     }

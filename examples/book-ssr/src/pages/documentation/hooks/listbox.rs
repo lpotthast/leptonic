@@ -10,11 +10,9 @@ pub fn PageUseListbox() -> impl IntoView {
     view! {
         <DocPage title="Listbox Hooks">
             <p>
-                "The listbox hooks build an accessible listbox from your own markup: single or multiple selection, keyboard "
-                "navigation and type-ahead. "<Code inline=true>"use_listbox"</Code>" handles the list, "
-                <Code inline=true>"use_option"</Code>" each option and "<Code inline=true>"use_listbox_section"</Code>
-                " groups of options. See the "<Link href=routes::doc::Listbox.materialize()>"Listbox overview"</Link>
-                " for concept guidance."
+                "The listbox hooks build a listbox, its options and sections from your own markup. See the "
+                <Link href=routes::doc::Listbox.materialize()>"Listbox overview"</Link>" for concept guidance and "
+                "keyboard interaction."
             </p>
 
             <ReactAria hook="useListBox"/>
@@ -42,14 +40,26 @@ pub fn PageUseListbox() -> impl IntoView {
                 </p>
 
                 <p>
-                    "Build a flat collection from a list of values with "<Code inline=true>"use_list_collection"</Code>
-                    ", or use "<Code inline=true>"use_collection"</Code>" for sections, headers and disabled items. "
-                    "Then create the list state with "<Code inline=true>"use_list_state"</Code>
-                    ", which owns the selection and the focused option."
+                    "Build a flat collection from a list of values with "
+                    <Link href=format!("{}#use-list-collection", routes::doc::CollectionState.materialize())>
+                        <Code inline=true>"use_list_collection"</Code>
+                    </Link>", or use "
+                    <Link href=format!("{}#use-collection", routes::doc::CollectionState.materialize())>
+                        <Code inline=true>"use_collection"</Code>
+                    </Link>" for sections, headers and disabled items. Then create the list state with "
+                    <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>
+                        <Code inline=true>"use_list_state"</Code>
+                    </Link>", which owns the selection and the focused option."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::{
+                            Key, SelectionMode, use_list_collection, use_list_state,
+                            collections::{SelectionOptions, UseListStateInput},
+                        };
+                        use leptos::prelude::*;
+
                         let fruits = Signal::stored(vec![("apple", "Apple"), ("banana", "Banana")]);
                         let collection = use_list_collection(
                             fruits,
@@ -69,46 +79,13 @@ pub fn PageUseListbox() -> impl IntoView {
                 <p>
                     "Render the options from the same data, in the same order. Read the selection with "
                     <Code inline=true>"state.selection.selected_keys()"</Code>", change it with methods like "
-                    <Code inline=true>"set_selected_keys"</Code>", or pass "<Code inline=true>"on_selection_change"</Code>
-                    " to hear about every change. The rest of "<Code inline=true>"SelectionOptions"</Code>":"
+                    <Code inline=true>"set_selected_keys"</Code>", or bind it to app state with "
+                    <Code inline=true>"selection"</Code>". "<Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link>
+                    " documents the collection builders, "
+                    <Link href=format!("{}#selectionoptions", routes::doc::CollectionState.materialize())>"SelectionOptions"</Link>
+                    " and the list state."
                 </p>
 
-                <ApiTable kind=ApiKind::Input of="SelectionOptions">
-                    <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
-                        "Whether nothing, one or many options can be selected, see "<a href="#selection-modes">"Selection Modes"</a>"."
-                    </ApiRow>
-                    <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
-                        "How pointer presses change the selection: "<Code inline=true>"Toggle"</Code>" the option, or "
-                        <Code inline=true>"Replace"</Code>" the selection with it."
-                    </ApiRow>
-                    <ApiRow name="default_selection" ty="Selection" default="empty">
-                        "The initial selection: "<Code inline=true>"Selection::keys([..])"</Code>" or "<Code inline=true>"Selection::All"</Code>"."
-                    </ApiRow>
-                    <ApiRow name="selection" ty="Option<ValueBinding<Selection>>" default="None">
-                        "The selection as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_selection"</Code>": the collection shows it, and selecting writes it."
-                    </ApiRow>
-                    <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">
-                        "Called with the new selection whenever it changes."
-                    </ApiRow>
-                    <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
-                        "Prevent deselecting the last selected option."
-                    </ApiRow>
-                    <ApiRow name="disabled_keys" ty="Signal<HashSet<Key>>" default="empty">
-                        "Options that can\u{2019}t be selected."
-                    </ApiRow>
-                    <ApiRow name="disabled_behavior" ty="DisabledBehavior" default="All">
-                        <Code inline=true>"All"</Code>": disabled options can\u{2019}t be focused or used either. "
-                        <Code inline=true>"Selection"</Code>": they can be focused and have actions, but can\u{2019}t be selected."
-                    </ApiRow>
-                    <ApiRow name="allow_duplicate_selection_events" ty="bool" default="false">
-                        "Call "<Code inline=true>"on_selection_change"</Code>" even when an interaction leaves the selection unchanged."
-                    </ApiRow>
-                </ApiTable>
-
-                <p>
-                    <Link href=routes::doc::Collections.materialize()>"Collections"</Link>
-                    " explains the selection state in more detail."
-                </p>
             </Section>
 
             <Section title="use_listbox">
@@ -132,7 +109,7 @@ pub fn PageUseListbox() -> impl IntoView {
                             "the listbox, e.g. a select trigger\u{2019}s "<Code inline=true>"aria-controls"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the listbox."</ApiRow>
-                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        <ApiRow name="aria_labelledby" ty="Signal<Option<String>>" default="None">
                             "The id of a visible label. The hook renders no label itself."
                         </ApiRow>
                         <ApiRow name="orientation" ty="Orientation" default="Vertical">
@@ -146,7 +123,7 @@ pub fn PageUseListbox() -> impl IntoView {
                             "Replaces the list keyboard navigation."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="CollectionOptions::default()">
-                            "Keyboard and focus behavior, see "<a href="#collectionoptions">"CollectionOptions"</a>"."
+                            "Keyboard and focus behavior, see "<Link href=format!("{}#collectionoptions", routes::doc::CollectionState.materialize())>"CollectionOptions"</Link>"."
                         </ApiRow>
                         <ApiRow name="should_select_on_press_up" ty="bool" default="false">
                             "Select when the press ends instead of when it starts, as in select popovers."
@@ -163,44 +140,6 @@ pub fn PageUseListbox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
                             "Called with whether focus is within the listbox."
-                        </ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="CollectionOptions">
-                    <p>"Shared by all collection hooks. All fields have defaults."</p>
-
-                    <ApiTable kind=ApiKind::Input of="CollectionOptions">
-                        <ApiRow name="auto_focus" ty="Signal<Option<AutoFocus>>" default="None">
-                            "Move focus into the listbox when it mounts: to the "<Code inline=true>"Selected"</Code>" option (or the "
-                            "listbox itself), the "<Code inline=true>"First"</Code>" or the "<Code inline=true>"Last"</Code>" one. A selected option always takes precedence."
-                        </ApiRow>
-                        <ApiRow name="should_focus_wrap" ty="bool" default="false">"Arrow keys wrap around at the ends."</ApiRow>
-                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">
-                            "Keep "<Keys keys="Escape"/>" from clearing the selection."
-                        </ApiRow>
-                        <ApiRow name="disallow_select_all" ty="bool" default="false">
-                            "Disable "<Keys keys="Control + A / Command + A"/>"."
-                        </ApiRow>
-                        <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">
-                            <Code inline=true>"None"</Code>" leaves "<Keys keys="Escape"/>" alone, so it can close a surrounding popover."
-                        </ApiRow>
-                        <ApiRow name="select_on_focus" ty="Option<bool>" default="None">
-                            "Select options as keyboard focus moves to them. "<Code inline=true>"None"</Code>": only in "
-                            <Code inline=true>"Replace"</Code>" selection behavior."
-                        </ApiRow>
-                        <ApiRow name="disallow_type_ahead" ty="bool" default="false">"Turn off type-ahead."</ApiRow>
-                        <ApiRow name="allows_tab_navigation" ty="bool" default="false">
-                            "Let "<Keys keys="Tab"/>" move between focusable elements inside options instead of leaving the listbox."
-                        </ApiRow>
-                        <ApiRow name="should_use_virtual_focus" ty="bool" default="false">
-                            "DOM focus stays elsewhere (e.g. in a combo box input) and options are focused virtually, through "
-                            <Code inline=true>"aria-activedescendant"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="link_behavior" ty="LinkBehavior" default="Action">
-                            "How options with a link behave. In "<Code inline=true>"Toggle"</Code>" selection behavior, "
-                            <Code inline=true>"use_listbox"</Code>" turns "<Code inline=true>"Action"</Code>" into "
-                            <Code inline=true>"Override"</Code>": pressing a link option opens it."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -244,8 +183,8 @@ pub fn PageUseListbox() -> impl IntoView {
                 <p>
                     "Renders one option. It only needs the listbox data and the option\u{2019}s key. Whether it is "
                     "selected, focused or disabled, its text and its link all come from the list state and the collection. "
-                    "It handles selection on press (with "<Keys keys="Shift"/>" and "<Keys keys="Control / Command"/>
-                    " for ranges and individual options), focus and hover."
+                    "It handles selection on press ("<Keys keys="Shift"/>" + click selects a range, "<Keys keys="Control"/>
+                    " + click, or "<Keys keys="Command"/>" + click on macOS, an individual option), focus and hover."
                 </p>
 
                 <Section title="Input" id="use-option-input">
@@ -361,32 +300,12 @@ pub fn PageUseListbox() -> impl IntoView {
                 </DocTable>
             </Section>
 
-            <Section title="Keyboard">
-                <p>
-                    "The listbox is a single tab stop: "<Keys keys="Tab"/>" moves focus into it and back out. Disabled options are "
-                    "skipped. Arrow keys follow "<Code inline=true>"orientation"</Code>"; in a vertical listbox:"
-                </p>
-
-                <KeyboardTable>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move focus to the next or previous option."</KeyRow>
-                    <KeyRow keys="Home / End">"Move focus to the first or last option."</KeyRow>
-                    <KeyRow keys="PageDown / PageUp">"Move focus by one page."</KeyRow>
-                    <KeyRow keys="Shift + ArrowDown / Shift + ArrowUp">"Extend the selection (multiple selection)."</KeyRow>
-                    <KeyRow keys="Space">"Toggle the selection of the focused option."</KeyRow>
-                    <KeyRow keys="Enter">
-                        "Select the focused option, or perform its action if the listbox has an "<Code inline=true>"on_action"</Code>"."
-                    </KeyRow>
-                    <KeyRow keys="Control + A / Command + A">"Select all options (multiple selection)."</KeyRow>
-                    <KeyRow keys="Escape">"Clear the selection."</KeyRow>
-                    <KeyRow keys="Any character">"Type-ahead: focus the next option whose text starts with the typed text."</KeyRow>
-                </KeyboardTable>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Listbox.materialize()>"Listbox overview"</Link></li>
-                <li><Link href=routes::doc::select::Hook.materialize()>"Select hooks"</Link></li>
-                <li><Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
-                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+                <li><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></li>
+                <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
+                <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>
     }

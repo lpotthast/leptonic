@@ -25,8 +25,6 @@
   }
 
   .fill {
-    position: absolute;
-    left: 0;
     height: var(--slider-fill-height);
     border-radius: var(--slider-fill-height);
     background-color: var(--slider-fill-background-color);
@@ -50,13 +48,18 @@
       transition: all var(--slider-thumb-transition-speed);
     }
 
-    &:hover,
-    &:active,
-    &:focus,
+    &[data-hovered],
+    &[data-focus-visible],
     &[data-dragging] {
       &:before {
         opacity: var(--slider-thumb-halo-opacity);
       }
+    }
+
+    // Keyboard focus (the thumb's hidden input has it): a ring besides the halo.
+    &[data-focus-visible] {
+      outline: 2px solid var(--brand-color);
+      outline-offset: 2px;
     }
 
     &[data-dragging] {
@@ -127,7 +130,7 @@
       top: calc(var(--slider-mark-size) * -1);
       border: var(--slider-mark-size) solid var(--slider-mark-color);
       border-radius: var(--slider-mark-size);
-      margin-left: calc(var(--slider-mark-size) * -1);
+      margin-inline-start: calc(var(--slider-mark-size) * -1);
       height: 0;
       width: 0;
 
@@ -138,11 +141,62 @@
         margin-top: calc(var(--slider-thumb-size) * 0.75);;
       }
 
-      &.in-range {
+      &[data-in-range] {
         border-color: var(--slider-mark-color-in-range);
 
         .title {
           color: var(--slider-mark-title-color-in-range);
+        }
+      }
+    }
+  }
+
+  &[data-disabled] {
+    cursor: default;
+    opacity: 0.5;
+
+    .thumb:before {
+      opacity: 0;
+    }
+  }
+
+  &[data-orientation="vertical"] {
+    // Vertical sliders take their height from the page (default 10em); the track runs bottom-up.
+    flex-direction: row;
+    width: var(--slider-thumb-size);
+    height: 10em;
+
+    .track {
+      width: var(--slider-track-height);
+      height: calc(100% - var(--slider-thumb-size));
+    }
+
+    .fill {
+      width: var(--slider-fill-height);
+      height: auto;
+      top: auto;
+      left: calc(((var(--slider-fill-height) - var(--slider-track-height)) * -0.5));
+    }
+
+    .thumb {
+      // `use_slider_thumb` sets `top` in percent.
+      left: 50%;
+    }
+
+    .marks {
+      width: auto;
+      height: calc(100% - var(--slider-thumb-size));
+
+      .mark {
+        top: auto;
+        left: calc(var(--slider-mark-size) * -1);
+        margin-inline-start: 0;
+        margin-bottom: calc(var(--slider-mark-size) * -1);
+
+        .title {
+          transform: translateY(50%);
+          margin-top: 0;
+          margin-left: calc(var(--slider-thumb-size) * 0.75);
         }
       }
     }

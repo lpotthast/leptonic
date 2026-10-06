@@ -10,23 +10,26 @@ pub fn PageDatePickerHooks() -> impl IntoView {
     view! {
         <DocPage title="Date Picker Hooks">
             <p>
-                "The date picker hooks combine a "<Link href=routes::doc::date_time::DateFieldHooks.materialize()>"date field"</Link>
+                "The date picker hooks combine a "<Link href=routes::doc::DateField.materialize()>"date field"</Link>
                 " with a button that opens a calendar in a popover. See the "
-                <Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link>" for how the date and time "
-                "hooks fit together."
+                <Link href=routes::doc::DatePicker.materialize()>"Date Picker overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useDatePicker"/>
 
             <Section title="Demo">
                 <p>
-                    "Type a date into the segments, or open the calendar with the button (or Alt + Arrow Down in the "
-                    "field), move through the days with the arrow keys and press Enter. Escape or a click outside closes "
-                    "the calendar."
+                    "Type a date into the segments, or open the calendar with the button (or "<Keys keys="Alt + ArrowDown"/>
+                    " in the field), move through the days with the arrow keys and press "<Keys keys="Enter"/>". "
+                    <Keys keys="Escape"/>" or a click outside closes the calendar. The demo renders its segments and moves "
+                    "the browser focus through the calendar with two small helpers, shown on the "
+                    <Link href=format!("{}#use-date-segment-example", routes::doc::DateField.materialize())>"Date Field Hooks"</Link>
+                    " and "<Link href=format!("{}#focus-management", routes::doc::calendar::Hook.materialize())>"Calendar Hooks"</Link>
+                    " pages, until leptonic has a segment atom and the calendar cells move the focus themselves."
                 </p>
 
                 <Demo
-                    description="Date picker built from use_date_picker, use_date_field, use_popover and the calendar hooks"
+                    description="Date picker built from use_date_picker, use_date_field, the Popover atom and the calendar hooks"
                     source=include_str!("demos/date_picker.rs")
                 >
                     <DatePickerDemo/>
@@ -48,7 +51,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Date field"</TableCell>
                         <TableCell>
-                            <Link href=routes::doc::date_time::DateFieldHooks.materialize()><Code inline=true>"use_date_field"</Code></Link>
+                            <Link href=routes::doc::DateField.materialize()><Code inline=true>"use_date_field"</Code></Link>
                             " with "<Code inline=true>"is_date_picker: true"</Code>
                         </TableCell>
                         <TableCell>
@@ -65,8 +68,9 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Popover with a dialog and a calendar"</TableCell>
                         <TableCell>
-                            <Link href=routes::doc::popover::Hook.materialize()><Code inline=true>"use_popover"</Code></Link>
-                            " and the "<Link href=routes::doc::date_time::CalendarHooks.materialize()>"calendar hooks"</Link>
+                            "The "<Link href=routes::doc::popover::Atom.materialize()><Code inline=true>"Popover"</Code></Link>
+                            " atom (or "<Link href=routes::doc::popover::Hook.materialize()><Code inline=true>"use_popover"</Code></Link>
+                            ") and the "<Link href=routes::doc::calendar::Hook.materialize()>"Calendar Hooks"</Link>
                         </TableCell>
                         <TableCell>
                             <Code inline=true>"is_open"</Code>", "<Code inline=true>"close"</Code>", "
@@ -76,16 +80,18 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                 </DocTable>
 
                 <p>
-                    "The popover is yours: the picker hooks only track whether it is open. "<Code inline=true>"use_popover"</Code>
-                    " positions it below the field and closes it on Escape and on clicks outside. Return the focus to the "
-                    "button when the popover closes, as the demo does."
+                    "The popover is yours: the picker hooks only track whether it is open. The demo binds the "
+                    <Code inline=true>"Popover"</Code>" atom to "<Code inline=true>"is_open"</Code>" and "
+                    <Code inline=true>"set_open"</Code>" and positions it at the whole field. The atom closes it on "
+                    <Keys keys="Escape"/>" and on clicks outside, keeps the focus inside while it is open and returns the "
+                    "focus to where it was when it closes."
                 </p>
 
                 <p>
                     "leptonic has no single "<Code inline=true>"use_calendar"</Code>" hook. Build the calendar from "
                     <Code inline=true>"use_calendar_state"</Code>", "<Code inline=true>"use_calendar_grid"</Code>" and "
                     <Code inline=true>"use_calendar_cell"</Code>" (documented on the "
-                    <Link href=routes::doc::date_time::CalendarHooks.materialize()>"calendar hooks"</Link>" page) and "
+                    <Link href=routes::doc::calendar::Hook.materialize()>"Calendar Hooks"</Link>" page) and "
                     "configure it from "<Code inline=true>"calendar_props"</Code>": its "<Code inline=true>"value"</Code>" "
                     "as the calendar\u{2019}s initial value, its "<Code inline=true>"on_change"</Code>" as the calendar\u{2019}s "
                     "selection callback, and "<Code inline=true>"min"</Code>", "<Code inline=true>"max"</Code>" and "
@@ -110,7 +116,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="min, max" ty="Option<OffsetDateTime>" default="None">"Values outside these bounds are invalid."</ApiRow>
                         <ApiRow name="show_time" ty="bool" default="false">
                             "Whether the value includes a time, which changes when a calendar selection is committed (see "
-                            <a href="#committing-values">"Committing Values"</a>")."
+                            <AnchorLink href="#committing-values">"Committing Values"</AnchorLink>")."
                         </ApiRow>
                         <ApiRow name="should_close_on_select" ty="bool" default="true">"Close the popover when a date is picked."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<Date, bool>>" default="None">
@@ -183,7 +189,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="min, max" ty="Option<OffsetDateTime>" default="None">"Values outside these bounds are invalid."</ApiRow>
                         <ApiRow name="show_time" ty="bool" default="false">
                             "Whether the value includes a time, which changes when a calendar selection is committed (see "
-                            <a href="#committing-values">"Committing Values"</a>")."
+                            <AnchorLink href="#committing-values">"Committing Values"</AnchorLink>")."
                         </ApiRow>
                         <ApiRow name="should_close_on_select" ty="bool" default="true">"Close the popover when a date is picked."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<Date, bool>>" default="None">
@@ -222,8 +228,8 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="group_props" ty="UseDatePickerGroupProps">
                             <Code inline=true>"id"</Code>", "<Code inline=true>"role=\"group\""</Code>", "
                             <Code inline=true>"aria-labelledby"</Code>", "<Code inline=true>"aria-describedby"</Code>" (selected "
-                            "date, description, error), "<Code inline=true>"aria-disabled"</Code>", the Alt + Arrow keydown "
-                            "handler, and an element capture used by the label."
+                            "date, description, error), "<Code inline=true>"aria-disabled"</Code>", the keydown handler for "
+                            <Keys keys="Alt + ArrowDown"/>" and "<Keys keys="Alt + ArrowUp"/>", and an element capture used by the label."
                         </ApiRow>
                         <ApiRow name="label_props" ty="UseDatePickerLabelProps">
                             <Code inline=true>"id"</Code>" and a click handler that focuses the field\u{2019}s tab stop. Spread "
@@ -241,7 +247,8 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                             <Code inline=true>"aria-labelledby"</Code>" (button and label), "<Code inline=true>"aria-haspopup"</Code>", "
                             <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-disabled"</Code>" (also while "
                             "read-only), "<Code inline=true>"aria-describedby"</Code>", "<Code inline=true>"tabindex=\"0\""</Code>
-                            " and click and Enter/Space handlers that open the popover."
+                            " and handlers for clicks, "<Keys keys="Enter"/>" and "<Keys keys="Space"/>" that open the "
+                            "popover. The button only opens it; it doesn\u{2019}t toggle it."
                         </ApiRow>
                         <ApiRow name="dialog_props" ty="UseDatePickerDialogProps">
                             <Code inline=true>"id"</Code>", "<Code inline=true>"role"</Code>" ("<Code inline=true>"dialog"</Code>"), "
@@ -300,29 +307,12 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                 </ul>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Alt + ArrowDown / Alt + ArrowUp">"In the field: open the calendar."</KeyRow>
-                    <KeyRow keys="Enter / Space">"On the button: open the calendar. In the calendar: pick the focused date and close."</KeyRow>
-                    <KeyRow keys="Arrow keys">"In the calendar: move the focused date by a day or a week."</KeyRow>
-                    <KeyRow keys="PageUp / PageDown">"In the calendar: move to the previous or next month (with Shift, year)."</KeyRow>
-                    <KeyRow keys="Home / End">"In the calendar: move to the first or last day of the month."</KeyRow>
-                    <KeyRow keys="Escape">"Close the calendar without picking (handled by the popover)."</KeyRow>
-                </KeyboardTable>
-
-                <p>
-                    "The segments of the field use the "
-                    <Link href=routes::doc::date_time::DateFieldHooks.materialize()>"date field keys"</Link>". The button "
-                    "only opens the popover; it doesn\u{2019}t toggle it."
-                </p>
-            </Section>
-
             <Section title="Internationalization">
                 <p>
                     "Like the date field, the picker isn\u{2019}t localized: the button\u{2019}s label (\u{201C}Calendar\u{201D}), "
                     "the \u{201C}Selected date\u{201D} description, the formatted value (English month names) and the "
                     "validation messages are English, and right-to-left layouts are not handled. See "
-                    <Link href=routes::doc::date_time::DateFieldHooks.materialize()>"the date field hooks"</Link>
+                    <Link href=routes::doc::DateField.materialize()>"Date Field"</Link>
                     " for the field itself."
                 </p>
             </Section>
@@ -354,18 +344,19 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         "created from it focuses today even after a date was picked."
                     </li>
                     <li>
-                        <b>"Alt + Arrow Down."</b>" The focused segment also handles the arrow key, so opening the calendar "
-                        "from the field also steps that segment."
+                        <b><Keys keys="Alt + ArrowDown"/>"."</b>" The focused segment also handles the arrow key, so opening "
+                        "the calendar from the field also steps that segment."
                     </li>
                 </ul>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link></li>
-                <li><Link href=routes::doc::date_time::DateFieldHooks.materialize()>"Date field hooks"</Link></li>
-                <li><Link href=routes::doc::date_time::CalendarHooks.materialize()>"Calendar hooks"</Link></li>
-                <li><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></li>
-                <li><Link href=routes::doc::Forms.materialize()>"Forms"</Link></li>
+                <li><Link href=routes::doc::DatePicker.materialize()>"Date Picker"</Link></li>
+                <li><Link href=routes::doc::date_picker::Component.materialize()>"Date Picker Component"</Link></li>
+                <li><Link href=routes::doc::DateField.materialize()>"Date Field Hooks"</Link></li>
+                <li><Link href=routes::doc::calendar::Hook.materialize()>"Calendar Hooks"</Link></li>
+                <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

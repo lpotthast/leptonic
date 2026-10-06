@@ -1,7 +1,8 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{kit::*, pages::documentation::atoms::demos::combobox::ComboBoxAtomDemo, routes};
+use super::demos::combobox::ComboBoxConceptDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageComboboxOverview() -> impl IntoView {
@@ -13,9 +14,8 @@ pub fn PageComboboxOverview() -> impl IntoView {
                 "contacts, where scrolling through all options would be slow but the user knows what to type."
             </p>
             <p>
-                "While the user moves through the suggestions, focus stays in the input: the highlighted option is "
-                "announced to screen readers through "<Code inline=true>"aria-activedescendant"</Code>
-                ", and the user can keep typing at any time."
+                "While the user moves through the suggestions, focus stays in the input: screen readers announce the "
+                "highlighted option, and the user can keep typing at any time."
             </p>
 
             <Section title="When to Use">
@@ -23,7 +23,7 @@ pub fn PageComboboxOverview() -> impl IntoView {
                     <TableRow><TableCell>"Pick from many options by typing part of their name"</TableCell><TableCell><b>"Combobox"</b></TableCell></TableRow>
                     <TableRow><TableCell>"Pick from a short list without typing"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
                     <TableRow><TableCell>"Keep the options visible all the time"</TableCell><TableCell><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Enter free-form text without suggestions"</TableCell><TableCell><Link href=routes::doc::TextField.materialize()>"Text field"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Enter free-form text without suggestions"</TableCell><TableCell><Link href=routes::doc::TextField.materialize()>"Text Field"</Link></TableCell></TableRow>
                 </DocTable>
 
                 <p>
@@ -41,17 +41,17 @@ pub fn PageComboboxOverview() -> impl IntoView {
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::combobox::Hook.materialize()>"use_combobox_state, use_combobox"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></TableCell>
                         <TableCell>
-                            "State, filtering, keyboard interaction and ARIA attributes for an input, a button and a listbox "
-                            "you render and position yourself."
+                            "State, filtering, keyboard interaction and ARIA attributes for an input, a button and a "
+                            "listbox that you render and position yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::combobox::Atom.materialize()>"Combobox Atoms"</Link></TableCell>
                         <TableCell>
                             "Unstyled label, input, button and popover parts with that behavior. The popover is positioned "
-                            "for you; you style the parts through classes and data attributes."
+                            "for you; you style the parts through their data attributes."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -64,20 +64,20 @@ pub fn PageComboboxOverview() -> impl IntoView {
                 </p>
 
                 <Demo
-                    description="Country combobox built from the atoms, with a disabled option"
-                    source=include_str!("../atoms/demos/combobox.rs")
+                    description="Country combobox built from the atoms, showing the selected country"
+                    source=include_str!("demos/combobox.rs")
                     source_open=true
                 >
-                    <ComboBoxAtomDemo/>
+                    <ComboBoxConceptDemo/>
                 </Demo>
             </Section>
 
             <Section title="Accessibility">
                 <p>
                     "Comboboxes follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/combobox/" target=LinkTarget::_Blank>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/combobox/" target=LinkTarget::Blank>
                         "Combobox pattern"
-                    </LinkExt>
+                    </Link>
                     " with a listbox popup."
                 </p>
 
@@ -96,17 +96,33 @@ pub fn PageComboboxOverview() -> impl IntoView {
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="ArrowDown / ArrowUp">
-                        "Open the popover and focus the selected option (or the first or last one); when open, focus the "
-                        "next or previous option."
+                    <KeyRow keys="ArrowDown">
+                        "Open the popover with all options and focus the selected option, or the first one; when open, "
+                        "focus the next option."
+                    </KeyRow>
+                    <KeyRow keys="ArrowUp">
+                        "Open the popover with all options and focus the selected option, or the last one; when open, "
+                        "focus the previous option."
                     </KeyRow>
                     <KeyRow keys="Home / End">"When open: focus the first or last option."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Return to the text: remove the focus from the options."</KeyRow>
-                    <KeyRow keys="Enter">"Select the focused option and close the popover."</KeyRow>
+                    <KeyRow keys="PageDown / PageUp">"When open: move the focus by a page of options."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowRight">"Remove the focus from the options and move the text cursor."</KeyRow>
+                    <KeyRow keys="Enter">
+                        "Select the focused option and close the popover; without a focused option, commit the text. "
+                        "While the popover is closed, "<Keys keys="Enter"/>" also submits the form."
+                    </KeyRow>
                     <KeyRow keys="Escape">"Close the popover and restore the selected option\u{2019}s text."</KeyRow>
-                    <KeyRow keys="Tab">"Select the focused option and move focus to the next element."</KeyRow>
+                    <KeyRow keys="Tab">"Select the focused option, close the popover and move focus to the next element."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></li>
+                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox Atoms"</Link></li>
+                <li><Link href=routes::doc::Select.materialize()>"Select"</Link></li>
+                <li><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

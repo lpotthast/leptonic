@@ -8,6 +8,15 @@ single-element Leptos components.
 Every atom renders exactly **one** HTML element. This keeps them composable and gives consumers
 full control over the surrounding DOM structure.
 
+**Exception: hidden inputs** (decided by the user, 2026-10-06). An atom may render native inputs that are
+invisible and that consumers never style, inside its one element:
+- the visually hidden range inputs of a thumb (`SliderThumb`, `ColorThumb`): screen readers draw their
+  focus outline on the thumb only when the inputs sit on it, as in react-aria-components;
+- the visually hidden `<input>` of `Checkbox`, `Radio` and `Switch`;
+- `type="hidden"` inputs carrying a field's value for forms (`ColorField`, `ColorChannelField`, ...).
+
+Anything visible or stylable is its own atom.
+
 ## Wrapping Hooks
 
 An atom calls one or more hooks, destructures the return, and spreads attributes onto its element:
@@ -62,11 +71,25 @@ When an atom comprises multiple cooperating elements (e.g., Slider with track, t
    `expect_context::<SliderCtx>()`.
 3. The root atom still delegates hook logic to `use_slider_state`, `use_slider`, etc.
 
+Provide contexts with `<Provider value=..>` around the children (or `scoped_view`), never with
+`provide_context` in the component body: a component has no owner of its own, so a context provided there
+reaches the atom's later siblings too.
+
+## Label, Description and Error Parts
+
+Atoms with a visible label provide a `LabelContext` for the `Label` part (and fields a `FieldContext` for
+`Description` and `FieldError`). Whether the `Label` is rendered decides the element's `aria-labelledby`, so
+don't guess it from the ARIA props: create a `LabelPresence::new(&aria_label, aria_labelledby.as_ref())`, pass
+its `has_label` signal to the hook and attach it to the context (`LabelContext::span(..).with_presence(..)`).
+Until mounted it guesses (so server HTML references a likely label), then it follows the rendered `Label`
+(react-aria-components' `useSlot`).
+
 ## Reference Implementations
 
-| Pattern                      | File                                |
-|------------------------------|-------------------------------------|
-| Simple hook wrapper          | `leptonic/src/atoms/button.rs`      |
-| Context-based composition    | `leptonic/src/atoms/slider.rs`      |
-| Router integration           | `leptonic/src/atoms/link.rs`        |
-| Overlay with portal          | `leptonic/src/atoms/popover.rs`     |
+| Pattern                      | File                                 |
+|------------------------------|--------------------------------------|
+| Simple hook wrapper          | `leptonic/src/atoms/button.rs`       |
+| Context-based composition    | `leptonic/src/atoms/slider.rs`       |
+| Router integration           | `leptonic/src/atoms/link.rs`         |
+| Overlay with portal          | `leptonic/src/atoms/popover.rs`      |
+| Label detection, value parts | `leptonic/src/atoms/progress_bar.rs` |

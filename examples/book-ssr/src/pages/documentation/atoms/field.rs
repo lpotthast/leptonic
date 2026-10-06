@@ -11,10 +11,10 @@ pub fn PageAtomField() -> impl IntoView {
     view! {
         <DocPage title="Field Atoms">
             <p>
-                "A form field needs a visible label, often a description, and an error message while its value is invalid. "
-                "Screen readers announce them only when the field references them by id. "<Code inline=true>"Label"</Code>", "
-                <Code inline=true>"Description"</Code>" and "<Code inline=true>"FieldError"</Code>" are these parts for every "
-                "field atom: place them anywhere inside the field, and the field wires up the ids. They are unstyled."
+                <Code inline=true>"Label"</Code>", "<Code inline=true>"Description"</Code>" and "
+                <Code inline=true>"FieldError"</Code>" are the unstyled label, description and error message of every field "
+                "atom: place them anywhere inside the field, and it connects them to its control. See the "
+                <Link href=routes::doc::Field.materialize()>"Field overview"</Link>"."
             </p>
             <p>
                 "These field atoms provide them: "
@@ -22,16 +22,22 @@ pub fn PageAtomField() -> impl IntoView {
                 <Link href=routes::doc::radio::Atom.materialize()>"RadioGroup"</Link>", "
                 <Link href=routes::doc::select::Atom.materialize()>"Select"</Link>", "
                 <Link href=routes::doc::combobox::Atom.materialize()>"ComboBox"</Link>", "
-                <Link href=routes::doc::text_field::Atom.materialize()>"TextField"</Link>" and "
-                <Link href=format!("{}#searchfield", routes::doc::text_field::Atom.materialize())>"SearchField"</Link>
-                ". Your own fields can provide them too, see "<a href="#fieldcontext">"FieldContext"</a>"."
+                <Link href=routes::doc::text_field::Atom.materialize()>"TextField"</Link>", "
+                <Link href=routes::doc::search_field::Atom.materialize()>"SearchField"</Link>", "
+                <Link href=routes::doc::number_field::Atom.materialize()>"NumberField"</Link>", "
+                <Link href=routes::doc::slider::Atom.materialize()>"Slider"</Link>" and "
+                <Link href=routes::doc::color_field::Atom.materialize()>"ColorField"</Link>
+                ". Fields you build from hooks can provide them too (see "
+                <AnchorLink href="#composition">"Composition"</AnchorLink>")."
             </p>
 
             <Section title="Hooks Used">
                 <p>
                     "The parts render the label, description and error message props of the field\u{2019}s hook, which "
-                    "come from "<Link href=routes::doc::hooks::UseLabel.materialize()>"use_label and use_field"</Link>
-                    ". The field passes them on in a "<Code inline=true>"FieldContext"</Code>"."
+                    "come from "<Link href=routes::doc::field::Hook.materialize()>"Field Hooks"</Link>" ("
+                    <Code inline=true>"use_label"</Code>" and "<Code inline=true>"use_field"</Code>
+                    "). The field passes the label props on in a "<Code inline=true>"LabelContext"</Code>", the description "
+                    "and error message props in a "<Code inline=true>"FieldContext"</Code>"."
                 </p>
             </Section>
 
@@ -44,7 +50,7 @@ pub fn PageAtomField() -> impl IntoView {
                         };
 
                         view! {
-                            <RadioGroup default_value="standard" validate=validate_shipping>
+                            <RadioGroup is_required=true>
                                 <Label>"Shipping"</Label>
                                 <Radio value="standard">"Standard"</Radio>
                                 <Radio value="express">"Express"</Radio>
@@ -70,7 +76,8 @@ pub fn PageAtomField() -> impl IntoView {
                 <p>
                     "The visible label of the field around it. The field decides the element: a "<Code inline=true>"<label>"</Code>
                     " pointing at the input for fields with a text input ("<Code inline=true>"TextField"</Code>", "
-                    <Code inline=true>"SearchField"</Code>", "<Code inline=true>"ComboBox"</Code>"), a "
+                    <Code inline=true>"SearchField"</Code>", "<Code inline=true>"NumberField"</Code>", "
+                    <Code inline=true>"ComboBox"</Code>"), a "
                     <Code inline=true>"<span>"</Code>" the field references with "<Code inline=true>"aria-labelledby"</Code>
                     " for groups and the select, whose trigger the label focuses when clicked. Outside a field, it is a plain "
                     <Code inline=true>"<label>"</Code>"."
@@ -142,9 +149,9 @@ pub fn PageAtomField() -> impl IntoView {
                 <Code language=Language::Css>
                     {indoc!(r"
                         .my-label { font-weight: 600; }
-                        .my-description { display: block; font-size: 0.85em; color: gray; }
-                        .my-error { display: block; font-size: 0.85em; color: crimson; }
-                        .my-group[data-invalid] .my-label { color: crimson; }
+                        .my-description { display: block; font-size: 0.85em; color: var(--muted); }
+                        .my-error { display: block; font-size: 0.85em; color: var(--danger); }
+                        .my-group[data-invalid] .my-label { color: var(--danger); }
                     ")}
                 </Code>
                 <p>
@@ -153,26 +160,27 @@ pub fn PageAtomField() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="FieldContext">
+            <Section title="Composition">
                 <p>
-                    "The parts find their field through a "<Code inline=true>"FieldContext"</Code>". To use them with a field "
-                    "you build from hooks, provide one with the props of "
-                    <Link href=format!("{}#use-field", routes::doc::hooks::UseLabel.materialize())>"use_field"</Link>
-                    " (or of a field hook such as "<Code inline=true>"use_text_field"</Code>") around them. (For a text "
+                    "The parts find their field through context: "<Code inline=true>"Label"</Code>" through a "
+                    <Code inline=true>"LabelContext"</Code>", "<Code inline=true>"Description"</Code>" and "
+                    <Code inline=true>"FieldError"</Code>" through a "<Code inline=true>"FieldContext"</Code>". To use them "
+                    "with a field you build from hooks, provide both with the props of "
+                    <Link href=format!("{}#use-field", routes::doc::field::Hook.materialize())>"use_field"</Link>
+                    " (or of a field hook such as "<Code inline=true>"use_text_field"</Code>") around them. For a text "
                     "field, use the "<Link href=routes::doc::text_field::Atom.materialize()>"TextField"</Link>
-                    " atom; the demo builds one to show the context.)"
+                    " atom; the demo builds one only to show the contexts."
                 </p>
                 <Demo
-                    description="Username text field built from use_field, providing a FieldContext to its label, description and list of errors"
+                    description="Username text field built from use_field, providing a LabelContext to its label and a FieldContext to its description and list of errors"
                     source=include_str!("demos/field_custom.rs")
                     source_open=true
                 >
                     <FieldCustomDemo/>
                 </Demo>
 
-                <Section title="Fields" id="field-context-fields">
+                <Section title="FieldContext">
                     <ApiTable kind=ApiKind::Fields of="FieldContext">
-                        <ApiRow name="label" ty="FieldLabelProps">"How the "<Code inline=true>"Label"</Code>" is rendered."</ApiRow>
                         <ApiRow name="description" ty="SlotProps">"The hook\u{2019}s "<Code inline=true>"description_props"</Code>"."</ApiRow>
                         <ApiRow name="error_message" ty="SlotProps">"The hook\u{2019}s "<Code inline=true>"error_message_props"</Code>"."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the field is invalid; "<Code inline=true>"FieldError"</Code>" is rendered only while it is."</ApiRow>
@@ -183,8 +191,8 @@ pub fn PageAtomField() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="FieldLabelProps">
-                    <ApiTable kind=ApiKind::Fields of="FieldLabelProps">
+                <Section title="LabelContext">
+                    <ApiTable kind=ApiKind::Fields of="LabelContext">
                         <ApiRow name="props" ty="UseLabelProps">"The hook\u{2019}s "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="element_type" ty="LabelElementType">
                             <Code inline=true>"Label"</Code>" or "<Code inline=true>"Span"</Code>"."
@@ -194,37 +202,35 @@ pub fn PageAtomField() -> impl IntoView {
                     <p>"Create it with one of its constructors:"</p>
                     <DocTable headers=&["Constructor", "Renders"]>
                         <TableRow>
-                            <TableCell><Code inline=true>"FieldLabelProps::label(props)"</Code></TableCell>
+                            <TableCell><Code inline=true>"LabelContext::label(props)"</Code></TableCell>
                             <TableCell>
                                 "A "<Code inline=true>"<label>"</Code>", for fields with a native input. Pass "
                                 <Code inline=true>"LabelElementType::Label"</Code>" to the hook."
                             </TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><Code inline=true>"FieldLabelProps::span(props)"</Code></TableCell>
+                            <TableCell><Code inline=true>"LabelContext::span(props)"</Code></TableCell>
                             <TableCell>
                                 "A "<Code inline=true>"<span>"</Code>", for fields a "<Code inline=true>"<label>"</Code>
-                                " can\u{2019}t label (groups, custom widgets). Pass "<Code inline=true>"LabelElementType::Span"</Code>
+                                " can\u{2019}t label (groups, custom elements). Pass "<Code inline=true>"LabelElementType::Span"</Code>
                                 " to the hook."
                             </TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>".with_on_click(handler)"</Code></TableCell>
-                            <TableCell>"Runs the handler on clicks on the label, e.g. to focus a custom widget."</TableCell>
+                            <TableCell>"Runs the handler on clicks on the label, e.g. to focus a custom element."</TableCell>
                         </TableRow>
                     </DocTable>
                 </Section>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::hooks::UseLabel.materialize()>"use_label and use_field"</Link></li>
-                <li><Link href=routes::doc::Forms.materialize()>"Forms"</Link></li>
-                <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox atoms"</Link></li>
-                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio atoms"</Link></li>
-                <li><Link href=routes::doc::select::Atom.materialize()>"Select atoms"</Link></li>
-                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></li>
-                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text field atoms"</Link></li>
-                <li><Link href=routes::doc::atoms::Form.materialize()>"Form atom"</Link></li>
+                <li><Link href=routes::doc::Field.materialize()>"Field overview"</Link></li>
+                <li><Link href=routes::doc::field::Hook.materialize()>"Field Hooks"</Link></li>
+                <li><Link href=routes::doc::form::Atom.materialize()>"Form Atom"</Link></li>
+                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
+                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

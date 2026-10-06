@@ -1,4 +1,6 @@
-// Demo styles of the table pages (overview, hook, atom). Theme-aware: use the book tokens (--book-surface-color, ...).
+// Collections: demos of the Table concept (overview, hooks, atoms).
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
 // Wide tables scroll horizontally instead of widening the page.
 .demo-table-scroll {
@@ -90,7 +92,7 @@
 
     th[aria-sort="ascending"]::after,
     th[aria-sort="descending"]::after {
-        color: var(--brand-color);
+        color: var(--book-brand-text-color);
         opacity: 1;
     }
 
@@ -125,7 +127,7 @@
     }
 
     th[data-sort-direction]::after {
-        color: var(--brand-color);
+        color: var(--book-brand-text-color);
         opacity: 1;
     }
 

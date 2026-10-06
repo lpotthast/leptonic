@@ -1,10 +1,11 @@
-// Content of documentation pages (`DocPage`): headings, tables, keys, the "Copy as MD" button.
+// Content of documentation pages (`DocPage`): headings, tables, keys, the "Copy as Markdown" button.
 
-article {
-  position: relative;
+@use "theme" as *;
+
+.doc-article {
   width: 100%;
-  max-width: 75em;
-  padding: 0 1.5em 6em;
+  max-width: var(--book-article-max-width);
+  padding: 0 var(--book-article-padding) calc(2 * var(--book-space-xxl));
 
   // Inline code may wrap: the theme renders it with `white-space: pre`, so a long expression in a sentence would widen
   // the page on phones. Long identifiers break only where nothing else fits.
@@ -23,7 +24,7 @@ article {
 
   // Plain links in prose (`<a href="#...">`); leptonic's `Link` components bring their own style.
   a:not([class]) {
-    color: var(--brand-color);
+    color: var(--book-brand-text-color);
   }
 
   // Keys (leptonic's `KbdKey`) in prose and tables: the font of code, slightly smaller than the text.
@@ -36,11 +37,24 @@ article {
   }
 }
 
-.leptonic-btn.copy-md-button {
-  position: absolute;
-  top: var(--book-space-s);
-  right: var(--book-space-m);
-  z-index: var(--book-z-sticky);
+// The page title and the "Copy as Markdown" button next to it. The button wraps below a title too long to share the
+// line.
+.doc-article-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: var(--book-space-m);
+
+  h1 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .leptonic-btn.doc-copy-markdown {
+    flex-shrink: 0;
+    margin-bottom: var(--book-space-s);
+  }
 }
 
 // Documentation tables use leptonic's `Table` components, configured through its variables.
@@ -50,8 +64,8 @@ article {
   --table-header-background-color: transparent;
   --table-wrapper-box-shadow-color: transparent;
   --table-row-border-bottom-color: transparent;
-  --table-header-cell-padding: 0.6em 0.75em;
-  --table-body-cell-padding: 0.6em 0.75em;
+  --table-header-cell-padding: var(--book-space-s) var(--book-space-m);
+  --table-body-cell-padding: var(--book-space-s) var(--book-space-m);
 
   margin: var(--book-space-m) 0;
   border-radius: 0;
@@ -59,14 +73,13 @@ article {
 
 // The Rust item an API table documents, right above the table.
 .doc-api-of {
-  margin: 1em 0 -0.5em;
+  margin: var(--book-space-m) 0 calc(-1 * var(--book-space-s));
   font-size: var(--book-font-size-s);
 }
 
 .leptonic-table.doc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.95em;
 
   th,
   td {
@@ -125,7 +138,7 @@ article {
 
 // Narrow screens: every row becomes a card of stacked cells, labelled by their column (`data-label`, set by the kit's
 // API and keyboard tables). The first cell (the name) acts as the card's title.
-@media (max-width: 800px) {
+@media (width <= $small) {
   .leptonic-table.doc-table {
     thead {
       display: none;
@@ -133,7 +146,7 @@ article {
 
     tr {
       display: block;
-      padding: 0.6em 0;
+      padding: var(--book-space-s) 0;
       border-bottom: 1px solid var(--book-border-color);
     }
 
@@ -142,7 +155,7 @@ article {
     td:last-child {
       display: block;
       width: auto;
-      padding: 0.2em 0.25em;
+      padding: var(--book-space-xs);
       border: none;
     }
 

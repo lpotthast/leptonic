@@ -25,7 +25,7 @@ fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> imp
         .tab_props
         .into_parts();
 
-    view! { <div {..attrs} class="demo-tab demo-hook-tab" style=styles>{label}</div> }
+    view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
 }
 
 /// The panel of one tab, rendered with `use_tab_panel` while its tab is selected.
@@ -77,5 +77,9 @@ pub fn TabsVerticalDemo() -> impl IntoView {
                 .map(|(key, _, text)| view! { <DemoTabPanel tabs=tabs.clone() key=key text=text/> })
                 .collect_view()}
         </div>
+
+        <p class="demo-status">
+            "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}
+        </p>
     }
 }

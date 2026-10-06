@@ -24,6 +24,7 @@ use crate::utils::{
     CapturedElement, EventAccessors,
     aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside},
     event_listeners::{Listener, listen},
+    key::{KeyboardEventKey, KeyboardKey},
     live_announcer::{Assertiveness, announce},
     node_contains,
     virtual_click::{is_virtual_click, is_virtual_pointer_event},
@@ -373,11 +374,11 @@ impl DragSession {
 
     fn on_key_down(self: &Rc<Self>, e: &web_sys::KeyboardEvent) {
         self.cancel_event(e);
-        if e.key() == "Escape" {
+        if e.typed_key() == KeyboardKey::Escape {
             self.cancel();
             return;
         }
-        if e.key() == "Tab" && !(e.meta_key() || e.alt_key() || e.ctrl_key()) {
+        if e.typed_key() == KeyboardKey::Tab && !(e.meta_key() || e.alt_key() || e.ctrl_key()) {
             if e.shift_key() {
                 self.previous();
             } else {
@@ -394,7 +395,7 @@ impl DragSession {
 
     fn on_key_up(self: &Rc<Self>, e: &web_sys::KeyboardEvent) {
         self.cancel_event(e);
-        if e.key() == "Enter" {
+        if e.typed_key() == KeyboardKey::Enter {
             let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
             let on_activate_button =
                 contains(self.current_activate_button().as_ref(), target.as_ref());

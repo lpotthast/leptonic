@@ -1,18 +1,13 @@
-// Documentation layout: navigation sidebar (left), page, table of contents (right), concept tabs.
+// Documentation layout: navigation sidebar (left), the page's `<main>` with the concept tabs, table of contents (right).
 
-$small: 800px;
-$medium: 1200px;
+@use "theme" as *;
 
 #book-doc-layout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  @media (min-width: $small + 1) {
-    margin-left: var(--book-drawer-width);
+  @media (width > $small) {
+    margin-left: var(--book-sidebar-width);
   }
 
-  @media (min-width: $medium + 1) {
+  @media (width > $medium) {
     margin-right: var(--book-toc-width);
   }
 }
@@ -23,10 +18,10 @@ $medium: 1200px;
   top: var(--book-app-bar-height);
   bottom: 0;
   left: 0;
-  width: var(--book-drawer-width);
+  width: var(--book-sidebar-width);
   overflow: auto;
 
-  @media (max-width: $small) {
+  @media (width <= $small) {
     display: none;
   }
 }
@@ -34,9 +29,20 @@ $medium: 1200px;
 // The documentation navigation, in the sidebar and in the menu.
 .book-doc-nav {
   padding: var(--book-space-m) 0;
-  font-size: 0.9rem;
+  font-size: var(--book-font-size-s);
 
-  .drawer-section {
+  // "Concepts", "Building blocks": headings above groups of sections.
+  .book-nav-part-title {
+    margin: var(--book-space-xl) 0 var(--book-space-s);
+    padding-left: var(--book-space-xl);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .book-nav-group {
     margin: var(--book-space-m) 0;
     padding-left: var(--book-space-xl);
 
@@ -47,38 +53,83 @@ $medium: 1200px;
     }
   }
 
-  .section-header {
+  .book-nav-group-header {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: var(--book-space-m);
     margin-bottom: var(--book-space-xs);
     padding: var(--book-space-xs) 0;
-    color: var(--book-menu-header-color);
-    font-size: 1.1em;
-    font-weight: 900;
+    color: var(--main-color);
+    font-weight: 700;
   }
 
-  a.section-header {
+  a.book-nav-group-header,
+  a.book-nav-group-title {
+    border-radius: var(--book-radius-s);
     cursor: pointer;
 
     &:hover,
     &[aria-current] {
-      color: var(--brand-color);
+      color: var(--book-brand-text-color);
     }
   }
 
-  a.item {
-    display: inline-flex;
+  .book-nav-group-title {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-m);
+    color: var(--main-color);
+  }
+
+  // Expands and collapses a group. The chevron hangs in the section's left padding, so that the icons of all groups
+  // line up, collapsible or not.
+  .book-nav-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-m);
+    margin-left: calc(-1 * (1em + var(--book-space-m)));
+    padding: 0;
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--book-brand-text-color);
+    }
+  }
+
+  .book-nav-group-chevron {
+    flex-shrink: 0;
+    width: 1em;
+    height: 0.75em;
+    color: var(--book-muted-color);
+    transition: transform var(--book-transition);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  .book-nav-group-toggle[aria-expanded="true"] .book-nav-group-chevron {
+    transform: rotate(90deg);
+  }
+
+  // Full width, so that the layer markers of concepts line up at the right edge.
+  a.book-nav-item {
+    display: flex;
+    justify-content: flex-start;
     align-items: center;
     gap: var(--book-space-s);
-    margin: 0.075em var(--book-space-s) 0.075em var(--book-space-l);
+    margin: 0 var(--book-space-s) 0 var(--book-space-l);
     padding: var(--book-space-xs) var(--book-space-s);
     border-radius: var(--book-radius-s);
-    color: var(--book-menu-item-color);
+    color: var(--main-color);
     font-weight: 400;
     cursor: pointer;
-    user-select: none;
     transition: background-color var(--book-transition), color var(--book-transition);
 
     &:hover {
@@ -87,72 +138,156 @@ $medium: 1200px;
 
     &[aria-current] {
       background-color: var(--brand-color);
-      color: var(--book-menu-item-active-color);
+      color: var(--book-on-brand-color);
     }
   }
 
-  .doc-badge {
-    flex-shrink: 0;
-    padding: 0.2em 0.4em;
+  // Focus rings in the book's color. Outside the element: the current item's fill would hide an inner ring.
+  :is(.book-nav-item, .book-nav-group-header, .book-nav-group-title, .book-nav-group-toggle)[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+// Kind of a building block (hook, atom, comp, util) next to its sidebar entry.
+.book-badge {
+  flex-shrink: 0;
+  padding: var(--book-space-xs) var(--book-space-s);
+  border-radius: var(--book-radius-s);
+  color: var(--book-on-brand-color);
+  font-size: var(--book-font-size-xs);
+  font-weight: 700;
+  line-height: 1;
+
+  &[data-kind="hook"] {
+    background-color: var(--book-badge-hook-color);
+  }
+
+  &[data-kind="atom"] {
+    background-color: var(--book-badge-atom-color);
+  }
+
+  &[data-kind="comp"] {
+    background-color: var(--book-badge-comp-color);
+  }
+
+  &[data-kind="util"] {
+    background-color: var(--book-badge-util-color);
+  }
+}
+
+// The layers a concept is documented at: H, A, C. Present layers are filled with their badge color, missing ones
+// plain.
+.book-layer-marks {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  margin-left: auto;
+  padding-left: var(--book-space-s);
+  font-family: var(--typography-code-font-family);
+  font-size: var(--book-font-size-xs);
+  font-weight: 700;
+  line-height: 1.5;
+
+  span {
+    min-width: 1.5em;
     border-radius: var(--book-radius-s);
-    color: var(--book-on-brand-color);
-    font-size: var(--book-font-size-xs);
-    font-weight: 700;
-    line-height: 1;
-
-    &[data-kind="hook"] {
-      background-color: var(--book-badge-hook-color);
-    }
-
-    &[data-kind="atom"] {
-      background-color: var(--book-badge-atom-color);
-    }
-
-    &[data-kind="comp"] {
-      background-color: var(--book-badge-comp-color);
-    }
+    text-align: center;
   }
-}
 
-.concept-layout {
-  width: 100%;
-
-  .concept-name {
-    padding: 0.5em 1.5rem 0;
+  [data-present="false"] {
     color: var(--book-muted-color);
-    font-size: var(--book-font-size-s);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
   }
 
-  // Concept pages have the sticky tab bar on top of the app bar.
-  --book-scroll-offset: calc(var(--book-app-bar-height) + 4em);
+  [data-present="true"] {
+    color: var(--book-on-brand-color);
+  }
+
+  [data-layer="hook"][data-present="true"] {
+    background-color: var(--book-badge-hook-color);
+  }
+
+  [data-layer="atom"][data-present="true"] {
+    background-color: var(--book-badge-atom-color);
+  }
+
+  [data-layer="component"][data-present="true"] {
+    background-color: var(--book-badge-comp-color);
+  }
 }
 
-.concept-tabs {
+.book-nav-item[aria-current] .book-layer-marks [data-present="false"] {
+  color: inherit;
+}
+
+// A documentation page's `<main>` (`DocPage`): the concept name and tabs (on concept pages), then the article. Centers
+// the article; the concept name and the sticky tab bar span the full width, with their content aligned to the
+// article's text.
+.doc-main {
+  --doc-inline-padding: max(
+    var(--book-article-padding),
+    calc((100% - var(--book-article-max-width)) / 2 + var(--book-article-padding))
+  );
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  // Anchored headings stay below the sticky tab bar as well.
+  &:has(.doc-concept-tabs) {
+    --book-scroll-offset: calc(var(--book-app-bar-height) + var(--book-concept-tabs-height) + 1rem);
+  }
+}
+
+.doc-concept-name {
+  align-self: stretch;
+  padding: var(--book-space-s) var(--doc-inline-padding) 0;
+  color: var(--book-muted-color);
+  font-size: var(--book-font-size-s);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+// One row on every screen (scrolling sideways if it has to), so that its height, which anchored headings keep clear
+// of, is fixed.
+.doc-concept-tabs {
   position: sticky;
   top: var(--book-app-bar-height);
   z-index: var(--book-z-sticky);
   display: flex;
-  flex-wrap: wrap;
-  padding: 0 1.5rem;
+  align-self: stretch;
+  height: var(--book-concept-tabs-height);
+  padding: 0 var(--doc-inline-padding);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
   border-bottom: 1px solid var(--book-border-color);
   background: var(--main-background-color);
 
-  .concept-tab {
-    padding: 0.75em 1em;
+  .doc-concept-tab {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0 var(--book-space-m);
     border-bottom: 2px solid transparent;
     color: var(--main-color);
+    white-space: nowrap;
     transition: color var(--book-transition), border-color var(--book-transition);
 
     &:hover {
-      color: var(--brand-color);
+      color: var(--book-brand-text-color);
     }
 
     &[aria-current] {
-      color: var(--brand-color);
+      color: var(--book-brand-text-color);
       border-bottom-color: var(--brand-color);
+    }
+
+    // Inside the element: the tab bar clips everything outside.
+    &[data-focus-visible] {
+      outline: 2px solid var(--book-focus-color);
+      outline-offset: -2px;
     }
   }
 }
@@ -164,15 +299,15 @@ nav#book-toc {
   bottom: 0;
   width: var(--book-toc-width);
   overflow-y: auto;
-  padding: 1em;
+  padding: var(--book-space-m);
   border-left: 1px solid var(--book-border-color);
 
-  @media (max-width: $medium) {
+  @media (width <= $medium) {
     display: none;
   }
 
   h2 {
-    margin: 0 0 1em;
+    margin: 0 0 var(--book-space-m);
   }
 
   ul {
@@ -182,24 +317,29 @@ nav#book-toc {
   }
 
   li {
-    margin: 0.25em 0;
+    margin: var(--book-space-xs) 0;
 
     @for $level from 1 through 4 {
       &[data-level="#{$level}"] .leptonic-anchor-link {
-        padding-left: 0.5em * $level;
+        padding-left: calc(#{$level} * var(--book-space-s));
       }
     }
   }
 
   .leptonic-anchor-link {
     display: block;
-    padding: 0.4em 0.5em;
+    padding: var(--book-space-xs) var(--book-space-s);
     overflow-wrap: anywhere;
     border-radius: var(--book-radius-s);
 
     &:hover {
-      color: var(--brand-color);
+      color: var(--book-brand-text-color);
       background-color: var(--book-hover-background-color);
+    }
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--book-focus-color);
+      outline-offset: -2px;
     }
   }
 }

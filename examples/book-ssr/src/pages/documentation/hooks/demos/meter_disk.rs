@@ -2,7 +2,7 @@ use leptonic::{
     components::prelude::*,
     hooks::*,
     utils::{
-        css::{CssDimension, NonNegativeLengthPercentage, Size, try_pct},
+        css::{computed_pct, computed_size},
         style::WidthProperty,
         styles::Styles,
     },
@@ -11,52 +11,44 @@ use leptos::prelude::*;
 
 #[component]
 pub fn MeterDiskDemo() -> impl IntoView {
-    let (disk_usage, set_disk_usage) = signal(72.5);
+    let disk_usage = RwSignal::new(72.5_f64);
 
-    let disk_meter = use_meter(UseMeterInput {
+    let UseProgressBarReturn {
+        props,
+        label_props,
+        percentage,
+        value_text,
+    } = use_meter(UseMeterInput::<f64> {
         value: disk_usage.into(),
-        label: Some("Disk Usage".to_string()),
-        min_value: 0.0,
-        max_value: 100.0,
-        ..Default::default()
+        has_label: true.into(),
+        ..UseMeterInput::default()
     });
-    let percentage = disk_meter.percentage;
+    // A meter always has a value, so `percentage` is always `Some`.
+    let percentage = Signal::derive(move || percentage.get().unwrap_or_default());
 
-    // The fill width is the only dynamic style; the color comes from a class.
-    let fill_styles =
-        Styles::new().add_reactive(move || WidthProperty.declare(fill_width(percentage.get())));
-    let fill_class = move || {
-        let level = match percentage.get() {
-            p if p > 80.0 => "danger",
-            p if p > 60.0 => "warning",
-            _ => "ok",
-        };
-        format!("demo-value-bar-fill {level}")
+    let fill_styles = Styles::new()
+        .add_reactive(move || WidthProperty.declare(computed_size(computed_pct(percentage.get()))));
+    // How full the disk is, for the fill color.
+    let level = move || match percentage.get() {
+        p if p > 80.0 => "critical",
+        p if p > 60.0 => "warning",
+        _ => "good",
     };
 
     view! {
         <div class="demo-value-bar-container">
             <div class="demo-value-bar-header">
-                <label id=disk_meter.label_props.id>"Disk Usage"</label>
-                <span>{move || disk_meter.value_label.get()}</span>
+                <span {..label_props.into_attrs()}>"Disk Usage"</span>
+                <span>{value_text}</span>
             </div>
-            <div {..disk_meter.meter_props.into_attrs()} class="demo-value-bar demo-value-bar-thick">
-                <div class=fill_class style=fill_styles></div>
+            <div {..props.into_attrs()} class="demo-value-bar demo-value-bar-thick">
+                <div class="demo-value-bar-fill" data-level=level style=fill_styles></div>
             </div>
         </div>
 
         <div class="demo-inline-controls">
-            <Button on_press=move |_| set_disk_usage.update(|v| *v = f64::max(*v - 10.0, 0.0))>"-10"</Button>
-            <Button on_press=move |_| set_disk_usage.update(|v| *v = f64::min(*v + 10.0, 100.0))>"+10"</Button>
+            <Button on_press=move |_| disk_usage.update(|v| *v = (*v - 10.0).max(0.0))>"Free 10%"</Button>
+            <Button on_press=move |_| disk_usage.update(|v| *v = (*v + 10.0).min(100.0))>"Use 10%"</Button>
         </div>
     }
-}
-
-/// The width of a fill covering `percent` of its track. Non-finite or negative input renders as zero width.
-fn fill_width(percent: f64) -> Size {
-    try_pct(percent)
-        .ok()
-        .and_then(|width| NonNegativeLengthPercentage::try_from(width).ok())
-        .unwrap_or_else(|| NonNegativeLengthPercentage::new(CssDimension::Zero))
-        .into()
 }

@@ -5,19 +5,25 @@ use leptos::{context::Provider, prelude::*};
 
 use super::{
     dialog::DialogTriggerContext,
+    popover::{PopoverDefaults, SubmenuPopoverContext},
     press::{PressResponder, PressResponderProps},
+    separator::SeparatorContext,
 };
 use crate::{
+    Out,
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, PressResponderTrigger,
-        SelectionBehavior, SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
+        IntoAttrs, MenuData, MenuTriggerState, MenuTriggerType, OverlayTriggerType, Placement,
+        PressResponderTrigger, SelectionBehavior, SelectionMode, SeparatorElementType, SubmenuKind,
+        SubmenuProps, SubmenuTriggerItem, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
         UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
         UseMenuTriggerMenuProps, UseMenuTriggerReturn, UseMenuTriggerStateInput,
+        UseSubmenuTriggerInput, UseSubmenuTriggerReturn, UseSubmenuTriggerStateInput,
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, Key, ListState, Node, Selection,
             SelectionOptions, UseListStateInput, use_list_state,
         },
         use_menu, use_menu_item, use_menu_section, use_menu_trigger, use_menu_trigger_state,
+        use_submenu_trigger, use_submenu_trigger_state,
     },
     utils::{
         CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
@@ -33,13 +39,19 @@ use crate::{
 // - The menu's items come from a collection (`collection` prop, as the `ListBox` atom); render one
 //   `MenuItem`/`MenuSection` per entry (or `MenuItems`). Item content uses `MenuItemLabel`,
 //   `MenuItemDescription` and `MenuItemShortcut` instead of `Text`/`Keyboard` slots.
-// - `MenuTrigger`'s open state is hook-owned (`default_open` + `on_open_change`, or `state`
-//   bound to app state).
+// - `MenuTrigger`'s open state (C4): `default_open` + `on_open_change`, or `is_open` + `set_open`.
 // - The menu is labelled by its trigger's rendered id (its own `attr:id`, else a generated one).
 //
+// ## DIFFERENT BEHAVIOR
+// - An explicit `aria_label` names the menu instead of the trigger: no `aria-labelledby` then.
+//   react-aria-components renders both, so `aria-labelledby` wins and the label is ignored.
+//
+// - `SubmenuTrigger` names its trigger item's `key` (the `MenuItem` child must have it), and
+//   the submenu's `Menu` has its own collection (react-aria-components: the submenu's items are a
+//   branch of the parent menu's collection). Reason: collections are built flat per menu.
+//
 // ## OMITTED FEATURES
-// - Submenus (`SubmenuTrigger`), `Separator` items,
-//   virtualized and render-prop item content, `onClose`/`shouldCloseOnSelect` per menu.
+// - Virtualized and render-prop item content, `onClose`/`shouldCloseOnSelect` per menu.
 //
 // =============================================================================
 
@@ -49,6 +61,24 @@ struct MenuTriggerContext {
     menu_props: UseMenuTriggerMenuProps,
     trigger: DialogTriggerContext,
 }
+
+/// The state of the menu tree's root: its trigger's, else the root menu's own
+/// (react-aria-components' `RootMenuTriggerStateContext`).
+#[derive(Debug, Clone, Copy)]
+struct RootMenuState(MenuTriggerState);
+
+/// The element of the menu around, for its submenu triggers.
+#[derive(Debug, Clone, Copy)]
+struct ParentMenuElement(CapturedElement);
+
+/// From a [`SubmenuTrigger`] to its trigger [`MenuItem`]; `None` inside a menu (so its items don't
+/// see an outer trigger).
+#[derive(Debug, Clone)]
+struct SubmenuItemContext(Option<(Key, SubmenuTriggerItem)>);
+
+/// From a [`SubmenuTrigger`] to the [`Menu`] it opens; `None` inside a menu.
+#[derive(Debug, Clone)]
+struct SubmenuMenuContext(Option<(SubmenuProps, CapturedElement)>);
 
 /// Context from [`MenuItem`] to its label, description and shortcut.
 #[derive(Debug, Clone)]
@@ -80,20 +110,25 @@ pub fn MenuTrigger(
     /// performs the button's own action, and Alt+ArrowDown opens the menu by keyboard).
     #[prop(optional)]
     trigger: MenuTriggerType,
-    /// Whether the menu starts open. Ignored when `state` is given.
+    /// Whether the menu starts open. Ignored with `is_open`.
     #[prop(optional)]
     default_open: bool,
     /// Called when the menu opens or closes.
     #[prop(into, optional)]
     on_open_change: Option<Callback<bool>>,
-    /// The open state as app state (e.g. an `RwSignal<bool>`), replacing `default_open`.
+    /// Whether the menu is open (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ValueBinding<bool>>,
+    is_open: Option<Signal<bool>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
+    let (is_open, on_open_change) =
+        ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let menu_state = use_menu_trigger_state(UseMenuTriggerStateInput {
         default_open,
-        value: state,
+        value: is_open,
         on_open_change,
     });
     let UseMenuTriggerReturn { button, menu_props } = use_menu_trigger(UseMenuTriggerInput {
@@ -122,6 +157,17 @@ pub fn MenuTrigger(
         move || {
             provide_context(overlay_trigger);
             provide_context(menu_context);
+            provide_context(RootMenuState(menu_state));
+            // A menu's popover starts at the trigger's start edge; a context menu's right at the
+            // point it opened (react-aria-components).
+            provide_context(Some(PopoverDefaults {
+                placement: Placement::BottomStart,
+                offset: if trigger == MenuTriggerType::ContextMenu {
+                    0.0
+                } else {
+                    8.0
+                },
+            }));
         },
         move || {
             PressResponder(PressResponderProps {
@@ -136,11 +182,12 @@ pub fn MenuTrigger(
                 long_press_accessibility_description: button.long_press_accessibility_description,
                 is_disabled: Some(is_disabled),
                 force_is_pressed: Some(menu_state.overlay.is_open),
-                prevent_focus_on_press: Some(button.prevent_focus_on_press),
+                prevent_focus_on_press: Some(Signal::stored(button.prevent_focus_on_press)),
                 should_cancel_on_pointer_exit: None,
                 allow_text_selection_on_press: None,
                 trigger: Some(press_trigger),
                 shortcuts: button.shortcuts,
+                on_context_menu: button.on_context_menu,
                 children,
             })
         },
@@ -152,7 +199,8 @@ pub fn MenuTrigger(
 /// [`MenuTrigger`].
 ///
 /// The items come from `collection`: render one [`MenuItem`] (or [`MenuSection`]) per collection
-/// entry, in collection order, or [`MenuItems`]. Inside a `MenuTrigger`, the menu is labelled by
+/// entry, in collection order, or [`MenuItems`]. A [`Separator`](super::separator::Separator)
+/// between them renders as `role="separator"`. Inside a `MenuTrigger`, the menu is labelled by
 /// the trigger and focuses its first, last or selected item when it opens.
 ///
 /// Data attributes of items: `data-focused`, `data-focus-visible`, `data-selected`,
@@ -173,10 +221,12 @@ pub fn Menu(
     /// The initially selected keys.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
-    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
-    /// `default_selected_keys`.
+    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
     #[prop(into, optional)]
-    selection: Option<ValueBinding<Selection>>,
+    selection: Option<Signal<Selection>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selection: Option<Out<Selection>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
@@ -198,7 +248,23 @@ pub fn Menu(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let trigger_ctx = use_context::<MenuTriggerContext>();
+    let (selection, on_selection_change) =
+        ValueBinding::from_state_props(selection, set_selection, on_selection_change);
+    // A submenu takes its settings from its `SubmenuTrigger`, not from the root trigger.
+    let submenu = use_context::<SubmenuMenuContext>().and_then(|ctx| ctx.0);
+    let trigger_ctx = if submenu.is_some() {
+        None
+    } else {
+        use_context::<MenuTriggerContext>()
+    };
+    // The root of a menu tree without trigger keeps the state of its submenus itself.
+    let root = use_context::<RootMenuState>().unwrap_or_else(|| {
+        RootMenuState(use_menu_trigger_state(UseMenuTriggerStateInput::default()))
+    });
+    let (submenu, element) = match submenu {
+        Some((props, element)) => (Some(props), element),
+        None => (None, CapturedElement::new()),
+    };
     let state = state.unwrap_or_else(|| {
         let collection = collection.unwrap_or_else(|| {
             crate::utils::dev_warn!("Menu: no `collection` given");
@@ -257,14 +323,28 @@ pub fn Menu(
         },
         on_action,
         on_close,
-        ..UseMenuInput::new(state, CapturedElement::new())
+        submenu,
+        ..UseMenuInput::new(state, element)
     });
-
     view! {
         <Provider value=data>
-            <div {..props.into_attrs()} class=classes style=styles>
-                {children()}
-            </div>
+            <Provider value=root>
+            <Provider value=ParentMenuElement(element)>
+            // The items of this menu don't belong to an outer submenu trigger.
+            <Provider value=SubmenuItemContext(None)>
+            <Provider value=SubmenuMenuContext(None)>
+            // Separators between the items are `<div role="separator">`s.
+            <Provider value=SeparatorContext {
+                element_type: SeparatorElementType::Div,
+            }>
+                <div {..props.into_attrs()} class=classes style=styles>
+                    {children()}
+                </div>
+            </Provider>
+            </Provider>
+            </Provider>
+            </Provider>
+            </Provider>
         </Provider>
     }
 }
@@ -285,6 +365,22 @@ pub fn MenuItem(
     children: Children,
 ) -> impl IntoView {
     let menu = expect_context::<MenuData>();
+    // The trigger item of a `SubmenuTrigger`.
+    let submenu_trigger = use_context::<SubmenuItemContext>()
+        .and_then(|ctx| ctx.0)
+        .map(|(trigger_key, trigger)| {
+            if trigger_key != key {
+                crate::utils::dev_warn!(
+                    "MenuItem: the trigger item of a SubmenuTrigger needs the trigger's key \
+                     {trigger_key:?}, has {key:?}"
+                );
+            }
+            trigger
+        });
+    let has_submenu = submenu_trigger.is_some();
+    let is_open = submenu_trigger
+        .as_ref()
+        .map_or_else(|| Signal::stored(false), |trigger| trigger.is_open);
     let UseMenuItemReturn {
         props,
         label_props,
@@ -299,6 +395,7 @@ pub fn MenuItem(
         menu,
         key,
         should_close_on_select,
+        submenu_trigger,
     });
     let ctx = MenuItemCtx {
         label: StoredValue::new(Some(label_props)),
@@ -319,11 +416,85 @@ pub fn MenuItem(
                 data-selected=flag(is_selected)
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
+                data-has-submenu=has_submenu.then_some("true")
+                data-open=flag(is_open)
             >
                 {children()}
             </div>
         </Provider>
     }
+}
+
+/// Opens a submenu from an item of a [`Menu`]: its children are the trigger [`MenuItem`] (with
+/// this `key`) and a [`Popover`](super::popover::Popover) with the submenu's [`Menu`]. The submenu
+/// opens when the item is pressed, hovered (after `delay`), or on ArrowRight (ArrowLeft in
+/// right-to-left text); ArrowLeft, Escape and focusing another item of the menu close it.
+///
+/// ```ignore
+/// <Menu collection=actions>
+///     <MenuItem key="copy">"Copy"</MenuItem>
+///     <SubmenuTrigger key="share">
+///         <MenuItem key="share">"Share"</MenuItem>
+///         <Popover>
+///             <Menu collection=targets>
+///                 <MenuItems let:node>{node.text_value.to_string()}</MenuItems>
+///             </Menu>
+///         </Popover>
+///     </SubmenuTrigger>
+/// </Menu>
+/// ```
+///
+/// The trigger item gets `data-has-submenu` and, while its submenu is open, `data-open`.
+#[component]
+pub fn SubmenuTrigger(
+    /// The key of the trigger item (the `MenuItem` child) in the menu's collection.
+    #[prop(into)]
+    key: Key,
+    /// How long hovering the trigger item takes to open the submenu. Default: 200 ms.
+    #[prop(optional)]
+    delay: Option<std::time::Duration>,
+    /// What the trigger opens. Default: a menu.
+    #[prop(optional)]
+    kind: SubmenuKind,
+    children: Children,
+) -> impl IntoView {
+    let root = expect_context::<RootMenuState>().0;
+    let parent_menu = expect_context::<ParentMenuElement>().0;
+    let menu = expect_context::<MenuData>();
+    let selection = menu.state.selection;
+    let is_disabled = {
+        let key = key.clone();
+        Signal::derive(move || selection.is_disabled(&key))
+    };
+    let state = use_submenu_trigger_state(UseSubmenuTriggerStateInput {
+        trigger_key: key.clone(),
+        root,
+    });
+    let (trigger, submenu) = (CapturedElement::new(), CapturedElement::new());
+    let UseSubmenuTriggerReturn {
+        trigger: item,
+        submenu: submenu_props,
+        should_close_on_interact_outside,
+    } = use_submenu_trigger(UseSubmenuTriggerInput {
+        kind,
+        is_disabled,
+        delay: delay.unwrap_or(std::time::Duration::from_millis(200)),
+        ..UseSubmenuTriggerInput::new(state, trigger, parent_menu, submenu)
+    });
+    let popover = SubmenuPopoverContext {
+        should_close_on_interact_outside: StoredValue::new(should_close_on_interact_outside),
+        aria_labelledby: StoredValue::new(submenu_props.aria_labelledby.clone()),
+    };
+    scoped_view(
+        move || {
+            provide_context(SubmenuItemContext(Some((key, item))));
+            provide_context(SubmenuMenuContext(Some((submenu_props, submenu))));
+            // The popover finds the submenu's state and the trigger item here.
+            provide_context(DialogTriggerContext::new(state.overlay, trigger));
+            provide_context(Some(popover));
+        },
+        children,
+    )
 }
 
 /// One [`MenuItem`] per item of the menu's collection, rendered by `children`.

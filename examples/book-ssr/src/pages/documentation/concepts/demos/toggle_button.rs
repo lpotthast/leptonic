@@ -1,12 +1,18 @@
-use leptonic::atoms::toggle_button::ToggleButton;
+use leptonic::{atoms::toggle_button::ToggleButton, components::prelude::Checkbox};
 use leptos::prelude::*;
 
 #[component]
 pub fn ToggleButtonConceptDemo() -> impl IntoView {
     let starred = RwSignal::new(false);
+    let disabled = RwSignal::new(false);
 
     view! {
-        <ToggleButton state=starred classes="demo-toggle-button">"Star"</ToggleButton>
-        <p class="demo-status">{move || if starred.get() { "Starred" } else { "Not starred" }}</p>
+        <ToggleButton is_selected=starred set_selected=starred is_disabled=disabled classes="demo-atom-toggle-button">
+            "Star"
+        </ToggleButton>
+        <p class="demo-status">{move || if starred.get() { "Starred." } else { "Not starred." }}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

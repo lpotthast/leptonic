@@ -2,6 +2,7 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::dismiss_button::DismissButtonDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -9,13 +10,27 @@ pub fn PageAtomDismissButton() -> impl IntoView {
     view! {
         <DocPage title="DismissButton">
             <p>
-                "A visually hidden button that lets screen reader users dismiss an overlay. Users of mobile screen readers "
-                "such as VoiceOver on iOS have no Escape key, so place one at the start and one at the end of popovers, "
-                "modals and trays. See the "<Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link>
+                "The "<Code inline=true>"DismissButton"</Code>" atom is a visually hidden button that closes an overlay. Users "
+                "of mobile screen readers such as VoiceOver on iOS have no Escape key; they find it at the start or end of the "
+                "overlay. See the "<Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior overview"</Link>
                 " for the other overlay building blocks."
             </p>
 
             <ReactAriaSource path="overlays/DismissButton.tsx"/>
+
+            <p>
+                "The "<Link href=routes::doc::popover::Atom.materialize()>"Popover"</Link>" atom already renders dismiss "
+                "buttons: one at its end, and one at its start too when it is modal. Add them yourself to overlays you build from "
+                "the hooks, such as "<Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>
+                " or "<Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>"."
+            </p>
+
+            <Section title="Hooks Used">
+                <p>
+                    "None: the atom renders a native "<Code inline=true>"<button>"</Code>" inside a "
+                    <Link href=routes::doc::screen_readers::VisuallyHidden.materialize()>"VisuallyHidden"</Link>"."
+                </p>
+            </Section>
 
             <Section title="Props">
                 <ApiTable kind=ApiKind::Props of="DismissButton">
@@ -23,10 +38,10 @@ pub fn PageAtomDismissButton() -> impl IntoView {
                         "Called when the button is activated. Close the overlay here."
                     </ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
-                        "The accessible name of the button. Without it (and without "<Code inline=true>"aria_labelledby"</Code>
-                        "), the button is labeled \u{201c}Dismiss\u{201d}."
+                        "The button\u{2019}s name. Without it (and without "<Code inline=true>"aria_labelledby"</Code>
+                        "), the button is named \u{201c}Dismiss\u{201d}."
                     </ApiRow>
-                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Elements naming the button."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the button."</ApiRow>
                 </ApiTable>
             </Section>
 
@@ -35,30 +50,44 @@ pub fn PageAtomDismissButton() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::atoms::prelude::DismissButton;
 
+                        let close = Callback::new(move |()| set_is_open.set(false));
+
                         view! {
-                            <div class="my-overlay">
-                                <DismissButton on_dismiss=move |()| set_is_open.set(false)/>
-                                // ... overlay content ...
-                                <DismissButton on_dismiss=move |()| set_is_open.set(false)/>
+                            <div {..overlay_attrs} role="dialog" aria-label="Notifications">
+                                <DismissButton on_dismiss=close/>
+                                "…"
+                                <DismissButton on_dismiss=close/>
                             </div>
                         }
                     "#)}
                 </Code>
             </Section>
 
-            <Section title="Accessibility">
+            <Section title="Demo">
                 <p>
-                    "The atom renders an empty "<Code inline=true>"<button>"</Code>" with an "<Code inline=true>"aria-label"</Code>
-                    ", visually hidden with inline styles. It has "<Code inline=true>"tabindex=\"-1\""</Code>
-                    ", so the Tab key skips it while screen reader navigation still reaches it."
+                    "The dismiss buttons are invisible. With a screen reader, move to the start or end of the open panel to find "
+                    "them."
+                </p>
+                <Demo
+                    description="A panel with dismiss buttons at its start and end"
+                    source=include_str!("demos/dismiss_button.rs")
+                >
+                    <DismissButtonDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Composition">
+                <p>
+                    "The button has "<Code inline=true>"tabindex=\"-1\""</Code>": the Tab key skips it, while screen reader "
+                    "navigation still reaches it. It has no visible content and no data attributes, so there is nothing to style."
                 </p>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
-                <li><Link href=routes::doc::overlays::UseOverlay.materialize()>"Overlay hooks"</Link></li>
-                <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
-                <li><Link href=routes::doc::Modal.materialize()>"Modal overview"</Link></li>
+                <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior overview"</Link></li>
+                <li><Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link></li>
+                <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
+                <li><Link href=routes::doc::screen_readers::VisuallyHidden.materialize()>"VisuallyHidden"</Link></li>
             </SeeAlso>
         </DocPage>
     }

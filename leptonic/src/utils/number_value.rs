@@ -4,6 +4,7 @@
 use std::fmt::{Debug, Display};
 
 use fixed_decimal::Decimal;
+use leptos::prelude::*;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -49,6 +50,18 @@ pub trait NumberValue:
 
     /// An approximation as `f64`, for APIs that take one (e.g. `aria-valuenow`).
     fn to_f64(self) -> f64;
+
+    /// The value closest to `value` (rounded for integer types); `None` if the type can't hold it.
+    fn from_f64(value: f64) -> Option<Self> {
+        let value = if Self::IS_INTEGER {
+            value.round()
+        } else {
+            value
+        };
+        value
+            .to_decimal()
+            .and_then(|decimal| Self::from_decimal(&decimal))
+    }
 
     /// The value clamped to `min..=max`.
     #[must_use]
@@ -292,6 +305,125 @@ impl NumberValue for f32 {
 
     fn to_f64(self) -> f64 {
         f64::from(self)
+    }
+}
+
+/// A number prop of a component generic over its number type: a number or any signal of one.
+///
+/// Unlike `#[prop(into)] Signal<T>`, it lets the compiler infer `T` from what is passed
+/// (`value=3.0`, `value=rw_signal`): Leptos also converts any value into a `Signal<Option<_>>`,
+/// which leaves `T` open. Its conversions accept only [`NumberValue`]s. Closures don't convert
+/// (a closure type could also be a number type, as far as the compiler knows): pass
+/// `Signal::derive(move || ..)`.
+#[derive(Debug, Clone, Copy)]
+pub struct NumberSignal<T: NumberValue>(Signal<T>);
+
+impl<T: NumberValue> NumberSignal<T> {
+    #[must_use]
+    pub fn into_signal(self) -> Signal<T> {
+        self.0
+    }
+}
+
+impl<T: NumberValue> From<T> for NumberSignal<T> {
+    fn from(value: T) -> Self {
+        Self(Signal::stored(value))
+    }
+}
+
+impl<T: NumberValue> From<Signal<T>> for NumberSignal<T> {
+    fn from(signal: Signal<T>) -> Self {
+        Self(signal)
+    }
+}
+
+impl<T: NumberValue> From<ReadSignal<T>> for NumberSignal<T> {
+    fn from(signal: ReadSignal<T>) -> Self {
+        Self(signal.into())
+    }
+}
+
+impl<T: NumberValue> From<RwSignal<T>> for NumberSignal<T> {
+    fn from(signal: RwSignal<T>) -> Self {
+        Self(signal.into())
+    }
+}
+
+impl<T: NumberValue> From<Memo<T>> for NumberSignal<T> {
+    fn from(memo: Memo<T>) -> Self {
+        Self(memo.into())
+    }
+}
+
+/// An optional number prop of a component generic over its number type: a number, an `Option` of
+/// one, or any signal of them. As [`NumberSignal`], it lets the compiler infer `T`.
+#[derive(Debug, Clone, Copy)]
+pub struct OptionalNumberSignal<T: NumberValue>(Signal<Option<T>>);
+
+impl<T: NumberValue> OptionalNumberSignal<T> {
+    #[must_use]
+    pub fn into_signal(self) -> Signal<Option<T>> {
+        self.0
+    }
+}
+
+impl<T: NumberValue> From<T> for OptionalNumberSignal<T> {
+    fn from(value: T) -> Self {
+        Self(Signal::stored(Some(value)))
+    }
+}
+
+impl<T: NumberValue> From<Option<T>> for OptionalNumberSignal<T> {
+    fn from(value: Option<T>) -> Self {
+        Self(Signal::stored(value))
+    }
+}
+
+impl<T: NumberValue> From<Signal<Option<T>>> for OptionalNumberSignal<T> {
+    fn from(signal: Signal<Option<T>>) -> Self {
+        Self(signal)
+    }
+}
+
+impl<T: NumberValue> From<ReadSignal<Option<T>>> for OptionalNumberSignal<T> {
+    fn from(signal: ReadSignal<Option<T>>) -> Self {
+        Self(signal.into())
+    }
+}
+
+impl<T: NumberValue> From<RwSignal<Option<T>>> for OptionalNumberSignal<T> {
+    fn from(signal: RwSignal<Option<T>>) -> Self {
+        Self(signal.into())
+    }
+}
+
+impl<T: NumberValue> From<Memo<Option<T>>> for OptionalNumberSignal<T> {
+    fn from(memo: Memo<Option<T>>) -> Self {
+        Self(memo.into())
+    }
+}
+
+impl<T: NumberValue> From<Signal<T>> for OptionalNumberSignal<T> {
+    fn from(signal: Signal<T>) -> Self {
+        Self(Signal::derive(move || Some(signal.get())))
+    }
+}
+
+impl<T: NumberValue> From<ReadSignal<T>> for OptionalNumberSignal<T> {
+    fn from(signal: ReadSignal<T>) -> Self {
+        Self(Signal::derive(move || Some(signal.get())))
+    }
+}
+
+impl<T: NumberValue> From<RwSignal<T>> for OptionalNumberSignal<T> {
+    fn from(signal: RwSignal<T>) -> Self {
+        Self(Signal::derive(move || Some(signal.get())))
+    }
+}
+
+impl<T: NumberValue> From<Memo<T>> for OptionalNumberSignal<T> {
+    fn from(memo: Memo<T>) -> Self {
+        Self(Signal::derive(move || Some(memo.get())))
     }
 }
 

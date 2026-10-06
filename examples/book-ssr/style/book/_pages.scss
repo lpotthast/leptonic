@@ -1,112 +1,156 @@
 // Pages outside the documentation: welcome page and 404.
 
-#welcome-page {
-  width: 100%;
-  max-width: 1200px;
+@use "theme" as *;
+
+.book-welcome {
+  display: flex;
+  flex-direction: column;
+  gap: var(--book-space-l);
+  max-width: var(--book-article-max-width);
   margin: 0 auto;
-  padding: 1em;
-  box-sizing: border-box;
+  padding: var(--book-space-m) var(--book-space-m) var(--book-space-xxl);
+}
 
-  #intro {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 4em 0 3em;
-    text-align: center;
+.book-welcome-intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--book-space-xxl) 0 var(--book-space-xl);
+  text-align: center;
+}
+
+// "LEPTONIC": written "Leptonic", so that screen readers read the name instead of spelling it.
+.book-welcome-title {
+  margin: var(--book-space-xs) 0;
+  font-size: 8em;
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+  background: var(--book-brand-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  // High contrast modes don't paint the gradient behind the transparent text: use the forced text color.
+  @media (forced-colors: active) {
+    background: none;
+    -webkit-text-fill-color: CanvasText;
+    color: CanvasText;
   }
 
-  #slogan {
-    margin: 0.2em 0;
-    font-size: 8em;
-    font-weight: 900;
-    background: var(--book-brand-gradient);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  #sub-slogan {
-    max-width: 36em;
-    text-wrap: balance;
-    margin: 0 0 1.5em;
-    font-size: 1.75em;
-  }
-
-  .cta {
-    font-size: var(--book-font-size-l);
-  }
-
-  #features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16em, 1fr));
-    gap: 1.5em;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .feature {
-    padding: var(--book-space-l);
-    border: 1px solid var(--book-border-color);
-    border-top: 4px solid var(--brand-color);
-    border-radius: var(--book-radius-m);
-    background-color: var(--book-surface-color);
-
-    h2 {
-      margin: 0 0 var(--book-space-s);
-      font-size: var(--book-font-size-l);
-    }
-
-    p {
-      margin: 0;
-      color: var(--book-muted-color);
-      line-height: 1.5;
-      hyphens: manual;
-    }
-  }
-
-  @media (max-width: 600px) {
-    #slogan {
-      font-size: 3em;
-    }
-
-    #sub-slogan {
-      font-size: 1.3em;
-    }
+  @media (width <= $small) {
+    font-size: 3em;
   }
 }
 
-.err-404 {
+.book-welcome-tagline {
+  max-width: 36em;
+  margin: 0 0 var(--book-space-l);
+  font-size: var(--book-font-size-xl);
+  text-wrap: balance;
+
+  @media (width <= $small) {
+    font-size: var(--book-font-size-l);
+  }
+}
+
+.book-welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--book-space-m);
+}
+
+// Three cards per row; one per row on small screens (never two and an orphan).
+.book-welcome-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--book-space-l);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  @media (width <= $small) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.book-welcome-card {
+  padding: var(--book-space-l);
+  border: 1px solid var(--book-border-color);
+  border-top: 4px solid var(--brand-color);
+  border-radius: var(--book-radius-m);
+  background-color: var(--book-surface-color);
+
+  h2 {
+    margin: 0 0 var(--book-space-s);
+    font-size: var(--book-font-size-l);
+  }
+
+  p {
+    margin: 0;
+    color: var(--book-muted-color);
+    line-height: 1.5;
+  }
+}
+
+// Further links of a card, e.g. the concept groups.
+.book-welcome-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--book-space-xs) var(--book-space-m);
+  margin: var(--book-space-m) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-welcome,
+.book-404 {
+  .leptonic-link[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+    border-radius: var(--book-radius-s);
+  }
+}
+
+.book-404 {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 2em;
-  max-width: 60em;
-  margin: 2em auto 0;
-  padding: 1em;
+  gap: var(--book-space-xl);
+  max-width: 60rem;
+  margin: var(--book-space-xl) auto 0;
+  padding: var(--book-space-m);
+}
 
-  .info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
+.book-404-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
 
-  #error {
-    margin: 0 0 0.1em;
-    font-size: 6em;
-    font-weight: bold;
-  }
+.book-404-code {
+  margin: 0;
+  font-size: 6em;
+  font-weight: 700;
+  line-height: 1;
+}
 
-  #whoops {
-    margin: 0 0.5rem 1.5em;
-    font-size: 2.5em;
-    font-weight: 500;
-  }
+.book-404-title {
+  margin: var(--book-space-s) 0;
+}
 
-  #ferris {
-    width: auto;
-    height: 14em;
-  }
+.book-404-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--book-space-m);
+  margin-top: var(--book-space-m);
+}
+
+.book-404-ferris {
+  width: auto;
+  height: 14em;
 }

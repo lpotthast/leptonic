@@ -2,13 +2,13 @@ use std::collections::HashMap;
 
 use leptonic::{
     atoms::{
-        button::Button,
         field::{Description, FieldError, Label},
         form::Form,
         input::Input,
         text_field::TextField,
     },
-    hooks::{ButtonType, InputType, TextFieldState},
+    components::button::{Button, ButtonVariant},
+    hooks::{ButtonType, InputType},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -38,23 +38,24 @@ pub fn FormAtomDemo() -> impl IntoView {
                 name="email"
                 input_type=InputType::Email
                 is_required=true
-                state=TextFieldState::from(email)
+                value=email
+                set_value=email
                 classes="demo-field"
             >
                 <Label classes="demo-field-label">"Email"</Label>
-                <Input classes=["demo-input", "demo-text-input", "demo-atom-input"]/>
+                <Input classes="demo-atom-input"/>
                 <Description classes="demo-field-description">"We send the newsletter to this address."</Description>
                 <FieldError classes="demo-field-error"/>
             </TextField>
             <div class="demo-flex-center-row">
-                <Button button_type=ButtonType::Submit classes="demo-btn">"Subscribe"</Button>
-                <Button button_type=ButtonType::Reset classes="demo-btn">"Reset"</Button>
+                <Button button_type=ButtonType::Submit>"Subscribe"</Button>
+                <Button button_type=ButtonType::Reset variant=ButtonVariant::Outlined>"Reset"</Button>
                 <Button
+                    variant=ButtonVariant::Flat
                     on_press=move |_| server_errors.set(HashMap::from([(
                         "email".to_owned(),
                         vec!["This address is already subscribed.".to_owned()],
                     )]))
-                    classes="demo-btn"
                 >
                     "Simulate server error"
                 </Button>

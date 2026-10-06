@@ -8,7 +8,7 @@ use leptos::{
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
 
-use super::MenuData;
+use super::{MenuData, SubmenuTriggerItem};
 use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
@@ -27,7 +27,7 @@ use crate::{
     },
     utils::{
         CapturedElement, EventAccessors, EventHandler, SlotProps,
-        aria::{AriaChecked, AriaDisabled, AriaRole},
+        aria::{AriaChecked, AriaDisabled, AriaHasPopup, AriaRole},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         pointer_type::PointerType,
         use_slot,
@@ -45,8 +45,11 @@ use crate::{
 // - Label, description and keyboard shortcut ids are referenced only while those elements are
 //   rendered (react-aria: `useSlotId`), detected through element capture.
 //
+// - A submenu trigger gets its trigger's behavior as `submenu_trigger` (react-aria: through the
+//   props `aria-haspopup`, `aria-expanded`, `onPressStart`, ... from `useSubmenuTrigger`).
+//
 // ## OMITTED FEATURES
-// - Submenu triggers (`aria-haspopup`/`aria-expanded` items) and virtual focus.
+// - Virtual focus.
 // - Per-item press, hover, keyboard and focus callbacks.
 //
 // =============================================================================
@@ -61,6 +64,9 @@ pub struct UseMenuItemInput {
     /// Close the menu after the item was activated. `None`: unless the menu allows multiple
     /// selection, or the item was checked with Space.
     pub should_close_on_select: Option<bool>,
+    /// Makes the item open a submenu (from `use_submenu_trigger`): it has no action, never closes
+    /// the menu and isn't selectable.
+    pub submenu_trigger: Option<SubmenuTriggerItem>,
 }
 
 /// Return value of [`use_menu_item`].
@@ -86,12 +92,17 @@ pub struct UseMenuItemProps {
     pub aria_label: Option<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
+    pub aria_haspopup: Signal<Option<AriaHasPopup>>,
+    pub aria_expanded: Signal<Option<&'static str>>,
+    pub aria_controls: Signal<Option<String>>,
     pub item: UseSelectableItemProps,
     pub press: UsePressProps,
     pub hover: UseHoverProps,
     pub keyboard: UseKeyboardProps,
     /// Performs the item's action (all activations end in a click).
     pub on_click: EventHandler<MouseEvent>,
+    /// A submenu trigger keeps DOM focus where it is on mouse down.
+    pub on_mousedown: EventHandler<MouseEvent>,
 }
 
 pub type UseMenuItemAttrs = (
@@ -102,12 +113,16 @@ pub type UseMenuItemAttrs = (
         Attr<attr::AriaLabel, Option<String>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
+        Attr<attr::AriaExpanded, Signal<Option<&'static str>>>,
+        Attr<attr::AriaControls, Signal<Option<String>>>,
     ),
     UseSelectableItemAttrs,
     UsePressAttrs,
     UseHoverAttrs,
     UseKeyboardAttrs,
     On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
 );
 
 impl IntoAttrs for UseMenuItemProps {
@@ -122,12 +137,16 @@ impl IntoAttrs for UseMenuItemProps {
                 Attr(attr::AriaLabel, self.aria_label),
                 Attr(attr::AriaLabelledby, self.aria_labelledby),
                 Attr(attr::AriaDescribedby, self.aria_describedby),
+                Attr(attr::AriaHaspopup, self.aria_haspopup),
+                Attr(attr::AriaExpanded, self.aria_expanded),
+                Attr(attr::AriaControls, self.aria_controls),
             ),
             self.item.into_attrs(),
             self.press.into_attrs(),
             self.hover.into_attrs(),
             self.keyboard.into_attrs(),
             self.on_click.into_on(ev::click),
+            self.on_mousedown.into_on(ev::mousedown),
         )
     }
 }
@@ -149,7 +168,12 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         menu,
         key,
         should_close_on_select,
+        submenu_trigger,
     } = input;
+    let is_trigger = submenu_trigger.is_some();
+    let is_trigger_expanded = submenu_trigger
+        .as_ref()
+        .map_or_else(|| Signal::stored(false), |trigger| trigger.is_open);
     let MenuData {
         state,
         collection_id,
@@ -171,7 +195,9 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     let (description_id, keyboard_id) =
         (description.referenced_id, keyboard_shortcut.referenced_id);
 
-    let element = CapturedElement::new();
+    let element = submenu_trigger
+        .as_ref()
+        .map_or_else(CapturedElement::new, |trigger| trigger.element);
     let UseSelectableItemReturn {
         props: item_props,
         is_selected,
@@ -193,7 +219,26 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         focus: None,
         should_use_virtual_focus: false,
     });
-    let (item_props, item_styles) = item_props.into_inner();
+    let (mut item_props, item_styles) = item_props.into_inner();
+    if let Some(trigger) = &submenu_trigger {
+        // A trigger keeps the item's focus handling only: it isn't selected by a press, and it is
+        // named by its own id (the submenu's label). While its submenu is open, Shift+Tab leaves
+        // the menu instead of moving to the trigger.
+        item_props.id.clone_from(&trigger.id);
+        item_props.press = use_press(UsePressInput {
+            is_disabled: Signal::stored(true),
+            ..UsePressInput::default()
+        })
+        .props
+        .into_inner()
+        .0;
+        let tabindex = item_props.tabindex;
+        item_props.tabindex = Signal::derive(move || {
+            tabindex
+                .get()
+                .map(|index| if is_trigger_expanded.get() { -1 } else { index })
+        });
+    }
 
     let key = StoredValue::new(key);
     let interaction: StoredValue<Option<Interaction>> = StoredValue::new(None);
@@ -203,6 +248,10 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     // the item activates it.
     let press = use_press(UsePressInput {
         is_disabled,
+        on_press_start: submenu_trigger
+            .as_ref()
+            .map(|trigger| trigger.on_press_start),
+        on_press: submenu_trigger.as_ref().map(|trigger| trigger.on_press),
         on_press_up: Some(Callback::new(move |e: PressEvent| {
             if e.pointer_type != PointerType::Keyboard {
                 interaction.set_value(Some(Interaction::Pointer(e.pointer_type.clone())));
@@ -221,11 +270,19 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     });
     let (press_props, press_styles) = press.props.into_inner();
 
-    // Hovering moves focus, unless the keyboard is in use.
+    // Hovering moves focus, unless the keyboard is in use (or it would leave an open subdialog).
+    let is_subdialog_trigger = submenu_trigger
+        .as_ref()
+        .is_some_and(|trigger| trigger.aria_haspopup.get_untracked() == Some(AriaHasPopup::Dialog));
     let hover = use_hover(UseHoverInput {
         is_disabled,
+        on_hover_change: submenu_trigger
+            .as_ref()
+            .map(|trigger| trigger.on_hover_change),
         on_hover_start: Some(Callback::new(move |_| {
-            if get_modality() == Modality::Pointer {
+            if get_modality() == Modality::Pointer
+                && !(is_subdialog_trigger && is_trigger_expanded.get_untracked())
+            {
                 selection.set_focused(true);
                 selection.set_focused_key(Some(key.get_value()), None);
             }
@@ -269,9 +326,27 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         ..UseKeyboardInput::default()
     })
     .props;
+    // A trigger's arrow keys open and close its submenu.
+    let keyboard = match &submenu_trigger {
+        Some(trigger) => {
+            let (item, trigger) = (keyboard, trigger.keyboard.clone());
+            UseKeyboardProps {
+                on_keydown: EventHandler::new(move |e: KeyboardEvent| {
+                    item.on_keydown.call(e.clone());
+                    trigger.on_keydown.call(e);
+                }),
+                on_keyup: EventHandler::new(move |e: KeyboardEvent| {
+                    item.on_keyup.call(e.clone());
+                    trigger.on_keyup.call(e);
+                }),
+            }
+        }
+        None => keyboard,
+    };
 
     let on_click = EventHandler::new(move |_: MouseEvent| {
-        if is_disabled.get_untracked() {
+        // A trigger has no action and keeps the menu open.
+        if is_disabled.get_untracked() || is_trigger {
             return;
         }
         let key = key.get_value();
@@ -296,10 +371,26 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
 
     let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
 
+    let (aria_haspopup, aria_expanded, aria_controls) = match &submenu_trigger {
+        Some(trigger) => {
+            let is_open = trigger.is_open;
+            (
+                trigger.aria_haspopup,
+                Signal::derive(move || Some(if is_open.get() { "true" } else { "false" })),
+                trigger.aria_controls,
+            )
+        }
+        None => (
+            Signal::stored(None),
+            Signal::stored(None),
+            Signal::stored(None),
+        ),
+    };
     UseMenuItemReturn {
         props: PropsWithStyles::new(
             UseMenuItemProps {
                 role: match untrack(|| selection.selection_mode()) {
+                    _ if is_trigger => AriaRole::Menuitem,
                     SelectionMode::None => AriaRole::Menuitem,
                     SelectionMode::Single => AriaRole::Menuitemradio,
                     SelectionMode::Multiple => AriaRole::Menuitemcheckbox,
@@ -308,7 +399,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                     is_disabled.get().then_some(AriaDisabled::True)
                 }),
                 aria_checked: Signal::derive(move || {
-                    (selection.selection_mode() != SelectionMode::None)
+                    (!is_trigger && selection.selection_mode() != SelectionMode::None)
                         .then(|| AriaChecked::from(is_selected.get()))
                 }),
                 aria_label,
@@ -323,8 +414,16 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 item: item_props,
                 press: press_props,
                 hover,
+                aria_haspopup,
+                aria_expanded,
+                aria_controls,
                 keyboard,
                 on_click,
+                on_mousedown: EventHandler::new(move |e: MouseEvent| {
+                    if is_trigger {
+                        e.prevent_default();
+                    }
+                }),
             },
             item_styles.merge(press_styles),
         ),
@@ -332,7 +431,9 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         description_props: description.props,
         keyboard_shortcut_props: keyboard_shortcut.props,
         is_focused,
-        is_focus_visible: Signal::derive(move || is_focused.get() && focus_visible.get()),
+        is_focus_visible: Signal::derive(move || {
+            is_focused.get() && focus_visible.get() && !is_trigger_expanded.get()
+        }),
         is_selected,
         is_pressed: press.is_pressed,
         is_disabled,

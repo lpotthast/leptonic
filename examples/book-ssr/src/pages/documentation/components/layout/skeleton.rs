@@ -7,16 +7,21 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageSkeleton() -> impl IntoView {
     view! {
-        <DocPage title="Skeleton">
+        <DocPage title="Skeleton Component">
             <p>
                 "A skeleton is a placeholder of a specific shape and size, shown in place of content that can\u{2019}t be "
                 "displayed yet, for example because its data is still being fetched. It reduces layout shifts and shows "
                 "your users where the content will appear. The "<Code inline=true>"Skeleton"</Code>
                 " component renders such a placeholder, animated by default."
             </p>
+            <p>
+                "A skeleton only mitigates slowly loading content. Often you can avoid the wait altogether, by preloading "
+                "resources or by serving data fast, so don\u{2019}t reach for skeletons by default. Keep in mind, though, "
+                "that even fast services can\u{2019}t make up for a slow network connection of your users."
+            </p>
 
             <Demo
-                description="Animated skeleton, static skeleton and skeleton with content"
+                description="Profile card showing two skeletons while loading, with a Loading checkbox to show the content"
                 source=include_str!("demos/skeleton.rs")
             >
                 <SkeletonDemo/>
@@ -37,18 +42,20 @@ pub fn PageSkeleton() -> impl IntoView {
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Additional classes and styles."
                     </ApiRow>
-                    <ApiRow name="children" ty="Option<Children>
-                        " default="None">"Content shown centered in the skeleton."
+                    <ApiRow name="children" ty="Option<Children>" default="None">
+                        "Content shown centered in the skeleton."
                     </ApiRow>
                 </ApiTable>
             </Section>
 
-            <Section title="When to Use">
+            <Section title="Accessibility">
                 <p>
-                    "A skeleton only mitigates slowly loading content. Often you can avoid the wait altogether, by "
-                    "preloading resources or by serving data fast, so don\u{2019}t reach for skeletons by default. "
-                    "Keep in mind, though, that even fast services can\u{2019}t make up for a slow network connection "
-                    "of your users."
+                    "A skeleton is a "<Code inline=true>"<div>"</Code>" without a role, which screen readers pass over. "
+                    "Tell them that content is on its way by setting "<Code inline=true>"aria-busy=\"true\""</Code>
+                    " on the region that is loading, as the demo does, and announce the result with the "
+                    <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live announcer"</Link>
+                    " where it matters (\u{201c}12 results\u{201d}). The highlight stops moving when the user prefers "
+                    "reduced motion."
                 </p>
             </Section>
 
@@ -58,8 +65,9 @@ pub fn PageSkeleton() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
-                <li><Link href=routes::doc::Progress.materialize()>"Progress"</Link></li>
+                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
+                <li><Link href=routes::doc::ProgressBar.materialize()>"Progress Bar"</Link></li>
+                <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"Live Announcer"</Link></li>
             </SeeAlso>
         </DocPage>
     }

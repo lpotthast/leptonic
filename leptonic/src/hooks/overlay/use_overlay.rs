@@ -11,7 +11,7 @@ use leptos::{
 };
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
-use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
+use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::visible_overlays;
 use crate::{
@@ -31,25 +31,42 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useOverlay.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The overlay element is captured by the returned props (`ElementCaptureAttr`) instead of a ref.
+// - `isDismissable`, `shouldCloseOnBlur` and `isKeyboardDismissDisabled` are signals;
+//   `shouldCloseOnInteractOutside` is an `InteractOutsideFilter`.
+// - No `underlayProps`: react-aria's are empty since its Firefox text-selection workaround was
+//   removed.
 //
 // ## DIFFERENT BEHAVIOR
+// - The overlay id is generated here and returned (react-aria: in `useOverlayTrigger`).
 //
-// - ID generation: react-aria generates overlay IDs in `useOverlayTrigger`, not `useOverlay`.
-//   Leptonic generates the ID here for convenience and returns it in `UseOverlayReturn`.
-//
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-//
-// - Uses `ElementCaptureAttr` instead of React ref parameter.
-//   The overlay element is captured via the attribute spread pattern rather than
-//   being passed as a ref argument.
-//
-// - Uses `EventHandler<E>` / `On<>` attributes instead of React event handler props.
-//
-// - No `underlay_props`: react-aria's are empty (`{}`) since its Firefox text-selection workaround
-//   was removed; an underlay element needs no props.
-//
+// =============================================================================
+
+/// Decides whether an interaction with an element outside an overlay closes it (`true`: close).
+#[derive(Clone)]
+pub struct InteractOutsideFilter(std::sync::Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>);
+
+impl InteractOutsideFilter {
+    pub fn new(filter: impl Fn(&web_sys::Element) -> bool + Send + Sync + 'static) -> Self {
+        Self(std::sync::Arc::new(filter))
+    }
+
+    /// Whether an interaction with `element` closes the overlay.
+    pub fn should_close(&self, element: &web_sys::Element) -> bool {
+        (self.0)(element)
+    }
+}
+
+impl std::fmt::Debug for InteractOutsideFilter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("InteractOutsideFilter(..)")
+    }
+}
 
 /// Input parameters for the `use_overlay` hook.
 #[derive(Debug, Clone)]
@@ -61,22 +78,39 @@ pub struct UseOverlayInput {
     pub on_close: Callback<()>,
 
     /// Whether to close the overlay when the user interacts outside it.
-    /// Defaults to `false`.
-    pub is_dismissable: bool,
+    pub is_dismissable: Signal<bool>,
 
     /// Whether the overlay should close when focus is lost or moves outside it.
-    /// Defaults to `false`.
-    pub should_close_on_blur: bool,
+    pub should_close_on_blur: Signal<bool>,
 
     /// Whether pressing the Escape key to close the overlay should be disabled.
-    /// Defaults to `false`.
-    pub is_keyboard_dismiss_disabled: bool,
+    pub is_keyboard_dismiss_disabled: Signal<bool>,
 
-    /// When the user interacts with an element outside of the overlay,
-    /// return `true` if `on_close` should be called. This gives you a chance to
-    /// filter out interaction with elements that should not dismiss the overlay.
-    /// By default, `on_close` will always be called on interaction outside the overlay.
-    pub should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
+    /// When the user interacts with an element outside of the overlay, decides whether
+    /// `on_close` is called. This gives you a chance to filter out interaction with elements that
+    /// should not dismiss the overlay. By default, any interaction outside closes it.
+    pub should_close_on_interact_outside: Option<InteractOutsideFilter>,
+
+    /// The element the overlay belongs to for the overlay stack and outside interactions, when it
+    /// is part of a group (a submenu's popover in its root popover's container). Default: the
+    /// overlay element.
+    pub group: Option<CapturedElement>,
+}
+
+impl UseOverlayInput {
+    /// An overlay open while `is_open`, closed through `on_close`: not dismissable by clicking
+    /// outside or blurring, closed by Escape, no group.
+    pub fn new(is_open: Signal<bool>, on_close: Callback<()>) -> Self {
+        Self {
+            is_open,
+            on_close,
+            is_dismissable: Signal::stored(false),
+            should_close_on_blur: Signal::stored(false),
+            is_keyboard_dismiss_disabled: Signal::stored(false),
+            should_close_on_interact_outside: None,
+            group: None,
+        }
+    }
 }
 
 /// The return value of the `use_overlay` hook.
@@ -179,6 +213,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                 should_close_on_blur,
                 is_keyboard_dismiss_disabled,
                 should_close_on_interact_outside,
+                group,
             } = input;
 
     let id_string = use_id("overlay");
@@ -186,6 +221,8 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     // Element capture for the overlay element. This is used by the overlay stack
     // and chained with the element capture from use_interact_outside.
     let overlay_element = CapturedElement::new();
+    // What the overlay stack and outside interactions see: the group, else the overlay.
+    let stacked_element = group.unwrap_or(overlay_element);
 
     // Track which overlay was topmost at pointerdown time.
     // This handles the race condition where a click on overlay B's trigger
@@ -196,37 +233,53 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
         LocalStorage,
     > = StoredValue::new_local(None);
 
-    // Push/remove element from the visible overlays stack when is_open changes.
+    // The open overlay's element is on the visible overlays stack. Remembers the element it pushed:
+    // by the time the overlay closes, the captured element may be gone or replaced.
+    let pushed: StoredValue<Option<SendWrapper<web_sys::Element>>, LocalStorage> =
+        StoredValue::new_local(None);
+    let remove_pushed = move || {
+        if let Some(el) = pushed.try_update_value(Option::take).flatten() {
+            visible_overlays::remove_overlay(&el);
+        }
+    };
     Effect::new(move |_| {
-        let open = is_open.get();
-        if open {
-            if let Some(el) = overlay_element.get() {
-                visible_overlays::push_overlay(&el);
-            }
-        } else if let Some(el) = overlay_element.get_untracked() {
-            visible_overlays::remove_overlay(&el);
+        let element = is_open.get().then(|| stacked_element.get()).flatten();
+        let unchanged = pushed.with_value(|pushed| pushed.as_deref() == element.as_deref());
+        if unchanged {
+            return;
+        }
+        remove_pushed();
+        if let Some(el) = element {
+            visible_overlays::push_overlay(&el);
+            pushed.set_value(Some(el));
         }
     });
-
-    // Clean up on unmount.
-    on_cleanup(move || {
-        if let Some(el) = overlay_element.get_untracked() {
-            visible_overlays::remove_overlay(&el);
-        }
-    });
+    on_cleanup(remove_pushed);
 
     let on_hide = move || {
-        if let Some(el) = overlay_element.get_untracked()
+        if let Some(el) = stacked_element.get_untracked()
             && visible_overlays::is_topmost(&el) {
                 on_close.run(());
             }
+    };
+
+    // Whether an interaction with `target` (outside the overlay) closes it.
+    let filter = StoredValue::new(should_close_on_interact_outside);
+    let close_on_interact = move |target: &web_sys::EventTarget| {
+        filter.with_value(|filter| {
+            filter.as_ref().is_none_or(|filter| {
+                target
+                    .dyn_ref::<web_sys::Element>()
+                    .is_some_and(|target| filter.should_close(target))
+            })
+        })
     };
 
     // Escape closes the topmost overlay (a handled shortcut stops propagation). With keyboard
     // dismissal disabled, the key press bubbles on.
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::key("Escape"), move |_| {
-            if is_keyboard_dismiss_disabled {
+            if is_keyboard_dismiss_disabled.get_untracked() {
                 return false;
             }
             on_hide();
@@ -236,11 +289,11 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     });
 
     let interact_outside_return = use_interact_outside(UseInteractOutsideInput {
-        is_disabled: Signal::derive(move || !(is_dismissable && is_open.get())),
+        is_disabled: Signal::derive(move || !(is_dismissable.get() && is_open.get())),
 
-        on_interact_outside_start: Some(Callback::new(move |e: PointerEvent| {
+        on_interact_outside_start: Some(Callback::new(move |e: web_sys::MouseEvent| {
             // Capture topmost at pointerdown time.
-            if let Some(el) = overlay_element.get_untracked() {
+            if let Some(el) = stacked_element.get_untracked() {
                 if visible_overlays::is_topmost(&el) {
                     last_topmost_at_pointerdown.set_value(Some(SendWrapper::new((*el).clone())));
                 } else {
@@ -249,13 +302,10 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             }
 
             // Check the filter callback.
-            let should_close = should_close_on_interact_outside.is_none_or(|filter| {
-                e.expect_target()
-                    .dyn_into::<web_sys::Element>().is_ok_and(|target_el| filter.run(target_el))
-            });
+            let should_close = close_on_interact(&e.expect_target());
 
             if should_close
-                && let Some(el) = overlay_element.get_untracked()
+                && let Some(el) = stacked_element.get_untracked()
                     && visible_overlays::is_topmost(&el) {
                         // Only stop propagation (as react-aria): the outside element still gets
                         // its default action (a link navigates, a checkbox toggles).
@@ -263,15 +313,14 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                     }
         })),
 
+        element: group,
+
         on_interact_outside: Some(Callback::new(move |e: web_sys::MouseEvent| {
             // Check the filter callback.
-            let should_close = should_close_on_interact_outside.is_none_or(|filter| {
-                e.expect_target()
-                    .dyn_into::<web_sys::Element>().is_ok_and(|target_el| filter.run(target_el))
-            });
+            let should_close = close_on_interact(&e.expect_target());
 
             if should_close {
-                if let Some(el) = overlay_element.get_untracked()
+                if let Some(el) = stacked_element.get_untracked()
                     && visible_overlays::is_topmost(&el) {
                         // Only stop propagation (as react-aria): the outside element still gets
                         // its default action (a link navigates, a checkbox toggles).
@@ -282,7 +331,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                 let was_topmost = last_topmost_at_pointerdown
                     .get_value()
                     .is_some_and(|saved| {
-                        overlay_element
+                        stacked_element
                             .get_untracked()
                             .is_some_and(|el| *saved == *el)
                     });
@@ -301,7 +350,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
         .chain(interact_outside_return.props.element_capture);
 
     let focus_within_return = use_focus_within(UseFocusWithinInput {
-        is_disabled: Signal::derive(move || !should_close_on_blur),
+        is_disabled: Signal::derive(move || !should_close_on_blur.get()),
 
         on_focus_within: None,
 
@@ -325,8 +374,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             }
 
             // Check the filter callback.
-            let should_close = should_close_on_interact_outside
-                .is_none_or(|filter| filter.run(related_el.clone()));
+            let should_close = close_on_interact(related_el);
 
             if should_close {
                 // Blur bypasses the topmost check, matching react-aria behavior.

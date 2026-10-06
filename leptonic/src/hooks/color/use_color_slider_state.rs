@@ -1,176 +1,161 @@
-// Upstream: react-stately/src/color/useColorSliderState.ts @ 6f664fe911
-use std::fmt;
-
+// Upstream: react-stately/src/color/useColorSliderState.ts @ 99e6102368
 use leptos::prelude::*;
 
 use crate::{
-    hooks::slider::{SliderValues, UseSliderStateInput, UseSliderStateReturn, use_slider_state},
-    utils::{color::ColorValue, orientation::Orientation},
+    hooks::slider::{SliderState, UseSliderStateInput, use_slider_state},
+    utils::{ValueBinding, color::ColorValue, orientation::Orientation},
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorSliderState.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Hook-owned state: The hook owns its color state internally and syncs
-//   bidirectionally with the underlying slider state.
+// ## API DIFFERENCES
+// - Generic over the color type (`ColorValue`), the color space is the type.
+// - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
+// - A `Copy` struct (C3) holding the one-thumb `SliderState` of the channel (react-aria: the
+//   slider state spread into the color slider state).
 //
-// - Wraps `use_slider_state` with a single thumb for the channel value,
-//   mapping channel range to slider min/max/step.
+// =============================================================================
 
-/// Input parameters for `use_color_slider_state`.
-#[derive(Debug, Clone)]
+/// Input of [`use_color_slider_state`]. Start from [`UseColorSliderStateInput::new`].
+#[derive(Debug, Clone, Copy)]
 pub struct UseColorSliderStateInput<C: ColorValue> {
-    /// The initial color value.
+    /// The initial color.
     pub default_value: C,
-
-    /// Which channel this slider controls.
+    /// The color as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<C>>,
+    /// The channel the slider changes.
     pub channel: C::Channel,
-
-    /// Whether the slider is disabled.
     pub is_disabled: Signal<bool>,
-
-    /// The slider orientation. Affects keyboard navigation and pointer
-    /// coordinate interpretation in the underlying slider state.
     pub orientation: Signal<Orientation>,
-
-    /// Callback fired when the color changes during interaction.
+    /// Called with the color whenever it changes, also while dragging.
     pub on_change: Option<Callback<C>>,
-
-    /// Callback fired when interaction ends.
+    /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
 }
 
-/// Return value of `use_color_slider_state`.
-pub struct UseColorSliderStateReturn<C: ColorValue> {
-    /// The current full color.
-    pub value: Signal<C>,
-
-    /// Update the full color.
-    pub set_value: Callback<C>,
-
-    /// The underlying slider state (single thumb).
-    pub slider_state: UseSliderStateReturn,
-
-    /// The display color for gradient rendering.
-    /// For hue: full saturation and brightness at current hue.
-    /// For other channels: color as-is (alpha stripping deferred until alpha support).
-    pub display_color: Signal<C>,
-
-    /// Formatted label for the current channel value.
-    pub thumb_value_label: Signal<String>,
-
-    /// The channel this slider controls.
-    pub channel: C::Channel,
-
-    /// Whether the color slider is currently being dragged.
-    pub is_dragging: Signal<bool>,
-}
-
-impl<C: ColorValue> Clone for UseColorSliderStateReturn<C> {
-    fn clone(&self) -> Self {
+impl<C: ColorValue> UseColorSliderStateInput<C> {
+    /// A horizontal slider of `channel`, starting at `default_value`.
+    pub fn new(default_value: C, channel: C::Channel) -> Self {
         Self {
-            value: self.value,
-            set_value: self.set_value,
-            slider_state: self.slider_state,
-            display_color: self.display_color,
-            thumb_value_label: self.thumb_value_label,
-            channel: self.channel,
-            is_dragging: self.is_dragging,
+            default_value,
+            value: None,
+            channel,
+            is_disabled: Signal::stored(false),
+            orientation: Signal::stored(Orientation::Horizontal),
+            on_change: None,
+            on_change_end: None,
         }
     }
 }
 
-impl<C: ColorValue> fmt::Debug for UseColorSliderStateReturn<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UseColorSliderStateReturn")
-            .field("channel", &self.channel)
-            .finish_non_exhaustive()
+/// The state of a color slider: the color, and the slider of its channel.
+#[derive(Debug, Clone, Copy)]
+pub struct ColorSliderState<C: ColorValue> {
+    /// The color.
+    pub value: Signal<C>,
+    /// The channel the slider changes.
+    pub channel: C::Channel,
+    /// The slider of the channel's value (one thumb).
+    pub slider: SliderState<f64>,
+    /// Whether the thumb is being dragged.
+    pub is_dragging: Signal<bool>,
+    binding: ValueBinding<C>,
+    default_value: StoredValue<C>,
+}
+
+impl<C: ColorValue> ColorSliderState<C> {
+    /// Sets the color.
+    pub fn set_value(&self, color: C) {
+        self.binding.set(color);
+    }
+
+    /// The color the slider started with (for form resets).
+    pub fn default_value(&self) -> C {
+        self.default_value.get_value()
+    }
+
+    /// The color to draw the track with: for a hue, the hue at full saturation (react-aria's
+    /// `getDisplayColor`).
+    pub fn display_color(&self) -> Signal<C> {
+        let (value, channel) = (self.value, self.channel);
+        Signal::derive(move || value.get().get_display_color(channel))
+    }
+
+    /// The channel's value, formatted.
+    pub fn formatted_value(&self) -> Signal<String> {
+        let (value, channel) = (self.value, self.channel);
+        Signal::derive(move || value.get().format_channel_value(channel))
     }
 }
 
-/// Creates state for a color slider that adjusts a single channel.
-///
-/// Wraps `use_slider_state` with the channel's range (min, max, step)
-/// and syncs changes back to the full color value.
+/// Creates the state of a slider changing one channel of a color.
 pub fn use_color_slider_state<C: ColorValue>(
-    input: &UseColorSliderStateInput<C>,
-) -> UseColorSliderStateReturn<C> {
+    input: UseColorSliderStateInput<C>,
+) -> ColorSliderState<C> {
     let UseColorSliderStateInput {
         default_value,
+        value,
         channel,
-        is_disabled: disabled,
+        is_disabled,
         orientation,
         on_change,
         on_change_end,
-    } = *input;
+    } = input;
+
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    let default_value = StoredValue::new(binding.value.get_untracked());
+    let color = binding.value;
+    // Several changes can come before the binding updates (dragging): the latest color.
+    let latest = StoredValue::new(color.get_untracked());
+    Effect::new(move || latest.set_value(color.get()));
+    let binding = ValueBinding::new(
+        color,
+        Callback::new(move |new_color: C| {
+            latest.set_value(new_color);
+            binding.set(new_color);
+            if let Some(on_change) = on_change {
+                on_change.run(new_color);
+            }
+        }),
+    );
 
     let range = C::get_channel_range(channel);
-
-    // Hook-owned color state.
-    let (color, set_color_signal) = signal(default_value);
-
-    // Internal update helper.
-    let update_color = move |new_color: C| {
-        set_color_signal.set(new_color);
-        if let Some(cb) = on_change {
-            cb.run(new_color);
-        }
-    };
-
-    // Controlled slider values derived from the color channel.
-    let slider_values = Signal::derive(move || vec![color.get().get_channel_value(channel)]);
-
-    let slider_on_change = Callback::new(move |values: Vec<f64>| {
-        if let Some(&val) = values.first() {
-            let current = color.get_untracked();
-            let new_color = current.with_channel_value(channel, val);
-            update_color(new_color);
-        }
-    });
-
-    let slider_on_change_end = on_change_end.map(|cb| {
-        Callback::new(move |values: Vec<f64>| {
-            if let Some(&val) = values.first() {
-                let current = color.get_untracked();
-                cb.run(current.with_channel_value(channel, val));
-            }
-        })
-    });
-
-    let mut slider_state = use_slider_state(UseSliderStateInput {
-        values: SliderValues::Controlled(slider_values),
-        min_value: range.min_value,
-        max_value: range.max_value,
-        step: Some(range.step),
-        is_disabled: disabled,
+    let slider = use_slider_state(UseSliderStateInput {
+        value: Some(ValueBinding::new(
+            Signal::derive(move || vec![color.get().get_channel_value(channel)]),
+            Callback::new(move |values: Vec<f64>| {
+                if let Some(&value) = values.first() {
+                    binding.set(latest.get_value().with_channel_value(channel, value));
+                }
+            }),
+        )),
+        step: Signal::stored(range.step),
+        is_disabled,
         orientation,
-        on_change: Some(slider_on_change),
-        on_change_end: slider_on_change_end,
+        // The channel's formatting and page size (react-stately overrides both).
+        value_label: Some(Callback::new(move |_| {
+            color.get().format_channel_value(channel)
+        })),
+        page_size: Some(Signal::stored(range.page_size)),
+        // `on_change` already ran with the color; this only reports the end.
+        on_change_end: on_change_end.map(|on_change_end| {
+            Callback::new(move |values: Vec<f64>| {
+                if let Some(&value) = values.first() {
+                    on_change_end.run(latest.get_value().with_channel_value(channel, value));
+                }
+            })
+        }),
+        ..UseSliderStateInput::new(range.min_value, range.max_value)
     });
 
-    // Override the auto-computed page_size with the channel's intended value.
-    slider_state.page_size = range.page_size;
-
-    let set_value = Callback::new(move |new_color: C| {
-        update_color(new_color);
-    });
-
-    // Display color for gradient rendering (channel-specific).
-    let display_color = Signal::derive(move || color.get().get_display_color(channel));
-
-    // Formatted channel value label.
-    let thumb_value_label = Signal::derive(move || color.get().format_channel_value(channel));
-
-    let is_dragging = Signal::derive(move || slider_state.is_thumb_dragging.run(0));
-
-    UseColorSliderStateReturn {
-        value: color.into(),
-        set_value,
-        slider_state,
-        display_color,
-        thumb_value_label,
+    ColorSliderState {
+        value: color,
         channel,
-        is_dragging,
+        slider,
+        is_dragging: Signal::derive(move || slider.is_thumb_dragging(0)),
+        binding,
+        default_value,
     }
 }

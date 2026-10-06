@@ -7,6 +7,7 @@ use crate::{
     components::date_selector::{DateSelector, DateSelectorProps},
     utils::{
         classes::Classes,
+        key::{KeyboardEventKey, KeyboardKey},
         styles::Styles,
         time::{GuideMode, Type},
     },
@@ -24,7 +25,7 @@ pub fn DateTimeInput(
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(into, optional)] prepend: ViewFn,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(optional)] margin: Option<Margin>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -49,17 +50,19 @@ pub fn DateTimeInput(
     let on_key_down = move |event: KeyboardEvent| {
         let in_focus = in_focus.get();
         let open = open.get();
+        let key = event.typed_key();
         if in_focus {
             if !open
-                && (event.key().as_str() == "ArrowDown"
-                    || event.key().as_str() == "Enter"
-                    || event.key().as_str() == " ")
+                && matches!(
+                    key,
+                    KeyboardKey::ArrowDown | KeyboardKey::Enter | KeyboardKey::Space
+                )
             {
                 event.prevent_default();
                 set_open.set(true);
-            } else if open && (event.key().as_str() == "Escape" || event.key().as_str() == "Tab") {
+            } else if open && matches!(key, KeyboardKey::Escape | KeyboardKey::Tab) {
                 set_open.set(false);
-            } else if event.key().as_str() == "Tab" {
+            } else if key == KeyboardKey::Tab {
                 // Do nothing.
             } else {
                 event.prevent_default();
@@ -102,7 +105,7 @@ pub fn DateTimeInput(
                 placeholder=label
                 tabindex="0"
                 type="text"
-                prop:disabled=move || disabled.get()
+                prop:disabled=move || is_disabled.get()
                 prop:value=move || {
                     get.get()
                         .map(|it| {

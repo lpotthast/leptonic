@@ -4,7 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ChipColorsDemo() -> impl IntoView {
     view! {
-        <div class="demo-clf-wrap">
+        <div class="demo-chip-row">
             <Chip color=ChipColor::Primary>"Primary"</Chip>
             <Chip color=ChipColor::Secondary>"Secondary"</Chip>
             <Chip color=ChipColor::Success>"Success"</Chip>

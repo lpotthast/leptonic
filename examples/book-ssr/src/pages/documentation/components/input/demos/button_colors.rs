@@ -1,15 +1,33 @@
-use leptonic::{components::prelude::*, utils::css::em};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
+
+const COLORS: [(ButtonColor, &str); 6] = [
+    (ButtonColor::Primary, "Primary"),
+    (ButtonColor::Secondary, "Secondary"),
+    (ButtonColor::Success, "Success"),
+    (ButtonColor::Info, "Info"),
+    (ButtonColor::Warn, "Warn"),
+    (ButtonColor::Danger, "Danger"),
+];
 
 #[component]
 pub fn ButtonColorsDemo() -> impl IntoView {
+    let last_pressed = RwSignal::new(None::<&str>);
+
     view! {
-        <Stack orientation=StackOrientation::Horizontal spacing=em(0.6) classes="demo-row-start">
-            <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
-            <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
-            <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
-            <Button on_press=move |_| {} color=ButtonColor::Danger>"Danger"</Button>
-            <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
-        </Stack>
+        <ButtonWrapper>
+            {COLORS
+                .into_iter()
+                .map(|(color, name)| {
+                    view! { <Button color=color on_press=move |_| last_pressed.set(Some(name))>{name}</Button> }
+                })
+                .collect_view()}
+        </ButtonWrapper>
+        <p class="demo-status">
+            {move || match last_pressed.get() {
+                Some(name) => format!("Last pressed: {name}."),
+                None => "No button pressed yet.".to_owned(),
+            }}
+        </p>
     }
 }

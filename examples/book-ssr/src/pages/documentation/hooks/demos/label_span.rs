@@ -7,7 +7,7 @@ pub fn LabelSpanDemo() -> impl IntoView {
         label_props,
         field_props,
     } = use_label(UseLabelInput {
-        has_label: true,
+        has_label: true.into(),
         label_element_type: LabelElementType::Span,
         ..UseLabelInput::default()
     });
@@ -18,6 +18,7 @@ pub fn LabelSpanDemo() -> impl IntoView {
             <span class="demo-field-label" {..label_props.into_attrs()}>"Notes"</span>
             <div
                 role="textbox"
+                aria-multiline="true"
                 contenteditable="true"
                 class="demo-input demo-text-input"
                 {..field_props.into_attrs()}

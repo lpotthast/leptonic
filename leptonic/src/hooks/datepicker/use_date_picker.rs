@@ -23,6 +23,7 @@ use crate::{
         aria::{AriaDisabled, AriaExpanded, AriaModal, AriaRole},
         element_capture::{CapturedElement, ElementCaptureAttr},
         id::use_id,
+        key::{KeyboardEventKey, KeyboardKey},
     },
 };
 
@@ -653,7 +654,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     let state_set_open = state.set_open;
     let handle_group_keydown = move |e: KeyboardEvent| {
         // Alt+ArrowDown or Alt+ArrowUp opens the popover (standard ARIA pattern).
-        if e.alt_key() && (e.key() == "ArrowDown" || e.key() == "ArrowUp") {
+        if e.alt_key() && matches!(e.typed_key(), KeyboardKey::ArrowDown | KeyboardKey::ArrowUp) {
             e.prevent_default();
             e.stop_propagation();
             state_set_open.run(true);
@@ -685,8 +686,8 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
-        match e.key().as_str() {
-            "Enter" | " " => {
+        match e.typed_key() {
+            KeyboardKey::Enter | KeyboardKey::Space => {
                 e.prevent_default();
                 state_set_open.run(true);
             }

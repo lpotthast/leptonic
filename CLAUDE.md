@@ -10,11 +10,15 @@ components with theming capabilities, built on a layered architecture of hooks, 
 ## Code Quality Principles
 
 - **Rust-native APIs**: Port react-aria's behavior faithfully, but never copy API shapes that are alien to Rust
-  (stringly-typed values, `string | number` unions, runtime-parsed specs, controlled/uncontrolled prop pairs, props
-  objects merged at runtime). Adapt them to idiomatic Rust/Leptos APIs (enums, newtypes, traits, typed builders,
+  (stringly-typed values, `string | number` unions, runtime-parsed specs, props objects merged at runtime). Adapt them to idiomatic Rust/Leptos APIs (enums, newtypes, traits, typed builders,
   `Default` + struct update syntax, signals) and document the adaptation as an `API DIFFERENCES` deviation. Use
   generics (or trait objects) wherever they make an API more capable or better typed (e.g. a number field generic over
   its value type instead of JS's `number`).
+- **State props of atoms and components** (the user's rule, 2026-10-06): controlled state is two props, a readable
+  `<x>` (`#[prop(into)]` `Signal<T>`/`MaybeProp<T>`: a plain value, any signal or a closure) and a writable
+  `set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`), never one combined binding
+  that forces e.g. an `RwSignal` (for `is_<x>`, the setter is `set_<x>`: `is_open` + `set_open`). Uncontrolled: `default_<x>`, plus `on_<x>_change` to observe. Hooks keep
+  `ValueBinding` internally (the component builds it from the two props).
 - **No workarounds**: Do not use temporary workarounds instead of fixing real underlying issues. Always address the root
   cause.
 - **Long-term solutions**: Prefer maintainable, long-term solutions over quick fixes that accumulate technical debt.
@@ -189,11 +193,13 @@ manual testing during development. It is named "book" following Rust ecosystem c
   `[lints.clippy]` in its `Cargo.toml`).
 - **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
 - **Not a workspace member**: Excluded from the root workspace; managed via the root Justfile.
-- **Page structure**: Pages live in `src/pages/documentation/`, organized by layer (`hooks/`, `atoms/`, `components/`)
-  and by concept (`concepts/`, `domains/`). The concept-based organization groups related hooks/atoms/components under
-  a single concept page (e.g., Button, Slider) while domain pages group behavioral hook families (e.g., Interactions,
-  Focus). Pages are written with the page kit in `src/kit/`; `src/nav.rs` defines the navigation. See
-  `documentation/documentation-strategy.md` for page types, the kit and writing guidelines.
+- **Page structure**: The sidebar (`src/nav.rs`) has three parts: guides; **concepts** (every UI element, e.g.
+  Button or Slider, as one entry whose layers are tabs, grouped by purpose); and **building blocks** (hooks, atoms and
+  utilities many concepts share, e.g. `use_press`, grouped into areas like Interactions or Focus). Page files live in
+  `src/pages/documentation/` by layer (`hooks/`, `atoms/`, `components/`), plus `concepts/` (concept overviews),
+  `groups/` (group and area overviews) and `getting_started/` (guides). Pages are written with the page kit in
+  `src/kit/`. "Component" means only the styled layer. See `documentation/documentation-strategy.md` for terminology,
+  page types, navigation rules, the kit and writing guidelines.
 - **When adding or modifying hooks, atoms, or components**: The corresponding book-ssr documentation page should be
   updated or created to demonstrate the change.
 
@@ -235,7 +241,6 @@ is required to build it, not only for leptos-use functions.
 ```toml
 [package.metadata.leptonic]
 style-dir = "style/leptonic"   # Where to output generated SCSS
-js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 ```
 
 The build script finds that `Cargo.toml` by walking up from `OUT_DIR`. A `CARGO_TARGET_DIR` inside the app (e.g.

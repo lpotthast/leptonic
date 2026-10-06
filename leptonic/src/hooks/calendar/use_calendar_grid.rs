@@ -126,7 +126,9 @@ impl UseCalendarGridInput {
             on_focus_section_start: Some(state.focus_section_start),
             on_focus_section_end: Some(state.focus_section_end),
             on_focus: Some(Callback::new(move |()| state.set_focused.run(true))),
-            on_blur: Some(Callback::new(move |()| state.set_focused.run(false))),
+            on_blur: Some(Callback::new(move |()| {
+                state.set_focused.try_run(false);
+            })),
             ..Default::default()
         }
     }

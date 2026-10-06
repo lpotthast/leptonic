@@ -1,78 +1,60 @@
-// Upstream: react-stately/src/color/useColorPickerState.ts @ 6f664fe911
-use std::fmt;
-
+// Upstream: react-stately/src/color/useColorPickerState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::color::ColorValue;
+use crate::utils::{ValueBinding, color::Color};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorPickerState.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Hook-owned state: The hook owns its WriteSignal internally and exposes a
-//   read-only Signal<C>. React-aria uses useControlledState for
-//   controlled/uncontrolled support.
+// ## API DIFFERENCES
+// - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
+// - A `Copy` struct with a signal and a method (C3).
+//
+// =============================================================================
 
-/// Input parameters for `use_color_picker_state`.
-#[derive(Debug, Clone)]
-pub struct UseColorPickerStateInput<C: ColorValue> {
-    /// The initial color value.
-    pub default_value: C,
-
-    /// Callback fired when the color changes.
-    pub on_change: Option<Callback<C>>,
+/// Input of [`use_color_picker_state`].
+#[derive(Debug, Clone, Default)]
+pub struct UseColorPickerStateInput {
+    /// The initial color. Default: black.
+    pub default_value: Color,
+    /// The color as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<Color>>,
+    /// Called with every new color.
+    pub on_change: Option<Callback<Color>>,
 }
 
-/// Return value of `use_color_picker_state`.
-pub struct UseColorPickerStateReturn<C: ColorValue> {
-    /// The current color (read-only).
-    pub color: Signal<C>,
-
-    /// Update the color value.
-    pub set_color: Callback<C>,
+/// The color that a color picker's parts share.
+#[derive(Debug, Clone, Copy)]
+pub struct ColorPickerState {
+    /// The color, in the space it was last set in.
+    pub color: Signal<Color>,
+    binding: ValueBinding<Color>,
+    on_change: Option<Callback<Color>>,
 }
 
-impl<C: ColorValue> Clone for UseColorPickerStateReturn<C> {
-    fn clone(&self) -> Self {
-        Self {
-            color: self.color,
-            set_color: self.set_color,
+impl ColorPickerState {
+    /// Sets the color.
+    pub fn set_color(&self, color: Color) {
+        self.binding.set(color);
+        if let Some(on_change) = self.on_change {
+            on_change.run(color);
         }
     }
 }
 
-impl<C: ColorValue> fmt::Debug for UseColorPickerStateReturn<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UseColorPickerStateReturn")
-            .field("color", &self.color)
-            .finish_non_exhaustive()
-    }
-}
-
-/// Creates top-level state for a color picker.
-///
-/// This is the simplest state hook — it wraps a single color value and
-/// provides a setter callback. Typically used to compose with more specialized
-/// hooks like `use_color_area_state` or `use_color_slider_state`.
-pub fn use_color_picker_state<C: ColorValue>(
-    input: &UseColorPickerStateInput<C>,
-) -> UseColorPickerStateReturn<C> {
+/// Creates the state of a color picker: one color its parts (area, sliders, fields, swatches)
+/// show and change.
+pub fn use_color_picker_state(input: UseColorPickerStateInput) -> ColorPickerState {
     let UseColorPickerStateInput {
         default_value,
+        value,
         on_change,
-    } = *input;
-
-    let (color, set_color_signal) = signal(default_value);
-
-    let set_color = Callback::new(move |new_color: C| {
-        set_color_signal.set(new_color);
-        if let Some(cb) = on_change {
-            cb.run(new_color);
-        }
-    });
-
-    UseColorPickerStateReturn {
-        color: color.into(),
-        set_color,
+    } = input;
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    ColorPickerState {
+        color: binding.value,
+        binding,
+        on_change,
     }
 }

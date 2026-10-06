@@ -5,12 +5,10 @@ use leptonic::{
     utils::time::{Day, InMonth},
 };
 use leptos::{html, prelude::*};
-use leptos_use::use_document;
-use time::{
-    OffsetDateTime,
-    macros::{datetime, format_description},
-};
-use wasm_bindgen::JsCast;
+use time::macros::{datetime, format_description};
+
+// A stopgap until the calendar cells move the browser focus themselves.
+use super::calendar_focus::{follow_focused_date, week_key};
 
 #[component]
 pub fn CalendarSingleDemo() -> impl IntoView {
@@ -28,16 +26,14 @@ pub fn CalendarSingleDemo() -> impl IntoView {
     });
 
     let grid_ref = NodeRef::<html::Table>::new();
-    follow_focused_date(state.focused_date, grid_ref);
+    follow_focused_date(state.focused_date, grid_ref, false);
 
     let selected = move || {
         state.value.get().map_or_else(
             || "No date selected".to_owned(),
             |date| {
-                date.format(format_description!(
-                    "[weekday], [month repr:long] [day padding:none], [year]"
-                ))
-                .unwrap_or_default()
+                let format = format_description!("[weekday], [month repr:long] [day padding:none], [year]");
+                format!("Selected: {}", date.format(format).unwrap_or_default())
             },
         )
     };
@@ -48,7 +44,7 @@ pub fn CalendarSingleDemo() -> impl IntoView {
                 <Button
                     on_press=move |_| state.focus_previous_page.run(())
                     variant=ButtonVariant::Flat
-                    disabled=Signal::derive(move || disabled.get() || state.is_previous_visible_range_invalid.get())
+                    is_disabled=Signal::derive(move || disabled.get() || state.is_previous_visible_range_invalid.get())
                     attr:aria-label="Previous month"
                 >
                     <Icon icon=icondata::BsChevronLeft/>
@@ -59,7 +55,7 @@ pub fn CalendarSingleDemo() -> impl IntoView {
                 <Button
                     on_press=move |_| state.focus_next_page.run(())
                     variant=ButtonVariant::Flat
-                    disabled=Signal::derive(move || disabled.get() || state.is_next_visible_range_invalid.get())
+                    is_disabled=Signal::derive(move || disabled.get() || state.is_next_visible_range_invalid.get())
                     attr:aria-label="Next month"
                 >
                     <Icon icon=icondata::BsChevronRight/>
@@ -73,7 +69,7 @@ pub fn CalendarSingleDemo() -> impl IntoView {
                     </tr>
                 </thead>
                 <tbody>
-                    <For each=move || state.weeks.get() key=|week| day_key(&week.days[0]) let(week)>
+                    <For each=move || state.weeks.get() key=week_key let(week)>
                         <tr>
                             {week.days.into_iter().map(|day| view! { <DayCell state day/> }).collect_view()}
                         </tr>
@@ -82,9 +78,11 @@ pub fn CalendarSingleDemo() -> impl IntoView {
             </table>
         </div>
 
-        <p class="demo-state-display">{selected}</p>
+        <p class="demo-status">{selected}</p>
 
-        <Checkbox state=disabled>"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -104,9 +102,7 @@ fn DayCell(state: UseCalendarStateReturn, day: Day) -> impl IntoView {
         is_focused: Signal::derive(move || state.is_cell_focused.run(date)),
         is_selected: Signal::derive(move || state.is_selected.run(date)),
         is_disabled: state.is_disabled,
-        on_select: Some(Callback::new(move |day: Day| {
-            state.select_date.run(day.date_time);
-        })),
+        on_select: Some(Callback::new(move |day: Day| state.select_date.run(day.date_time))),
         // Moving the cursor to a day of another month on mousedown would switch the month before the click
         // lands. Those days are selected (and focused) by `on_select` instead.
         on_focus: Some(Callback::new(move |day: Day| {
@@ -128,38 +124,4 @@ fn DayCell(state: UseCalendarStateReturn, day: Day) -> impl IntoView {
             </button>
         </td>
     }
-}
-
-/// Weeks are recomputed whenever the focused date changes. Keying them by date keeps the DOM, and the focused
-/// button, while you move within a month. A date appears in three months (e.g. as a day of the next month), hence
-/// `in_month`.
-fn day_key(day: &Day) -> (time::Date, u8) {
-    (day.date_time.date(), day.in_month as u8)
-}
-
-/// The cells only update their `tabindex` when the focused date changes; they don't move DOM focus. Focus the
-/// tabbable cell after each change, unless focus is elsewhere on the page (e.g. on the month buttons).
-fn follow_focused_date(focused_date: Signal<OffsetDateTime>, grid: NodeRef<html::Table>) {
-    Effect::watch(
-        move || focused_date.get(),
-        move |_, _, _| {
-            // Wait for the new month to render.
-            request_animation_frame(move || {
-                let Some(grid) = grid.get_untracked() else {
-                    return;
-                };
-                // Focus is on the body when the previously focused cell was removed by a month change.
-                let focus_in_grid = use_document().active_element().is_none_or(|active| {
-                    active.tag_name() == "BODY" || grid.contains(Some(&active))
-                });
-                if focus_in_grid
-                    && let Ok(Some(cell)) = grid.query_selector("button[tabindex='0']")
-                    && let Ok(cell) = cell.dyn_into::<web_sys::HtmlElement>()
-                {
-                    let _ = cell.focus();
-                }
-            });
-        },
-        false,
-    );
 }

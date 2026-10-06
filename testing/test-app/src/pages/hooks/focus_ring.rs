@@ -1,4 +1,7 @@
-use leptonic::hooks::{IntoAttrs, UseFocusRingInput, use_focus_ring};
+use leptonic::{
+    atoms::focus_ring::FocusRing,
+    hooks::{IntoAttrs, UseFocusRingInput, use_focus_ring},
+};
 use leptos::prelude::*;
 
 #[component]
@@ -41,6 +44,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
 
     let disabled_is_focus_visible = disabled_focus_ring.is_focus_visible;
     let disabled_is_focused = disabled_focus_ring.is_focused;
+    let ring_disabled = RwSignal::new(false);
 
     view! {
         <div id="test-page-hook-focus-ring">
@@ -117,6 +121,27 @@ pub fn PageHookFocusRing() -> impl IntoView {
                         {move || if disabled_is_focus_visible.get() { "true" } else { "false" }}
                     </span>
                 </div>
+            </section>
+
+            <section>
+                <h2>"FocusRing atom"</h2>
+                // Clicked, then typed into: focus becomes visible here, but not in the text input.
+                <FocusRing>
+                    <div id="test-fr-atom" tabindex="0">"Atom"</div>
+                </FocusRing>
+                <FocusRing is_text_input=true>
+                    <div id="test-fr-atom-text" tabindex="0">"Atom (text input)"</div>
+                </FocusRing>
+                // Disabled while focused (by a script click on the toggle, so focus stays).
+                <FocusRing is_disabled=ring_disabled>
+                    <div id="test-fr-atom-disable" tabindex="0">"Atom (disabled later)"</div>
+                </FocusRing>
+                <button
+                    id="test-fr-atom-disable-toggle"
+                    on:click=move |_| ring_disabled.update(|d| *d = !*d)
+                >
+                    "Toggle disabled"
+                </button>
             </section>
         </div>
     }

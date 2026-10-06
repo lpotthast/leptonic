@@ -2,19 +2,19 @@
 use leptos::prelude::*;
 
 use super::{
-    field::{FieldContext, FieldLabelProps},
+    field::{FieldContext, LabelContext},
     form::use_validation_behavior,
     input::{InputContext, InputState},
 };
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldState, UseTextFieldInput,
-        UseTextFieldReturn, UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_text_field,
+        AutoCapitalize, EnterKeyHint, InputMode, InputType, UseTextFieldInput, UseTextFieldReturn,
+        UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_text_field,
         use_text_field_state,
     },
-    utils::data_attributes::flag,
-    utils::scoped_context::scoped_view,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, data_attributes::flag, scoped_context::scoped_view, styles::Styles},
 };
 
 // =============================================================================
@@ -22,8 +22,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - No controlled `value` (hook-owned state, project-wide convention): `default_value` and
-//   `on_change`, or a `state` bound to app state (`TextFieldState::from(rw_signal)`).
+// - Value (C4): `default_value` + `on_change`, or `value` + `set_value` (react-aria: `value` +
+//   `onChange`).
 // - The input's attributes (`placeholder`, `pattern`, `input_type`, ...) are props of the field,
 //   not of its `Input`. Reason: the field's hook computes all of the input's attributes; the
 //   `Input` part only renders them.
@@ -43,10 +43,12 @@ pub fn TextField(
     /// Called when the value changes.
     #[prop(into, optional)]
     on_change: Option<Callback<String>>,
-    /// External value state, replacing `default_value`. Bind a signal with
-    /// `state=TextFieldState::from(rw_signal)`.
+    /// The value (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<TextFieldState>,
+    value: Option<Signal<String>>,
+    /// Receives the new value: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<String>>,
     /// The `<input>`'s type (ignored by a `TextArea`).
     #[prop(into, optional)]
     input_type: Signal<InputType>,
@@ -88,16 +90,16 @@ pub fn TextField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let state = if let Some(state) = state {
-        on_change.map_or(state, |on_change| state.with_on_change(on_change))
-    } else {
-        use_text_field_state(UseTextFieldStateInput {
-            default_value,
-            on_change,
-        })
-    };
+    let (value, on_change) =
+        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let state = use_text_field_state(UseTextFieldStateInput {
+        default_value,
+        value,
+        on_change,
+    });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let field = use_text_field(UseTextFieldInput {
         id,
         input_type,
@@ -132,7 +134,7 @@ pub fn TextField(
     // Contexts for the children only, with the `<div>` as the root (getting attributes set on the
     // component).
     scoped_view(
-        move || provide_text_field_contexts(field),
+        move || provide_text_field_contexts(field, label_presence),
         move || {
             view! {
                 <div
@@ -152,7 +154,10 @@ pub fn TextField(
 
 /// Provides the contexts of a text-like field's parts ([`Label`](super::field::Label),
 /// [`Input`](super::input::Input), ...).
-pub(crate) fn provide_text_field_contexts(field: UseTextFieldReturn) {
+pub(crate) fn provide_text_field_contexts(
+    field: UseTextFieldReturn,
+    label_presence: LabelPresence,
+) {
     let UseTextFieldReturn {
         label_props,
         input_props,
@@ -175,8 +180,8 @@ pub(crate) fn provide_text_field_contexts(field: UseTextFieldReturn) {
             is_focus_visible,
         },
     ));
+    provide_context(LabelContext::label(label_props).with_presence(label_presence));
     provide_context(FieldContext {
-        label: FieldLabelProps::label(label_props),
         description: description_props,
         error_message: error_message_props,
         is_invalid,

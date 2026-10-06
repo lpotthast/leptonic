@@ -1,453 +1,606 @@
-use std::{
-    borrow::Cow,
-    sync::{Arc, atomic::AtomicUsize},
+// Upstream: react-aria-components/src/Slider.tsx @ 99e6102368
+use std::sync::Arc;
+
+use leptos::{context::Provider, ev, prelude::*};
+
+use super::{
+    field::{FieldContext, LabelContext},
+    visually_hidden::VisuallyHidden,
 };
-
-use leptos::{context::Provider, prelude::*};
-
 use crate::{
-    hooks::*,
+    Out,
+    atoms::field::LabelPresence,
+    hooks::{
+        ComputedSliderMark, IntoAttrs, SliderMarks, UseFocusRingInput, UseHoverInput,
+        UseLabelProps, UseSliderInput, UseSliderMarksInput, UseSliderOutputAttrs, UseSliderReturn,
+        UseSliderStateInput, UseSliderThumbInput, UseSliderThumbReturn, UseSliderTrackAttrs,
+        ValidityStateSnapshot, use_focus_ring, use_hover, use_slider, use_slider_marks,
+        use_slider_state, use_slider_thumb,
+    },
     utils::{
-        CapturedElement,
-        classes::Classes,
-        css::{CssDimension, LengthPercentageAuto, computed_pct, computed_size},
-        style::{BottomProperty, HeightProperty, LeftProperty, TopProperty, WidthProperty},
+        ValueBinding, classes::Classes, data_attributes::flag,
+        number_formatter::NumberFormatOptions, number_value::NumberValue, orientation::Orientation,
         styles::Styles,
     },
 };
 
-/// Controls when the slider thumb tooltip is displayed.
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SliderPopover {
-    /// Never show the tooltip.
-    #[default]
-    Never,
-    /// Show the tooltip conditionally based on hover and drag state.
-    When {
-        /// Show the tooltip when the thumb is hovered.
-        hovered: bool,
-        /// Show the tooltip when the thumb is being dragged.
-        dragged: bool,
-    },
-    /// Always show the tooltip.
-    Always,
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `Slider` is generic over its value type (as `use_slider_state`); its children reach it through
+//   a context of plain `f64` positions and formatted labels, so they need no type parameter.
+// - Values are a `Vec` (`default_values`, or `values` + `set_values`); the themed `Slider` and
+//   `RangeSlider` take a single value and a range.
+// - Render props become `data-*` attributes plus plain children; `SliderOutput` shows the
+//   formatted values without children.
+// - Label, description and error message are the field parts (C14): `Label`, `Description`,
+//   `FieldError` inside the slider.
+//
+// ## DIFFERENT BEHAVIOR
+// - `SliderFill` sets its position and its size along the track, not its size across it
+//   (react-aria-components: 100%, as a default style that a `style` prop replaces): CSS sizes it.
+//
+// ## ADDITIONS
+// - `SliderThumbTooltip`, `SliderMarks`/`SliderMark` for the themed slider.
+//
+// =============================================================================
+
+/// What the slider's parts need, without its value type.
+#[derive(Clone)]
+struct SliderContext {
+    orientation: Signal<Orientation>,
+    is_disabled: Signal<bool>,
+    /// The thumbs' positions on the track, 0.0 to 1.0.
+    percents: Signal<Vec<f64>>,
+    /// The first thumb's bounds, as `f64`.
+    first_thumb_bounds: Signal<(f64, f64)>,
+    /// Where a value (as `f64`) is on the track, 0.0 to 1.0.
+    value_percent: Callback<f64, f64>,
+    /// The values, formatted for an output.
+    formatted: Signal<String>,
+    track: StoredValue<(UseSliderTrackAttrs, Styles)>,
+    output: StoredValue<UseSliderOutputAttrs>,
+    /// Creates thumb `index` (in the thumb's reactive owner).
+    thumb: Arc<dyn Fn(ThumbOptions) -> (UseSliderThumbReturn, Signal<String>) + Send + Sync>,
+    /// The range, step and values as `f64`, and a formatter, for marks.
+    marks: Arc<dyn Fn(SliderMarks) -> Signal<Vec<ComputedSliderMark>> + Send + Sync>,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct SliderCtx {
-    pub(crate) state: UseSliderStateReturn,
-
-    pub(crate) output_attrs: UseSliderOutputAttrs,
-    pub(crate) track_attrs: UseSliderTrackAttrs,
-    pub(crate) track_styles: Styles,
-    pub(crate) track: CapturedElement,
-
-    pub(crate) next_thumb_idx: Arc<AtomicUsize>,
+/// A thumb's settings, without the slider's value type.
+struct ThumbOptions {
+    index: usize,
+    is_disabled: Signal<bool>,
+    name: Option<String>,
+    form: Option<String>,
+    aria_label: MaybeProp<String>,
+    aria_labelledby: Option<String>,
 }
 
-impl SliderCtx {
-    pub fn next_thumb_idx(&self) -> usize {
-        self.next_thumb_idx
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+fn expect_slider() -> Option<SliderContext> {
+    let context = use_context::<SliderContext>();
+    if context.is_none() {
+        crate::utils::dev_warn!("Slider parts must be inside a <Slider>.");
     }
+    context
 }
 
+/// A slider: thumbs on a track picking values from a range. Put a `SliderTrack` with
+/// `SliderThumb`s (one per value, each with its `index`) and optionally a `Label` and a
+/// `SliderOutput` inside it.
+///
+/// The value type comes from `values` or `default_values` (with typed literals: `vec![30_u8]`);
+/// the bounds' conversions (`into`) can't tell it.
+///
+/// ```ignore
+/// <Slider min_value=0 max_value=100 default_values=vec![30_u8]>
+///     <Label>"Volume"</Label>
+///     <SliderOutput/>
+///     <SliderTrack><SliderThumb/></SliderTrack>
+/// </Slider>
+/// ```
+///
+/// Data attributes: `data-orientation`, `data-disabled`.
 #[component]
-pub fn Slider(
-    #[prop(into)] values: SliderValues,
-    #[prop(into, optional, default = 0.0)] min: f64,
-    #[prop(into, optional, default = 100.0)] max: f64,
-    #[prop(optional, default = Some(1.0))] step: Option<f64>,
-    #[prop(into, default = Orientation::Horizontal.into())] orientation: Signal<Orientation>,
+#[allow(clippy::too_many_lines)]
+pub fn Slider<T: NumberValue>(
+    /// The group's id (thumb ids derive from it). Generated by default.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(into)] min_value: Signal<T>,
+    #[prop(into)] max_value: Signal<T>,
+    /// The step between values. Default: 1.
+    #[prop(into, default = Signal::stored(T::ONE))]
+    step: Signal<T>,
+    /// The initial values, one per thumb. Default: one thumb at `min_value`.
+    #[prop(optional)]
+    default_values: Option<Vec<T>>,
+    /// The values, replacing `default_values` (controlled; any signal or value).
+    #[prop(into, optional)]
+    values: Option<Signal<Vec<T>>>,
+    /// Receives the new values (an `RwSignal`, `WriteSignal`, closure, `Callback`, ...).
+    #[prop(into, optional)]
+    set_values: Option<Out<Vec<T>>>,
+    #[prop(into, default = Signal::stored(Orientation::Horizontal))] orientation: Signal<
+        Orientation,
+    >,
     #[prop(into, optional)] is_disabled: Signal<bool>,
-    #[prop(optional)] on_change: Option<Callback<Vec<f64>>>,
-    #[prop(optional)] on_change_end: Option<Callback<Vec<f64>>>,
-    #[prop(into, optional)] aria_label: Option<&'static str>,
+    /// Whether the value is invalid (shows a `FieldError`).
+    #[prop(into, optional)]
+    is_invalid: Signal<bool>,
+    /// How values are formatted for assistive technology and the output.
+    #[prop(into, optional)]
+    format_options: Signal<NumberFormatOptions>,
+    /// Names the slider when it has no `Label`.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Called with the values whenever they change, also while dragging.
+    #[prop(into, optional)]
+    on_change: Option<Callback<Vec<T>>>,
+    /// Called with the values when the user stops dragging.
+    #[prop(into, optional)]
+    on_change_end: Option<Callback<Vec<T>>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
+    let (value, on_change) = ValueBinding::from_state_props(values, set_values, on_change);
     let state = use_slider_state(UseSliderStateInput {
-        values,
-        min_value: min,
-        max_value: max,
+        default_values,
+        value,
+        min_value,
+        max_value,
         step,
         is_disabled,
         orientation,
+        format_options,
+        value_label: None,
+        page_size: None,
         on_change,
         on_change_end,
     });
-
-    let UseSliderReturn {
-        group_props,
-        track_props,
-        track_ref,
-        label_props: _,
-        output_props,
-    } = use_slider(UseSliderInput {
-        state,
+    let slider = use_slider(UseSliderInput {
+        id,
+        has_label,
         aria_label,
         aria_labelledby,
+        ..UseSliderInput::new(state)
     });
+    let UseSliderReturn {
+        label_props,
+        description_props,
+        error_message_props,
+        group_props,
+        track_props,
+        output_props,
+        data,
+        track_element,
+    } = slider;
 
-    let (track_attrs, track_styles) = track_props.into_parts();
+    let label = LabelContext::span(UseLabelProps {
+        id: label_props.id,
+        html_for: None,
+    })
+    .with_on_click(label_props.on_click)
+    .with_presence(label_presence);
+    let field = FieldContext {
+        description: description_props,
+        error_message: error_message_props,
+        is_invalid,
+        validation_errors: Signal::default(),
+        validation_details: Signal::stored(ValidityStateSnapshot::default()),
+    };
 
-    let ctx = SliderCtx {
-        state,
-        output_attrs: output_props.into_attrs(),
-        track_attrs,
-        track_styles,
-        track: track_ref,
-        next_thumb_idx: Arc::new(AtomicUsize::new(0)),
+    let thumb_data = StoredValue::new(data);
+    let context = SliderContext {
+        orientation,
+        is_disabled,
+        percents: Signal::derive(move || {
+            (0..state.thumb_count())
+                .map(|index| state.thumb_percent(index))
+                .collect()
+        }),
+        first_thumb_bounds: Signal::derive(move || {
+            (
+                state.thumb_min_value(0).to_f64(),
+                state.thumb_max_value(0).to_f64(),
+            )
+        }),
+        value_percent: Callback::new(move |value: f64| {
+            let (min, max) = (min_value.get().to_f64(), max_value.get().to_f64());
+            if max == min {
+                0.0
+            } else {
+                (value - min) / (max - min)
+            }
+        }),
+        formatted: Signal::derive(move || state.formatted_values()),
+        track: StoredValue::new(track_props.into_parts()),
+        output: StoredValue::new(output_props.into_attrs()),
+        thumb: Arc::new(move |options: ThumbOptions| {
+            let ThumbOptions {
+                index,
+                is_disabled,
+                name,
+                form,
+                aria_label,
+                aria_labelledby,
+            } = options;
+            let thumb = use_slider_thumb(UseSliderThumbInput {
+                state,
+                slider: thumb_data.get_value(),
+                track: track_element,
+                index,
+                is_disabled,
+                name,
+                form,
+                has_label: Signal::stored(false),
+                aria_label,
+                aria_labelledby,
+                aria_describedby: None,
+                is_required: Signal::default(),
+                is_invalid,
+            });
+            (
+                thumb,
+                Signal::derive(move || state.thumb_value_label(index)),
+            )
+        }),
+        marks: Arc::new(move |marks| {
+            use_slider_marks(UseSliderMarksInput {
+                min_value: Signal::derive(move || min_value.get().to_f64()),
+                max_value: Signal::derive(move || max_value.get().to_f64()),
+                step: Signal::derive(move || step.get().to_f64()),
+                values: Signal::derive(move || {
+                    state
+                        .values
+                        .with(|v| v.iter().map(|v| v.to_f64()).collect())
+                }),
+                marks,
+                format: Callback::new(move |value: f64| {
+                    T::from_f64(value)
+                        .map_or_else(|| value.to_string(), |value| state.format_value(value))
+                }),
+            })
+        }),
     };
 
     view! {
-        <Provider value=ctx>
-            <div {..group_props.into_attrs()} class=classes style=styles>
-                {children()}
-            </div>
+        <Provider value=context>
+            <Provider value=label><Provider value=field>
+                <div
+                    {..group_props.into_attrs()}
+                    class=classes
+                    style=styles
+                    data-orientation=move || orientation.get().as_str()
+                    data-disabled=flag(is_disabled)
+                >
+                    {children()}
+                </div>
+            </Provider></Provider>
         </Provider>
     }
 }
 
-#[component(transparent)]
-pub fn SliderOutput<C, V>(children: C) -> impl IntoView
-where
-    C: Fn(UseSliderOutputAttrs, Signal<Vec<f64>>) -> V + 'static,
-    V: IntoView + 'static,
-{
-    let ctx = expect_context::<SliderCtx>();
-    children(ctx.output_attrs.clone(), ctx.state.values)
-}
-
+/// The track of the [`Slider`] around it: pressing it moves the closest thumb there.
+///
+/// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
 #[component]
 pub fn SliderTrack(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let ctx = expect_context::<SliderCtx>();
-    let styles = ctx.track_styles.merge(styles);
+    let Some(slider) = expect_slider() else {
+        return children().into_any();
+    };
+    let hover = use_hover(UseHoverInput {
+        is_disabled: slider.is_disabled,
+        ..UseHoverInput::default()
+    });
+    let (attrs, track_styles) = slider.track.get_value();
+    let orientation = slider.orientation;
     view! {
-        <div {..ctx.track_attrs.clone()} class=classes style=styles>
+        <div
+            {..attrs}
+            {..hover.props.into_attrs()}
+            class=classes
+            style=track_styles.merge(styles)
+            data-hovered=flag(hover.is_hovered)
+            data-orientation=move || orientation.get().as_str()
+            data-disabled=flag(slider.is_disabled)
+        >
             {children()}
         </div>
     }
+    .into_any()
 }
 
+/// The filled part of the track: from `offset` (default: the start) to the thumb, or between the
+/// first and the last thumb. Put it in the `SliderTrack` and size it across the track with CSS
+/// (e.g. `height: 100%`).
+///
+/// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
 #[component]
-#[allow(clippy::similar_names)]
-pub fn SliderTrackFill(
+pub fn SliderFill(
+    /// Where the fill of a one-thumb slider starts, as a value of the range (e.g. 0 in a range
+    /// from -10 to 10). Default: the start.
+    #[prop(into, optional)]
+    offset: MaybeProp<f64>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let ctx = expect_context::<SliderCtx>();
-    let state = ctx.state;
-    let values = state.values;
-
-    match state.num_thumbs {
-        1 => {
-            let percentage = Signal::derive(move || {
-                let val = values.get().first().copied().unwrap_or(state.min_value);
-                state.get_value_percent.run(val) * 100.0
-            });
-            let styles = styles
-                .add_unchecked("position", "absolute")
-                .add(LeftProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
-                .add_optional(move || match state.orientation.get() {
-                    Orientation::Horizontal => {
-                        Some(TopProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
-                    }
-                    Orientation::Vertical => None,
-                })
-                .add_optional(move || match state.orientation.get() {
-                    Orientation::Horizontal => None,
-                    Orientation::Vertical => {
-                        Some(BottomProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
-                    }
-                })
-                .add_reactive(move || {
-                    HeightProperty.declare(computed_size(match state.orientation.get() {
-                        Orientation::Horizontal => computed_pct(100.0),
-                        Orientation::Vertical => computed_pct(percentage.get()),
-                    }))
-                })
-                .add_reactive(move || {
-                    WidthProperty.declare(computed_size(match state.orientation.get() {
-                        Orientation::Horizontal => computed_pct(percentage.get()),
-                        Orientation::Vertical => computed_pct(100.0),
-                    }))
-                });
-            view! { <div class=classes style=styles /> }.into_any()
-        }
-        2 => {
-            let first_percentage = Signal::derive(move || {
-                let val = values.get().first().copied().unwrap_or(state.min_value);
-                state.get_value_percent.run(val) * 100.0
-            });
-            let difference = Signal::derive(move || {
-                let vals = values.get();
-                let v1 = vals.first().copied().unwrap_or(state.min_value);
-                let v2 = vals.get(1).copied().unwrap_or(state.min_value);
-                ((state.get_value_percent.run(v2) - state.get_value_percent.run(v1)) * 100.0)
-                    .max(0.0)
-            });
-            let styles = styles
-                .add_unchecked("position", "absolute")
-                .add_optional(move || match state.orientation.get() {
-                    Orientation::Horizontal => {
-                        Some(TopProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
-                    }
-                    Orientation::Vertical => None,
-                })
-                .add_optional(move || match state.orientation.get() {
-                    Orientation::Horizontal => None,
-                    Orientation::Vertical => Some(BottomProperty.declare(
-                        LengthPercentageAuto::from(computed_pct(first_percentage.get())),
-                    )),
-                })
-                .add_reactive(move || {
-                    LeftProperty.declare(LengthPercentageAuto::from(
-                        match state.orientation.get() {
-                            Orientation::Horizontal => computed_pct(first_percentage.get()),
-                            Orientation::Vertical => CssDimension::Zero,
-                        },
-                    ))
-                })
-                .add_reactive(move || {
-                    HeightProperty.declare(computed_size(match state.orientation.get() {
-                        Orientation::Horizontal => computed_pct(100.0),
-                        Orientation::Vertical => computed_pct(difference.get()),
-                    }))
-                })
-                .add_reactive(move || {
-                    WidthProperty.declare(computed_size(match state.orientation.get() {
-                        Orientation::Horizontal => computed_pct(difference.get()),
-                        Orientation::Vertical => computed_pct(100.0),
-                    }))
-                });
-            view! { <div class=classes style=styles /> }.into_any()
-        }
-        n => {
-            tracing::warn!("SliderTrackFill: {n}-thumb fill not yet supported");
-            ().into_any()
-        }
+    let Some(slider) = expect_slider() else {
+        return ().into_any();
+    };
+    let SliderContext {
+        orientation,
+        is_disabled,
+        percents,
+        first_thumb_bounds,
+        value_percent,
+        ..
+    } = slider;
+    let hover = use_hover(UseHoverInput {
+        is_disabled,
+        ..UseHoverInput::default()
+    });
+    // In percent: (start, size).
+    let span = Signal::derive(move || {
+        let (min, max) = first_thumb_bounds.get();
+        let offset = offset
+            .get()
+            .map_or(min, |offset| offset.clamp(min.min(max), max.max(min)));
+        percents.with(|percents| {
+            let start = if percents.len() > 1 {
+                percents[0]
+            } else {
+                value_percent.run(offset)
+            } * 100.0;
+            let end = percents.last().copied().unwrap_or(0.0) * 100.0;
+            (start.min(end), (start.max(end) - start.min(end)).max(0.0))
+        })
+    });
+    let vertical = move || orientation.get() == Orientation::Vertical;
+    let percent = |value: f64| format!("{value}%");
+    let styles = Styles::new()
+        .add_unchecked("position", "absolute")
+        .add_optional_unchecked("inset-inline-start", move || {
+            (!vertical()).then(|| percent(span.get().0))
+        })
+        .add_optional_unchecked("width", move || {
+            (!vertical()).then(|| percent(span.get().1))
+        })
+        .add_optional_unchecked("bottom", move || vertical().then(|| percent(span.get().0)))
+        .add_optional_unchecked("height", move || vertical().then(|| percent(span.get().1)))
+        .merge(styles);
+    view! {
+        <div
+            {..hover.props.into_attrs()}
+            class=classes
+            style=styles
+            data-hovered=flag(hover.is_hovered)
+            data-orientation=move || orientation.get().as_str()
+            data-disabled=flag(is_disabled)
+        />
     }
+    .into_any()
 }
 
-/// Context provided by `SliderThumb` to its children, exposing the thumb's
-/// interaction state and value so that child atoms (e.g. `SliderThumbTooltip`)
-/// can render based on thumb state.
+/// What a thumb's tooltip needs.
 #[derive(Debug, Clone, Copy)]
-pub struct SliderThumbCtx {
-    /// Whether the pointer is currently hovering over the thumb.
-    pub is_hovered: Signal<bool>,
-    /// Whether the thumb is currently being dragged.
-    pub is_dragging: Signal<bool>,
-    /// The current value of this thumb.
-    pub value: Signal<f64>,
-    /// The formatted display value (respects `decimal_places`).
-    pub display_value: Signal<String>,
+struct SliderThumbContext {
+    is_hovered: Signal<bool>,
+    is_dragging: Signal<bool>,
+    /// The formatted value.
+    label: Signal<String>,
 }
 
+/// A thumb of the [`Slider`] around it, inside its `SliderTrack`: dragged with a pointer, moved
+/// with the keyboard through its visually hidden `<input type="range">`.
+///
+/// Data attributes: `data-dragging`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 #[component]
 pub fn SliderThumb(
-    #[prop(into, optional)] index: Option<usize>,
-    #[prop(into, optional)] name: Option<&'static str>,
-    #[prop(into, optional)] aria_label: Option<Cow<'static, str>>,
-    #[prop(into, optional)] aria_labelledby: Option<&'static str>,
-    #[prop(into, optional)] aria_describedby: Option<&'static str>,
-    #[prop(into, optional)] aria_details: Option<&'static str>,
-    #[prop(into, optional)] aria_errormessage: Option<&'static str>,
-    #[prop(into, optional)] decimal_places: Option<usize>,
+    /// The thumb's value in the slider's values.
+    #[prop(optional)]
+    index: usize,
+    /// Disables this thumb only.
+    #[prop(into, optional)]
+    is_disabled: Signal<bool>,
+    /// The input's name, for forms.
+    #[prop(into, optional)]
+    name: Option<String>,
+    #[prop(into, optional)] form: Option<String>,
+    /// Names this thumb next to the slider's label (e.g. "Minimum").
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
-    let ctx = expect_context::<SliderCtx>();
-
-    let thumb_index = index.unwrap_or_else(|| ctx.next_thumb_idx());
-
+    let Some(slider) = expect_slider() else {
+        return ().into_any();
+    };
+    let (thumb, label) = (slider.thumb)(ThumbOptions {
+        index,
+        is_disabled,
+        name,
+        form,
+        aria_label,
+        aria_labelledby,
+    });
     let UseSliderThumbReturn {
         thumb_props,
         input_props,
         is_dragging,
-        is_hovered,
-        is_focused: _,
-        is_focus_visible: _,
-        percentage,
-        value,
-        display_value,
-        thumb_id: _,
-    } = use_slider_thumb(UseSliderThumbInput {
-        state: ctx.state,
-        track: ctx.track,
-        index: thumb_index,
-        name,
-        aria_label,
-        aria_labelledby,
-        is_disabled: ctx.state.is_disabled,
-        decimal_places,
-        aria_describedby,
-        aria_details,
-        aria_errormessage,
-        aria_valuetext: None,
+        is_disabled,
+        is_focused,
+        ..
+    } = thumb;
+    let hover = use_hover(UseHoverInput {
+        is_disabled,
+        ..UseHoverInput::default()
     });
-
-    let data_dragging = Signal::derive(move || {
-        if is_dragging.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-
-    let styles = styles
-        .add_unchecked("position", "absolute")
-        .add_optional(move || match ctx.state.orientation.get() {
-            Orientation::Horizontal => {
-                Some(TopProperty.declare(LengthPercentageAuto::from(computed_pct(50.0))))
-            }
-            Orientation::Vertical => None,
-        })
-        .add_reactive(move || {
-            LeftProperty.declare(LengthPercentageAuto::from(
-                match ctx.state.orientation.get() {
-                    Orientation::Horizontal => computed_pct(percentage.get()),
-                    Orientation::Vertical => computed_pct(50.0),
-                },
-            ))
-        })
-        .add_optional(move || match ctx.state.orientation.get() {
-            Orientation::Horizontal => None,
-            Orientation::Vertical => Some(
-                BottomProperty.declare(LengthPercentageAuto::from(computed_pct(percentage.get()))),
-            ),
-        })
-        .add_optional_unchecked("transform", move || {
-            Some(match ctx.state.orientation.get() {
-                Orientation::Horizontal => "translate(-50%, -50%)",
-                Orientation::Vertical => "translate(-50%, 50%)",
-            })
-        });
-
-    let thumb_ctx = SliderThumbCtx {
-        is_hovered,
+    let focus_ring = use_focus_ring(UseFocusRingInput::default());
+    let is_focus_visible = focus_ring.is_focus_visible;
+    let input_focus = (
+        focus_ring.props.on_focus.into_on(ev::focus),
+        focus_ring.props.on_blur.into_on(ev::blur),
+    );
+    let (thumb_attrs, thumb_styles) = thumb_props.into_parts();
+    let thumb_context = SliderThumbContext {
+        is_hovered: hover.is_hovered,
         is_dragging,
-        value,
-        display_value,
+        label,
     };
 
     view! {
-        <Provider value=thumb_ctx>
-            <div
-                {..thumb_props.into_attrs()}
-                class=classes
-                style=styles
-                data-dragging=data_dragging
-            >
-                <input
-                    {..input_props.into_attrs()}
-                    style="opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute; top: 0; left: 0;"
-                />
-
-                {children.map(|c| c())}
-            </div>
-        </Provider>
+        <div
+            {..thumb_attrs}
+            {..hover.props.into_attrs()}
+            class=classes
+            style=thumb_styles.merge(styles)
+            data-dragging=flag(is_dragging)
+            data-hovered=flag(hover.is_hovered)
+            data-focused=flag(is_focused)
+            data-focus-visible=flag(is_focus_visible)
+            data-disabled=flag(is_disabled)
+        >
+            <VisuallyHidden>
+                <input {..input_props.into_attrs()} {..input_focus} />
+            </VisuallyHidden>
+            <Provider value=thumb_context>{children.map(|children| children())}</Provider>
+        </div>
     }
+    .into_any()
 }
 
-/// Atom component that renders a tooltip above the slider thumb.
-/// Expects to be used as a child of `SliderThumb` (requires `SliderThumbCtx`).
-///
-/// Renders a single `<div>` whose visibility is controlled by the `popover`
-/// configuration via a `data-visible` attribute. CSS should hide the element
-/// when `data-visible` is absent.
+/// When a [`SliderThumbTooltip`] shows.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SliderPopover {
+    #[default]
+    Never,
+    When {
+        hovered: bool,
+        dragged: bool,
+    },
+    Always,
+}
+
+/// A tooltip with the value of the `SliderThumb` around it. Shown as `popover` says: style it
+/// hidden without `data-visible`.
 #[component]
 pub fn SliderThumbTooltip(
     #[prop(optional)] popover: SliderPopover,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let ctx = expect_context::<SliderThumbCtx>();
-
-    let data_visible = Signal::derive(move || {
-        let visible = match popover {
-            SliderPopover::Never => false,
-            SliderPopover::When { hovered, dragged } => {
-                (hovered && ctx.is_hovered.get()) || (dragged && ctx.is_dragging.get())
-            }
-            SliderPopover::Always => true,
-        };
-        visible.then_some("true")
+    let Some(thumb) = use_context::<SliderThumbContext>() else {
+        crate::utils::dev_warn!("A <SliderThumbTooltip> must be inside a <SliderThumb>.");
+        return ().into_any();
+    };
+    let visible = Signal::derive(move || match popover {
+        SliderPopover::Never => false,
+        SliderPopover::When { hovered, dragged } => {
+            (hovered && thumb.is_hovered.get()) || (dragged && thumb.is_dragging.get())
+        }
+        SliderPopover::Always => true,
     });
-
-    let text = Signal::derive(move || match value_display {
-        Some(cb) => cb.run(ctx.value.get()),
-        None => ctx.display_value.get(),
-    });
-
+    // The input announces the value: the tooltip only shows it.
     view! {
-        <div class=classes style=styles data-visible=data_visible>
-            {move || text.get()}
+        <div class=classes style=styles data-visible=flag(visible) aria-hidden="true">
+            {thumb.label}
         </div>
     }
+    .into_any()
 }
 
-/// Atom component that renders slider marks.
-/// Expects to be used within a `Slider` atom (requires `SliderCtx`).
+/// An `<output>` with the formatted values of the [`Slider`] around it ("10", "10 – 20").
+///
+/// Data attributes: `data-orientation`, `data-disabled`.
+#[component]
+pub fn SliderOutput(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
+    let Some(slider) = expect_slider() else {
+        return ().into_any();
+    };
+    let orientation = slider.orientation;
+    view! {
+        <output
+            {..slider.output.get_value()}
+            class=classes
+            style=styles
+            data-orientation=move || orientation.get().as_str()
+            data-disabled=flag(slider.is_disabled)
+        >
+            {slider.formatted}
+        </output>
+    }
+    .into_any()
+}
+
+/// The marks of the [`Slider`] around it; render each with a [`SliderMark`].
 #[component]
 pub fn SliderMarks<C, V>(
     #[prop(into)] marks: SliderMarks,
-    #[prop(optional)] value_display: Option<Callback<f64, String>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: C,
 ) -> impl IntoView
 where
     C: Fn(Signal<Vec<ComputedSliderMark>>) -> V,
-    V: IntoView,
+    V: IntoView + 'static,
 {
-    let ctx = expect_context::<SliderCtx>();
-
-    let computed = use_slider_marks(UseSliderMarksInput {
-        state: ctx.state,
-        marks,
-        value_display,
-    });
-
-    view! {
-        <div class=classes style=styles>
-            {children(computed.marks)}
-        </div>
-    }
+    let Some(slider) = expect_slider() else {
+        return ().into_any();
+    };
+    let computed = (slider.marks)(marks);
+    view! { <div class=classes style=styles aria-hidden="true">{children(computed)}</div> }
+        .into_any()
 }
 
-/// NOTE: Ignores the `mark`s `name`. It must be rendered manually as children.
+/// A mark placed along the track, as the fill: `inset-inline-start` in percent when horizontal
+/// (mirrored right to left), `bottom` when vertical.
+///
+/// Data attributes: `data-in-range` while selected, `data-orientation`.
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn SliderMark(
-    #[prop(into)] mark: ComputedSliderMark,
+    mark: ComputedSliderMark,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    // TODO: We could use a data attribute instead.
-    let classes = classes.add_reactive("in-range", mark.in_range);
-
-    let styles = styles
+    let Some(SliderContext { orientation, .. }) = expect_slider() else {
+        return ().into_any();
+    };
+    let vertical = move || orientation.get() == Orientation::Vertical;
+    let position = format!("{}%", mark.percentage * 100.0);
+    let bottom = position.clone();
+    let styles = Styles::new()
         .add_unchecked("position", "absolute")
-        .add(
-            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
-                mark.percentage * 100.0,
-            ))),
-        );
-
+        .add_optional_unchecked("inset-inline-start", move || {
+            (!vertical()).then(|| position.clone())
+        })
+        .add_optional_unchecked("bottom", move || vertical().then(|| bottom.clone()))
+        .merge(styles);
     view! {
-        <div class=classes style=styles>
+        <div
+            class=classes
+            style=styles
+            data-in-range=flag(mark.in_range)
+            data-orientation=move || orientation.get().as_str()
+        >
             {children()}
         </div>
     }
+    .into_any()
 }

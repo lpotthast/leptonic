@@ -1,7 +1,8 @@
-use leptos::prelude::*;
+use leptos::{attr::custom::custom_attribute, prelude::*};
 
 use crate::hooks::*;
 
+/// Applies hover handling to its child, which gets `data-hovered` while hovered.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Hoverable(
@@ -12,7 +13,7 @@ pub fn Hoverable(
 ) -> impl IntoView {
     let UseHoverReturn {
         props: hover_props,
-        is_hovered: _,
+        is_hovered,
     } = use_hover(UseHoverInput {
         is_disabled,
         on_hover_start,
@@ -25,4 +26,7 @@ pub fn Hoverable(
         .into_view()
         .add_any_attr(on_pointerenter)
         .add_any_attr(on_pointerleave)
+        .add_any_attr(custom_attribute("data-hovered", move || {
+            is_hovered.try_get().unwrap_or_default().then_some("true")
+        }))
 }

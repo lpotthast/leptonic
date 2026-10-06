@@ -1,21 +1,18 @@
 use std::time::Duration;
 
-use leptonic::{
-    components::prelude::*,
-    hooks::{PlacementX, PlacementY, *},
-};
+use leptonic::{components::prelude::Checkbox, hooks::*, utils::CapturedElement};
 use leptos::{portal::Portal, prelude::*};
-use leptos_element_capture::CapturedElement;
 
-/// A tooltip built from all three tooltip hooks, positioned with `use_overlay_position`.
+/// A tooltip built from the three tooltip hooks, positioned with `use_overlay_position`.
 #[component]
 pub fn TooltipDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
-    let target_element = CapturedElement::new();
+    let keep_open = RwSignal::new(true);
+    let trigger_element = CapturedElement::new();
 
+    // Hovering opens the tooltip after half a second (default: 1.5 s).
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: Duration::from_millis(300),
-        close_delay: Duration::from_millis(100),
+        delay: Duration::from_millis(500),
         ..Default::default()
     });
     let trigger = use_tooltip_trigger(
@@ -25,24 +22,16 @@ pub fn TooltipDemo() -> impl IntoView {
         },
         state,
     );
-    // Keeps the tooltip open while the pointer is over it.
+    // Keeps the tooltip open while the pointer is over the tooltip itself.
     let tooltip = use_tooltip(UseTooltipInput {
-        is_disabled: disabled.into(),
+        is_disabled: Signal::derive(move || disabled.get() || !keep_open.get()),
         state: Some(state),
-        on_open: None,
-        on_close: None,
+        ..Default::default()
     });
-
     let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::stored(PlacementX::Center),
-        placement_y: Signal::stored(PlacementY::Above),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
+        placement: Signal::stored(Placement::Top),
+        offset: Signal::stored(6.0),
+        ..UseOverlayPositionInput::new(trigger_element, trigger.is_open)
     });
 
     let is_open = trigger.is_open;
@@ -54,13 +43,18 @@ pub fn TooltipDemo() -> impl IntoView {
     let tooltip_attrs = StoredValue::new(tooltip.props.into_attrs());
 
     view! {
-        <div class="demo-overlays-stage">
-            <button {..target_element.attr()} {..trigger.trigger_props.into_attrs()} class="demo-btn-primary">
-                "Hover me"
+        <div class="demo-tooltip-stage">
+            <button {..trigger_element.attr()} {..trigger.trigger_props.into_attrs()} class="demo-btn">
+                "Publish"
             </button>
         </div>
-
-        <Checkbox state=disabled>"Disable tooltip"</Checkbox>
+        <p class="demo-status">
+            {move || if is_open.get() { "The tooltip is open." } else { "The tooltip is closed." }}
+        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=keep_open set_selected=keep_open>"Keep open while hovered"</Checkbox>
+        </div>
 
         <Portal>
             <Show when=move || is_open.get()>
@@ -70,9 +64,9 @@ pub fn TooltipDemo() -> impl IntoView {
                     style=position_styles.get_value()
                     id=tooltip_id.get_value()
                     role=tooltip_role
-                    class="demo-overlays-tooltip"
+                    class="demo-tooltip"
                 >
-                    "This is a tooltip!"
+                    "Make the post visible to everyone"
                 </div>
             </Show>
         </Portal>

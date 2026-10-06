@@ -1,15 +1,17 @@
-use leptonic::{components::prelude::*, hooks::PlacementY};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 #[component]
 pub fn PopoverConceptDemo() -> impl IntoView {
     view! {
-        <Popover placement_y=PlacementY::Below>
-            <PopoverTrigger slot>
-                // The popover toggles itself when this button is pressed; `on_press` is for your own logic.
-                <Button on_press=|_| {}>"Click me"</Button>
-            </PopoverTrigger>
-            "Popover content appears here."
-        </Popover>
+        <div class="demo-popover-stage">
+            <Popover>
+                // Pressing the button opens and closes the popover.
+                <PopoverTrigger slot>
+                    <Button>"Delivery"</Button>
+                </PopoverTrigger>
+                "Orders placed before 2 p.m. ship the same day."
+            </Popover>
+        </div>
     }
 }

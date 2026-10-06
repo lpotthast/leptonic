@@ -130,9 +130,18 @@ async fn row_focus_cell_focus(page: &Page<'_>) -> Result<(), Report> {
     page.press_tab().await?;
     page.wait_for_focus_on(&g.rows[0], "Row-Cell: row 1")
         .await?;
+    // Keyboard focus is visible on rows and cells.
+    page.wait_for_attr(&g.rows[0], "data-focus-visible", Some("true"))
+        .await?;
 
     press(page, Key::Right).await?;
     page.wait_for_focus_on(&g.cells[0], "Row-Cell: cell 1")
+        .await?;
+    page.wait_for_attr(&g.cells[0], "data-focused", Some("true"))
+        .await?;
+    page.wait_for_attr(&g.cells[0], "data-focus-visible", Some("true"))
+        .await?;
+    page.wait_for_attr(&g.rows[0], "data-focus-visible", None)
         .await?;
     press(page, Key::Right).await?;
     page.wait_for_focus_on(&g.switches[0], "Row-Cell: switch 1")

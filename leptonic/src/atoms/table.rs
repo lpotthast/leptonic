@@ -7,6 +7,7 @@ use leptos::{context::Provider, html, prelude::*};
 use leptos_use::use_resize_observer;
 
 use crate::{
+    Out,
     hooks::{
         CellFocusMode, ColumnKind, ColumnSize, DisabledBehavior, GridFocusMode, IntoAttrs,
         KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, SortDescriptor,
@@ -22,14 +23,14 @@ use crate::{
         use_table_header_row, use_table_row, use_table_select_all_checkbox,
         use_table_selection_checkbox, use_table_state,
     },
-    utils::data_attributes::flag,
-    utils::scoped_context::scoped_view,
     utils::{
         CapturedElement, ValueBinding,
         classes::Classes,
         css::{Size, computed_px, computed_size},
+        data_attributes::flag,
         i18n::use_direction,
         locale::WritingDirection,
+        scoped_context::scoped_view,
         style::WidthProperty,
         styles::Styles,
     },
@@ -63,9 +64,9 @@ struct ColumnResizeContext {
 /// `data-resizable-direction` for styling, as react-aria-components does: `left` while the column
 /// is at its minimum width (style e.g. `cursor: e-resize`), `right` at its maximum width
 /// (`w-resize`), mirrored in right-to-left layouts, and `both` otherwise. The header exposes
-/// `data-resizing` too. Drag the resizer, or focus it
-/// (Tab from its header) and press Enter, resize with the arrow keys, and press Enter, Escape or
-/// Tab to finish.
+/// `data-resizing` too. Drag the resizer, or focus it by keyboard (arrow onto its column header:
+/// a resizable header hands the focus to its resizer, as in react-aria-components) and press
+/// Enter, resize with the arrow keys, and press Enter, Escape or Tab to finish.
 ///
 /// The container measures its own width; let it scroll (`overflow: auto`) for tables wider than
 /// it.
@@ -132,10 +133,12 @@ pub fn Table(
     /// The initially selected rows.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
-    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
-    /// `default_selected_keys`.
+    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
     #[prop(into, optional)]
-    selection: Option<ValueBinding<Selection>>,
+    selection: Option<Signal<Selection>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selection: Option<Out<Selection>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     /// Defaults to `DisabledBehavior::Selection`: disabled rows can be focused, not selected.
@@ -143,13 +146,15 @@ pub fn Table(
     disabled_behavior: Option<DisabledBehavior>,
     #[prop(optional)] disallow_empty_selection: bool,
     #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
-    /// The initial sorting. Ignored when `sort_descriptor` is bound.
+    /// The initial sorting. Ignored with `sort_descriptor`.
     #[prop(optional)]
     default_sort_descriptor: Option<SortDescriptor>,
-    /// The sorting as app state (e.g. an `RwSignal<Option<SortDescriptor>>`), replacing
-    /// `default_sort_descriptor`. Setting it to `None` clears the sorting.
+    /// The sorting (controlled): a value or any signal. `None` shows the table unsorted.
     #[prop(into, optional)]
-    sort_descriptor: Option<ValueBinding<Option<SortDescriptor>>>,
+    sort_descriptor: Option<Signal<Option<SortDescriptor>>>,
+    /// Receives the new sorting: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_sort_descriptor: Option<Out<Option<SortDescriptor>>>,
     /// Called when the user sorts the table. Sort the rows accordingly.
     #[prop(into, optional)]
     on_sort_change: Option<Callback<SortDescriptor>>,
@@ -166,6 +171,19 @@ pub fn Table(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    // Without `sort_descriptor`, the table owns the sorting and `set_sort_descriptor` receives
+    // each change, like `on_sort_change`.
+    let on_sort_change = match (sort_descriptor, set_sort_descriptor) {
+        (None, Some(set_sort_descriptor)) => Some(Callback::new(move |sort: SortDescriptor| {
+            set_sort_descriptor.set(Some(sort.clone()));
+            if let Some(on_sort_change) = on_sort_change {
+                on_sort_change.run(sort);
+            }
+        })),
+        _ => on_sort_change,
+    };
+    let (selection, on_selection_change) =
+        ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let state = use_table_state(UseTableStateInput {
         selection: SelectionOptions {
             selection_mode,
@@ -180,7 +198,8 @@ pub fn Table(
         },
         focus_mode,
         default_sort_descriptor,
-        sort_descriptor,
+        sort_descriptor: sort_descriptor
+            .map(|value| ValueBinding::from_props(value, set_sort_descriptor)),
         on_sort_change,
         ..UseTableStateInput::new(table)
     });

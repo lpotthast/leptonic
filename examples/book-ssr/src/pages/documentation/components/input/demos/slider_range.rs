@@ -3,27 +3,28 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SliderRangeDemo() -> impl IntoView {
-    let (opacity_from, set_opacity_from) = signal(0.5);
-    let (opacity_to, set_opacity_to) = signal(0.75);
-    let (stars_from, set_stars_from) = signal(2.0);
-    let (stars_to, set_stars_to) = signal(4.0);
+    let opacity = RwSignal::new(0.5_f64..=0.75);
+    let stars = RwSignal::new(2_u8..=4);
 
     view! {
         <div class="demo-control-stack">
-            // Continuous: no `step`.
-            <RangeSlider
-                value_a=opacity_from set_value_a=set_opacity_from
-                value_b=opacity_to set_value_b=set_opacity_to
-                min=0.0 max=1.0
-                value_display=move |v| format!("{v:.2}")/>
+            <RangeSlider value=opacity set_value=opacity min_value=0.0 max_value=1.0 step=0.01 aria_label="Opacity"/>
 
             // Stepped, with named marks.
             <RangeSlider
-                value_a=stars_from set_value_a=set_stars_from
-                value_b=stars_to set_value_b=set_stars_to
-                min=1.0 max=5.0 step=1.0
+                value=stars
+                set_value=stars
+                min_value=1
+                max_value=5
                 marks=SliderMarks::Automatic { create_names: true }
-                value_display=move |v| format!("{v:.0}")/>
+                aria_label="Stars"
+            />
         </div>
+        <p class="demo-status">
+            {move || opacity.with(|opacity| {
+                format!("Opacity from {:.0}% to {:.0}%. ", opacity.start() * 100.0, opacity.end() * 100.0)
+            })}
+            {move || stars.with(|stars| format!("Stars from {} to {}.", stars.start(), stars.end()))}
+        </p>
     }
 }

@@ -1,0 +1,30 @@
+// Collection State: demos of the collection state hooks.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// A list built from `use_selectable_list` and `use_selectable_item`. The hooks bring no ARIA attributes; the demo
+// renders `aria-selected` and `aria-disabled` from the item hook's state and styles them.
+.demo-selectable-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    max-width: 16em;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    // The list takes focus itself only while no item is focused.
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-selectable-item {
+    padding: var(--book-space-s) var(--book-space-m);
+    border-radius: var(--book-radius-s);
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[aria-selected="true"] { background: var(--brand-color-subtle); font-weight: 600; }
+    &[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}

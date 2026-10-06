@@ -116,6 +116,7 @@ pub fn ListBoxAtomDemo() -> impl IntoView {
                 collection=toppings
                 selection_mode=SelectionMode::Multiple
                 selection=selection
+                set_selection=selection
                 aria_labelledby="demo-lb-label"
                 classes="demo-lb-listbox"
             >
@@ -146,13 +147,14 @@ pub fn ListBoxAtomDemo() -> impl IntoView {
             </ListBox>
         </div>
 
-        <div class="demo-flex-center-row">
-            <p>"Selected: " <strong>{move || selected_names(&selection.get())}</strong></p>
+        <p class="demo-status">"Selected: "{move || selected_names(&selection.get())}"."</p>
+        <div class="demo-controls">
             // The app changes the selection by writing its state.
             <Button on_press=move |_| selection.set(Selection::default()) color=ButtonColor::Secondary>
                 "Clear"
             </Button>
         </div>
+
     }
 }
 
@@ -162,7 +164,7 @@ fn selected_names(selection: &Selection) -> String {
         .iter()
         .flat_map(|group| group.toppings)
         .filter(|topping| match selection {
-            // Select all (Ctrl + A) selects every topping that isn't disabled.
+            // Select all (Ctrl + A, Cmd + A on macOS) selects every topping that isn't disabled.
             Selection::All => topping.key != SOLD_OUT,
             Selection::Keys(keys) => keys.contains(&Key::from(topping.key)),
         })

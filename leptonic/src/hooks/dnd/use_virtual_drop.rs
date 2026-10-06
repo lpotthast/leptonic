@@ -2,7 +2,7 @@
 use leptos::prelude::*;
 
 use super::{drag_manager::use_drag_session, messages, utils::use_drag_modality};
-use crate::utils::use_description::use_reactive_description;
+use crate::utils::use_description::use_description;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -18,7 +18,7 @@ use crate::utils::use_description::use_reactive_description;
 pub fn use_virtual_drop() -> Signal<Option<String>> {
     let modality = use_drag_modality();
     let session = use_drag_session();
-    use_reactive_description(Signal::derive(move || {
+    use_description(Signal::derive(move || {
         session
             .with(Option::is_some)
             .then(|| messages::drop_description(modality.get()).to_owned())

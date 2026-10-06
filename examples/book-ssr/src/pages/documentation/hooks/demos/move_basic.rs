@@ -1,7 +1,9 @@
 use leptonic::{
+    components::prelude::Checkbox,
     hooks::*,
     utils::{
-        css::{CssDimension, LengthPercentageAuto, try_px},
+        data_attributes::flag,
+        css::{LengthPercentageAuto, computed_px},
         style::{LeftProperty, TopProperty},
         styles::Styles,
     },
@@ -15,7 +17,7 @@ use ringbuf::{
 
 /// A pixel offset. Measured sizes are `NaN` before the first layout, which renders as `0px`.
 fn offset(px: f64) -> LengthPercentageAuto {
-    LengthPercentageAuto::from(try_px(px).unwrap_or(CssDimension::Zero))
+    LengthPercentageAuto::from(computed_px(px))
 }
 
 #[component]
@@ -23,6 +25,7 @@ pub fn BasicMovementExample() -> impl IntoView {
     let (events, set_events) = signal(HeapRb::<String>::new(50));
     let (left, set_left) = signal(0.0);
     let (top, set_top) = signal(0.0);
+    let disabled = RwSignal::new(false);
 
     let container: NodeRef<html::Div> = NodeRef::new();
     let container_bounding = use_element_bounding(container);
@@ -37,8 +40,7 @@ pub fn BasicMovementExample() -> impl IntoView {
     let UseMoveReturn {
         props, is_moving, ..
     } = use_move(UseMoveInput {
-        is_disabled: false.into(),
-        axis: None.into(),
+        is_disabled: disabled.into(),
         on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
             set_events.update(|events| {
                 events.push_overwrite(format!(
@@ -65,10 +67,7 @@ pub fn BasicMovementExample() -> impl IntoView {
                 events.push_overwrite(format!("MoveEnd {{ pointer: {} }}", e.pointer_type));
             });
         })),
-        on_position_change: None,
-        constraint: None,
-        allow_container_click: false,
-        initial_position: None,
+        ..UseMoveInput::default()
     });
 
     let handle_styles = Styles::builder()
@@ -83,11 +82,15 @@ pub fn BasicMovementExample() -> impl IntoView {
                 node_ref=handle
                 tabindex="0"
                 class="demo-move-handle"
-                class:moving=move || is_moving.get()
+                data-moving=flag(is_moving)
                 style=handle_styles
             >
                 "Drag me (or use arrow keys)"
             </div>
+        </div>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>

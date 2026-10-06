@@ -1,14 +1,12 @@
 use leptonic::{
+    components::prelude::{Button, ButtonVariant, Icon},
     hooks::{
-        GridListData, IntoAttrs, SelectionBehavior, SelectionMode, UseGridListInput,
-        UseGridListItemInput, UseGridListReturn,
-        collections::{
-            CollectionOptions, EscapeKeyBehavior, Key, Selection, SelectionOptions,
-            UseListStateInput, use_list_collection, use_list_state,
-        },
-        use_grid_list, use_grid_list_item,
+        GridListData, IntoAttrs, Key, SelectionBehavior, SelectionMode, UseGridListInput, UseGridListItemInput,
+        UseGridListReturn, use_grid_list, use_grid_list_item, use_list_collection, use_list_state,
+        collections::{Selection, SelectionOptions, UseListStateInput},
     },
-    utils::{CapturedElement, classes::Classes},
+    prelude::icondata,
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -20,87 +18,76 @@ const FILES: [(&str, &str); 5] = [
     ("archive", "Archive.zip"),
 ];
 
-fn describe(selection: &Selection) -> String {
-    match selection {
-        Selection::All => "all".to_owned(),
-        Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
-        Selection::Keys(keys) => {
-            let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
-            keys.sort();
-            keys.join(", ")
-        }
-    }
-}
-
 #[component]
 pub fn GridListDemo() -> impl IntoView {
-    let selected = RwSignal::new(String::from("none"));
-    let last_action = RwSignal::new(None::<Key>);
+    // App state: the files, the selected ones, and the file opened last.
+    let files = RwSignal::new(FILES.to_vec());
+    let selection = RwSignal::new(Selection::default());
+    let opened = RwSignal::new(None::<Key>);
 
-    // The rows and their selection.
-    let collection = use_list_collection(
-        Signal::stored(FILES.to_vec()),
-        |(key, _)| Key::from(*key),
-        |(_, name)| (*name).to_owned(),
-    );
+    // The rows follow the files: removing one updates the collection, and focus moves to a neighbor.
+    let collection = use_list_collection(files.into(), |(key, _)| Key::from(*key), |(_, name)| (*name).to_owned());
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
             selection_behavior: SelectionBehavior::Replace,
-            on_selection_change: Some(Callback::new(move |selection| {
-                selected.set(describe(&selection));
-            })),
+            selection: Some(selection.into()),
             ..SelectionOptions::default()
         },
     });
-
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label: "Files".into(),
-        options: CollectionOptions {
-            escape_key_behavior: EscapeKeyBehavior::ClearSelection,
-            ..CollectionOptions::default()
-        },
-        on_action: Some(Callback::new(move |key| last_action.set(Some(key)))),
+        on_action: Some(Callback::new(move |key| opened.set(Some(key)))),
         ..UseGridListInput::new(state, CapturedElement::new())
     });
+    let remove = Callback::new(move |key: &'static str| files.update(|files| files.retain(|(k, _)| *k != key)));
+
+    let status = move || {
+        let selected = selection.with(|selection| match selection {
+            Selection::All => "all".to_owned(),
+            Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
+            Selection::Keys(keys) => {
+                let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
+                keys.sort();
+                keys.join(", ")
+            }
+        });
+        let opened = opened.get().map_or_else(|| "none".to_owned(), |key| key.to_string());
+        format!("Selected: {selected}. Opened: {opened}.")
+    };
 
     view! {
         <div {..props.into_attrs()} class="demo-grid-list">
-            {FILES.map(|(key, name)| view! { <FileRow list=data.clone() key=Key::from(key) name/> }).collect_view()}
+            <For each=move || files.get() key=|(key, _)| *key let:file>
+                <FileRow list=data.clone() key=file.0 name=file.1 remove/>
+            </For>
         </div>
-
-        <div class="demo-state-display">
-            <div>
-                <strong>"Focused: "</strong>
-                {move || state.selection.focused_key().map_or_else(|| "none".to_owned(), |key| key.to_string())}
-            </div>
-            <div><strong>"Selected: "</strong>{selected}</div>
-            <div>
-                <strong>"Last action: "</strong>
-                {move || last_action.get().map_or_else(|| "none".to_owned(), |key| key.to_string())}
-            </div>
+        <p class="demo-status">{status}</p>
+        <div class="demo-controls">
+            <Button on_press=move |_| files.set(FILES.to_vec())>"Restore files"</Button>
         </div>
     }
 }
 
+/// A row: `use_grid_list_item` sets `role="row"`, `aria-selected` and the single `role="gridcell"`, which holds
+/// the name and a button. ArrowRight moves focus to the button, ArrowLeft back to the row.
 #[component]
-fn FileRow(list: GridListData, key: Key, name: &'static str) -> impl IntoView {
-    let row = use_grid_list_item(UseGridListItemInput::new(list, key));
-    let is_selected = row.is_selected;
+fn FileRow(list: GridListData, key: &'static str, name: &'static str, remove: Callback<&'static str>) -> impl IntoView {
+    let row = use_grid_list_item(UseGridListItemInput::new(list, Key::from(key)));
     let (row_attrs, row_styles) = row.row_props.into_parts();
 
     view! {
-        <div
-            {..row_attrs}
-            class=Classes::from("demo-grid-list-item")
-                .add_reactive("selected", is_selected)
-                .add_reactive("focused", row.is_focused)
-            style=row_styles
-        >
+        <div {..row_attrs} class="demo-grid-list-row" style=row_styles>
             <div {..row.grid_cell_props.into_attrs()} class="demo-grid-list-cell">
-                <span class="demo-grid-list-icon">{move || if is_selected.get() { "\u{2713}" } else { "" }}</span>
-                <span>{name}</span>
+                <span class="demo-grid-list-name">{name}</span>
+                <Button
+                    variant=ButtonVariant::Flat
+                    on_press=move |_| remove.run(key)
+                    attr:aria-label=format!("Remove {name}")
+                >
+                    <Icon icon=icondata::BsTrash/>
+                </Button>
             </div>
         </div>
     }

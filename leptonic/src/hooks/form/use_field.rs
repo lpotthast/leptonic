@@ -34,7 +34,7 @@ pub struct UseFieldInput {
     /// The label element's id. Generated when `None`.
     pub label_id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub label_element_type: LabelElementType,
     /// Labels the field when there is no visible label. Next to a visible label, it is added to the
     /// field's name.
@@ -65,14 +65,14 @@ pub struct UseFieldReturn {
 pub struct UseFieldProps {
     pub id: String,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
 }
 
 pub type UseFieldAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
 );
 
@@ -93,7 +93,7 @@ impl IntoAttrs for UseFieldProps {
 /// `aria-labelledby` / `aria-describedby`.
 ///
 /// ```ignore
-/// let field = use_field(UseFieldInput { has_label: true, ..UseFieldInput::default() });
+/// let field = use_field(UseFieldInput { has_label: true.into(), ..UseFieldInput::default() });
 /// view! {
 ///     <label {..field.label_props.into_attrs()}>"Email"</label>
 ///     <input type="email" {..field.field_props.into_attrs()} />
@@ -168,11 +168,12 @@ mod tests {
         Owner::new().with(|| {
             let field = use_field(UseFieldInput {
                 id: Some("f".to_owned()),
-                has_label: true,
+                has_label: Signal::stored(true),
                 ..UseFieldInput::default()
             });
             let label_id = field.label_props.id.clone();
-            assert_that!(field.field_props.aria_labelledby).is_equal_to(Some(label_id));
+            assert_that!(field.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(label_id));
             assert_that!(field.label_props.html_for).is_equal_to(Some("f".to_owned()));
             // Nothing describes the field until a description is rendered.
             assert_that!(field.field_props.aria_describedby.get_untracked()).is_none();
@@ -188,7 +189,9 @@ mod tests {
                 aria_labelledby: Some("other".to_owned()),
                 ..UseFieldInput::default()
             });
-            assert_that!(field.field_props.aria_labelledby).is_equal_to(Some("other f".to_owned()));
+            // The field first, as react-aria's `useLabels`.
+            assert_that!(field.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some("f other".to_owned()));
         });
     }
 
@@ -196,7 +199,7 @@ mod tests {
     fn span_labels_have_no_for_attribute() {
         Owner::new().with(|| {
             let field = use_field(UseFieldInput {
-                has_label: true,
+                has_label: Signal::stored(true),
                 label_element_type: LabelElementType::Span,
                 ..UseFieldInput::default()
             });

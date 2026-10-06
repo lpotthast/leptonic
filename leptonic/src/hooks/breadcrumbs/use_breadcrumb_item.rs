@@ -1,186 +1,65 @@
-// Upstream: react-aria/src/breadcrumbs/useBreadcrumbItem.ts @ 6f664fe911
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
-use web_sys::{KeyboardEvent, MouseEvent};
+// Upstream: react-aria/src/breadcrumbs/useBreadcrumbItem.ts @ 99e6102368
+use leptos::prelude::*;
 
 use crate::{
-    hooks::IntoAttrs,
-    utils::{
-        EventHandler,
-        aria::{AriaCurrent, AriaDisabled},
-    },
+    hooks::{UseLinkInput, UseLinkReturn, use_link},
+    utils::aria::AriaCurrent,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - The link settings are a nested `UseLinkInput`; `isCurrent` is a signal and `aria-current` the
+//   typed `current` (default `AriaCurrent::Page`).
 //
+// ## OMITTED FEATURES
+// - Heading items (`elementType: 'h1'..'h6'`, attributes without link behavior): render the
+//   current item as a heading without the hook.
+// - `autoFocus` of the current item.
+//
+// =============================================================================
 
-/// Input parameters for the `use_breadcrumb_item` hook.
+/// Input of [`use_breadcrumb_item`].
 #[derive(Debug, Clone)]
 pub struct UseBreadcrumbItemInput {
-    /// The href for the breadcrumb link.
-    pub href: Option<String>,
-
-    /// Whether this is the current/last item.
-    pub is_current: bool,
-
-    /// Whether the item is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Callback when the item is pressed.
-    pub on_press: Option<Callback<()>>,
+    /// The item's link. Its `is_disabled` disables the item.
+    pub link: UseLinkInput,
+    /// Whether the item is the current page (the last one): it is then no working link.
+    pub is_current: Signal<bool>,
+    /// What the current item is. Default: `AriaCurrent::Page`.
+    pub current: AriaCurrent,
 }
 
 impl Default for UseBreadcrumbItemInput {
     fn default() -> Self {
         Self {
-            href: None,
-            is_current: false,
-            is_disabled: Signal::derive(|| false),
-            on_press: None,
+            link: UseLinkInput::default(),
+            is_current: Signal::default(),
+            current: AriaCurrent::Page,
         }
     }
 }
 
-/// The return value of the `use_breadcrumb_item` hook.
-pub struct UseBreadcrumbItemReturn {
-    /// Props for the breadcrumb item container (li).
-    pub item_props: UseBreadcrumbItemProps,
-
-    /// Props for the link/span element.
-    pub link_props: UseBreadcrumbLinkProps,
-
-    /// Whether this is the current item.
-    pub is_current: bool,
-}
-
-/// Props from `use_breadcrumb_item` for the item container element.
-///
-/// Currently empty — CSS class should be applied directly in the component.
-#[derive(Debug)]
-pub struct UseBreadcrumbItemProps;
-
-impl IntoAttrs for UseBreadcrumbItemProps {
-    type Attrs = UseBreadcrumbItemAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {}
-}
-
-/// Attributes for the breadcrumb item container.
-pub type UseBreadcrumbItemAttrs = ();
-
-/// Props from `use_breadcrumb_item` for the link element that can be extracted and merged programmatically.
-#[derive(Debug)]
-pub struct UseBreadcrumbLinkProps {
-    pub href: Option<String>,
-    pub aria_current: Option<AriaCurrent>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub tabindex: &'static str,
-    pub on_click: EventHandler<MouseEvent>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-}
-
-impl IntoAttrs for UseBreadcrumbLinkProps {
-    type Attrs = UseBreadcrumbLinkAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Href, self.href),
-            Attr(attr::AriaCurrent, self.aria_current),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_click.into_on(ev::click),
-            self.on_keydown.into_on(ev::keydown),
-        )
-    }
-}
-
-/// Attributes for the breadcrumb link element.
-pub type UseBreadcrumbLinkAttrs = (
-    Attr<attr::Href, Option<String>>,
-    Attr<attr::AriaCurrent, Option<AriaCurrent>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::Tabindex, &'static str>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Provides the behavior and accessibility for a breadcrumb item.
-///
-/// # Example
-///
-/// ```ignore
-/// let item = use_breadcrumb_item(UseBreadcrumbItemInput {
-///     href: Some("/home".to_string()),
-///     is_current: false,
-///     on_press: Some(Callback::new(|_| navigate("/home"))),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <li {..item.item_props.into_attrs()}>
-///         <a {..item.link_props.into_attrs()}>"Home"</a>
-///     </li>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemReturn {
+/// An item of breadcrumbs: a link to an ancestor page, or the current page, which is announced
+/// as current (`aria-current`) and can't be followed. The item is disabled while current.
+pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseLinkReturn {
     let UseBreadcrumbItemInput {
-        href,
+        link,
         is_current,
-        is_disabled: disabled,
-        on_press,
+        current,
     } = input;
-
-    let aria_current = is_current.then_some(AriaCurrent::Page);
-
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Current item doesn't need to be a link
-    let tabindex = if is_current { "-1" } else { "0" };
-
-    let handle_click = move |e: MouseEvent| {
-        if disabled.get_untracked() || is_current {
-            e.prevent_default();
-            return;
-        }
-        if let Some(on_press) = on_press {
-            on_press.run(());
-        }
-    };
-
-    // Links activate natively: Enter on an `<a href>` clicks it (`handle_click` runs `on_press`),
-    // and Space doesn't activate links (as `usePress` treats links).
-    let is_link = href.is_some();
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() || is_current || is_link {
-            return;
-        }
-
-        let key = e.key();
-        if key == "Enter" || key == " " {
-            e.prevent_default();
-            if let Some(on_press) = on_press {
-                on_press.run(());
-            }
-        }
-    };
-
-    UseBreadcrumbItemReturn {
-        item_props: UseBreadcrumbItemProps,
-        link_props: UseBreadcrumbLinkProps {
-            href: if is_current { None } else { href },
-            aria_current,
-            aria_disabled,
-            tabindex,
-            on_click: EventHandler::new(handle_click),
-            on_keydown: EventHandler::new(handle_keydown),
-        },
-        is_current,
-    }
+    let is_disabled = link.is_disabled;
+    let aria_current = link.aria_current;
+    use_link(UseLinkInput {
+        is_disabled: Signal::derive(move || is_disabled.get() || is_current.get()),
+        aria_current: Signal::derive(move || {
+            is_current
+                .get()
+                .then_some(current)
+                .or_else(|| aria_current.get())
+        }),
+        ..link
+    })
 }

@@ -1,7 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
 use leptos::prelude::*;
-use uuid::Uuid;
 
 use crate::{
     Mount, Out,
@@ -11,7 +10,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct TabData {
-    pub id: Uuid,
+    pub id: Oco<'static, str>,
     pub name: Oco<'static, str>,
     pub label: ViewFn,
 }
@@ -29,8 +28,9 @@ impl Debug for TabData {
 // TODO: We might want to take only `Children` and hide them when the tab is not active...
 #[component]
 pub fn Tab(
-    // TODO: Can / should we accept a String instead?
-    #[prop(optional)] id: Option<Uuid>,
+    /// The tab panel's id. Default: a generated, hydration-stable one.
+    #[prop(into, optional)]
+    id: Option<Oco<'static, str>>,
 
     /// Uniquely identifies this tab.
     #[prop(into)]
@@ -54,7 +54,7 @@ pub fn Tab(
 
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let id = id.unwrap_or_else(Uuid::new_v4);
+    let id = id.unwrap_or_else(|| crate::utils::id::use_id("tab").into());
     let tabs = use_tabs();
 
     let mount = mount.or(tabs.default_mount_type).unwrap_or(Mount::Once);
@@ -62,13 +62,16 @@ pub fn Tab(
     let name = StoredValue::new(name);
 
     tabs.register(TabData {
-        id,
+        id: id.clone(),
         name: name.get_value(),
         label,
     });
 
+    let id = StoredValue::new(id);
     on_cleanup(move || {
-        tabs.deregister(id);
+        if let Some(id) = id.try_get_value() {
+            tabs.deregister(&id);
+        }
     });
 
     if let Some(on_show) = on_show {
@@ -100,7 +103,7 @@ pub fn Tab(
             <div
                 class=classes.get_value().add("leptonic-tab")
                 style=styles.get_value()
-                id=id.to_string()
+                id=id.get_value()
                 data-name=name.get_value()
                 role="tabpanel"
                 aria-hidden=move || if is_active() { "false" } else { "true" }
@@ -114,7 +117,7 @@ pub fn Tab(
                 <div
                     class=classes.get_value().add("leptonic-tab")
                     style=styles.get_value()
-                    id=id.to_string()
+                    id=id.get_value()
                     data-name=name.get_value()
                     role="tabpanel"
                 >

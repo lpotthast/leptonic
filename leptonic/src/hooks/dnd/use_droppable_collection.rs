@@ -28,7 +28,12 @@ use crate::{
         collections::{Collection, Key, KeyboardDelegate, NodeKind},
         focus::use_focus_visible::{Modality, set_modality},
     },
-    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection},
+    utils::{
+        CapturedElement,
+        i18n::use_direction,
+        key::{KeyboardEventKey, KeyboardKey},
+        locale::WritingDirection,
+    },
 };
 
 // =============================================================================
@@ -574,14 +579,18 @@ fn keyboard_drop_target(
         let allowed = &drag.allowed_drop_operations;
         let current = state.target.get_untracked();
         let step = |direction| nvt(current.clone(), &types, allowed, direction, true);
-        match e.key().as_str() {
-            "ArrowDown" => state.set_target(step(NavigationDirection::Down)),
-            "ArrowUp" => state.set_target(step(NavigationDirection::Up)),
-            "ArrowLeft" => state.set_target(step(NavigationDirection::Left)),
-            "ArrowRight" => state.set_target(step(NavigationDirection::Right)),
-            "Home" => state.set_target(nvt(None, &types, allowed, NavigationDirection::Down, true)),
-            "End" => state.set_target(nvt(None, &types, allowed, NavigationDirection::Up, true)),
-            "PageDown" => {
+        match e.typed_key() {
+            KeyboardKey::ArrowDown => state.set_target(step(NavigationDirection::Down)),
+            KeyboardKey::ArrowUp => state.set_target(step(NavigationDirection::Up)),
+            KeyboardKey::ArrowLeft => state.set_target(step(NavigationDirection::Left)),
+            KeyboardKey::ArrowRight => state.set_target(step(NavigationDirection::Right)),
+            KeyboardKey::Home => {
+                state.set_target(nvt(None, &types, allowed, NavigationDirection::Down, true));
+            }
+            KeyboardKey::End => {
+                state.set_target(nvt(None, &types, allowed, NavigationDirection::Up, true));
+            }
+            KeyboardKey::PageDown => {
                 let target = match &current {
                     None => nvt(None, &types, allowed, NavigationDirection::Down, true),
                     Some(target) => {
@@ -632,7 +641,7 @@ fn keyboard_drop_target(
                 };
                 state.set_target(target.or(current));
             }
-            "PageUp" => {
+            KeyboardKey::PageUp => {
                 let target = match &current {
                     None => nvt(None, &types, allowed, NavigationDirection::Up, true),
                     Some(DropTarget::Root) => current.clone(),

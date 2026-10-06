@@ -1,46 +1,5 @@
-// Upstream: react-aria/src/slider/useSlider.ts @ 6f664fe911
-//! # Slider Hooks
-//!
-//! Accessible slider components with multi-thumb support, based on
-//! [react-aria's slider](https://react-spectrum.adobe.com/react-aria/useSlider.html).
-//!
-//! ## Architecture
-//!
-//! Following react-aria's pattern, sliders use N+1 movement handler instances for N thumbs:
-//! - **Track-level (`use_slider`):** One movement handler handles track clicks,
-//!   finds closest thumb via `find_closest_thumb()`, and drags that thumb.
-//! - **Per-thumb (`use_slider_thumb`):** Each thumb has its own movement handler
-//!   for direct thumb-initiated drags.
-//!
-//! Both share the same track element as container. This allows:
-//! - Track clicks to move the closest thumb with continuous drag support
-//! - Direct thumb drags to work independently
-//! - Clean separation without thumbs needing to know about each other
-//!
-//! ## Pixel Accumulation Pattern
-//!
-//! To avoid precision loss during continuous dragging, we use pixel accumulation:
-//! - On drag start: Initialize `current_position` to `thumb_percent * track_size` (in pixels)
-//! - On move: Accumulate pixel deltas into `current_position`
-//! - Convert back to percent: `percent = current_position / track_size`
-//!
-//! This is critical because `set_thumb_percent` snaps values to steps. If we naively
-//! added `delta_percent` to the current (snapped) `thumb_percent`, small movements would
-//! be lost. By tracking position in floating-point pixels, we preserve sub-pixel
-//! movements until they accumulate enough to cross a step boundary.
-//!
-//! ## Deviations from react-aria
-//!
-//! ### Input Type
-//! React-aria uses `type="range"` for the hidden input, which provides better
-//! screen reader semantics. We use `type="hidden"` for simpler form integration
-//! since the thumb element already has the slider role and ARIA attributes.
-//!
-//! ### Number Formatting
-//! React-aria uses `Intl.NumberFormat` for locale-specific number display.
-//! We use basic string formatting with configurable decimal places.
-//! This avoids `wasm_bindgen` complexity for internationalization.
-
+// Upstream: react-aria/src/slider/useSlider.ts @ 99e6102368
+// Upstream: react-aria/src/slider/utils.ts @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -49,436 +8,445 @@ use leptos::{
     prelude::*,
 };
 use send_wrapper::SendWrapper;
-use web_sys::PointerEvent;
+use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
     hooks::{
-        IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, Orientation, PropsWithStyles,
-        UseMoveInput, interactions::use_move::MoveAxis, slider::UseSliderStateReturn, use_move,
+        IntoAttrs, LabelElementType, Modality, MoveEndEvent, MoveEvent, MoveStartEvent,
+        PropsWithStyles, UseFieldInput, UseFieldReturn, UseMoveInput,
+        interactions::use_move::MoveAxis, set_modality, slider::SliderState, use_field, use_move,
     },
     utils::{
-        EventAccessors, EventHandler, EventTargetExt,
-        aria::{AriaDisabled, AriaLive, AriaRole},
+        EventAccessors, EventHandler, EventTargetExt, SlotProps,
+        aria::{AriaLive, AriaRole},
         css::TouchAction,
         element_capture::{CapturedElement, ElementCaptureAttr},
         event_listeners::{Listener, listen_to},
         i18n::use_direction,
-        id::use_id,
         locale::WritingDirection,
+        number_value::NumberValue,
+        orientation::Orientation,
         style::TouchActionProperty,
         styles::Styles,
     },
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - What the thumbs need from the slider (react-aria's `sliderData` WeakMap keyed by the state)
+//   is the returned `SliderData`, passed to `use_slider_thumb`.
+// - The track is captured by its props (`track_element`) instead of a ref argument.
+// - The slider is a field (C14, `use_field` instead of `useLabel`): a rendered description
+//   describes every thumb, and there is an error message slot.
 //
+// ## DIFFERENT BEHAVIOR
+// - Thumb ids derive from the group's id (react-aria: the label's id while there is a label), so
+//   they stay stable while the label comes and goes (ids must match between server and client);
+//   the thumbs' `aria-labelledby` follows the label.
+// - Track presses start on `pointerdown` only: PointerEvent is always available (CLAUDE.md), so
+//   react-aria's mouse and touch fallbacks are omitted.
+//
+// =============================================================================
 
-/// Input parameters for the `use_slider` hook.
-#[derive(Debug, Clone)]
-pub struct UseSliderInput {
-    /// The slider state (from `use_slider_state`). Also provides `is_disabled`.
-    pub state: UseSliderStateReturn,
-
-    /// An accessibility label for the slider group.
-    pub aria_label: Option<&'static str>,
-
-    /// ID of an element that labels the slider group.
+/// Input of [`use_slider`]. Start from [`UseSliderInput::new`].
+#[derive(Debug)]
+pub struct UseSliderInput<T: NumberValue> {
+    pub state: SliderState<T>,
+    /// The group's id. Generated when `None`.
+    pub id: Option<String>,
+    /// Whether a visible label is rendered (with `label_props`).
+    pub has_label: Signal<bool>,
+    /// Names the slider when there is no visible label.
+    pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
+    /// Further elements describing every thumb (next to a rendered description).
+    pub aria_describedby: Option<String>,
 }
 
-/// The return value of the `use_slider` hook.
+impl<T: NumberValue> UseSliderInput<T> {
+    pub fn new(state: SliderState<T>) -> Self {
+        Self {
+            state,
+            id: None,
+            has_label: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+        }
+    }
+}
+
+/// What the thumbs need from their slider.
+#[derive(Debug, Clone)]
+pub struct SliderData {
+    /// The slider group's id. Thumb ids derive from it (stable, unlike react-aria's, which derive
+    /// from the label's id when there is one).
+    pub id: String,
+    /// The id the thumbs are labelled by: the label's while it is rendered, else the group's.
+    pub labelled_by: Signal<String>,
+    /// What describes every thumb: the description while rendered, and `aria_describedby`.
+    pub aria_describedby: Signal<Option<String>>,
+}
+
+impl SliderData {
+    /// The id of thumb `index`'s input.
+    pub fn thumb_id(&self, index: usize) -> String {
+        format!("{}-{index}", self.id)
+    }
+}
+
+/// Return value of [`use_slider`].
 #[derive(Debug)]
 pub struct UseSliderReturn {
-    /// Props for the slider group/container element.
-    pub group_props: UseSliderGroupProps,
-
-    /// Props for the label element.
+    /// For the label element.
     pub label_props: UseSliderLabelProps,
-
-    /// Props for the output/value display element.
-    pub output_props: UseSliderOutputProps,
-
-    /// Props for the slider track element.
-    /// Includes an `ElementCaptureAttr` that captures the DOM element.
+    /// For a description of the slider (describes every thumb while rendered).
+    pub description_props: SlotProps,
+    /// For an error message. Render it only while the slider is invalid.
+    pub error_message_props: SlotProps,
+    /// For the element around label, track and output (`role="group"`).
+    pub group_props: UseSliderGroupProps,
+    /// For the track: pressing it moves the closest thumb there.
     pub track_props: PropsWithStyles<UseSliderTrackProps>,
+    /// For an `<output>` showing the values.
+    pub output_props: UseSliderOutputProps,
+    /// For [`use_slider_thumb`](super::use_slider_thumb).
+    pub data: SliderData,
+    /// The track element, for the thumbs.
+    pub track_element: CapturedElement,
+}
 
-    /// Reactive handle to the captured track element.
-    /// Pass this to `use_slider_thumb`.
-    pub track_ref: CapturedElement,
+/// The label's props: a click focuses the first thumb (the label has no `for`: VoiceOver on iOS
+/// would announce only the label for the first thumb).
+#[derive(Debug)]
+pub struct UseSliderLabelProps {
+    pub id: String,
+    pub on_click: EventHandler<MouseEvent>,
+}
+
+pub type UseSliderLabelAttrs = (
+    Attr<attr::Id, String>,
+    On<ev::click, SharedEventCallback<MouseEvent>>,
+);
+
+impl IntoAttrs for UseSliderLabelProps {
+    type Attrs = UseSliderLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
+    }
 }
 
 #[derive(Debug)]
 pub struct UseSliderGroupProps {
-    role: AriaRole,
-    id: String,
-    aria_label: Option<&'static str>,
-    aria_labelledby: Option<String>,
-    aria_disabled: Signal<Option<AriaDisabled>>,
+    pub id: String,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
+
+pub type UseSliderGroupAttrs = (
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::Id, String>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+);
 
 impl IntoAttrs for UseSliderGroupProps {
     type Attrs = UseSliderGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
+            Attr(attr::Role, AriaRole::Group),
             Attr(attr::Id, self.id),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDisabled, self.aria_disabled),
         )
     }
 }
 
-/// Attributes for the slider group element.
-pub type UseSliderGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Id, String>,
-    Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-);
-
 #[derive(Debug)]
 pub struct UseSliderTrackProps {
-    role: AriaRole,
-    on_pointerdown: EventHandler<PointerEvent>,
-    element_capture: ElementCaptureAttr,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseSliderTrackAttrs = (
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    ElementCaptureAttr,
+);
 
 impl IntoAttrs for UseSliderTrackProps {
     type Attrs = UseSliderTrackAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.element_capture,
         )
     }
 }
 
-/// Attributes for the slider track element.
-pub type UseSliderTrackAttrs = (
-    Attr<attr::Role, AriaRole>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    ElementCaptureAttr,
-);
-
-/// Props for the label element.
-#[derive(Debug)]
-pub struct UseSliderLabelProps {
-    /// The id of the label element.
-    pub id: String,
-}
-
-/// Props for the output/value display element.
+/// The output's props: `for` all thumbs, not announced while dragging (`aria-live="off"`).
 #[derive(Debug)]
 pub struct UseSliderOutputProps {
-    /// The id of the output element.
-    pub id: String,
-
-    /// The "for" attribute linking to all thumb IDs (space-separated).
-    pub html_for: String,
-
-    /// The aria-live value for the output element. Use "off" to prevent
-    /// screen reader announcements during dragging.
-    pub aria_live: AriaLive,
+    pub html_for: Signal<String>,
 }
+
+pub type UseSliderOutputAttrs = (
+    Attr<attr::For, Signal<String>>,
+    Attr<attr::AriaLive, AriaLive>,
+);
 
 impl IntoAttrs for UseSliderOutputProps {
     type Attrs = UseSliderOutputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
             Attr(attr::For, self.html_for),
-            Attr(attr::AriaLive, self.aria_live),
+            Attr(attr::AriaLive, AriaLive::Off),
         )
     }
 }
 
-pub type UseSliderOutputAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::For, String>,
-    Attr<attr::AriaLive, AriaLive>,
-);
-
-pub type ThumbIdx = usize;
-
-/// Find the closest thumb to a click position.
-fn find_closest_thumb(click_value: f64, values: &[f64]) -> Option<ThumbIdx> {
-    if values.is_empty() {
-        return None;
-    }
-    if values.len() == 1 {
-        return Some(0);
-    }
-
-    // Find position where click_value would be inserted
-    match values.iter().position(|&v| click_value < v) {
-        Some(0) => Some(0),             // Click is before first thumb.
-        None => Some(values.len() - 1), // Click is after last thumb.
-        Some(i) => {
-            // Click is between thumb i-1 and thumb i, find closer one.
-            let prev_dist = (values[i - 1] - click_value).abs();
-            let next_dist = (values[i] - click_value).abs();
-            if prev_dist <= next_dist {
-                Some(i - 1)
+/// The thumb closest to `value`: of stacked thumbs, the one after (react-aria's `onDownTrack`).
+fn closest_thumb(value: f64, values: &[f64]) -> Option<usize> {
+    let split = values.iter().position(|v| value - v < 0.0);
+    match split {
+        _ if values.is_empty() => None,
+        Some(0) => Some(0),
+        None => Some(values.len() - 1),
+        Some(split) => {
+            let (last_left, first_right) = (values[split - 1], values[split]);
+            if (last_left - value).abs() < (first_right - value).abs() {
+                Some(split - 1)
             } else {
-                Some(i)
+                Some(split)
             }
         }
     }
 }
 
-/// Provides the behavior and accessibility implementation for a slider track.
-///
-/// This hook manages track-level behavior including track clicks to move thumbs.
-/// Use `use_slider_thumb` for individual thumb behavior.
-///
-/// # Example
-///
-/// ```ignore
-/// let state = use_slider_state(UseSliderStateInput {
-///     values: SliderValues::Uncontrolled(vec![50.0]),
-///     ..Default::default()
-/// });
-///
-/// let UseSliderReturn { group_props, track_props, track_ref, label_props, output_props } =
-///     use_slider(UseSliderInput {
-///         state,
-///         label: Some("Volume".to_string()),
-///         ..Default::default()
-///     });
-///
-/// // Pass track_ref to each thumb
-/// let UseSliderThumbReturn { thumb_props, .. } = use_slider_thumb(UseSliderThumbInput {
-///     state,
-///     track_ref,
-///     index: 0,
-///     ..Default::default()
-/// });
-/// ```
-///
-/// # Panics
-///
-/// Panics if the current target of the pointer event is not available.
+/// A slider: a group of thumbs on a track, named by a label. Pressing the track moves the
+/// closest thumb there (and drags it). Render each thumb with
+/// [`use_slider_thumb`](super::use_slider_thumb).
 #[allow(clippy::too_many_lines)]
-pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
+pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     let UseSliderInput {
         state,
+        id,
+        has_label,
         aria_label,
         aria_labelledby,
+        aria_describedby,
     } = input;
 
-    let base_id = use_id("slider");
-    // Right-to-left layouts reverse the horizontal direction.
+    let UseFieldReturn {
+        label_props,
+        field_props,
+        description_props,
+        error_message_props,
+        ..
+    } = use_field(UseFieldInput {
+        id,
+        has_label,
+        label_element_type: LabelElementType::Span,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        ..UseFieldInput::default()
+    });
+    let data = SliderData {
+        id: field_props.id.clone(),
+        labelled_by: {
+            let (label_id, field_id) = (label_props.id.clone(), field_props.id.clone());
+            Signal::derive(move || {
+                if has_label.get() {
+                    label_id.clone()
+                } else {
+                    field_id.clone()
+                }
+            })
+        },
+        aria_describedby: field_props.aria_describedby,
+    };
+
     let direction = use_direction();
-    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
-    let group_id = format!("slider-group-{base_id}");
-    let label_id = format!("slider-label-{base_id}");
-    let output_id = format!("slider-output-{base_id}");
-
+    let track = CapturedElement::new();
     let orientation = state.orientation;
-    let disabled = state.is_disabled;
+    // The thumb the track press moves, and its position in pixels along the track: dragging adds
+    // the deltas here, so movements smaller than a step aren't lost when the value snaps.
+    let dragged_thumb = StoredValue::new(None::<usize>);
+    let position = StoredValue::new(None::<f64>);
+    let release_listeners: StoredValue<Option<SendWrapper<Vec<Listener>>>> = StoredValue::new(None);
 
-    let track_element = CapturedElement::new();
+    let is_vertical = move || orientation.get_untracked() == Orientation::Vertical;
+    let reversed = move || is_vertical() || direction.get_untracked() == WritingDirection::Rtl;
+    let end_drag = move || {
+        if let Some(index) = dragged_thumb.get_value() {
+            state.set_thumb_dragging(index, false);
+            dragged_thumb.set_value(None);
+        }
+        release_listeners.set_value(None);
+    };
 
-    // Generate thumb IDs for the output's "for" attribute
-    let thumb_ids: Vec<String> = (0..state.num_thumbs)
-        .map(|i| format!("slider-thumb-{base_id}-{i}"))
-        .collect();
-    let html_for = thumb_ids.join(" ");
-
-    // Track-level drag state: which thumb index is being dragged via track interaction
-    let dragging_thumb_index: StoredValue<Option<usize>> = StoredValue::new(None);
-    // Pixel accumulation: track the thumb's position in pixels (not percent) to avoid
-    // precision loss when the percent snaps to steps. See module docs for details.
-    let current_position_px: StoredValue<Option<f64>> = StoredValue::new(None);
-
-    // Cleanup functions for the global pointerup/pointercancel listeners registered
-    // in on_track_pointerdown. Stored so we can remove them in the handler or on_cleanup.
-    let track_cleanup: StoredValue<Option<SendWrapper<Vec<Listener>>>> = StoredValue::new(None);
-
-    // Handle track clicks immediately on pointerdown (before use_move processes the event).
-    // This is the react-aria "onDownTrack" pattern: click-to-position happens here,
-    // while use_move only handles subsequent drag deltas.
-    let handle_track_pointerdown = move |e: PointerEvent| {
-        if disabled.get_untracked() {
+    let on_track_down = move |e: PointerEvent| {
+        if e.pointer_type() == "mouse"
+            && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
+        {
             return;
         }
+        let Some(track_el) = track.get_untracked() else {
+            return;
+        };
+        let thumbs = state.values.get_untracked();
+        if state.is_disabled.get_untracked()
+            || (0..thumbs.len()).any(|index| untrack(|| state.is_thumb_dragging(index)))
+        {
+            return;
+        }
+        let rect = track_el.get_bounding_client_rect();
+        let (size, offset) = if is_vertical() {
+            (rect.height(), e.client_y() - rect.top())
+        } else {
+            (rect.width(), e.client_x() - rect.left())
+        };
+        let mut percent = offset / size;
+        if reversed() {
+            percent = 1.0 - percent;
+        }
+        let Some(value) = untrack(|| state.percent_value(percent)) else {
+            return;
+        };
+        let values: Vec<f64> = thumbs.iter().map(|v| v.to_f64()).collect();
+        let Some(closest) = closest_thumb(value.to_f64(), &values) else {
+            return;
+        };
+        if !state.is_thumb_editable(closest) {
+            dragged_thumb.set_value(None);
+            return;
+        }
+        // Don't move focus away.
+        e.prevent_default();
+        dragged_thumb.set_value(Some(closest));
+        state.set_focused_thumb(Some(closest));
+        state.set_thumb_dragging(closest, true);
+        state.set_thumb_value(closest, value);
 
-        if let Some(track) = track_element.get_untracked().as_deref().cloned() {
-            let rect = track.get_bounding_client_rect();
-
-            // Client (viewport) coordinates, as `getBoundingClientRect`.
-            let client_x = e.client_x();
-            let client_y = e.client_y();
-
-            let (position, size): (f64, f64) = match orientation.get_untracked() {
-                Orientation::Horizontal => {
-                    let pos = client_x - rect.left();
-                    let adjusted_pos = if is_rtl() { rect.width() - pos } else { pos };
-                    (adjusted_pos, rect.width())
+        // A press without movement ends on the pointer's release.
+        let pointer_id = e.pointer_id();
+        if let Some(document) = e.expect_current_target().get_owner_document() {
+            let on_up = listen_to(&document, ev::pointerup, false, move |e: PointerEvent| {
+                if e.pointer_id() == pointer_id {
+                    end_drag();
                 }
-                Orientation::Vertical => {
-                    // For vertical, bottom = 0%, top = 100%
-                    (rect.bottom() - client_y, rect.height())
-                }
-            };
-
-            let percent = (position / size).clamp(0.0, 1.0);
-            let click_value = state.min_value + percent * (state.max_value - state.min_value);
-
-            // Find closest thumb
-            let values = state.values.get_untracked();
-            let Some(closest_thumb) = find_closest_thumb(click_value, &values) else {
-                return;
-            };
-
-            // Move the closest thumb to the click position
-            state.set_thumb_percent.run((closest_thumb, percent));
-
-            // Focus the thumb that was clicked
-            state.set_focused_thumb.run(Some(closest_thumb));
-
-            // Start tracking for continuous drag
-            dragging_thumb_index.set_value(Some(closest_thumb));
-            state.set_thumb_dragging.run((closest_thumb, true));
-
-            // Initialize pixel position for accumulation pattern.
-            // Use the click position (already adjusted for RTL/vertical).
-            current_position_px.set_value(Some(position));
-
-            // Register global pointerup/pointercancel listeners for cleanup.
-            // These always fire (even without pointer movement), ensuring dragging state
-            // is cleared for click-without-drag interactions.
-            let pointer_id = e.pointer_id();
-            let Some(doc) = e.expect_current_target().get_owner_document() else {
-                return;
-            };
-
-            let on_up = listen_to(&doc, ev::pointerup, false, move |e: PointerEvent| {
-                if e.pointer_id() != pointer_id {
-                    return;
-                }
-                if let Some(idx) = dragging_thumb_index.get_value() {
-                    state.set_thumb_dragging.run((idx, false));
-                }
-                dragging_thumb_index.set_value(None);
-                current_position_px.set_value(None);
-                // Remove our global listeners.
-                track_cleanup.set_value(None);
             });
-
-            let on_cancel = listen_to(&doc, ev::pointercancel, false, move |e: PointerEvent| {
-                if e.pointer_id() != pointer_id {
-                    return;
-                }
-                if let Some(idx) = dragging_thumb_index.get_value() {
-                    state.set_thumb_dragging.run((idx, false));
-                }
-                dragging_thumb_index.set_value(None);
-                current_position_px.set_value(None);
-                // Remove our global listeners.
-                track_cleanup.set_value(None);
-            });
-
-            track_cleanup.set_value(Some(SendWrapper::new(vec![on_up, on_cancel])));
+            release_listeners.set_value(Some(SendWrapper::new(vec![on_up])));
         }
     };
 
-    // Use use_move hook for track-level dragging. use_move handles pointer event
-    // management (pointerdown, pointermove, pointerup, pointercancel) for drag deltas.
-    // on_move_start is a no-op because we handle the initial click in on_track_pointerdown.
-    let track_move_return = use_move(UseMoveInput {
-        is_disabled: disabled,
+    let track_move = use_move(UseMoveInput {
+        is_disabled: state.is_disabled,
         axis: Signal::derive(move || match orientation.get() {
-            Orientation::Horizontal => Some(MoveAxis::Horizontal),
-            Orientation::Vertical => Some(MoveAxis::Vertical),
+            Orientation::Horizontal => MoveAxis::Horizontal,
+            Orientation::Vertical => MoveAxis::Vertical,
         }),
-        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {})),
+        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
+            position.set_value(None);
+        })),
         on_move: Some(Callback::new(move |e: MoveEvent| {
-            if let Some(idx) = dragging_thumb_index.get_value()
-                && let Some(track) = track_element.get_untracked().as_deref().cloned()
-            {
-                let orientation = orientation.get_untracked();
-
-                let rect = track.get_bounding_client_rect();
-                let size = match orientation {
-                    Orientation::Horizontal => rect.width(),
-                    Orientation::Vertical => rect.height(),
-                };
-
-                // Get current position in pixels (initialized in on_track_pointerdown)
-                let pos = current_position_px
-                    .get_value()
-                    .unwrap_or_else(|| state.get_thumb_percent.run(idx) * size);
-
-                // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
-                // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
-                let delta = match orientation {
-                    Orientation::Horizontal => e.delta_x,
-                    Orientation::Vertical => -e.delta_y,
-                };
-                let delta = if is_rtl() && orientation == Orientation::Horizontal {
-                    -delta
-                } else {
-                    delta
-                };
-
-                // Accumulate in pixels, then convert to percent
-                let new_pos = pos + delta;
-                current_position_px.set_value(Some(new_pos));
-
-                let new_percent = (new_pos / size).clamp(0.0, 1.0);
-                state.set_thumb_percent.run((idx, new_percent));
+            let (Some(index), Some(track_el)) = (dragged_thumb.get_value(), track.get_untracked())
+            else {
+                return;
+            };
+            let rect = track_el.get_bounding_client_rect();
+            let size = if is_vertical() {
+                rect.height()
+            } else {
+                rect.width()
+            };
+            let current = position
+                .get_value()
+                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)) * size);
+            let mut delta = if is_vertical() { e.delta_y } else { e.delta_x };
+            if reversed() {
+                delta = -delta;
             }
+            let current = current + delta;
+            position.set_value(Some(current));
+            state.set_thumb_percent(index, (current / size).clamp(0.0, 1.0));
         })),
-        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
-            // Idempotent: on_track_pointerdown's global pointerup handler may have
-            // already cleared this state. Both handlers guard with `if let Some`.
-            if let Some(idx) = dragging_thumb_index.get_value() {
-                state.set_thumb_dragging.run((idx, false));
-            }
-            dragging_thumb_index.set_value(None);
-            current_position_px.set_value(None);
-        })),
-        on_position_change: None,
-        constraint: None,
-        allow_container_click: false,
-        initial_position: None,
+        on_move_end: Some(Callback::new(move |_: MoveEndEvent| end_drag())),
     });
-
     on_cleanup(move || {
-        track_cleanup.try_update_value(Option::take);
+        release_listeners.try_update_value(Option::take);
     });
 
+    // A click on the label focuses the first thumb (Safari doesn't focus range inputs through
+    // labels) and shows its focus ring.
+    let first_thumb = data.thumb_id(0);
+    let on_label_click = EventHandler::new(move |_: MouseEvent| {
+        if let Some(thumb) = leptos_use::use_document()
+            .as_ref()
+            .and_then(|document| document.get_element_by_id(&first_thumb))
+            .and_then(|el| wasm_bindgen::JsCast::dyn_into::<web_sys::HtmlElement>(el).ok())
+        {
+            let _ = thumb.focus();
+            set_modality(Modality::Keyboard);
+        }
+    });
+
+    let thumb_data = data.clone();
     UseSliderReturn {
-        group_props: UseSliderGroupProps {
-            role: AriaRole::Group,
-            id: group_id,
-            aria_label,
-            aria_labelledby,
-            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
+        label_props: UseSliderLabelProps {
+            id: label_props.id,
+            on_click: on_label_click,
         },
-        label_props: UseSliderLabelProps { id: label_id },
-        output_props: UseSliderOutputProps {
-            id: output_id,
-            html_for,
-            aria_live: AriaLive::Off,
+        description_props,
+        error_message_props,
+        group_props: UseSliderGroupProps {
+            id: field_props.id,
+            aria_label: field_props.aria_label,
+            aria_labelledby: field_props.aria_labelledby,
         },
         track_props: PropsWithStyles::new(
             UseSliderTrackProps {
-                role: AriaRole::Presentation,
-                on_pointerdown: EventHandler::new(handle_track_pointerdown)
-                    .chain(track_move_return.props.on_pointerdown),
-                element_capture: track_element.attr(),
+                on_pointerdown: EventHandler::new(on_track_down)
+                    .chain(track_move.props.on_pointerdown),
+                element_capture: track.attr(),
             },
-            Styles::new().add(TouchActionProperty.declare(TouchAction::None)),
+            Styles::new()
+                .add_unchecked("position", "relative")
+                .add(TouchActionProperty.declare(TouchAction::None)),
         ),
-        track_ref: track_element,
+        output_props: UseSliderOutputProps {
+            html_for: Signal::derive(move || {
+                (0..state.thumb_count())
+                    .map(|index| thumb_data.thumb_id(index))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            }),
+        },
+        data,
+        track_element: track,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::closest_thumb;
+
+    #[test]
+    fn closest_thumb_prefers_the_later_of_stacked_thumbs() {
+        assert_that!(closest_thumb(5.0, &[10.0, 20.0])).is_equal_to(Some(0));
+        assert_that!(closest_thumb(30.0, &[10.0, 20.0])).is_equal_to(Some(1));
+        assert_that!(closest_thumb(14.0, &[10.0, 20.0])).is_equal_to(Some(0));
+        assert_that!(closest_thumb(15.0, &[10.0, 20.0])).is_equal_to(Some(1));
+        assert_that!(closest_thumb(10.0, &[10.0, 10.0])).is_equal_to(Some(1));
+        assert_that!(closest_thumb(1.0, &[])).is_none();
     }
 }

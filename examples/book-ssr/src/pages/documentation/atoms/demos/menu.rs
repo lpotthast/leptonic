@@ -2,7 +2,7 @@ use leptonic::{
     atoms::prelude as atoms,
     components::prelude::Checkbox,
     hooks::{
-        PlacementX, SelectionMode,
+        Placement, SelectionMode,
         collections::{Key, Selection, use_collection},
     },
 };
@@ -32,11 +32,11 @@ pub fn MenuDemo() -> impl IntoView {
             // An action menu: pressing an item performs the action and closes the menu.
             <atoms::MenuTrigger is_disabled=disabled>
                 <atoms::Button classes="demo-btn">"Edit"</atoms::Button>
-                <atoms::Popover placement_x=PlacementX::Left offset=4.0>
+                <atoms::Popover placement=Placement::BottomLeft offset=4.0>
                     <atoms::Menu
                         collection=actions
                         on_action=move |key: Key| last_action.set(Some(key))
-                        classes="demo-overlays-menu-list"
+                        classes="demo-menu-list"
                     >
                         <atoms::MenuItems classes="demo-menu-atom-item" let:node>
                             {node.text_value.to_string()}
@@ -48,29 +48,30 @@ pub fn MenuDemo() -> impl IntoView {
             // A menu with checkable items in a section; it stays open while you check them.
             <atoms::MenuTrigger is_disabled=disabled>
                 <atoms::Button classes="demo-btn">"View"</atoms::Button>
-                <atoms::Popover placement_x=PlacementX::Left offset=4.0>
+                <atoms::Popover placement=Placement::BottomLeft offset=4.0>
                     <atoms::Menu
                         collection=view_options
                         selection_mode=SelectionMode::Multiple
                         selection=view
-                        classes="demo-overlays-menu-list"
+                        set_selection=view
+                        classes="demo-menu-list"
                     >
-                        <atoms::MenuSection key="panels" heading_classes="demo-overlays-menu-heading">
+                        <atoms::MenuSection key="panels" heading_classes="demo-menu-heading">
                             <atoms::MenuItem key="sidebar" classes="demo-menu-atom-item">
+                                <span class="demo-menu-atom-check" aria-hidden="true"></span>
                                 <atoms::MenuItemLabel>"Sidebar"</atoms::MenuItemLabel>
                                 <atoms::MenuItemShortcut classes="demo-menu-atom-shortcut">"Ctrl+B"</atoms::MenuItemShortcut>
                             </atoms::MenuItem>
                             <atoms::MenuItem key="toolbar" classes="demo-menu-atom-item">
+                                <span class="demo-menu-atom-check" aria-hidden="true"></span>
                                 <atoms::MenuItemLabel>"Toolbar"</atoms::MenuItemLabel>
                             </atoms::MenuItem>
                         </atoms::MenuSection>
                     </atoms::Menu>
                 </atoms::Popover>
             </atoms::MenuTrigger>
-
-            <Checkbox state=disabled>"Disabled"</Checkbox>
         </div>
-        <p>
+        <p class="demo-status">
             {move || match last_action.get() {
                 Some(key) => format!("Last action: {key}."),
                 None => "No action yet.".to_owned(),
@@ -86,5 +87,9 @@ pub fn MenuDemo() -> impl IntoView {
                 Selection::All => "All panels shown.".to_owned(),
             }}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
+
     }
 }

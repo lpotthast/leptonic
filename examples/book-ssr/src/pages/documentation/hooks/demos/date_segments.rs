@@ -1,3 +1,5 @@
+//! Renders the segments of a date or time field. leptonic has no segment atom yet (tracked in its roadmap), so the
+//! date field, time field and date picker demos share this Leptos component built from `use_date_segment`.
 use leptonic::hooks::*;
 use leptos::{html, prelude::*};
 
@@ -81,12 +83,11 @@ pub fn DateSegments(
     // Editing changes the segments' values, never which segments there are. Create the elements once, so that they
     // (and the digits `use_date_segment` buffers while you type) survive edits.
     let initial = segments.get_untracked();
-    let elements = StoredValue::new(
-        initial
-            .iter()
-            .map(|_| NodeRef::<html::Span>::new())
-            .collect::<Vec<_>>(),
-    );
+    let node_refs = initial
+        .iter()
+        .map(|_| NodeRef::<html::Span>::new())
+        .collect::<Vec<_>>();
+    let elements = StoredValue::new(node_refs.clone());
 
     // The first editable segment is the field's tab stop until another segment receives focus.
     if focused_segment.get_untracked().is_none()
@@ -114,9 +115,9 @@ pub fn DateSegments(
 
     initial
         .into_iter()
+        .zip(node_refs)
         .enumerate()
-        .map(|(index, segment)| {
-            let node_ref = elements.with_value(|elements| elements[index]);
+        .map(|(index, (segment, node_ref))| {
             // `use_date_segment` keeps the segment it was created with; read the current text from the field.
             let text = move || segments.with(|segments| segments.get(index).map(|s| s.text.clone()).unwrap_or_default());
             let is_placeholder = move || segments.with(|segments| segments.get(index).is_some_and(|s| s.is_placeholder));

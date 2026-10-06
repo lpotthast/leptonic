@@ -1,9 +1,9 @@
 use leptos::prelude::*;
 
 use crate::{
+    Out,
     atoms::switch::{Switch as SwitchAtom, SwitchProps as SwitchAtomProps},
     components::icon::Icon,
-    hooks::ToggleState,
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -52,16 +52,19 @@ pub struct SwitchIcons {
 
 /// A switch with its label (the children).
 ///
-/// Its selection starts at `default_selected` and is reported through `on_change`; bind it to
-/// a signal with `state=ToggleState::from(rw_signal)` (or a `(read, write)` signal pair).
+/// Its selection starts at `default_selected` and is reported through `on_change`; or it is
+/// `is_selected`, and changes go to `set_selected` (e.g. both an `RwSignal<bool>`).
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn Switch(
     #[prop(optional)] default_selected: bool,
     #[prop(into, optional)] on_change: Option<Callback<bool>>,
-    /// External selection state, replacing `default_selected`.
+    /// The selection (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ToggleState>,
+    is_selected: Option<Signal<bool>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] name: Option<String>,
@@ -101,7 +104,8 @@ pub fn Switch(
     SwitchAtom(SwitchAtomProps {
         default_selected,
         on_change,
-        state,
+        is_selected,
+        set_selected,
         is_disabled,
         is_read_only,
         is_required: Signal::stored(false),

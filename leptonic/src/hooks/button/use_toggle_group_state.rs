@@ -11,7 +11,8 @@ use crate::hooks::collections::Key;
 //
 // ## API DIFFERENCES
 // - `ToggleGroupSelectionMode` enum instead of the `'single' | 'multiple'` string union.
-// - Hook-owned state (project-wide convention): no controlled `selectedKeys`.
+// - State (C4): `default_selected_keys` + `on_selection_change`, or `selected_keys` bound to app
+//   state (a `ValueBinding`, the atoms' `selected_keys` + `set_selected_keys`).
 //
 // =============================================================================
 
@@ -31,8 +32,10 @@ pub struct UseToggleGroupStateInput {
     pub selection_mode: ToggleGroupSelectionMode,
     /// Keeps at least one button selected.
     pub disallow_empty_selection: bool,
-    /// The initially selected buttons.
+    /// The initially selected buttons. Ignored when `selected_keys` is bound.
     pub default_selected_keys: HashSet<Key>,
+    /// The selected buttons as app state, replacing `default_selected_keys`.
+    pub selected_keys: Option<crate::utils::ValueBinding<HashSet<Key>>>,
     /// Called with the selected buttons when they change.
     pub on_selection_change: Option<Callback<HashSet<Key>>>,
     pub is_disabled: Signal<bool>,
@@ -44,6 +47,7 @@ impl Default for UseToggleGroupStateInput {
             selection_mode: ToggleGroupSelectionMode::default(),
             disallow_empty_selection: false,
             default_selected_keys: HashSet::new(),
+            selected_keys: None,
             on_selection_change: None,
             is_disabled: Signal::stored(false),
         }
@@ -58,7 +62,7 @@ pub struct ToggleGroupState {
     /// The selected buttons.
     pub selected_keys: Signal<HashSet<Key>>,
     disallow_empty_selection: bool,
-    set_keys: WriteSignal<HashSet<Key>>,
+    set_keys: crate::utils::ValueBinding<HashSet<Key>>,
     on_selection_change: Option<Callback<HashSet<Key>>>,
 }
 
@@ -121,14 +125,16 @@ pub fn use_toggle_group_state(input: UseToggleGroupStateInput) -> ToggleGroupSta
         selection_mode,
         disallow_empty_selection,
         default_selected_keys,
+        selected_keys,
         on_selection_change,
         is_disabled,
     } = input;
-    let (selected_keys, set_keys) = signal(default_selected_keys);
+    let set_keys = selected_keys
+        .unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_selected_keys)));
     ToggleGroupState {
         selection_mode,
         is_disabled,
-        selected_keys: selected_keys.into(),
+        selected_keys: set_keys.value,
         disallow_empty_selection,
         set_keys,
         on_selection_change,

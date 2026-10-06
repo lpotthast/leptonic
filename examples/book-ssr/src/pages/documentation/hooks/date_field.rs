@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{date_field::DateFieldDemo, time_field::TimeFieldDemo};
+use super::demos::date_field::DateFieldDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -11,10 +11,11 @@ pub fn PageDateFieldHooks() -> impl IntoView {
     view! {
         <DocPage title="Date Field Hooks">
             <p>
-                "The date field hooks build fields that split a date, a date and time, or a time of day into segments "
-                "(year, month, day, hour, \u{2026}) that you fill in by typing digits or change with the arrow keys. "
-                "See the "<Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link>
-                " for how they relate to the calendar and date picker hooks."
+                "A date field lets users enter a date, or a date and time, without parsing free text: it splits the "
+                "value into segments (year, month, day, hour, \u{2026}) that you fill in by typing digits or change with "
+                "the arrow keys. For a time of day alone, use a "<Link href=routes::doc::TimeField.materialize()>"time field"</Link>
+                "; to pick the date from a calendar as well, a "<Link href=routes::doc::DatePicker.materialize()>"date picker"</Link>
+                ". See "<Link href=routes::doc::DateTime.materialize()>"Date & Time"</Link>" for how they relate."
             </p>
 
             <ReactAria hook="useDateField"/>
@@ -23,7 +24,8 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 <p>
                     "Click the field (or tab to it) and type a date: the focus moves on to the next segment once a "
                     "segment is complete. The arrow keys change the focused segment. Weekend dates fail the field\u{2019}s "
-                    "custom validation."
+                    "custom validation. The segments are rendered by the Leptos component shown in the "
+                    <AnchorLink href="#use-date-segment-example">"use_date_segment example"</AnchorLink>"."
                 </p>
 
                 <Demo description="Date field with live value, weekday validation and a disabled toggle" source=include_str!("demos/date_field.rs")>
@@ -49,7 +51,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_time_field"</Code></TableCell>
+                        <TableCell><Link href=routes::doc::TimeField.materialize()>"use_time_field"</Link></TableCell>
                         <TableCell>
                             <Code inline=true>"--:--"</Code>", "<Code inline=true>"--:--:--"</Code>" with "
                             <Code inline=true>"show_seconds"</Code>", plus "<Code inline=true>"AM"</Code>"/"
@@ -72,17 +74,17 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     </li>
                     <li>
                         <b>"Incomplete values."</b>" While you edit, the field keeps every segment separately (in an "
-                        <Code inline=true>"IncompleteDate"</Code>" or "<Code inline=true>"IncompleteTime"</Code>"), so a value "
+                        <AnchorLink href="#incompletedate"><Code inline=true>"IncompleteDate"</Code></AnchorLink>"), so a value "
                         "can be partly filled in. "<Code inline=true>"on_change"</Code>" only fires once every segment is "
                         "filled (with the complete value) or every segment is cleared (with "<Code inline=true>"None"</Code>
                         "). A partly filled field keeps reporting its last complete value."
                     </li>
                     <li>
                         <b>"The placeholder date."</b>" Pressing an arrow key on an empty segment starts from a placeholder "
-                        "date and steps once, so Arrow Up on an empty year shows next year. The date field uses "
-                        <Code inline=true>"default_value"</Code>", or the current UTC time when the field is created; the "
-                        "time field uses midnight. The date field also fills the parts it has no segments for (the time "
-                        "of a date-only field, the seconds) from the placeholder."
+                        "date and steps once, so "<Keys keys="ArrowUp"/>" on an empty year shows next year. The field uses "
+                        <Code inline=true>"default_value"</Code>", or the current UTC time when the field is created. It "
+                        "also fills the parts it has no segments for (the time of a date-only field, the seconds) from the "
+                        "placeholder."
                     </li>
                     <li>
                         <b>"Valid days."</b>" The day segment\u{2019}s maximum follows the month and year shown. Changing the "
@@ -100,14 +102,14 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-date-field-state-input">
-                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
+                    <p>"The input has no "<Code inline=true>"Default"</Code>": every field is required."</p>
 
                     <ApiTable kind=ApiKind::Input of="UseDateFieldStateInput">
                         <ApiRow name="value" ty="Signal<Option<OffsetDateTime>>">
                             "The current value. When it changes, the segments show it."
                         </ApiRow>
                         <ApiRow name="default_value" ty="Option<OffsetDateTime>">
-                            "The placeholder date (see "<a href="#how-segments-work">"How Segments Work"</a>"). "
+                            "The placeholder date (see "<AnchorLink href="#how-segments-work">"How Segments Work"</AnchorLink>"). "
                             <Code inline=true>"None"</Code>" uses the current UTC time."
                         </ApiRow>
                         <ApiRow name="min, max" ty="Option<OffsetDateTime>">"Bounds the emitted value is clamped to."</ApiRow>
@@ -121,7 +123,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="validate" ty="Option<ValidateFn<Option<OffsetDateTime>>>">
                             "Custom validation: return "<Code inline=true>"Err(messages)"</Code>" for an invalid value."
                         </ApiRow>
-                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the value invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
+                        <ApiRow name="is_invalid" ty="Signal<bool>">"Marks the value invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
                             <Code inline=true>"false"</Code>" leaves validation to the other sources."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">
                             <Code inline=true>"Aria"</Code>" shows errors as you edit; "<Code inline=true>"Native"</Code>
@@ -170,7 +172,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseDateFieldInput">
                         <ApiRow name="value" ty="Signal<Option<OffsetDateTime>>" default="None">"The current value."</ApiRow>
                         <ApiRow name="default_value" ty="Option<OffsetDateTime>" default="None">
-                            "The placeholder date (see "<a href="#how-segments-work">"How Segments Work"</a>"). "
+                            "The placeholder date (see "<AnchorLink href="#how-segments-work">"How Segments Work"</AnchorLink>"). "
                             <Code inline=true>"None"</Code>" uses the current UTC time."
                         </ApiRow>
                         <ApiRow name="min, max" ty="Option<OffsetDateTime>" default="None">"Bounds the emitted value is clamped to."</ApiRow>
@@ -210,7 +212,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                             "; otherwise it is added while the value is invalid."
                         </ApiRow>
                         <ApiRow name="is_date_picker" ty="bool" default="false">
-                            "Set inside a "<Link href=routes::doc::date_time::DatePickerHooks.materialize()>"date picker"</Link>
+                            "Set inside a "<Link href=routes::doc::date_picker::Hook.materialize()>"date picker"</Link>
                             ": the field gets "<Code inline=true>"role=\"presentation\""</Code>" instead of "
                             <Code inline=true>"group"</Code>", because the picker\u{2019}s group is the labelled element."
                         </ApiRow>
@@ -255,23 +257,53 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 </Section>
 
                 <Section title="Example" id="use-date-field-example">
+                    <p>
+                        "The field renders one element per segment. This minimal version wires the essential callbacks; the "
+                        <AnchorLink href="#use-date-segment-example">"use_date_segment example"</AnchorLink>" adds paging, "
+                        "clearing and moving the browser focus with "<Code inline=true>"focused_segment"</Code>"."
+                    </p>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            let (value, set_value) = signal(None::<OffsetDateTime>);
+                            use leptonic::hooks::*;
+                            use leptos::prelude::*;
+                            use time::OffsetDateTime;
+
+                            let (birthday, set_birthday) = signal(None::<OffsetDateTime>);
                             let field = use_date_field(UseDateFieldInput {
-                                value: value.into(),
+                                value: birthday.into(),
                                 label: Some("Birthday".to_owned()),
-                                on_change: Some(Callback::new(move |v| set_value.set(v))),
+                                on_change: Some(Callback::new(move |date| set_birthday.set(date))),
                                 ..Default::default()
                             });
-                            let controls = SegmentControls::from(&field);
+                            let UseDateFieldReturn {
+                                segments, focused_segment, set_segment, increment, decrement,
+                                focus_next, focus_previous, confirm_placeholder, ..
+                            } = field;
+
+                            // The segment list never changes its shape: create every segment once.
+                            let segment_views = segments.get_untracked().into_iter().enumerate().map(move |(index, segment)| {
+                                let text = move || segments.with(|all| all.get(index).map(|it| it.text.clone()));
+                                if !segment.is_editable {
+                                    return view! { <span aria-hidden="true">{text}</span> }.into_any();
+                                }
+                                let ty = segment.segment_type;
+                                let segment = use_date_segment(UseDateSegmentInput {
+                                    segment,
+                                    is_focused: Signal::derive(move || focused_segment.get() == Some(index)),
+                                    on_change: Some(Callback::new(move |value| set_segment.run((ty, value)))),
+                                    on_increment: Some(Callback::new(move |()| increment.run(ty))),
+                                    on_decrement: Some(Callback::new(move |()| decrement.run(ty))),
+                                    on_focus_next: Some(focus_next),
+                                    on_focus_previous: Some(focus_previous),
+                                    on_blur: Some(confirm_placeholder),
+                                    ..Default::default()
+                                });
+                                view! { <span {..segment.segment_props.into_attrs()}>{text}</span> }.into_any()
+                            });
 
                             view! {
                                 <span id=field.label_props.id>"Birthday"</span>
-                                <div {..field.field_props.into_attrs()}>
-                                    // See `use_date_segment` below.
-                                    <DateSegments controls is_disabled=false is_read_only=false is_invalid=field.is_invalid/>
-                                </div>
+                                <div {..field.field_props.into_attrs()}>{segment_views.collect_view()}</div>
                             }
                         "#)}
                     </Code>
@@ -281,7 +313,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
             <Section title="use_date_segment">
                 <p>
                     "Makes one segment a "<Code inline=true>"spinbutton"</Code>": it handles typing, the arrow keys and "
-                    "Backspace, and calls the callbacks you wire to the field. Typed digits are buffered, so typing "
+                    <Keys keys="Backspace"/>", and calls the callbacks you wire to the field. Typed digits are buffered, so typing "
                     <Code inline=true>"1"</Code>" and "<Code inline=true>"2"</Code>" into the month gives 12. The focus "
                     "moves on as soon as another digit can\u{2019}t fit (typing "<Code inline=true>"4"</Code>
                     " into a day, or the second digit of a month)."
@@ -291,7 +323,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     "The hook reads the "<Code inline=true>"segment"</Code>" you pass once. Create each segment element "
                     "once (the segment list never changes its shape) so that the digit buffer survives edits, and read "
                     "the text from the field\u{2019}s "<Code inline=true>"segments"</Code>" signal. The ARIA values "
-                    "keep describing the segment the hook was created with (see "<a href="#limitations">"Limitations"</a>")."
+                    "keep describing the segment the hook was created with (see "<AnchorLink href="#limitations">"Limitations"</AnchorLink>")."
                 </p>
 
                 <Section title="Input" id="use-date-segment-input">
@@ -305,13 +337,13 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="on_change" ty="Option<Callback<i32>>" default="None">
                             "Called with the typed number, or with 0 (AM) or 1 (PM) for the AM/PM segment."
                         </ApiRow>
-                        <ApiRow name="on_increment, on_decrement" ty="Option<Callback<()>>" default="None">"Arrow Up and Arrow Down."</ApiRow>
-                        <ApiRow name="on_increment_page, on_decrement_page" ty="Option<Callback<()>>" default="None">"Page Up and Page Down."</ApiRow>
-                        <ApiRow name="on_increment_to_max, on_decrement_to_min" ty="Option<Callback<()>>" default="None">"End and Home."</ApiRow>
+                        <ApiRow name="on_increment, on_decrement" ty="Option<Callback<()>>" default="None"><Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>"."</ApiRow>
+                        <ApiRow name="on_increment_page, on_decrement_page" ty="Option<Callback<()>>" default="None"><Keys keys="PageUp"/>" and "<Keys keys="PageDown"/>"."</ApiRow>
+                        <ApiRow name="on_increment_to_max, on_decrement_to_min" ty="Option<Callback<()>>" default="None"><Keys keys="End"/>" and "<Keys keys="Home"/>"."</ApiRow>
                         <ApiRow name="on_focus_next, on_focus_previous" ty="Option<Callback<()>>" default="None">
-                            "Arrow Right and Arrow Left, auto-advance after typing, and Backspace on an empty segment."
+                            <Keys keys="ArrowRight"/>" and "<Keys keys="ArrowLeft"/>", auto-advance after typing, and "<Keys keys="Backspace"/>" on an empty segment."
                         </ApiRow>
-                        <ApiRow name="on_clear" ty="Option<Callback<()>>" default="None">"Backspace and Delete."</ApiRow>
+                        <ApiRow name="on_clear" ty="Option<Callback<()>>" default="None"><Keys keys="Backspace"/>" and "<Keys keys="Delete"/>"."</ApiRow>
                         <ApiRow name="on_blur" ty="Option<Callback<()>>" default="None">
                             "Called when the segment loses focus. Wire it to "<Code inline=true>"confirm_placeholder"</Code>"."
                         </ApiRow>
@@ -338,9 +370,10 @@ pub fn PageDateFieldHooks() -> impl IntoView {
 
                 <Section title="Example" id="use-date-segment-example">
                     <p>
-                        "The demos on this page and on the "
-                        <Link href=routes::doc::date_time::DatePickerHooks.materialize()>"date picker hooks"</Link>
-                        " page render their segments with this component. It wires "<Code inline=true>"use_date_segment"</Code>
+                        "leptonic has no segment atom yet, so the date field, "
+                        <Link href=routes::doc::TimeField.materialize()>"Time Field Hooks"</Link>" and "
+                        <Link href=routes::doc::date_picker::Hook.materialize()>"Date Picker Hooks"</Link>
+                        " demos render their segments with this Leptos component. It wires "<Code inline=true>"use_date_segment"</Code>
                         " to either field, makes the first editable segment the tab stop, and moves the browser focus "
                         "along with "<Code inline=true>"focused_segment"</Code>"."
                     </p>
@@ -372,108 +405,17 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="use_time_field">
+            <Section title="IncompleteDate">
                 <p>
-                    "The time-of-day version of "<Code inline=true>"use_date_field"</Code>". Its value is a "
-                    <Code inline=true>"TimeValue"</Code>" (hour 0\u{2013}23, minute, second) and its placeholder is "
-                    "midnight. It has no validation."
-                </p>
-
-                <ReactAria hook="useTimeField"/>
-
-                <Demo description="Time field with 24-hour and seconds toggles" source=include_str!("demos/time_field.rs")>
-                    <TimeFieldDemo/>
-                </Demo>
-
-                <Section title="Input" id="use-time-field-input">
-                    <ApiTable kind=ApiKind::Input of="UseTimeFieldInput">
-                        <ApiRow name="value" ty="Signal<Option<TimeValue>>" default="None">"The current value."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Option<TimeValue>>>" default="None">
-                            "Called with the complete value, or "<Code inline=true>"None"</Code>" once every segment is cleared."
-                        </ApiRow>
-                        <ApiRow name="hour_cycle_24" ty="bool" default="true">"Use a 24-hour clock instead of a 12-hour clock with AM/PM."</ApiRow>
-                        <ApiRow name="show_seconds" ty="bool" default="false">"Add a seconds segment."</ApiRow>
-                        <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Turn off all segment changes."</ApiRow>
-                        <ApiRow name="is_required" ty="bool" default="false">"Sets "<Code inline=true>"aria-required"</Code>"."</ApiRow>
-                        <ApiRow name="label, description, error_message" ty="Option<String>" default="None">
-                            "Whether you render these elements; as for "<Code inline=true>"use_date_field"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="min, max" ty="Option<TimeValue>" default="None">"Currently ignored."</ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="Return" id="use-time-field-return">
-                    <p>
-                        "The same fields as "<Code inline=true>"use_date_field"</Code>" ("<Code inline=true>"field_props"</Code>", "
-                        <Code inline=true>"label_props"</Code>", "<Code inline=true>"description_props"</Code>", "
-                        <Code inline=true>"error_props"</Code>", "<Code inline=true>"segments"</Code>", "
-                        <Code inline=true>"focused_segment"</Code>", "<Code inline=true>"field_id"</Code>", the focus and "
-                        "segment callbacks), without "<Code inline=true>"is_invalid"</Code>", "
-                        <Code inline=true>"validation_errors"</Code>" and "<Code inline=true>"state"</Code>". The field "
-                        "never sets "<Code inline=true>"aria-invalid"</Code>"."
-                    </p>
-                </Section>
-
-                <Section title="TimeValue">
-                    <ApiTable kind=ApiKind::Fields of="TimeValue">
-                        <ApiRow name="hour" ty="u8">"0\u{2013}23."</ApiRow>
-                        <ApiRow name="minute, second" ty="u8">"0\u{2013}59."</ApiRow>
-                    </ApiTable>
-
-                    <p>
-                        <Code inline=true>"TimeValue::new(h, m, s)"</Code>" clamps to these ranges, "
-                        <Code inline=true>"TimeValue::hm(h, m)"</Code>" sets the seconds to 0. "
-                        <Code inline=true>"format_hm()"</Code>" and "<Code inline=true>"format_hms()"</Code>" format as "
-                        <Code inline=true>"14:30"</Code>" and "<Code inline=true>"14:30:00"</Code>"; "
-                        <Code inline=true>"to_12_hour()"</Code>" returns the 12-hour hour and whether it is PM."
-                    </p>
-                </Section>
-            </Section>
-
-            <Section title="use_time_field_state">
-                <p>
-                    "A value holder for a time field: a signal with the value and callbacks to change it. "
-                    <Code inline=true>"use_time_field"</Code>" doesn\u{2019}t need it (it keeps its own editing buffer), "
-                    "but it is a convenient place to keep the value:"
-                </p>
-
-                <Code language=Language::Rust>
-                    {indoc!(r"
-                        let time = use_time_field_state(Some(TimeValue::hm(9, 0)));
-                        let field = use_time_field(UseTimeFieldInput {
-                            value: time.value,
-                            on_change: Some(time.set_value),
-                            ..Default::default()
-                        });
-                    ")}
-                </Code>
-
-                <Section title="Input" id="use-time-field-state-input">
-                    <p>
-                        "The hook takes a single argument, the initial value: "<Code inline=true>"Option<TimeValue>"</Code>"."
-                    </p>
-                </Section>
-
-                <Section title="Return" id="use-time-field-state-return">
-                    <ApiTable kind=ApiKind::Return of="UseTimeFieldStateReturn">
-                        <ApiRow name="value" ty="Signal<Option<TimeValue>>">"The value."</ApiRow>
-                        <ApiRow name="set_value" ty="Callback<Option<TimeValue>>">"Replaces the value."</ApiRow>
-                        <ApiRow name="clear" ty="Callback<()>">"Sets the value to "<Code inline=true>"None"</Code>"."</ApiRow>
-                    </ApiTable>
-                </Section>
-            </Section>
-
-            <Section title="IncompleteDate and IncompleteTime">
-                <p>
-                    "The editing buffers of the date and the time field: every part is an "<Code inline=true>"Option"</Code>
+                    "The editing buffer of the date field: every part is an "<Code inline=true>"Option"</Code>
                     " ("<Code inline=true>"year"</Code>", "<Code inline=true>"month"</Code>", "<Code inline=true>"day"</Code>", "
                     <Code inline=true>"hour"</Code>", "<Code inline=true>"minute"</Code>", "<Code inline=true>"second"</Code>", "
                     <Code inline=true>"day_period"</Code>"), and the hour is stored in the field\u{2019}s hour cycle. "
-                    "You only need them to build your own field state: "<Code inline=true>"set"</Code>", "
+                    "You only need it to build your own field state: "<Code inline=true>"set"</Code>", "
                     <Code inline=true>"clear"</Code>", "<Code inline=true>"cycle"</Code>" (wrapping steps), "
                     <Code inline=true>"is_complete"</Code>", "<Code inline=true>"is_cleared"</Code>" and "
-                    <Code inline=true>"to_date"</Code>"/"<Code inline=true>"to_time"</Code>" (fill missing parts from a "
-                    "placeholder) implement the behavior described above."
+                    <Code inline=true>"to_date"</Code>" (fill missing parts from a placeholder) implement the behavior "
+                    "described above."
                 </p>
             </Section>
 
@@ -541,9 +483,8 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     </li>
                     <li>
                         "The fields render no "<Code inline=true>"<input>"</Code>". To submit the value with a native form, "
-                        "add a hidden input bound to it. See "<Link href=routes::doc::Forms.materialize()>"Forms"</Link>"."
+                        "add a hidden input bound to it. See "<Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link>"."
                     </li>
-                    <li><Code inline=true>"use_time_field"</Code>" has no validation."</li>
                 </ul>
             </Section>
 
@@ -552,14 +493,14 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     <li>
                         <b>"Segment snapshots."</b>" "<Code inline=true>"use_date_segment"</Code>" keeps the "
                         <Code inline=true>"DateSegment"</Code>" it was created with: "<Code inline=true>"aria-valuenow"</Code>" "
-                        "and "<Code inline=true>"aria-valuetext"</Code>" keep their initial values, and Backspace decides "
+                        "and "<Code inline=true>"aria-valuetext"</Code>" keep their initial values, and "<Keys keys="Backspace"/>" decides "
                         "between clearing the segment and moving to the previous one by the initial state. In a field that "
-                        "started empty, Backspace on a segment you filled moves to the previous segment instead of "
+                        "started empty, "<Keys keys="Backspace"/>" on a segment you filled moves to the previous segment instead of "
                         "clearing it."
                     </li>
                     <li>
                         <b>"Modifier keys."</b>" Segments react to the arrow keys even with Alt held, so the date picker\u{2019}s "
-                        "Alt + Arrow Down also changes the focused segment."
+                        <Keys keys="Alt + ArrowDown"/>" also changes the focused segment."
                     </li>
                     <li>
                         <b>"Disabled fields stay focusable."</b>" The tab stop keeps "<Code inline=true>"tabindex=\"0\""</Code>" "
@@ -574,11 +515,12 @@ pub fn PageDateFieldHooks() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link></li>
-                <li><Link href=routes::doc::date_time::DatePickerHooks.materialize()>"Date picker hooks"</Link></li>
-                <li><Link href=routes::doc::date_time::CalendarHooks.materialize()>"Calendar hooks"</Link></li>
-                <li><Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link></li>
-                <li><Link href=routes::doc::Forms.materialize()>"Forms"</Link></li>
+                <li><Link href=routes::doc::DateTime.materialize()>"Date & Time"</Link></li>
+                <li><Link href=routes::doc::TimeField.materialize()>"Time Field Hooks"</Link></li>
+                <li><Link href=routes::doc::DatePicker.materialize()>"Date Picker"</Link></li>
+                <li><Link href=routes::doc::Calendar.materialize()>"Calendar"</Link></li>
+                <li><Link href=routes::doc::utilities::UseSpinButton.materialize()>"use_spin_button"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

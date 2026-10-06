@@ -1,20 +1,6 @@
-// Demo styles of the Focus pages.
+// Focus: demos of the focus hooks, atoms and utilities (focus scopes: `_shared.scss`, also used by the clipboard demo).
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
-
-.demo-container-active   { border: 2px solid var(--brand-color); padding: var(--book-space-l); border-radius: var(--book-radius-m); background: var(--brand-color-subtle); }
-
-.demo-container-inactive { border: 2px solid var(--book-border-color); padding: var(--book-space-l); border-radius: var(--book-radius-m); background: transparent; }
-
-.demo-focus-flush {
-    margin: 0;
-}
-
-.demo-focus-hint {
-    margin: 0;
-    font-size: var(--book-font-size-s);
-    color: var(--book-muted-color);
-}
 
 // Focusable buttons and inputs inside focus demos. Every focus is outlined, so you can follow where focus moves.
 .demo-focus-item {
@@ -42,34 +28,12 @@ input.demo-focus-item {
     cursor: text;
 }
 
-// A custom focusable element (not a native control). Shows a ring only for keyboard focus (`data-focus-visible`).
-.demo-focus-target {
+// A label with its field on one line.
+.demo-focus-label {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
-    padding: var(--book-space-m) var(--book-space-xl);
-    border: 2px solid var(--brand-color);
-    border-radius: var(--book-radius-m);
-    background: var(--brand-color-subtle);
-    color: var(--main-color);
-    cursor: pointer;
-    outline: none;
-
-    &[data-focus-visible] {
-        outline: 3px solid var(--book-focus-color);
-        outline-offset: 2px;
-    }
-}
-
-// Container whose focus is trapped or managed.
-.demo-focus-scope {
-    display: flex;
-    flex-direction: column;
-    gap: var(--book-space-m);
-    padding: var(--book-space-l);
-    border: 2px solid var(--book-focus-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color);
+    gap: var(--book-space-s);
 }
 
 .demo-focus-row {
@@ -77,27 +41,20 @@ input.demo-focus-item {
     flex-wrap: wrap;
     align-items: center;
     gap: var(--book-space-s);
+
+    // Elements in an inert subtree look as unavailable as they are.
+    [inert] { opacity: 0.5; }
 }
 
-.demo-focus-scope:focus {
-    outline: 3px solid var(--book-focus-color);
-    outline-offset: 2px;
+// A container whose elements a focus manager moves between.
+.demo-focus-managed {
+    padding: var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
 }
 
-// Shows a ring only for keyboard focus, driven by the `data-focus-visible` attribute of `use_focus_ring` / `FocusRing`.
-.demo-focus-ring {
-    &:focus {
-        outline: none;
-    }
-
-    &[data-focus-visible] {
-        outline: 3px solid var(--book-focus-color);
-        outline-offset: 2px;
-    }
-}
-
-// A group of controls that shows one ring around all of them while a child has keyboard focus.
-.demo-focus-group {
+// use_focus_within: highlighted while focus is inside (`data-focus-within`, set by the demo from the hook's state).
+.demo-focus-within-box {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -105,30 +62,179 @@ input.demo-focus-item {
     padding: var(--book-space-m);
     border: 2px solid var(--book-border-color);
     border-radius: var(--book-radius-m);
-    transition: border-color var(--book-transition);
+    transition: border-color var(--book-transition), background-color var(--book-transition);
 
-    &[data-focus-visible] {
-        border-color: var(--book-focus-color);
+    &[data-focus-within] {
+        border-color: var(--brand-color);
+        background: var(--brand-color-subtle);
+    }
+}
+
+// use_focusable: a scrollable region that keyboard users focus to scroll it.
+.demo-focusable-region {
+    max-height: 8em;
+    overflow: auto;
+    padding: var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    p { margin: 0 0 var(--book-space-s); }
+
+    &:focus-visible {
         outline: 3px solid var(--book-focus-color);
         outline-offset: 2px;
     }
 }
 
-// Shows the focus outline only while `use_focus_visible` reports keyboard or virtual modality (`.focus-visible`).
-.demo-focus-modality {
+// Shows a ring only for keyboard focus, driven by the `data-focus-visible` attribute of `use_focus_ring` / `FocusRing`.
+.demo-focus-ring {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
     &:focus {
         outline: none;
     }
 
-    &.focus-visible:focus {
+    &[data-focused] {
+        border-color: var(--brand-color);
+    }
+
+    &[data-focus-visible] {
         outline: 3px solid var(--book-focus-color);
         outline-offset: 2px;
     }
 }
 
-// FocusManager atom demo: the buttons the arrow keys move between.
+// The keyboard hint the FocusRing demo shows while focus is visible.
+.demo-focus-hint-inline { color: var(--book-muted-color); }
+
+// A group of controls that shows one ring around all of them while a child has keyboard focus.
+.demo-focus-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+
+    &[data-focus-visible] {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// The controls inside `.demo-focus-group`: the group draws the ring, the focused control is underlined.
+.demo-focus-plain {
+    padding: var(--book-space-xs) var(--book-space-s);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: transparent;
+    color: var(--main-color);
+    font: inherit;
+
+    &:focus { outline: none; }
+    &:focus-visible { box-shadow: inset 0 -2px 0 var(--book-focus-color); }
+}
+
+button.demo-focus-plain { cursor: pointer; font-weight: 600; }
+
+// Shows the focus outline only while `use_focus_visible` reports keyboard or virtual modality (`data-focus-visible`,
+// set by the demo from the hook's state).
+.demo-focus-modality {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus {
+        outline: none;
+    }
+
+    &[data-focus-visible]:focus {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// FocusManagerProvider demo: the div the atom renders.
 .demo-focus-manager-buttons {
     display: flex;
     flex-wrap: wrap;
     gap: var(--book-space-s);
+}
+
+// focusability demo: the results of the checks.
+.demo-focusability-results {
+    margin: var(--book-space-m) 0 0;
+    padding-left: var(--book-space-l);
+}
+
+// Focusable atom: an info icon that is a tab stop (`Focusable` adds no data attributes; use :focus-visible).
+.demo-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4em;
+    height: 1.4em;
+    border-radius: 50%;
+    color: var(--book-brand-text-color);
+    cursor: help;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// virtual_focus: an input whose arrow keys move virtual focus through a list of options. The input's ring and the
+// focused option follow the synthetic focus events (`data-focused`, set by the demo from them): DOM focus never
+// leaves the input, so `:focus` can't show where focus is.
+.demo-virtual-focus {
+    display: grid;
+    gap: var(--book-space-s);
+    max-width: 16em;
+}
+
+.demo-virtual-input {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+
+    &:focus { outline: none; }
+
+    &[data-focused] {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+.demo-virtual-list {
+    margin: 0;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    list-style: none;
+}
+
+.demo-virtual-option {
+    padding: var(--book-space-xs) var(--book-space-s);
+    border-radius: var(--book-radius-s);
+
+    &[data-focused] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+        background: var(--brand-color-subtle);
+    }
 }

@@ -12,7 +12,7 @@ pub fn PageAtomTable() -> impl IntoView {
         <DocPage title="Table Atoms">
             <p>
                 "The table atoms render an unstyled, accessible data table with the behavior of the "
-                <Link href=routes::doc::table::Hook.materialize()>"table hooks"</Link>": "<Code inline=true>"Table"</Code>
+                <Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link>": "<Code inline=true>"Table"</Code>
                 " holds the state, "<Code inline=true>"TableHeader"</Code>" renders the column headers, and you render the "
                 "rows and cells. See the "<Link href=routes::doc::Table.materialize()>"Table overview"</Link>" for concept "
                 "guidance."
@@ -71,7 +71,13 @@ pub fn PageAtomTable() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow};
+                        use std::sync::Arc;
+
+                        use leptonic::{
+                            atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
+                            hooks::{SelectionMode, TableCollection},
+                        };
+                        use leptos::prelude::*;
 
                         let table = Memo::new(|_| Arc::new(TableCollection::build(|t| {
                             t.column("name", "Name").row_header();
@@ -102,9 +108,10 @@ pub fn PageAtomTable() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A team table with selection checkboxes and two sortable columns. Sorting and selection live in "
-                    "signals of the demo, bound with "<Code inline=true>"sort_descriptor"</Code>" ("
-                    <Code inline=true>"RwSignal<Option<SortDescriptor>>"</Code>") and "<Code inline=true>"selection"</Code>" ("
-                    <Code inline=true>"RwSignal<Selection>"</Code>"): the table shows them, the user\u{2019}s sorting and "
+                    "signals of the demo: an "<Code inline=true>"RwSignal<Option<SortDescriptor>>"</Code>" passed as "
+                    <Code inline=true>"sort_descriptor"</Code>" and "<Code inline=true>"set_sort_descriptor"</Code>", and an "
+                    <Code inline=true>"RwSignal<Selection>"</Code>" passed as "<Code inline=true>"selection"</Code>" and "
+                    <Code inline=true>"set_selection"</Code>". The table shows them, the user\u{2019}s sorting and "
                     "selecting writes them, and the buttons below reset them. Setting the sort descriptor to "
                     <Code inline=true>"None"</Code>" clears the sorting; the rows return to the order the members joined. "
                     "The table itself doesn\u{2019}t reorder rows: the demo sorts its data by the descriptor and rebuilds "
@@ -113,7 +120,7 @@ pub fn PageAtomTable() -> impl IntoView {
                     "demo is styled through the data attributes listed below."
                 </p>
                 <Demo
-                    description="Team table built from the table atoms: selection checkboxes with select all, sortable columns, a disabled row, sorting and selection bound to app state, styled through data attributes"
+                    description="Team table built from the table atoms: selection checkboxes with select all, sortable columns, a disabled row, sorting and selection controlled by app state, styled through data attributes"
                     source=include_str!("demos/table.rs")
                 >
                     <TableAtomDemo/>
@@ -128,7 +135,7 @@ pub fn PageAtomTable() -> impl IntoView {
                 <Section title="Props" id="table-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::Table">
                         <ApiRow name="table" ty="Memo<Arc<TableCollection>>">
-                            "The columns and rows. Build it with "<Code inline=true>"TableCollection::build_with"</Code>" and "
+                            "The columns and rows. Required. Build it with "<Code inline=true>"TableCollection::build_with"</Code>" and "
                             <Code inline=true>"show_selection_checkboxes: true"</Code>" for a checkbox column."
                         </ApiRow>
                         <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
@@ -138,8 +145,11 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">"No selection when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">"Whether clicks toggle rows or replace the selection."</ApiRow>
                         <ApiRow name="default_selected_keys" ty="Vec<Key>" default="empty">"The initially selected rows."</ApiRow>
-                        <ApiRow name="selection" ty="Option<ValueBinding<Selection>>" default="None">
-                            "The selection as app state (e.g. an "<Code inline=true>"RwSignal<Selection>"</Code>"), replacing "<Code inline=true>"default_selected_keys"</Code>"."
+                        <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
+                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">
                             "Called with the new selection. \u{201c}Select all\u{201d} reports "<Code inline=true>"Selection::All"</Code>"."
@@ -154,8 +164,11 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">"What Escape does."</ApiRow>
                         <ApiRow name="default_sort_descriptor" ty="Option<SortDescriptor>" default="None">"The initial sorting."</ApiRow>
-                        <ApiRow name="sort_descriptor" ty="Option<ValueBinding<Option<SortDescriptor>>>" default="None">
-                            "The sorting as app state (e.g. an "<Code inline=true>"RwSignal<Option<SortDescriptor>>"</Code>"), replacing "<Code inline=true>"default_sort_descriptor"</Code>". Setting it to "<Code inline=true>"None"</Code>" clears the sorting."
+                        <ApiRow name="sort_descriptor" ty="Option<Signal<Option<SortDescriptor>>>" default="None">
+                            "The sorting (controlled), replacing "<Code inline=true>"default_sort_descriptor"</Code>": a value or any signal. "<Code inline=true>"None"</Code>" clears the sorting."
+                        </ApiRow>
+                        <ApiRow name="set_sort_descriptor" ty="Option<Out<Option<SortDescriptor>>>" default="None">
+                            "Receives the new sorting: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_sort_change" ty="Option<Callback<SortDescriptor>>" default="None">
                             "Called when the user sorts the table. Sort your rows accordingly."
@@ -168,7 +181,7 @@ pub fn PageAtomTable() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the table."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<table>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"A "<Code inline=true>"TableHeader"</Code>" and a "<Code inline=true>"TableBody"</Code>". Required."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -191,7 +204,7 @@ pub fn PageAtomTable() -> impl IntoView {
                 <Section title="Props" id="table-body-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::TableBody">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<tbody>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Children">"One "<Code inline=true>"TableRow"</Code>" per row of the collection."</ApiRow>
+                        <ApiRow name="children" ty="Children">"One "<Code inline=true>"TableRow"</Code>" per row of the collection. Required."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -203,9 +216,9 @@ pub fn PageAtomTable() -> impl IntoView {
                 </p>
                 <Section title="Props" id="table-row-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::TableRow">
-                        <ApiRow name="key" ty="Key">"The row\u{2019}s key in the table\u{2019}s collection."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The row\u{2019}s key in the table\u{2019}s collection. Required."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<tr>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Children">"The row\u{2019}s cells."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The row\u{2019}s cells. Required."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -218,7 +231,7 @@ pub fn PageAtomTable() -> impl IntoView {
                 </p>
                 <Section title="Props" id="table-cell-props">
                     <ApiTable kind=ApiKind::Props of="atoms::table::TableCell">
-                        <ApiRow name="column" ty="Key">"The key of the cell\u{2019}s column."</ApiRow>
+                        <ApiRow name="column" ty="Key">"The key of the cell\u{2019}s column. Required."</ApiRow>
                         <ApiRow name="focus_mode" ty="Option<CellFocusMode>" default="None">
                             "What gets focus: the cell, or its first focusable child. "<Code inline=true>"None"</Code>": the child, "
                             "or the cell with "<Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
@@ -256,7 +269,7 @@ pub fn PageAtomTable() -> impl IntoView {
                             <Code inline=true>"overflow: auto"</Code>": when the columns\u{2019} minimum widths don\u{2019}t fit, "
                             "the table gets wider than the container."
                         </ApiRow>
-                        <ApiRow name="children" ty="Children">"A "<Code inline=true>"Table"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"A "<Code inline=true>"Table"</Code>". Required."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -323,7 +336,6 @@ pub fn PageAtomTable() -> impl IntoView {
                         ", a disabled row only shows through its disabled checkbox."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: being pressed."</ApiRow>
-                    <ApiRow name="data-focus-visible" ty="true">"On a selection checkbox: it has keyboard focus."</ApiRow>
                     <ApiRow name="data-resizing" ty="true">
                         "In a "<Code inline=true>"ResizableTableContainer"</Code>", on a column header and its resizer: the "
                         "column is being resized."
@@ -357,8 +369,8 @@ pub fn PageAtomTable() -> impl IntoView {
                         .my-table th[data-allows-sorting] { cursor: pointer; }
                         .my-table th[data-sort-direction="ascending"]::after { content: "▲"; }
                         .my-table th[data-sort-direction="descending"]::after { content: "▼"; }
-                        .my-table :is(tr, th, td):focus-visible { outline: 2px solid royalblue; outline-offset: -2px; }
-                        .my-row[data-selected] { background: #eef; }
+                        .my-table :is(tr, th, td):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .my-row[data-selected] { background: var(--surface); }
                         .my-row[data-disabled] { opacity: 0.5; }
                     "#)}
                 </Code>
@@ -377,7 +389,7 @@ pub fn PageAtomTable() -> impl IntoView {
                         .my-table [data-column-resizer][data-resizable-direction="left"] { cursor: e-resize; }
                         .my-table [data-column-resizer][data-resizable-direction="right"] { cursor: w-resize; }
                         .my-table [data-column-resizer]:is(:hover, [data-resizing], :has(input:focus-visible)) {
-                            background: royalblue;
+                            background: var(--accent);
                         }
                     "#)}
                 </Code>
@@ -385,12 +397,15 @@ pub fn PageAtomTable() -> impl IntoView {
 
             <Section title="Composition">
                 <p>
-                    "The parts find the table through the "<Code inline=true>"TableData"</Code>" context. Your own components "
+                    "The parts find the table through the "<Code inline=true>"TableData"</Code>" context. Your own Leptos components "
                     "inside "<Code inline=true>"Table"</Code>" can read it too, e.g. to show the number of selected rows in a "
                     "cell:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::TableData;
+                        use leptos::prelude::*;
+
                         #[component]
                         fn SelectedCount() -> impl IntoView {
                             let selection = expect_context::<TableData>().state.grid.list.selection;
@@ -399,15 +414,18 @@ pub fn PageAtomTable() -> impl IntoView {
                     "#)}
                 </Code>
                 <p>
-                    <Code inline=true>"state"</Code>" is the "<Code inline=true>"TableState"</Code>" documented on the "
-                    <Link href=format!("{}#use-table-state", routes::doc::table::Hook.materialize())>"hook page"</Link>"."
+                    <Code inline=true>"state"</Code>" is the "<Code inline=true>"TableState"</Code>" documented under "
+                    <Link href=format!("{}#use-table-state", routes::doc::table::Hook.materialize())>"use_table_state"</Link>
+                    " on the "<Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link>" page."
                 </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Table.materialize()>"Table overview"</Link></li>
-                <li><Link href=routes::doc::table::Hook.materialize()>"Table hooks"</Link></li>
-                <li><Link href=routes::doc::grid::Atom.materialize()>"Grid atoms"</Link></li>
+                <li><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></li>
+                <li><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></li>
+                <li><Link href=routes::doc::grid::Atom.materialize()>"Grid Atoms"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>
     }

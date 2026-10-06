@@ -4,6 +4,6 @@ use leptos::prelude::*;
 #[component]
 pub fn KbdShortcutDemo() -> impl IntoView {
     view! {
-        <KbdShortcut keys=[KeyboardKey::Command, KeyboardKey::Enter]/>
+        <p>"Send the message with " <KbdShortcut keys=[KeyboardKey::Control, KeyboardKey::Enter]/> "."</p>
     }
 }

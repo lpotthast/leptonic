@@ -4,7 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ScrollWheelDemo() -> impl IntoView {
     let (value, set_value) = signal(50.0f64);
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
     let (last_delta, set_last_delta) = signal((0.0f64, 0.0f64));
 
     let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
@@ -19,16 +19,20 @@ pub fn ScrollWheelDemo() -> impl IntoView {
     });
 
     view! {
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disable scroll wheel handling"</Checkbox>
-
-        <div {..scroll_wheel.props.into_attrs()} tabindex="0" class="demo-scroll-wheel-target">
+        <div {..scroll_wheel.props.into_attrs()} class="demo-scroll-wheel-target">
             <div class="demo-scroll-wheel-value">{move || format!("{:.0}", value.get())}</div>
             <p class="demo-muted-text">"Scroll here with a mouse wheel or trackpad"</p>
         </div>
 
-        <p>
-            "Last scroll delta: "
-            <code>{move || format!("({:.1}, {:.1})", last_delta.get().0, last_delta.get().1)}</code>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
+
+        <p class="demo-status">
+            {move || {
+                let (x, y) = last_delta.get();
+                format!("Last delta ({x:.1}, {y:.1}).")
+            }}
         </p>
     }
 }

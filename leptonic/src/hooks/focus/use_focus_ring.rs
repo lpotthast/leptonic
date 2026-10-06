@@ -181,6 +181,13 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     } = input;
 
     let (focused, set_focused) = signal(false);
+    // Disabled, the focus handlers are off: the element no longer counts as focused (it would stay
+    // so until the next blur after enabling).
+    Effect::new(move || {
+        if disabled.get() {
+            set_focused.set(false);
+        }
+    });
 
     let UseFocusVisibleReturn {
         focus_should_be_visible,
@@ -253,7 +260,7 @@ fn track_focus(
             on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
                 set_focused.set(false);
                 if let Some(on_blur) = on_blur {
-                    on_blur.run(e.event);
+                    on_blur.try_run(e.event);
                 }
             })),
             on_focus_within_change: on_focus_change,
@@ -278,7 +285,7 @@ fn track_focus(
             on_blur: Some(Callback::new(move |e| {
                 set_focused.set(false);
                 if let Some(on_blur) = on_blur {
-                    on_blur.run(e);
+                    on_blur.try_run(e);
                 }
             })),
             on_focus_change,

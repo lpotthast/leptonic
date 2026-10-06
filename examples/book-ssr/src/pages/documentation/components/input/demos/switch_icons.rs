@@ -3,11 +3,11 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SwitchIconsDemo() -> impl IntoView {
-    let (night_mode, set_night_mode) = signal(false);
+    let night_mode = RwSignal::new(false);
 
     view! {
         <Switch
-            state=(night_mode, set_night_mode)
+            is_selected=night_mode set_selected=night_mode
             icons=SwitchIcons { off: icondata::BsSun, on: icondata::BsMoon }
         >
             "Night mode"

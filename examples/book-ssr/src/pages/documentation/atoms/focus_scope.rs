@@ -13,7 +13,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 "The "<Code inline=true>"FocusScope"</Code>" atom contains, restores and auto-focuses focus for dialogs, menus "
                 "and other overlays, and gives its children a "<Code inline=true>"FocusManager"</Code>
                 " to move focus programmatically. See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>
-                " for domain guidance."
+                " for the other focus building blocks."
             </p>
 
             <ReactAria hook="FocusScope"/>
@@ -28,9 +28,11 @@ pub fn PageAtomFocusScope() -> impl IntoView {
 
             <Section title="Props">
                 <ApiTable kind=ApiKind::Props of="FocusScope">
-                    <ApiRow name="contain" ty="bool" default="false">
-                        "Keep focus inside the scope: Tab and Shift + Tab wrap around, and focus that leaves the scope (by a "
-                        "click or programmatically) is moved back."
+                    <ApiRow name="contain" ty="Signal<bool>" default="false">
+                        "Keep focus inside the scope: "<Keys keys="Tab"/>" and "<Keys keys="Shift + Tab"/>" wrap around, and "
+                        "focus that leaves the scope (by a click or programmatically) is moved back. May change while the scope "
+                        "is mounted, e.g. a non-modal popover starts containing focus once a dialog is inside. Always give "
+                        "keyboard users a way out of a containing scope, such as a close button or "<Keys keys="Escape"/>"."
                     </ApiRow>
                     <ApiRow name="restore_focus" ty="bool" default="false">
                         "When the scope unmounts, focus the element that was focused when it mounted."
@@ -42,20 +44,20 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Classes and styles of the wrapper "<Code inline=true>"<div>"</Code>"."
                     </ApiRow>
-                    <ApiRow name="children" ty="Children">"The scope\u{2019}s content."</ApiRow>
+                    <ApiRow name="children" ty="Children">"The scope\u{2019}s content. Required."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::focus_scope::FocusScope;
+                        use leptonic::atoms::prelude::FocusScope;
 
                         view! {
                             <FocusScope contain=true restore_focus=true auto_focus=true>
-                                <input type="text" placeholder="First name"/>
-                                <input type="text" placeholder="Last name"/>
-                                <button>"Submit"</button>
+                                <input type="text" aria-label="First name"/>
+                                <input type="text" aria-label="Last name"/>
+                                <button type="submit">"Submit"</button>
                             </FocusScope>
                         }
                     "#)}
@@ -64,8 +66,8 @@ pub fn PageAtomFocusScope() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "Open the form: focus moves to the first input. Tab cycles through the form without leaving it. Submit or "
-                    "cancel, and focus returns to \u{201c}Open form\u{201d}."
+                    "Open the form: focus moves to the first field. "<Keys keys="Tab"/>" cycles through the form without "
+                    "leaving it. Submit or cancel, and focus returns to \u{201c}Open form\u{201d}."
                 </p>
 
                 <Demo
@@ -92,7 +94,11 @@ pub fn PageAtomFocusScope() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{atoms::focus_scope::FocusScopeContext, components::prelude::Button};
+                        use leptonic::{
+                            atoms::focus_scope::FocusScopeContext,
+                            components::prelude::Button,
+                            hooks::FocusManagerOptions,
+                        };
 
                         #[component]
                         fn NextButton() -> impl IntoView {
@@ -113,8 +119,8 @@ pub fn PageAtomFocusScope() -> impl IntoView {
             <Section title="Composition">
                 <ul>
                     <li>
-                        "Scopes nest. Only the innermost containing scope handles Tab, and an outer scope does not pull focus out "
-                        "of an inner one."
+                        "Scopes nest. Only the innermost containing scope handles "<Keys keys="Tab"/>", and an outer scope does "
+                        "not pull focus out of an inner one."
                     </li>
                     <li>
                         "Before restoring focus, the scope dispatches the cancelable "<Code inline=true>"leptonic-focus-scope-restore"</Code>
@@ -123,7 +129,8 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                     </li>
                     <li>
                         "Without "<Code inline=true>"contain"</Code>", a scope with "<Code inline=true>"restore_focus"</Code>
-                        " sends Tab to the element after the one focus will return to, so you can tab out of an overlay naturally."
+                        " sends "<Keys keys="Tab"/>" to the element after the one focus will return to, so you can tab out of "
+                        "an overlay naturally."
                     </li>
                 </ul>
             </Section>
@@ -131,7 +138,9 @@ pub fn PageAtomFocusScope() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::FocusManagerProvider.materialize()>"FocusManagerProvider"</Link></li>
                 <li><Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
+                <li><Link href=routes::doc::dialog::Atom.materialize()>"Dialog Atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }

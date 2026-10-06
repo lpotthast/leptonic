@@ -129,10 +129,7 @@ pub fn TableResizingHookDemo() -> impl IntoView {
                 </tbody>
             </table>
         </div>
-        <div class="demo-state-display">
-            <div><strong>"Widths: "</strong>{widths}</div>
-            <div><strong>"Resizing: "</strong>{resizing}</div>
-        </div>
+        <p class="demo-status">"Widths: "{widths}". Resizing: "{resizing}"."</p>
     }
 }
 

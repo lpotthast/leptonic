@@ -12,15 +12,15 @@ const PLANS: [(&str, &str); 3] = [("free", "Free"), ("pro", "Pro"), ("team", "Te
 
 #[component]
 pub fn RadioAtomDemo() -> impl IntoView {
-    let (plan, set_plan) = signal(Some(Key::from("free")));
+    let plan = RwSignal::new(Some(Key::from("free")));
     let disabled = RwSignal::new(false);
     let read_only = RwSignal::new(false);
     let team_disabled = RwSignal::new(true);
 
     view! {
         <RadioGroup
-            default_value="free"
-            on_change=move |value| set_plan.set(value)
+            value=plan
+            set_value=plan
             orientation=Orientation::Horizontal
             is_disabled=disabled
             is_read_only=read_only
@@ -47,13 +47,19 @@ pub fn RadioAtomDemo() -> impl IntoView {
         </RadioGroup>
 
         <p class="demo-status">
-            {move || plan.get().map_or_else(|| "No plan".to_owned(), |plan| format!("Plan: {plan}"))}
+            {move || {
+                let selected = plan.get();
+                PLANS
+                    .into_iter()
+                    .find(|(value, _)| selected.as_ref() == Some(&Key::from(*value)))
+                    .map_or_else(|| "No plan selected.".to_owned(), |(_, label)| format!("Plan: {label}."))
+            }}
         </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=team_disabled>"Team disabled"</Checkbox>
-            <Checkbox state=disabled>"Group disabled"</Checkbox>
-            <Checkbox state=read_only>"Read-only"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+            <Checkbox is_selected=team_disabled set_selected=team_disabled>"Team plan disabled"</Checkbox>
         </div>
     }
 }

@@ -1,24 +1,30 @@
-use leptonic::atoms::{
-    button::Button,
-    dialog::{Dialog, DialogDescription, DialogTitle},
-    modal::{ModalBackdrop, ModalContent},
+use leptonic::{
+    atoms::{
+        button::Button,
+        dialog::{Dialog, DialogDescription, DialogTitle, DialogTrigger},
+        modal::{ModalBackdrop, ModalContent},
+    },
+    hooks::DialogRole,
 };
-use leptonic::hooks::DialogRole;
 use leptos::prelude::*;
 
 /// A dismissable modal dialog named by `aria_label` (react-aria-components' `Dialog.test.js`
 /// setup), opened by a button. A second modal next to it (in the same owner) closes through a
-/// button closing it.
+/// button closing it. A third one opens from a `DialogTrigger` (`#test-dialog-trigger`); its
+/// "Count" button (`#test-dialog-count`) only counts and must not toggle the modal.
 #[component]
 pub fn PageAtomDialog() -> impl IntoView {
     let is_open = RwSignal::new(false);
     let is_other_open = RwSignal::new(false);
+    let count = RwSignal::new(0u32);
+    let is_animated_open = RwSignal::new(false);
 
     view! {
         <h1>"Dialog"</h1>
         <button id="test-dialog-open" on:click=move |_| is_open.set(true)>"Open"</button>
         <ModalBackdrop
-            state=is_open
+            is_open=is_open
+            set_open=is_open
             is_dismissable=true
         >
             <ModalContent>
@@ -27,12 +33,30 @@ pub fn PageAtomDialog() -> impl IntoView {
                 </Dialog>
             </ModalContent>
         </ModalBackdrop>
+        // Entry and exit animations of backdrop and modal (react-aria-components' `ModalOverlay`).
+        <style>
+            ".test-animated-backdrop[data-entering], .test-animated-modal[data-entering] { animation: test-modal-fade 300ms; }
+            .test-animated-backdrop[data-exiting], .test-animated-modal[data-exiting] { animation: test-modal-fade 300ms reverse; }
+            @keyframes test-modal-fade { from { opacity: 0; } to { opacity: 1; } }"
+        </style>
+        <button id="test-dialog-open-animated" on:click=move |_| is_animated_open.set(true)>"Animated"</button>
+        <ModalBackdrop
+            is_open=is_animated_open
+            set_open=is_animated_open
+            is_dismissable=true
+            classes="test-animated-backdrop"
+        >
+            <ModalContent classes="test-animated-modal">
+                <Dialog aria_label="Animated">"Animated modal"</Dialog>
+            </ModalContent>
+        </ModalBackdrop>
         // The `Button` atom (`use_press`) as opener.
         <Button attr:id="test-dialog-open-other" on_press=move |_| is_other_open.set(true)>
             "Open other"
         </Button>
         <ModalBackdrop
-            state=is_other_open
+            is_open=is_other_open
+            set_open=is_other_open
         >
             // As crudkit's confirmation dialogs: an alert dialog with title, description and
             // `Button` atoms.
@@ -50,6 +74,18 @@ pub fn PageAtomDialog() -> impl IntoView {
                 </Dialog>
             </ModalContent>
         </ModalBackdrop>
+        <DialogTrigger>
+            <Button attr:id="test-dialog-trigger">"Open triggered"</Button>
+            <ModalBackdrop is_dismissable=true>
+                <ModalContent>
+                    <Dialog aria_label="Triggered">
+                        <Button attr:id="test-dialog-count" on_press=move |_| count.update(|c| *c += 1)>
+                            "Count " {count}
+                        </Button>
+                    </Dialog>
+                </ModalContent>
+            </ModalBackdrop>
+        </DialogTrigger>
         <div>"Open: " <span id="test-dialog-is-open">{move || is_open.get().to_string()}</span></div>
     }
 }

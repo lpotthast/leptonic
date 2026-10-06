@@ -6,79 +6,76 @@ use super::demos::disclosure::DisclosureDemo;
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseDisclosure() -> impl IntoView {
     view! {
-        <DocPage title="use_disclosure">
+        <DocPage title="Disclosure Hooks">
             <p>
-                "The "<Code inline=true>"use_disclosure"</Code>" hook connects a trigger button with a content panel it "
-                "shows and hides, and "<Code inline=true>"use_disclosure_state"</Code>" holds the expanded state. "
-                "See the "<Link href=routes::doc::Collapsible.materialize()>"Collapsible overview"</Link>" for concept guidance."
+                <AnchorLink href="#use-disclosure">"use_disclosure"</AnchorLink>" connects a trigger button with the panel it "
+                "shows and hides, "<AnchorLink href="#use-disclosure-state">"use_disclosure_state"</AnchorLink>" holds whether "
+                "it is expanded, and "<AnchorLink href="#use-disclosure-group-state">"use_disclosure_group_state"</AnchorLink>
+                " which disclosures of an accordion are. See the "<Link href=routes::doc::Disclosure.materialize()>"Disclosure overview"</Link>
+                " for concept guidance."
             </p>
 
             <ReactAria hook="useDisclosure"/>
 
+            <Section title="Demo">
+                <p>
+                    "A disclosure built from the hooks, styled through the "<Code inline=true>"aria-expanded"</Code>" and "
+                    <Code inline=true>"disabled"</Code>" attributes they set."
+                </p>
+                <Demo description="Disclosure with a toggle button, a collapsible panel and a Disabled checkbox" source=include_str!("demos/disclosure.rs")>
+                    <DisclosureDemo/>
+                </Demo>
+            </Section>
+
             <Section title="use_disclosure">
                 <Section title="Input" id="use-disclosure-input">
                     <p>
-                        "The hook doesn\u{2019}t own the expanded state: it reads "<Code inline=true>"is_expanded"</Code>
-                        " and reports requested changes through "<Code inline=true>"on_expanded_change"</Code>"."
+                        "Create the input with "<Code inline=true>"UseDisclosureInput::new(state)"</Code>" from a "
+                        <AnchorLink href="#use-disclosure-state">"use_disclosure_state"</AnchorLink>"."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseDisclosureInput">
-                        <ApiRow name="is_expanded" ty="Signal<bool>" default="false">"Whether the panel is expanded."</ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                            "Whether the disclosure is disabled. A disabled trigger ignores clicks and keys and gets "
-                            <Code inline=true>"aria-disabled=\"true\""</Code>"."
-                        </ApiRow>
-                        <ApiRow name="on_expanded_change" ty="Option<Callback<bool>>" default="None">
-                            "Called with the new expanded state when the trigger is activated. Without it, the trigger does nothing."
-                        </ApiRow>
+                        <ApiRow name="state" ty="DisclosureState">"Whether the panel is expanded. Required."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the trigger can\u{2019}t toggle the panel."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-disclosure-return">
                     <ApiTable kind=ApiKind::Return of="UseDisclosureReturn">
-                        <ApiRow name="trigger_props" ty="UseDisclosureTriggerProps">
-                            "Attributes and event handlers for the trigger button: "<Code inline=true>"id"</Code>", "
-                            <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-controls"</Code>", "
-                            <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"data-focus-visible"</Code>
-                            " and the click, key and focus handlers. Spread with "<Code inline=true>"{..trigger_props.into_attrs()}"</Code>"."
+                        <ApiRow name="button" ty="UseButtonInput">
+                            "The trigger\u{2019}s configuration: its id, "<Code inline=true>"aria-expanded"</Code>", "
+                            <Code inline=true>"aria-controls"</Code>" and the toggling. Pass it to "
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
+                            " (add your own settings with struct update syntax)."
                         </ApiRow>
-                        <ApiRow name="content_props" ty="UseDisclosureContentProps">
-                            "Attributes for the panel: "<Code inline=true>"id"</Code>", "<Code inline=true>"role=\"region\""</Code>", "
-                            <Code inline=true>"aria-labelledby"</Code>" (the trigger) and "<Code inline=true>"aria-hidden"</Code>
-                            " while collapsed."
+                        <ApiRow name="panel_props" ty="UseDisclosurePanelProps">
+                            "For the panel: its id, "<Code inline=true>"role=\"group\""</Code>", "<Code inline=true>"aria-labelledby"</Code>
+                            " (the trigger), "<Code inline=true>"aria-hidden"</Code>" and "<Code inline=true>"hidden=\"until-found\""</Code>
+                            " while collapsed, and its capture. Spread with "<Code inline=true>"{..panel_props.into_attrs()}"</Code>"."
                         </ApiRow>
-                        <ApiRow name="trigger_id, content_id" ty="String">"The generated ids of trigger and panel."</ApiRow>
-                        <ApiRow name="is_expanded" ty="Signal<bool>">"The "<Code inline=true>"is_expanded"</Code>" input, passed through."</ApiRow>
-                        <ApiRow name="toggle" ty="Callback<()>">
-                            "Requests the opposite state through "<Code inline=true>"on_expanded_change"</Code>
-                            ", unless the disclosure is disabled."
-                        </ApiRow>
-                        <ApiRow name="is_focus_visible" ty="Signal<bool>">
-                            "Whether the trigger has keyboard focus and should show a focus ring."
-                        </ApiRow>
+                        <ApiRow name="trigger_id" ty="String">"The trigger\u{2019}s id (also in "<Code inline=true>"button"</Code>")."</ApiRow>
+                        <ApiRow name="panel_element" ty="CapturedElement">"The panel element, once rendered."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Example" id="use-disclosure-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            let UseDisclosureStateReturn { is_expanded, expand, collapse, .. } = use_disclosure_state(false);
+                            use leptonic::hooks::{
+                                IntoAttrs, UseDisclosureInput, UseDisclosureStateInput, use_button, use_disclosure,
+                                use_disclosure_state,
+                            };
 
-                            let disclosure = use_disclosure(UseDisclosureInput {
-                                is_expanded,
-                                on_expanded_change: Some(Callback::new(move |expanded: bool| {
-                                    if expanded { expand.run(()) } else { collapse.run(()) }
-                                })),
-                                ..Default::default()
-                            });
+                            let state = use_disclosure_state(UseDisclosureStateInput::default());
+                            let disclosure = use_disclosure(UseDisclosureInput::new(state));
+                            let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
 
                             view! {
-                                <button {..disclosure.trigger_props.into_attrs()}>"Details"</button>
-                                <div {..disclosure.content_props.into_attrs()} hidden=move || !is_expanded.get()>
-                                    "Hidden content"
-                                </div>
+                                <h3><button {..button_attrs} style=button_styles>"Details"</button></h3>
+                                <div {..disclosure.panel_props.into_attrs()}>"Hidden content"</div>
                             }
                         "#)}
                     </Code>
@@ -86,55 +83,117 @@ pub fn PageUseDisclosure() -> impl IntoView {
             </Section>
 
             <Section title="use_disclosure_state">
+                <p>"Holds whether a disclosure is expanded."</p>
+
+                <Section title="Input" id="use-disclosure-state-input">
+                    <ApiTable kind=ApiKind::Input of="UseDisclosureStateInput">
+                        <ApiRow name="default_expanded" ty="bool" default="false">"Whether it starts expanded."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<bool>>" default="None">
+                            "The expanded state as app state (e.g. an "<Code inline=true>"RwSignal<bool>"</Code>"), replacing "
+                            <Code inline=true>"default_expanded"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<bool>>" default="None">"Called when it expands or collapses."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-disclosure-state-return">
+                    <ApiTable kind=ApiKind::Fields of="DisclosureState">
+                        <ApiRow name="is_expanded" ty="Signal<bool>">
+                            "Whether the disclosure is expanded. Change it with "<Code inline=true>"expand()"</Code>", "
+                            <Code inline=true>"collapse()"</Code>", "<Code inline=true>"toggle()"</Code>" or "
+                            <Code inline=true>"set_expanded(bool)"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Example" id="use-disclosure-state-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            use leptonic::{hooks::{UseDisclosureStateInput, use_disclosure_state}, utils::ValueBinding};
+
+                            // The expanded state lives in the app, e.g. to expand the disclosure from elsewhere.
+                            let expanded = RwSignal::new(true);
+                            let state = use_disclosure_state(UseDisclosureStateInput {
+                                value: Some(ValueBinding::from(expanded)),
+                                ..UseDisclosureStateInput::default()
+                            });
+                        ")}
+                    </Code>
+                </Section>
+            </Section>
+
+            <Section title="use_disclosure_group_state">
                 <p>
-                    <Code inline=true>"use_disclosure_state(default_expanded: bool)"</Code>
-                    " creates the expanded state and the callbacks that change it."
+                    "Holds which disclosures of a group (an accordion) are expanded, by key. The "
+                    <Link href=format!("{}#disclosuregroup", routes::doc::disclosure::Atom.materialize())>"DisclosureGroup"</Link>
+                    " atom uses it and gives each of its disclosures the expanded state of its key."
                 </p>
 
-                <ApiTable kind=ApiKind::Return of="UseDisclosureStateReturn">
-                    <ApiRow name="is_expanded" ty="Signal<bool>">"Whether the disclosure is expanded."</ApiRow>
-                    <ApiRow name="expand, collapse" ty="Callback<()>">"Expand or collapse the disclosure."</ApiRow>
-                    <ApiRow name="toggle" ty="Callback<()>">"Flip the expanded state."</ApiRow>
-                </ApiTable>
+                <Section title="Input" id="use-disclosure-group-state-input">
+                    <ApiTable kind=ApiKind::Input of="UseDisclosureGroupStateInput">
+                        <ApiRow name="expansion" ty="DisclosureGroupExpansion" default="Single">
+                            <Code inline=true>"Single"</Code>": expanding one collapses the others; "<Code inline=true>"Multiple"</Code>": any number."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether all disclosures are disabled."</ApiRow>
+                        <ApiRow name="default_expanded_keys" ty="Vec<Key>" default="empty">
+                            "The initially expanded disclosures, in order (a single-expansion group keeps the first)."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<HashSet<Key>>>" default="None">"The expanded keys as app state."</ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called with the expanded keys."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-disclosure-group-state-return">
+                    <ApiTable kind=ApiKind::Fields of="DisclosureGroupState">
+                        <ApiRow name="expansion" ty="DisclosureGroupExpansion">"From the input."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"From the input."</ApiRow>
+                        <ApiRow name="expanded_keys" ty="Signal<HashSet<Key>>">
+                            "The expanded disclosures. "<Code inline=true>"is_expanded(&key)"</Code>", "<Code inline=true>"toggle_key(&key)"</Code>
+                            " and "<Code inline=true>"set_expanded_keys(keys)"</Code>" read and change them."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Example" id="use-disclosure-group-state-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::hooks::{Key, UseDisclosureGroupStateInput, use_disclosure_group_state};
+
+                            let group = use_disclosure_group_state(UseDisclosureGroupStateInput {
+                                default_expanded_keys: vec![Key::from("shipping")],
+                                ..UseDisclosureGroupStateInput::default()
+                            });
+                            // Expanding "returns" collapses "shipping".
+                            group.toggle_key(&Key::from("returns"));
+                        "#)}
+                    </Code>
+                </Section>
             </Section>
 
-            <Section title="Demo">
-                <p>"The panel is hidden with CSS while the hook marks it "<Code inline=true>"aria-hidden"</Code>"."</p>
-
-                <Demo description="Disclosure with a toggle button, a collapsible panel and a disabled switch" source=include_str!("demos/disclosure.rs")>
-                    <DisclosureDemo/>
-                </Demo>
-            </Section>
-
-            <Section title="Hiding the panel">
+            <Section title="Hiding the Panel">
                 <p>
-                    "The hook marks a collapsed panel with "<Code inline=true>"aria-hidden=\"true\""</Code>
-                    " but leaves it visible. Hide it yourself, so that it disappears for sighted users and its content can\u{2019}t "
-                    "be reached with "<Code inline=true>"Tab"</Code>": set the "<Code inline=true>"hidden"</Code>
-                    " attribute, select on "<Code inline=true>"[aria-hidden=\"true\"]"</Code>" in CSS, or don\u{2019}t render the content."
+                    "A collapsed panel is "<Code inline=true>"hidden=\"until-found\""</Code>": hidden, but the browser\u{2019}s find "
+                    "in page still finds its content, and expands the disclosure when it does. Put padding on the panel\u{2019}s "
+                    "content rather than the panel: a panel hidden this way keeps its own box."
                 </p>
-            </Section>
-
-            <Section title="Use Cases">
-                <ul>
-                    <li>"FAQ accordions"</li>
-                    <li>"Collapsible sections"</li>
-                    <li>"Expandable cards"</li>
-                    <li>"Show more/less content"</li>
-                </ul>
-            </Section>
-
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Focus the trigger."</KeyRow>
-                    <KeyRow keys="Enter / Space">"Expand or collapse the panel."</KeyRow>
-                </KeyboardTable>
+                <p>
+                    "To animate the panel, transition its size: while it expands or collapses, "
+                    <Code inline=true>"--disclosure-panel-width"</Code>" and "<Code inline=true>"--disclosure-panel-height"</Code>
+                    " hold its size in pixels (afterwards "<Code inline=true>"auto"</Code>" when expanded)."
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .my-panel { height: var(--disclosure-panel-height); overflow: clip; transition: height 200ms; }
+                        @media (prefers-reduced-motion: reduce) { .my-panel { transition: none; } }
+                    ")}
+                </Code>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Collapsible.materialize()>"Collapsible overview"</Link></li>
-                <li><Link href=routes::doc::collapsible::Component.materialize()>"Collapsible component"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+                <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure overview"</Link></li>
+                <li><Link href=routes::doc::disclosure::Atom.materialize()>"Disclosure Atoms"</Link></li>
+                <li><Link href=routes::doc::disclosure::Component.materialize()>"Disclosure Components"</Link></li>
+                <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
             </SeeAlso>
         </DocPage>
     }

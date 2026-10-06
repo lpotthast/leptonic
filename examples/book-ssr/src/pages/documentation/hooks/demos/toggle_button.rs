@@ -16,12 +16,12 @@ pub fn ToggleButtonDemo() -> impl IntoView {
     }));
     let (attrs, styles) = button.props.into_parts();
 
-    // Styled through `aria-pressed`.
+    // Styled through `aria-pressed` and `data-focus-visible`, which `use_button` sets.
     view! {
         <button {..attrs} style=styles class="demo-toggle-button">"Pin"</button>
-        <p class="demo-status">{move || if state.is_selected.get() { "Pinned" } else { "Not pinned" }}</p>
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <p class="demo-status">{move || if state.is_selected.get() { "Pinned." } else { "Not pinned." }}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

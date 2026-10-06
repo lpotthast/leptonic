@@ -12,9 +12,8 @@ const ALIGNMENTS: [&str; 3] = ["Left", "Center", "Right"];
 pub fn ToggleButtonGroupDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
-    // Single selection: the group is a `radiogroup`, its buttons are radios.
+    // Single selection (the default): the group is a `radiogroup`, its buttons are radios.
     let state = use_toggle_group_state(UseToggleGroupStateInput {
-        selection_mode: ToggleGroupSelectionMode::Single,
         disallow_empty_selection: true,
         default_selected_keys: HashSet::from([Key::from("Left")]),
         is_disabled: disabled.into(),
@@ -35,11 +34,11 @@ pub fn ToggleButtonGroupDemo() -> impl IntoView {
         <p class="demo-status">
             {move || {
                 let selected = state.selected_keys.get().iter().map(ToString::to_string).collect::<Vec<_>>();
-                format!("Alignment: {}", selected.join(", "))
+                format!("Alignment: {}.", selected.join(", "))
             }}
         </p>
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disable the group"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }
@@ -50,6 +49,6 @@ fn AlignmentButton(group: ToggleGroupState, alignment: &'static str) -> impl Int
         UseToggleButtonGroupItemInput::new(group, alignment),
     ));
     let (attrs, styles) = button.props.into_parts();
-    // Styled through `aria-checked` (`aria-pressed` in a multiple-selection group).
+    // Styled through `aria-checked` (`aria-pressed` in a multiple-selection group) and `data-focus-visible`.
     view! { <button {..attrs} style=styles class="demo-toggle-button">{alignment}</button> }
 }

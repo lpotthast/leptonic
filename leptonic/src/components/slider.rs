@@ -1,20 +1,26 @@
+use std::ops::RangeInclusive;
+
 use leptos::prelude::*;
 use ordered_float::OrderedFloat;
 
-// Re-export the popover enum from atoms.
-pub use crate::atoms::slider::SliderPopover;
-// Re-export mark types from hooks for backward compatibility.
-pub use crate::hooks::{SliderMark, SliderMarkValue, SliderMarks};
 use crate::{
     Out,
     atoms::slider::{
-        Slider as SliderAtom, SliderMark, SliderMarks, SliderThumb, SliderThumbTooltip,
-        SliderTrack, SliderTrackFill,
+        Slider as SliderAtom, SliderFill, SliderMark as SliderMarkAtom,
+        SliderMarks as SliderMarksAtom, SliderThumb, SliderThumbTooltip, SliderTrack,
     },
-    hooks::SliderValues,
-    utils::{classes::Classes, styles::Styles},
+    utils::number_value::NumberSignal,
+    utils::{
+        classes::Classes, number_formatter::NumberFormatOptions, number_value::NumberValue,
+        orientation::Orientation, styles::Styles,
+    },
+};
+pub use crate::{
+    atoms::slider::SliderPopover,
+    hooks::{SliderMark, SliderMarkValue, SliderMarks},
 };
 
+/// The look of a themed slider's thumbs.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SliderVariant {
     Block,
@@ -23,7 +29,7 @@ pub enum SliderVariant {
 }
 
 impl SliderVariant {
-    const fn to_str(self) -> &'static str {
+    const fn as_str(self) -> &'static str {
         match self {
             Self::Block => "block",
             Self::Round => "round",
@@ -31,173 +37,164 @@ impl SliderVariant {
     }
 }
 
-/// Shared implementation for single and range sliders.
-#[component]
-#[allow(clippy::too_many_arguments)]
-fn SliderInner(
-    values: SliderValues,
-    min: f64,
-    max: f64,
-    step: Option<f64>,
-    disabled: Signal<bool>,
-    on_change: Option<Callback<Vec<f64>>>,
-    variant: &'static str,
-    marks: SliderMarks,
-    value_display: Option<Callback<f64, String>>,
+/// The themed parts inside the slider atom: track, fill, thumbs with tooltips, marks.
+fn slider_parts(
+    thumbs: Vec<(usize, MaybeProp<String>)>,
     popover: SliderPopover,
-    num_thumbs: usize,
-    classes: Classes,
-    styles: Styles,
+    marks: SliderMarks,
 ) -> impl IntoView {
     view! {
+        <SliderTrack classes="track">
+            <SliderFill classes="fill" />
+            {thumbs
+                .into_iter()
+                .map(|(index, aria_label)| {
+                    view! {
+                        <SliderThumb index aria_label classes="thumb">
+                            <SliderThumbTooltip popover classes="tooltip" />
+                        </SliderThumb>
+                    }
+                })
+                .collect_view()}
+        </SliderTrack>
+        <SliderMarksAtom marks classes="marks" let:marks>
+            <For
+                each=move || marks.get()
+                key=|mark| OrderedFloat::from(mark.percentage)
+                let:mark
+            >
+                <SliderMarkAtom mark=mark.clone() classes="mark">
+                    {mark.name.map(|name| view! { <div class="title">{name}</div> })}
+                </SliderMarkAtom>
+            </For>
+        </SliderMarksAtom>
+    }
+}
+
+/// A themed slider picking one value.
+///
+/// ```ignore
+/// let volume = RwSignal::new(30);
+/// view! { <Slider value=volume set_value=volume min_value=0 max_value=100 aria_label="Volume"/> }
+/// ```
+#[component]
+pub fn Slider<T: NumberValue>(
+    /// The value: a number or any signal of one.
+    #[prop(into)]
+    value: NumberSignal<T>,
+    /// Receives the new value: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into)]
+    set_value: Out<T>,
+    #[prop(into)] min_value: Signal<T>,
+    #[prop(into)] max_value: Signal<T>,
+    /// The step between values. Default: 1.
+    #[prop(into, default = Signal::stored(T::ONE))]
+    step: Signal<T>,
+    #[prop(into, default = Signal::stored(Orientation::Horizontal))] orientation: Signal<
+        Orientation,
+    >,
+    #[prop(optional)] variant: SliderVariant,
+    /// When the value shows above the thumb.
+    #[prop(optional)]
+    popover: SliderPopover,
+    #[prop(optional)] marks: SliderMarks,
+    /// How the value is formatted (tooltip, marks, assistive technology).
+    #[prop(into, optional)]
+    format_options: Signal<NumberFormatOptions>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Names the slider (there is no visible label).
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
+    let value = value.into_signal();
+    let values = Signal::derive(move || vec![value.get()]);
+    let set_values = Out::new_callback(move |values: Vec<T>| {
+        if let Some(first) = values.first() {
+            set_value.set(*first);
+        }
+    });
+    view! {
         <SliderAtom
-            values=values
-            min=min
-            max=max
-            nostrip:step=step
-            is_disabled=disabled
-            nostrip:on_change=on_change
+            values
+            set_values
+            min_value
+            max_value
+            step
+            orientation
+            format_options
+            is_disabled
+            aria_label
             classes=classes.add("leptonic-slider")
             styles
-            attr:data-variant=variant
+            attr:data-variant=variant.as_str()
         >
-            <SliderTrack classes=Classes::from("track")>
-                <SliderTrackFill classes=Classes::from("fill") />
-                <For
-                    each=move || 0..num_thumbs
-                    key=move |thumb_idx| *thumb_idx
-                    children=move |thumb_idx| {
-                        view! {
-                            <SliderThumb index=thumb_idx classes=Classes::from("thumb")>
-                                <SliderThumbTooltip
-                                    popover=popover
-                                    nostrip:value_display=value_display
-                                    classes=Classes::from("tooltip")
-                                />
-                            </SliderThumb>
-                        }
-                    }
-                />
-            </SliderTrack>
-            <SliderMarks
-                marks=marks
-                nostrip:value_display=value_display
-                classes=Classes::from("marks")
-                let:marks
-            >
-                <For
-                    each=move || marks.get()
-                    key=move |mark| OrderedFloat::from(mark.percentage)
-                    children=move |mark| {
-                        view! {
-                            <SliderMark mark=mark.clone() classes=Classes::from("mark")>
-                                {match mark.name {
-                                    Some(name) => {
-                                        view! { <div class="title">{name}</div> }.into_any()
-                                    }
-                                    None => ().into_any(),
-                                }}
-                            </SliderMark>
-                        }
-                    }
-                />
-            </SliderMarks>
+            {slider_parts(vec![(0, MaybeProp::default())], popover, marks)}
         </SliderAtom>
     }
 }
 
-/// A single-thumb slider component that composes the slider atoms.
+/// A themed slider picking a range with two thumbs, which can't pass each other.
 ///
-/// Renders a `<div class="leptonic-slider">` with a bar, range fill, knob,
-/// and optional marks. Full keyboard navigation is built in.
+/// ```ignore
+/// let price = RwSignal::new(20..=80);
+/// view! { <RangeSlider value=price set_value=price min_value=0 max_value=100 aria_label="Price"/> }
+/// ```
 #[component]
-pub fn Slider(
-    #[prop(into)] value: Signal<f64>,
-    #[prop(into)] set_value: Out<f64>,
-    min: f64,
-    max: f64,
-    #[prop(optional)] step: Option<f64>,
+pub fn RangeSlider<T: NumberValue>(
+    /// The range: a plain value or any signal.
+    #[prop(into)]
+    value: Signal<RangeInclusive<T>>,
+    /// Receives the new range: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into)]
+    set_value: Out<RangeInclusive<T>>,
+    #[prop(into)] min_value: Signal<T>,
+    #[prop(into)] max_value: Signal<T>,
+    /// The step between values. Default: 1.
+    #[prop(into, default = Signal::stored(T::ONE))]
+    step: Signal<T>,
+    #[prop(into, default = Signal::stored(Orientation::Horizontal))] orientation: Signal<
+        Orientation,
+    >,
     #[prop(optional)] variant: SliderVariant,
     #[prop(optional)] popover: SliderPopover,
-    #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(into, optional)] format_options: Signal<NumberFormatOptions>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Names the slider (there is no visible label).
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    /// Names the thumbs next to the slider's name. Default: "Minimum", "Maximum".
+    #[prop(into, default = Signal::stored(("Minimum".to_owned(), "Maximum".to_owned())))]
+    thumb_labels: Signal<(String, String)>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let values = Signal::derive(move || vec![value.get()]);
-    let on_change = Callback::new(move |vals: Vec<f64>| {
-        if let Some(v) = vals.first() {
-            set_value.set(*v);
+    let values = Signal::derive(move || value.with(|range| vec![*range.start(), *range.end()]));
+    let set_values = Out::new_callback(move |values: Vec<T>| {
+        if let [start, end] = values.as_slice() {
+            set_value.set(*start..=*end);
         }
     });
-
+    let start_label = MaybeProp::derive(move || Some(thumb_labels.get().0));
+    let end_label = MaybeProp::derive(move || Some(thumb_labels.get().1));
     view! {
-        <SliderInner
-            values=SliderValues::Controlled(values)
-            min
-            max
+        <SliderAtom
+            values
+            set_values
+            min_value
+            max_value
             step
-            disabled
-            on_change=Some(on_change)
-            variant=variant.to_str()
-            marks
-            value_display
-            popover
-            num_thumbs=1
-            classes
+            orientation
+            format_options
+            is_disabled
+            aria_label
+            classes=classes.add("leptonic-slider")
             styles
-        />
-    }
-}
-
-/// A two-thumb range slider component.
-///
-/// Renders a `<div class="leptonic-slider">` with two knobs allowing selection
-/// of a value range. Thumbs cannot cross each other.
-#[component]
-#[allow(clippy::similar_names)]
-pub fn RangeSlider(
-    #[prop(into)] value_a: Signal<f64>,
-    #[prop(into)] value_b: Signal<f64>,
-    #[prop(into)] set_value_a: Out<f64>,
-    #[prop(into)] set_value_b: Out<f64>,
-    min: f64,
-    max: f64,
-    #[prop(optional)] step: Option<f64>,
-    #[prop(optional)] variant: SliderVariant,
-    #[prop(optional)] popover: SliderPopover,
-    #[prop(into, optional)] disabled: Signal<bool>,
-    #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
-    #[prop(optional)] classes: Classes,
-    #[prop(optional)] styles: Styles,
-) -> impl IntoView {
-    let values = Signal::derive(move || vec![value_a.get(), value_b.get()]);
-    let on_change = Callback::new(move |vals: Vec<f64>| {
-        if let Some(v) = vals.first() {
-            set_value_a.set(*v);
-        }
-        if let Some(v) = vals.get(1) {
-            set_value_b.set(*v);
-        }
-    });
-
-    view! {
-        <SliderInner
-            values=SliderValues::Controlled(values)
-            min
-            max
-            step
-            disabled
-            on_change=Some(on_change)
-            variant=variant.to_str()
-            marks
-            value_display
-            popover
-            num_thumbs=2
-            classes
-            styles
-        />
+            attr:data-variant=variant.as_str()
+        >
+            {slider_parts(vec![(0, start_label), (1, end_label)], popover, marks)}
+        </SliderAtom>
     }
 }

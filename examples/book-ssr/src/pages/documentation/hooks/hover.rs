@@ -11,7 +11,8 @@ pub fn PageUseHover() -> impl IntoView {
         <DocPage title="use_hover">
             <p>
                 "The "<Code inline=true>"use_hover"</Code>" hook tracks whether a mouse or pen is over an element. "
-                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>
+                " to compare it with the other interaction building blocks."
             </p>
 
             <ReactAria hook="useHover"/>
@@ -56,10 +57,14 @@ pub fn PageUseHover() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptos::prelude::*;
+
                         let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput::default());
 
+                        // Style the hovered state with `[data-hovered]`.
                         view! {
-                            <div {..props.into_attrs()} class:hovered=move || is_hovered.get()>"Hover me"</div>
+                            <div {..props.into_attrs()} data-hovered=flag(is_hovered)>"Hover me"</div>
                         }
                     "#)}
                 </Code>
@@ -88,6 +93,7 @@ pub fn PageUseHover() -> impl IntoView {
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
                 <li><Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
+                <li><Link href=routes::doc::interactions::Hoverable.materialize()>"Hoverable"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" (composes use_hover)"</li>
             </SeeAlso>
         </DocPage>

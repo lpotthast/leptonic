@@ -205,12 +205,14 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             cleanup_global_listener();
             cleanup_blur_observer();
 
+            // Removing a focused element blurs it after its owner was disposed: the callbacks
+            // may be gone then (`try_run`).
             if let Some(on_blur_within) = on_blur_within {
-                on_blur_within.run(FocusWithinEvent { event: e });
+                on_blur_within.try_run(FocusWithinEvent { event: e });
             }
 
             if let Some(on_focus_within_change) = on_focus_within_change {
-                on_focus_within_change.run(false);
+                on_focus_within_change.try_run(false);
             }
         };
 

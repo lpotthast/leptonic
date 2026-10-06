@@ -1,13 +1,26 @@
-use leptonic::prelude::icondata;
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::{
+    atoms::prelude::{Link, LinkRel},
+    components::prelude::Icon,
+    hooks::LinkTarget,
+    prelude::icondata,
+};
 use leptos::prelude::*;
 
 #[component]
-pub fn LinkExternalDemo() -> impl IntoView {
+pub fn LinkExternalAtomDemo() -> impl IntoView {
     view! {
-        <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
-            // An icon-only link needs an accessible name.
-            <Icon icon=icondata::BsGithub classes="demo-navigation-icon-large" aria_label="Leptonic on GitHub"/>
-        </LinkExt>
+        // `LinkTarget::Blank` opens a new tab (and adds `rel="noopener"`); `NoFollow` asks search engines not to
+        // follow the link.
+        <Link
+            href="https://github.com/lpotthast/leptonic"
+            target=LinkTarget::Blank
+            rel=vec![LinkRel::NoFollow]
+            classes="demo-link-atom"
+        >
+            "Leptonic on GitHub"
+            // Decorative: the icon has no label, so assistive technology skips it.
+            <Icon icon=icondata::BsBoxArrowUpRight classes="demo-link-icon"/>
+        </Link>
+        <p class="demo-caption">"Opens in a new tab."</p>
     }
 }

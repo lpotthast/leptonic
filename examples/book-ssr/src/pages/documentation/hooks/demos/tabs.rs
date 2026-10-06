@@ -22,7 +22,7 @@ fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> imp
     let UseTabReturn { tab_props, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
     let (attrs, styles) = tab_props.into_parts();
 
-    view! { <div {..attrs} class="demo-tab demo-hook-tab" style=styles>{label}</div> }
+    view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
 }
 
 #[component]
@@ -49,8 +49,7 @@ pub fn TabsDemo() -> impl IntoView {
     // `key: None`: one panel that always shows the selected tab.
     let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
 
-    let content = move || {
-        match state.selected_key().map(|key| key.to_string()).as_deref() {
+    let content = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
         Some("specs") => view! {
             <h4>"Specs"</h4>
             <p>"Aluminium frame, 1.2 kg, USB-C charging."</p>
@@ -67,7 +66,6 @@ pub fn TabsDemo() -> impl IntoView {
             <p>"A lightweight, foldable reading lamp."</p>
         }
         .into_any(),
-    }
     };
 
     view! {
@@ -78,11 +76,11 @@ pub fn TabsDemo() -> impl IntoView {
         </div>
         <div {..panel.tab_panel_props.into_attrs()} class="demo-tab-panel">{content}</div>
 
-        <div class="demo-tabs-controls">
-            <Checkbox state=disabled>"Disable all tabs"</Checkbox>
-            <p class="demo-tabs-status">
-                "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}
-            </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
+        <p class="demo-status">
+            "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}
+        </p>
     }
 }

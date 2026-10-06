@@ -4,8 +4,6 @@
 // Intentional deviations from react-aria:
 // - DEV-I1: `disabled` is `Signal<bool>` (reactive) instead of a plain `bool`.
 //   Idiomatic Leptos; react-aria achieves reactivity via `useLayoutEffect([isDisabled])`.
-// - DEV-I2: Returns `UsePreventScrollReturn { props }` instead of `void`.
-//   API consistency with other leptonic hooks. `UsePreventScrollAttrs` is `()`.
 // - DEV-I3: Uses `thread_local! { Cell<usize> }` instead of a plain `let` variable.
 //   Rust requires thread-safe globals. WASM is single-threaded so `Cell` suffices.
 
@@ -19,7 +17,7 @@ use leptos_use::use_window;
 use wasm_bindgen::{JsCast, prelude::*};
 use web_sys::HtmlElement;
 
-use crate::{hooks::IntoAttrs, utils::platform::device};
+use crate::utils::platform::device;
 
 thread_local! {
     static PREVENT_SCROLL_STATE: RefCell<PreventScrollState> = const { RefCell::new(PreventScrollState::new()) };
@@ -39,29 +37,10 @@ impl PreventScrollState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UsePreventScrollInput {
     pub is_disabled: Signal<bool>,
 }
-
-#[derive(Debug)]
-pub struct UsePreventScrollReturn {
-    /// Props for the element. Call `.into_attrs()` for view spreading.
-    pub props: UsePreventScrollProps,
-}
-
-/// Props from `use_prevent_scroll` that can be converted to spreadable attributes.
-#[derive(Debug)]
-pub struct UsePreventScrollProps;
-
-impl IntoAttrs for UsePreventScrollProps {
-    type Attrs = UsePreventScrollAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {}
-}
-
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UsePreventScrollAttrs = ();
 
 /// Prevents scrolling on the document body on mount, and restores it on unmount.
 /// Also ensures that content does not shift due to the scrollbars disappearing.
@@ -71,31 +50,30 @@ pub type UsePreventScrollAttrs = ();
 ///
 /// On iOS Safari, implements comprehensive touch event interception and focus
 /// override to prevent Safari's native scrolling behavior.
-pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollReturn {
+pub fn use_prevent_scroll(input: UsePreventScrollInput) {
     let UsePreventScrollInput {
         is_disabled: disabled,
     } = input;
 
-    let _effect = Effect::new(move |last| {
-        if let Some(Some(())) = last {
+    // Whether this instance holds one of the shared count's references: only then may it release
+    // one (a disabled instance unmounting must not re-enable scrolling under an open overlay). On
+    // the server it never does, so the thread-local state is never touched there.
+    let holds = StoredValue::new(false);
+    let release = move || {
+        if holds.try_get_value() == Some(true) {
+            holds.set_value(false);
             decrement_and_maybe_restore();
         }
-
-        if disabled.get() {
-            None
-        } else {
+    };
+    Effect::new(move |_| {
+        let enabled = !disabled.get();
+        release();
+        if enabled {
             increment_and_maybe_setup();
-            Some(())
+            holds.set_value(true);
         }
     });
-
-    on_cleanup(move || {
-        decrement_and_maybe_restore();
-    });
-
-    UsePreventScrollReturn {
-        props: UsePreventScrollProps,
-    }
+    on_cleanup(release);
 }
 
 fn increment_and_maybe_setup() {

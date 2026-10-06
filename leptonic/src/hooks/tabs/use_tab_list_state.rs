@@ -3,11 +3,13 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::hooks::collections::{
-    Collection, CollectionMemo, Key, SingleSelectListState, UseSingleSelectListStateInput,
-    use_single_select_list_state,
+use crate::{
+    hooks::collections::{
+        Collection, CollectionMemo, Key, SingleSelectListState, UseSingleSelectListStateInput,
+        use_single_select_list_state,
+    },
+    utils::ValueBinding,
 };
-use crate::utils::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

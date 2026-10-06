@@ -5,15 +5,15 @@ use std::collections::HashSet;
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
+    Out,
     hooks::{
-        IntoAttrs, Orientation, ToggleGroupSelectionMode, ToggleGroupState, ToggleState,
-        UseButtonInput, UseToggleButtonGroupInput, UseToggleButtonGroupItemInput,
-        UseToggleButtonInput, UseToggleGroupStateInput, UseToggleStateInput, UseToolbarInput,
-        collections::Key, use_button, use_toggle_button, use_toggle_button_group,
-        use_toggle_button_group_item, use_toggle_group_state, use_toggle_state,
+        IntoAttrs, Orientation, ToggleGroupSelectionMode, ToggleGroupState, UseButtonInput,
+        UseToggleButtonGroupInput, UseToggleButtonGroupItemInput, UseToggleButtonInput,
+        UseToggleGroupStateInput, UseToggleStateInput, UseToolbarInput, collections::Key,
+        use_button, use_toggle_button, use_toggle_button_group, use_toggle_button_group_item,
+        use_toggle_group_state, use_toggle_state,
     },
-    utils::data_attributes::flag,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, data_attributes::flag, styles::Styles},
 };
 
 // =============================================================================
@@ -21,9 +21,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - No controlled `isSelected`/`selectedKeys` (hook-owned state, project-wide convention): a
-//   toggle button bound to app state takes a `state` (`ToggleState::from(rw_signal)`, or
-//   `ToggleState::new`).
+// - State (C4): `default_selected` + `on_change`, or `is_selected` + `set_selected`; the group's
+//   `default_selected_keys` + `on_selection_change`, or `selected_keys` + `set_selected_keys`
+//   (react-aria: `isSelected`/`selectedKeys` + `onChange`/`onSelectionChange`).
 // - In a group, the button's key is `value` (react-aria: `id`, which is also the DOM id).
 // - Render props become `data-*` attributes plus plain children.
 //
@@ -41,7 +41,7 @@ pub struct ToggleButtonGroupCtx {
 /// `data-focus-visible`, `data-disabled`.
 ///
 /// Inside a [`ToggleButtonGroup`], `value` is required and the group holds the selection
-/// (`default_selected`, `on_change` and `state` don't apply).
+/// (`default_selected`, `is_selected`, `set_selected` and `on_change` don't apply).
 #[allow(clippy::needless_pass_by_value)]
 #[component]
 pub fn ToggleButton(
@@ -52,10 +52,12 @@ pub fn ToggleButton(
     /// Called when the button is selected or deselected.
     #[prop(into, optional)]
     on_change: Option<Callback<bool>>,
-    /// External selection state, replacing `default_selected`. Bind a signal with
-    /// `state=ToggleState::from(rw_signal)`.
+    /// Whether the toggle is selected (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ToggleState>,
+    is_selected: Option<Signal<bool>>,
+    /// Receives the selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
@@ -77,15 +79,14 @@ pub fn ToggleButton(
         });
         (input, is_selected)
     } else {
-        let state = if let Some(state) = state {
-            on_change.map_or(state, |on_change| state.with_on_change(on_change))
-        } else {
-            use_toggle_state(UseToggleStateInput {
-                default_selected,
-                on_change,
-                ..UseToggleStateInput::default()
-            })
-        };
+        let (value, on_change) =
+            crate::utils::ValueBinding::from_state_props(is_selected, set_selected, on_change);
+        let state = use_toggle_state(UseToggleStateInput {
+            default_selected,
+            value,
+            on_change,
+            ..UseToggleStateInput::default()
+        });
         let input = use_toggle_button(UseToggleButtonInput { state, button });
         (input, state.is_selected)
     };
@@ -122,6 +123,12 @@ pub fn ToggleButtonGroup(
     #[prop(optional)]
     disallow_empty_selection: bool,
     #[prop(into, optional)] default_selected_keys: HashSet<Key>,
+    /// The selected buttons (controlled): a value or any signal.
+    #[prop(into, optional)]
+    selected_keys: Option<Signal<HashSet<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected_keys: Option<Out<HashSet<Key>>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<HashSet<Key>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// The axis of the arrow keys (react-aria's default: horizontal).
@@ -133,10 +140,16 @@ pub fn ToggleButtonGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (selected_keys, on_selection_change) = crate::utils::ValueBinding::from_state_props(
+        selected_keys,
+        set_selected_keys,
+        on_selection_change,
+    );
     let state = use_toggle_group_state(UseToggleGroupStateInput {
         selection_mode,
         disallow_empty_selection,
         default_selected_keys,
+        selected_keys,
         on_selection_change,
         is_disabled,
     });

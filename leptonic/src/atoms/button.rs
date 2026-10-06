@@ -1,10 +1,14 @@
+use std::sync::Arc;
+
 use leptos::{
     attr::custom::custom_attribute,
+    either::Either,
     prelude::*,
     tachys::html::{class::class, style::style},
 };
 use leptos_router::components::{A, AProps, ToHref};
 
+use super::link::SharedHref;
 use crate::{
     hooks::{LinkTarget, *},
     utils::{
@@ -42,12 +46,16 @@ pub fn Button(
     /// Marks the button as the current item of a set (e.g. the current page of a pagination).
     #[prop(into, optional)]
     aria_current: Signal<Option<AriaCurrent>>,
+    /// The form attributes of a submit or reset button (`form`, `formaction`, `name`, ...).
+    #[prop(optional)]
+    form: ButtonFormAttributes,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let UseButtonReturn {
         props,
+        is_disabled,
         is_pressed,
         is_hovered,
         is_focused,
@@ -60,10 +68,11 @@ pub fn Button(
         aria_expanded,
         aria_pressed,
         aria_label,
-        aria_labelledby: aria_labelledby.map(Into::into),
+        aria_labelledby: Signal::stored(aria_labelledby),
         aria_describedby,
         aria_controls,
         aria_current,
+        form,
         on_press,
         on_hover_start,
         on_hover_end,
@@ -93,8 +102,8 @@ pub fn LinkButton<H>(
     href: H,
 
     /// Where to display the linked URL, as the name for a browsing context (a tab, window, or `<iframe>`).
-    #[prop(into, optional)]
-    target: Option<LinkTarget>,
+    #[prop(optional)]
+    target: LinkTarget,
 
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
 
@@ -110,12 +119,12 @@ pub fn LinkButton<H>(
 
     #[prop(into, optional)] styles: Styles,
 
-    /// If `true`, the link is marked active when the location matches exactly;
-    /// if false, link is marked active if the current route starts with it.
+    /// When the link is the current page (`aria-current="page"`).
     #[prop(optional)]
-    exact: bool,
+    current_match: crate::atoms::link::CurrentMatch,
 
-    children: Children,
+    /// Rendered again when the link is disabled or enabled.
+    children: ChildrenFn,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
@@ -124,6 +133,7 @@ where
     // focus behavior; propagation must continue so the router sees the click.
     let UseButtonReturn {
         props,
+        is_disabled,
         is_pressed,
         is_hovered,
         is_focused,
@@ -138,29 +148,44 @@ where
         ..UseButtonInput::default()
     });
 
-    let target: Option<Oco<'static, str>> = Some(target.unwrap_or_default())
-        .filter(|it| it != &LinkTarget::_Self)
-        .map(|it| it.to_oco());
-
-    // TODO: Propagate scroll and strict_trailing_slash?
-    // TODO (new): Does a class in props.attrs override this? Do we need the old "prepend" logic?
-
+    let target = (target != LinkTarget::Same).then(|| target.to_oco());
     let (button_attrs, button_styles) = props.into_parts();
-    let styles = button_styles.merge(styles);
+    // Cloned for each rendering (the element is rendered again when it is disabled or enabled).
+    let attrs = StoredValue::new((
+        button_attrs,
+        custom_attribute("data-pressed", flag(is_pressed)),
+        custom_attribute("data-hovered", flag(is_hovered)),
+        custom_attribute("data-focused", flag(is_focused)),
+        custom_attribute("data-disabled", flag(is_disabled)),
+    ));
+    let styles = StoredValue::new(button_styles.merge(styles));
+    let classes = StoredValue::new(classes);
+    let href = SharedHref(Arc::new(href));
 
-    A(AProps {
-        href,
-        target,
-        exact,
-        strict_trailing_slash: false,
-        scroll: true,
-        children,
-    })
-    .add_any_attr(class(classes))
-    .add_any_attr(style(styles))
-    .add_any_attr(button_attrs)
-    .add_any_attr(custom_attribute("data-pressed", flag(is_pressed)))
-    .add_any_attr(custom_attribute("data-hovered", flag(is_hovered)))
-    .add_any_attr(custom_attribute("data-focused", flag(is_focused)))
-    .add_any_attr(custom_attribute("data-disabled", flag(is_disabled)))
+    // Disabled, the link has no `href`: it can't be followed in any way (react-aria's `useButton`
+    // drops it, as the `Link` atom).
+    move || {
+        if is_disabled.get() {
+            Either::Left(view! {
+                <a {..attrs.get_value()} class=classes.get_value() style=styles.get_value()>
+                    {children()}
+                </a>
+            })
+        } else {
+            let children = children.clone();
+            Either::Right(
+                A(AProps {
+                    href: href.clone(),
+                    target: target.clone(),
+                    exact: current_match == crate::atoms::link::CurrentMatch::Exact,
+                    strict_trailing_slash: false,
+                    scroll: true,
+                    children: Box::new(move || children()),
+                })
+                .add_any_attr(class(classes.get_value()))
+                .add_any_attr(style(styles.get_value()))
+                .add_any_attr(attrs.get_value()),
+            )
+        }
+    }
 }

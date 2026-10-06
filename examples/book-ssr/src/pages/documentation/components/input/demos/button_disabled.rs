@@ -3,17 +3,14 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ButtonDisabledDemo() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(true);
+    let sent = RwSignal::new(false);
 
     view! {
-        <div>
-            <Switch state=(disabled, set_disabled)>"Disable"</Switch>
+        <Button is_disabled=disabled on_press=move |_| sent.set(true)>"Send"</Button>
+        <p class="demo-status">{move || if sent.get() { "Sent." } else { "Not sent yet." }}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
-
-        <ButtonWrapper>
-            <Button on_press=move |_| {} disabled=true>"Always Disabled"</Button>
-            <Button on_press=move |_| {} disabled=disabled>"Disabled"</Button>
-            <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
-        </ButtonWrapper>
     }
 }

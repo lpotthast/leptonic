@@ -1,9 +1,12 @@
 // Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 6f664fe911
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useNumberFormatter.ts
 
+use std::sync::Arc;
+
 use fixed_decimal::{Decimal, Sign, SignedRoundingMode, UnsignedRoundingMode};
 use icu_decimal::{DecimalFormatter, options::DecimalFormatterOptions};
 use icu_locale::Locale as IcuLocale;
+use leptos::prelude::*;
 
 use super::{i18n::Locale, number_value::NumberValue};
 
@@ -130,16 +133,51 @@ pub enum SignDisplay {
 pub struct NumberFormatter {
     locale: IcuLocale,
     options: NumberFormatOptions,
+    /// The locale's decimal formatter for the grouping option, built once. `None` if the locale
+    /// has no data (digits are then formatted plainly).
+    decimal: Option<Arc<DecimalFormatter>>,
+}
+
+impl PartialEq for NumberFormatter {
+    fn eq(&self, other: &Self) -> bool {
+        // The decimal formatter follows from these.
+        self.locale == other.locale && self.options == other.options
+    }
+}
+
+/// The number formatter of the current locale (see [`use_locale`](super::i18n::use_locale)) and
+/// `options`, rebuilt when either changes (react-aria's `useNumberFormatter`).
+pub fn use_number_formatter(options: Signal<NumberFormatOptions>) -> Memo<NumberFormatter> {
+    let locale = super::i18n::use_locale();
+    Memo::new(move |_| NumberFormatter::new(&locale.get(), options.get()))
 }
 
 impl NumberFormatter {
     /// Creates a new number formatter with the given locale and options.
     #[must_use]
     pub fn new(locale: &Locale, options: NumberFormatOptions) -> Self {
+        let locale = locale.icu_locale().clone();
+        let mut decimal_options = DecimalFormatterOptions::default();
+        decimal_options.grouping_strategy = Some(if options.use_grouping {
+            icu_decimal::options::GroupingStrategy::Auto
+        } else {
+            icu_decimal::options::GroupingStrategy::Never
+        });
+        let prefs = icu_decimal::DecimalFormatterPreferences::from(&locale);
+        let decimal = DecimalFormatter::try_new(prefs, decimal_options)
+            .ok()
+            .map(Arc::new);
         Self {
-            locale: locale.icu_locale().clone(),
+            locale,
             options,
+            decimal,
         }
+    }
+
+    /// The options this formatter formats with.
+    #[must_use]
+    pub fn options(&self) -> &NumberFormatOptions {
+        &self.options
     }
 
     /// Formats a number according to the formatter's options. Empty for infinite and NaN floats.
@@ -249,17 +287,10 @@ impl NumberFormatter {
 
     /// Applies the locale's separators (and grouping, if enabled) with ICU4X.
     fn format_with_icu(&self, decimal: &Decimal) -> String {
-        let mut options = DecimalFormatterOptions::default();
-        options.grouping_strategy = Some(if self.options.use_grouping {
-            icu_decimal::options::GroupingStrategy::Auto
-        } else {
-            icu_decimal::options::GroupingStrategy::Never
-        });
-        let prefs = icu_decimal::DecimalFormatterPreferences::from(&self.locale);
-        match DecimalFormatter::try_new(prefs, options) {
-            Ok(formatter) => formatter.format(decimal).to_string(),
-            Err(_) => decimal.to_string(),
-        }
+        self.decimal.as_ref().map_or_else(
+            || decimal.to_string(),
+            |formatter| formatter.format(decimal).to_string(),
+        )
     }
 }
 

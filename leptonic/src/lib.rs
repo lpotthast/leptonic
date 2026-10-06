@@ -40,8 +40,7 @@ pub mod prelude {
     //pub use crate::components::prelude::*;
     //pub use crate::hooks::prelude::*;
     pub use crate::hooks::IntoAttrs;
-    pub use crate::signal_ls;
-    pub use crate::utils::ValueBinding;
+    pub use crate::{signal_ls, utils::ValueBinding};
 }
 
 #[derive(Debug, Clone, Copy)]

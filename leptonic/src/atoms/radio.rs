@@ -1,27 +1,32 @@
 // Upstream: react-aria-components/src/RadioGroup.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
 
+use super::{
+    field::{FieldContext, LabelContext},
+    form::use_validation_behavior,
+};
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
         IntoAttrs, Orientation, RadioGroupData, UseHoverInput, UseRadioGroupInput,
         UseRadioGroupReturn, UseRadioGroupStateInput, UseRadioInput, ValidateFn,
         ValidationBehavior, collections::Key, use_hover, use_radio, use_radio_group,
         use_radio_group_state,
     },
-    utils::data_attributes::flag,
-    utils::{classes::Classes, styles::Styles, visually_hidden::visually_hidden_styles},
+    utils::{
+        classes::Classes, data_attributes::flag, styles::Styles,
+        visually_hidden::visually_hidden_styles,
+    },
 };
-
-use super::field::{FieldContext, FieldLabelProps};
-use super::form::use_validation_behavior;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - No controlled `value` (hook-owned state, project-wide convention): `default_value` and
-//   `on_change`.
+// - The selected value is split into `value` (a value or any signal) and `set_value` (an `Out`),
+//   plus `default_value` and `on_change` (C4; react-aria: controlled/uncontrolled `value`).
 // - Values are collection `Key`s (react-aria: strings).
 // - Render props become `data-*` attributes plus plain children.
 //
@@ -45,8 +50,15 @@ pub struct RadioGroupCtx {
 #[component]
 pub fn RadioGroup(
     #[prop(into, optional)] default_value: Option<Key>,
+    /// The selected value (controlled): a value or any signal.
+    #[prop(into, optional)]
+    value: Option<Signal<Option<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Option<Key>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<Key>>>,
-    /// The axis of the arrow keys (react-aria's default: vertical).
+    /// The group's layout, announced as `aria-orientation` (default vertical). All arrow keys
+    /// move the selection; in a horizontal group, Left/Right follow the writing direction.
     #[prop(default = Orientation::Vertical)]
     orientation: Orientation,
     #[prop(into, optional)] is_disabled: Signal<bool>,
@@ -70,8 +82,11 @@ pub fn RadioGroup(
     children: Children,
 ) -> impl IntoView {
     let validation_behavior = use_validation_behavior(validation_behavior);
+    let (value, on_change) =
+        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_radio_group_state(UseRadioGroupStateInput {
         default_value,
+        value,
         on_change,
         name,
         is_disabled,
@@ -82,7 +97,8 @@ pub fn RadioGroup(
         validation_behavior,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let UseRadioGroupReturn {
         props,
         label_props,
@@ -104,8 +120,8 @@ pub fn RadioGroup(
         ..UseRadioGroupInput::new(state)
     });
     let ctx = RadioGroupCtx { data, is_invalid };
+    let label = LabelContext::span(label_props).with_presence(label_presence);
     let field = FieldContext {
-        label: FieldLabelProps::span(label_props),
         description: description_props,
         error_message: error_message_props,
         is_invalid,
@@ -115,7 +131,7 @@ pub fn RadioGroup(
 
     view! {
         <Provider value=ctx>
-            <Provider value=field>
+            <Provider value=label><Provider value=field>
                 <div
                     {..props.into_attrs()}
                     class=classes
@@ -128,7 +144,7 @@ pub fn RadioGroup(
                 >
                     {children()}
                 </div>
-            </Provider>
+            </Provider></Provider>
         </Provider>
     }
 }

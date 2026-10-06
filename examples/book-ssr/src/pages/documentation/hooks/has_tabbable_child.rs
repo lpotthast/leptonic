@@ -11,12 +11,13 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
         <DocPage title="use_has_tabbable_child">
             <p>
                 "The "<Code inline=true>"use_has_tabbable_child"</Code>" hook tells you whether an element contains anything "
-                "you can reach with Tab. Use it to decide whether a container should be a tab stop itself, or to make sure a "
+                "you can reach with "<Keys keys="Tab"/>". Use it to decide whether a container should be a tab stop itself, or to make sure a "
                 "focus trap has something to focus. "
-                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>
+                " to compare it with the other focus building blocks."
             </p>
 
-            <ReactAria hook="useHasTabbableChild"/>
+            <ReactAriaSource path="focus/useHasTabbableChild.ts"/>
 
             <Section title="Input">
                 <p>
@@ -46,19 +47,23 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "A common pattern makes a container a tab stop only while it has no tabbable children. Otherwise it gets "
-                    <Code inline=true>"tabindex=\"-1\""</Code>": it can still be focused programmatically, but Tab goes straight "
+                    <Code inline=true>"tabindex=\"-1\""</Code>": it can still be focused programmatically, but "<Keys keys="Tab"/>" goes straight "
                     "to its children."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+
                         let UseHasTabbableChildReturn { has_tabbable_child, props } =
                             use_has_tabbable_child(UseHasTabbableChildInput::default());
 
                         view! {
                             <div
-                                {..props.into_attrs()}
+                                role="group"
+                                aria-label="Attachments"
                                 tabindex=move || if has_tabbable_child.get() { -1 } else { 0 }
+                                {..props.into_attrs()}
                             >
                                 <button>"Child button"</button>
                             </div>
@@ -69,11 +74,12 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "The demo applies the pattern above. Hide both children and the container itself becomes a tab stop."
+                    "The demo applies the pattern above. Hide the button and the field, and the group itself becomes a tab stop. "
+                    "Disabled, the hook reports no tabbable child."
                 </p>
 
                 <Demo
-                    description="Container that becomes a tab stop when its button and input are hidden"
+                    description="Group that becomes a tab stop when its button and field are hidden, with a disabled toggle"
                     source=include_str!("demos/has_tabbable_child.rs")
                 >
                     <HasTabbableChildDemo/>
@@ -85,15 +91,17 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
                     "The hook checks the container once it is rendered and then watches its subtree with a "
                     <Code inline=true>"MutationObserver"</Code>". It reacts to added and removed elements anywhere below the "
                     "container and to changes of the "<Code inline=true>"tabindex"</Code>" and "<Code inline=true>"disabled"</Code>
-                    " attributes. Each change triggers a rescan with the same tabbability rules the focus manager uses: disabled, "
-                    "hidden and inert elements and elements with "<Code inline=true>"tabindex=\"-1\""</Code>" don\u{2019}t count."
+                    " attributes. Each change triggers a rescan with the same tabbability rules the focus manager uses ("
+                    <Link href=routes::doc::focus::Focusability.materialize()>"is_tabbable"</Link>"): disabled, hidden and "
+                    "inert elements and elements with "<Code inline=true>"tabindex=\"-1\""</Code>" don\u{2019}t count."
                 </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
-                <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope atom"</Link></li>
+                <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
+                <li><Link href=routes::doc::focus::Focusability.materialize()>"focusability"</Link></li>
             </SeeAlso>
         </DocPage>
     }

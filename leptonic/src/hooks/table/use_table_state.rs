@@ -4,12 +4,14 @@ use std::sync::Arc;
 use leptos::prelude::*;
 
 use super::TableCollection;
-use crate::hooks::{
-    GridFocusMode, GridState, UseGridStateInput,
-    collections::{CollectionMemo, DisabledBehavior, Key, SelectionOptions},
-    use_grid_state,
+use crate::{
+    hooks::{
+        GridFocusMode, GridState, UseGridStateInput,
+        collections::{CollectionMemo, DisabledBehavior, Key, SelectionOptions},
+        use_grid_state,
+    },
+    utils::ValueBinding,
 };
-use crate::utils::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

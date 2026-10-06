@@ -7,10 +7,6 @@ edition = "2024"
 # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory. Relative to your project root.
 style-dir = "style"
 
-# REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory. Relative to your project root.
-# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-standard location here. 
-js-dir = "public/js"
-
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "book-ssr"
@@ -169,15 +165,6 @@ syn = { version = "2.0.117", features = ["full"] }
 tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }
 
 [patch.crates-io]
-# TEMPORARY (same as the root Cargo.toml): chrome-for-testing 0.4 can't parse the Chrome for Testing API since it
-# started listing `linux-arm64`, which breaks the browser tests. Remove once a chrome-for-testing-manager release on
-# chrome-for-testing 0.5 (and a browser-test release on it) is published. Requires `../chrome-for-testing-manager`
-# (next to this repository) checked out on branch `cft-0.5-linux-arm64`.
-chrome-for-testing-manager = { path = "../../../chrome-for-testing-manager" }
-# TEMPORARY (same as the root Cargo.toml): session reuse, timing report and progress warnings of the browser test
-# runner. Remove once a browser-test release with them is published (and bump `browser-test` above). Requires
-# `../browser-test` (next to this repository) checked out on branch `session-reuse-timing`.
-browser-test = { path = "../../../browser-test" }
 #any_spawner = { path = "/Users/lukaspotthast/dev/leptos/any_spawner" }
 #const_str_slice_concat = { path = "/Users/lukaspotthast/dev/leptos/const_str_slice_concat" }
 #either_of = { path = "/Users/lukaspotthast/dev/leptos/either_of" }

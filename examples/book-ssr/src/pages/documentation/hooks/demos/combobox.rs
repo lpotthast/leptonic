@@ -8,7 +8,7 @@ use leptonic::{
         use_button, use_combobox, use_combobox_state, use_contains_filter, use_listbox, use_option,
         use_text_field,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -47,7 +47,7 @@ pub fn ComboboxDemo() -> impl IntoView {
         button,
         listbox,
     } = use_combobox(UseComboBoxInput {
-        has_label: true,
+        has_label: true.into(),
         placeholder: Some("Search fruits\u{2026}".to_owned()),
         is_disabled: disabled.into(),
         popover,
@@ -83,9 +83,10 @@ pub fn ComboboxDemo() -> impl IntoView {
             </Show>
         </div>
 
-        <Checkbox state=disabled>"Disabled"</Checkbox>
-
         <DemoState state/>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -106,14 +107,14 @@ fn FruitListBox(listbox: UseListBoxInput) -> impl IntoView {
 }
 
 /// One option. It is focused virtually: DOM focus stays in the input, which points at the option with
-/// `aria-activedescendant`.
+/// `aria-activedescendant`. The hook sets `aria-selected` and `aria-disabled`; the focus is shown through
+/// `data-focused`, rendered from `is_focused`.
 #[component]
 fn FruitOption(list: ListBoxData, node: Node) -> impl IntoView {
     let UseOptionReturn {
         props,
         is_selected,
         is_focused,
-        is_disabled,
         ..
     } = use_option(UseOptionInput {
         list,
@@ -122,14 +123,7 @@ fn FruitOption(list: ListBoxData, node: Node) -> impl IntoView {
     let (attrs, styles) = props.into_parts();
 
     view! {
-        <div
-            {..attrs}
-            style=styles
-            class=Classes::from("demo-combo-option")
-                .add_reactive("focused", is_focused)
-                .add_reactive("selected", is_selected)
-                .add_reactive("disabled", is_disabled)
-        >
+        <div {..attrs} style=styles data-focused=move || is_focused.get().then_some("") class="demo-combo-option">
             <span class="demo-combo-check" aria-hidden="true">
                 <Show when=move || is_selected.get()>"\u{2713}"</Show>
             </span>
@@ -145,17 +139,13 @@ fn DemoState(state: ComboBoxState) -> impl IntoView {
             .selected_key()
             .map_or_else(|| "none".to_owned(), |key| key.to_string())
     };
-    let input_value = move || format!("\u{201c}{}\u{201d}", state.input_value());
+    let input_value = move || state.input_value();
     let open = move || if state.is_open() { "open" } else { "closed" };
 
     view! {
-        <dl class="demo-combo-state">
-            <dt>"Value"</dt>
-            <dd>{value}</dd>
-            <dt>"Input"</dt>
-            <dd>{input_value}</dd>
-            <dt>"Popover"</dt>
-            <dd>{open}</dd>
-        </dl>
+        <p class="demo-status">
+            "Value: "{value}". Input: \u{201c}"{input_value}"\u{201d}. Popover: "{open}"."
+        </p>
     }
+
 }

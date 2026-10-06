@@ -18,23 +18,28 @@ pub fn NumberFieldAtomDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     view! {
-        <NumberField state=temperature is_disabled=disabled classes="demo-field">
+        <NumberField value=temperature set_value=temperature is_disabled=disabled classes="demo-field">
             <Label classes="demo-field-label">"Temperature (\u{b0}C)"</Label>
+            // The group draws the border and the focus ring; the input inside it stays plain.
             <NumberFieldGroup classes="demo-number-field-group">
-                <NumberFieldDecrementButton classes="demo-stepper-btn">"\u{2212}"</NumberFieldDecrementButton>
-                <Input classes=["demo-input", "demo-text-input", "demo-atom-input", "demo-number-input"]/>
-                <NumberFieldIncrementButton classes="demo-stepper-btn">"+"</NumberFieldIncrementButton>
+                <NumberFieldDecrementButton classes="demo-number-field-stepper">
+                    <span aria-hidden="true">"\u{2212}"</span>
+                </NumberFieldDecrementButton>
+                <Input classes="demo-number-field-input"/>
+                <NumberFieldIncrementButton classes="demo-number-field-stepper">
+                    <span aria-hidden="true">"+"</span>
+                </NumberFieldIncrementButton>
             </NumberFieldGroup>
             <Description classes="demo-field-description">"Home and End jump to the limits of an i8."</Description>
             <FieldError classes="demo-field-error"/>
         </NumberField>
 
         <p class="demo-status">
-            {move || temperature.get().map_or_else(|| "No temperature".to_owned(), |t| format!("Temperature: {t} \u{b0}C"))}
+            {move || temperature.get().map_or_else(|| "No temperature.".to_owned(), |t| format!("Temperature: {t}\u{a0}\u{b0}C"))}
         </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

@@ -6,7 +6,10 @@ use wasm_bindgen::JsCast;
 use super::use_text_field::{InputType, UseTextFieldInput, UseTextFieldReturn, use_text_field};
 use crate::{
     hooks::button::use_button::UseButtonInput,
-    utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+    utils::{
+        EventAccessors,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+    },
 };
 
 // =============================================================================
@@ -17,7 +20,7 @@ use crate::{
 // - The input is the text field's (`UseSearchFieldInput::text_field`, `type="search"` by default),
 //   and its state a `TextFieldState` (react-stately's `useSearchFieldState` has the same shape:
 //   a value and its setter). Reason: one state type for all text fields; app state binds through
-//   `TextFieldState::from(rw_signal)`.
+//   `UseTextFieldStateInput::value`.
 // - Returns the clear button's `UseButtonInput` (compose with `use_button`) instead of button
 //   props. Reason: inputs compose, DOM props don't (project convention).
 // - Enter and Escape are keyboard shortcuts merged with the text field's own (`shortcuts`), the
@@ -114,8 +117,9 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
             }
             // The input's own value too, in case it was set on the element directly.
             let input_value = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+                .expect_target()
+                .dyn_into::<web_sys::HtmlInputElement>()
+                .ok()
                 .map(|input| input.value())
                 .unwrap_or_default();
             if state.value.with_untracked(String::is_empty) && input_value.is_empty() {

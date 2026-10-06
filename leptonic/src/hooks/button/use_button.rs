@@ -15,8 +15,8 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 use crate::{
     hooks::{
         FocusHandle, FocusableContextAttr, FocusableContextAttrs, HoverEndEvent, HoverStartEvent,
-        IntoAttrs, LinkTarget, LongPressEvent, PressEvent, PropsWithStyles, UseFocusRingReturn,
-        UseFocusableReturn, UseHoverReturn, UsePressReturn,
+        IntoAttrs, LinkRel, LinkTarget, LongPressEvent, PressEvent, PropsWithStyles,
+        UseFocusRingReturn, UseFocusableReturn, UseHoverReturn, UsePressReturn,
         focus::{
             use_focus_ring::{UseFocusRingInput, use_focus_ring},
             use_focusable::{UseFocusableInput, use_focusable},
@@ -26,6 +26,7 @@ use crate::{
             use_keyboard::KeyboardEventWrapper,
             use_press::{UsePressInput, use_press},
         },
+        link_rel_to_string,
     },
     utils::{
         ElementCaptureAttr, EventHandler,
@@ -117,17 +118,57 @@ pub struct ButtonFormAttributes {
     /// Overrides the form's `action`.
     pub form_action: Option<Oco<'static, str>>,
     /// Overrides the form's `enctype`.
-    pub form_enc_type: Option<Oco<'static, str>>,
+    pub form_enc_type: Option<FormEncType>,
     /// Overrides the form's `method`.
-    pub form_method: Option<Oco<'static, str>>,
+    pub form_method: Option<FormMethod>,
     /// Overrides the form's `novalidate`.
     pub form_no_validate: bool,
     /// Overrides the form's `target`.
-    pub form_target: Option<Oco<'static, str>>,
+    pub form_target: Option<LinkTarget>,
     /// Name submitted with the form data when this button submits the form.
     pub name: Option<Oco<'static, str>>,
     /// Value submitted with the form data when this button submits the form.
     pub value: Option<Oco<'static, str>>,
+}
+
+/// How a form's data is encoded when submitted (`enctype`, `formenctype`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FormEncType {
+    /// `application/x-www-form-urlencoded` (the browser's default).
+    UrlEncoded,
+    /// `multipart/form-data`, needed to upload files.
+    Multipart,
+    /// `text/plain`.
+    TextPlain,
+}
+
+impl FormEncType {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::UrlEncoded => "application/x-www-form-urlencoded",
+            Self::Multipart => "multipart/form-data",
+            Self::TextPlain => "text/plain",
+        }
+    }
+}
+
+/// How a form is submitted (`method`, `formmethod`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum FormMethod {
+    Get,
+    Post,
+    /// Closes the `<dialog>` the form is in.
+    Dialog,
+}
+
+impl FormMethod {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Get => "get",
+            Self::Post => "post",
+            Self::Dialog => "dialog",
+        }
+    }
 }
 
 /// Input of [`use_button`]. Everything is optional; start from `UseButtonInput::default()`.
@@ -145,8 +186,9 @@ pub struct UseButtonInput {
     /// An accessible name, for buttons without visible text (e.g. icon buttons).
     pub aria_label: MaybeProp<String>,
 
-    /// The id(s) of the element(s) naming the button.
-    pub aria_labelledby: Option<Oco<'static, str>>,
+    /// The id(s) of the element(s) naming the button. A signal: e.g. a field's label ids follow
+    /// whether its label is rendered.
+    pub aria_labelledby: Signal<Option<String>>,
 
     /// Whether the button is disabled.
     pub is_disabled: Signal<bool>,
@@ -164,13 +206,14 @@ pub struct UseButtonInput {
     pub prevent_focus_on_press: bool,
 
     /// For `ButtonElementType::Anchor`: the link target. Removed while disabled.
-    pub href: Option<Signal<String>>,
+    pub href: Signal<Option<String>>,
 
     /// For `ButtonElementType::Anchor`: where to open the link.
-    pub target: Option<LinkTarget>,
+    pub target: LinkTarget,
 
-    /// For `ButtonElementType::Anchor`: the link relationship.
-    pub rel: Option<Oco<'static, str>>,
+    /// For `ButtonElementType::Anchor`: the link relationship. `NoOpener` is added for
+    /// `LinkTarget::Blank`.
+    pub rel: Vec<LinkRel>,
 
     /// For `ButtonElementType::Button`: form attributes.
     pub form: ButtonFormAttributes,
@@ -203,7 +246,7 @@ pub struct UseButtonInput {
     pub on_long_press: Option<Callback<LongPressEvent>>,
     pub on_long_press_end: Option<Callback<LongPressEvent>>,
     /// Describes the long press action to assistive technology, e.g. "Long press to open menu".
-    pub long_press_accessibility_description: Option<Oco<'static, str>>,
+    pub long_press_accessibility_description: MaybeProp<String>,
 
     pub on_hover_start: Option<Callback<HoverStartEvent>>,
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
@@ -218,6 +261,10 @@ pub struct UseButtonInput {
 
     /// Keyboard shortcuts handled while the button has focus.
     pub shortcuts: Option<KeyboardShortcuts>,
+
+    /// Called when a context menu is requested on the button (right click, Shift+F10, long press
+    /// on iOS, ...; see `use_context_menu`).
+    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_button`].
@@ -225,6 +272,8 @@ pub struct UseButtonInput {
 pub struct UseButtonReturn {
     /// Props for the button element. Call `.into_parts()` for view spreading and styles.
     pub props: PropsWithStyles<UseButtonProps>,
+    /// Whether the button is disabled: by its input, or by a surrounding `PressResponder`.
+    pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
     pub is_hovered: Signal<bool>,
     /// Whether the button is focused.
@@ -240,14 +289,14 @@ pub struct UseButtonReturn {
 pub struct UseButtonProps {
     pub id: Option<Oco<'static, str>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<Oco<'static, str>>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub role: Option<AriaRole>,
     pub button_type: Option<&'static str>,
     pub disabled: Signal<bool>,
     pub tabindex: Signal<Option<i32>>,
     pub href: Signal<Option<String>>,
     pub target: Option<Oco<'static, str>>,
-    pub rel: Option<Oco<'static, str>>,
+    pub rel: Option<String>,
     pub form: ButtonFormAttributes,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
@@ -266,6 +315,7 @@ pub struct UseButtonProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_contextmenu: EventHandler<MouseEvent>,
     pub on_pointerup: EventHandler<PointerEvent>,
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
@@ -285,13 +335,13 @@ pub type UseButtonAttrs = (
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::Href, Signal<Option<String>>>,
         Attr<attr::Target, Option<Oco<'static, str>>>,
-        Attr<attr::Rel, Option<Oco<'static, str>>>,
+        Attr<attr::Rel, Option<String>>,
     ),
     (
         Attr<attr::Form, Option<Oco<'static, str>>>,
         Attr<attr::Formaction, Option<Oco<'static, str>>>,
-        Attr<attr::Formenctype, Option<Oco<'static, str>>>,
-        Attr<attr::Formmethod, Option<Oco<'static, str>>>,
+        Attr<attr::Formenctype, Option<&'static str>>,
+        Attr<attr::Formmethod, Option<&'static str>>,
         Attr<attr::Formnovalidate, bool>,
         Attr<attr::Formtarget, Option<Oco<'static, str>>>,
         Attr<attr::Name, Option<Oco<'static, str>>>,
@@ -299,7 +349,7 @@ pub type UseButtonAttrs = (
     ),
     (
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Option<Oco<'static, str>>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
         Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
         Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
@@ -319,6 +369,7 @@ pub type UseButtonAttrs = (
         On<ev::click, SharedEventCallback<MouseEvent>>,
         On<ev::dblclick, SharedEventCallback<MouseEvent>>,
         On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+        On<ev::contextmenu, SharedEventCallback<MouseEvent>>,
         On<ev::pointerup, SharedEventCallback<PointerEvent>>,
         On<ev::mousedown, SharedEventCallback<MouseEvent>>,
         On<ev::dragstart, SharedEventCallback<DragEvent>>,
@@ -356,10 +407,10 @@ impl IntoAttrs for UseButtonProps {
             (
                 Attr(attr::Form, form),
                 Attr(attr::Formaction, form_action),
-                Attr(attr::Formenctype, form_enc_type),
-                Attr(attr::Formmethod, form_method),
+                Attr(attr::Formenctype, form_enc_type.map(FormEncType::as_str)),
+                Attr(attr::Formmethod, form_method.map(FormMethod::as_str)),
                 Attr(attr::Formnovalidate, form_no_validate),
-                Attr(attr::Formtarget, form_target),
+                Attr(attr::Formtarget, form_target.map(|target| target.to_oco())),
                 Attr(attr::Name, name),
                 Attr(attr::Value, value),
             ),
@@ -385,6 +436,7 @@ impl IntoAttrs for UseButtonProps {
                 self.on_click.into_on(ev::click),
                 self.on_dblclick.into_on(ev::dblclick),
                 self.on_pointerdown.into_on(ev::pointerdown),
+                self.on_contextmenu.into_on(ev::contextmenu),
                 self.on_pointerup.into_on(ev::pointerup),
                 self.on_mousedown.into_on(ev::mousedown),
                 self.on_dragstart.into_on(ev::dragstart),
@@ -450,12 +502,21 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         on_key_down,
         on_key_up,
         shortcuts,
+        on_context_menu,
     } = input;
 
     // An overlay trigger's props from a `PressResponder` (`DialogTrigger`); the button's own win
     // (react-aria-components merges `triggerProps` into the pressable child).
     let responder = use_context::<crate::hooks::PressResponderContext>();
     let trigger = responder.as_ref().and_then(|ctx| ctx.trigger);
+    // A disabled responder (a disabled `MenuTrigger` or `Disclosure`) disables the button itself:
+    // its `disabled` attribute, focus, hover and shortcuts, not only its presses.
+    let disabled = match responder.as_ref().and_then(|ctx| ctx.is_disabled) {
+        Some(responder_disabled) => {
+            Signal::derive(move || disabled.get() || responder_disabled.get())
+        }
+        None => disabled,
+    };
     // The responder's shortcuts (a menu trigger's) after the button's own.
     let shortcuts = match (
         shortcuts,
@@ -466,6 +527,20 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         (Some(own), Some(responder)) => Some(own.with(responder)),
         (own, responder) => own.or(responder),
     };
+    // Context menu requests: the responder's (a `MenuTrigger`'s) and the button's own. On iOS a
+    // long press requests it.
+    let context_menu = crate::hooks::use_context_menu(crate::hooks::UseContextMenuInput {
+        on_context_menu: crate::hooks::chain_optional_callbacks(
+            responder.as_ref().and_then(|ctx| ctx.on_context_menu),
+            on_context_menu,
+        ),
+    });
+    let on_long_press_start = crate::hooks::chain_optional_callbacks(
+        context_menu.on_long_press_start,
+        on_long_press_start,
+    );
+    let on_long_press =
+        crate::hooks::chain_optional_callbacks(context_menu.on_long_press, on_long_press);
     let (aria_haspopup, aria_expanded, aria_controls) = match trigger {
         Some(trigger) => (
             Signal::derive(move || aria_haspopup.get().or_else(|| trigger.aria_haspopup.get())),
@@ -482,9 +557,13 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         is_disabled: disabled,
         // Client-side routers (like leptos_router) handle link clicks in a document-level
         // listener, so clicks on anchors must bubble.
-        force_propagation: element_type == ButtonElementType::Anchor,
-        prevent_focus_on_press,
-        on_press: on_press.unwrap_or_else(|| Callback::new(|_| {})),
+        propagation: if element_type == ButtonElementType::Anchor {
+            crate::hooks::PressPropagation::Continue
+        } else {
+            crate::hooks::PressPropagation::Stop
+        },
+        prevent_focus_on_press: Signal::stored(prevent_focus_on_press),
+        on_press,
         on_press_start,
         on_press_end,
         on_press_up,
@@ -569,12 +648,15 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         },
         disabled: Signal::derive(move || has_disabled_attr && disabled.get()),
         tabindex,
-        href: Signal::derive(move || {
-            href.filter(|_| is_anchor && !disabled.get())
-                .map(|href| href.get())
-        }),
-        target: target.filter(|_| is_anchor).map(|t| t.to_oco()),
-        rel: rel.filter(|_| is_anchor),
+        href: Signal::derive(move || href.get().filter(|_| is_anchor && !disabled.get())),
+        target: (is_anchor && target != LinkTarget::Same).then(|| target.to_oco()),
+        rel: {
+            let mut rel = rel;
+            if target == LinkTarget::Blank && !rel.contains(&LinkRel::NoOpener) {
+                rel.push(LinkRel::NoOpener);
+            }
+            link_rel_to_string(&rel).filter(|_| is_anchor)
+        },
         form: if element_type == ButtonElementType::Button {
             form
         } else {
@@ -618,13 +700,17 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         // Keyboard handlers (and shortcuts) run before press handling, as in react-aria's
         // `mergeProps(focusableProps, pressProps)`. Press handling prevents the default action of
         // Enter/Space, which shortcuts check to see whether something else handled the key.
-        on_keydown: focusable_props.on_keydown.chain(press_props.on_keydown),
+        on_keydown: focusable_props
+            .on_keydown
+            .chain(press_props.on_keydown)
+            .chain(context_menu.props.on_keydown),
         on_keyup: focusable_props.on_keyup,
         on_focus: focusable_props.on_focus.chain(focus_ring_props.on_focus),
         on_blur: focusable_props.on_blur.chain(focus_ring_props.on_blur),
         on_click: press_props.on_click,
         on_dblclick: press_props.on_dblclick,
         on_pointerdown: press_props.on_pointerdown,
+        on_contextmenu: context_menu.props.on_contextmenu,
         on_pointerup: press_props.on_pointerup,
         on_mousedown: press_props.on_mousedown,
         on_dragstart: press_props.on_dragstart,
@@ -635,6 +721,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     UseButtonReturn {
         props: PropsWithStyles::new(props, styles),
+        is_disabled: disabled,
         is_pressed,
         is_hovered,
         is_focused,

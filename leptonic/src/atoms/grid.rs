@@ -3,19 +3,21 @@ use std::collections::HashSet;
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
+    Out,
     hooks::{
         CellFocusMode, DisabledBehavior, GridData, GridFocusMode, IntoAttrs,
-        KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, UseGridCellInput,
-        UseGridCellReturn, UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn,
-        UseGridStateInput,
+        KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, UseFocusRingInput,
+        UseFocusRingReturn, UseFocusVisibleInput, UseGridCellInput, UseGridCellReturn,
+        UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn, UseGridStateInput,
         collections::{
             CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, Selection, SelectionOptions,
         },
-        use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
+        use_focus_ring, use_focus_visible, use_grid, use_grid_cell, use_grid_row,
+        use_grid_row_group, use_grid_state,
     },
-    utils::ValueBinding,
-    utils::data_attributes::flag,
-    utils::{CapturedElement, classes::Classes, styles::Styles},
+    utils::{
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+    },
 };
 
 /// A headless grid: rows of cells, navigated in two dimensions with the arrow keys.
@@ -36,10 +38,12 @@ pub fn Grid(
     /// The initially selected rows.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
-    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
-    /// `default_selected_keys`.
+    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
     #[prop(into, optional)]
-    selection: Option<ValueBinding<Selection>>,
+    selection: Option<Signal<Selection>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selection: Option<Out<Selection>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
@@ -61,6 +65,8 @@ pub fn Grid(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (selection, on_selection_change) =
+        ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let state = use_grid_state(UseGridStateInput {
         collection,
         selection: SelectionOptions {
@@ -117,7 +123,8 @@ pub fn GridRowGroup(
 
 /// A row of a [`Grid`], for the collection row `key`.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-disabled` and `data-pressed` for styling.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
+/// `data-pressed` for styling.
 #[component]
 pub fn GridRow(
     /// The row's key in the grid's collection.
@@ -138,6 +145,9 @@ pub fn GridRow(
     } = use_grid_row(UseGridRowInput { grid, key });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
+    // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
+    let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
+    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
 
     view! {
         <div
@@ -146,6 +156,7 @@ pub fn GridRow(
             style=styles
             data-selected=flag(is_selected)
             data-focused=flag(is_focused)
+            data-focus-visible=flag(is_focus_visible)
             data-disabled=flag(is_disabled)
             data-pressed=flag(is_pressed)
         >
@@ -156,7 +167,7 @@ pub fn GridRow(
 
 /// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
 ///
-/// Exposes `data-pressed` for styling.
+/// Exposes `data-pressed`, `data-focused` and `data-focus-visible` for styling.
 #[component]
 pub fn GridCell(
     /// The cell's key in the grid's collection.
@@ -181,13 +192,22 @@ pub fn GridCell(
 
     let (attrs, cell_styles) = grid_cell_props.into_parts();
     let styles = cell_styles.merge(styles);
+    // Focus on the cell itself (react-aria-components: the cell's `useFocusRing`).
+    let UseFocusRingReturn {
+        props: focus_ring,
+        is_focused,
+        is_focus_visible,
+    } = use_focus_ring(UseFocusRingInput::default());
 
     view! {
         <div
             {..attrs}
+            {..focus_ring.into_attrs()}
             class=classes
             style=styles
             data-pressed=move || is_pressed.get().then_some("true")
+            data-focused=flag(is_focused)
+            data-focus-visible=flag(is_focus_visible)
         >
             {children()}
         </div>

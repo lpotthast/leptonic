@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    components::prelude::Checkbox,
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
@@ -12,53 +12,54 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorChannelFieldDemo() -> impl IntoView {
-    let state = use_color_channel_field_state(&UseColorChannelFieldStateInput {
-        default_value: HSV::new(),
-        channel: HsvChannel::Hue,
-        on_change: None,
-    });
-
-    let color_value = state.color_value;
     let disabled = RwSignal::new(false);
 
-    let field = use_color_channel_field(UseColorChannelFieldInput {
-        state,
+    // The field edits the hue of a blue. Disabled lives on the state (as in a number field).
+    let state = use_color_channel_field_state(UseColorChannelFieldStateInput {
+        default_value: Some(HSV {
+            hue: 210.0,
+            saturation: 0.6,
+            value: 0.8,
+        }),
         is_disabled: disabled.into(),
-        is_read_only: Signal::stored(false),
-        aria_label: None,
+        ..UseColorChannelFieldStateInput::new(HsvChannel::Hue)
+    });
+    let field = use_color_channel_field(UseColorChannelFieldInput {
+        field: UseNumberFieldInput {
+            has_label: true.into(),
+            ..UseNumberFieldInput::new(state.number)
+        },
+        ..UseColorChannelFieldInput::new(state)
     });
 
+    // The stepper buttons come as `UseButtonInput`s: render them with `use_button`.
     let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
     let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
 
-    let preview_styles = Styles::new().add_reactive(move || {
-        BackgroundColorProperty.declare(CssColor::from(color_value.get().into_rgb8()))
-    });
+    let color = state.color_value;
+    let preview_styles =
+        Styles::new().add_optional(move || color.get().map(|c| BackgroundColorProperty.declare(CssColor::from(c.into_rgb8()))));
 
     view! {
-        <div>
-            <div {..field.group_props.into_attrs()}>
-                <label {..field.label_props.into_attrs()} class="demo-color-channel-field-label">
-                    "Hue (0\u{2013}360)"
-                </label>
-                <div class="demo-color-channel-field-row">
-                    <button {..decrement_attrs} style=decrement_styles class="demo-stepper-btn">
-                        "\u{2212}"
-                    </button>
-                    <input {..field.input_props.into_attrs()} class="demo-color-channel-field-input"/>
-                    <button {..increment_attrs} style=increment_styles class="demo-stepper-btn">
-                        "+"
-                    </button>
-                    <span class="demo-color-channel-field-preview" style=preview_styles></span>
-                </div>
+        <div class="demo-field">
+            <label class="demo-field-label" {..field.label_props.into_attrs()}>"Hue (0\u{2013}360)"</label>
+            <div class="demo-color-field-row" {..field.group_props.into_attrs()}>
+                <button class="demo-btn" {..decrement_attrs} style=decrement_styles>
+                    <span aria-hidden="true">"\u{2212}"</span>
+                </button>
+                <input class="demo-color-channel-field-input" {..field.input_props.into_attrs()}/>
+                <button class="demo-btn" {..increment_attrs} style=increment_styles>
+                    <span aria-hidden="true">"+"</span>
+                </button>
+                <span class="demo-color-field-preview" style=preview_styles></span>
             </div>
+        </div>
 
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-
-            <p class="demo-mt-half">
-                "Color: "
-                <code>{move || color_value.get().to_css_string()}</code>
-            </p>
+        <p class="demo-status">
+            {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {}", c.to_css_string()))}
+        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

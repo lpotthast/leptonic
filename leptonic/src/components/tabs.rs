@@ -1,5 +1,4 @@
 use leptos::{context::Provider, prelude::*};
-use uuid::Uuid;
 
 use crate::{
     Mount,
@@ -46,7 +45,7 @@ impl Default for TabHistory {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct TabsContext {
+pub(crate) struct TabsContext {
     pub tabs: ReadSignal<Vec<TabData>>,
     pub set_tabs: WriteSignal<Vec<TabData>>,
 
@@ -74,7 +73,7 @@ impl TabsContext {
         }
     }
 
-    pub(crate) fn deregister(&self, tab_id: Uuid) {
+    pub(crate) fn deregister(&self, tab_id: &str) {
         self.set_tabs.update(|labels| {
             if let Some(idx) = labels.iter().position(|tab| tab.id == tab_id) {
                 labels.remove(idx);
@@ -89,7 +88,7 @@ impl TabsContext {
     }
 }
 
-pub fn use_tabs() -> TabsContext {
+pub(crate) fn use_tabs() -> TabsContext {
     expect_context::<TabsContext>()
 }
 
@@ -119,7 +118,7 @@ pub fn Tabs(
 }
 
 #[component]
-pub fn TabsContent(children: Children) -> impl IntoView {
+pub(crate) fn TabsContent(children: Children) -> impl IntoView {
     let ctx = use_tabs();
 
     // Note: Rendering out the children first is important for reliable SSR.
@@ -135,7 +134,7 @@ pub fn TabsContent(children: Children) -> impl IntoView {
 }
 
 #[component]
-pub fn TabSelectors(
+pub(crate) fn TabSelectors(
     tabs: ReadSignal<Vec<TabData>>,
     history: ReadSignal<TabHistory>,
     set_history: WriteSignal<TabHistory>,
@@ -144,7 +143,7 @@ pub fn TabSelectors(
         <div class="leptonic-tab-selectors" role="tablist">
             <For
                 each=move || tabs.get()
-                key=|tab| tab.id
+                key=|tab| tab.id.clone()
                 children=move |tab| {
                     let n1 = tab.name.clone();
                     let n2 = tab.name.clone();

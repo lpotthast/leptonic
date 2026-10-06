@@ -45,8 +45,8 @@ themes = []
 # Enables clipboard support.
 clipboard = ["components", "web-sys/Clipboard"]
 
-# Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
-tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
+# Enables the tiptap rich text editor (its JS ships with leptos-tiptap as wasm-bindgen snippets).
+tiptap = ["components", "dep:leptos-tiptap"]
 
 syntax-highlight = ["components", "dep:syntect"]
 
@@ -70,7 +70,7 @@ leptos = "0.8.2"
 leptos-classes = "0.1.4"
 leptos-element-capture = "0.1.0"
 leptos-styles = "0.1.0"
-leptos-tiptap = { version = "0.9.0", optional = true }
+leptos-tiptap = { version = "0.10.0", optional = true, default-features = false, features = ["full"] }
 leptos-use = { version = "0.19.2", features = ["math"] }
 leptos_meta = { version = "0.8.2", features = [] }
 leptos_reactive = "0.6.6"
@@ -95,7 +95,10 @@ wasm-bindgen = "0.2.117"
 wasm-bindgen-futures = "0.4.64"
 web-sys = { version = "0.3.91", features = [
     "Animation",
+    "AnimationPlayState",
+    "AnimationTimeline",
     "CssTransition",
+    "DocumentTimeline",
     "DomRect",
     "Element",
     "Event",
@@ -113,6 +116,7 @@ web-sys = { version = "0.3.91", features = [
     "KeyboardEventInit",
     "MouseEvent",
     "MouseEventInit",
+    "PointerEventInit",
     "NodeFilter",
     "NodeList",
     "RadioNodeList",
@@ -156,6 +160,8 @@ icu_list = "2"
 icu_locale = "2"
 icu_normalizer = "2"
 icu_plurals = "2"
+# `Send + Sync` formatters (Arc instead of Rc in data payloads), so they can be cached in signals.
+icu_provider = { version = "2", features = ["sync"] }
 icu_time = "2"
 itertools = "0.14.0"
 ammonia = { version = "4", optional = true }
@@ -165,12 +171,12 @@ syntect = { version = "5", optional = true, default-features = false, features =
 anyhow = "1.0.102"
 cargo_toml = "0.22.3"
 leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
-leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
 assertr = "0.7.1"
 browser-test = "0.5.0"
 leptos-browser-test = "0.3.0"
+leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 rootcause = "0.13.0"
 tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }
 tracing = "0.1.44"

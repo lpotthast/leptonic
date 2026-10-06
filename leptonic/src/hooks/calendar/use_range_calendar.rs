@@ -37,6 +37,7 @@ use crate::{
         EventHandler,
         aria::{AriaDisabled, AriaRole},
         id::use_id,
+        key::{KeyboardEventKey, KeyboardKey},
     },
 };
 
@@ -208,7 +209,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
         if is_disabled.get_untracked() {
             return;
         }
-        if e.key().as_str() == "Escape" && anchor_date.get_untracked().is_some() {
+        if e.typed_key() == KeyboardKey::Escape && anchor_date.get_untracked().is_some() {
             e.prevent_default();
             set_anchor_date.run(None);
         }

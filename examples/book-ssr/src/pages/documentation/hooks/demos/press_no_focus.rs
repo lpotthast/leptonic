@@ -1,34 +1,35 @@
-use leptonic::hooks::*;
+use leptonic::{hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
 
 #[component]
 pub fn PressNoFocusDemo() -> impl IntoView {
-    let (focused, set_focused) = signal(false);
+    let focused = RwSignal::new(false);
 
     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
-        prevent_focus_on_press: true,
+        prevent_focus_on_press: true.into(),
         ..Default::default()
     });
     let (attrs, styles) = props.into_parts();
 
-    view! {
-        <p>
-            <strong>"prevent_focus_on_press"</strong>
-            " \u{2014} Click the button: it does not receive focus, so no focus outline appears. "
-            "The button above does receive focus when clicked."
-        </p>
+    // Only to show whether the button has focus.
+    let UseFocusReturn { props: focus_props } = use_focus(UseFocusInput {
+        on_focus_change: Some(Callback::new(move |is_focused| focused.set(is_focused))),
+        ..Default::default()
+    });
 
+    view! {
         <button
             {..attrs}
+            {..focus_props.into_attrs()}
             style=styles
-            class="demo-press-button demo-interactions-show-focus"
-            class:pressed=move || is_pressed.get()
-            on:focus=move |_| set_focused.set(true)
-            on:blur=move |_| set_focused.set(false)
+            class="demo-press-button"
+            data-pressed=flag(is_pressed)
         >
-            "Click me (no focus)"
+            "Press me (no focus)"
         </button>
 
-        <p>"Focused: "{move || focused.get()}</p>
+        <p class="demo-status">
+            {move || if focused.get() { "The button has focus." } else { "The button doesn\u{2019}t have focus." }}
+        </p>
     }
 }

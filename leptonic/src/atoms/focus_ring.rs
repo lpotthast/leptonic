@@ -10,10 +10,19 @@ pub struct FocusRingContext {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Marks its child with `data-focused` while it has focus and `data-focus-visible` while that
+/// focus should be visible (react-aria's `FocusRing`, whose `focusClass`/`focusRingClass` these
+/// attributes replace).
 #[component(transparent)]
 pub fn FocusRing(
     #[prop(into, optional)] is_disabled: Signal<bool>,
-    #[prop(optional)] within: bool,
+    /// Whether focus inside the child counts too, instead of only focus on the child itself.
+    #[prop(optional)]
+    within: bool,
+    /// Whether the child is a text input: typing in it doesn't make focus visible, only Tab and
+    /// Escape do.
+    #[prop(optional)]
+    is_text_input: bool,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus: Option<Callback<FocusEvent>>,
     #[prop(into, optional)] on_blur: Option<Callback<FocusEvent>>,
@@ -28,7 +37,7 @@ pub fn FocusRing(
         is_disabled,
         within,
         auto_focus,
-        is_text_input: false,
+        is_text_input,
         on_focus,
         on_blur,
         on_focus_change,
@@ -66,6 +75,9 @@ pub fn FocusRing(
                 .add_any_attr(on_focusout_attr)
                 .add_any_attr(custom_attribute("data-focus-visible", move || {
                     data_focus_visible_signal.try_get().flatten()
+                }))
+                .add_any_attr(custom_attribute("data-focused", move || {
+                    is_focused.try_get().unwrap_or_default().then_some("true")
                 }))
         },
     )

@@ -30,7 +30,7 @@ pub fn PageHookTagGroup() -> impl IntoView {
         data,
         ..
     } = use_tag_group(UseTagGroupInput {
-        has_label: true,
+        has_label: true.into(),
         on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
             tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
         })),

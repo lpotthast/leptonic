@@ -5,15 +5,18 @@ use leptonic::{
     utils::time::{Day, InMonth},
 };
 use leptos::{html, prelude::*};
-use leptos_use::use_document;
 use time::{
     OffsetDateTime,
     macros::{datetime, format_description},
 };
-use wasm_bindgen::JsCast;
+
+// A stopgap until the calendar cells move the browser focus themselves.
+use super::calendar_focus::{follow_focused_date, week_key};
 
 #[component]
 pub fn CalendarRangeDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
+
     let UseRangeCalendarReturn {
         calendar_props,
         state,
@@ -23,6 +26,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
             datetime!(2026-03-10 0:00 UTC),
             datetime!(2026-03-14 0:00 UTC),
         )),
+        is_disabled: disabled.into(),
         ..Default::default()
     });
     let calendar = state.calendar;
@@ -33,7 +37,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
     });
 
     let grid_ref = NodeRef::<html::Table>::new();
-    follow_focused_date(calendar.focused_date, grid_ref);
+    follow_focused_date(calendar.focused_date, grid_ref, false);
 
     let status = move || match (state.anchor_date.get(), state.value.get()) {
         (Some(anchor), _) => format!("Selecting from {} \u{2026}", format_date(anchor)),
@@ -44,12 +48,11 @@ pub fn CalendarRangeDemo() -> impl IntoView {
                 end: Some(end),
             },
         ) => {
-            let nights = (end.date() - start.date()).whole_days();
-            format!(
-                "{} \u{2013} {} ({nights} nights)",
-                format_date(start),
-                format_date(end)
-            )
+            let nights = match (end.date() - start.date()).whole_days() {
+                1 => "1 night".to_owned(),
+                nights => format!("{nights} nights"),
+            };
+            format!("{} \u{2013} {} ({nights})", format_date(start), format_date(end))
         }
         (None, _) => "No range selected".to_owned(),
     };
@@ -60,6 +63,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
                 <Button
                     on_press=move |_| calendar.focus_previous_page.run(())
                     variant=ButtonVariant::Flat
+                    is_disabled=disabled
                     attr:aria-label="Previous month"
                 >
                     <Icon icon=icondata::BsChevronLeft/>
@@ -70,6 +74,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
                 <Button
                     on_press=move |_| calendar.focus_next_page.run(())
                     variant=ButtonVariant::Flat
+                    is_disabled=disabled
                     attr:aria-label="Next month"
                 >
                     <Icon icon=icondata::BsChevronRight/>
@@ -83,7 +88,7 @@ pub fn CalendarRangeDemo() -> impl IntoView {
                     </tr>
                 </thead>
                 <tbody>
-                    <For each=move || calendar.weeks.get() key=|week| day_key(&week.days[0]) let(week)>
+                    <For each=move || calendar.weeks.get() key=week_key let(week)>
                         <tr>
                             {week.days.into_iter().map(|day| view! { <RangeDayCell state day/> }).collect_view()}
                         </tr>
@@ -92,7 +97,11 @@ pub fn CalendarRangeDemo() -> impl IntoView {
             </table>
         </div>
 
-        <p class="demo-state-display">{status}</p>
+        <p class="demo-status">{status}</p>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -159,38 +168,4 @@ fn RangeDayCell(state: UseRangeCalendarStateReturn, day: Day) -> impl IntoView {
 fn format_date(date: OffsetDateTime) -> String {
     date.format(format_description!("[month repr:short] [day padding:none]"))
         .unwrap_or_default()
-}
-
-/// Weeks are recomputed whenever the focused date changes. Keying them by date keeps the DOM, and the focused
-/// button, while you move within a month. A date appears in three months (e.g. as a day of the next month), hence
-/// `in_month`.
-fn day_key(day: &Day) -> (time::Date, u8) {
-    (day.date_time.date(), day.in_month as u8)
-}
-
-/// The cells only update their `tabindex` when the focused date changes; they don't move DOM focus. Focus the
-/// tabbable cell after each change, unless focus is elsewhere on the page (e.g. on the month buttons).
-fn follow_focused_date(focused_date: Signal<OffsetDateTime>, grid: NodeRef<html::Table>) {
-    Effect::watch(
-        move || focused_date.get(),
-        move |_, _, _| {
-            // Wait for the new month to render.
-            request_animation_frame(move || {
-                let Some(grid) = grid.get_untracked() else {
-                    return;
-                };
-                // Focus is on the body when the previously focused cell was removed by a month change.
-                let focus_in_grid = use_document().active_element().is_none_or(|active| {
-                    active.tag_name() == "BODY" || grid.contains(Some(&active))
-                });
-                if focus_in_grid
-                    && let Ok(Some(cell)) = grid.query_selector("button[tabindex='0']")
-                    && let Ok(cell) = cell.dyn_into::<web_sys::HtmlElement>()
-                {
-                    let _ = cell.focus();
-                }
-            });
-        },
-        false,
-    );
 }

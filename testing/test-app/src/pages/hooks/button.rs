@@ -30,7 +30,7 @@ pub fn PageHookButton() -> impl IntoView {
     let (anchor_attrs, anchor_styles) = use_button(UseButtonInput {
         id: Some("test-btn-anchor".into()),
         element_type: ButtonElementType::Anchor,
-        href: Some(Signal::stored("#anchor-target".to_owned())),
+        href: Signal::stored(Some("#anchor-target".to_owned())),
         is_disabled: disabled.into(),
         ..Default::default()
     })

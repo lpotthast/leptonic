@@ -1,8 +1,9 @@
 use leptonic::{
+    components::prelude::Checkbox,
     hooks::*,
     utils::{
-        css::{CssDimension, LengthPercentageAuto, NonNegativeLengthPercentage, Size, try_pct},
-        style::{LeftProperty, WidthProperty},
+        css::{computed_pct, computed_size},
+        style::WidthProperty,
         styles::Styles,
     },
 };
@@ -10,82 +11,47 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SliderBasicDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
+
     let state = use_slider_state(UseSliderStateInput {
-        values: SliderValues::Uncontrolled(vec![50.0]),
-        min_value: 0.0,
-        max_value: 100.0,
-        step: Some(1.0),
-        is_disabled: false.into(),
-        orientation: Orientation::Horizontal.into(),
-        on_change: None,
-        on_change_end: None,
+        default_values: Some(vec![50.0]),
+        is_disabled: disabled.into(),
+        ..UseSliderStateInput::new(0.0, 100.0)
     });
-
-    let UseSliderReturn {
-        group_props,
-        output_props,
-        track_props,
-        track_ref,
-        ..
-    } = use_slider(UseSliderInput {
-        state,
-        aria_label: Some("Volume"),
-        aria_labelledby: None,
+    let slider = use_slider(UseSliderInput {
+        // A visible label names the slider: spread `label_props` on it.
+        has_label: Signal::stored(true),
+        ..UseSliderInput::new(state)
     });
-    let (track_attrs, track_styles) = track_props.into_parts();
-
-    let UseSliderThumbReturn {
-        thumb_props,
-        input_props,
-        percentage,
-        value,
-        ..
-    } = use_slider_thumb(UseSliderThumbInput {
-        state,
-        track: track_ref,
-        index: 0,
-        name: Some("volume"),
-        aria_label: Some("Volume".into()),
-        aria_labelledby: None,
-        is_disabled: state.is_disabled,
-        decimal_places: None,
-        aria_describedby: None,
-        aria_details: None,
-        aria_errormessage: None,
-        aria_valuetext: None,
+    let thumb = use_slider_thumb(UseSliderThumbInput::new(state, &slider));
+    // The slider hooks don't track keyboard focus: a focus ring on the thumb sets `data-focus-visible` while its
+    // input has keyboard focus.
+    let focus_ring = use_focus_ring(UseFocusRingInput {
+        within: true,
+        ..UseFocusRingInput::default()
     });
-
-    // Fill width and thumb position are computed at runtime; everything else comes from CSS classes.
-    let fill_styles = Styles::new()
-        .add_reactive(move || WidthProperty.declare(computed_size(computed_pct(percentage.get()))));
-    let thumb_styles = Styles::new().add_reactive(move || {
-        LeftProperty.declare(LengthPercentageAuto::from(computed_pct(percentage.get())))
+    let (track_attrs, track_styles) = slider.track_props.into_parts();
+    // The thumb positions itself on the track.
+    let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
+    // The fill covers the track up to the thumb.
+    let fill_styles = Styles::new().add_reactive(move || {
+        WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0) * 100.0)))
     });
 
     view! {
-        <div class="demo-slider" {..group_props.into_attrs()}>
-            <span class="demo-slider-label" aria-hidden="true">"Volume"</span>
+        <div class="demo-slider" {..slider.group_props.into_attrs()}>
+            <span class="demo-slider-label" {..slider.label_props.into_attrs()}>"Volume"</span>
             <div class="demo-slider-track" {..track_attrs} style=track_styles>
-                <div class="demo-slider-fill demo-slider-fill-positioned" style=fill_styles></div>
-                <div class="demo-slider-thumb demo-slider-thumb-positioned" {..thumb_props.into_attrs()} style=thumb_styles>
-                    <input class="demo-visually-hidden-input" {..input_props.into_attrs()}/>
+                <div class="demo-slider-fill" style=fill_styles></div>
+                <div class="demo-slider-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
+                    <input class="demo-visually-hidden-input" {..thumb.input_props.into_attrs()}/>
                 </div>
             </div>
-            <output class="demo-slider-output" {..output_props.into_attrs()}>
-                {move || format!("{:.0}", value.get())}
-            </output>
+            <output class="demo-slider-output" {..slider.output_props.into_attrs()}>{move || state.formatted_values()}</output>
+        </div>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
-}
-
-/// Percentages computed at runtime can be NaN (e.g. when `min == max`); fall back to `0`.
-fn computed_pct(value: f64) -> CssDimension {
-    try_pct(value).unwrap_or(CssDimension::Zero)
-}
-
-/// `width` only accepts non-negative values; fall back to `0` otherwise.
-fn computed_size(value: CssDimension) -> Size {
-    NonNegativeLengthPercentage::try_from(value)
-        .unwrap_or_else(|_| NonNegativeLengthPercentage::new(CssDimension::Zero))
-        .into()
 }

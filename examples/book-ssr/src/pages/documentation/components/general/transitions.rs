@@ -20,7 +20,8 @@ pub fn PageTransitions() -> impl IntoView {
                 <Code inline=true>"Collapse"</Code>", "<Code inline=true>"Fade"</Code>", "<Code inline=true>"Grow"</Code>
                 ", "<Code inline=true>"Slide"</Code>" and "<Code inline=true>"Zoom"</Code>". Each wraps its children in "
                 "a "<Code inline=true>"<div>"</Code>" and switches that element between both states when a "
-                <Code inline=true>"Signal<bool>"</Code>" changes; the CSS transitions of the element do the animating."
+                <Code inline=true>"Signal<bool>"</Code>" changes; the CSS transitions of the element do the animating. See the "
+                <Link href=routes::doc::Animation.materialize()>"Animation overview"</Link>" for the other animation building blocks."
             </p>
             <p>
                 "The children always stay mounted: a hidden transition is still in the DOM, only collapsed, transparent "
@@ -35,43 +36,12 @@ pub fn PageTransitions() -> impl IntoView {
                 <TransitionsCompareDemo/>
             </Demo>
 
-            <Section title="Transitions or Animation Hooks">
-                <p>
-                    "Use a transition component when content should stay mounted and simply animate between shown and "
-                    "hidden: an expandable details panel, a sidebar that slides away, a hint that fades out. You pick a "
-                    "component, pass a signal, and the theme or your CSS does the rest."
-                </p>
-                <p>
-                    "Use the "<Link href=routes::doc::hooks::Animation.materialize()>"animation hooks"</Link>" ("
-                    <Code inline=true>"use_enter_animation"</Code>", "<Code inline=true>"use_exit_animation"</Code>
-                    ") when the element is added to and removed from the DOM, as overlays, popovers and modals are. They "
-                    "keep an element mounted until its exit animation finished and report "<Code inline=true>"data-entering"</Code>
-                    " / "<Code inline=true>"data-exiting"</Code>" states, so you can unmount it afterwards. Transitions "
-                    "can\u{2019}t do that: they never unmount their children and don\u{2019}t tell you when an animation ended."
-                </p>
-                <DocTable headers=&["", "Transitions", "Animation hooks"]>
-                    <TableRow>
-                        <TableCell>"Children"</TableCell>
-                        <TableCell>"Always mounted"</TableCell>
-                        <TableCell>"Mounted while open or exiting; you unmount them afterwards"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"State"</TableCell>
-                        <TableCell><Code inline=true>"data-in"</Code>" attribute (Fade, Grow, Slide, Zoom) or inline size (Collapse)"</TableCell>
-                        <TableCell><Code inline=true>"data-entering"</Code>", "<Code inline=true>"data-exiting"</Code>", "<Code inline=true>"ExitState"</Code></TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Animation"</TableCell>
-                        <TableCell>"CSS transitions of the wrapper element"</TableCell>
-                        <TableCell>"Any CSS animation or transition on your element"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Layer"</TableCell>
-                        <TableCell>"Components with a wrapper "<Code inline=true>"<div>"</Code></TableCell>
-                        <TableCell>"Hooks; you render the element"</TableCell>
-                    </TableRow>
-                </DocTable>
-            </Section>
+            <p>
+                "Transitions keep their children mounted. For elements that are added to and removed from the DOM, such "
+                "as overlays, use the animation hooks instead; the "
+                <Link href=format!("{}#relationships", routes::doc::Animation.materialize())>"Animation overview"</Link>
+                " compares both."
+            </p>
 
             <Section title="Collapse">
                 <p>
@@ -105,7 +75,7 @@ pub fn PageTransitions() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="Horizontal axis">
+                <Section title="Horizontal Axis">
                     <p>
                         "With "<Code inline=true>"axis=CollapseAxis::X"</Code>", Collapse animates the width. Give the content "
                         "a fixed width: inside a zero-width wrapper, content without one shrinks to its narrowest layout "
@@ -116,7 +86,7 @@ pub fn PageTransitions() -> impl IntoView {
                     </Demo>
                 </Section>
 
-                <Section title="Measured size">
+                <Section title="Measured Size">
                     <p>
                         "Collapse measures the content only when "<Code inline=true>"show"</Code>" changes (and once its "
                         "element is mounted). The expanded size is a fixed pixel value, not "<Code inline=true>"auto"</Code>
@@ -240,8 +210,8 @@ pub fn PageTransitions() -> impl IntoView {
                         <b>"Announce the state on the trigger."</b>" The transitions render no ARIA attributes. A button "
                         "that expands content should set "<Code inline=true>"aria-expanded"</Code>
                         ", as the Collapse demos do with "<Code inline=true>"Button"</Code>"\u{2019}s "
-                        <Code inline=true>"aria_expanded"</Code>" prop. For a complete disclosure pattern, use the "
-                        <Link href=routes::doc::Collapsible.materialize()>"Collapsible"</Link>"."
+                        <Code inline=true>"aria_expanded"</Code>" prop. For the complete disclosure ARIA pattern, use a "
+                        <Link href=routes::doc::Disclosure.materialize()>"Disclosure"</Link>"."
                     </li>
                 </ul>
                 <Code language=Language::Css>
@@ -285,9 +255,9 @@ pub fn PageTransitions() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::hooks::Animation.materialize()>"Animation Hooks"</Link></li>
-                <li><Link href=routes::doc::Collapsible.materialize()>"Collapsible"</Link></li>
-                <li><Link href=routes::doc::Overlays.materialize()>"Overlays"</Link></li>
+                <li><Link href=routes::doc::Animation.materialize()>"Animation"</Link></li>
+                <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure"</Link></li>
+                <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,30 +1,116 @@
+use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{text_field_basic::TextFieldBasicDemo, text_field_search::TextFieldSearchDemo};
+use super::demos::text_field_basic::TextFieldBasicDemo;
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseTextField() -> impl IntoView {
     view! {
         <DocPage title="Text Field Hooks">
             <p>
-                <Code inline=true>"use_text_field"</Code>" and "<Code inline=true>"use_search_field"</Code>
-                " add labelling, validation and keyboard handling to native text inputs. See the "
+                "The text field hooks add labelling and validation to a native text input or text area: "
+                <AnchorLink href="#use-text-field-state"><Code inline=true>"use_text_field_state"</Code></AnchorLink>
+                " holds the value, "<AnchorLink href="#use-text-field"><Code inline=true>"use_text_field"</Code></AnchorLink>
+                " returns the attributes of the input, its label, description and error message, and "
+                <AnchorLink href="#use-formatted-text-field"><Code inline=true>"use_formatted_text_field"</Code></AnchorLink>
+                " keeps the text of a formatted field valid while typing. See the "
                 <Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useTextField"/>
 
-            <Section title="use_text_field">
-                <p>
-                    "The hook owns the field\u{2019}s value. Create its state with "<Code inline=true>"use_text_field_state"</Code>
-                    " ("<Code inline=true>"default_value"</Code>", optional "<Code inline=true>"on_change"</Code>"), read it from "
-                    <Code inline=true>"state.value"</Code>" and change it with "<Code inline=true>"state.set_value(..)"</Code>
-                    ". Components that keep the value elsewhere build one with "
-                    <Code inline=true>"TextFieldState::new(value, set_value)"</Code>"."
-                </p>
+            <Section title="Example">
+                <p>"Create the state, pass it to the hook and spread the returned props onto your elements:"</p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::hooks::*;
 
+                        let name = use_text_field_state(UseTextFieldStateInput::default());
+                        let field = use_text_field(UseTextFieldInput {
+                            has_label: true.into(),
+                            ..UseTextFieldInput::new(name)
+                        });
+
+                        view! {
+                            <label {..field.label_props.into_attrs()}>"Name"</label>
+                            <input {..field.input_props.into_attrs()}/>
+                            <p>{move || format!("Hello, {}!", name.value.get())}</p>
+                        }
+                    "#)}
+                </Code>
+            </Section>
+
+            <Section title="Demo">
+                <p>
+                    "A required username with a description, a length limit and custom validation. The error message "
+                    "appears as soon as the value is invalid."
+                </p>
+                <Demo
+                    description="Required username field with description, validation error, a clear button and a disabled toggle"
+                    source=include_str!("demos/text_field_basic.rs")
+                >
+                    <TextFieldBasicDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="use_text_field_state">
+                <p>
+                    "Creates the field\u{2019}s "<Code inline=true>"TextFieldState"</Code>". The hook owns the value, starting "
+                    "at "<Code inline=true>"default_value"</Code>", unless you bind it to your app state with "
+                    <Code inline=true>"value"</Code>". Either way, every change goes through "
+                    <Code inline=true>"state.set_value(..)"</Code>"."
+                </p>
+                <Section title="Input" id="use-text-field-state-input">
+                    <ApiTable kind=ApiKind::Input of="UseTextFieldStateInput">
+                        <ApiRow name="default_value" ty="String" default="empty">
+                            "The initial value. Ignored when "<Code inline=true>"value"</Code>" is bound."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<String>>" default="None">
+                            "The value as app state, replacing "<Code inline=true>"default_value"</Code>": "
+                            <Code inline=true>"Some(signal.into())"</Code>" for an "<Code inline=true>"RwSignal<String>"</Code>
+                            " or a "<Code inline=true>"(ReadSignal, WriteSignal)"</Code>" pair."
+                        </ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<String>>" default="None">"Called with the value when it changes."</ApiRow>
+                    </ApiTable>
+                </Section>
+                <Section title="Return" id="use-text-field-state-return">
+                    <p>"The hook returns a "<Code inline=true>"TextFieldState"</Code>" ("<Code inline=true>"Copy"</Code>")."</p>
+                    <ApiTable kind=ApiKind::Return of="TextFieldState">
+                        <ApiRow name="value" ty="Signal<String>">"The current value."</ApiRow>
+                    </ApiTable>
+                    <DocTable headers=&["Method", "Purpose"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_value(value)"</Code></TableCell>
+                            <TableCell>"Changes the value."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"with_on_change(callback)"</Code></TableCell>
+                            <TableCell>"The same state, also calling "<Code inline=true>"callback"</Code>" when the value changes."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"TextFieldState::new(value, set_value)"</Code></TableCell>
+                            <TableCell>
+                                "A state whose value lives elsewhere, such as the input text of a "
+                                <Link href=routes::doc::combobox::Hook.materialize()>"combobox"</Link>"."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"TextFieldState::from(signal)"</Code></TableCell>
+                            <TableCell>
+                                "A state bound to an "<Code inline=true>"RwSignal<String>"</Code>" or a "
+                                <Code inline=true>"(ReadSignal, WriteSignal)"</Code>" pair, like Leptos\u{2019} "
+                                <Code inline=true>"bind:value"</Code>"."
+                            </TableCell>
+                        </TableRow>
+                    </DocTable>
+                </Section>
+            </Section>
+
+            <Section title="use_text_field">
+                <p>"Wires the input to its label, description and error message, and validates the value."</p>
                 <Section title="Input" id="use-text-field-input">
                     <p>
                         "Create the input with "<Code inline=true>"UseTextFieldInput::new(state)"</Code>" and set further fields "
@@ -32,27 +118,33 @@ pub fn PageUseTextField() -> impl IntoView {
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseTextFieldInput">
-                        <ApiRow name="state" ty="TextFieldState">"The value, from "<Code inline=true>"use_text_field_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="TextFieldState">
+                            "Required. The value, from "<AnchorLink href="#use-text-field-state"><Code inline=true>"use_text_field_state"</Code></AnchorLink>"."
+                        </ApiRow>
                         <ApiRow name="element" ty="TextFieldElement" default="Input">
                             <Code inline=true>"Input"</Code>" or "<Code inline=true>"TextArea"</Code>": the element you render."
                         </ApiRow>
                         <ApiRow name="input_type" ty="Signal<InputType>" default="Text">
                             <Code inline=true>"Text"</Code>", "<Code inline=true>"Search"</Code>", "<Code inline=true>"Url"</Code>", "
                             <Code inline=true>"Tel"</Code>", "<Code inline=true>"Email"</Code>" or "<Code inline=true>"Password"</Code>
-                            ". Only for "<Code inline=true>"<input>"</Code>"."
+                            ". Only for "<Code inline=true>"<input>"</Code>"; reactive, e.g. for a \u{201c}show password\u{201d} toggle."
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="label_id" ty="Option<String>" default="None">"The label\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">
+                        <ApiRow name="label_id" ty="Option<String>" default="None">"The label\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>
                             ". The input is then labelled by it."
                         </ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">"Disables the field or makes it read-only."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">
-                            "Sets "<Code inline=true>"required"</Code>" and "<Code inline=true>"aria-required"</Code>"."
+                            "Marks the field as required: with "<Code inline=true>"aria-required"</Code>" under "
+                            <Code inline=true>"ValidationBehavior::Aria"</Code>", with the native "<Code inline=true>"required"</Code>
+                            " under "<Code inline=true>"Native"</Code>"."
                         </ApiRow>
-                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the value invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
-                            <Code inline=true>"false"</Code>" leaves validation to the other sources."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
+                            "Marks the value invalid while "<Code inline=true>"true"</Code>", taking precedence over all other "
+                            "validation; "<Code inline=true>"false"</Code>" leaves validation to the other sources."
+                        </ApiRow>
                         <ApiRow name="validate" ty="Option<ValidateFn<String>>" default="None">
                             "Custom validation, returning "<Code inline=true>"Ok(())"</Code>" or "<Code inline=true>"Err(messages)"</Code>"."
                         </ApiRow>
@@ -75,7 +167,7 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="enter_key_hint" ty="Option<EnterKeyHint>" default="None">"The label of the virtual keyboard\u{2019}s Enter key."</ApiRow>
                         <ApiRow name="auto_capitalize" ty="Option<AutoCapitalize>" default="None">"Automatic capitalization."</ApiRow>
                         <ApiRow name="auto_correct, spell_check" ty="Option<bool>" default="None">"Automatic correction and spell checking."</ApiRow>
-                        <ApiRow name="auto_focus" ty="bool" default="false">"Focus the input when it mounts."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="exclude_from_tab_order" ty="bool" default="false">"Sets "<Code inline=true>"tabindex=\"-1\""</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Further elements labelling the field."</ApiRow>
@@ -87,9 +179,9 @@ pub fn PageUseTextField() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="aria_autocomplete" ty="Option<AriaAutocomplete>" default="None">"The "<Code inline=true>"aria-autocomplete"</Code>" attribute."</ApiRow>
                         <ApiRow name="aria_haspopup" ty="Option<AriaHasPopup>" default="None">"The "<Code inline=true>"aria-haspopup"</Code>" attribute."</ApiRow>
-                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the field gains or loses focus."</ApiRow>
-                        <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Keyboard callbacks."</ApiRow>
+                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when the input gains or loses focus, with the event."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>
+                        <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called on key presses in the input."</ApiRow>
                         <ApiRow name="shortcuts" ty="Option<KeyboardShortcuts>" default="None">"Keyboard shortcuts handled while the field has focus."</ApiRow>
                     </ApiTable>
 
@@ -122,105 +214,54 @@ pub fn PageUseTextField() -> impl IntoView {
                         <ApiRow name="validation_details" ty="Signal<ValidityStateSnapshot>">"Detailed validity state."</ApiRow>
                     </ApiTable>
                 </Section>
-
-                <Section title="Example" id="use-text-field-example">
-                    <p>
-                        "A required username with a description, a length limit and custom validation. The error message "
-                        "appears as soon as the value is invalid."
-                    </p>
-
-                    <Demo
-                        description="Required username field with description, validation error, a clear button and a disabled toggle"
-                        source=include_str!("demos/text_field_basic.rs")
-                        source_open=true
-                    >
-                        <TextFieldBasicDemo/>
-                    </Demo>
-                </Section>
             </Section>
 
-            <Section title="use_search_field">
+            <Section title="use_formatted_text_field">
                 <p>
-                    "A text field for search queries: the input gets "<Code inline=true>"type=\"search\""</Code>", "
-                    <Keys keys="Enter"/>" calls "<Code inline=true>"on_submit"</Code>" with the value (without "
-                    <Code inline=true>"on_submit"</Code>", it submits the form), and "<Keys keys="Escape"/>" empties the field "
-                    "and calls "<Code inline=true>"on_clear"</Code>". In an empty field, "<Keys keys="Escape"/>" is left to "
-                    "surrounding elements, so it can close a dialog. The value state is a "<Code inline=true>"TextFieldState"</Code>
-                    ", as for "<Code inline=true>"use_text_field"</Code>"."
+                    "Keeps the text of a field with a format, such as a number or a hex color, valid while the user types: "
+                    "it checks every edit with "<Code inline=true>"validate"</Code>" before the browser applies it, and "
+                    "reverts composed text (from an input method or autocorrect) that ends up invalid. The "
+                    <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>
+                    " use it. Attach the returned handlers to the input next to "<Code inline=true>"use_text_field"</Code>
+                    "\u{2019}s props."
                 </p>
-
-                <Section title="Input" id="use-search-field-input">
-                    <p>
-                        "Create the input with "<Code inline=true>"UseSearchFieldInput::new(UseTextFieldInput { .. })"</Code>
-                        ", which sets the text field\u{2019}s "<Code inline=true>"input_type"</Code>" to "
-                        <Code inline=true>"Search"</Code>"."
-                    </p>
-
-                    <ApiTable kind=ApiKind::Input of="UseSearchFieldInput">
-                        <ApiRow name="text_field" ty="UseTextFieldInput">
-                            "The text field: value state, labelling, validation, \u{2026} See "
-                            <a href="#use-text-field-input">"use_text_field"</a>"."
+                <DocTable headers=&["Argument", "Type", "Description"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"element"</Code></TableCell>
+                        <TableCell><Code inline=true>"CapturedElement"</Code></TableCell>
+                        <TableCell>"The input, e.g. "<Code inline=true>"use_text_field"</Code>"\u{2019}s "<Code inline=true>"element"</Code>"."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"validate"</Code></TableCell>
+                        <TableCell><Code inline=true>"Callback<String, bool>"</Code></TableCell>
+                        <TableCell>"Whether a text may be typed: a valid value, or the beginning of one."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"set_input_value"</Code></TableCell>
+                        <TableCell><Code inline=true>"Callback<String>"</Code></TableCell>
+                        <TableCell>"Sets the field\u{2019}s text, to revert an invalid composition."</TableCell>
+                    </TableRow>
+                </DocTable>
+                <Section title="Return" id="use-formatted-text-field-return">
+                    <ApiTable kind=ApiKind::Return of="FormattedTextFieldHandlers">
+                        <ApiRow name="on_beforeinput" ty="EventHandler<InputEvent>">
+                            "Rejects edits that would make the text invalid, before the browser applies them."
                         </ApiRow>
-                        <ApiRow name="on_submit" ty="Option<Callback<String>>" default="None">
-                            "Called with the value when the user presses "<Keys keys="Enter"/>". Without it, "<Keys keys="Enter"/>
-                            " submits the form."
-                        </ApiRow>
-                        <ApiRow name="on_clear" ty="Option<Callback<()>>" default="None">
-                            "Called when "<Keys keys="Escape"/>" or the clear button empties the field."
+                        <ApiRow name="on_compositionstart, on_compositionend" ty="EventHandler<CompositionEvent>">
+                            "Remember the text before a composition and restore it when the composed text is invalid."
                         </ApiRow>
                     </ApiTable>
                 </Section>
-
-                <Section title="Return" id="use-search-field-return">
-                    <ApiTable kind=ApiKind::Return of="UseSearchFieldReturn">
-                        <ApiRow name="text_field" ty="UseTextFieldReturn">
-                            "The text field\u{2019}s return: input, label, description and error message props, and validation."
-                        </ApiRow>
-                        <ApiRow name="clear_button" ty="UseButtonInput">
-                            "The clear button\u{2019}s configuration. Pass it to "
-                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>": the button is labelled "
-                            "\u{201c}Clear search\u{201d}, isn\u{2019}t in the tab order, keeps focus in the input, and is "
-                            "disabled while the field is disabled or read-only. Hide it while "<Code inline=true>"state.value"</Code>
-                            " is empty."
-                        </ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="Example" id="use-search-field-example">
-                    <Demo
-                        description="Search field with clear button showing the last submitted query"
-                        source=include_str!("demos/text_field_search.rs")
-                        source_open=true
-                    >
-                        <TextFieldSearchDemo/>
-                    </Demo>
-                </Section>
-            </Section>
-
-            <Section title="use_number_field">
-                <p>
-                    "Numeric input with increment and decrement buttons, locale-aware formatting and floating-point precision "
-                    "handling. See the "<Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
-                    " page."
-                </p>
-            </Section>
-
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Enter">"Search field: calls "<Code inline=true>"on_submit"</Code>", or submits the form without it."</KeyRow>
-                    <KeyRow keys="Escape">
-                        "Search field: empties a non-empty field and calls "<Code inline=true>"on_clear"</Code>"; in an empty "
-                        "field, the key propagates."
-                    </KeyRow>
-                </KeyboardTable>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link></li>
-                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field atoms"</Link></li>
-                <li><Link href=routes::doc::text_field::Component.materialize()>"Text Field component"</Link></li>
-                <li><Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link></li>
-                <li><Link href=routes::doc::hooks::UseLabel.materialize()>"use_label"</Link></li>
+                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
+                <li><Link href=routes::doc::text_field::Component.materialize()>"Text Field Component"</Link></li>
+                <li><Link href=routes::doc::search_field::Hook.materialize()>"use_search_field"</Link></li>
+                <li><Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link></li>
+                <li><Link href=routes::doc::field::Hook.materialize()>"Field Hooks"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

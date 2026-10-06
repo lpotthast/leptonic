@@ -34,13 +34,13 @@ pub struct UseModalBackdropInput {
 
     /// Whether interacting outside the modal closes it. Default: `false` (modals block outside
     /// interaction).
-    pub is_dismissable: bool,
+    pub is_dismissable: Signal<bool>,
 
     /// Whether Escape no longer closes the modal.
-    pub is_keyboard_dismiss_disabled: bool,
+    pub is_keyboard_dismiss_disabled: Signal<bool>,
 
     /// Which outside interactions close the modal (when `is_dismissable`): `true` closes.
-    pub should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
+    pub should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
 
     /// Whether the modal is still animating in. While it is, the content outside isn't hidden
     /// from assistive technology yet (and a parent modal doesn't hide this one).
@@ -52,8 +52,8 @@ impl UseModalBackdropInput {
     pub fn new(state: OverlayTriggerState) -> Self {
         Self {
             state,
-            is_dismissable: false,
-            is_keyboard_dismiss_disabled: false,
+            is_dismissable: Signal::stored(false),
+            is_keyboard_dismiss_disabled: Signal::stored(false),
             should_close_on_interact_outside: None,
             is_entering: Signal::stored(false),
         }
@@ -135,9 +135,10 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
         is_open,
         on_close: Callback::new(move |()| state.close()),
         is_dismissable,
-        should_close_on_blur: false,
+        should_close_on_blur: Signal::stored(false),
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
+        group: None,
     });
 
     // 2. Prevent body scroll while the modal is open.

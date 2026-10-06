@@ -65,7 +65,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let expand_button = UseButtonInput {
         // Labelled by its own label ("Expand"/"Collapse") and the item.
         id: Some(button_id.clone().into()),
-        aria_labelledby: Some(format!("{button_id} {row_id}").into()),
+        aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true,
         on_press: Some(Callback::new(move |_: PressEvent| {

@@ -76,6 +76,24 @@ impl BrowserTest<str> for PopoverTests {
             .await?;
         page.wait_for_selector("[role=dialog][aria-label=Info]")
             .await?;
+        // With a dialog inside, it contains focus (react-aria's `useOverlayFocusContain`): Tab
+        // wraps around instead of leaving (which would close it).
+        let info_id = page
+            .css("[role=dialog][aria-label=Info]")
+            .await?
+            .attr("id")
+            .await?
+            .unwrap_or_default();
+        page.wait_for_active_id(&info_id).await?;
+        page.send_keys_to_active(Key::Tab).await?;
+        page.wait_for_active_id("test-popover-non-modal-first")
+            .await?;
+        page.send_keys_to_active(Key::Tab).await?;
+        page.wait_for_active_id("test-popover-non-modal-second")
+            .await?;
+        page.send_keys_to_active(Key::Tab).await?;
+        page.wait_for_active_id("test-popover-non-modal-first")
+            .await?;
         page.click_element_with_id("test-popover-outside").await?;
         page.wait_for_no_selector("[role=dialog]").await?;
         page.wait_for_active_id("test-popover-outside").await?;
@@ -113,6 +131,39 @@ impl BrowserTest<str> for PopoverTests {
         page.wait_for_no_selector("[role=dialog]").await?;
         page.wait_for_active_id("test-popover-standalone-trigger")
             .await?;
+
+        // "supports isEntering and isExiting props", with CSS animations: entering while its
+        // animation runs, then exiting (and still rendered) until the exit animation ended.
+        page.click_element_with_id("test-popover-animated-trigger")
+            .await?;
+        page.wait_for_selector(".test-animated-popover[data-entering]")
+            .await?;
+        page.wait_for_selector(".test-animated-popover:not([data-entering])")
+            .await?;
+        page.send_keys_to_active(Key::Escape).await?;
+        page.wait_for_selector(".test-animated-popover[data-exiting]")
+            .await?;
+        page.wait_for_no_selector(".test-animated-popover").await?;
+        page.wait_for_active_id("test-popover-animated-trigger")
+            .await?;
+
+        // useOverlayPosition.test.tsx: a non-modal popover stays open when an adjacent region
+        // scrolls ("should not close the overlay when an adjacent scrollable region scrolls"), and
+        // closes when the page scrolls ("should close the overlay when the body scrolls").
+        page.click_element_with_id("test-popover-non-modal-trigger")
+            .await?;
+        page.wait_for_selector("[role=dialog]").await?;
+        page.driver
+            .execute(
+                "document.getElementById('test-popover-adjacent-scroll').dispatchEvent(new Event('scroll'));",
+                vec![],
+            )
+            .await?;
+        assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(1);
+        page.driver
+            .execute("document.body.dispatchEvent(new Event('scroll'));", vec![])
+            .await?;
+        page.wait_for_no_selector("[role=dialog]").await?;
         page.expect_no_page_errors().await
     }
 }

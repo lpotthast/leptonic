@@ -1,5 +1,7 @@
 // Documentation search (app bar trigger and modal).
 
+@use "theme" as *;
+
 .leptonic-btn.doc-search-trigger {
   gap: var(--book-space-s);
   min-width: 14em;
@@ -19,7 +21,7 @@
     font-size: var(--book-font-size-xs);
   }
 
-  @media (max-width: 800px) {
+  @media (width <= $small) {
     min-width: auto;
 
     .doc-search-trigger-text,
@@ -30,9 +32,9 @@
 }
 
 .leptonic-modal.doc-search-modal {
-  width: 600px;
+  width: 37.5rem;
   max-width: 90vw;
-  height: 450px;
+  height: 28rem;
   max-height: 60vh;
   overflow: hidden;
 
@@ -79,9 +81,14 @@
   color: inherit;
   text-decoration: none;
 
-  &:hover,
-  &:focus-visible {
+  &:hover {
     background-color: var(--book-hover-background-color);
+  }
+
+  // Inside the element: the result list clips everything outside.
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: -2px;
   }
 }
 
@@ -89,16 +96,35 @@
   font-weight: 600;
 }
 
+.doc-search-result-section {
+  font-weight: 400;
+}
+
+// Two lines at most: enough to show the match in its context.
 .doc-search-result-snippet {
+  display: -webkit-box;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   color: var(--book-muted-color);
   font-size: var(--book-font-size-s);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+}
+
+// Occurrences of the query.
+.doc-search-mark {
+  border-radius: var(--book-radius-s);
+  background-color: var(--brand-color-subtle);
+  color: var(--main-color);
+  font-weight: 600;
 }
 
 .doc-search-status {
   padding: var(--book-space-m);
   color: var(--book-muted-color);
   text-align: center;
+
+  &[data-error] {
+    color: var(--main-color);
+  }
 }

@@ -3,70 +3,50 @@ use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
-    number_field_basic::NumberFieldBasicDemo, number_field_disabled::NumberFieldDisabledDemo,
-    number_field_fractional::NumberFieldFractionalDemo,
+    number_field_basic::NumberFieldBasicDemo, number_field_fractional::NumberFieldFractionalDemo,
 };
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseNumberField() -> impl IntoView {
     view! {
-        <DocPage title="use_number_field">
+        <DocPage title="Number Field Hooks">
             <p>
-                "The "<Code inline=true>"use_number_field"</Code>" hook builds a number input with increment and decrement "
-                "buttons, keyboard and scroll wheel stepping, and locale-aware formatting. See the "
-                <Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link>" for concept guidance."
+                "The number field hooks build a number input with stepper buttons, keyboard and scroll wheel stepping, and "
+                "locale-aware formatting. "
+                <AnchorLink href="#use-number-field-state"><Code inline=true>"use_number_field_state"</Code></AnchorLink>
+                " owns the value and the displayed text, commits typed text and steps the value; "
+                <AnchorLink href="#use-number-field"><Code inline=true>"use_number_field"</Code></AnchorLink>
+                " returns the attributes of the input, its group, label, description and error message, and the "
+                "configuration of the stepper buttons. See the "
+                <Link href=routes::doc::NumberField.materialize()>"Number Field overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useNumberField"/>
 
-            <Section title="Architecture">
-                <p>"The number field is split into two hooks:"</p>
+            <p>
+                "The keyboard handling, hold-to-spin buttons and screen reader announcements come from "
+                <Link href=routes::doc::utilities::UseSpinButton.materialize()>"use_spin_button"</Link>", the filtering of "
+                "typed text from "
+                <Link href=format!("{}#use-formatted-text-field", routes::doc::text_field::Hook.materialize())>"use_formatted_text_field"</Link>
+                ". For a ready-made "
+                "field, use the "<Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link>
+                " or the "<Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link>"."
+            </p>
 
-                <DocTable headers=&["Hook", "Responsibility"]>
-                    <TableRow>
-                        <TableCell><Code inline=true>"use_number_field_state"</Code></TableCell>
-                        <TableCell>
-                            "Owns the value and the displayed text, commits typed text (parse, snap or validate, format), "
-                            "steps the value and validates it."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Code inline=true>"use_number_field"</Code></TableCell>
-                        <TableCell>
-                            "Labelling, ARIA attributes, keyboard and scroll wheel handling, input filtering, stepper button "
-                            "configuration and commit on blur and "<Keys keys="Enter"/>"."
-                        </TableCell>
-                    </TableRow>
-                </DocTable>
-
+            <Section title="Example">
                 <p>
-                    "The keyboard handling, hold-to-spin buttons and screen reader announcements come from "
-                    <Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link>". For a ready-made "
-                    "field, use the "<Link href=routes::doc::text_field::NumberFieldAtom.materialize()>"NumberField atom"</Link>"."
+                    "The state holds the value, the range and the disabled state; the field hook wires the elements. "
+                    "Spread "<Code inline=true>"group_props"</Code>" on the element around the input and the buttons:"
                 </p>
-            </Section>
-
-            <Section title="Value Types">
-                <p>
-                    "Both hooks are generic over the value type "<Code inline=true>"T"</Code>": every primitive integer ("
-                    <Code inline=true>"i8"</Code>" to "<Code inline=true>"i128"</Code>", "<Code inline=true>"u8"</Code>" to "
-                    <Code inline=true>"u128"</Code>", "<Code inline=true>"isize"</Code>", "<Code inline=true>"usize"</Code>
-                    ") and float ("<Code inline=true>"f32"</Code>", "<Code inline=true>"f64"</Code>"), through the "
-                    <Code inline=true>"NumberValue"</Code>" trait. Usually "<Code inline=true>"T"</Code>" is inferred from "
-                    <Code inline=true>"default_value"</Code>" or the bound state."
-                </p>
-                <ul>
-                    <li>
-                        "Integers are exact, also beyond 2"<sup>"53"</sup>". Stepping saturates at the type\u{2019}s bounds, "
-                        "which also apply without "<Code inline=true>"min_value"</Code>" and "<Code inline=true>"max_value"</Code>
-                        ": a "<Code inline=true>"u8"</Code>" field stops at 0 and 255, and "<Keys keys="Home"/>" / "
-                        <Keys keys="End"/>" jump there. Text with fraction digits or out of range isn\u{2019}t a value of the type."
-                    </li>
-                    <li>
-                        "Floats are rounded to the step\u{2019}s precision, so stepping by 0.1 three times gives exactly 0.3."
-                    </li>
-                </ul>
+                <Demo
+                    description="Quantity number field from 0 to 100 with stepper buttons and a disabled toggle"
+                    source=include_str!("demos/number_field_basic.rs")
+                    source_open=true
+                >
+                    <NumberFieldBasicDemo/>
+                </Demo>
             </Section>
 
             <Section title="use_number_field_state">
@@ -78,11 +58,12 @@ pub fn PageUseNumberField() -> impl IntoView {
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseNumberFieldStateInput">
                         <ApiRow name="default_value" ty="Option<T>" default="None">
-                            "The initial value, restored on form reset. "<Code inline=true>"None"</Code>" starts empty."
+                            "The initial value, unless "<Code inline=true>"value"</Code>" is bound; "<Code inline=true>"None"</Code>
+                            " starts empty. A form reset restores the value the field started with."
                         </ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<Option<T>>>" default="None">
                             "The value as app state, replacing "<Code inline=true>"default_value"</Code>" (see "
-                            <a href="#binding-app-state">"Binding App State"</a>")."
+                            <AnchorLink href="#binding-app-state">"Binding App State"</AnchorLink>")."
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">
                             "Called when the committed value changes."
@@ -118,12 +99,12 @@ pub fn PageUseNumberField() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="State" id="use-number-field-state-state">
+                <Section title="Return" id="use-number-field-state-return">
                     <p>
                         "The hook returns a "<Code inline=true>"NumberFieldState<T>"</Code>" ("<Code inline=true>"Copy"</Code>
-                        "), which you pass to "<Code inline=true>"use_number_field"</Code>"."
+                        "), which you pass to "<AnchorLink href="#use-number-field"><Code inline=true>"use_number_field"</Code></AnchorLink>"."
                     </p>
-                    <ApiTable kind=ApiKind::Fields of="NumberFieldState">
+                    <ApiTable kind=ApiKind::Return of="NumberFieldState">
                         <ApiRow name="number_value" ty="Signal<Option<T>>">
                             "The value of the typed text; "<Code inline=true>"None"</Code>" while it is empty or unparsable."
                         </ApiRow>
@@ -181,27 +162,31 @@ pub fn PageUseNumberField() -> impl IntoView {
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseNumberFieldInput">
-                        <ApiRow name="state" ty="NumberFieldState<T>">"The state from "<Code inline=true>"use_number_field_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="NumberFieldState<T>">"Required. The state from "<Code inline=true>"use_number_field_state"</Code>"."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when there is no visible label."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">
                             "Further labelling and describing elements."
                         </ApiRow>
-                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Sets "<Code inline=true>"aria-required"</Code>"."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">
+                            "Marks the field as required: with "<Code inline=true>"aria-required"</Code>" under the state\u{2019}s "
+                            <Code inline=true>"ValidationBehavior::Aria"</Code>", with the native "<Code inline=true>"required"</Code>
+                            " under "<Code inline=true>"Native"</Code>"."
+                        </ApiRow>
                         <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
-                        <ApiRow name="auto_focus" ty="bool" default="false">"Focus the input when it mounts."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the input when it mounts."</ApiRow>
                         <ApiRow name="is_wheel_disabled" ty="bool" default="false">
                             "Leave the value alone on scroll. Otherwise the wheel steps while the field has focus."
                         </ApiRow>
                         <ApiRow name="increment_aria_label, decrement_aria_label" ty="MaybeProp<String>" default="None">
                             "Replace the stepper buttons\u{2019} names (\u{201c}Increase \u{2026}\u{201d}, \u{201c}Decrease \u{2026}\u{201d})."
                         </ApiRow>
-                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Focus callbacks."</ApiRow>
+                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">"Called when the input gains or loses focus, with the event."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the input gains or loses focus."</ApiRow>
-                        <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Keyboard callbacks."</ApiRow>
+                        <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">"Called on key presses in the input."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -217,7 +202,9 @@ pub fn PageUseNumberField() -> impl IntoView {
                             "shows the state\u{2019}s text by itself."
                         </ApiRow>
                         <ApiRow name="increment_button, decrement_button" ty="UseButtonInput">
-                            "Configuration for the stepper buttons. Pass them to "<Code inline=true>"use_button"</Code>"."
+                            "Configuration for the stepper buttons. Pass them to "
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" (see "
+                            <AnchorLink href="#stepper-buttons">"Stepper Buttons"</AnchorLink>")."
                         </ApiRow>
                         <ApiRow name="description_props" ty="SlotProps">"For the description; referenced while it is rendered."</ApiRow>
                         <ApiRow name="error_message_props" ty="SlotProps">"For the error message. Render it only while "<Code inline=true>"is_invalid"</Code>"."</ApiRow>
@@ -230,14 +217,26 @@ pub fn PageUseNumberField() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Example">
-                <Demo
-                    description="Quantity number field from 0 to 100 with stepper buttons"
-                    source=include_str!("demos/number_field_basic.rs")
-                    source_open=true
-                >
-                    <NumberFieldBasicDemo/>
-                </Demo>
+            <Section title="Value Types">
+                <p>
+                    "Both hooks are generic over the value type "<Code inline=true>"T"</Code>": every primitive integer ("
+                    <Code inline=true>"i8"</Code>" to "<Code inline=true>"i128"</Code>", "<Code inline=true>"u8"</Code>" to "
+                    <Code inline=true>"u128"</Code>", "<Code inline=true>"isize"</Code>", "<Code inline=true>"usize"</Code>
+                    ") and float ("<Code inline=true>"f32"</Code>", "<Code inline=true>"f64"</Code>"), through the "
+                    <Code inline=true>"NumberValue"</Code>" trait. Usually "<Code inline=true>"T"</Code>" is inferred from "
+                    <Code inline=true>"default_value"</Code>" or the bound state."
+                </p>
+                <ul>
+                    <li>
+                        "Integers are exact, also beyond 2"<sup>"53"</sup>". Stepping saturates at the type\u{2019}s bounds, "
+                        "which also apply without "<Code inline=true>"min_value"</Code>" and "<Code inline=true>"max_value"</Code>
+                        ": a "<Code inline=true>"u8"</Code>" field stops at 0 and 255, and "<Keys keys="Home"/>" / "
+                        <Keys keys="End"/>" jump there. Text with fraction digits or out of range isn\u{2019}t a value of the type."
+                    </li>
+                    <li>
+                        "Floats are rounded to the step\u{2019}s precision (see "<AnchorLink href="#fractional-step">"Fractional Step"</AnchorLink>")."
+                    </li>
+                </ul>
             </Section>
 
             <Section title="Stepper Buttons">
@@ -252,8 +251,9 @@ pub fn PageUseNumberField() -> impl IntoView {
                 <ul>
                     <li>"They are left out of the tab order. Keyboard users change the value with the arrow keys in the input instead."</li>
                     <li>
-                        "They don\u{2019}t take focus when pressed. With a mouse, focus moves to the input, so you can keep typing. "
-                        "If the input already has focus, it keeps it, so tapping a button doesn\u{2019}t close the software keyboard."
+                        "If the input has focus, it keeps it when a button is pressed, so tapping a button doesn\u{2019}t "
+                        "close the software keyboard. Otherwise, a mouse press moves focus to the input, so you can keep "
+                        "typing; a touch or screen reader press focuses the button."
                     </li>
                     <li>
                         "They are named \u{201c}Increase "<i>"aria_label"</i>"\u{201d} and \u{201c}Decrease "<i>"aria_label"</i>
@@ -262,7 +262,10 @@ pub fn PageUseNumberField() -> impl IntoView {
                         <Code inline=true>"increment_aria_label"</Code>" and "<Code inline=true>"decrement_aria_label"</Code>
                         " to pick your own labels."
                     </li>
-                    <li>"They are disabled once the value reaches the minimum or maximum, but stay focusable, so focus isn\u{2019}t lost."</li>
+                    <li>
+                        "They are disabled once the value reaches the minimum or maximum, but stay focusable, so a focused "
+                        "button keeps focus."
+                    </li>
                     <li>"Holding a button keeps stepping until you let go or the limit is reached."</li>
                 </ul>
 
@@ -296,8 +299,9 @@ pub fn PageUseNumberField() -> impl IntoView {
                     "The input shows the formatted text (e.g. \u{201c}1,024\u{201d}), so it has no "<Code inline=true>"name"</Code>
                     ". To submit the value with a form, render a hidden input with the field\u{2019}s name and "
                     <Code inline=true>"state.number_value"</Code>"; the "
-                    <Link href=routes::doc::text_field::NumberFieldAtom.materialize()>"NumberField atom"</Link>" does this when "
-                    "you give it a "<Code inline=true>"name"</Code>". Form resets restore "<Code inline=true>"default_value"</Code>"."
+                    <Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link>"\u{2019} "<Code inline=true>"NumberField"</Code>" does this when "
+                    "you give it a "<Code inline=true>"name"</Code>". A form reset restores the value the field started with: "
+                    <Code inline=true>"default_value"</Code>", or the bound value when the state was created."
                 </p>
             </Section>
 
@@ -312,52 +316,12 @@ pub fn PageUseNumberField() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Disabled State">
-                <p>
-                    "Set "<Code inline=true>"is_disabled"</Code>" on the state; the field reads it. The group gets "<Code inline=true>"aria-disabled"</Code>
-                    ", the input and the stepper buttons are disabled."
-                </p>
-
-                <Demo description="Number field with a disabled toggle" source=include_str!("demos/number_field_disabled.rs")>
-                    <NumberFieldDisabledDemo/>
-                </Demo>
-            </Section>
-
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="ArrowUp / ArrowDown">"Increment or decrement by one step."</KeyRow>
-                    <KeyRow keys="PageUp / PageDown">"Increment or decrement by one step."</KeyRow>
-                    <KeyRow keys="Home">"Set to the minimum (for integers without one: the type\u{2019}s minimum)."</KeyRow>
-                    <KeyRow keys="End">"Set to the maximum (for integers without one: the type\u{2019}s maximum)."</KeyRow>
-                    <KeyRow keys="Enter">
-                        "Commit the typed value. Inside a form, "<Keys keys="Enter"/>" still submits it, with the committed value."
-                    </KeyRow>
-                </KeyboardTable>
-
-                <p>"Keys pressed with Ctrl, Shift, Alt or Meta are ignored. Typed text is also committed on blur."</p>
-            </Section>
-
-            <Section title="Accessibility">
-                <ul>
-                    <li>
-                        "The input has "<Code inline=true>"aria-roledescription=\"Number field\""</Code>
-                        " (except on iOS, where it interferes with VoiceOver)."
-                    </li>
-                    <li>
-                        "The group wrapper has "<Code inline=true>"role=\"group\""</Code>" with "
-                        <Code inline=true>"aria-disabled"</Code>" and "<Code inline=true>"aria-invalid"</Code>"."
-                    </li>
-                    <li>"The stepper buttons point to the input with "<Code inline=true>"aria-controls"</Code>"."</li>
-                    <li>"Autocorrect and spellcheck are off, and the virtual keyboard layout (" <Code inline=true>"inputmode"</Code>") depends on the range, the step and the platform."</li>
-                    <li>"Value changes are announced to screen readers."</li>
-                </ul>
-            </Section>
-
             <SeeAlso>
-                <li><Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link></li>
-                <li><Link href=routes::doc::text_field::NumberFieldAtom.materialize()>"Number Field atoms"</Link></li>
-                <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field hooks"</Link></li>
-                <li><Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link></li>
+                <li><Link href=routes::doc::NumberField.materialize()>"Number Field overview"</Link></li>
+                <li><Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link></li>
+                <li><Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link></li>
+                <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
+                <li><Link href=routes::doc::utilities::UseSpinButton.materialize()>"use_spin_button"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
             </SeeAlso>
         </DocPage>

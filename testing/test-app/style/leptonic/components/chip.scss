@@ -68,9 +68,22 @@
         }
     }
 
-    .leptonic-icon.dismiss {
-        margin-left: 0.4em;
+    .leptonic-chip-dismiss {
+        display: inline-flex;
+        align-items: center;
+        margin: 0 0 0 0.4em;
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: none;
+        color: inherit;
+        font: inherit;
         font-size: 1.1em;
         cursor: pointer;
+
+        &[data-focus-visible] {
+            outline: 2px solid currentColor;
+            outline-offset: 1px;
+        }
     }
 }

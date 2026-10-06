@@ -14,8 +14,8 @@ pub fn PageCheckboxOverview() -> impl IntoView {
                 "indeterminate, when it summarizes child checkboxes of which only some are checked."
             </p>
             <p>
-                "Leptonic\u{2019}s checkboxes are native "<Code inline=true>"<input type=\"checkbox\">"</Code>" elements inside a "
-                <Code inline=true>"<label>"</Code>", so they submit with forms, reset with them and take part in validation. "
+                "Leptonic\u{2019}s checkboxes are native checkbox inputs inside their label, so they submit with forms, reset "
+                "with them and take part in validation. "
                 "Checkbox groups select a set of values with a shared label, description and error message."
             </p>
 
@@ -52,21 +52,21 @@ pub fn PageCheckboxOverview() -> impl IntoView {
                 </p>
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></TableCell>
                         <TableCell>
                             <Code inline=true>"use_checkbox"</Code>", "<Code inline=true>"use_checkbox_group"</Code>" and their state "
                             "hooks: behavior, validation and form integration for inputs and labels you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></TableCell>
                         <TableCell>
                             "Unstyled "<Code inline=true>"Checkbox"</Code>" and "<Code inline=true>"CheckboxGroup"</Code>
                             " with their parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox component"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></TableCell>
                         <TableCell>"Themed "<Code inline=true>"Checkbox"</Code>" and "<Code inline=true>"CheckboxGroup"</Code>" with icons, label and description."</TableCell>
                     </TableRow>
                 </DocTable>
@@ -74,11 +74,12 @@ pub fn PageCheckboxOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "Bind the component to a signal with "<Code inline=true>"state"</Code>" and pass the label as children; "
-                    "pressing the label toggles the checkbox too."
+                    "Pass the component an "<Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"is_selected"</Code>
+                    " and "<Code inline=true>"set_selected"</Code>", and the label as children; pressing the label toggles the "
+                    "checkbox too."
                 </p>
                 <Demo
-                    description="Newsletter checkbox bound to a signal, with its state shown below"
+                    description="Newsletter checkbox kept in a signal, with its state shown below and a disabled toggle"
                     source=include_str!("demos/checkbox.rs")
                     source_open=true
                 >
@@ -89,9 +90,9 @@ pub fn PageCheckboxOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "Checkboxes follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/" target=LinkTarget::_Blank>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/" target=LinkTarget::Blank>
                         "Checkbox pattern"
-                    </LinkExt>"."
+                    </Link>"."
                 </p>
                 <ul>
                     <li>
@@ -118,6 +119,15 @@ pub fn PageCheckboxOverview() -> impl IntoView {
                     <KeyRow keys="Space">"Toggles the focused checkbox."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
+                <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
+                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
+                <li><Link href=routes::doc::Switch.materialize()>"Switch"</Link></li>
+                <li><Link href=routes::doc::Radio.materialize()>"Radio"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

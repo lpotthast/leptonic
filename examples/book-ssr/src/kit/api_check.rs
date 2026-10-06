@@ -266,3 +266,31 @@ fn api_tables_match_the_library() {
         .with_detail_message("API tables out of sync with the library")
         .is_empty();
 }
+
+/// The `ty` of every `ApiRow` is written on one line with single spaces: a line break or indentation in the string
+/// literal would show up in the table.
+#[test]
+fn api_row_types_have_no_stray_whitespace() {
+    let pages = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages");
+    let mut problems = Vec::new();
+    for page in rust_files(&pages) {
+        let source = fs::read_to_string(&page).expect("page source is readable");
+        for row in tags(&source, "ApiRow") {
+            let Some(ty) = attribute(row, "ty") else {
+                continue;
+            };
+            if ty.contains(|c: char| c.is_whitespace() && c != ' ')
+                || ty.contains("  ")
+                || ty.trim() != ty
+            {
+                problems.push(format!(
+                    "{}: `ty=\"{ty}\"`",
+                    page.strip_prefix(&pages).unwrap_or(&page).display()
+                ));
+            }
+        }
+    }
+    assert_that!(problems)
+        .with_detail_message("`ApiRow` types with line breaks, indentation or double spaces")
+        .is_empty();
+}

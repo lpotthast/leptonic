@@ -1,12 +1,14 @@
 use leptonic::{
     atoms::{
         field::Label,
+        form::Form,
         listbox::{ListBox, ListBoxItems},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    hooks::collections::{Key, use_list_collection},
+    components::prelude::{Button, ButtonColor},
+    hooks::{ButtonType, collections::{Key, use_list_collection}},
 };
-use leptos::{ev::SubmitEvent, html, prelude::*};
+use leptos::{ev::SubmitEvent, prelude::*, wasm_bindgen::JsCast};
 
 const SIZES: [(&str, &str); 5] = [
     ("s", "Small"),
@@ -23,13 +25,14 @@ pub fn SelectFormDemo() -> impl IntoView {
         |(key, _)| Key::from(*key),
         |(_, label)| (*label).to_owned(),
     );
-    let form = NodeRef::<html::Form>::new();
     let submitted = RwSignal::new(None::<String>);
 
     // Reads the submitted value the way a server would receive it: from the form data.
     let on_submit = move |e: SubmitEvent| {
         e.prevent_default();
-        let Some(form) = form.get() else { return };
+        let Some(form) = e.current_target().and_then(|target| target.dyn_into::<web_sys::HtmlFormElement>().ok()) else {
+            return;
+        };
         let Ok(data) = web_sys::FormData::new_with_form(&form) else {
             return;
         };
@@ -37,7 +40,7 @@ pub fn SelectFormDemo() -> impl IntoView {
     };
 
     view! {
-        <form node_ref=form class="demo-sel-form" on:submit=on_submit on:reset=move |_| submitted.set(None)>
+        <Form classes="demo-sel-form" on:submit=on_submit on:reset=move |_| submitted.set(None)>
             // `name` makes the select a form field; `HiddenSelect` holds its value.
             <Select collection=sizes name="size" default_value=vec![Key::from("m")] classes="demo-sel">
                 <Label classes="demo-sel-label">"T-shirt size"</Label>
@@ -53,13 +56,13 @@ pub fn SelectFormDemo() -> impl IntoView {
                 <HiddenSelect/>
             </Select>
             <div class="demo-flex-center-row">
-                <button class="demo-btn" type="submit">"Submit"</button>
-                <button class="demo-btn" type="reset">"Reset"</button>
+                <Button button_type=ButtonType::Submit>"Submit"</Button>
+                <Button button_type=ButtonType::Reset color=ButtonColor::Secondary>"Reset"</Button>
             </div>
-        </form>
+        </Form>
 
-        <p class="demo-caption">
-            {move || submitted.get().map_or_else(|| "Not submitted yet.".to_owned(), |size| format!("Submitted: size={size}"))}
+        <p class="demo-status">
+            {move || submitted.get().map_or_else(|| "Not submitted yet.".to_owned(), |size| format!("Submitted: size={size}."))}
         </p>
     }
 }

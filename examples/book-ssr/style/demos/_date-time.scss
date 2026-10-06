@@ -1,0 +1,146 @@
+// Date & Time: demos of Calendar, Date Field, Date Picker and Time Field.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// -- Calendar --
+
+.demo-calendar {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--book-space-s);
+    max-width: 100%;
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+}
+
+.demo-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: var(--book-space-s); }
+
+.demo-calendar-title  { font-weight: 600; }
+
+.demo-calendar-grid {
+    width: auto;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0 2px;
+
+    th, td { padding: 0 1px; border: none; background: none; text-align: center; }
+    th { padding-bottom: var(--book-space-xs); font-size: var(--book-font-size-s); font-weight: 600; color: var(--book-muted-color); }
+
+    &[aria-disabled="true"] { opacity: 0.5; }
+}
+
+.demo-calendar-day {
+    width: 2.4em;
+    height: 2.4em;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover { background: var(--book-surface-color-raised); }
+    &[data-today] { font-weight: 700; text-decoration: underline; }
+    &[data-outside-month] { color: var(--book-muted-color); }
+    &[data-unavailable] { color: var(--book-muted-color); text-decoration: line-through; cursor: not-allowed; }
+    &[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
+[aria-selected="true"] > .demo-calendar-day { background: var(--brand-color); color: var(--book-on-brand-color); }
+
+// Range calendars: the selected range is a band, its first and last day are filled.
+.demo-calendar-range {
+    td[aria-selected="true"] { background: var(--brand-color-subtle); }
+    td[data-range-start] { border-radius: var(--book-radius-pill) 0 0 var(--book-radius-pill); }
+    td[data-range-end] { border-radius: 0 var(--book-radius-pill) var(--book-radius-pill) 0; }
+    td[data-range-start][data-range-end] { border-radius: var(--book-radius-pill); }
+
+    [aria-selected="true"] > .demo-calendar-day { background: none; color: var(--main-color); }
+    [data-range-start] > .demo-calendar-day,
+    [data-range-end] > .demo-calendar-day { background: var(--brand-color); color: var(--book-on-brand-color); }
+}
+
+// -- Date field --
+
+.demo-date-field             { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); max-width: 100%; }
+
+.demo-date-field-label       { font-weight: 600; }
+
+.demo-date-field-description { color: var(--book-muted-color); font-size: var(--book-font-size-s); }
+
+.demo-date-field-error       { color: var(--danger-color); font-size: var(--book-font-size-s); }
+
+.demo-date-field-error:empty { display: none; }
+
+.demo-date-field-input {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    font-family: var(--typography-code-font-family);
+    font-size: var(--book-font-size-m);
+    font-variant-numeric: tabular-nums;
+
+    &:focus-within { border-color: var(--book-focus-color); }
+
+    &[aria-invalid="true"] { border-color: var(--danger-color); }
+
+    &[aria-disabled="true"] { opacity: 0.5; }
+}
+
+// Segments: focused while edited, so the background marks the focus.
+.demo-date-segment {
+    padding: 0 0.1em;
+    border-radius: var(--book-radius-s);
+    outline: none;
+    cursor: default;
+
+    &[data-placeholder] { color: var(--book-muted-color); }
+
+    &:focus { background: var(--brand-color); color: var(--book-on-brand-color); }
+}
+
+.demo-date-segment-literal { color: var(--book-muted-color); white-space: pre; }
+
+// -- Date picker --
+
+.demo-date-picker            { display: inline-block; max-width: 100%; }
+
+.demo-date-picker-group      { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); }
+
+.demo-date-picker-input      { gap: var(--book-space-s); padding-right: var(--book-space-xs); }
+
+.demo-date-picker-segments   { display: inline-flex; }
+
+.demo-date-picker-button {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--book-space-xs) var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: pointer;
+
+    &[aria-expanded="true"] { border-color: var(--brand-color); }
+    &[aria-disabled="true"] { cursor: not-allowed; }
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// Positioning styles (and the layer) come from the `Popover` atom. The calendar inside reuses the calendar classes.
+.demo-date-picker-popover {
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}

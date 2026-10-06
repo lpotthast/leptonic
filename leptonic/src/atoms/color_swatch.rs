@@ -1,56 +1,61 @@
-//! Headless color swatch atom that displays a color with proper accessibility.
+//! Headless color swatch atom.
+// Upstream: react-aria-components/src/ColorSwatch.tsx @ 99e6102368
 
 use leptos::prelude::*;
 
+use super::{color_picker::ColorPickerContext, color_swatch_picker::ColorSwatchPickerItemContext};
 use crate::{
-    hooks::{IntoAttrs, UseColorSwatchInput, use_color_swatch},
+    hooks::{UseColorSwatchInput, use_color_swatch},
     utils::{
-        classes::Classes, color::ColorValue, css::ForcedColorAdjust,
-        style::ForcedColorAdjustProperty, styles::Styles,
+        classes::Classes,
+        color::{Color, ColorProp},
+        styles::Styles,
     },
 };
 
-/// A headless color swatch that displays a color with proper accessibility.
-///
-/// Renders a `<div>` with `role="img"`, `aria-roledescription="color swatch"`,
-/// and the color as background. Apply your own sizing via styles/classes.
+/// A swatch showing a color: an image named after the color, with the color as its background.
+/// Size it with styles or classes.
 #[component]
-pub fn ColorSwatch<C: ColorValue>(
-    /// The color to display.
-    #[prop(into)]
-    color: Signal<C>,
-    /// An optional color name for the aria-label.
+pub fn ColorSwatch(
+    /// The color to show: any color value or signal of one. Default: the color of the
+    /// `ColorSwatchPickerItem` around it, else the `ColorPicker`'s.
     #[prop(into, optional)]
-    color_name: Option<Signal<String>>,
-    /// An optional aria-label override.
+    color: Option<ColorProp>,
+    /// Replaces the color's name (e.g. "Ocean" instead of "dark vibrant cyan blue").
+    #[prop(into, optional)]
+    color_name: MaybeProp<String>,
+    /// Added to the color's name.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    /// Optional children to render inside the swatch.
-    #[prop(optional)]
-    children: Option<Children>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
-    let swatch = use_color_swatch(UseColorSwatchInput {
-        color,
+    let color = color
+        .map(|ColorProp(color)| color)
+        .or_else(|| {
+            use_context::<ColorSwatchPickerItemContext>()
+                .map(|ColorSwatchPickerItemContext(color)| Signal::stored(color))
+        })
+        .or_else(|| use_context::<ColorPickerContext>().map(|ColorPickerContext(state)| state.color))
+        .unwrap_or_else(|| {
+            crate::utils::dev_warn!(
+                "ColorSwatch: no `color` given (and not inside a ColorSwatchPickerItem or ColorPicker)"
+            );
+            Signal::stored(Color::default())
+        });
+    let (attrs, swatch_styles) = use_color_swatch(UseColorSwatchInput {
         color_name,
         aria_label,
-    });
-
-    let bg = swatch.background_color;
-
-    let styles = styles
-        // The background is a computed CSS color string (it may use any color space).
-        .add_optional_unchecked("background-color", move || Some(bg.get()))
-        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
-
+        aria_labelledby,
+        ..UseColorSwatchInput::new(color)
+    })
+    .color_swatch_props
+    .into_parts();
     view! {
-        <div
-            {..swatch.props.into_attrs()}
-            class=classes
-            style=styles
-        >
-            {children.map(|c| c())}
+        <div {..attrs} class=classes style=swatch_styles.merge(styles)>
+            {children.map(|children| children())}
         </div>
     }
 }

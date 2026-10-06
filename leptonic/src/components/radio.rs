@@ -1,9 +1,13 @@
 use leptos::prelude::*;
 
 use crate::{
-    atoms::field::{Description, FieldError, Label, TextElement},
-    atoms::radio::{
-        Radio as RadioAtom, RadioGroup as RadioGroupAtom, RadioGroupProps as RadioGroupAtomProps,
+    Out,
+    atoms::{
+        field::{Description, FieldError, Label, TextElement},
+        radio::{
+            Radio as RadioAtom, RadioGroup as RadioGroupAtom,
+            RadioGroupProps as RadioGroupAtomProps,
+        },
     },
     hooks::{Orientation, collections::Key},
     utils::{classes::Classes, styles::Styles},
@@ -20,6 +24,12 @@ pub fn RadioGroup(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] description: Option<String>,
     #[prop(into, optional)] default_value: Option<Key>,
+    /// The selected value (controlled): a value or any signal.
+    #[prop(into, optional)]
+    value: Option<Signal<Option<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Option<Key>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<Key>>>,
     #[prop(default = Orientation::Vertical)] orientation: Orientation,
     #[prop(into, optional)] is_disabled: Signal<bool>,
@@ -51,6 +61,8 @@ pub fn RadioGroup(
     // Built from the props struct: the view macro can't forward `Option` props.
     RadioGroupAtom(RadioGroupAtomProps {
         default_value,
+        value,
+        set_value,
         on_change,
         orientation,
         is_disabled,

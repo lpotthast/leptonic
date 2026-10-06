@@ -1,29 +1,28 @@
 use leptonic::{
-    atoms::slider::{
-        Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
+    atoms::{
+        field::Label,
+        slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
     },
-    hooks::SliderValues,
+    components::prelude::Checkbox,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn SliderBasicDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
+
     view! {
-        <div class="demo-frame">
-            <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) classes="demo-slider">
-                <SliderTrack classes="demo-slider-track">
-                    <SliderTrackFill classes="demo-slider-fill" />
-                    <SliderThumb aria_label="Volume" classes="demo-slider-thumb" />
-                </SliderTrack>
-                <SliderOutput let:attrs let:values>
-                    <output {..attrs} class="demo-slider-output">
-                        {move || {
-                            let val = values.get().first().copied().unwrap_or(0.0);
-                            format!("{val:.0}%")
-                        }}
-                    </output>
-                </SliderOutput>
-            </SliderAtom>
+        <Slider min_value=0 max_value=100 default_values=vec![50_u8] is_disabled=disabled classes="demo-slider">
+            <Label classes="demo-slider-label">"Volume"</Label>
+            <SliderTrack classes="demo-slider-track">
+                <SliderFill classes="demo-slider-fill"/>
+                <SliderThumb classes="demo-slider-thumb"/>
+            </SliderTrack>
+            <SliderOutput classes="demo-slider-output"/>
+        </Slider>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

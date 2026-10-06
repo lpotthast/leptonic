@@ -5,22 +5,33 @@ use super::demos::link::LinkConceptDemo;
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageLinkOverview() -> impl IntoView {
     view! {
         <DocPage title="Link">
             <p>
                 "Links take users to another page, another site or another place on the current page. Leptonic has "
-                <Code inline=true>"Link"</Code>" for pages of your app, "<Code inline=true>"LinkExt"</Code>
-                " for other sites and "<Code inline=true>"AnchorLink"</Code>" for scrolling to a section of the current page."
+                <Code inline=true>"Link"</Code>" for pages of your app and other sites, "<Code inline=true>"LinkButton"</Code>
+                " for a link that looks like a button, and "<Code inline=true>"AnchorLink"</Code>" for scrolling to a "
+                "section of the current page."
             </p>
 
             <Section title="When to Use">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow><TableCell>"Navigate to another page of your app"</TableCell><TableCell><b>"Link"</b></TableCell></TableRow>
-                    <TableRow><TableCell>"Navigate to another site"</TableCell><TableCell><b>"LinkExt"</b></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Navigate to another site"</TableCell>
+                        <TableCell><b>"Link"</b>" with a URL (and "<Code inline=true>"LinkTarget::Blank"</Code>")"</TableCell>
+                    </TableRow>
                     <TableRow><TableCell>"Scroll to a section of the current page"</TableCell><TableCell><b>"AnchorLink"</b></TableCell></TableRow>
-                    <TableRow><TableCell>"Trigger an action (submit, delete)"</TableCell><TableCell><Link href=routes::doc::Button.materialize()>"Button"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Navigate with an element that looks like a button"</TableCell><TableCell><Code inline=true>"LinkButton"</Code></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Navigate with an element that looks like a button"</TableCell>
+                        <TableCell><b>"LinkButton"</b></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Trigger an action (submit, delete)"</TableCell>
+                        <TableCell><Link href=routes::doc::Button.materialize()>"Button"</Link></TableCell>
+                    </TableRow>
                 </DocTable>
 
                 <p>
@@ -31,33 +42,40 @@ pub fn PageLinkOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Links exist as hooks and as atoms; the atoms also come as themed components. See "
+                    "Links exist at all three layers. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link></TableCell>
-                        <TableCell>"Link behavior and ARIA attributes for any element you render, including non-anchor elements."</TableCell>
+                        <TableCell><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></TableCell>
+                        <TableCell>
+                            <Code inline=true>"use_link"</Code>": link behavior and ARIA attributes for any element you render, "
+                            "including non-anchor elements. "<Code inline=true>"use_anchor_link"</Code>": an in-page link that "
+                            "scrolls to its target and updates the URL fragment."
+                        </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::link::UseAnchorLink.materialize()>"use_anchor_link"</Link></TableCell>
-                        <TableCell>"An in-page link that scrolls to its target and updates the URL hash."</TableCell>
+                        <TableCell><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></TableCell>
+                        <TableCell>
+                            "Unstyled "<Code inline=true>"Link"</Code>", "<Code inline=true>"LinkButton"</Code>" and "
+                            <Code inline=true>"AnchorLink"</Code>", styled through data attributes. "<Code inline=true>"Link"</Code>
+                            " and "<Code inline=true>"LinkButton"</Code>" navigate with leptos_router and mark the current page."
+                        </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::link::LinkAtom.materialize()>"Link atom"</Link></TableCell>
-                        <TableCell><Code inline=true>"Link"</Code>", "<Code inline=true>"LinkExt"</Code>" and "<Code inline=true>"LinkButton"</Code>", unstyled or themed."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::link::AnchorLinkAtom.materialize()>"AnchorLink atom"</Link></TableCell>
-                        <TableCell>"An anchor link, unstyled or themed."</TableCell>
+                        <TableCell><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></TableCell>
+                        <TableCell>
+                            "The atoms with leptonic\u{2019}s theme; "<Code inline=true>"LinkButton"</Code>" takes the variants, "
+                            "colors and sizes of the "<Link href=routes::doc::button::Component.materialize()>"Button Component"</Link>"."
+                        </TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
-                <p>"A link to another site, opening in a new tab:"</p>
+                <p>"The themed "<Code inline=true>"Link"</Code>" to another site, opening in a new tab:"</p>
 
                 <Demo description="External link to the leptonic repository" source=include_str!("demos/link.rs") source_open=true>
                     <LinkConceptDemo/>
@@ -66,21 +84,46 @@ pub fn PageLinkOverview() -> impl IntoView {
 
             <Section title="Accessibility">
                 <p>
-                    "Native "<Code inline=true>"<a>"</Code>" elements bring link semantics with them. When you render a "
-                    "link as another element, "<Code inline=true>"use_link"</Code>" adds what is missing."
+                    "A link is announced as a link and followed with "<Keys keys="Enter"/>". Native "<Code inline=true>"<a>"</Code>
+                    " elements bring this with them; all layers keep it and add:"
                 </p>
 
                 <ul>
-                    <li><Code inline=true>"role=\"link\""</Code>" on elements other than "<Code inline=true>"<a>"</Code>"."</li>
-                    <li><Code inline=true>"aria-disabled=\"true\""</Code>" while the link is disabled."</li>
-                    <li><Code inline=true>"aria-current"</Code>" marks the link to the current page in a navigation."</li>
+                    <li>
+                        <Code inline=true>"role=\"link\""</Code>" and "<Code inline=true>"tabindex=\"0\""</Code>" on elements other "
+                        "than "<Code inline=true>"<a>"</Code>", so they are announced and reached like links."
+                    </li>
+                    <li>
+                        "Disabled links lose their "<Code inline=true>"href"</Code>", leave the tab order and get "
+                        <Code inline=true>"aria-disabled=\"true\""</Code>"."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-current=\"page\""</Code>" on the link to the current page ("
+                        <Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>")."
+                    </li>
+                    <li>
+                        <Code inline=true>"rel=\"noopener\""</Code>" on links opening a new tab, so the opened page can\u{2019}t "
+                        "reach yours."
+                    </li>
+                    <li>
+                        "A link without text, such as an icon or a bare "<Code inline=true>"#"</Code>", needs an "
+                        <Code inline=true>"aria_label"</Code>"."
+                    </li>
                 </ul>
 
                 <KeyboardTable>
                     <KeyRow keys="Tab">"Moves focus to the link."</KeyRow>
-                    <KeyRow keys="Enter">"Activates the link."</KeyRow>
+                    <KeyRow keys="Enter">"Follows the link. Unlike buttons, links don\u{2019}t react to Space."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></li>
+                <li><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></li>
+                <li><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></li>
+                <li><Link href=routes::doc::Breadcrumbs.materialize()>"Breadcrumbs"</Link></li>
+                <li><Link href=routes::doc::Button.materialize()>"Button"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

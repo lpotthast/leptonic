@@ -5,15 +5,15 @@ use leptos::prelude::*;
 pub fn PreventScrollDemo() -> impl IntoView {
     let (prevent_scroll, set_prevent_scroll) = signal(false);
 
-    // Scrolling is prevented while `disabled` is `false`.
+    // Scrolling is prevented while `is_disabled` is `false`.
     use_prevent_scroll(UsePreventScrollInput {
         is_disabled: Signal::derive(move || !prevent_scroll.get()),
     });
 
     view! {
-        <Checkbox state=(prevent_scroll, set_prevent_scroll) classes="demo-form-row">"Prevent scroll"</Checkbox>
+        <Checkbox is_selected=prevent_scroll set_selected=set_prevent_scroll>"Prevent scroll"</Checkbox>
 
-        <p class="demo-mt-half">
+        <p class="demo-status">
             {move || {
                 if prevent_scroll.get() {
                     "Scroll prevention is on. Try scrolling: the page stays where it is."

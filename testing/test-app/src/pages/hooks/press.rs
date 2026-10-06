@@ -1,4 +1,7 @@
-use leptonic::hooks::{PressEvent, UsePressInput, UsePressReturn, use_press};
+use leptonic::{
+    hooks::{PressEvent, UsePressInput, UsePressReturn, use_press},
+    utils::propagation_control::Propagation,
+};
 use leptos::prelude::*;
 
 /// Every press callback appends to a shared log, so tests can assert the exact event order.
@@ -21,24 +24,11 @@ fn press_input(log: EventLog, disabled: Signal<bool>) -> UsePressInput {
     };
     UsePressInput {
         is_disabled: disabled,
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: entry("press"),
+        on_press: Some(entry("press")),
         on_press_up: Some(entry("up")),
         on_press_start: Some(entry("start")),
         on_press_end: Some(entry("end")),
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-        long_press_disabled: Signal::stored(false),
+        ..UsePressInput::default()
     }
 }
 
@@ -50,6 +40,8 @@ pub fn PageHookPress() -> impl IntoView {
             <BasicPress />
             <DisableOnPressStart />
             <CheckboxInForm />
+            <NestedPress id="test-press-nested-stop" continue_inner=false />
+            <NestedPress id="test-press-nested-continue" continue_inner=true />
             <button id="test-press-elsewhere">"Elsewhere"</button>
         </div>
     }
@@ -132,6 +124,50 @@ fn CheckboxInForm() -> impl IntoView {
             </form>
             <div>"Submits: " <span id="test-press-submits">{submits}</span></div>
             <div>"Log: " <span id="test-press-checkbox-log">{log.render()}</span></div>
+        </section>
+    }
+}
+
+/// An inner pressable inside an outer one (react-aria's "event bubbling" tests). The inner one's
+/// callbacks continue propagation when `continue_inner`. Logs to `#{id}-outer-log`/`-inner-log`.
+#[component]
+fn NestedPress(id: &'static str, continue_inner: bool) -> impl IntoView {
+    let outer_log = EventLog(RwSignal::new(Vec::new()));
+    let inner_log = EventLog(RwSignal::new(Vec::new()));
+    // As upstream's tests: the outer pressable listens to press up only when the inner continues
+    // (a pointer up bubbles to it either way, and starts no press there).
+    let mut outer_input = press_input(outer_log, Signal::stored(false));
+    if !continue_inner {
+        outer_input.on_press_up = None;
+    }
+    let outer = use_press(outer_input);
+    let entry = move |name: &'static str| {
+        Callback::new(move |e: PressEvent| {
+            if continue_inner {
+                e.continue_propagation();
+            }
+            inner_log.push(name);
+        })
+    };
+    let inner = use_press(UsePressInput {
+        on_press: Some(entry("press")),
+        on_press_up: Some(entry("up")),
+        on_press_start: Some(entry("start")),
+        on_press_end: Some(entry("end")),
+        ..UsePressInput::default()
+    });
+    let (outer_attrs, outer_styles) = outer.props.into_parts();
+    let (inner_attrs, inner_styles) = inner.props.into_parts();
+    view! {
+        <section id=id>
+            <div role="button" tabindex="0" {..outer_attrs} style=outer_styles>
+                "Outer "
+                <div id=format!("{id}-inner") role="button" tabindex="0" {..inner_attrs} style=inner_styles>
+                    "Inner"
+                </div>
+            </div>
+            <div>"Outer: " <span id=format!("{id}-outer-log")>{outer_log.render()}</span></div>
+            <div>"Inner: " <span id=format!("{id}-inner-log")>{inner_log.render()}</span></div>
         </section>
     }
 }

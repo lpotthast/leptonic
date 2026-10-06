@@ -21,6 +21,7 @@ use crate::{
         EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaRequired, AriaRole},
         id::use_id,
+        key::{KeyboardEventKey, KeyboardKey},
     },
 };
 
@@ -430,12 +431,11 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
             return;
         }
 
-        let key = e.key();
-        match key.as_str() {
-            "ArrowRight" | "Tab" if !e.shift_key() => {
+        match e.typed_key() {
+            KeyboardKey::ArrowRight | KeyboardKey::Tab if !e.shift_key() => {
                 // Navigation handled by individual segments.
             }
-            "ArrowLeft" | "Tab" if e.shift_key() => {
+            KeyboardKey::ArrowLeft | KeyboardKey::Tab if e.shift_key() => {
                 // Navigation handled by individual segments.
             }
             _ => {}

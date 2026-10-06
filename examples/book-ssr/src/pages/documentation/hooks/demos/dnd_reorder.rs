@@ -18,7 +18,7 @@ use leptonic::{
         use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
         use_droppable_item, use_grid_list, use_grid_list_item,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -65,7 +65,7 @@ fn sorted(keys: impl IntoIterator<Item = Key>, tasks: &[&str]) -> String {
 pub fn ReorderDemo() -> impl IntoView {
     let tasks = RwSignal::new(TASKS.to_vec());
     let disabled = RwSignal::new(false);
-    let last_drop = RwSignal::new(String::from("none"));
+    let last_drop = RwSignal::new(String::from("none yet"));
 
     // The rows and their selection: dragging a selected row drags all selected rows.
     let collection = use_list_collection(
@@ -159,14 +159,16 @@ pub fn ReorderDemo() -> impl IntoView {
             {move || last().map(|task| view! { <DropIndicator task position=DropPosition::After drop=drop.clone()/> })}
         </div>
 
-        <Checkbox state=disabled>"Disable drag and drop"</Checkbox>
-
-        <div class="demo-state-display">
-            <div><strong>"Order: "</strong>{move || tasks.get().join(", ")}</div>
-            <div><strong>"Selected: "</strong>{move || tasks.with(|tasks| sorted(list.selection.selected_keys(), tasks))}</div>
-            <div><strong>"Dragging: "</strong>{move || tasks.with(|tasks| sorted(drag_state.dragging_keys.get(), tasks))}</div>
-            <div><strong>"Last drop: "</strong>{last_drop}</div>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
+
+        <p class="demo-status">
+            "Order: "{move || tasks.get().join(", ")}<br/>
+            "Selected: "{move || tasks.with(|tasks| sorted(list.selection.selected_keys(), tasks))}<br/>
+            "Dragging: "{move || tasks.with(|tasks| sorted(drag_state.dragging_keys.get(), tasks))}<br/>
+            "Last drop: "{last_drop}
+        </p>
     }
 }
 
@@ -224,13 +226,14 @@ fn TaskRow(
             {..row_attrs}
             {..drag_props.into_attrs()}
             {..element.attr()}
-            class=Classes::from("demo-dnd-row").add_reactive("focus-visible", is_focus_visible)
+            class="demo-dnd-row"
             style=row_styles
             aria-hidden=move || aria_hidden.get()
             data-dragging=move || is_dragging.get().then_some("")
+            data-focus-visible=move || is_focus_visible.get().then_some("")
         >
             <div {..grid_cell_props.into_attrs()} class="demo-dnd-cell">
-                <span class="demo-dnd-check">{move || if is_selected.get() { "\u{2713}" } else { "" }}</span>
+                <span class="demo-dnd-check" aria-hidden="true">{move || if is_selected.get() { "\u{2713}" } else { "" }}</span>
                 <span class="demo-dnd-grip" aria-hidden="true">"\u{2630}"</span>
                 <span>{task}</span>
             </div>

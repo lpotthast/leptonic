@@ -1,8 +1,7 @@
 use leptonic::{atoms::color_swatch::ColorSwatch, utils::color::RGB8};
 use leptos::prelude::*;
 
-/// Named colors. The name becomes the swatch's accessible label; without it, screen readers would hear the CSS
-/// color string ("rgb(229, 72, 77)").
+/// Named colors. The name becomes the swatch's accessible label, replacing the generated one ("vibrant red").
 const PALETTE: [(&str, RGB8); 6] = [
     (
         "Tomato red",
@@ -63,7 +62,7 @@ pub fn ColorSwatchPaletteDemo() -> impl IntoView {
                 .map(|(name, color)| {
                     view! {
                         <li class="demo-color-atoms-palette-item">
-                            <ColorSwatch<RGB8>
+                            <ColorSwatch
                                 color=color
                                 color_name=name.to_owned()
                                 classes="demo-color-atoms-palette-swatch"

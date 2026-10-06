@@ -1,6 +1,6 @@
 pub mod demos;
 
-pub mod callback;
 pub mod icon;
+pub mod sanitized_html;
 pub mod transitions;
 pub mod typography;

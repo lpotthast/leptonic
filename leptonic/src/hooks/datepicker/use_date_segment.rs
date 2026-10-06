@@ -546,7 +546,7 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
                 e.prevent_default();
                 handle_digit_input(
                     digit,
-                    &entered_keys,
+                    entered_keys,
                     max_digits,
                     seg_max.unwrap_or(i32::MAX),
                     on_change,
@@ -597,7 +597,7 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
 /// Handle digit input with accumulation and auto-advance.
 fn handle_digit_input(
     digit: &str,
-    entered_keys: &StoredValue<String>,
+    entered_keys: StoredValue<String>,
     max_digits: usize,
     max_value: i32,
     on_change: Option<Callback<i32>>,

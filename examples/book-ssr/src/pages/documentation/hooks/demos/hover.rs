@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{components::prelude::*, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
@@ -8,7 +8,7 @@ use ringbuf::{
 #[component]
 pub fn HoverDemo() -> impl IntoView {
     let (events, set_events) = signal(HeapRb::<String>::new(50));
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
 
     let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput {
         is_disabled: disabled.into(),
@@ -22,22 +22,22 @@ pub fn HoverDemo() -> impl IntoView {
                 events.push_overwrite(format!("HoverEnd: pointer_type={:?}", e.pointer_type));
             });
         })),
-        on_hover_change: None,
+        ..Default::default()
     });
 
     view! {
-        <div {..props.into_attrs()} class="demo-hover-target" class:hovered=move || is_hovered.get()>
+        // `data-hovered` shows the hook's `is_hovered` state to CSS.
+        <div {..props.into_attrs()} class="demo-hover-target" data-hovered=flag(is_hovered)>
             "Hover me"
         </div>
 
-        <p>
-            "is_hovered: "
-            <strong class=move || if is_hovered.get() { "demo-state-active" } else { "demo-state-inactive" }>
-                {move || is_hovered.get()}
-            </strong>
-        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
 
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
+        <p class="demo-status">
+            {move || if is_hovered.get() { "Hovered." } else { "Not hovered." }}
+        </p>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
         <pre class="demo-event-log">

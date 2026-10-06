@@ -16,48 +16,35 @@ pub fn PageUseMove() -> impl IntoView {
             <p>
                 "The "<Code inline=true>"use_move"</Code>" hook reports pointer drags and arrow key presses on an element as "
                 "movement deltas. Optionally, it keeps the element inside a container and tracks its position for you. "
-                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" to compare it with the other interaction building blocks."
             </p>
 
             <ReactAria hook="useMove"/>
 
             <Section title="Input">
                 <p>
-                    <Code inline=true>"UseMoveInput"</Code>" has no "<Code inline=true>"Default"</Code>
-                    " implementation, so you set every field."
+                    <Code inline=true>"UseMoveInput"</Code>" implements "<Code inline=true>"Default"</Code>
+                    " (free movement in both axes, no callbacks), so you name only the fields you need."
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseMoveInput">
-                    <ApiRow name="is_disabled" ty="Signal<bool>">"Ignore pointer and keyboard movement while "<Code inline=true>"true"</Code>"."</ApiRow>
-                    <ApiRow name="axis" ty="Signal<Option<MoveAxis>>">
-                        "Lock movement to "<Code inline=true>"MoveAxis::Horizontal"</Code>" or "<Code inline=true>"MoveAxis::Vertical"</Code>
-                        ". "<Code inline=true>"None"</Code>" and "<Code inline=true>"MoveAxis::Both"</Code>" allow both directions."
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                        "Ignore pointer and keyboard movement while "<Code inline=true>"true"</Code>"."
                     </ApiRow>
-                    <ApiRow name="on_move_start" ty="Option<Callback<MoveStartEvent>>">
+                    <ApiRow name="axis" ty="Signal<MoveAxis>" default="MoveAxis::Both">
+                        "Lock movement to "<Code inline=true>"MoveAxis::Horizontal"</Code>" or "<Code inline=true>"MoveAxis::Vertical"</Code>
+                        ". "<Code inline=true>"MoveAxis::Both"</Code>" allows both directions."
+                    </ApiRow>
+                    <ApiRow name="on_move_start" ty="Option<Callback<MoveStartEvent>>" default="None">
                         "Called when movement starts. The event has "<Code inline=true>"pointer_type"</Code>", "
                         <Code inline=true>"modifiers"</Code>", "<Code inline=true>"page_x"</Code>" and "<Code inline=true>"page_y"</Code>"."
                     </ApiRow>
-                    <ApiRow name="on_move" ty="Option<Callback<MoveEvent>>">
+                    <ApiRow name="on_move" ty="Option<Callback<MoveEvent>>" default="None">
                         "Called for every movement step with "<Code inline=true>"delta_x"</Code>", "<Code inline=true>"delta_y"</Code>", "
                         <Code inline=true>"pointer_type"</Code>" and "<Code inline=true>"modifiers"</Code>"."
                     </ApiRow>
-                    <ApiRow name="on_move_end" ty="Option<Callback<MoveEndEvent>>">
+                    <ApiRow name="on_move_end" ty="Option<Callback<MoveEndEvent>>" default="None">
                         "Called when movement ends, with "<Code inline=true>"pointer_type"</Code>" and "<Code inline=true>"modifiers"</Code>"."
-                    </ApiRow>
-                    <ApiRow name="constraint" ty="Option<MoveConstraint>">
-                        "Keep the element inside a container: "<Code inline=true>"MoveConstraint::Bounds"</Code>
-                        " keeps the whole element inside, "<Code inline=true>"MoveConstraint::Center"</Code>" only its center. "
-                        "Enables the "<Code inline=true>"constraint"</Code>" return value."
-                    </ApiRow>
-                    <ApiRow name="on_position_change" ty="Option<Callback<NormalizedPosition>>">
-                        "Called whenever the constrained position changes: by dragging, container clicks, the keyboard or "
-                        <Code inline=true>"set_position"</Code>". Constrained mode only."
-                    </ApiRow>
-                    <ApiRow name="allow_container_click" ty="bool">
-                        "Move the element to where the container is clicked. Constrained mode only."
-                    </ApiRow>
-                    <ApiRow name="initial_position" ty="Option<NormalizedPosition>">
-                        "Starting position in constrained mode. Defaults to the top left corner."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -70,33 +57,29 @@ pub fn PageUseMove() -> impl IntoView {
                         " to receive arrow keys."
                     </ApiRow>
                     <ApiRow name="is_moving" ty="Signal<bool>">"Whether the element is currently being moved."</ApiRow>
-                    <ApiRow name="constraint" ty="Option<UseMoveConstraintReturn>">
-                        <Code inline=true>"Some"</Code>" when "<Code inline=true>"constraint"</Code>" is set, see "
-                        <a href="#constrained-movement">"Constrained movement"</a>"."
-                    </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptos::prelude::*;
+
+                        let offset = RwSignal::new((0.0, 0.0));
+
                         let UseMoveReturn { props, is_moving, .. } = use_move(UseMoveInput {
-                            is_disabled: false.into(),
-                            axis: None.into(),
-                            on_move_start: None,
                             on_move: Some(Callback::new(move |e: MoveEvent| {
-                                set_x.update(|x| *x += e.delta_x);
-                                set_y.update(|y| *y += e.delta_y);
+                                offset.update(|(x, y)| {
+                                    *x += e.delta_x;
+                                    *y += e.delta_y;
+                                });
                             })),
-                            on_move_end: None,
-                            on_position_change: None,
-                            constraint: None,
-                            allow_container_click: false,
-                            initial_position: None,
+                            ..UseMoveInput::default()
                         });
 
                         view! {
-                            <div {..props.into_attrs()} tabindex="0">"Drag me"</div>
+                            <div {..props.into_attrs()} tabindex="0" data-moving=flag(is_moving)>"Drag me"</div>
                         }
                     "#)}
                 </Code>
@@ -104,7 +87,7 @@ pub fn PageUseMove() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "Without a constraint, the hook only reports deltas and you decide what to do with them. This demo adds "
+                    "The hook only reports deltas and you decide what to do with them. This demo adds "
                     "them to the element\u{2019}s offset and keeps it inside the area itself."
                 </p>
 
@@ -113,12 +96,13 @@ pub fn PageUseMove() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Constrained movement">
+            <Section title="use_constrained_move">
                 <p>
-                    "With a "<Code inline=true>"constraint"</Code>", the hook also tracks the element\u{2019}s position inside "
-                    "a container. Spread "<Code inline=true>"container_props"</Code>" onto the container (it needs "
-                    <Code inline=true>"position: relative"</Code>") and position the element absolutely at "
-                    <Code inline=true>"pixel_position"</Code>"."
+                    <Code inline=true>"use_constrained_move(input, options)"</Code>" takes the same "
+                    <Code inline=true>"UseMoveInput"</Code>" plus "<AnchorLink href="#moveconstraintoptions">"MoveConstraintOptions"</AnchorLink>
+                    ", keeps the element inside a container and tracks its position. Spread the returned "
+                    <Code inline=true>"container_props"</Code>" onto the container (it needs "<Code inline=true>"position: relative"</Code>
+                    ") and position the element absolutely at "<Code inline=true>"pixel_position"</Code>"."
                 </p>
                 <p>
                     "In a right-to-left layout (the locale of an enclosing "<Code inline=true>"I18nProvider"</Code>
@@ -126,21 +110,51 @@ pub fn PageUseMove() -> impl IntoView {
                     <Code inline=true>"x = 0.0"</Code>" is the right edge."
                 </p>
 
-                <ApiTable kind=ApiKind::Return of="UseMoveConstraintReturn">
-                    <ApiRow name="container_props" ty="UseMoveContainerProps">
-                        "Props for the container. Spread them with "<Code inline=true>"{..container_props.into_attrs()}"</Code>"."
-                    </ApiRow>
-                    <ApiRow name="normalized_position" ty="Signal<NormalizedPosition>">
-                        "Position with "<Code inline=true>"x"</Code>" and "<Code inline=true>"y"</Code>" between "
-                        <Code inline=true>"0.0"</Code>" (top left) and "<Code inline=true>"1.0"</Code>" (bottom right)."
-                    </ApiRow>
-                    <ApiRow name="pixel_position" ty="Signal<(f64, f64)>">"Position in pixels relative to the container."</ApiRow>
-                    <ApiRow name="set_position" ty="Callback<NormalizedPosition>">"Moves the element programmatically."</ApiRow>
-                </ApiTable>
+                <Section title="MoveConstraintOptions">
+                    <p>
+                        <Code inline=true>"MoveConstraintOptions::new(mode)"</Code>" starts at the top left corner, without "
+                        "container clicks; change the rest with struct update syntax."
+                    </p>
 
-                <Demo description="Movement constrained to a container with position readout" source=include_str!("demos/move_constrained.rs")>
-                    <ConstrainedBasicExample/>
-                </Demo>
+                    <ApiTable kind=ApiKind::Fields of="MoveConstraintOptions">
+                        <ApiRow name="mode" ty="MoveConstraint">
+                            "Required. "<Code inline=true>"MoveConstraint::Bounds"</Code>" keeps the whole element inside, "
+                            <Code inline=true>"MoveConstraint::Center"</Code>" only its center."
+                        </ApiRow>
+                        <ApiRow name="allow_container_click" ty="bool" default="false">
+                            "Move the element to where the container is pressed."
+                        </ApiRow>
+                        <ApiRow name="initial_position" ty="NormalizedPosition" default="(0.0, 0.0)">
+                            "Where the element starts, normalized to the container."
+                        </ApiRow>
+                        <ApiRow name="on_position_change" ty="Option<Callback<NormalizedPosition>>" default="None">
+                            "Called whenever the constrained position changes: by dragging, container clicks, the keyboard or "
+                            <Code inline=true>"set_position"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="UseConstrainedMoveReturn">
+                    <ApiTable kind=ApiKind::Return of="UseConstrainedMoveReturn">
+                        <ApiRow name="props" ty="UseMoveProps">
+                            "Pointer and key handlers for the movable element, as with "<Code inline=true>"use_move"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_moving" ty="Signal<bool>">"Whether the element is currently being moved."</ApiRow>
+                        <ApiRow name="container_props" ty="UseMoveContainerProps">
+                            "Props for the container. Spread them with "<Code inline=true>"{..container_props.into_attrs()}"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="normalized_position" ty="Signal<NormalizedPosition>">
+                            "Position with "<Code inline=true>"x"</Code>" and "<Code inline=true>"y"</Code>" between "
+                            <Code inline=true>"0.0"</Code>" (top left) and "<Code inline=true>"1.0"</Code>" (bottom right)."
+                        </ApiRow>
+                        <ApiRow name="pixel_position" ty="Signal<Point>">"Position in pixels relative to the container."</ApiRow>
+                        <ApiRow name="set_position" ty="Callback<NormalizedPosition>">"Moves the element programmatically."</ApiRow>
+                    </ApiTable>
+
+                    <Demo description="Movement constrained to a container with position readout" source=include_str!("demos/move_constrained.rs")>
+                        <ConstrainedBasicExample/>
+                    </Demo>
+                </Section>
 
                 <Section title="Axis">
                     <p>"Lock movement to one axis with "<Code inline=true>"axis"</Code>"."</p>
@@ -150,15 +164,15 @@ pub fn PageUseMove() -> impl IntoView {
                     </Demo>
                 </Section>
 
-                <Section title="Container click">
-                    <p>"With "<Code inline=true>"allow_container_click"</Code>", clicking the container moves the element there."</p>
+                <Section title="Container Click">
+                    <p>"With "<Code inline=true>"allow_container_click"</Code>", pressing the container moves the element there."</p>
 
                     <Demo description="Clicking the container moves the element to the click position" source=include_str!("demos/move_container_click.rs")>
                         <ContainerClickExample/>
                     </Demo>
                 </Section>
 
-                <Section title="Bounds or center">
+                <Section title="Bounds or Center">
                     <p>
                         <Code inline=true>"MoveConstraint::Bounds"</Code>" keeps the whole element inside the container. "
                         <Code inline=true>"MoveConstraint::Center"</Code>" only keeps its center inside, so the element can "
@@ -170,7 +184,7 @@ pub fn PageUseMove() -> impl IntoView {
                     </Demo>
                 </Section>
 
-                <Section title="Programmatic position">
+                <Section title="Programmatic Position">
                     <p>"Call "<Code inline=true>"set_position"</Code>" to move the element from code."</p>
 
                     <Demo description="Buttons moving the element with set_position" source=include_str!("demos/move_programmatic.rs")>
@@ -198,8 +212,9 @@ pub fn PageUseMove() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
-                <li><Link href=routes::doc::interactions::Dnd.materialize()>"Drag and drop"</Link></li>
-                <li><Link href=routes::doc::slider::Hook.materialize()>"use_slider"</Link>" (uses use_move)"</li>
+                <li><Link href=routes::doc::DragAndDrop.materialize()>"Drag & Drop"</Link></li>
+                <li><Link href=routes::doc::slider::Hook.materialize()>"Slider Hooks"</Link>" (built on use_move)"</li>
+                <li><Link href=routes::doc::color_area::Hook.materialize()>"Color Area Hooks"</Link>" (built on use_move)"</li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,32 +1,23 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{components::prelude::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkDisabledDemo() -> impl IntoView {
-    let is_disabled = RwSignal::new(false);
-    let disabled_link = use_link(UseLinkInput {
-        href: Some("#".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: is_disabled.into(),
-        element_type: LinkElementType::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
+    let disabled = RwSignal::new(false);
 
-    let (link_props, link_styles) = disabled_link.props.into_inner();
+    let link = use_link(UseLinkInput {
+        href: Signal::stored(Some("/doc/link/atom".to_owned())),
+        is_disabled: disabled.into(),
+        ..UseLinkInput::default()
+    });
+    let (link_attrs, link_styles) = link.props.into_parts();
 
     view! {
-        <div>
-            <strong>"Disabled Link: "</strong>
-            // `.demo-link` greys itself out via `[aria-disabled="true"]`, which the hook sets.
-            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
-                "This link can be disabled"
-            </a>
-        </div>
+        // Disabled, the link loses its `href` and gets `aria-disabled="true"`, which the styles use.
+        <p><a {..link_attrs} class="demo-link" style=link_styles>"Link Atoms"</a></p>
 
-        <Checkbox state=is_disabled>"Disable link"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

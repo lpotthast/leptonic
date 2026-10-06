@@ -66,6 +66,7 @@ pub fn SelectAtomDemo() -> impl IntoView {
         <Select
             collection=offices
             value=office
+            set_value=office
             is_disabled=disabled
             classes="demo-sel"
         >
@@ -106,15 +107,15 @@ pub fn SelectAtomDemo() -> impl IntoView {
             </SelectPopover>
         </Select>
 
-        <div class="demo-flex-center-row">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <p class="demo-status">
+            "Selected key: "
+            {move || office.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}
+        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
             // The app changes the selection by writing its state.
             <Button on_press=move |_| office.set(Vec::new()) color=ButtonColor::Secondary>"Clear"</Button>
         </div>
 
-        <p>
-            "Selected key: "
-            <strong>{move || office.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}</strong>
-        </p>
     }
 }

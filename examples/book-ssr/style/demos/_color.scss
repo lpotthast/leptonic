@@ -1,0 +1,436 @@
+// Color: demos of ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker and ColorWheel.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode. The thumbs contain the
+// focused (visually hidden) range input and show its focus through `data-focus-visible`: set by the `ColorThumb` atom,
+// and by `use_focus_ring` with `within` in the hook demos.
+
+// -- Color area atoms --
+
+// The color area next to its result.
+.demo-color-atoms {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--book-space-l);
+}
+
+// The atom sets the gradient, `position: relative` and `touch-action: none`; the size and shape are ours.
+.demo-color-atoms-area {
+    width: 200px;
+    height: 200px;
+    max-width: 100%;
+    border-radius: var(--book-radius-m);
+    cursor: crosshair;
+
+    &[data-disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+// The atom positions the thumb and sets its background to the current color.
+.demo-color-atoms-thumb {
+    box-sizing: border-box;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--book-muted-color), var(--book-shadow-s);
+    cursor: grab;
+
+    &[data-dragging] { cursor: grabbing; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-disabled] { cursor: not-allowed; }
+}
+
+.demo-color-atoms-result {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+}
+
+.demo-color-atoms-swatch {
+    flex-shrink: 0;
+    width: 4em;
+    height: 4em;
+    border-radius: var(--book-radius-m);
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}
+
+.demo-color-atoms-values {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: var(--book-space-xs) var(--book-space-m);
+    margin: 0;
+
+    dt {
+        color: var(--book-muted-color);
+    }
+
+    dd {
+        margin: 0;
+        white-space: nowrap;
+    }
+}
+
+// A row of named swatches with their names and hex codes.
+.demo-color-atoms-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-m);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.demo-color-atoms-palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--book-space-xs);
+    width: 7em;
+    font-size: var(--book-font-size-s);
+    text-align: center;
+
+    code {
+        color: var(--book-muted-color);
+    }
+}
+
+.demo-color-atoms-palette-swatch {
+    width: 3em;
+    height: 3em;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}
+
+// -- Color field atoms --
+
+.demo-color-atoms-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-m);
+}
+
+// Three channel fields in a row.
+.demo-color-atoms-channel-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 6em));
+    gap: var(--book-space-s);
+}
+
+// The Input atom, styled through its data attributes.
+.demo-color-atoms-input {
+    box-sizing: border-box;
+    width: 8em;
+    max-width: 100%;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font-family: var(--typography-code-font-family);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-invalid] { border-color: var(--danger-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-color-atoms-channel-fields .demo-color-atoms-input {
+    width: 100%;
+}
+
+// -- Color swatch picker atoms --
+
+// The swatches wrap into rows (the picker's grid layout).
+.demo-color-swatch-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-xs);
+    max-width: 16em;
+}
+
+.demo-color-swatch-picker-item {
+    display: flex;
+    padding: 3px;
+    border-radius: 50%;
+    cursor: pointer;
+
+    &[data-selected] { box-shadow: 0 0 0 2px var(--main-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-color-swatch-picker-swatch {
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}
+
+// -- Color slider atoms --
+
+.demo-color-atoms-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-m);
+    width: 16em;
+    max-width: 100%;
+}
+
+// Label and output in a row, the track below them.
+.demo-color-atoms-slider {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--book-space-xs);
+}
+
+.demo-color-atoms-slider-output {
+    color: var(--book-muted-color);
+}
+
+// The atom sets the gradient, `position: relative` and `touch-action: none`.
+.demo-color-atoms-slider-track {
+    grid-column: 1 / -1;
+    height: 24px;
+    border-radius: var(--book-radius-s);
+
+    &[data-disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    // The atom positions the thumb along the track; center it across.
+    > .demo-color-atoms-thumb {
+        top: 50%;
+    }
+}
+
+// -- Color wheel atoms --
+
+// The atom sizes the ring and positions the thumb.
+.demo-color-atoms-wheel {
+    width: fit-content;
+
+    &[data-disabled] {
+        opacity: 0.5;
+    }
+}
+
+// -- Color area hooks --
+
+// The gradient and the thumb position and color are set from Rust.
+.demo-color-area {
+    width: 200px;
+    height: 200px;
+    border-radius: var(--book-radius-s);
+
+    &[aria-disabled="true"] {
+        opacity: 0.5;
+    }
+}
+
+// The hook positions the thumb; the demo sets its color.
+.demo-color-area-thumb {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    cursor: grab;
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Color field hooks --
+
+// Hex input with a color preview next to it.
+.demo-color-field-row {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+}
+
+.demo-color-field-input {
+    width: 120px;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font-family: var(--typography-code-font-family);
+    text-transform: uppercase;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+
+    &[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.demo-color-field-preview {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+}
+
+// A channel field: a number field with stepper buttons.
+
+
+.demo-color-channel-field-input {
+    width: 80px;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    text-align: center;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+
+    &[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+// -- Color slider hooks --
+
+// Label and output in a row, the track below them.
+.demo-color-slider {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--book-space-xs);
+    max-width: 20em;
+}
+
+.demo-color-slider-output {
+    color: var(--book-muted-color);
+}
+
+// The hooks set the gradient, `position: relative` and `touch-action: none`.
+.demo-color-slider-track {
+    grid-column: 1 / -1;
+    height: 16px;
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    // Dimmed while its hidden input is disabled.
+    &:has(input[disabled]) {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.demo-color-slider-thumb {
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    cursor: grab;
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Color wheel hooks --
+
+// The thumb is positioned in this element, next to the track. The hook sizes, shapes and fills the track and
+// positions the thumb.
+.demo-color-wheel {
+    position: relative;
+    width: fit-content;
+
+    // Dimmed while its hidden input is disabled.
+    &:has(input[disabled]) {
+        opacity: 0.5;
+    }
+}
+
+.demo-color-wheel-thumb {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    cursor: grab;
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Color swatch hooks --
+
+// The background color is set from Rust.
+.demo-color-swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-xl);
+}
+
+.demo-color-swatch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-s);
+    margin: 0;
+}
+
+.demo-color-swatch-hook {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    forced-color-adjust: none;
+}
+
+// -- Color picker --
+
+// The swatch inside the button that opens a color picker (color overview).
+.demo-color-trigger-swatch {
+    width: 1.25em;
+    height: 1.25em;
+    margin-right: var(--book-space-s);
+    border-radius: var(--book-radius-s);
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}
+
+// Color picker parts at a fixed size.
+.demo-color-palette-small {
+    width: 10em;
+    height: 5em;
+}
+
+.demo-color-preview-large {
+    width: 5em;
+    height: 5em;
+}
+
+// -- Color names (Color overview) --
+
+.demo-color-names {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-m);
+}
+
+.demo-color-names-swatch {
+    width: 3em;
+    height: 3em;
+    border-radius: var(--book-radius-m);
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}
+
+// -- Color swatch --
+
+// A single swatch (Color Swatch overview).
+.demo-color-swatch-large {
+    width: 4em;
+    height: 4em;
+    border-radius: var(--book-radius-m);
+    box-shadow: inset 0 0 0 1px var(--book-border-color);
+}

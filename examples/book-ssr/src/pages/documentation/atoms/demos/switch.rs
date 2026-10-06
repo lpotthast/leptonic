@@ -9,7 +9,7 @@ pub fn SwitchAtomDemo() -> impl IntoView {
 
     view! {
         // The atom renders a `<label>` around a visually hidden input; the children draw the track.
-        <switch::Switch state=wifi is_disabled=disabled is_read_only=read_only classes="demo-switch">
+        <switch::Switch is_selected=wifi set_selected=wifi is_disabled=disabled is_read_only=read_only classes="demo-switch">
             <span class="demo-switch-track" aria-hidden="true">
                 <span class="demo-switch-thumb"></span>
             </span>
@@ -18,9 +18,9 @@ pub fn SwitchAtomDemo() -> impl IntoView {
 
         <p class="demo-status">{move || if wifi.get() { "Wi-Fi is on." } else { "Wi-Fi is off." }}</p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-            <Checkbox state=read_only>"Read-only"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
         </div>
     }
 }

@@ -1,148 +1,130 @@
-// Upstream: react-aria/src/slider/useSliderThumb.ts @ 569946588e
-use std::borrow::Cow;
-
+// Upstream: react-aria/src/slider/useSliderThumb.ts @ 99e6102368
 use leptos::{
     attr,
-    attr::{
-        Attr,
-        custom::{CustomAttr, custom_attribute},
-    },
+    attr::Attr,
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
+    tachys::html::property::{Property, prop},
 };
-use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
+use send_wrapper::SendWrapper;
+use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use crate::{
     hooks::{
-        IntoAttrs, Orientation, UseFocusRingInput, UseFocusRingReturn, UseMoveProps, UseMoveReturn,
-        interactions::{
-            use_hover::{UseHoverInput, UseHoverReturn, use_hover},
-            use_move::{MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
-        },
-        slider::use_slider_state::UseSliderStateReturn,
-        use_focus_ring,
+        FocusableContextAttr, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
+        UseFocusableInput, UseFocusableReturn, UseFormResetInput, UseLabelInput, UseLabelProps,
+        UseLabelReturn, UseMoveInput,
+        interactions::use_move::MoveAxis,
+        slider::{SliderData, SliderState, UseSliderReturn},
+        use_focusable, use_form_reset, use_label, use_move,
     },
     utils::{
-        ElementCaptureAttr, EventHandler,
-        aria::{AriaDisabled, AriaOrientation},
-        element_capture::CapturedElement,
-        focus::focus_element,
+        EventAccessors, EventHandler, EventTargetExt,
+        aria::{AriaInvalid, AriaOrientation, AriaRequired},
+        css::TouchAction,
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        event_listeners::{Listener, listen_to},
+        focus::focus_safely,
         i18n::use_direction,
-        id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
-        math::percentage_in_range,
+        number_value::NumberValue,
+        orientation::Orientation,
+        pointer_type::PointerType,
+        style::TouchActionProperty,
+        styles::Styles,
     },
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - The slider's `SliderData` and track come in with `UseSliderThumbInput::new(state, &slider)`;
+//   the input element is captured by its props instead of an `inputRef`.
+// - The thumb's orientation is the slider's (react-aria allows overriding it per thumb).
+// - `isRequired`/`isInvalid` are signals; no `validationState`.
 //
+// ## DIFFERENT BEHAVIOR
+// - Thumb presses start on `pointerdown` only (PointerEvent is always available).
+//
+// =============================================================================
 
-/// Input parameters for the `use_slider_thumb` hook.
-#[derive(Debug, Clone)]
-pub struct UseSliderThumbInput {
-    /// The slider state (from `use_slider_state`).
-    pub state: UseSliderStateReturn,
-
-    /// Reactive handle to the track element (from `use_slider`'s return).
+/// Input of [`use_slider_thumb`]. Start from [`UseSliderThumbInput::new`].
+#[derive(Debug)]
+pub struct UseSliderThumbInput<T: NumberValue> {
+    pub state: SliderState<T>,
+    pub slider: SliderData,
+    /// The slider's track (`UseSliderReturn::track_element`).
     pub track: CapturedElement,
-
-    /// The index of this thumb in the slider.
+    /// The thumb's index in the slider's values.
     pub index: usize,
-
-    /// The name attribute for form submission.
-    pub name: Option<&'static str>,
-
-    /// An accessibility label for this thumb.
-    pub aria_label: Option<Cow<'static, str>>,
-
-    /// ID of an element that labels this thumb.
-    pub aria_labelledby: Option<&'static str>,
-
-    /// Whether this thumb is disabled.
+    /// Disables this thumb only (the slider's `is_disabled` disables all).
     pub is_disabled: Signal<bool>,
-
-    /// Number of decimal places for display.
-    pub decimal_places: Option<usize>,
-
-    /// ID of an element that describes this thumb.
-    pub aria_describedby: Option<&'static str>,
-
-    /// ID of an element that provides additional details about this thumb.
-    pub aria_details: Option<&'static str>,
-
-    /// ID of an element that contains an error message for this thumb.
-    pub aria_errormessage: Option<&'static str>,
-
-    /// Optional override for the ARIA valuetext. When `Some`, this is used instead
-    /// of the auto-generated display value formatted from the numeric thumb value.
-    pub aria_valuetext: Option<Signal<String>>,
+    pub is_required: Signal<bool>,
+    pub is_invalid: Signal<bool>,
+    /// The input's name, for forms.
+    pub name: Option<String>,
+    /// The id of the form the input belongs to, if not its ancestor.
+    pub form: Option<String>,
+    /// Whether the thumb has a visible label of its own (with `label_props`).
+    pub has_label: Signal<bool>,
+    /// Names this thumb (next to the slider's label), e.g. "Minimum".
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
 }
 
-/// The return value of the `use_slider_thumb` hook.
+impl<T: NumberValue> UseSliderThumbInput<T> {
+    /// The first thumb of `slider`.
+    pub fn new(state: SliderState<T>, slider: &UseSliderReturn) -> Self {
+        Self {
+            state,
+            slider: slider.data.clone(),
+            track: slider.track_element,
+            index: 0,
+            is_disabled: Signal::default(),
+            is_required: Signal::default(),
+            is_invalid: Signal::default(),
+            name: None,
+            form: None,
+            has_label: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+        }
+    }
+}
+
+/// Return value of [`use_slider_thumb`].
 #[derive(Debug)]
 pub struct UseSliderThumbReturn {
-    /// Props for the thumb element.
-    pub thumb_props: UseSliderThumbProps,
-
-    /// Props for the visually hidden range input. Render inside the thumb element
-    /// with visually-hidden styling (e.g. `opacity: 0.0001; width: 100%; height: 100%;
-    /// pointer-events: none; position: absolute; top: 0; left: 0;`).
-    /// This input is the focus target and carries ARIA slider semantics.
+    /// For the thumb element, positioned on the track (`position: absolute`).
+    pub thumb_props: PropsWithStyles<UseSliderThumbProps>,
+    /// For the `<input type="range">` inside the thumb (visually hidden): focus, keyboard and
+    /// assistive technology.
     pub input_props: UseSliderThumbInputProps,
-
-    /// Whether this thumb is being dragged.
+    /// For the thumb's own label, if it has one.
+    pub label_props: UseLabelProps,
     pub is_dragging: Signal<bool>,
-
-    /// Whether this thumb is hovered.
-    pub is_hovered: Signal<bool>,
-
-    /// Whether this thumb is focused.
+    pub is_disabled: Signal<bool>,
     pub is_focused: Signal<bool>,
-
-    /// Whether the focus ring should be visible.
-    pub is_focus_visible: Signal<bool>,
-
-    /// The current value of this thumb.
-    pub value: Signal<f64>,
-
-    /// The percentage of this thumb's value (0-100).
-    pub percentage: Signal<f64>,
-
-    /// The formatted display value.
-    pub display_value: Signal<String>,
-
-    /// The thumb ID (for ARIA associations).
-    pub thumb_id: String,
 }
 
-/// Props for the slider thumb element.
-///
-/// The thumb is a visual container for pointer drag interaction and
-/// focus-ring display. The actual focus target is the range input
-/// rendered inside the thumb (see [`UseSliderThumbInputProps`]).
 #[derive(Debug)]
 pub struct UseSliderThumbProps {
-    /// Pointer-down handler (focuses the hidden input + starts drag).
     pub on_pointerdown: EventHandler<PointerEvent>,
-    /// Keyboard handler for arrow keys, PageUp/Down, Home/End (catches events bubbling from input).
     pub on_keydown: EventHandler<KeyboardEvent>,
-    /// Focus event handler (from `use_focus_ring`).
-    pub on_focus: EventHandler<FocusEvent>,
-    /// Blur event handler (from `use_focus_ring`).
-    pub on_blur: EventHandler<FocusEvent>,
-    /// Focus-in event handler (from `use_focus_ring`).
-    pub on_focusin: EventHandler<FocusEvent>,
-    /// Focus-out event handler (from `use_focus_ring`).
-    pub on_focusout: EventHandler<FocusEvent>,
-    /// Pointer-enter handler (from `use_hover`).
-    pub on_pointerenter: EventHandler<PointerEvent>,
-    /// Pointer-leave handler (from `use_hover`).
-    pub on_pointerleave: EventHandler<PointerEvent>,
-    /// Data attribute for keyboard focus visibility.
-    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseSliderThumbAttrs = (
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    ElementCaptureAttr,
+);
 
 impl IntoAttrs for UseSliderThumbProps {
     type Attrs = UseSliderThumbAttrs;
@@ -151,497 +133,403 @@ impl IntoAttrs for UseSliderThumbProps {
         (
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
-            self.on_focusin.into_on(ev::focusin),
-            self.on_focusout.into_on(ev::focusout),
-            self.on_pointerenter.into_on(ev::pointerenter),
-            self.on_pointerleave.into_on(ev::pointerleave),
-            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
         )
     }
 }
 
-/// Attributes for the slider thumb element.
-pub type UseSliderThumbAttrs = (
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-    CustomAttr<&'static str, Signal<Option<&'static str>>>,
-);
-
-/// Props for the visually hidden range input inside the slider thumb.
-///
-/// This input is the focus target and carries ARIA slider semantics.
-/// Render it inside the thumb element with visually-hidden styling
-/// (e.g. `opacity: 0.0001; width: 100%; height: 100%; pointer-events: none;
-/// position: absolute; top: 0; left: 0;`).
 #[derive(Debug)]
 pub struct UseSliderThumbInputProps {
-    /// Input type (always `"range"`).
-    pub ty: &'static str,
-    /// Unique ID for this thumb's input.
     pub id: String,
-    /// Tab index (always `"0"` for enabled sliders).
-    pub tabindex: &'static str,
-    /// Accessibility label.
-    pub aria_label: Option<Cow<'static, str>>,
-    /// ID of an element that labels this thumb.
-    pub aria_labelledby: Option<&'static str>,
-    /// Current thumb value.
-    pub aria_valuenow: Signal<f64>,
-    /// Minimum value for this thumb (constrained by neighbors).
-    pub aria_valuemin: Signal<f64>,
-    /// Maximum value for this thumb (constrained by neighbors).
-    pub aria_valuemax: Signal<f64>,
-    /// Human-readable value description.
-    pub aria_valuetext: Signal<String>,
-    /// Slider orientation.
-    pub aria_orientation: Signal<AriaOrientation>,
-    /// Whether the slider value is invalid.
-    /// Whether the slider is disabled.
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    /// Whether the slider value is required.
-    /// ID of an element that describes this thumb.
-    pub aria_describedby: Option<&'static str>,
-    /// ID of an element that provides additional details about this thumb.
-    pub aria_details: Option<&'static str>,
-    /// ID of an element that contains an error message for this thumb.
-    pub aria_errormessage: Option<&'static str>,
-    /// Form submission name.
-    pub name: Option<&'static str>,
-    /// Current thumb value for form submission.
-    pub value: Signal<f64>,
-    /// Native `min` attribute for browser form validation (mirrors the slider's minimum).
-    pub min: f64,
-    /// Native `max` attribute for browser form validation (mirrors the slider's maximum).
-    pub max: f64,
-    /// Native `step` attribute. `"any"` for continuous sliders, otherwise the numeric step.
-    pub step: String,
-    /// Whether the input is disabled.
+    pub tabindex: Signal<Option<i32>>,
+    pub min: Signal<String>,
+    pub max: Signal<String>,
+    pub step: Signal<String>,
+    pub value: Signal<String>,
+    pub name: Option<String>,
+    pub form: Option<String>,
     pub disabled: Signal<bool>,
-    /// Element capture for the hook to obtain a reference for focusing.
+    pub aria_orientation: Signal<AriaOrientation>,
+    pub aria_valuetext: Signal<String>,
+    pub aria_required: Signal<Option<AriaRequired>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
+    pub on_input: EventHandler<Event>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub context_attrs: FocusableContextAttr,
 }
+
+pub type UseSliderThumbInputAttrs = (
+    (
+        Attr<attr::Type, &'static str>,
+        Attr<attr::Id, String>,
+        Attr<attr::Tabindex, Signal<Option<i32>>>,
+        Attr<attr::Min, Signal<String>>,
+        Attr<attr::Max, Signal<String>>,
+        Attr<attr::Step, Signal<String>>,
+        Attr<attr::Value, Signal<String>>,
+        Property<&'static str, Signal<String>>,
+        Attr<attr::Name, Option<String>>,
+        Attr<attr::Form, Option<String>>,
+        Attr<attr::Disabled, Signal<bool>>,
+    ),
+    (
+        Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
+        Attr<attr::AriaValuetext, Signal<String>>,
+        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
+        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
+        Attr<attr::AriaLabel, MaybeProp<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        ElementCaptureAttr,
+    ),
+    (
+        On<ev::input, SharedEventCallback<Event>>,
+        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+        On<ev::focus, SharedEventCallback<FocusEvent>>,
+        On<ev::blur, SharedEventCallback<FocusEvent>>,
+        FocusableContextAttr,
+    ),
+);
 
 impl IntoAttrs for UseSliderThumbInputProps {
     type Attrs = UseSliderThumbInputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Type, self.ty),
-            Attr(attr::Id, self.id),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaDetails, self.aria_details),
-            Attr(attr::AriaErrormessage, self.aria_errormessage),
-            Attr(attr::Name, self.name),
-            Attr(attr::Value, self.value),
-            Attr(attr::Min, self.min),
-            Attr(attr::Max, self.max),
-            Attr(attr::Step, self.step),
-            Attr(attr::Disabled, self.disabled),
-            self.element_capture,
+            (
+                Attr(attr::Type, "range"),
+                Attr(attr::Id, self.id),
+                Attr(attr::Tabindex, self.tabindex),
+                Attr(attr::Min, self.min),
+                Attr(attr::Max, self.max),
+                Attr(attr::Step, self.step),
+                Attr(attr::Value, self.value),
+                // The attribute is the initial value only.
+                prop("value", self.value),
+                Attr(attr::Name, self.name),
+                Attr(attr::Form, self.form),
+                Attr(attr::Disabled, self.disabled),
+            ),
+            (
+                Attr(attr::AriaOrientation, self.aria_orientation),
+                Attr(attr::AriaValuetext, self.aria_valuetext),
+                Attr(attr::AriaRequired, self.aria_required),
+                Attr(attr::AriaInvalid, self.aria_invalid),
+                Attr(attr::AriaLabel, self.aria_label),
+                Attr(attr::AriaLabelledby, self.aria_labelledby),
+                Attr(attr::AriaDescribedby, self.aria_describedby),
+                self.element_capture,
+            ),
+            (
+                self.on_input.into_on(ev::input),
+                self.on_keydown.into_on(ev::keydown),
+                self.on_keyup.into_on(ev::keyup),
+                self.on_focus.into_on(ev::focus),
+                self.on_blur.into_on(ev::blur),
+                self.context_attrs,
+            ),
         )
     }
 }
 
-/// Attributes for the slider input element.
-pub type UseSliderThumbInputAttrs = (
-    Attr<attr::Type, &'static str>,
-    Attr<attr::Id, String>,
-    Attr<attr::Tabindex, &'static str>,
-    Attr<attr::AriaLabel, Option<Cow<'static, str>>>,
-    Attr<attr::AriaLabelledby, Option<&'static str>>,
-    Attr<attr::AriaValuenow, Signal<f64>>,
-    Attr<attr::AriaValuemin, Signal<f64>>,
-    Attr<attr::AriaValuemax, Signal<f64>>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaDescribedby, Option<&'static str>>,
-    Attr<attr::AriaDetails, Option<&'static str>>,
-    Attr<attr::AriaErrormessage, Option<&'static str>>,
-    Attr<attr::Name, Option<&'static str>>,
-    Attr<attr::Value, Signal<f64>>,
-    Attr<attr::Min, f64>,
-    Attr<attr::Max, f64>,
-    Attr<attr::Step, String>,
-    Attr<attr::Disabled, Signal<bool>>,
-    ElementCaptureAttr,
-);
-
-/// Provides the behavior and accessibility implementation for a slider thumb.
-///
-/// # Example
-///
-/// ```ignore
-/// let state = use_slider_state(UseSliderStateInput {
-///     values: SliderValues::Uncontrolled(vec![50.0]),
-///     ..Default::default()
-/// });
-///
-/// let UseSliderReturn { track_props, track_ref, .. } = use_slider(UseSliderInput {
-///     state,
-///     ..Default::default()
-/// });
-///
-/// let UseSliderThumbReturn { thumb_props, input_props, percentage, .. } =
-///     use_slider_thumb(UseSliderThumbInput {
-///         state,
-///         track_ref,  // from use_slider return
-///         index: 0,
-///         ..Default::default()
-///     });
-/// ```
+/// A thumb of a slider: drag it, or focus its range input and use the arrow keys (Shift: by a
+/// page), PageUp/PageDown, Home and End.
 #[allow(clippy::too_many_lines)]
-pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
+pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSliderThumbReturn {
     let UseSliderThumbInput {
         state,
+        slider,
         track,
         index,
+        is_disabled,
+        is_required,
+        is_invalid,
         name,
+        form,
+        has_label,
         aria_label,
         aria_labelledby,
-        is_disabled: disabled,
-        decimal_places,
         aria_describedby,
-        aria_details,
-        aria_errormessage,
-        aria_valuetext,
     } = input;
 
-    let base_id = use_id("slider-thumb");
-    // Right-to-left layouts reverse the horizontal direction.
-    let direction = use_direction();
-    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
-    let thumb_id = format!("slider-thumb-{base_id}");
-
+    let is_disabled = Signal::derive(move || is_disabled.get() || state.is_disabled.get());
     let orientation = state.orientation;
-    let is_disabled = disabled;
-    let input_element = CapturedElement::new();
+    let direction = use_direction();
+    let is_vertical = move || orientation.get_untracked() == Orientation::Vertical;
+    let reverse_x = move || direction.get_untracked() == WritingDirection::Rtl;
 
-    // Dragging state for this thumb
-    let (is_dragging, set_is_dragging) = signal(false);
-    let (is_focused, set_is_focused) = signal(false);
-
-    // Value signal for this thumb - uses TRACKED access to values for reactivity
-    let value = Signal::derive(move || {
-        state
-            .values
-            .get() // TRACKED access - subscribes to changes
-            .get(index)
-            .copied()
-            .unwrap_or(state.min_value)
+    let UseLabelReturn {
+        label_props,
+        field_props,
+    } = use_label(UseLabelInput {
+        id: Some(slider.thumb_id(index)),
+        has_label,
+        aria_label,
+        // Labelled by the slider in any case (also keeps `use_label` from warning); the labelling
+        // itself follows the slider's label below.
+        aria_labelledby: Some(slider.labelled_by.get_untracked()),
+        ..UseLabelInput::default()
     });
-
-    // Percentage signal for this thumb (0-100 for CSS) - uses TRACKED access
-    let percentage = Signal::derive(move || {
-        let val = state
-            .values
-            .get() // TRACKED access
-            .get(index)
-            .copied()
-            .unwrap_or(state.min_value);
-        percentage_in_range(state.min_value, state.max_value, val) * 100.0
-    });
-
-    // Minimum value for this thumb, constrained by neighbors.
-    let thumb_min = Signal::derive(move || {
-        let global_min = state.min_value;
-        if index == 0 {
-            global_min
-        } else {
-            state
-                .values
-                .get()
-                .get(index - 1)
-                .copied()
-                .unwrap_or(global_min)
-        }
-    });
-
-    // Maximum value for this thumb, constrained by neighbors.
-    let thumb_max = Signal::derive(move || {
-        let global_max = state.max_value;
-        let vals = state.values.get();
-        if index >= vals.len().saturating_sub(1) {
-            global_max
-        } else {
-            vals.get(index + 1).copied().unwrap_or(global_max)
-        }
-    });
-
-    // Format display value
-    let display_value = if let Some(override_text) = aria_valuetext {
-        override_text
-    } else {
+    // As `use_label` with `"{slider labelled by} {aria_labelledby}"`, but following whether the
+    // slider's label is rendered: the thumb's own label, the slider's, then the given ids, and
+    // the thumb itself (first) next to an `aria-label`.
+    let thumb_labelled_by = {
+        let (thumb_label_id, thumb_id) = (label_props.id.clone(), field_props.id.clone());
+        let slider_labelled_by = slider.labelled_by;
         Signal::derive(move || {
-            let value = value.get();
-            if let Some(places) = decimal_places {
-                format!("{value:.places$}")
-            } else {
-                value.to_string()
+            let mut ids = Vec::new();
+            if aria_label.with(Option::is_some) {
+                ids.push(thumb_id.clone());
             }
+            if has_label.get() {
+                ids.push(thumb_label_id.clone());
+            }
+            ids.push(slider_labelled_by.get());
+            ids.extend(
+                aria_labelledby
+                    .iter()
+                    .flat_map(|ids| ids.split_whitespace())
+                    .map(str::to_owned),
+            );
+            crate::hooks::form::use_label::dedup_ids(&mut ids);
+            Some(ids.join(" "))
         })
     };
 
-    // Pixel accumulation: track the thumb's position in pixels (not percent) to avoid
-    // precision loss when the percent snaps to steps. See module docs for details.
-    let current_position_px: StoredValue<Option<f64>> = StoredValue::new(None);
-
-    // Use use_move hook for thumb dragging. This handles all the pointer event
-    // management (pointerdown, pointermove, pointerup, pointercancel) automatically.
-    let UseMoveReturn {
-        props: move_props, ..
-    } = use_move(UseMoveInput {
-        is_disabled,
-        axis: Signal::derive(move || match orientation.get() {
-            Orientation::Horizontal => Some(MoveAxis::Horizontal),
-            Orientation::Vertical => Some(MoveAxis::Vertical),
-        }),
-        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
-            // Initialize pixel position from current thumb percent
-            if let Some(rect) = track.get_bounding_client_rect_untracked() {
-                let size = match orientation.get_untracked() {
-                    Orientation::Horizontal => rect.width(),
-                    Orientation::Vertical => rect.height(),
-                };
-                let initial_px = state.get_thumb_percent.run(index) * size;
-                current_position_px.set_value(Some(initial_px));
-            }
-
-            set_is_dragging.set(true);
-            state.set_thumb_dragging.run((index, true));
-            state.set_focused_thumb.run(Some(index));
-        })),
-        on_move: Some(Callback::new(move |e: MoveEvent| {
-            if let Some(rect) = track.get_bounding_client_rect_untracked() {
-                let orientation = orientation.get_untracked();
-                let size = match orientation {
-                    Orientation::Horizontal => rect.width(),
-                    Orientation::Vertical => rect.height(),
-                };
-
-                // Get current position in pixels (should be initialized in on_move_start)
-                let pos = current_position_px
-                    .get_value()
-                    .unwrap_or_else(|| state.get_thumb_percent.run(index) * size);
-
-                // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
-                // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
-                let delta = match orientation {
-                    Orientation::Horizontal => e.delta_x,
-                    Orientation::Vertical => -e.delta_y,
-                };
-                let delta = if is_rtl() && orientation == Orientation::Horizontal {
-                    -delta
-                } else {
-                    delta
-                };
-
-                // Accumulate in pixels, then convert to percent
-                let new_pos = pos + delta;
-                current_position_px.set_value(Some(new_pos));
-
-                let new_percent = (new_pos / size).clamp(0.0, 1.0);
-                state.set_thumb_percent.run((index, new_percent));
-            }
-        })),
-        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
-            set_is_dragging.set(false);
-            state.set_thumb_dragging.run((index, false));
-            current_position_px.set_value(None);
-        })),
-        on_position_change: None,
-        constraint: None,
-        allow_container_click: false,
-        initial_position: None,
-    });
-
-    // Destructure move_props to catch future type-changes / extensions early.
-    // Sliders have their own keyboard handling, so on_keydown from use_move is ignored.
-    // element_capture is harmless when unused.
-    let UseMoveProps {
-        on_pointerdown,
-        on_keydown: _,
-        element_capture: _,
-    } = move_props;
-
-    // Focus the hidden input on pointerdown. use_move calls prevent_default()
-    // on pointerdown which suppresses the browser's default focus behavior.
-    let handle_pointerdown = EventHandler::new(move |_: PointerEvent| {
+    let input_element = CapturedElement::new();
+    let focus_input = move || {
         if let Some(el) = input_element.get_untracked() {
-            focus_element(&el, true);
-        }
-    })
-    .chain(on_pointerdown);
-
-    // Handle keydown on thumb (catches events bubbling from the input)
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        // Default keyboard increment: step if present, else 1% of range.
-        let range = state.max_value - state.min_value;
-        let step_amount = state.step.unwrap_or(range / 100.0);
-        let page_size = state.page_size;
-        let min_val = state.min_value;
-        let max_val = state.max_value;
-        let shift = e.shift_key();
-        let key = e.key();
-
-        // Helper closures
-        let increment = |amount: f64| {
-            e.prevent_default();
-            state.increment_thumb.run((index, Some(amount)));
-        };
-        let decrement = |amount: f64| {
-            e.prevent_default();
-            state.decrement_thumb.run((index, Some(amount)));
-        };
-        let set_to_min = || {
-            e.prevent_default();
-            state.set_thumb_value.run((index, min_val));
-        };
-        let set_to_max = || {
-            e.prevent_default();
-            state.set_thumb_value.run((index, max_val));
-        };
-
-        match (key.as_str(), shift, is_rtl()) {
-            // Right arrow / Up arrow (increment by step)
-            ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => {
-                increment(step_amount);
-            }
-            // Right arrow (shifted) / Up arrow (shifted) / Page up (increment by page)
-            ("ArrowRight", true, false)
-            | ("ArrowLeft", true, true)
-            | ("ArrowUp", true, _)
-            | ("PageUp", _, _) => increment(page_size),
-
-            // Left arrow / Down arrow (decrement by step)
-            ("ArrowLeft", false, false) | ("ArrowRight", false, true) | ("ArrowDown", false, _) => {
-                decrement(step_amount);
-            }
-            // Left arrow (shifted) / Down arrow (shifted) / Page down (decrement by page)
-            ("ArrowLeft", true, false)
-            | ("ArrowRight", true, true)
-            | ("ArrowDown", true, _)
-            | ("PageDown", _, _) => decrement(page_size),
-
-            // Home/End
-            ("Home", _, _) => set_to_min(),
-            ("End", _, _) => set_to_max(),
-
-            _ => {}
+            focus_safely(&el);
         }
     };
-
-    // Use hover hook for robust hover tracking (handles iOS, touch/pen, disabled state)
-    let UseHoverReturn {
-        props: hover_props,
-        is_hovered,
-    } = use_hover(UseHoverInput {
-        is_disabled,
-        on_hover_start: None,
-        on_hover_end: None,
-        on_hover_change: None,
+    let is_focused = Signal::derive(move || state.focused_thumb.get() == Some(index));
+    Effect::new(move |_| {
+        if is_focused.get() {
+            focus_input();
+        }
     });
 
-    // Use focus ring for keyboard focus visibility.
-    // Uses within=true so focus on the hidden input child triggers the ring
-    // on the parent thumb element.
-    let UseFocusRingReturn {
-        props: focus_ring_props,
-        is_focus_visible,
-        is_focused: _,
-    } = use_focus_ring(UseFocusRingInput {
+    // Keyboard changes count as a drag, so that `on_change_end` follows them.
+    let keyboard_update = move |update: &dyn Fn()| {
+        state.set_thumb_dragging(index, true);
+        update();
+        state.set_thumb_dragging(index, false);
+    };
+    let shortcuts = KeyboardShortcuts::new()
+        .on(Shortcut::key("PageUp"), move |_| {
+            keyboard_update(&|| state.increment_thumb(index, Some(untrack(|| state.page_size()))));
+        })
+        .on(Shortcut::key("PageDown"), move |_| {
+            keyboard_update(&|| state.decrement_thumb(index, Some(untrack(|| state.page_size()))));
+        })
+        .on(Shortcut::key("Home"), move |_| {
+            keyboard_update(&|| {
+                state.set_thumb_value(index, untrack(|| state.thumb_min_value(index)));
+            });
+        })
+        .on(Shortcut::key("End"), move |_| {
+            keyboard_update(&|| {
+                state.set_thumb_value(index, untrack(|| state.thumb_max_value(index)));
+            });
+        });
+
+    // Dragging accumulates the pointer's deltas in pixels, so that movements smaller than a step
+    // aren't lost when the value snaps.
+    let position = StoredValue::new(None::<f64>);
+    let thumb_move = use_move(UseMoveInput {
         is_disabled,
-        within: true,
-        auto_focus: false,
-        is_text_input: false,
-        on_focus: Some(Callback::new(move |_: FocusEvent| {
-            set_is_focused.set(true);
-            state.set_focused_thumb.run(Some(index));
+        axis: Signal::derive(move || match orientation.get() {
+            Orientation::Horizontal => MoveAxis::Horizontal,
+            Orientation::Vertical => MoveAxis::Vertical,
+        }),
+        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
+            position.set_value(None);
+            state.set_thumb_dragging(index, true);
         })),
-        on_blur: Some(Callback::new(move |_: FocusEvent| {
-            set_is_focused.set(false);
-            if state.focused_thumb.get_untracked() == Some(index) {
-                state.set_focused_thumb.run(None);
+        on_move: Some(Callback::new(move |e: MoveEvent| {
+            let Some(track_el) = track.get_untracked() else {
+                return;
+            };
+            let rect = track_el.get_bounding_client_rect();
+            let size = if is_vertical() {
+                rect.height()
+            } else {
+                rect.width()
+            };
+            if e.pointer_type == PointerType::Keyboard {
+                let step = Some(if e.modifiers.shift_key {
+                    untrack(|| state.page_size())
+                } else {
+                    state.step.get_untracked()
+                });
+                if (e.delta_x > 0.0 && reverse_x())
+                    || (e.delta_x < 0.0 && !reverse_x())
+                    || e.delta_y > 0.0
+                {
+                    state.decrement_thumb(index, step);
+                } else {
+                    state.increment_thumb(index, step);
+                }
+                return;
             }
+            let current = position
+                .get_value()
+                .unwrap_or_else(|| untrack(|| state.thumb_percent(index)) * size);
+            let mut delta = if is_vertical() { e.delta_y } else { e.delta_x };
+            if is_vertical() || reverse_x() {
+                delta = -delta;
+            }
+            let current = current + delta;
+            position.set_value(Some(current));
+            state.set_thumb_percent(index, (current / size).clamp(0.0, 1.0));
         })),
-        on_focus_change: None,
+        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
+            state.set_thumb_dragging(index, false);
+        })),
     });
 
-    // Compute aria-invalid
+    // Register the thumb's editability with the state (react-aria: during render).
+    Effect::new(move |_| state.set_thumb_editable(index, !is_disabled.get()));
+    state.set_thumb_editable(index, !is_disabled.get_untracked());
 
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let UseFocusableReturn {
+        props: focusable_props,
+        ..
+    } = use_focusable(UseFocusableInput {
+        is_disabled,
+        on_focus: Some(Callback::new(move |_| state.set_focused_thumb(Some(index)))),
+        on_blur: Some(Callback::new(move |_| state.set_focused_thumb(None))),
+        shortcuts: Some(shortcuts),
+        allow_shortcut_repeats: true,
+        ..UseFocusableInput::default()
+    });
 
-    // Compute aria-required
+    // A press on the thumb focuses its input and drags until the pointer is released.
+    let release_listeners: StoredValue<Option<SendWrapper<Vec<Listener>>>> = StoredValue::new(None);
+    let on_down = move |e: PointerEvent| {
+        if is_disabled.get_untracked()
+            || e.button() != 0
+            || e.alt_key()
+            || e.ctrl_key()
+            || e.meta_key()
+        {
+            return;
+        }
+        focus_input();
+        state.set_thumb_dragging(index, true);
+        let pointer_id = e.pointer_id();
+        if let Some(document) = e.expect_current_target().get_owner_document() {
+            let on_up = listen_to(&document, ev::pointerup, false, move |e: PointerEvent| {
+                if e.pointer_id() == pointer_id {
+                    focus_input();
+                    state.set_thumb_dragging(index, false);
+                    release_listeners.set_value(None);
+                }
+            });
+            release_listeners.set_value(Some(SendWrapper::new(vec![on_up])));
+        }
+    };
+    on_cleanup(move || {
+        release_listeners.try_update_value(Option::take);
+    });
 
-    // Orientation string
-    let aria_orientation = Signal::derive(move || AriaOrientation::from(orientation.get()));
+    use_form_reset(UseFormResetInput {
+        element: input_element,
+        initial_value: state
+            .default_values()
+            .get(index)
+            .copied()
+            .unwrap_or(T::ZERO),
+        on_reset: Callback::new(move |value| state.set_thumb_value(index, value)),
+    });
 
+    let percent = Signal::derive(move || {
+        let percent = state.thumb_percent(index);
+        if orientation.get() == Orientation::Vertical || direction.get() == WritingDirection::Rtl {
+            1.0 - percent
+        } else {
+            percent
+        }
+    });
+    let side = move || {
+        if orientation.get() == Orientation::Vertical {
+            "top"
+        } else {
+            "left"
+        }
+    };
+    let thumb_styles = Styles::new()
+        .add_unchecked("position", "absolute")
+        .add_unchecked("transform", "translate(-50%, -50%)")
+        .add(TouchActionProperty.declare(TouchAction::None))
+        .add_optional_unchecked("left", move || {
+            (side() == "left").then(|| format!("{}%", percent.get() * 100.0))
+        })
+        .add_optional_unchecked("top", move || {
+            (side() == "top").then(|| format!("{}%", percent.get() * 100.0))
+        });
+
+    let to_string = |value: T| value.to_f64().to_string();
     UseSliderThumbReturn {
-        thumb_props: UseSliderThumbProps {
-            on_pointerdown: handle_pointerdown,
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
-            on_focusin: focus_ring_props.on_focusin,
-            on_focusout: focus_ring_props.on_focusout,
-            on_pointerenter: hover_props.on_pointerenter,
-            on_pointerleave: hover_props.on_pointerleave,
-            data_focus_visible: focus_ring_props.data_focus_visible,
-        },
+        thumb_props: PropsWithStyles::new(
+            UseSliderThumbProps {
+                on_pointerdown: EventHandler::new(on_down).chain(thumb_move.props.on_pointerdown),
+                on_keydown: thumb_move.props.on_keydown,
+                element_capture: thumb_move.props.element_capture,
+            },
+            thumb_styles,
+        ),
         input_props: UseSliderThumbInputProps {
-            ty: "range",
-            id: thumb_id.clone(),
-            tabindex: "0",
-            aria_label,
-            aria_labelledby,
-            aria_valuenow: value,
-            aria_valuemin: thumb_min,
-            aria_valuemax: thumb_max,
-            aria_valuetext: display_value,
-            aria_orientation,
-            aria_disabled,
-            aria_describedby,
-            aria_details,
-            aria_errormessage,
+            id: field_props.id,
+            tabindex: Signal::derive(move || (!is_disabled.get()).then_some(0)),
+            min: Signal::derive(move || to_string(state.thumb_min_value(index))),
+            max: Signal::derive(move || to_string(state.thumb_max_value(index))),
+            step: Signal::derive(move || to_string(state.step.get())),
+            value: Signal::derive(move || to_string(state.thumb_value(index))),
             name,
-            value,
-            min: state.min_value,
-            max: state.max_value,
-            step: state
-                .step
-                .map_or_else(|| "any".to_owned(), |s| s.to_string()),
+            form,
             disabled: is_disabled,
-            element_capture: input_element.attr(),
+            aria_orientation: Signal::derive(move || orientation.get().into()),
+            aria_valuetext: Signal::derive(move || state.thumb_value_label(index)),
+            aria_required: Signal::derive(move || is_required.get().then_some(AriaRequired::True)),
+            aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
+            aria_label: field_props.aria_label,
+            aria_labelledby: thumb_labelled_by,
+            aria_describedby: {
+                let slider_describedby = slider.aria_describedby;
+                Signal::derive(move || {
+                    let ids: Vec<String> = slider_describedby
+                        .get()
+                        .into_iter()
+                        .chain(aria_describedby.clone())
+                        .collect();
+                    (!ids.is_empty()).then(|| ids.join(" "))
+                })
+            },
+            element_capture: focusable_props.element_capture.chain(input_element.attr()),
+            on_input: EventHandler::new(move |e: Event| {
+                let value = event_target_value(&e);
+                if let Some(value) = value.parse::<f64>().ok().and_then(T::from_f64) {
+                    state.set_thumb_value(index, value);
+                }
+            }),
+            on_keydown: focusable_props.on_keydown,
+            on_keyup: focusable_props.on_keyup,
+            on_focus: focusable_props.on_focus,
+            on_blur: focusable_props.on_blur,
+            context_attrs: FocusableContextAttr(focusable_props.context_attrs),
         },
-        is_dragging: is_dragging.into(),
-        is_hovered,
-        is_focused: is_focused.into(),
-        is_focus_visible,
-        value,
-        percentage,
-        display_value,
-        thumb_id,
+        label_props,
+        is_dragging: Signal::derive(move || state.is_thumb_dragging(index)),
+        is_disabled,
+        is_focused,
     }
 }

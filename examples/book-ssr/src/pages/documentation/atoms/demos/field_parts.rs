@@ -5,6 +5,7 @@ use leptonic::{
         field::{Description, FieldError, Label},
         radio::{Radio, RadioGroup},
     },
+    components::checkbox::Checkbox,
     hooks::Key,
 };
 use leptos::prelude::*;
@@ -17,12 +18,14 @@ const OPTIONS: [(&str, &str); 3] = [
 
 #[component]
 pub fn FieldPartsDemo() -> impl IntoView {
-    let (shipping, set_shipping) = signal(Some(Key::from("standard")));
+    let shipping = RwSignal::new(Some(Key::from("standard")));
+    let disabled = RwSignal::new(false);
 
     view! {
         <RadioGroup
-            default_value="standard"
-            on_change=move |value| set_shipping.set(value)
+            value=shipping
+            set_value=shipping
+            is_disabled=disabled
             validate=Arc::new(|value: &Option<Key>| {
                 if value.as_ref().is_some_and(|key| key.to_string() == "overnight") {
                     Err(vec!["Overnight shipping isn\u{2019}t available for your address.".to_owned()])
@@ -52,7 +55,11 @@ pub fn FieldPartsDemo() -> impl IntoView {
         </RadioGroup>
 
         <p class="demo-status">
-            {move || shipping.get().map_or_else(|| "No shipping".to_owned(), |key| format!("Shipping: {key}"))}
+            {move || shipping.get().map_or_else(|| "No shipping chosen.".to_owned(), |key| format!("Shipping: {key}"))}
         </p>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

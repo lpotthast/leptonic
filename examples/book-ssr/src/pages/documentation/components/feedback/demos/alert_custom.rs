@@ -4,22 +4,22 @@ use leptos::prelude::*;
 #[component]
 pub fn AlertCustomDemo() -> impl IntoView {
     view! {
-        // Replaces the icon with custom prepend and append slots.
-        <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None classes="demo-clf-alert-celebration">
-            <AlertPrepend slot>"🎉"</AlertPrepend>
-            <AlertTitle slot>"Success"</AlertTitle>
-            <AlertAppend slot>"🎉"</AlertAppend>
+        // Replaces the icon with custom prepend and append slots. The emoji are decoration: hidden from screen readers.
+        <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None classes="demo-alert-celebration">
+            <AlertPrepend slot><span aria-hidden="true">"🎉"</span></AlertPrepend>
+            <AlertTitle slot>"Order placed"</AlertTitle>
+            <AlertAppend slot><span aria-hidden="true">"🎉"</span></AlertAppend>
         </Alert>
 
         // Moves the icon into the title.
-        <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None classes="demo-clf-alert-loud">
+        <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None classes="demo-alert-loud">
             <AlertTitle slot>
-                "Warning"
-                <span class="demo-clf-alert-title-icon">
+                "Unsaved changes"
+                <span class="demo-alert-title-icon">
                     <AlertIcon variant=AlertVariant::Warn/>
                 </span>
             </AlertTitle>
-            <AlertContent slot>"This is dangerous!"</AlertContent>
+            <AlertContent slot>"Leaving this page discards your changes."</AlertContent>
         </Alert>
     }
 }

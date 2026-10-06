@@ -13,6 +13,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, PointerEvent};
 
 #[cfg(not(feature = "ssr"))]
+use crate::utils::key::{KeyboardEventKey, KeyboardKey};
+#[cfg(not(feature = "ssr"))]
 use crate::{
     Out,
     utils::{
@@ -145,6 +147,9 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
         let subscriber_id: StoredValue<Option<SubscriberId>, LocalStorage> =
             StoredValue::new_local(None);
 
+        // Whether the hook was disabled since it was created: then the modality may have changed
+        // unseen. (On creation the state is current, including `auto_focus`.)
+        let was_disabled = StoredValue::new_local(false);
         Effect::new(move |_| {
             if is_disabled.get() {
                 // Unregister while disabled.
@@ -152,11 +157,13 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
                     state.unregister(old_id);
                     subscriber_id.set_value(None);
                 }
+                was_disabled.set_value(true);
             } else {
-                // Sync to current global state (may have changed while unsubscribed).
-                let current = state.modality();
-                set_is_focus_visible.set(is_focus_visible_for_modality(current));
-                set_modality.set(current);
+                if was_disabled.get_value() {
+                    let current = state.modality();
+                    set_is_focus_visible.set(is_focus_visible_for_modality(current));
+                    set_modality.set(current);
+                }
 
                 // Register for future updates.
                 let id = state.register(is_text_input, move |new_modality: Modality| {
@@ -433,9 +440,10 @@ fn is_valid_key(e: &KeyboardEvent, is_mac: bool) -> bool {
     !(e.meta_key()
         || (!is_mac && e.alt_key())
         || e.ctrl_key()
-        || e.key() == "Control"
-        || e.key() == "Shift"
-        || e.key() == "Meta")
+        || matches!(
+            e.typed_key(),
+            KeyboardKey::Control | KeyboardKey::Shift | KeyboardKey::Meta
+        ))
 }
 
 /// Keys that always trigger keyboard modality, even inside text inputs.
@@ -874,12 +882,12 @@ pub fn set_modality(modality: Modality) {
 
 #[cfg(all(test, not(feature = "ssr")))]
 mod tests {
-    use assertr::prelude::*;
-
     use std::sync::{
         Arc,
         atomic::{AtomicU32, Ordering},
     };
+
+    use assertr::prelude::*;
 
     use super::*;
 

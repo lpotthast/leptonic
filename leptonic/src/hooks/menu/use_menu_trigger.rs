@@ -7,7 +7,10 @@ use crate::{
     hooks::{
         UseButtonInput,
         collections::{AutoFocus, FocusStrategy},
-        interactions::use_press::{LongPressEvent, PressEvent},
+        interactions::{
+            use_context_menu::ContextMenuEvent,
+            use_press::{LongPressEvent, PressEvent},
+        },
         overlay::use_overlay_trigger::{
             OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger,
         },
@@ -16,6 +19,7 @@ use crate::{
         focus::focus_event_target,
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        point::Point,
         pointer_type::PointerType,
     },
 };
@@ -33,7 +37,6 @@ use crate::{
 //   the button input and the trigger element gets exactly one press handler.
 //
 // ## OMITTED FEATURES
-// - `trigger="contextMenu"`: requires `use_context_menu` (not yet ported).
 // - Localized long press description (English only, until leptonic has localized strings).
 //
 // =============================================================================
@@ -46,6 +49,10 @@ pub enum MenuTriggerType {
     Press,
     /// Menu opens on long press (touch and hold).
     LongPress,
+    /// Menu opens as a context menu (right click, Shift+F10, long press on touch screens, ...) at
+    /// the point it was requested. The trigger gets no `aria-haspopup`, `aria-expanded` or
+    /// `aria-controls`: it doesn't open the menu on activation.
+    ContextMenu,
 }
 
 /// Input parameters for the `use_menu_trigger` hook.
@@ -209,6 +216,17 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             })),
             ..UseButtonInput::default()
         },
+        MenuTriggerType::ContextMenu => UseButtonInput {
+            on_context_menu: Some(Callback::new(move |e: ContextMenuEvent| {
+                let rect = e.target.get_bounding_client_rect();
+                state.set_point(Some(Point {
+                    x: rect.x() + e.x,
+                    y: rect.y() + e.y,
+                }));
+                state.open(None);
+            })),
+            ..UseButtonInput::default()
+        },
         MenuTriggerType::LongPress => UseButtonInput {
             on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
                 state.close();
@@ -216,23 +234,72 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             on_long_press: Some(Callback::new(move |_: LongPressEvent| {
                 state.open(Some(FocusStrategy::First));
             })),
-            long_press_accessibility_description: Some(
-                "Long press or press Alt + ArrowDown to open menu".into(),
+            long_press_accessibility_description: MaybeProp::from(
+                "Long press or press Alt + ArrowDown to open menu".to_owned(),
             ),
             ..UseButtonInput::default()
         },
     };
 
     let aria_haspopup = overlay_trigger.props.aria_haspopup;
-    let button = UseButtonInput {
-        id: Some(Oco::Owned(menu_trigger_id.clone())),
-        is_disabled: disabled,
-        aria_haspopup: Signal::stored(aria_haspopup),
-        aria_expanded: overlay_trigger.props.aria_expanded,
-        aria_controls: overlay_trigger.props.aria_controls,
-        shortcuts: Some(shortcuts),
-        ..button
+    let button = if trigger == MenuTriggerType::ContextMenu {
+        // A context menu trigger isn't announced as opening a menu (it doesn't on activation), and
+        // the keyboard opens it with the context menu shortcuts only.
+        UseButtonInput {
+            id: Some(Oco::Owned(menu_trigger_id.clone())),
+            is_disabled: disabled,
+            ..button
+        }
+    } else {
+        UseButtonInput {
+            id: Some(Oco::Owned(menu_trigger_id.clone())),
+            is_disabled: disabled,
+            aria_haspopup: Signal::stored(aria_haspopup),
+            aria_expanded: overlay_trigger.props.aria_expanded,
+            aria_controls: overlay_trigger.props.aria_controls,
+            shortcuts: Some(shortcuts),
+            ..button
+        }
     };
+
+    // A right click outside closes a context menu, so the browser's context menu appears instead.
+    // Everything outside the menu is inert, so the click's target is the body.
+    #[cfg(not(feature = "ssr"))]
+    if trigger == MenuTriggerType::ContextMenu {
+        use leptos::ev;
+        use leptos_use::use_document;
+        use send_wrapper::SendWrapper;
+
+        use crate::utils::event_listeners::{Listener, listen_to};
+
+        let listener: StoredValue<Option<SendWrapper<Listener>>> = StoredValue::new(None);
+        Effect::new(move || {
+            listener.set_value(None);
+            if !state.is_open() {
+                return;
+            }
+            let Some(document) = use_document().as_ref().cloned() else {
+                return;
+            };
+            let body = document.body();
+            let handle = listen_to(
+                &document,
+                ev::mousedown,
+                false,
+                move |e: web_sys::MouseEvent| {
+                    let is_context_click = e.button() == 2 || (e.button() == 0 && e.ctrl_key());
+                    let on_body = body.as_ref().is_some_and(|body| {
+                        e.target().as_ref() == Some(AsRef::<web_sys::EventTarget>::as_ref(body))
+                    });
+                    if is_context_click && on_body {
+                        state.close();
+                    }
+                },
+            );
+            listener.set_value(Some(SendWrapper::new(handle)));
+        });
+        on_cleanup(move || listener.set_value(None));
+    }
 
     UseMenuTriggerReturn {
         button,

@@ -16,7 +16,8 @@ use crate::hooks::collections::Key;
 // ## API DIFFERENCES
 // - Values are `Key`s (strings or integers), not strings: what collections and toggle button
 //   groups use; they render as the checkboxes' form values.
-// - Hook-owned state (project-wide convention): no controlled `value`.
+// - State (C4): `default_value` + `on_change`, or `value` bound to app state (a `ValueBinding`,
+//   the atoms' `value` + `set_value`).
 // - The validation behavior is set here (react-aria: on `useCheckboxGroup`), so the state and
 //   its items read it from one place.
 //
@@ -25,8 +26,10 @@ use crate::hooks::collections::Key;
 /// Input of [`use_checkbox_group_state`].
 #[derive(Clone)]
 pub struct UseCheckboxGroupStateInput {
-    /// The initially checked values.
+    /// The initially checked values. Ignored when `value` is bound.
     pub default_value: Vec<Key>,
+    /// The checked values as app state, replacing `default_value`.
+    pub value: Option<crate::utils::ValueBinding<Vec<Key>>>,
     /// Called with the checked values when they change.
     pub on_change: Option<Callback<Vec<Key>>>,
     pub is_disabled: Signal<bool>,
@@ -44,6 +47,7 @@ impl Default for UseCheckboxGroupStateInput {
     fn default() -> Self {
         Self {
             default_value: Vec::new(),
+            value: None,
             on_change: None,
             is_disabled: Signal::stored(false),
             is_read_only: Signal::stored(false),
@@ -80,7 +84,7 @@ pub struct CheckboxGroupState {
     pub validation_behavior: ValidationBehavior,
     default_value: StoredValue<Vec<Key>>,
     name: StoredValue<Option<String>>,
-    set_value: WriteSignal<Vec<Key>>,
+    set_value: crate::utils::ValueBinding<Vec<Key>>,
     on_change: Option<Callback<Vec<Key>>>,
     invalid_values: StoredValue<HashMap<Key, ValidationResult>>,
 }
@@ -178,6 +182,7 @@ impl CheckboxGroupState {
 pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGroupState {
     let UseCheckboxGroupStateInput {
         default_value,
+        value,
         on_change,
         is_disabled,
         is_read_only,
@@ -187,16 +192,19 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         validation_behavior,
         name,
     } = input;
-    let (value, set_value) = signal(default_value.clone());
+    let set_value =
+        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+    let value = set_value.value;
+    let default_value = value.get_untracked();
     let validation = use_form_validation_state(UseFormValidationStateInput {
         is_invalid,
-        value: value.into(),
+        value,
         validate,
         validation_behavior,
         name: name.clone(),
     });
     CheckboxGroupState {
-        value: value.into(),
+        value,
         is_disabled,
         is_read_only,
         is_required: Signal::derive(move || is_required.get() && value.with(Vec::is_empty)),

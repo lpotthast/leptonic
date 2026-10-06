@@ -6,7 +6,11 @@ use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
 use super::{Key, KeyboardDelegate, SelectionManager};
-use crate::utils::{EventAccessors, EventHandler, node_contains};
+use crate::utils::{
+    EventAccessors, EventHandler,
+    key::{KeyboardEventKey, KeyboardKey},
+    node_contains,
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -91,7 +95,7 @@ pub fn use_type_select(input: UseTypeSelectInput) -> UseTypeSelectReturn {
     let on_keydown_capture = move |e: KeyboardEvent| {
         // During a search, a space belongs to the search (instead of e.g. selecting the focused
         // item). Handled in the capture phase, before the item sees the key.
-        if e.key() != " " || search.with_value(String::is_empty) {
+        if e.typed_key() != KeyboardKey::Space || search.with_value(String::is_empty) {
             return;
         }
         e.prevent_default();

@@ -3,28 +3,22 @@ use leptos::prelude::*;
 
 #[component]
 pub fn LinkExternalDemo() -> impl IntoView {
-    let external_link = use_link(UseLinkInput {
-        href: Some("https://leptos.dev".to_string()),
-        target: Some(LinkTarget::_Blank),
-        rel: vec![LinkRel::NoOpener, LinkRel::NoReferrer],
-        is_disabled: Signal::default(),
-        element_type: LinkElementType::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
+    let link = use_link(UseLinkInput {
+        href: Signal::stored(Some("https://leptos.dev".to_owned())),
+        target: LinkTarget::Blank,
+        // `NoOpener` is added for `LinkTarget::Blank`.
+        rel: vec![LinkRel::NoReferrer],
+        ..UseLinkInput::default()
     });
-
-    let (link_props, link_styles) = external_link.props.into_inner();
+    let (link_attrs, link_styles) = link.props.into_parts();
 
     view! {
-        <div>
-            <strong>"External Link: "</strong>
-            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
+        <p>
+            <a {..link_attrs} class="demo-link" style=link_styles>
                 "Visit Leptos"
-                <span class="demo-link-icon">{"\u{2197}"}</span>
+                <span class="demo-link-icon" aria-hidden="true">"\u{2197}"</span>
             </a>
-            <span class="demo-hint">"(opens in new tab)"</span>
-        </div>
+        </p>
+        <p class="demo-caption">"Opens in a new tab."</p>
     }
 }

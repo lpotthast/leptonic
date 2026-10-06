@@ -34,16 +34,6 @@
   touch-action: none;
   user-select: none;
 
-  .leptonic-color-palette-knob-wrapper {
-    display: flex;
-    align-items: center;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    left: calc(var(--color-palette-knob-size) * -0.5);
-    bottom: calc(var(--color-palette-knob-size) * -0.5);
-  }
-
   .leptonic-color-palette-knob {
     &:before {
       --color-palette-knob-halo-displacement: calc((var(--color-palette-knob-halo-size) / 2.0 - (var(--color-palette-knob-size) - 2.0 * var(--color-palette-knob-border-width)) / 2.0) * -1.0);
@@ -60,16 +50,15 @@
       transition: all var(--color-palette-knob-transition-speed);
     }
 
-    &:hover,
-    &:active,
-    &:focus,
-    &.is-dragged {
+    &[data-hovered],
+    &[data-focus-visible],
+    &[data-dragging] {
       &:before {
         opacity: var(--color-palette-knob-halo-opacity);
       }
     }
 
-    &.is-dragged {
+    &[data-dragging] {
       &:before {
         --color-palette-knob-halo-displacement: calc((var(--color-palette-knob-halo-size-while-dragged) / 2.0 - (var(--color-palette-knob-size) - 2.0 * var(--color-palette-knob-border-width)) / 2.0) * -1.0);
         width: var(--color-palette-knob-halo-size-while-dragged);
@@ -88,34 +77,82 @@
     border-width: var(--color-palette-knob-border-width);
     border-style: var(--color-palette-knob-border-style);
     border-color: var(--color-palette-knob-border-color);
-    background-color: var(--color-palette-knob-background-color);
     box-shadow: var(--color-palette-knob-box-shadow);
     transition: 0s;
-    // The knob position is determined by setting the "left" attribute programmatically with a percentage value.
+    // Positioned by `use_color_area` (absolute, centered on the color's point); its background is
+    // the current color.
 
-    &[data-variant="round"] {
-      border-radius: calc(var(--color-palette-knob-size) * 0.5);
+    border-radius: calc(var(--color-palette-knob-size) * 0.5);
+  }
+}
+
+.leptonic-hue-slider {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+
+  .leptonic-hue-slider-track {
+    // The gradient comes from `use_color_slider`.
+    width: 100%;
+    height: 0.75em;
+    margin: 0.75em 0;
+    border-radius: 0.375em;
+    forced-color-adjust: none;
+    cursor: pointer;
+  }
+
+  .leptonic-hue-slider-thumb {
+    // Positioned by `use_slider_thumb` (left, centered); its background is the current hue.
+    top: 50%;
+    width: var(--color-palette-knob-size);
+    height: var(--color-palette-knob-size);
+    border-radius: calc(var(--color-palette-knob-size) * 0.5);
+    border: var(--color-palette-knob-border-width) var(--color-palette-knob-border-style) var(--color-palette-knob-border-color);
+    box-shadow: var(--color-palette-knob-box-shadow);
+    box-sizing: border-box;
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--brand-color);
+      outline-offset: 2px;
+    }
+  }
+
+  &[data-disabled] {
+    opacity: 0.5;
+
+    .leptonic-hue-slider-track {
+      cursor: default;
     }
   }
 }
 
-.leptonic-hue-slider .leptonic-slider {
-  --slider-fill-height: 0.75em;
-  --slider-fill-background-color: transparent;
+.leptonic-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
 
-  --slider-track-height: 0.75em;
-  --slider-track-background-image: linear-gradient(to right,
-          rgb(255, 0, 0) 0%,
-          rgb(255, 255, 0) 17%,
-          rgb(0, 255, 0) 33%,
-          rgb(0, 255, 255) 50%,
-          rgb(0, 0, 255) 67%,
-          rgb(255, 0, 255) 83%,
-          rgb(255, 0, 0) 100%);
+  .leptonic-color-picker-main {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em;
+    height: 12em;
 
-  --slider-thumb-border-width: 0.25em;
-  --slider-thumb-border-style: solid;
-  --slider-thumb-border-color: white;
+    .leptonic-color-preview {
+      width: 20%;
+      height: 100%;
+    }
 
-  forced-color-adjust: none;
+    .leptonic-color-palette {
+      flex: 1;
+      height: 100%;
+    }
+  }
+
+  .leptonic-color-picker-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5em;
+  }
 }

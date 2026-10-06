@@ -6,10 +6,10 @@ use leptos::prelude::*;
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Hook-owned state (project-wide convention): no controlled `isSelected`. A state driven by
-//   something else (a group's value, a collection's selection) is built with
-//   `ToggleState::new`, which delegates changes to a callback; app state in a signal binds with
-//   `ToggleState::from(rw_signal)` (or a read/write pair), like Leptos' `bind:checked`.
+// - Hook-owned state (C4): `default_selected` + `on_change`, or `value` bound to app state (the
+//   atoms' `is_selected` + `set_selected`). A state driven by something else (a group's value, a
+//   collection's selection) is built with `ToggleState::new`, which delegates changes to a
+//   callback.
 //
 // =============================================================================
 
@@ -91,8 +91,10 @@ impl From<(ReadSignal<bool>, WriteSignal<bool>)> for ToggleState {
 /// Input of [`use_toggle_state`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseToggleStateInput {
-    /// Whether the toggle is initially selected.
+    /// Whether the toggle is initially selected. Ignored when `value` is bound.
     pub default_selected: bool,
+    /// The selection as app state, replacing `default_selected`.
+    pub value: Option<crate::utils::ValueBinding<bool>>,
     /// Called when the selection changes.
     pub on_change: Option<Callback<bool>>,
     /// While `true`, the selection can't be changed.
@@ -103,6 +105,7 @@ impl Default for UseToggleStateInput {
     fn default() -> Self {
         Self {
             default_selected: false,
+            value: None,
             on_change: None,
             is_read_only: Signal::stored(false),
         }
@@ -113,18 +116,21 @@ impl Default for UseToggleStateInput {
 pub fn use_toggle_state(input: UseToggleStateInput) -> ToggleState {
     let UseToggleStateInput {
         default_selected,
+        value,
         on_change,
         is_read_only,
     } = input;
-    let (is_selected, set_is_selected) = signal(default_selected);
+    let binding =
+        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_selected)));
+    let is_selected = binding.value;
     ToggleState {
-        is_selected: is_selected.into(),
-        default_selected,
+        is_selected,
+        default_selected: is_selected.get_untracked(),
         set_selected: Callback::new(move |selected: bool| {
             if is_read_only.get_untracked() || is_selected.get_untracked() == selected {
                 return;
             }
-            set_is_selected.set(selected);
+            binding.set(selected);
             if let Some(on_change) = on_change {
                 on_change.run(selected);
             }

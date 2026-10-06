@@ -7,12 +7,11 @@
 // ## API DIFFERENCES
 // - The trigger and popover elements are captured (`trigger_props`, `props`) instead of passing
 //   refs; `trigger` lets a caller that captures the trigger already (`DialogTrigger`) pass it.
-// - Placement is two typed axes (`placement_x`, `placement_y`) instead of a placement string;
-//   the resolved placement after flipping is returned per axis.
+// - Positioning options are those of `use_overlay_position` (typed `Placement`); the arrow
+//   element is captured by the returned `arrow_props`.
 //
 // ## OMITTED FEATURES
-// - `arrowRef`/`arrowProps`, `groupRef` (submenu groups), `getTargetRect` and anchoring at
-//   `state.point`, `useFocusWithin` props.
+// - `useFocusWithin` props.
 //
 // =============================================================================
 
@@ -21,22 +20,22 @@ use leptos::{oco::Oco, prelude::*};
 use super::{
     use_overlay::{UseOverlayInput, use_overlay},
     use_overlay_position::{
-        PhysicalPlacementX, PlacementX, PlacementY, UseOverlayPositionInput, use_overlay_position,
+        Placement, PlacementAxis, Rect, UseOverlayArrowProps, UseOverlayPositionInput,
+        use_overlay_position,
     },
 };
 use crate::{
     hooks::{
         IntoAttrs, MergedOverlayOverlayPositionAttrs, OverlayState, OverlayTriggerState,
-        PropsWithStyles, UseCloseOnScrollInput, UsePreventScrollProps, UsePreventScrollReturn,
+        PropsWithStyles,
         interactions::use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
         merged::MergedOverlayOverlayPositionProps,
-        use_close_on_scroll,
     },
-    utils::{CapturedElement, ElementCaptureAttr, MergeWith},
+    utils::{CapturedElement, ElementCaptureAttr, MergeWith, point::Point},
 };
 
 /// Input parameters for the `use_popover` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UsePopoverInput<S: OverlayState = OverlayTriggerState> {
     /// Whether the popover is open; dismissing (Escape, outside interaction, blur) closes it. An
     /// `OverlayTriggerState`, or a component state with its own closing logic (a select's).
@@ -45,11 +44,8 @@ pub struct UsePopoverInput<S: OverlayState = OverlayTriggerState> {
     /// The trigger the popover is positioned at, captured by `trigger_props` (or by the caller).
     pub trigger: CapturedElement,
 
-    /// Horizontal placement of the popover relative to the trigger.
-    pub placement_x: Signal<PlacementX>,
-
-    /// Vertical placement of the popover relative to the trigger.
-    pub placement_y: Signal<PlacementY>,
+    /// Where the popover goes relative to the trigger. Default: [`Placement::Bottom`].
+    pub placement: Signal<Placement>,
 
     /// Additional offset along the main axis (pushes the popover away from the trigger).
     /// Default: 0.0
@@ -67,17 +63,41 @@ pub struct UsePopoverInput<S: OverlayState = OverlayTriggerState> {
     /// Default: true
     pub should_flip: Signal<bool>,
 
+    /// The popover's maximum height. Default: the room available.
+    pub max_height: Signal<Option<f64>>,
+
+    /// The arrow's size across the main axis. Default: the width of the arrow element.
+    pub arrow_size: Signal<Option<f64>>,
+
+    /// The minimum distance between the arrow and the popover's edges. Default: 0.
+    pub arrow_boundary_offset: Signal<f64>,
+
+    /// The element the popover must stay within. Default: the document body.
+    pub boundary: Option<CapturedElement>,
+
+    /// Replaces the trigger's bounding rectangle (viewport coordinates). Default: the state's
+    /// `point` (where a context menu opened), else none.
+    pub target_rect: Signal<Option<Rect>>,
+
     /// Whether the popover takes over the page while open. Default: modal.
     pub modality: PopoverModality,
 
     /// Whether pressing Escape should be disabled.
-    pub is_keyboard_dismiss_disabled: bool,
+    pub is_keyboard_dismiss_disabled: Signal<bool>,
 
     /// When the user interacts with an element outside of the overlay,
     /// return `true` if `on_close` should be called. This gives you a chance to
     /// filter out interaction with elements that should not dismiss the popover.
     /// By default, `on_close` will always be called on interaction outside the popover.
-    pub should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
+    pub should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
+
+    /// The group the popover belongs to: a root popover's container, which also holds the
+    /// popovers of its submenus. The overlay stack, outside interactions and hiding the rest of the
+    /// page work on the group. Default: the popover alone.
+    pub group: Option<CapturedElement>,
+
+    /// Whether this is a submenu's popover: dismissable by outside interaction although non-modal.
+    pub is_submenu: bool,
 }
 
 /// Whether a popover takes over the page while open (react-aria: `isNonModal`).
@@ -106,15 +126,21 @@ impl<S: OverlayState> UsePopoverInput<S> {
         Self {
             state,
             trigger: CapturedElement::new(),
-            placement_x: Signal::stored(PlacementX::Center),
-            placement_y: Signal::stored(PlacementY::Below),
+            placement: Signal::stored(Placement::Bottom),
             offset: Signal::stored(0.0),
             cross_offset: Signal::stored(0.0),
             container_padding: Signal::stored(12.0),
             should_flip: Signal::stored(true),
+            max_height: Signal::stored(None),
+            arrow_size: Signal::stored(None),
+            arrow_boundary_offset: Signal::stored(0.0),
+            boundary: None,
+            target_rect: Signal::stored(None),
             modality: PopoverModality::Modal,
-            is_keyboard_dismiss_disabled: false,
+            is_keyboard_dismiss_disabled: Signal::stored(false),
             should_close_on_interact_outside: None,
+            group: None,
+            is_submenu: false,
         }
     }
 }
@@ -135,11 +161,14 @@ pub struct UsePopoverReturn {
     /// The popover element, once rendered.
     pub popover_element: CapturedElement,
 
-    /// Resolved horizontal placement after flipping.
-    pub resolved_placement_x: Memo<PhysicalPlacementX>,
+    /// Props for an arrow element inside the popover (see `use_overlay_position`).
+    pub arrow_props: PropsWithStyles<UseOverlayArrowProps>,
 
-    /// Resolved vertical placement after flipping.
-    pub resolved_placement_y: Memo<PlacementY>,
+    /// The side of the trigger the popover is on, once positioned (after flipping).
+    pub placement: Signal<Option<PlacementAxis>>,
+
+    /// The point of the popover closest to the trigger, in its own coordinates, once positioned.
+    pub trigger_anchor_point: Signal<Option<Point>>,
 }
 
 /// Props from `use_popover` for the popover element that can be extracted and merged programmatically.
@@ -226,65 +255,74 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
     let UsePopoverInput {
         state,
         trigger: trigger_element,
-        placement_x,
-        placement_y,
+        placement,
         offset,
         cross_offset,
         container_padding,
         should_flip,
+        max_height,
+        arrow_size,
+        arrow_boundary_offset,
+        boundary,
+        target_rect,
         modality,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
+        group,
+        is_submenu,
     } = input;
     let is_open = Signal::derive(move || state.is_open());
     let on_close = Callback::new(move |()| state.close());
 
     // 1. Delegate all dismissal to use_overlay (overlay stack, escape, interact outside, blur).
-    //    react-aria: isDismissable = !isNonModal || isSubmenu (no submenu support here).
+    //    As react-aria: isDismissable = !isNonModal || isSubmenu.
     //    react-aria: shouldCloseOnBlur is always true for popovers.
     let overlay = use_overlay(UseOverlayInput {
         is_open,
         on_close,
-        is_dismissable: modality.is_modal(),
-        should_close_on_blur: true,
+        is_dismissable: Signal::stored(modality.is_modal() || is_submenu),
+        should_close_on_blur: Signal::stored(true),
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
+        group,
     });
 
-    // 2. Positioning relative to the trigger.
-    //    The overlay element is captured internally by use_overlay_position.
+    // 2. Positioning relative to the trigger (or the point the state opened at). A non-modal
+    //    popover closes when the page scrolls; a modal one prevents scrolling.
+    let point = state.point();
     let position = use_overlay_position(UseOverlayPositionInput {
-        target: trigger_element,
-        placement_x,
-        placement_y,
+        placement,
+        container_padding,
         offset,
         cross_offset,
-        container_padding,
         should_flip,
-        max_height: None,
-        is_open,
+        boundary,
+        max_height,
+        arrow_size,
+        arrow_boundary_offset,
+        target_rect: Signal::derive(move || {
+            target_rect.get().or_else(|| {
+                point.get().map(|point| Rect {
+                    top: point.y,
+                    left: point.x,
+                    width: 0.0,
+                    height: 0.0,
+                })
+            })
+        }),
+        // A submenu's popover stays open (as react-aria): its menu may scroll the trigger item.
+        on_close: (!modality.is_modal() && !is_submenu).then_some(on_close),
+        ..UseOverlayPositionInput::new(trigger_element, is_open)
     });
 
-    // A non-modal popover closes when the page scrolls (react-aria: `useOverlayPosition`'s
-    // `onClose`); a modal one prevents scrolling.
-    if !modality.is_modal() {
-        use_close_on_scroll(UseCloseOnScrollInput {
-            is_open,
-            trigger_element,
-            on_close,
-        });
-    }
-
     // 3. Scroll prevention (disabled when non-modal or not open).
-    let UsePreventScrollReturn {
-        props: UsePreventScrollProps { /* Empty, no further prop merge required. */ },
-    } = use_prevent_scroll(UsePreventScrollInput {
+    use_prevent_scroll(UsePreventScrollInput {
         is_disabled: Signal::derive(move || !modality.is_modal() || !is_open.get()),
     });
 
     // 4. Hide the rest of the page from assistive technology (modal), or stay visible (non-modal).
     let popover_element = overlay.overlay_element;
-    use_popover_visibility(is_open, popover_element, modality);
+    use_popover_visibility(is_open, group.unwrap_or(popover_element), modality);
 
     // 5. Return merged props.
     let id = overlay.id;
@@ -301,8 +339,9 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
         },
         id,
         popover_element,
-        resolved_placement_x: position.resolved_placement_x,
-        resolved_placement_y: position.resolved_placement_y,
+        arrow_props: position.arrow_props,
+        placement: position.placement,
+        trigger_anchor_point: position.trigger_anchor_point,
     }
 }
 

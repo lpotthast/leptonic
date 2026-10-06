@@ -5,22 +5,22 @@ use leptos::prelude::*;
 pub fn AlertVariantsDemo() -> impl IntoView {
     view! {
         <Alert variant=AlertVariant::Success>
-            <AlertTitle slot>"Success"</AlertTitle>
+            <AlertTitle slot>"Saved"</AlertTitle>
             <AlertContent slot>"Your changes were saved."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Info>
-            <AlertTitle slot>"Info"</AlertTitle>
+            <AlertTitle slot>"Update available"</AlertTitle>
             <AlertContent slot>"A new version is available."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Warn>
-            <AlertTitle slot>"Warn"</AlertTitle>
+            <AlertTitle slot>"Session expiring"</AlertTitle>
             <AlertContent slot>"Your session expires in five minutes."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Danger>
-            <AlertTitle slot>"Danger"</AlertTitle>
+            <AlertTitle slot>"Upload failed"</AlertTitle>
             <AlertContent slot>"The file could not be uploaded."</AlertContent>
         </Alert>
     }

@@ -2,8 +2,9 @@ use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
-    slider_basic::SliderBasicDemo, slider_marks::SliderMarksDemo,
-    slider_popover::SliderPopoverDemo, slider_range::SliderRangeDemo,
+    slider_basic::SliderBasicDemo, slider_disabled::SliderDisabledDemo,
+    slider_marks::SliderMarksDemo, slider_popover::SliderPopoverDemo,
+    slider_range::SliderRangeDemo, slider_variants::SliderVariantsDemo, slider_vertical::SliderVerticalDemo,
     slider_volume::SliderVolumeDemo,
 };
 use crate::{kit::*, routes};
@@ -11,95 +12,77 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageSlider() -> impl IntoView {
     view! {
-        <DocPage title="Slider component">
+        <DocPage title="Slider Components">
             <p>
-                "The themed "<Code inline=true>"Slider"</Code>" and "<Code inline=true>"RangeSlider"</Code>
-                " let you adjust a value, or a range of values, by dragging a thumb along a track. "
-                "See the "<Link href=routes::doc::Slider.materialize()>"Slider overview"</Link>" for concept guidance."
+                "The themed "<Code inline=true>"Slider"</Code>" picks a value and "<Code inline=true>"RangeSlider"</Code>
+                " a range of values. See the "<Link href=routes::doc::Slider.materialize()>"Slider overview"</Link>
+                " for when to use a slider."
             </p>
 
             <Demo description="Sliders with a coarse and a fine step" source=include_str!("demos/slider_basic.rs")>
                 <SliderBasicDemo/>
             </Demo>
 
-            <Section title="Props">
-                <Section title="Slider">
+            <Section title="Slider">
+                <p>
+                    "Generic over the value type: integers ("<Code inline=true>"u8"</Code>", "<Code inline=true>"i32"</Code>
+                    ", \u{2026}) or floats, taken from "<Code inline=true>"value"</Code>"."
+                </p>
+                <Section title="Props" id="slider-props">
                     <ApiTable kind=ApiKind::Props of="components::slider::Slider">
-                        <ApiRow name="value" ty="Signal<f64>">"The current value. Required."</ApiRow>
-                        <ApiRow name="set_value" ty="Out<f64>">"Receives the new value. Required."</ApiRow>
-                        <ApiRow name="min, max" ty="f64">"The range of the slider. Required."</ApiRow>
-                        <ApiRow name="step" ty="Option<f64>" default="None">
-                            "The step between selectable values. Without it, the slider is continuous."
+                        <ApiRow name="value" ty="NumberSignal<T>">"The value: a number or any signal of one. Required."</ApiRow>
+                        <ApiRow name="set_value" ty="Out<T>">
+                            "Receives the new value: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>
+                            ", closure or "<Code inline=true>"Callback"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="marks" ty="SliderMarks" default="SliderMarks::None">
-                            "Marks along the track, see "<a href="#marks">"Marks"</a>"."
-                        </ApiRow>
-                        <ApiRow name="popover" ty="SliderPopover" default="SliderPopover::Never">
-                            "When to show the value above the thumb, see "<a href="#value-popover">"Value Popover"</a>"."
-                        </ApiRow>
-                        <ApiRow name="value_display" ty="Option<Callback<f64, String>>" default="None">
-                            "Formats values for the tooltip and the names of automatic marks."
-                        </ApiRow>
-                        <ApiRow name="variant" ty="SliderVariant" default="Round">
-                            <Code inline=true>"Round"</Code>" or "<Code inline=true>"Block"</Code>
-                            ", rendered as "<Code inline=true>"data-variant"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
-                            "Additional classes and styles."
-                        </ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<T>">"The range. Required."</ApiRow>
+                        <ApiRow name="step" ty="Signal<T>" default="1">"The step values snap to."</ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">"The axis of the track, see "<AnchorLink href="#vertical">"Vertical"</AnchorLink>"."</ApiRow>
+                        <ApiRow name="variant" ty="SliderVariant" default="Round">"Round or block (square) thumbs and track ends."</ApiRow>
+                        <ApiRow name="popover" ty="SliderPopover" default="Never">"When the value shows above the thumb; see "<AnchorLink href="#value-popover">"Value Popover"</AnchorLink>"."</ApiRow>
+                        <ApiRow name="marks" ty="SliderMarks" default="None">"Marks along the track; see "<AnchorLink href="#marks">"Marks"</AnchorLink>"."</ApiRow>
+                        <ApiRow name="format_options" ty="Signal<NumberFormatOptions>" default="NumberFormatOptions::default()">"How the value is formatted (popover, marks, assistive technology)."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider, which has no visible label."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the slider."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="RangeSlider">
+                <p>
+                    "Two thumbs, which can\u{2019}t pass each other, select a range. It takes the same marks, steps and "
+                    "popovers as "<Code inline=true>"Slider"</Code>"."
+                </p>
+                <Section title="Props" id="range-slider-props">
+                    <ApiTable kind=ApiKind::Props of="RangeSlider">
+                        <ApiRow name="value" ty="Signal<RangeInclusive<T>>">"The range: a plain value or any signal. Required."</ApiRow>
+                        <ApiRow name="set_value" ty="Out<RangeInclusive<T>>">"Receives the new range. Required."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<T>">"The bounds of the slider. Required."</ApiRow>
+                        <ApiRow name="step" ty="Signal<T>" default="1">"The step values snap to."</ApiRow>
+                        <ApiRow name="thumb_labels" ty="Signal<(String, String)>" default="(\"Minimum\", \"Maximum\")">"Names of the two thumbs, next to the slider\u{2019}s name."</ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">"The axis of the track, see "<AnchorLink href="#vertical">"Vertical"</AnchorLink>"."</ApiRow>
+                        <ApiRow name="variant" ty="SliderVariant" default="Round">"Round or block (square) thumbs and track ends."</ApiRow>
+                        <ApiRow name="popover" ty="SliderPopover" default="Never">"When the values show above the thumbs."</ApiRow>
+                        <ApiRow name="marks" ty="SliderMarks" default="None">"Marks along the track."</ApiRow>
+                        <ApiRow name="format_options" ty="Signal<NumberFormatOptions>" default="NumberFormatOptions::default()">"How the values are formatted (popovers, marks, assistive technology)."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider, which has no visible label."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the slider."</ApiRow>
                     </ApiTable>
                 </Section>
 
-                <Section title="RangeSlider">
-                    <p>"Like "<Code inline=true>"Slider"</Code>", with two values instead of one:"</p>
-                    <ApiTable kind=ApiKind::Props of="RangeSlider">
-                        <ApiRow name="value_a, value_b" ty="Signal<f64>">"The start and end of the range. Required."</ApiRow>
-                        <ApiRow name="set_value_a, set_value_b" ty="Out<f64>">
-                            "Receive the new start and end. Required."
-                        </ApiRow>
-                        <ApiRow name="min, max" ty="f64">"The range of the slider. Required."</ApiRow>
-                        <ApiRow name="step" ty="Option<f64>" default="None">
-                            "The step between selectable values. Without it, the slider is continuous."
-                        </ApiRow>
-                        <ApiRow name="marks" ty="SliderMarks" default="SliderMarks::None">
-                            "Marks along the track, see "<a href="#marks">"Marks"</a>"."
-                        </ApiRow>
-                        <ApiRow name="popover" ty="SliderPopover" default="SliderPopover::Never">
-                            "When to show the values above the thumbs, see "<a href="#value-popover">"Value Popover"</a>"."
-                        </ApiRow>
-                        <ApiRow name="value_display" ty="Option<Callback<f64, String>>" default="None">
-                            "Formats values for the tooltips and the names of automatic marks."
-                        </ApiRow>
-                        <ApiRow name="variant" ty="SliderVariant" default="Round">
-                            <Code inline=true>"Round"</Code>" or "<Code inline=true>"Block"</Code>
-                            ", rendered as "<Code inline=true>"data-variant"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
-                            "Additional classes and styles."
-                        </ApiRow>
-                    </ApiTable>
-                    <p>"The two thumbs cannot cross each other."</p>
-                </Section>
+                <Demo description="A fine-stepped and a stepped range slider" source=include_str!("demos/slider_range.rs")>
+                    <SliderRangeDemo/>
+                </Demo>
             </Section>
 
             <Section title="Step and Precision">
                 <p>
-                    "The "<Code inline=true>"step"</Code>" prop decides which values you can select: "<Code inline=true>"min"</Code>
-                    " plus multiples of "<Code inline=true>"step"</Code>". Smaller steps make the slider smoother until it "
-                    "feels continuous. Leave out "<Code inline=true>"step"</Code>" to use the full "<Code inline=true>"f64"</Code>
-                    " precision."
-                </p>
-                <p>
-                    "Sliders always work with "<Code inline=true>"f64"</Code>" values, which are subject to the usual "
-                    "floating-point rounding. Format values for display, as the demos do, instead of showing them raw."
-                </p>
-            </Section>
-
-            <Section title="Volume Slider">
-                <p>
-                    "A continuous slider suits values whose exact number doesn\u{2019}t matter to the user, such as a volume."
+                    "The "<Code inline=true>"step"</Code>" decides which values you can select: "<Code inline=true>"min_value"</Code>
+                    " plus multiples of the step. Integer sliders hold exact values; float sliders round to the step\u{2019}s "
+                    "precision, so stepping by 0.1 gives 0.3, not 0.30000000000000004. A fine step suits values whose exact "
+                    "number doesn\u{2019}t matter to the user, such as a volume."
                 </p>
 
                 <Demo description="Continuous volume slider between two icons" source=include_str!("demos/slider_volume.rs")>
@@ -109,59 +92,67 @@ pub fn PageSlider() -> impl IntoView {
 
             <Section title="Marks">
                 <p>
-                    "Marks visualize the selectable values. "<Code inline=true>"SliderMarks::Automatic"</Code>
-                    " generates one mark per step (it requires a "<Code inline=true>"step"</Code>"), optionally with a name "
-                    "formatted by "<Code inline=true>"value_display"</Code>". "<Code inline=true>"SliderMarks::Custom"</Code>
-                    " places "<Code inline=true>"SliderMark"</Code>"s at absolute values ("
-                    <Code inline=true>"SliderMarkValue::Value"</Code>
-                    ") or at a fraction of the track ("<Code inline=true>"SliderMarkValue::Percentage"</Code>"). A "
-                    <Code inline=true>"min"</Code>" greater than "<Code inline=true>"max"</Code>" reverses the slider."
+                    "Marks show the selectable values. "<Code inline=true>"SliderMarks::Automatic"</Code>
+                    " places one mark per step (every n-th step on long ranges), optionally named by the formatted value. "
+                    <Code inline=true>"SliderMarks::Custom"</Code>" places "<Code inline=true>"SliderMark"</Code>"s at values ("
+                    <Code inline=true>"SliderMarkValue::Value"</Code>") or at fractions of the track ("
+                    <Code inline=true>"SliderMarkValue::Percentage"</Code>"). Marks within the selected range are highlighted."
                 </p>
-                <Demo description="Automatic and custom marks, a fractional step and a reversed slider" source=include_str!("demos/slider_marks.rs")>
+                <Demo description="Automatic and custom marks, and a fractional step" source=include_str!("demos/slider_marks.rs")>
                     <SliderMarksDemo/>
-                </Demo>
-            </Section>
-
-            <Section title="Range Slider">
-                <p>
-                    <Code inline=true>"RangeSlider"</Code>" selects a range with two thumbs. It takes the same marks, steps "
-                    "and popovers as "<Code inline=true>"Slider"</Code>"."
-                </p>
-                <Demo description="A continuous and a stepped range slider" source=include_str!("demos/slider_range.rs")>
-                    <SliderRangeDemo/>
                 </Demo>
             </Section>
 
             <Section title="Value Popover">
                 <p>
-                    <Code inline=true>"popover"</Code>" shows the formatted value above the thumb: "
+                    <Code inline=true>"popover"</Code>" shows the formatted value above a thumb: "
                     <Code inline=true>"SliderPopover::When { hovered, dragged }"</Code>" while the thumb is hovered or "
-                    "dragged, "<Code inline=true>"SliderPopover::Always"</Code>" permanently."
+                    "dragged, "<Code inline=true>"SliderPopover::Always"</Code>" permanently. It only shows the value; the "
+                    "thumb announces it to assistive technology."
                 </p>
                 <Demo description="Value popovers on interaction and always, on a slider and a range slider" source=include_str!("demos/slider_popover.rs")>
                     <SliderPopoverDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <p>"Each thumb is focusable; "<Keys keys="Tab"/>" moves between them."</p>
-                <KeyboardTable>
-                    <KeyRow keys="ArrowRight / ArrowUp">
-                        "Increase by one step (by 1% of the range on continuous sliders)."
-                    </KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowDown">
-                        "Decrease by one step (by 1% of the range on continuous sliders)."
-                    </KeyRow>
-                    <KeyRow keys="PageUp / Shift + ArrowRight / Shift + ArrowUp">
-                        "Increase by a page: a tenth of the range, snapped to the step."
-                    </KeyRow>
-                    <KeyRow keys="PageDown / Shift + ArrowLeft / Shift + ArrowDown">
-                        "Decrease by a page."
-                    </KeyRow>
-                    <KeyRow keys="Home">"Jump to the minimum."</KeyRow>
-                    <KeyRow keys="End">"Jump to the maximum."</KeyRow>
-                </KeyboardTable>
-                <p>"In right-to-left layouts, the left and right arrow keys swap their meaning."</p>
+            <Section title="Variants">
+                <p>
+                    <Code inline=true>"SliderVariant::Round"</Code>" draws round thumbs and track ends, "
+                    <Code inline=true>"SliderVariant::Block"</Code>" square ones."
+                </p>
+                <Demo description="Round and block slider" source=include_str!("demos/slider_variants.rs")>
+                    <SliderVariantsDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Vertical">
+                <p>
+                    "With "<Code inline=true>"orientation=Orientation::Vertical"</Code>" the track stands upright, 10em tall "
+                    "by default, and the value grows from the bottom up. "<Keys keys="ArrowUp"/>" and "<Keys keys="ArrowRight"/>
+                    " increase it."
+                </p>
+                <Demo description="Vertical level slider with a status line" source=include_str!("demos/slider_vertical.rs")>
+                    <SliderVerticalDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Disabled">
+                <p>
+                    "A disabled slider ignores pointer and keyboard input, its thumbs leave the tab order, and the theme "
+                    "dims it."
+                </p>
+                <Demo description="Slider with a disabled toggle" source=include_str!("demos/slider_disabled.rs")>
+                    <SliderDisabledDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Accessibility">
+                <p>
+                    "The components behave as described on the "<Link href=routes::doc::Slider.materialize()>"Slider overview"</Link>
+                    ". A thumb with keyboard focus shows a focus ring (the theme styles "<Code inline=true>"data-focus-visible"</Code>
+                    "), and pointer hover is styled through "<Code inline=true>"data-hovered"</Code>", so touch doesn\u{2019}t "
+                    "leave thumbs looking hovered."
+                </p>
             </Section>
 
             <Section title="Styling">
@@ -171,8 +162,9 @@ pub fn PageSlider() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Slider.materialize()>"Slider overview"</Link></li>
-                <li><Link href=routes::doc::slider::Hook.materialize()>"use_slider"</Link></li>
-                <li><Link href=routes::doc::slider::Atom.materialize()>"Slider atoms"</Link></li>
+                <li><Link href=routes::doc::slider::Hook.materialize()>"Slider Hooks"</Link></li>
+                <li><Link href=routes::doc::slider::Atom.materialize()>"Slider Atoms"</Link></li>
+                <li><Link href=routes::doc::NumberField.materialize()>"Number Field"</Link></li>
             </SeeAlso>
         </DocPage>
     }

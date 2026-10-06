@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use leptonic::{
     atoms::prelude::{
         Button, Menu, MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems,
-        MenuSection, MenuTrigger, Popover,
+        MenuSection, MenuTrigger, Popover, Separator,
     },
     hooks::{
         MenuTriggerType, SelectionMode,
@@ -20,7 +20,7 @@ use crate::pages::atoms::listbox::describe_selection;
 /// - "More" (`#test-menu-atoms-long-trigger`): the actions menu opened by a long press; a press
 ///   appends "More pressed".
 /// - "View" (`#test-menu-atoms-view-trigger`): multiple selection, sections "Panels" (Sidebar
-///   with a description and a shortcut, Toolbar) and "Zoom" (Fit). The selection is shown in
+///   with a description and a shortcut, Toolbar) and "Zoom" (Fit), a `Separator` between them. The selection is shown in
 ///   `#test-menu-atoms-view-selection`.
 #[component]
 pub fn PageAtomMenu() -> impl IntoView {
@@ -79,6 +79,7 @@ pub fn PageAtomMenu() -> impl IntoView {
                             </MenuItem>
                             <MenuItem key="Toolbar">"Toolbar"</MenuItem>
                         </MenuSection>
+                        <Separator />
                         <MenuSection key="zoom">
                             <MenuItem key="Fit">"Fit"</MenuItem>
                         </MenuSection>

@@ -2,8 +2,10 @@
 //! page each one is.
 //!
 //! Drives the sidebar ([`DocLayout`](crate::pages::documentation::doc_layout::DocLayout)), the tabs of concept pages
-//! ([`ConceptLayout`](crate::pages::documentation::concept_layout::ConceptLayout)) and the page classification of the
-//! Markdown export. Adding a page means adding a route in `routes.rs` and an entry here.
+//! ([`ConceptLayout`](crate::pages::documentation::concept_layout::ConceptLayout)), the member tables of group
+//! overviews and the page classification of the Markdown export. Adding a page means adding a route in `routes.rs` and
+//! an entry here. The rules (which part a page belongs to, names, markers, tabs) are in "Navigation" of
+//! `documentation/documentation-strategy.md`; the tests below enforce them.
 
 use std::sync::LazyLock;
 
@@ -16,73 +18,154 @@ use crate::routes::doc;
 pub enum PageKind {
     /// Getting-started pages and other guides.
     Guide,
-    /// Overview of a behavioral domain (Interactions, Focus, ...) or a category (Input, Layout, ...).
-    Domain,
+    /// Overview of a concept group (Fields, Overlays, ...) or a building-block area (Interactions, Focus, ...).
+    Overview,
     /// Overview of a concept implemented at several layers (Button, Slider, ...).
     Concept,
     Hook,
     Atom,
     Component,
+    /// A function or type from `leptonic::utils`, outside the three layers (e.g. the live announcer, `I18nProvider`).
+    Utility,
 }
 
 impl PageKind {
-    /// Name of the kind, e.g. in the member tables of section overviews.
+    /// Name of the kind, e.g. in the member tables of group overviews.
     pub fn label(self) -> &'static str {
         match self {
             Self::Guide => "Guide",
-            Self::Domain => "Overview",
+            Self::Overview => "Overview",
             Self::Concept => "Concept",
             Self::Hook => "Hook",
             Self::Atom => "Atom",
             Self::Component => "Component",
+            Self::Utility => "Utility",
         }
     }
 
-    /// Short label of a layer, shown as a badge next to standalone pages in the sidebar.
+    /// Short label shown as a badge next to building blocks in the sidebar.
     pub fn badge(self) -> Option<&'static str> {
         match self {
             Self::Hook => Some("hook"),
             Self::Atom => Some("atom"),
             Self::Component => Some("comp"),
-            Self::Guide | Self::Domain | Self::Concept => None,
+            Self::Utility => Some("util"),
+            Self::Guide | Self::Overview | Self::Concept => None,
+        }
+    }
+
+    /// The layer a page of this kind documents.
+    pub fn layer(self) -> Option<Layer> {
+        match self {
+            Self::Hook => Some(Layer::Hook),
+            Self::Atom => Some(Layer::Atom),
+            Self::Component => Some(Layer::Component),
+            Self::Guide | Self::Overview | Self::Concept | Self::Utility => None,
         }
     }
 }
 
-/// A group of pages in the sidebar.
-pub struct NavSection {
+/// How much of a concept leptonic implements for you. Ordered from the lowest layer to the highest.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Layer {
+    Hook,
+    Atom,
+    Component,
+}
+
+impl Layer {
+    pub const ALL: [Layer; 3] = [Layer::Hook, Layer::Atom, Layer::Component];
+
+    pub fn kind(self) -> PageKind {
+        match self {
+            Self::Hook => PageKind::Hook,
+            Self::Atom => PageKind::Atom,
+            Self::Component => PageKind::Component,
+        }
+    }
+
+    /// Lowercase name, e.g. for `data-layer` attributes.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Hook => "hook",
+            Self::Atom => "atom",
+            Self::Component => "component",
+        }
+    }
+
+    /// The letter of the layer marker in the sidebar.
+    pub fn letter(self) -> &'static str {
+        match self {
+            Self::Hook => "H",
+            Self::Atom => "A",
+            Self::Component => "C",
+        }
+    }
+}
+
+/// The parts of the sidebar, each answering one question of the reader.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PartKind {
+    /// Getting started and guides.
+    Guides,
+    /// "Which UI element do I need?": every concept, grouped by purpose.
+    Concepts,
+    /// "How do I give my own element a behavior?": hooks, atoms and utilities shared by many concepts, grouped by
+    /// behavior.
+    BuildingBlocks,
+}
+
+/// A part of the sidebar.
+pub struct NavPart {
+    pub kind: PartKind,
+    /// The heading above the part's groups. The guides have none.
+    pub title: Option<&'static str>,
+    pub groups: Vec<NavGroup>,
+}
+
+/// A group of pages in the sidebar: a concept group, a building-block area, or a group of guides.
+pub struct NavGroup {
     pub title: &'static str,
     pub icon: Icon,
-    /// The section's overview page. Getting started has none.
+    /// The group's overview page. Groups of guides and small building-block areas have none.
     pub overview: Option<String>,
-    /// Whether entries are standalone pages of different layers, which the sidebar marks with a badge. Members of a
-    /// behavioral domain are shown without badges.
-    pub badges: bool,
     pub entries: Vec<NavEntry>,
 }
 
 /// A page listed in the sidebar.
 pub struct NavEntry {
     pub title: &'static str,
-    /// One line on what the page covers, without a trailing period. Shown in the member tables of section overviews.
+    /// One line on what the page covers, without a trailing period. Shown in the member tables of group overviews.
     pub summary: &'static str,
     pub href: String,
     pub kind: PageKind,
-    /// Sub-pages of a concept, shown as tabs next to its overview (which is not listed here).
+    /// The layer pages of a concept, shown as tabs next to its overview (which is not listed here).
     pub tabs: Vec<NavTab>,
-    /// Pages belonging to this entry that are reached through its content instead of the sidebar.
-    pub hidden: Vec<NavTab>,
 }
 
-/// A page that is not listed in the sidebar itself: a concept tab, or a page reached through another page.
+/// A layer page of a concept, shown as a tab.
 pub struct NavTab {
-    pub label: &'static str,
     pub href: String,
-    pub kind: PageKind,
+    pub layer: Layer,
+    /// Whether the page documents several items of its layer (several hooks, several atoms), making its label plural.
+    pub several: bool,
+}
+
+impl NavTab {
+    pub fn label(&self) -> &'static str {
+        match (self.layer, self.several) {
+            (Layer::Hook, false) => "Hook",
+            (Layer::Hook, true) => "Hooks",
+            (Layer::Atom, false) => "Atom",
+            (Layer::Atom, true) => "Atoms",
+            (Layer::Component, false) => "Component",
+            (Layer::Component, true) => "Components",
+        }
+    }
 }
 
 pub struct Nav {
-    pub sections: Vec<NavSection>,
+    pub parts: Vec<NavPart>,
 }
 
 /// The navigation of the documentation.
@@ -94,21 +177,11 @@ pub fn nav() -> &'static Nav {
 impl Nav {
     /// The kind of the page at `path`, if it is part of the navigation.
     pub fn page_kind(&self, path: &str) -> Option<PageKind> {
-        self.sections.iter().find_map(|section| {
-            if section.overview.as_deref() == Some(path) {
-                return Some(PageKind::Domain);
+        self.groups().find_map(|group| {
+            if group.overview.as_deref() == Some(path) {
+                return Some(PageKind::Overview);
             }
-            section.entries.iter().find_map(|entry| {
-                if entry.href == path {
-                    return Some(entry.kind);
-                }
-                entry
-                    .tabs
-                    .iter()
-                    .chain(&entry.hidden)
-                    .find(|tab| tab.href == path)
-                    .map(|tab| tab.kind)
-            })
+            group.entries.iter().find_map(|entry| entry.page_kind(path))
         })
     }
 
@@ -122,44 +195,83 @@ impl Nav {
 
     /// Every page of the documentation.
     pub fn pages(&self) -> impl Iterator<Item = &str> {
-        self.sections.iter().flat_map(|section| {
-            section
+        self.groups().flat_map(|group| {
+            group
                 .overview
                 .iter()
                 .map(String::as_str)
-                .chain(section.entries.iter().flat_map(|entry| {
-                    std::iter::once(entry.href.as_str()).chain(
-                        entry
-                            .tabs
-                            .iter()
-                            .chain(&entry.hidden)
-                            .map(|tab| tab.href.as_str()),
-                    )
-                }))
+                .chain(group.entries.iter().flat_map(NavEntry::pages))
         })
     }
 
+    pub fn groups(&self) -> impl Iterator<Item = &NavGroup> {
+        self.parts.iter().flat_map(|part| &part.groups)
+    }
+
     fn entries(&self) -> impl Iterator<Item = &NavEntry> {
-        self.sections.iter().flat_map(|section| &section.entries)
+        self.groups().flat_map(|group| &group.entries)
     }
 }
 
-fn section(
+impl NavGroup {
+    /// Whether the page at `path` belongs to this group.
+    pub fn contains(&self, path: &str) -> bool {
+        self.overview.as_deref() == Some(path)
+            || self
+                .entries
+                .iter()
+                .any(|entry| entry.page_kind(path).is_some())
+    }
+}
+
+impl NavEntry {
+    /// The layers this entry documents: the tabs of a concept, or the layer of a single-layer page.
+    pub fn layers(&self) -> Vec<Layer> {
+        if self.tabs.is_empty() {
+            self.kind.layer().into_iter().collect()
+        } else {
+            self.tabs.iter().map(|tab| tab.layer).collect()
+        }
+    }
+
+    fn page_kind(&self, path: &str) -> Option<PageKind> {
+        if self.href == path {
+            return Some(self.kind);
+        }
+        self.tabs
+            .iter()
+            .find(|tab| tab.href == path)
+            .map(|tab| tab.layer.kind())
+    }
+
+    fn pages(&self) -> impl Iterator<Item = &str> {
+        std::iter::once(self.href.as_str()).chain(self.tabs.iter().map(|tab| tab.href.as_str()))
+    }
+}
+
+fn part(kind: PartKind, title: Option<&'static str>, groups: Vec<NavGroup>) -> NavPart {
+    NavPart {
+        kind,
+        title,
+        groups,
+    }
+}
+
+fn group(
     title: &'static str,
     icon: Icon,
     overview: Option<String>,
-    badges: bool,
     entries: Vec<NavEntry>,
-) -> NavSection {
-    NavSection {
+) -> NavGroup {
+    NavGroup {
         title,
         icon,
         overview,
-        badges,
         entries,
     }
 }
 
+/// A page without tabs: a guide, a building block or a single-layer concept.
 fn page(title: &'static str, summary: &'static str, href: String, kind: PageKind) -> NavEntry {
     NavEntry {
         title,
@@ -167,10 +279,10 @@ fn page(title: &'static str, summary: &'static str, href: String, kind: PageKind
         href,
         kind,
         tabs: Vec::new(),
-        hidden: Vec::new(),
     }
 }
 
+/// A concept with an overview page and a tab for each of its layers.
 fn concept(
     title: &'static str,
     summary: &'static str,
@@ -183,739 +295,1105 @@ fn concept(
         href,
         kind: PageKind::Concept,
         tabs,
-        hidden: Vec::new(),
     }
 }
 
-fn tab(label: &'static str, href: String, kind: PageKind) -> NavTab {
-    NavTab { label, href, kind }
-}
-
-impl NavEntry {
-    fn with_hidden(mut self, hidden: Vec<NavTab>) -> Self {
-        self.hidden = hidden;
-        self
+fn tab(layer: Layer, several: bool, href: String) -> NavTab {
+    NavTab {
+        href,
+        layer,
+        several,
     }
 }
 
-#[allow(clippy::too_many_lines)]
+fn hook(href: String) -> NavTab {
+    tab(Layer::Hook, false, href)
+}
+
+fn hooks(href: String) -> NavTab {
+    tab(Layer::Hook, true, href)
+}
+
+fn atom(href: String) -> NavTab {
+    tab(Layer::Atom, false, href)
+}
+
+fn atoms(href: String) -> NavTab {
+    tab(Layer::Atom, true, href)
+}
+
+fn component(href: String) -> NavTab {
+    tab(Layer::Component, false, href)
+}
+
+fn components(href: String) -> NavTab {
+    tab(Layer::Component, true, href)
+}
+
 fn build() -> Nav {
-    use PageKind::{Atom, Component, Guide, Hook};
-
-    let hook = |href: String| tab("Hook", href, Hook);
-    let hooks = |href: String| tab("Hooks", href, Hook);
-    let atom = |href: String| tab("Atom", href, Atom);
-    let component = |href: String| tab("Component", href, Component);
-
     Nav {
-        sections: vec![
-            section(
-                "Getting started",
-                icondata::BsBook,
-                None,
-                false,
+        parts: vec![
+            part(PartKind::Guides, None, vec![getting_started(), guides()]),
+            part(
+                PartKind::Concepts,
+                Some("Concepts"),
                 vec![
-                    page(
-                        "Overview",
-                        "What leptonic is and how the documentation is organized",
-                        doc::Overview.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Installation",
-                        "Adds leptonic to a Leptos app, with styles and the theme",
-                        doc::Installation.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Themes",
-                        "Light and dark themes, switching between them and customizing them",
-                        doc::Themes.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Changelog",
-                        "Changes of every release, with migration notes",
-                        doc::Changelog.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Event Propagation",
-                        "Why leptonic events stop propagating and how to let them bubble",
-                        doc::EventPropagation.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Hooks, Atoms & Components",
-                        "The three layers of leptonic and when to use which",
-                        doc::Architecture.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Classes & Styles",
-                        "Passing classes and typed styles to atoms and components",
-                        doc::ClassesAndStyles.materialize(),
-                        Guide,
-                    ),
-                    page(
-                        "Forms & Validation",
-                        "Form fields, validation behavior and error messages",
-                        doc::Forms.materialize(),
-                        Guide,
-                    ),
+                    buttons(),
+                    fields(),
+                    pickers(),
+                    collections(),
+                    date_time(),
+                    color(),
+                    overlays(),
+                    navigation(),
+                    status(),
+                    layout(),
                 ],
             ),
-            section(
-                "Interactions",
-                icondata::BsCursor,
-                Some(doc::Interactions.materialize()),
-                false,
+            part(
+                PartKind::BuildingBlocks,
+                Some("Building blocks"),
                 vec![
-                    page(
-                        "use_press",
-                        "Press interactions across mouse, touch, keyboard and screen readers, including long press",
-                        doc::interactions::UsePress.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "PressResponder",
-                        "Passes press handling to a pressable descendant, e.g. a menu or dialog trigger",
-                        doc::interactions::PressResponder.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "Hoverable",
-                        "Adds hover tracking to its child without rendering an element",
-                        doc::interactions::Hoverable.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "use_hover",
-                        "Tracks whether a mouse or pen hovers an element, for tooltips and highlights",
-                        doc::interactions::UseHover.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_move",
-                        "Reports pointer drags and arrow keys as movement, for sliders and color areas",
-                        doc::interactions::UseMove.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_keyboard",
-                        "Key events and keyboard shortcuts on an element",
-                        doc::interactions::UseKeyboard.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_interact_outside",
-                        "Detects interactions outside an element, to dismiss popovers and menus",
-                        doc::interactions::UseInteractOutside.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_scroll_wheel",
-                        "Scroll wheel events without scrolling the page",
-                        doc::interactions::UseScrollWheel.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_prevent_scroll",
-                        "Locks page scrolling while a modal or overlay is open",
-                        doc::interactions::UsePreventScroll.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "Drag & Drop",
-                        "Draggable elements, drop targets and reorderable collections, with keyboard support",
-                        doc::interactions::Dnd.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "Focus",
-                icondata::BsEye,
-                Some(doc::Focus.materialize()),
-                false,
-                vec![
-                    page(
-                        "use_focus",
-                        "Tracks focus and blur of an element",
-                        doc::focus::UseFocus.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_focus_within",
-                        "Tracks whether focus is inside a container",
-                        doc::focus::UseFocusWithin.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_focusable",
-                        "Makes a custom element focusable, with keyboard events and programmatic focus",
-                        doc::focus::UseFocusable.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_focus_manager",
-                        "Moves focus to the next, previous, first or last element of a container",
-                        doc::focus::UseFocusManager.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_has_tabbable_child",
-                        "Tells whether a container has tabbable descendants",
-                        doc::focus::UseHasTabbableChild.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_focus_ring",
-                        "Tells whether an element should show a keyboard focus ring",
-                        doc::focus::UseFocusRing.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_focus_visible",
-                        "Tracks whether the user navigates with the keyboard",
-                        doc::focus::UseFocusVisible.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "FocusScope",
-                        "Contains, restores and auto-focuses focus within a subtree, e.g. a dialog",
-                        doc::focus::FocusScope.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "FocusRing",
-                        "Marks its child with data-focus-visible while it has keyboard focus",
-                        doc::focus::FocusRing.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "FocusManager",
-                        "A container that hands a focus manager to its children",
-                        doc::focus::FocusManager.materialize(),
-                        Atom,
-                    ),
-                ],
-            ),
-            section(
-                "Overlays",
-                icondata::BsWindowStack,
-                Some(doc::Overlays.materialize()),
-                false,
-                vec![
-                    page(
-                        "Overlay Hooks",
-                        "Dismissing, positioning and trigger attributes of floating content",
-                        doc::overlays::UseOverlay.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "DismissButton",
-                        "A visually hidden button that lets screen reader users dismiss an overlay",
-                        doc::overlays::DismissButton.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "Animation Hooks",
-                        "Enter and exit animation states for elements that mount and unmount",
-                        doc::hooks::Animation.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "Transitions",
-                        "Ready-made collapse, fade, grow, slide and zoom transitions",
-                        doc::components::Transitions.materialize(),
-                        Component,
-                    ),
-                ],
-            ),
-            section(
-                "Collections",
-                icondata::BsListUl,
-                Some(doc::Collections.materialize()),
-                false,
-                vec![],
-            ),
-            section(
-                "Input",
-                icondata::BsToggles,
-                Some(doc::InputCategory.materialize()),
-                true,
-                vec![
-                    concept(
-                        "Button",
-                        "Triggers an action, such as submit, delete or open",
-                        doc::Button.materialize(),
-                        vec![
-                            hook(doc::button::Hook.materialize()),
-                            atom(doc::button::Atom.materialize()),
-                            component(doc::button::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Checkbox",
-                        "Turns an independent option on or off",
-                        doc::Checkbox.materialize(),
-                        vec![
-                            hook(doc::checkbox::Hook.materialize()),
-                            atom(doc::checkbox::Atom.materialize()),
-                            component(doc::checkbox::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Color",
-                        "Picks colors with areas, sliders, wheels, swatches and fields",
-                        doc::Color.materialize(),
-                        vec![
-                            hooks(doc::color::Hooks.materialize()),
-                            atom(doc::color::Atom.materialize()),
-                            component(doc::color::Component.materialize()),
-                        ],
-                    )
-                    .with_hidden(vec![
-                        tab(
-                            "use_color_area",
-                            doc::hooks::UseColorArea.materialize(),
-                            Hook,
-                        ),
-                        tab(
-                            "use_color_slider",
-                            doc::hooks::UseColorSlider.materialize(),
-                            Hook,
-                        ),
-                        tab(
-                            "use_color_wheel",
-                            doc::hooks::UseColorWheel.materialize(),
-                            Hook,
-                        ),
-                        tab(
-                            "use_color_field",
-                            doc::hooks::UseColorField.materialize(),
-                            Hook,
-                        ),
-                        tab(
-                            "use_color_swatch",
-                            doc::hooks::UseColorSwatch.materialize(),
-                            Hook,
-                        ),
-                        tab(
-                            "use_color_channel_field",
-                            doc::hooks::UseColorChannelField.materialize(),
-                            Hook,
-                        ),
-                    ]),
-                    concept(
-                        "Combobox",
-                        "A text field with a filtered list of options, for large option sets",
-                        doc::Combobox.materialize(),
-                        vec![
-                            hook(doc::combobox::Hook.materialize()),
-                            atom(doc::combobox::Atom.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Date & Time",
-                        "Calendars, date and time fields, and date pickers",
-                        doc::DateTime.materialize(),
-                        vec![
-                            tab(
-                                "Calendar Hooks",
-                                doc::date_time::CalendarHooks.materialize(),
-                                Hook,
-                            ),
-                            tab(
-                                "Date Field Hooks",
-                                doc::date_time::DateFieldHooks.materialize(),
-                                Hook,
-                            ),
-                            tab(
-                                "Date Picker Hooks",
-                                doc::date_time::DatePickerHooks.materialize(),
-                                Hook,
-                            ),
-                            component(doc::date_time::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Listbox",
-                        "A list of options that are all visible at once, with single or multiple selection",
-                        doc::Listbox.materialize(),
-                        vec![
-                            hook(doc::listbox::Hook.materialize()),
-                            atom(doc::listbox::Atom.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Radio",
-                        "Picks exactly one option of a small, visible set",
-                        doc::Radio.materialize(),
-                        vec![
-                            hook(doc::radio::Hook.materialize()),
-                            atom(doc::radio::Atom.materialize()),
-                            component(doc::radio::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Select",
-                        "Picks an option from a dropdown, where space is limited",
-                        doc::Select.materialize(),
-                        vec![
-                            hook(doc::select::Hook.materialize()),
-                            atom(doc::select::Atom.materialize()),
-                            component(doc::select::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Slider",
-                        "Picks a number, or a range, by dragging along a track",
-                        doc::Slider.materialize(),
-                        vec![
-                            hook(doc::slider::Hook.materialize()),
-                            atom(doc::slider::Atom.materialize()),
-                            component(doc::slider::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Text Field",
-                        "Single-line and multi-line text input",
-                        doc::TextField.materialize(),
-                        vec![
-                            hook(doc::text_field::Hook.materialize()),
-                            tab(
-                                "Number Field Hook",
-                                doc::text_field::NumberFieldHook.materialize(),
-                                Hook,
-                            ),
-                            atom(doc::text_field::Atom.materialize()),
-                            tab(
-                                "Number Field Atoms",
-                                doc::text_field::NumberFieldAtom.materialize(),
-                                Atom,
-                            ),
-                            component(doc::text_field::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Switch",
-                        "Switches a setting on or off, with immediate effect",
-                        doc::Switch.materialize(),
-                        vec![
-                            hook(doc::switch::Hook.materialize()),
-                            atom(doc::switch::Atom.materialize()),
-                            component(doc::switch::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Toggle Button",
-                        "A button that stays pressed, alone or in a group of options",
-                        doc::ToggleButton.materialize(),
-                        vec![
-                            hook(doc::toggle_button::Hook.materialize()),
-                            atom(doc::toggle_button::Atom.materialize()),
-                        ],
-                    ),
-                    page(
-                        "Field Atoms",
-                        "Label, description and error message of any field atom",
-                        doc::atoms::Field.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "Form Atom",
-                        "A form whose fields share a validation behavior and show server errors",
-                        doc::atoms::Form.materialize(),
-                        Atom,
-                    ),
-                    page(
-                        "Tiptap Editor",
-                        "A rich text editor based on Tiptap",
-                        doc::components::TiptapEditor.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "use_label",
-                        "Associates a label, description and error message with a field",
-                        doc::hooks::UseLabel.materialize(),
-                        Hook,
-                    ),
-                    page(
-                        "use_spin_button",
-                        "Steps a number up and down with the keyboard and hold-to-spin buttons",
-                        doc::hooks::UseSpinButton.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "Data Display",
-                icondata::BsGrid,
-                Some(doc::DataDisplay.materialize()),
-                true,
-                vec![
-                    concept(
-                        "Grid",
-                        "Rows and cells navigated in two dimensions, with row selection",
-                        doc::Grid.materialize(),
-                        vec![
-                            hook(doc::grid::Hook.materialize()),
-                            atom(doc::grid::Atom.materialize()),
-                            component(doc::grid::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Table",
-                        "Columns of data with sortable headers and selectable rows",
-                        doc::Table.materialize(),
-                        vec![
-                            hook(doc::table::Hook.materialize()),
-                            atom(doc::table::Atom.materialize()),
-                            component(doc::table::Component.materialize()),
-                        ],
-                    ),
-                    page(
-                        "use_tree",
-                        "Hierarchical items with expandable and collapsible children",
-                        doc::hooks::UseTree.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "Layout",
-                icondata::BsColumnsGap,
-                Some(doc::LayoutCategory.materialize()),
-                true,
-                vec![
-                    concept(
-                        "Collapsible",
-                        "Content that expands and collapses under a header",
-                        doc::Collapsible.materialize(),
-                        vec![
-                            hook(doc::collapsible::Hook.materialize()),
-                            component(doc::collapsible::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Separator",
-                        "A visual divider between groups of content",
-                        doc::Separator.materialize(),
-                        vec![
-                            hook(doc::separator::Hook.materialize()),
-                            component(doc::separator::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Tabs",
-                        "Switches between panels that share the same space",
-                        doc::Tabs.materialize(),
-                        vec![
-                            hook(doc::tabs::Hook.materialize()),
-                            atom(doc::tabs::Atom.materialize()),
-                            component(doc::tabs::Component.materialize()),
-                        ],
-                    ),
-                    page(
-                        "App Bar",
-                        "The application's top bar",
-                        doc::components::AppBar.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Drawer",
-                        "A side panel that slides in",
-                        doc::components::Drawer.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Skeleton",
-                        "Placeholder shapes while content loads",
-                        doc::components::Skeleton.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Stack",
-                        "Stacks elements vertically or horizontally with even spacing",
-                        doc::components::Stack.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "use_toolbar",
-                        "A group of controls navigated with the arrow keys",
-                        doc::hooks::UseToolbar.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "Feedback",
-                icondata::BsChatSquare,
-                Some(doc::Feedback.materialize()),
-                true,
-                vec![
-                    concept(
-                        "Chip",
-                        "Compact tags, filters and status labels that can be removed",
-                        doc::Chip.materialize(),
-                        vec![
-                            hook(doc::chip::Hook.materialize()),
-                            component(doc::chip::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Modal",
-                        "A dialog that blocks the page until the user responds",
-                        doc::Modal.materialize(),
-                        vec![
-                            hook(doc::modal::Hook.materialize()),
-                            atom(doc::modal::Atom.materialize()),
-                            component(doc::modal::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Popover",
-                        "Content anchored to a trigger element",
-                        doc::Popover.materialize(),
-                        vec![
-                            hook(doc::popover::Hook.materialize()),
-                            atom(doc::popover::Atom.materialize()),
-                            component(doc::popover::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Progress",
-                        "Shows the progress of an ongoing task, determinate or not",
-                        doc::Progress.materialize(),
-                        vec![
-                            hook(doc::progress::Hook.materialize()),
-                            component(doc::progress::Component.materialize()),
-                        ],
-                    ),
-                    concept(
-                        "Tooltip",
-                        "A short hint shown when a button or icon is hovered or focused",
-                        doc::Tooltip.materialize(),
-                        vec![
-                            hook(doc::tooltip::Hook.materialize()),
-                            atom(doc::tooltip::Atom.materialize()),
-                        ],
-                    ),
-                    page(
-                        "Alert",
-                        "A prominent status message",
-                        doc::components::Alert.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Kbd",
-                        "Displays keys and keyboard shortcuts",
-                        doc::components::Kbd.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Toast",
-                        "Temporary notifications",
-                        doc::components::Toast.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "use_meter",
-                        "Shows a value within a known range, such as disk usage",
-                        doc::hooks::UseMeter.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "Navigation",
-                icondata::BsSignpost,
-                Some(doc::Navigation.materialize()),
-                true,
-                vec![
-                    concept(
-                        "Link",
-                        "Navigates to a URL or an anchor on the page",
-                        doc::Link.materialize(),
-                        vec![
-                            tab("use_link", doc::link::UseLink.materialize(), Hook),
-                            tab(
-                                "use_anchor_link",
-                                doc::link::UseAnchorLink.materialize(),
-                                Hook,
-                            ),
-                            tab("Link Atom", doc::link::LinkAtom.materialize(), Atom),
-                            tab(
-                                "AnchorLink Atom",
-                                doc::link::AnchorLinkAtom.materialize(),
-                                Atom,
-                            ),
-                        ],
-                    ),
-                    concept(
-                        "Menu",
-                        "A list of actions opened from a trigger",
-                        doc::Menu.materialize(),
-                        vec![
-                            hook(doc::menu::Hook.materialize()),
-                            atom(doc::menu::Atom.materialize()),
-                        ],
-                    ),
-                    page(
-                        "use_breadcrumbs",
-                        "A trail of links to the current page's ancestors",
-                        doc::hooks::UseBreadcrumbs.materialize(),
-                        Hook,
-                    ),
-                ],
-            ),
-            section(
-                "General",
-                icondata::BsCircleSquare,
-                Some(doc::General.materialize()),
-                true,
-                vec![
-                    page(
-                        "Typography",
-                        "Headings, paragraphs and code with the theme's text styles",
-                        doc::components::Typography.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Icon",
-                        "Renders icons from the icondata sets",
-                        doc::components::Icon.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Callback",
-                        "The prop types components use for callbacks, outputs and views",
-                        doc::components::Callback.materialize(),
-                        Component,
-                    ),
-                    page(
-                        "Live Announcer",
-                        "Announces messages to screen reader users",
-                        doc::utils::LiveAnnouncer.materialize(),
-                        Guide,
-                    ),
+                    interactions(),
+                    focus(),
+                    overlay_behavior(),
+                    collection_state(),
+                    drag_and_drop(),
+                    animation(),
+                    screen_readers(),
+                    utilities(),
                 ],
             ),
         ],
     }
 }
 
+// ── Guides ───────────────────────────────────────────────────────────────────
+
+fn getting_started() -> NavGroup {
+    use PageKind::Guide;
+    group(
+        "Getting started",
+        icondata::BsBook,
+        None,
+        vec![
+            page(
+                "Overview",
+                "What leptonic is and how the documentation is organized",
+                doc::Overview.materialize(),
+                Guide,
+            ),
+            page(
+                "Installation",
+                "Adds leptonic to a Leptos app, with styles and the theme",
+                doc::Installation.materialize(),
+                Guide,
+            ),
+            page(
+                "Changelog",
+                "Changes of every release, with migration notes",
+                doc::Changelog.materialize(),
+                Guide,
+            ),
+        ],
+    )
+}
+
+fn guides() -> NavGroup {
+    use PageKind::Guide;
+    group(
+        "Guides",
+        icondata::BsLightbulb,
+        None,
+        vec![
+            page(
+                "Hooks, Atoms & Components",
+                "The three layers of leptonic and when to use which",
+                doc::Architecture.materialize(),
+                Guide,
+            ),
+            page(
+                "Event Propagation",
+                "Why leptonic events stop propagating and how to let them bubble",
+                doc::EventPropagation.materialize(),
+                Guide,
+            ),
+            page(
+                "Classes & Styles",
+                "Passing classes and typed styles to atoms and components",
+                doc::ClassesAndStyles.materialize(),
+                Guide,
+            ),
+            page(
+                "Callbacks",
+                "The prop types components use for callbacks, outputs and views",
+                doc::Callbacks.materialize(),
+                Guide,
+            ),
+            page(
+                "Themes",
+                "Light and dark themes, switching between them and customizing them",
+                doc::Themes.materialize(),
+                Guide,
+            ),
+            page(
+                "Forms & Validation",
+                "Form fields, validation behavior and error messages",
+                doc::Forms.materialize(),
+                Guide,
+            ),
+            page(
+                "Server-Side Rendering",
+                "How leptonic renders on the server and hydrates, and what your code has to watch out for",
+                doc::Ssr.materialize(),
+                Guide,
+            ),
+            page(
+                "Accessibility",
+                "What leptonic does for accessibility at each layer and what your app still has to do",
+                doc::Accessibility.materialize(),
+                Guide,
+            ),
+        ],
+    )
+}
+
+// ── Concepts ─────────────────────────────────────────────────────────────────
+
+fn buttons() -> NavGroup {
+    group(
+        "Buttons",
+        icondata::BsHandIndex,
+        Some(doc::Buttons.materialize()),
+        vec![
+            concept(
+                "Button",
+                "Triggers an action, such as submit, delete or open",
+                doc::Button.materialize(),
+                vec![
+                    hook(doc::button::Hook.materialize()),
+                    atom(doc::button::Atom.materialize()),
+                    components(doc::button::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Toggle Button",
+                "A button that stays pressed, alone or in a group of options",
+                doc::ToggleButton.materialize(),
+                vec![
+                    hooks(doc::toggle_button::Hook.materialize()),
+                    atoms(doc::toggle_button::Atom.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn fields() -> NavGroup {
+    group(
+        "Fields",
+        icondata::BsInputCursorText,
+        Some(doc::Fields.materialize()),
+        vec![
+            concept(
+                "Checkbox",
+                "Turns an independent option on or off, alone or in a group",
+                doc::Checkbox.materialize(),
+                vec![
+                    hooks(doc::checkbox::Hook.materialize()),
+                    atoms(doc::checkbox::Atom.materialize()),
+                    components(doc::checkbox::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Field",
+                "Label, description and error message of any form field",
+                doc::Field.materialize(),
+                vec![
+                    hooks(doc::field::Hook.materialize()),
+                    atoms(doc::field::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Form",
+                "Submits fields together, deciding when they show errors and passing on server errors",
+                doc::Form.materialize(),
+                vec![
+                    hooks(doc::form::Hook.materialize()),
+                    atom(doc::form::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Number Field",
+                "Enters a number by typing or stepping, with locale-aware formatting",
+                doc::NumberField.materialize(),
+                vec![
+                    hooks(doc::number_field::Hook.materialize()),
+                    atoms(doc::number_field::Atom.materialize()),
+                    component(doc::number_field::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Radio",
+                "Picks exactly one option of a small, visible set",
+                doc::Radio.materialize(),
+                vec![
+                    hooks(doc::radio::Hook.materialize()),
+                    atoms(doc::radio::Atom.materialize()),
+                    components(doc::radio::Component.materialize()),
+                ],
+            ),
+            page(
+                "Rich Text Editor",
+                "A rich text editor based on Tiptap",
+                doc::RichTextEditor.materialize(),
+                PageKind::Component,
+            ),
+            concept(
+                "Search Field",
+                "A text field for search queries, submitted with Enter and cleared with Escape",
+                doc::SearchField.materialize(),
+                vec![
+                    hook(doc::search_field::Hook.materialize()),
+                    atoms(doc::search_field::Atom.materialize()),
+                    component(doc::search_field::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Slider",
+                "Picks a number, or a range, by dragging along a track",
+                doc::Slider.materialize(),
+                vec![
+                    hooks(doc::slider::Hook.materialize()),
+                    atoms(doc::slider::Atom.materialize()),
+                    components(doc::slider::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Switch",
+                "Switches a setting on or off, with immediate effect",
+                doc::Switch.materialize(),
+                vec![
+                    hooks(doc::switch::Hook.materialize()),
+                    atom(doc::switch::Atom.materialize()),
+                    component(doc::switch::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Text Field",
+                "Single-line and multi-line text input, such as names, emails and passwords",
+                doc::TextField.materialize(),
+                vec![
+                    hooks(doc::text_field::Hook.materialize()),
+                    atoms(doc::text_field::Atom.materialize()),
+                    component(doc::text_field::Component.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn pickers() -> NavGroup {
+    group(
+        "Pickers",
+        icondata::BsMenuDown,
+        Some(doc::Pickers.materialize()),
+        vec![
+            concept(
+                "Combobox",
+                "A text field with a filtered list of options, for large option sets",
+                doc::Combobox.materialize(),
+                vec![
+                    hooks(doc::combobox::Hook.materialize()),
+                    atoms(doc::combobox::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Select",
+                "Picks an option from a dropdown, where space is limited",
+                doc::Select.materialize(),
+                vec![
+                    hooks(doc::select::Hook.materialize()),
+                    atoms(doc::select::Atom.materialize()),
+                    components(doc::select::Component.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn collections() -> NavGroup {
+    group(
+        "Collections",
+        icondata::BsListUl,
+        Some(doc::Collections.materialize()),
+        vec![
+            concept(
+                "Grid",
+                "Rows and cells navigated in two dimensions, with row selection",
+                doc::Grid.materialize(),
+                vec![
+                    hooks(doc::grid::Hook.materialize()),
+                    atoms(doc::grid::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Grid List",
+                "A list of rows that may contain buttons, checkboxes or links",
+                doc::GridList.materialize(),
+                vec![
+                    hooks(doc::grid_list::Hook.materialize()),
+                    atoms(doc::grid_list::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Listbox",
+                "A list of options that are all visible at once, with single or multiple selection",
+                doc::Listbox.materialize(),
+                vec![
+                    hooks(doc::listbox::Hook.materialize()),
+                    atoms(doc::listbox::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Menu",
+                "A list of actions opened from a trigger",
+                doc::Menu.materialize(),
+                vec![
+                    hooks(doc::menu::Hook.materialize()),
+                    atoms(doc::menu::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Table",
+                "Columns of data with sortable headers and selectable rows",
+                doc::Table.materialize(),
+                vec![
+                    hooks(doc::table::Hook.materialize()),
+                    atoms(doc::table::Atom.materialize()),
+                    components(doc::table::Component.materialize()),
+                ],
+            ),
+            page(
+                "Tag Group",
+                "A focusable list of tags that can be selected and removed",
+                doc::TagGroup.materialize(),
+                PageKind::Hook,
+            ),
+            page(
+                "Tree",
+                "Hierarchical items with expandable and collapsible children",
+                doc::Tree.materialize(),
+                PageKind::Hook,
+            ),
+        ],
+    )
+}
+
+fn date_time() -> NavGroup {
+    group(
+        "Date & Time",
+        icondata::BsCalendar3,
+        Some(doc::DateTime.materialize()),
+        vec![
+            concept(
+                "Calendar",
+                "A month grid for picking a date or a range of dates",
+                doc::Calendar.materialize(),
+                vec![
+                    hooks(doc::calendar::Hook.materialize()),
+                    component(doc::calendar::Component.materialize()),
+                ],
+            ),
+            page(
+                "Date Field",
+                "Enters a date, or a date and time, in editable segments",
+                doc::DateField.materialize(),
+                PageKind::Hook,
+            ),
+            concept(
+                "Date Picker",
+                "A date field with a calendar in a popover",
+                doc::DatePicker.materialize(),
+                vec![
+                    hooks(doc::date_picker::Hook.materialize()),
+                    component(doc::date_picker::Component.materialize()),
+                ],
+            ),
+            page(
+                "Time Field",
+                "Enters a time of day in editable segments",
+                doc::TimeField.materialize(),
+                PageKind::Hook,
+            ),
+        ],
+    )
+}
+
+fn color() -> NavGroup {
+    group(
+        "Color",
+        icondata::BsPalette,
+        Some(doc::Color.materialize()),
+        vec![
+            concept(
+                "Color Area",
+                "Picks two channels of a color, e.g. saturation and brightness, in a 2D area",
+                doc::ColorArea.materialize(),
+                vec![
+                    hooks(doc::color_area::Hook.materialize()),
+                    atoms(doc::color_area::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Color Field",
+                "Enters a color, or one of its channels, as text",
+                doc::ColorField.materialize(),
+                vec![
+                    hooks(doc::color_field::Hook.materialize()),
+                    atoms(doc::color_field::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Color Picker",
+                "Combines color areas, sliders and fields into one picker",
+                doc::ColorPicker.materialize(),
+                vec![
+                    hook(doc::color_picker::Hook.materialize()),
+                    atom(doc::color_picker::Atom.materialize()),
+                    components(doc::color_picker::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Color Slider",
+                "Picks one channel of a color along a track",
+                doc::ColorSlider.materialize(),
+                vec![
+                    hooks(doc::color_slider::Hook.materialize()),
+                    atoms(doc::color_slider::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Color Swatch",
+                "Shows a color as a small preview",
+                doc::ColorSwatch.materialize(),
+                vec![
+                    hook(doc::color_swatch::Hook.materialize()),
+                    atom(doc::color_swatch::Atom.materialize()),
+                ],
+            ),
+            page(
+                "Color Swatch Picker",
+                "Picks one of a few predefined colors, shown as swatches",
+                doc::ColorSwatchPicker.materialize(),
+                PageKind::Atom,
+            ),
+            concept(
+                "Color Wheel",
+                "Picks a hue on a circular track",
+                doc::ColorWheel.materialize(),
+                vec![
+                    hooks(doc::color_wheel::Hook.materialize()),
+                    atoms(doc::color_wheel::Atom.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn overlays() -> NavGroup {
+    group(
+        "Overlays",
+        icondata::BsWindowStack,
+        Some(doc::Overlays.materialize()),
+        vec![
+            concept(
+                "Dialog",
+                "The named content of a modal or popover, such as a confirmation or a form",
+                doc::Dialog.materialize(),
+                vec![
+                    hook(doc::dialog::Hook.materialize()),
+                    atoms(doc::dialog::Atom.materialize()),
+                ],
+            ),
+            page(
+                "Drawer",
+                "A side panel that slides in",
+                doc::Drawer.materialize(),
+                PageKind::Component,
+            ),
+            concept(
+                "Modal",
+                "A dialog that blocks the page until the user responds",
+                doc::Modal.materialize(),
+                vec![
+                    hooks(doc::modal::Hook.materialize()),
+                    atoms(doc::modal::Atom.materialize()),
+                    components(doc::modal::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Popover",
+                "Content anchored to a trigger element",
+                doc::Popover.materialize(),
+                vec![
+                    hook(doc::popover::Hook.materialize()),
+                    atoms(doc::popover::Atom.materialize()),
+                    component(doc::popover::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Tooltip",
+                "A short hint shown when a button or icon is hovered or focused",
+                doc::Tooltip.materialize(),
+                vec![
+                    hooks(doc::tooltip::Hook.materialize()),
+                    atoms(doc::tooltip::Atom.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn navigation() -> NavGroup {
+    group(
+        "Navigation",
+        icondata::BsSignpost,
+        Some(doc::Navigation.materialize()),
+        vec![
+            concept(
+                "Breadcrumbs",
+                "A trail of links to the current page's ancestors",
+                doc::Breadcrumbs.materialize(),
+                vec![
+                    hooks(doc::breadcrumbs::Hook.materialize()),
+                    atoms(doc::breadcrumbs::Atom.materialize()),
+                ],
+            ),
+            concept(
+                "Disclosure",
+                "Content that expands and collapses under a trigger, alone or as an accordion",
+                doc::Disclosure.materialize(),
+                vec![
+                    hooks(doc::disclosure::Hook.materialize()),
+                    atoms(doc::disclosure::Atom.materialize()),
+                    components(doc::disclosure::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Link",
+                "Navigates to a URL or an anchor on the page",
+                doc::Link.materialize(),
+                vec![
+                    hooks(doc::link::Hook.materialize()),
+                    atoms(doc::link::Atom.materialize()),
+                    components(doc::link::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Tabs",
+                "Switches between panels that share the same space",
+                doc::Tabs.materialize(),
+                vec![
+                    hooks(doc::tabs::Hook.materialize()),
+                    atoms(doc::tabs::Atom.materialize()),
+                    components(doc::tabs::Component.materialize()),
+                ],
+            ),
+        ],
+    )
+}
+
+fn status() -> NavGroup {
+    group(
+        "Status",
+        icondata::BsInfoCircle,
+        Some(doc::Status.materialize()),
+        vec![
+            page(
+                "Alert",
+                "A prominent status message",
+                doc::Alert.materialize(),
+                PageKind::Component,
+            ),
+            concept(
+                "Meter",
+                "Shows a value within a known range, such as disk usage",
+                doc::Meter.materialize(),
+                vec![
+                    hook(doc::meter::Hook.materialize()),
+                    atoms(doc::meter::Atom.materialize()),
+                    component(doc::meter::Component.materialize()),
+                ],
+            ),
+            concept(
+                "Progress Bar",
+                "Shows the progress of an ongoing task, determinate or not",
+                doc::ProgressBar.materialize(),
+                vec![
+                    hook(doc::progress_bar::Hook.materialize()),
+                    atoms(doc::progress_bar::Atom.materialize()),
+                    component(doc::progress_bar::Component.materialize()),
+                ],
+            ),
+            page(
+                "Toast",
+                "Temporary notifications",
+                doc::Toast.materialize(),
+                PageKind::Component,
+            ),
+        ],
+    )
+}
+
+fn layout() -> NavGroup {
+    group(
+        "Content & Layout",
+        icondata::BsColumnsGap,
+        Some(doc::Layout.materialize()),
+        vec![
+            page(
+                "App Bar",
+                "The application's top bar",
+                doc::AppBar.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Card & Tile",
+                "Containers for related content: a themed card surface and an unstyled tile",
+                doc::CardAndTile.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Chip",
+                "Compact labels for tags, filters and states, optionally dismissible",
+                doc::Chip.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Grid Layout",
+                "Arranges content in responsive rows and columns",
+                doc::GridLayout.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Icon",
+                "Renders icons from the icondata sets",
+                doc::Icon.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Kbd",
+                "Displays keys and keyboard shortcuts",
+                doc::Kbd.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Sanitized HTML",
+                "Renders HTML from other sources without the scripts it may contain",
+                doc::SanitizedHtml.materialize(),
+                PageKind::Component,
+            ),
+            concept(
+                "Separator",
+                "A visual divider between groups of content",
+                doc::Separator.materialize(),
+                vec![
+                    hook(doc::separator::Hook.materialize()),
+                    atom(doc::separator::Atom.materialize()),
+                    component(doc::separator::Component.materialize()),
+                ],
+            ),
+            page(
+                "Skeleton",
+                "Placeholder shapes while content loads",
+                doc::Skeleton.materialize(),
+                PageKind::Component,
+            ),
+            page(
+                "Stack",
+                "Stacks elements vertically or horizontally with even spacing",
+                doc::Stack.materialize(),
+                PageKind::Component,
+            ),
+            concept(
+                "Toolbar",
+                "A group of controls navigated with the arrow keys",
+                doc::Toolbar.materialize(),
+                vec![
+                    hook(doc::toolbar::Hook.materialize()),
+                    atom(doc::toolbar::Atom.materialize()),
+                ],
+            ),
+            page(
+                "Typography",
+                "Headings, paragraphs and code with the theme's text styles",
+                doc::Typography.materialize(),
+                PageKind::Component,
+            ),
+        ],
+    )
+}
+
+// ── Building blocks ──────────────────────────────────────────────────────────
+
+fn interactions() -> NavGroup {
+    use PageKind::{Atom, Hook};
+    group(
+        "Interactions",
+        icondata::BsCursor,
+        Some(doc::Interactions.materialize()),
+        vec![
+            page(
+                "use_press",
+                "Press interactions across mouse, touch, keyboard and screen readers, including long press",
+                doc::interactions::UsePress.materialize(),
+                Hook,
+            ),
+            page(
+                "PressResponder",
+                "Passes press handling to a pressable descendant, e.g. a menu or dialog trigger",
+                doc::interactions::PressResponder.materialize(),
+                Atom,
+            ),
+            page(
+                "use_hover",
+                "Tracks whether a mouse or pen hovers an element, for tooltips and highlights",
+                doc::interactions::UseHover.materialize(),
+                Hook,
+            ),
+            page(
+                "Hoverable",
+                "Adds hover tracking to its child without rendering an element",
+                doc::interactions::Hoverable.materialize(),
+                Atom,
+            ),
+            page(
+                "use_move",
+                "Reports pointer drags and arrow keys as movement, for sliders and color areas",
+                doc::interactions::UseMove.materialize(),
+                Hook,
+            ),
+            page(
+                "use_keyboard",
+                "Key events and keyboard shortcuts on an element",
+                doc::interactions::UseKeyboard.materialize(),
+                Hook,
+            ),
+            page(
+                "use_context_menu",
+                "Requests for a context menu by right click, keyboard or long press, with their position",
+                doc::interactions::UseContextMenu.materialize(),
+                Hook,
+            ),
+            page(
+                "use_interact_outside",
+                "Detects interactions outside an element, to dismiss popovers and menus",
+                doc::interactions::UseInteractOutside.materialize(),
+                Hook,
+            ),
+            page(
+                "use_scroll_wheel",
+                "Scroll wheel events without scrolling the page",
+                doc::interactions::UseScrollWheel.materialize(),
+                Hook,
+            ),
+        ],
+    )
+}
+
+fn focus() -> NavGroup {
+    use PageKind::{Atom, Hook};
+    group(
+        "Focus",
+        icondata::BsEye,
+        Some(doc::Focus.materialize()),
+        vec![
+            page(
+                "use_focus",
+                "Tracks focus and blur of an element",
+                doc::focus::UseFocus.materialize(),
+                Hook,
+            ),
+            page(
+                "use_focus_within",
+                "Tracks whether focus is inside a container",
+                doc::focus::UseFocusWithin.materialize(),
+                Hook,
+            ),
+            page(
+                "use_focusable",
+                "Makes a custom element focusable, with keyboard events and programmatic focus",
+                doc::focus::UseFocusable.materialize(),
+                Hook,
+            ),
+            page(
+                "Focusable",
+                "Makes its child focusable, e.g. an icon that shows a tooltip",
+                doc::focus::Focusable.materialize(),
+                Atom,
+            ),
+            page(
+                "use_focus_visible",
+                "Tracks whether the user navigates with the keyboard",
+                doc::focus::UseFocusVisible.materialize(),
+                Hook,
+            ),
+            page(
+                "use_focus_ring",
+                "Tells whether an element should show a keyboard focus ring",
+                doc::focus::UseFocusRing.materialize(),
+                Hook,
+            ),
+            page(
+                "FocusRing",
+                "Marks its child with data-focus-visible while it has keyboard focus",
+                doc::focus::FocusRing.materialize(),
+                Atom,
+            ),
+            page(
+                "FocusScope",
+                "Contains, restores and auto-focuses focus within a subtree, e.g. a dialog",
+                doc::focus::FocusScope.materialize(),
+                Atom,
+            ),
+            page(
+                "use_focus_manager",
+                "Moves focus to the next, previous, first or last element of a container",
+                doc::focus::UseFocusManager.materialize(),
+                Hook,
+            ),
+            page(
+                "FocusManagerProvider",
+                "A container that hands a focus manager to its children",
+                doc::focus::FocusManagerProvider.materialize(),
+                Atom,
+            ),
+            page(
+                "use_has_tabbable_child",
+                "Tells whether a container has tabbable descendants",
+                doc::focus::UseHasTabbableChild.materialize(),
+                Hook,
+            ),
+            page(
+                "focusability",
+                "Checks whether an element can take focus or is reached by Tab",
+                doc::focus::Focusability.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "virtual_focus",
+                "Focuses an option for assistive technology while DOM focus stays in an input",
+                doc::focus::VirtualFocus.materialize(),
+                PageKind::Utility,
+            ),
+        ],
+    )
+}
+
+fn overlay_behavior() -> NavGroup {
+    use PageKind::{Atom, Hook, Utility};
+    group(
+        "Overlay Behavior",
+        icondata::BsLayers,
+        Some(doc::OverlayBehavior.materialize()),
+        vec![
+            page(
+                "use_overlay_trigger_state",
+                "Whether an overlay is open, shared by its trigger and the overlay",
+                doc::overlay_behavior::UseOverlayTriggerState.materialize(),
+                Hook,
+            ),
+            page(
+                "use_overlay",
+                "Dismisses an overlay on Escape, a press outside or blur",
+                doc::overlay_behavior::UseOverlay.materialize(),
+                Hook,
+            ),
+            page(
+                "use_overlay_trigger",
+                "Connects a trigger to the overlay it opens with ARIA attributes",
+                doc::overlay_behavior::UseOverlayTrigger.materialize(),
+                Hook,
+            ),
+            page(
+                "use_overlay_position",
+                "Places an overlay next to its target and flips it when space runs out",
+                doc::overlay_behavior::UseOverlayPosition.materialize(),
+                Hook,
+            ),
+            page(
+                "use_close_on_scroll",
+                "Closes an overlay when its trigger scrolls away",
+                doc::overlay_behavior::UseCloseOnScroll.materialize(),
+                Hook,
+            ),
+            page(
+                "use_prevent_scroll",
+                "Locks page scrolling while a modal or overlay is open",
+                doc::overlay_behavior::UsePreventScroll.materialize(),
+                Hook,
+            ),
+            page(
+                "aria_hide_outside",
+                "Hides the page outside a modal overlay from assistive technology",
+                doc::overlay_behavior::AriaHideOutside.materialize(),
+                Utility,
+            ),
+            page(
+                "use_overlay_focus_contain",
+                "Lets overlay content, such as a dialog, keep focus inside the overlay",
+                doc::overlay_behavior::UseOverlayFocusContain.materialize(),
+                Hook,
+            ),
+            page(
+                "DismissButton",
+                "A visually hidden button that lets screen reader users dismiss an overlay",
+                doc::overlay_behavior::DismissButton.materialize(),
+                Atom,
+            ),
+        ],
+    )
+}
+
+fn collection_state() -> NavGroup {
+    group(
+        "Collection State",
+        icondata::BsCollection,
+        Some(doc::CollectionState.materialize()),
+        Vec::new(),
+    )
+}
+
+fn drag_and_drop() -> NavGroup {
+    group(
+        "Drag & Drop",
+        icondata::BsArrowsMove,
+        Some(doc::DragAndDrop.materialize()),
+        Vec::new(),
+    )
+}
+
+fn animation() -> NavGroup {
+    group(
+        "Animation",
+        icondata::BsPlayCircle,
+        Some(doc::Animation.materialize()),
+        vec![page(
+            "Transitions",
+            "Ready-made collapse, fade, grow, slide and zoom transitions",
+            doc::animation::Transitions.materialize(),
+            PageKind::Component,
+        )],
+    )
+}
+
+fn screen_readers() -> NavGroup {
+    group(
+        "Screen Readers",
+        icondata::BsMegaphone,
+        None,
+        vec![
+            page(
+                "live_announcer",
+                "Announces messages to screen reader users",
+                doc::screen_readers::LiveAnnouncer.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "use_visually_hidden",
+                "Hides an element visually but not from screen readers, optionally showing it on focus",
+                doc::screen_readers::UseVisuallyHidden.materialize(),
+                PageKind::Hook,
+            ),
+            page(
+                "VisuallyHidden",
+                "Content only screen readers read, such as the context of a link or a skip link",
+                doc::screen_readers::VisuallyHidden.materialize(),
+                PageKind::Atom,
+            ),
+            page(
+                "use_description",
+                "Describes an element to screen readers through a hidden text and aria-describedby",
+                doc::screen_readers::UseDescription.materialize(),
+                PageKind::Hook,
+            ),
+        ],
+    )
+}
+
+fn utilities() -> NavGroup {
+    group(
+        "Utilities",
+        icondata::BsTools,
+        None,
+        vec![
+            page(
+                "I18nProvider",
+                "Sets the locale and writing direction that hooks format and lay out with",
+                doc::utilities::I18nProvider.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "NumberFormatter",
+                "Formats and parses numbers for a locale, and picks plural forms",
+                doc::utilities::NumberFormatter.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "DateTimeFormatter",
+                "Formats dates and times for a locale",
+                doc::utilities::DateTimeFormatter.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "ListFormatter",
+                "Joins items into a list such as \u{201c}A, B, and C\u{201d} for a locale",
+                doc::utilities::ListFormatter.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "Collator",
+                "Sorts and filters text by the rules of a locale",
+                doc::utilities::Collator.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "use_spin_button",
+                "Steps a number up and down with the keyboard and hold-to-spin buttons",
+                doc::utilities::UseSpinButton.materialize(),
+                PageKind::Hook,
+            ),
+            page(
+                "use_clipboard",
+                "Cut, copy and paste of your app's data on a focused element",
+                doc::utilities::UseClipboard.materialize(),
+                PageKind::Hook,
+            ),
+        ],
+    )
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use assertr::prelude::*;
 
-    use super::nav;
+    use super::{NavEntry, PageKind, PartKind, nav};
+
+    fn entries_of(kind: PartKind) -> impl Iterator<Item = &'static NavEntry> {
+        nav()
+            .parts
+            .iter()
+            .filter(move |part| part.kind == kind)
+            .flat_map(|part| &part.groups)
+            .flat_map(|group| &group.entries)
+    }
 
     #[test]
     fn every_entry_has_a_one_line_summary() {
-        for entry in nav().sections.iter().flat_map(|section| &section.entries) {
+        for entry in nav().groups().flat_map(|group| &group.entries) {
             assert_that!(entry.summary)
                 .with_detail_message(entry.title)
                 .is_not_empty();
@@ -925,6 +1403,96 @@ mod tests {
             assert_that!(entry.summary.contains('\n'))
                 .with_detail_message(entry.title)
                 .is_false();
+        }
+    }
+
+    #[test]
+    fn every_page_is_listed_once() {
+        let mut seen = HashSet::new();
+        for page in nav().pages() {
+            assert_that!(seen.insert(page))
+                .with_detail_message(format!("{page} is listed twice"))
+                .is_true();
+        }
+    }
+
+    #[test]
+    fn guides_are_guides() {
+        for entry in entries_of(PartKind::Guides) {
+            assert_that!(entry.kind)
+                .with_detail_message(entry.title)
+                .is_equal_to(PageKind::Guide);
+        }
+    }
+
+    /// A concept is either an overview with a tab per layer, or a single page of one layer.
+    #[test]
+    fn concepts_have_layers() {
+        for entry in entries_of(PartKind::Concepts) {
+            if entry.kind == PageKind::Concept {
+                assert_that!(entry.tabs.len() >= 2)
+                    .with_detail_message(format!(
+                        "{}: a concept with one layer is a single page, without tabs",
+                        entry.title
+                    ))
+                    .is_true();
+                // Strictly ascending: one tab per layer, from hooks to components.
+                assert_that!(entry.tabs.windows(2).all(|w| w[0].layer < w[1].layer))
+                    .with_detail_message(format!(
+                        "{}: tabs must be one per layer, in the order hook, atom, component",
+                        entry.title
+                    ))
+                    .is_true();
+            } else {
+                assert_that!(entry.kind.layer().is_some() && entry.tabs.is_empty())
+                    .with_detail_message(format!(
+                        "{}: a single-layer concept is a hook, atom or component page",
+                        entry.title
+                    ))
+                    .is_true();
+            }
+        }
+    }
+
+    #[test]
+    fn building_blocks_are_single_pages_with_a_badge() {
+        for entry in entries_of(PartKind::BuildingBlocks) {
+            assert_that!(entry.tabs.is_empty() && entry.kind.badge().is_some())
+                .with_detail_message(entry.title)
+                .is_true();
+        }
+    }
+
+    #[test]
+    fn concept_groups_are_sorted() {
+        for group in nav()
+            .parts
+            .iter()
+            .filter(|part| part.kind == PartKind::Concepts)
+            .flat_map(|part| &part.groups)
+        {
+            let titles: Vec<_> = group.entries.iter().map(|entry| entry.title).collect();
+            let mut sorted = titles.clone();
+            sorted.sort_unstable();
+            assert_that!(titles)
+                .with_detail_message(group.title)
+                .is_equal_to(sorted);
+        }
+    }
+
+    /// A hook and an atom (or component) of the same name are one concept with tabs, not two entries.
+    #[test]
+    fn concepts_are_not_split_into_layer_entries() {
+        let mut seen = HashSet::new();
+        for entry in entries_of(PartKind::Concepts) {
+            let name = entry
+                .title
+                .trim_start_matches("use_")
+                .replace(['_', ' '], "")
+                .to_lowercase();
+            assert_that!(seen.insert(name))
+                .with_detail_message(entry.title)
+                .is_true();
         }
     }
 }

@@ -12,7 +12,7 @@ pub fn TabReactiveLabelDemo() -> impl IntoView {
                 name="notifications"
                 label=move || move || if notifications.get() { "Notifications (on)" } else { "Notifications (off)" }
             >
-                <Switch state=(notifications, set_notifications)>"Notifications"</Switch>
+                <Switch is_selected=notifications set_selected=set_notifications>"Notifications"</Switch>
             </Tab>
             <Tab name="privacy" label=|| "Privacy">"Privacy settings."</Tab>
         </Tabs>

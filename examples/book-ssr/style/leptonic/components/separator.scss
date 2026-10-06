@@ -1,0 +1,13 @@
+.leptonic-separator {
+    flex-shrink: 0;
+    margin: var(--separator-margin);
+    border: none;
+    border-top: var(--separator-thickness) solid var(--separator-color);
+
+    &[aria-orientation="vertical"] {
+        align-self: stretch;
+        margin: var(--separator-vertical-margin);
+        border-top: none;
+        border-left: var(--separator-thickness) solid var(--separator-color);
+    }
+}

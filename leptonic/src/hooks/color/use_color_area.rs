@@ -1,4 +1,5 @@
-// Upstream: react-aria/src/color/useColorArea.ts @ 6f664fe911
+// Upstream: react-aria/src/color/useColorArea.ts @ 99e6102368
+// Upstream: react-aria/src/color/useColorAreaGradient.ts @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -6,465 +7,771 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::{Event, KeyboardEvent};
+use send_wrapper::SendWrapper;
+use wasm_bindgen::JsCast;
+use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
-use super::use_color_area_state::UseColorAreaStateReturn;
+use super::use_color_area_state::ColorAreaState;
 use crate::{
     hooks::{
-        IntoAttrs, MoveEndEvent, MoveStartEvent, UseMoveAttrs, UseMoveInput,
-        interactions::use_move::{MoveConstraint, NormalizedPosition, UseMoveContainerAttrs},
-        use_move,
+        FocusWithinEvent, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
+        UseFocusInput, UseFocusWithinInput, UseFormResetInput, UseKeyboardInput, UseMoveInput,
+        use_focus, use_focus_within, use_form_reset, use_keyboard, use_move,
     },
     utils::{
-        EventHandler,
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaHidden, AriaOrientation, AriaRole},
-        color::ColorValue,
+        color::{BlendMode, ColorValue},
+        css::{ForcedColorAdjust, LengthPercentageAuto, TouchAction, computed_pct},
+        event_listeners::{Listener, listen_to},
+        focus::focus_element,
         i18n::use_direction,
+        id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
+        platform::device::{is_android, is_ios},
+        pointer_type::PointerType,
+        style::{ForcedColorAdjustProperty, LeftProperty, TopProperty, TouchActionProperty},
+        styles::Styles,
+        visually_hidden::visually_hidden_full_size_styles,
     },
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorArea.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Uses `use_move` with `MoveConstraint` instead of manual pointer tracking.
-//   The leptonic `use_move` hook provides equivalent normalized position
-//   tracking with container-click support.
+// ## API DIFFERENCES
+// - The elements (area, inputs) are captured by the returned props instead of refs passed in.
+// - The gradient styles (`useColorAreaGradient`) are part of the returned props' styles; the
+//   gradient comes from the color type (`ColorValue::get_area_gradient`).
 //
-// - No mobile-specific focus management. React-aria toggles `aria-hidden` and
-//   `tabindex` between x/y inputs based on focus and keyboard interaction
-//   state, and detects iOS/Android for special handling. We simplify to: x
-//   input is always the primary (tabindex=0), y input is always
-//   tabindex=-1 / aria-hidden="true" unless the user has interacted via
-//   keyboard, which is the desktop behavior in react-aria.
+// ## OMITTED FEATURES
+// - Localized strings: "Color picker", "2D slider", "{name}: {value}" and the color names are
+//   English until leptonic has a localized string formatter.
+// - The mouse and touch fallbacks for browsers without `PointerEvent` (CLAUDE.md).
+//
+// =============================================================================
 
-/// Input parameters for `use_color_area`.
+/// Input of [`use_color_area`]. Start from [`UseColorAreaInput::new`].
 #[derive(Debug, Clone)]
 pub struct UseColorAreaInput<C: ColorValue> {
-    /// The color area state (from `use_color_area_state`).
-    pub state: UseColorAreaStateReturn<C>,
-
-    /// Whether the color area is disabled.
+    pub state: ColorAreaState<C>,
     pub is_disabled: Signal<bool>,
-
-    /// An accessibility label for the color area.
-    pub aria_label: Option<&'static str>,
-
-    /// HTML `name` attribute for the hidden X-axis range input (form submission).
-    pub x_name: Option<&'static str>,
-
-    /// HTML `name` attribute for the hidden Y-axis range input (form submission).
-    pub y_name: Option<&'static str>,
-
-    /// HTML `form` attribute for form association.
-    pub form: Option<&'static str>,
+    /// Names the area (its inputs get "{label}, Color picker").
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_details: Option<String>,
+    /// The name of the x channel's input, for form submission.
+    pub x_name: Option<String>,
+    /// The name of the y channel's input, for form submission.
+    pub y_name: Option<String>,
+    /// The id of a `<form>` the inputs belong to.
+    pub form: Option<String>,
 }
 
-/// Return value of `use_color_area`.
+impl<C: ColorValue> UseColorAreaInput<C> {
+    pub fn new(state: ColorAreaState<C>) -> Self {
+        Self {
+            state,
+            is_disabled: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            aria_details: None,
+            x_name: None,
+            y_name: None,
+            form: None,
+        }
+    }
+}
+
+/// Return value of [`use_color_area`].
+#[derive(Debug)]
 pub struct UseColorAreaReturn {
-    /// Props for the color area container element.
-    pub area_props: UseColorAreaProps,
-
-    /// Props for the thumb/knob element inside the area.
-    pub thumb_props: UseColorAreaThumbProps,
-
-    /// Props for the visually hidden X-axis range input (render inside thumb).
-    pub x_input_props: UseColorAreaInputProps,
-
-    /// Props for the visually hidden Y-axis range input (render inside thumb).
-    pub y_input_props: UseColorAreaInputProps,
-
-    /// CSS gradient background for the area.
-    pub background: Signal<String>,
-
-    /// CSS `background-blend-mode` for the area, if needed (e.g., `"screen"` for RGB).
-    /// Consumers must apply this as a CSS property on the area element when `Some`.
-    pub background_blend_mode: Signal<Option<&'static str>>,
-
-    /// CSS color for the thumb indicator.
-    pub thumb_color: Signal<String>,
-
-    /// Thumb X position as percentage (0–100) for CSS `left`.
-    pub thumb_x_percent: Signal<f64>,
-
-    /// Thumb Y position as percentage (0–100) for CSS `bottom`.
-    pub thumb_y_percent: Signal<f64>,
+    /// For the area (the gradient).
+    pub color_area_props: PropsWithStyles<UseColorAreaProps>,
+    /// For the thumb inside the area.
+    pub thumb_props: PropsWithStyles<UseColorAreaThumbProps>,
+    /// For the visually hidden range input of the x channel (inside the thumb).
+    pub x_input_props: PropsWithStyles<UseColorAreaInputProps>,
+    /// For the visually hidden range input of the y channel (inside the thumb).
+    pub y_input_props: PropsWithStyles<UseColorAreaInputProps>,
 }
 
-/// Props for the color area container.
+/// Props of the color area's element.
 #[derive(Debug)]
 pub struct UseColorAreaProps {
-    role: AriaRole,
-    aria_label: Option<&'static str>,
-    aria_disabled: Signal<Option<AriaDisabled>>,
-    container_attrs: UseMoveContainerAttrs,
+    pub id: String,
+    pub aria_label: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseColorAreaAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    ElementCaptureAttr,
+);
 
 impl IntoAttrs for UseColorAreaProps {
     type Attrs = UseColorAreaAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, AriaRole::Group),
             Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDisabled, self.aria_disabled),
-            self.container_attrs,
+            self.on_pointerdown.into_on(ev::pointerdown),
+            self.element_capture,
         )
     }
 }
 
-/// Attribute tuple produced by [`UseColorAreaProps::into_attrs`].
-pub type UseColorAreaAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    UseMoveContainerAttrs,
-);
-
-/// Props for the color area thumb element.
-///
-/// The thumb has `role="presentation"` — it is purely visual. ARIA semantics
-/// live on the hidden range inputs inside the thumb. Keyboard events bubble
-/// from the focused input through the thumb, where `use_move` handles arrow
-/// keys and the keydown handler catches PageUp/Down/Home/End.
+/// Props of the thumb (presentational: the inputs carry the semantics).
 #[derive(Debug)]
 pub struct UseColorAreaThumbProps {
-    role: AriaRole,
-    on_keydown: EventHandler<KeyboardEvent>,
-    move_attrs: UseMoveAttrs,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseColorAreaThumbAttrs = (
+    Attr<attr::Role, AriaRole>,
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    ElementCaptureAttr,
+);
 
 impl IntoAttrs for UseColorAreaThumbProps {
     type Attrs = UseColorAreaThumbAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
+            Attr(attr::Role, AriaRole::Presentation),
+            self.on_pointerdown.into_on(ev::pointerdown),
             self.on_keydown.into_on(ev::keydown),
-            self.move_attrs,
+            self.on_keyup.into_on(ev::keyup),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            self.element_capture,
         )
     }
 }
 
-/// Attribute tuple produced by [`UseColorAreaThumbProps::into_attrs`].
-pub type UseColorAreaThumbAttrs = (
-    Attr<attr::Role, AriaRole>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    UseMoveAttrs,
-);
-
-/// Props for a visually hidden range input inside the color area thumb.
-///
-/// Two of these are produced: one for the X axis and one for the Y axis.
-/// They provide screen reader semantics (`type="range"` with
-/// `aria-roledescription="2D slider"`) and form submission support.
-///
-/// These inputs must be rendered as children of the thumb element and styled
-/// as visually hidden (e.g., `opacity: 0.0001; width: 100%; height: 100%;
-/// pointer-events: none; position: absolute;`).
+/// Props of a channel's visually hidden range input.
 #[derive(Debug)]
 pub struct UseColorAreaInputProps {
-    r#type: &'static str,
-    tabindex: Signal<i32>,
-    min: f64,
-    max: f64,
-    step: f64,
-    value: Signal<f64>,
-    disabled: Signal<bool>,
-    name: Option<&'static str>,
-    form: Option<&'static str>,
-    aria_roledescription: &'static str,
-    aria_orientation: AriaOrientation,
-    aria_valuetext: Signal<String>,
-    aria_label: Option<&'static str>,
-    aria_hidden: Signal<Option<AriaHidden>>,
-    on_change: EventHandler<Event>,
+    pub id: String,
+    pub min: f64,
+    pub max: f64,
+    pub step: f64,
+    pub value: Signal<f64>,
+    pub is_disabled: Signal<bool>,
+    pub name: Option<String>,
+    pub form: Option<String>,
+    pub tabindex: Signal<Option<i32>>,
+    pub aria_label: Signal<Option<String>>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_details: Option<String>,
+    pub aria_orientation: AriaOrientation,
+    pub aria_valuetext: Signal<String>,
+    pub aria_hidden: Signal<Option<AriaHidden>>,
+    pub on_change: EventHandler<Event>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseColorAreaInputAttrs = (
+    (
+        Attr<attr::Id, String>,
+        Attr<attr::Type, &'static str>,
+        Attr<attr::Min, f64>,
+        Attr<attr::Max, f64>,
+        Attr<attr::Step, f64>,
+        Attr<attr::Value, Signal<f64>>,
+        Attr<attr::Disabled, Signal<bool>>,
+        Attr<attr::Name, Option<String>>,
+        Attr<attr::Form, Option<String>>,
+        Attr<attr::Tabindex, Signal<Option<i32>>>,
+    ),
+    (
+        Attr<attr::AriaRoledescription, &'static str>,
+        Attr<attr::AriaLabel, Signal<Option<String>>>,
+        Attr<attr::AriaLabelledby, Option<String>>,
+        Attr<attr::AriaDescribedby, Option<String>>,
+        Attr<attr::AriaDetails, Option<String>>,
+        Attr<attr::AriaOrientation, AriaOrientation>,
+        Attr<attr::AriaValuetext, Signal<String>>,
+        Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
+    ),
+    (
+        On<ev::change, SharedEventCallback<Event>>,
+        On<ev::focus, SharedEventCallback<FocusEvent>>,
+        On<ev::blur, SharedEventCallback<FocusEvent>>,
+        ElementCaptureAttr,
+    ),
+);
 
 impl IntoAttrs for UseColorAreaInputProps {
     type Attrs = UseColorAreaInputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Type, self.r#type),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Min, self.min),
-            Attr(attr::Max, self.max),
-            Attr(attr::Step, self.step),
-            Attr(attr::Value, self.value),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::Name, self.name),
-            Attr(attr::Form, self.form),
-            Attr(attr::AriaRoledescription, Some(self.aria_roledescription)),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaHidden, self.aria_hidden),
-            self.on_change.into_on(ev::change),
+            (
+                Attr(attr::Id, self.id),
+                Attr(attr::Type, "range"),
+                Attr(attr::Min, self.min),
+                Attr(attr::Max, self.max),
+                Attr(attr::Step, self.step),
+                Attr(attr::Value, self.value),
+                Attr(attr::Disabled, self.is_disabled),
+                Attr(attr::Name, self.name),
+                Attr(attr::Form, self.form),
+                Attr(attr::Tabindex, self.tabindex),
+            ),
+            (
+                Attr(attr::AriaRoledescription, TWO_DIMENSIONAL_SLIDER),
+                Attr(attr::AriaLabel, self.aria_label),
+                Attr(attr::AriaLabelledby, self.aria_labelledby),
+                Attr(attr::AriaDescribedby, self.aria_describedby),
+                Attr(attr::AriaDetails, self.aria_details),
+                Attr(attr::AriaOrientation, self.aria_orientation),
+                Attr(attr::AriaValuetext, self.aria_valuetext),
+                Attr(attr::AriaHidden, self.aria_hidden),
+            ),
+            (
+                self.on_change.into_on(ev::change),
+                self.on_focus.into_on(ev::focus),
+                self.on_blur.into_on(ev::blur),
+                self.element_capture,
+            ),
         )
     }
 }
 
-/// Attribute tuple produced by [`UseColorAreaInputProps::into_attrs`].
-pub type UseColorAreaInputAttrs = (
-    Attr<attr::Type, &'static str>,
-    Attr<attr::Tabindex, Signal<i32>>,
-    Attr<attr::Min, f64>,
-    Attr<attr::Max, f64>,
-    Attr<attr::Step, f64>,
-    Attr<attr::Value, Signal<f64>>,
-    Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::Name, Option<&'static str>>,
-    Attr<attr::Form, Option<&'static str>>,
-    Attr<attr::AriaRoledescription, Option<&'static str>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
-    On<ev::change, SharedEventCallback<Event>>,
-);
+const COLOR_PICKER: &str = "Color picker";
+const TWO_DIMENSIONAL_SLIDER: &str = "2D slider";
 
-/// Creates behavior and ARIA props for a 2D color area.
-///
-/// Composes `use_move` with `MoveConstraint` to provide pointer, touch,
-/// and keyboard interaction. The area container is the movement boundary;
-/// the thumb is the movable element.
-///
-/// Two visually hidden `<input type="range">` elements provide screen reader
-/// semantics and form submission. They should be rendered as children of the
-/// thumb element.
-///
-/// # Panics
-///
-/// Panics if the `MoveConstraint` return is missing, which should never happen
-/// since a `MoveConstraint` is always provided.
-#[allow(clippy::similar_names, clippy::too_many_lines)]
+/// One of the area's two inputs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    X,
+    Y,
+}
+
+/// The pointer interaction under way: the pointer and whether it started on the area (else
+/// on the thumb).
+#[derive(Debug, Clone, Copy)]
+struct Press {
+    pointer_id: i32,
+    on_area: bool,
+}
+
+/// Behavior and accessibility of a 2D color area: dragging the thumb or pressing the area,
+/// arrow keys (with Shift: page steps), PageUp/PageDown and Home/End, two visually hidden range
+/// inputs for assistive technology and forms.
+#[allow(clippy::too_many_lines)]
 pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAreaReturn {
     let UseColorAreaInput {
         state,
-        is_disabled: disabled,
+        is_disabled,
         aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
         x_name,
         y_name,
         form,
     } = input;
 
-    let set_dragging_start = state.set_dragging;
-    let set_dragging_end = state.set_dragging;
+    let direction = use_direction();
+    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
+    let area_element = CapturedElement::new();
+    let thumb_element = CapturedElement::new();
+    let x_input = CapturedElement::new();
+    let y_input = CapturedElement::new();
 
-    // Get the initial thumb position.
-    let initial_pos = state.thumb_position.get_untracked();
+    let focused_input = RwSignal::new(None::<Axis>);
+    let changed_via_keyboard = RwSignal::new(false);
+    let changed_via_input = RwSignal::new(false);
+    let focus_input = move |axis: Axis| {
+        let element = match axis {
+            Axis::X => x_input,
+            Axis::Y => y_input,
+        };
+        if let Some(element) = element.get_untracked() {
+            focus_element(&element, true);
+        }
+    };
 
-    // Set up use_move with constraint. The constraint's normalized_position
-    // signal is the source of truth for the thumb position and color state.
-    // Position changes propagate to color state via `on_position_change`.
-    let set_color_from_point = state.set_color_from_point;
-    let move_return = use_move(UseMoveInput {
-        is_disabled: disabled,
-        axis: Signal::derive(|| None), // both axes
-        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
-            set_dragging_start.run(true);
+    use_form_reset(UseFormResetInput {
+        element: x_input,
+        initial_value: state.default_value(),
+        on_reset: Callback::new(move |color: C| state.set_value(color)),
+    });
+
+    // -- Keyboard: PageUp/PageDown on y, Home/End on x (arrows come through `use_move`) --
+    let keyboard_update = move |step: &dyn Fn(), axis: Axis| {
+        state.set_dragging(true);
+        changed_via_keyboard.set(true);
+        step();
+        state.set_dragging(false);
+        focus_input(axis);
+        focused_input.set(Some(axis));
+    };
+    let keyboard = use_keyboard(UseKeyboardInput {
+        is_disabled,
+        shortcuts: Some(
+            KeyboardShortcuts::new()
+                .on(Shortcut::key("PageUp"), move |_| {
+                    keyboard_update(&|| state.increment_y(state.y_channel_page_step), Axis::Y);
+                })
+                .on(Shortcut::key("PageDown"), move |_| {
+                    keyboard_update(&|| state.decrement_y(state.y_channel_page_step), Axis::Y);
+                })
+                .on(Shortcut::key("Home"), move |_| {
+                    keyboard_update(
+                        &|| {
+                            if is_rtl() {
+                                state.increment_x(state.x_channel_page_step);
+                            } else {
+                                state.decrement_x(state.x_channel_page_step);
+                            }
+                        },
+                        Axis::X,
+                    );
+                })
+                .on(Shortcut::key("End"), move |_| {
+                    keyboard_update(
+                        &|| {
+                            if is_rtl() {
+                                state.decrement_x(state.x_channel_page_step);
+                            } else {
+                                state.increment_x(state.x_channel_page_step);
+                            }
+                        },
+                        Axis::X,
+                    );
+                }),
+        ),
+        allow_repeats: true,
+        ..UseKeyboardInput::default()
+    })
+    .props;
+
+    // -- Moving: dragging (pointer deltas over the area's size) and arrow keys (steps) --
+    let press = StoredValue::new(None::<Press>);
+    let current_position = StoredValue::new(None::<(f64, f64)>);
+    let on_move_start = Callback::new(move |_: MoveStartEvent| {
+        current_position.set_value(None);
+        state.set_dragging(true);
+    });
+    let on_move = Callback::new(move |e: MoveEvent| {
+        let (dx, dy) = (e.delta_x, e.delta_y);
+        if e.pointer_type == PointerType::Keyboard {
+            let shift = e.modifiers.shift_key;
+            let x_step = if shift && state.x_channel_page_step > state.x_channel_step {
+                state.x_channel_page_step
+            } else {
+                state.x_channel_step
+            };
+            let y_step = if shift && state.y_channel_page_step > state.y_channel_step {
+                state.y_channel_page_step
+            } else {
+                state.y_channel_step
+            };
+            let towards_end = if is_rtl() { dx < 0.0 } else { dx > 0.0 };
+            if dx != 0.0 && towards_end {
+                state.increment_x(x_step);
+            } else if dx != 0.0 {
+                state.decrement_x(x_step);
+            } else if dy > 0.0 {
+                state.decrement_y(y_step);
+            } else if dy < 0.0 {
+                state.increment_y(y_step);
+            }
+            let changed = dx != 0.0 || dy != 0.0;
+            changed_via_keyboard.set(changed);
+            // The input of the axis that moved more.
+            focused_input.set(Some(if changed && dy.abs() > dx.abs() {
+                Axis::Y
+            } else {
+                Axis::X
+            }));
+        } else {
+            let (width, height) = area_element.get_untracked().map_or((0.0, 0.0), |area| {
+                let rect = area.get_bounding_client_rect();
+                (rect.width(), rect.height())
+            });
+            let (mut x, mut y) = current_position
+                .get_value()
+                .unwrap_or_else(|| untrack(|| state.thumb_position()));
+            if width > 0.0 {
+                x += if is_rtl() { -dx } else { dx } / width;
+            }
+            if height > 0.0 {
+                y += dy / height;
+            }
+            current_position.set_value(Some((x, y)));
+            state.set_color_from_point(x, y);
+        }
+    });
+    let on_move_end = Callback::new(move |_: MoveEndEvent| {
+        press.update_value(|press| {
+            if let Some(press) = press {
+                press.on_area = false;
+            }
+        });
+        state.set_dragging(false);
+        focus_input(focused_input.get_untracked().unwrap_or(Axis::X));
+    });
+    let thumb_move = use_move(UseMoveInput {
+        is_disabled,
+        on_move_start: Some(on_move_start),
+        on_move: Some(on_move),
+        on_move_end: Some(on_move_end),
+        ..UseMoveInput::default()
+    })
+    .props;
+    // The area forwards its moves only while a press started on it.
+    let on_area = move || press.get_value().is_some_and(|press| press.on_area);
+    let area_move = use_move(UseMoveInput {
+        is_disabled,
+        on_move_start: Some(Callback::new(move |e| {
+            if on_area() {
+                on_move_start.run(e);
+            }
         })),
-        on_move: None,
-        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
-            set_dragging_end.run(false);
+        on_move: Some(Callback::new(move |e| {
+            if on_area() {
+                on_move.run(e);
+            }
         })),
-        on_position_change: Some(Callback::new(move |pos: NormalizedPosition| {
-            set_color_from_point.run((pos.x, pos.y));
+        on_move_end: Some(Callback::new(move |e| {
+            if on_area() {
+                on_move_end.run(e);
+            }
         })),
-        constraint: Some(MoveConstraint::Center),
-        allow_container_click: true,
-        initial_position: Some(NormalizedPosition {
-            x: initial_pos.0,
-            y: initial_pos.1,
+        ..UseMoveInput::default()
+    })
+    .props;
+
+    let focus_within = use_focus_within(UseFocusWithinInput {
+        on_blur_within: Some(Callback::new(move |_: FocusWithinEvent| {
+            changed_via_keyboard.set(false);
+            changed_via_input.set(false);
+        })),
+        ..UseFocusWithinInput::default()
+    })
+    .props;
+
+    // -- Presses: on the thumb (start dragging it) or the area (jump there, then drag) --
+    let pointer_up_listener = StoredValue::new(None::<SendWrapper<Listener>>);
+    let release = move |pointer_id: i32| {
+        let Some(current) = press.get_value() else {
+            return;
+        };
+        if current.pointer_id != pointer_id {
+            return;
+        }
+        press.set_value(None);
+        pointer_up_listener.set_value(None);
+        changed_via_keyboard.set(false);
+        state.set_dragging(false);
+        focus_input(Axis::X);
+    };
+    let listen_for_release = move || {
+        if let Some(window) = leptos_use::use_window().as_ref() {
+            let listener = listen_to(window, ev::pointerup, false, move |e: PointerEvent| {
+                release(e.pointer_id());
+            });
+            pointer_up_listener.set_value(Some(SendWrapper::new(listener)));
+        }
+    };
+    let ignored = |e: &PointerEvent| {
+        e.pointer_type() == "mouse"
+            && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
+    };
+    let on_thumb_down = EventHandler::new(move |e: PointerEvent| {
+        if is_disabled.get_untracked() || ignored(&e) || state.is_dragging.get_untracked() {
+            return;
+        }
+        press.set_value(Some(Press {
+            pointer_id: e.pointer_id(),
+            on_area: false,
+        }));
+        changed_via_keyboard.set(false);
+        focus_input(Axis::X);
+        state.set_dragging(true);
+        listen_for_release();
+    });
+    let on_area_down = EventHandler::new(move |e: PointerEvent| {
+        if is_disabled.get_untracked() || ignored(&e) {
+            return;
+        }
+        let Some(area) = e
+            .expect_current_target()
+            .dyn_into::<web_sys::Element>()
+            .ok()
+        else {
+            return;
+        };
+        let rect = area.get_bounding_client_rect();
+        let mut x = (e.client_x() - rect.x()) / rect.width();
+        let y = (e.client_y() - rect.y()) / rect.height();
+        if is_rtl() {
+            x = 1.0 - x;
+        }
+        let inside = (0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y);
+        if inside && !state.is_dragging.get_untracked() && press.get_value().is_none() {
+            press.set_value(Some(Press {
+                pointer_id: e.pointer_id(),
+                on_area: true,
+            }));
+            changed_via_keyboard.set(false);
+            state.set_color_from_point(x, y);
+            focus_input(Axis::X);
+            state.set_dragging(true);
+            listen_for_release();
+        }
+    });
+
+    // -- Inputs --
+    let on_change = EventHandler::new(move |e: Event| {
+        changed_via_input.set(true);
+        let Some(target) = e
+            .expect_target()
+            .dyn_into::<web_sys::HtmlInputElement>()
+            .ok()
+        else {
+            return;
+        };
+        let Ok(value) = target.value().parse::<f64>() else {
+            return;
+        };
+        let target: &web_sys::Node = &target;
+        if x_input.get_untracked().is_some_and(|x| **x == *target) {
+            state.set_x_value(value);
+        } else if y_input.get_untracked().is_some_and(|y| **y == *target) {
+            state.set_y_value(value);
+        }
+    });
+    let input_focus = |axis: Axis| {
+        use_focus(UseFocusInput {
+            on_focus: Some(Callback::new(move |_| focused_input.set(Some(axis)))),
+            ..UseFocusInput::default()
+        })
+        .props
+    };
+    let x_focus = input_focus(Axis::X);
+    let y_focus = input_focus(Axis::Y);
+
+    let (x_channel, y_channel, z_channel) = (state.x_channel, state.y_channel, state.z_channel);
+    let value_text = move |channel: C::Channel| {
+        Signal::derive(move || {
+            let color = state.display_color().get();
+            let name_and_value = |c: C::Channel| {
+                format!(
+                    "{}: {}",
+                    C::get_channel_name(c),
+                    color.format_channel_value(c)
+                )
+            };
+            let text = if changed_via_input.get() || changed_via_keyboard.get() {
+                name_and_value(channel)
+            } else {
+                let other = if channel == y_channel {
+                    x_channel
+                } else {
+                    y_channel
+                };
+                [channel, other, z_channel].map(name_and_value).join(", ")
+            };
+            format!("{text}, {}", color.color_name())
+        })
+    };
+
+    let is_mobile = is_ios() || is_android();
+    let labelled_by = |own_id: &str| {
+        aria_labelledby
+            .as_ref()
+            .map(|ids| format!("{own_id} {ids}"))
+    };
+    let input_label = Signal::derive(move || {
+        Some(match aria_label.get() {
+            Some(label) => format!("{label}, {COLOR_PICKER}"),
+            None => COLOR_PICKER.to_owned(),
+        })
+    });
+    let area_id = use_id("color-area");
+    let has_labelledby = aria_labelledby.is_some();
+    let area_label = Signal::derive(move || match aria_label.get() {
+        Some(label) => Some(format!("{label}, {COLOR_PICKER}")),
+        // On touch devices, the area itself is announced (react-aria's default label).
+        None => (is_mobile && !has_labelledby).then(|| COLOR_PICKER.to_owned()),
+    });
+
+    let input_styles = || visually_hidden_full_size_styles();
+    let x_range = C::get_channel_range(x_channel);
+    let y_range = C::get_channel_range(y_channel);
+    let x_id = use_id("color-area-x");
+    let y_id = use_id("color-area-y");
+    // So that only one "2D slider" is listed by screen readers, the unfocused input is hidden
+    // until the value changes by keyboard (react-aria).
+    let x_input_props = UseColorAreaInputProps {
+        aria_labelledby: labelled_by(&x_id),
+        id: x_id,
+        min: x_range.min_value,
+        max: x_range.max_value,
+        step: state.x_channel_step,
+        value: state.x_value,
+        is_disabled,
+        name: x_name,
+        form: form.clone(),
+        tabindex: Signal::derive(move || {
+            let focused = focused_input.get();
+            (!(is_mobile || focused.is_none() || focused == Some(Axis::X))).then_some(-1)
         }),
-    });
+        aria_label: input_label,
+        aria_describedby: aria_describedby.clone(),
+        aria_details: aria_details.clone(),
+        aria_orientation: AriaOrientation::Horizontal,
+        aria_valuetext: value_text(x_channel),
+        aria_hidden: Signal::derive(move || {
+            let focused = focused_input.get();
+            let shown = is_mobile
+                || focused.is_none()
+                || focused == Some(Axis::X)
+                || changed_via_keyboard.get();
+            (!shown).then_some(AriaHidden::True)
+        }),
+        on_change: on_change.clone(),
+        on_focus: x_focus.on_focus,
+        on_blur: x_focus.on_blur,
+        element_capture: x_input.attr(),
+    };
+    let y_input_props = UseColorAreaInputProps {
+        aria_labelledby: labelled_by(&y_id),
+        id: y_id,
+        min: y_range.min_value,
+        max: y_range.max_value,
+        step: state.y_channel_step,
+        value: state.y_value,
+        is_disabled,
+        name: y_name,
+        form,
+        tabindex: Signal::derive(move || {
+            (!(is_mobile || focused_input.get() == Some(Axis::Y))).then_some(-1)
+        }),
+        aria_label: input_label,
+        aria_describedby,
+        aria_details,
+        aria_orientation: AriaOrientation::Vertical,
+        aria_valuetext: value_text(y_channel),
+        aria_hidden: Signal::derive(move || {
+            let shown =
+                is_mobile || focused_input.get() == Some(Axis::Y) || changed_via_keyboard.get();
+            (!shown).then_some(AriaHidden::True)
+        }),
+        on_change,
+        on_focus: y_focus.on_focus,
+        on_blur: y_focus.on_blur,
+        element_capture: y_input.attr(),
+    };
 
-    let constraint_return = move_return
-        .constraint
-        .expect("MoveConstraint was provided, so constraint return must exist");
-
-    // Thumb position as percentage for CSS, derived from constraint position.
-    let norm_pos = constraint_return.normalized_position;
-    let thumb_x_percent = Signal::derive(move || norm_pos.get().x * 100.0);
-    let thumb_y_percent = Signal::derive(move || {
-        // Y inverted: constraint 0=top → CSS bottom 100%.
-        (1.0 - norm_pos.get().y) * 100.0
-    });
-
-    // Background gradient derived from the color value via the ColorValue trait.
-    // This handles HSV, HSL, and RGB color spaces with appropriate gradient strategies.
-    let area_gradient = Signal::derive(move || {
+    // -- Styles (react-aria's `useColorAreaGradient`) --
+    let gradient = Memo::new(move |_| {
         state
             .value
             .get()
-            .get_area_gradient(state.x_channel, state.y_channel)
+            .get_area_gradient(x_channel, y_channel, direction.get())
     });
-    let background = Signal::derive(move || area_gradient.get().background);
-    let background_blend_mode = Signal::derive(move || area_gradient.get().blend_mode);
+    let area_styles = Styles::new()
+        .add_unchecked("position", "relative")
+        .add(TouchActionProperty.declare(TouchAction::None))
+        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None))
+        // Computed gradients: no checked grammar in `leptos-css` yet.
+        .add_optional_unchecked("background", move || Some(gradient.get().background))
+        .add_optional_unchecked("background-blend-mode", move || {
+            gradient.get().blend_mode.map(BlendMode::as_str)
+        });
+    let thumb_position = move || {
+        let (x, y) = state.thumb_position();
+        (if is_rtl() { 1.0 - x } else { x }, y)
+    };
+    let thumb_styles = Styles::new()
+        .add_unchecked("position", "absolute")
+        .add_reactive(move || {
+            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
+                thumb_position().0 * 100.0,
+            )))
+        })
+        .add_reactive(move || {
+            TopProperty.declare(LengthPercentageAuto::from(computed_pct(
+                thumb_position().1 * 100.0,
+            )))
+        })
+        .add_unchecked("transform", "translate(-50%, -50%)")
+        .add(TouchActionProperty.declare(TouchAction::None))
+        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
 
-    // Thumb color: the current display color.
-    let thumb_color = Signal::derive(move || state.display_color.get().to_css_string());
-
-    // ARIA valuetext: describes all three channel values for screen readers.
-    // Format: "{x_name} {x_value}, {y_name} {y_value}, {z_name} {z_value}[, {hue_name}]"
-    let x_ch = state.x_channel;
-    let y_ch = state.y_channel;
-    let z_ch = state.z_channel;
-    let aria_valuetext = Signal::derive(move || {
-        let color = state.value.get();
-        let mut text = format!(
-            "{} {}, {} {}, {} {}",
-            C::get_channel_name(x_ch),
-            color.format_channel_value(x_ch),
-            C::get_channel_name(y_ch),
-            color.format_channel_value(y_ch),
-            C::get_channel_name(z_ch),
-            color.format_channel_value(z_ch),
-        );
-        // Append hue name if any channel is a hue channel.
-        let hue_name = color
-            .get_hue_name_for_channel(x_ch)
-            .or_else(|| color.get_hue_name_for_channel(y_ch))
-            .or_else(|| color.get_hue_name_for_channel(z_ch));
-        if let Some(name) = hue_name {
-            text.push_str(", ");
-            text.push_str(name);
-        }
-        text
-    });
-
-    // ARIA disabled.
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Reactive tabindex for hidden range inputs.
-    // X input is always the primary (tabindex=0 unless disabled).
-    // Y input gets tabindex=-1 unless keyboard interaction revealed both axes.
-    let x_tabindex = Signal::derive(move || if disabled.get() { -1 } else { 0 });
-    let y_tabindex = Signal::derive(move || -1_i32);
-
-    // Y input is aria-hidden to avoid announcing two "2D slider" controls.
-    // Screen readers only see the x input (which has full valuetext with all channels).
-    let y_aria_hidden = Signal::derive(move || Some(AriaHidden::True));
-    let x_aria_hidden: Signal<Option<AriaHidden>> = Signal::derive(|| None);
-
-    // Channel ranges for the hidden inputs.
-    let x_range = C::get_channel_range(x_ch);
-    let y_range = C::get_channel_range(y_ch);
-
-    // onChange handlers for hidden range inputs.
-    // These fire when assistive technology changes the input value directly.
-    let set_x = state.set_x_value;
-    let handle_x_change = EventHandler::new(move |e: Event| {
-        let target = event_target::<web_sys::HtmlInputElement>(&e);
-        if let Ok(val) = target.value().parse::<f64>() {
-            set_x.run(val);
-        }
-    });
-    let set_y = state.set_y_value;
-    let handle_y_change = EventHandler::new(move |e: Event| {
-        let target = event_target::<web_sys::HtmlInputElement>(&e);
-        if let Ok(val) = target.value().parse::<f64>() {
-            set_y.run(val);
-        }
-    });
-
-    // Additional keyboard handler for PageUp/Down/Home/End.
-    let increment_x = state.increment_x;
-    let decrement_x = state.decrement_x;
-    let increment_y = state.increment_y;
-    let decrement_y = state.decrement_y;
-    let x_page = state.x_channel_page_step;
-    let y_page = state.y_channel_page_step;
-
-    // Right-to-left layouts mirror the horizontal axis (Home/End; dragging mirrors in `use_move`).
-    let direction = use_direction();
-    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
-    let handle_keydown = EventHandler::new(move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-        let key = e.key();
-        match key.as_str() {
-            "PageUp" => {
-                e.prevent_default();
-                increment_y.run(Some(y_page));
-            }
-            "PageDown" => {
-                e.prevent_default();
-                decrement_y.run(Some(y_page));
-            }
-            "Home" => {
-                e.prevent_default();
-                if is_rtl() {
-                    increment_x.run(Some(x_page));
-                } else {
-                    decrement_x.run(Some(x_page));
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                if is_rtl() {
-                    decrement_x.run(Some(x_page));
-                } else {
-                    increment_x.run(Some(x_page));
-                }
-            }
-            _ => {} // Arrow keys handled by use_move
-        }
-    });
-
+    // With other labels next to its `aria-label`, the area names itself too (`use_label`'s rule).
+    let area_labelledby = {
+        let area_id = area_id.clone();
+        let ids = aria_labelledby.clone();
+        Signal::derive(move || {
+            let ids = ids.clone()?;
+            Some(if area_label.with(Option::is_some) {
+                format!("{area_id} {ids}")
+            } else {
+                ids
+            })
+        })
+    };
     UseColorAreaReturn {
-        area_props: UseColorAreaProps {
-            role: AriaRole::Group,
-            aria_label,
-            aria_disabled,
-            container_attrs: constraint_return.container_props.into_attrs(),
-        },
-        thumb_props: UseColorAreaThumbProps {
-            role: AriaRole::Presentation,
-            on_keydown: handle_keydown,
-            move_attrs: move_return.props.into_attrs(),
-        },
-        x_input_props: UseColorAreaInputProps {
-            r#type: "range",
-            tabindex: x_tabindex,
-            min: x_range.min_value,
-            max: x_range.max_value,
-            step: state.x_channel_step,
-            value: state.x_value,
-            disabled,
-            name: x_name,
-            form,
-            aria_roledescription: "2D slider",
-            aria_orientation: AriaOrientation::Horizontal,
-            aria_valuetext,
-            aria_label,
-            aria_hidden: x_aria_hidden,
-            on_change: handle_x_change,
-        },
-        y_input_props: UseColorAreaInputProps {
-            r#type: "range",
-            tabindex: y_tabindex,
-            min: y_range.min_value,
-            max: y_range.max_value,
-            step: state.y_channel_step,
-            value: state.y_value,
-            disabled,
-            name: y_name,
-            form,
-            aria_roledescription: "2D slider",
-            aria_orientation: AriaOrientation::Vertical,
-            aria_valuetext,
-            aria_label,
-            aria_hidden: y_aria_hidden,
-            on_change: handle_y_change,
-        },
-        background,
-        background_blend_mode,
-        thumb_color,
-        thumb_x_percent,
-        thumb_y_percent,
+        color_area_props: PropsWithStyles::new(
+            UseColorAreaProps {
+                id: area_id,
+                aria_label: area_label,
+                aria_labelledby: area_labelledby,
+                aria_disabled: Signal::derive(move || {
+                    is_disabled.get().then_some(AriaDisabled::True)
+                }),
+                on_pointerdown: on_area_down.chain(area_move.on_pointerdown),
+                element_capture: area_element.attr().chain(area_move.element_capture),
+            },
+            area_styles,
+        ),
+        thumb_props: PropsWithStyles::new(
+            UseColorAreaThumbProps {
+                on_pointerdown: on_thumb_down.chain(thumb_move.on_pointerdown),
+                on_keydown: keyboard.on_keydown.chain(thumb_move.on_keydown),
+                on_keyup: keyboard.on_keyup,
+                on_focusin: focus_within.on_focusin,
+                on_focusout: focus_within.on_focusout,
+                element_capture: thumb_element.attr().chain(thumb_move.element_capture),
+            },
+            thumb_styles,
+        ),
+        x_input_props: PropsWithStyles::new(x_input_props, input_styles()),
+        y_input_props: PropsWithStyles::new(y_input_props, input_styles()),
     }
 }

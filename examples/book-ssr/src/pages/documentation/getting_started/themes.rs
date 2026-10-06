@@ -10,13 +10,13 @@ pub fn PageThemes() -> impl IntoView {
         <DocPage title="Themes">
             <p>
                 "Leptonic\u{2019}s components don\u{2019}t carry their styles. All styling comes from the "
-                <LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::_Blank>"leptonic-theme"</LinkExt>
+                <Link href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::Blank>"leptonic-theme"</Link>
                 " crate, whose stylesheets leptonic\u{2019}s build script copies into your project (see "
                 <Link href=routes::doc::Installation.materialize()>"Installation"</Link>"). They define two themes, "
                 <Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>". Hooks and atoms bring no styles at all."
             </p>
 
-            <Section title="Switching themes">
+            <Section title="Switching Themes">
                 <p>
                     <Code inline=true>"<Root>"</Code>" provides the active theme. It starts with its "<Code inline=true>"default_theme"</Code>
                     ", remembers the user\u{2019}s choice in local storage (key "<Code inline=true>"theme"</Code>") and sets the "
@@ -53,11 +53,94 @@ pub fn PageThemes() -> impl IntoView {
                     "#)}
                 </Code>
 
+            </Section>
+
+            <Section title="ThemeProvider">
                 <p>
-                    <Code inline=true>"LeptonicTheme"</Code>" describes the two built-in themes. For themes of your own, define a type "
-                    "implementing the "<Code inline=true>"Theme"</Code>" trait (a name, used as the "<Code inline=true>"data-theme"</Code>
-                    " value, and an icon for the toggle) and use it with "<Code inline=true>"<Root>"</Code>" and "
-                    <Code inline=true>"ThemeToggle"</Code>"."
+                    <Code inline=true>"<Root>"</Code>" renders a "<Code inline=true>"ThemeProvider"</Code>" for you. It "
+                    "provides the "<Code inline=true>"ThemeContext"</Code>" that "<Code inline=true>"use_theme"</Code>" and "
+                    <Code inline=true>"ThemeToggle"</Code>" read, and wraps its children in a "
+                    <Code inline=true>"<div data-theme=\u{2026}>"</Code>" with "<Code inline=true>"display: contents"</Code>
+                    ". The outermost provider also sets "<Code inline=true>"data-theme"</Code>" on "
+                    <Code inline=true>"<html>"</Code>"."
+                </p>
+                <p>
+                    "Render one of your own to give a part of the page a different theme, e.g. a dark preview inside a "
+                    "light page. Without "<Code inline=true>"theme"</Code>", it starts with the theme type\u{2019}s "
+                    <Code inline=true>"Default"</Code>"; pass a signal pair to control it, as "<Code inline=true>"<Root>"</Code>
+                    " does with "<Code inline=true>"signal_ls"</Code>":"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        view! {
+                            <ThemeProvider theme=signal(LeptonicTheme::Dark)>
+                                <Card>"Always dark"</Card>
+                            </ThemeProvider>
+                        }
+                    "#)}
+                </Code>
+                <ApiTable kind=ApiKind::Props of="ThemeProvider">
+                    <ApiRow name="theme" ty="Option<(ReadSignal<T>, WriteSignal<T>)>" default="None">
+                        "The theme and its setter. Without it, the provider keeps the theme in a signal of its own, "
+                        "starting at "<Code inline=true>"T::default()"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="children" ty="Children">"The themed content. Required."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Custom Themes">
+                <p>
+                    <Code inline=true>"LeptonicTheme"</Code>" describes the two built-in themes. For themes of your own, define "
+                    "a type implementing the "<Code inline=true>"Theme"</Code>" trait: a name, used as the "
+                    <Code inline=true>"data-theme"</Code>" value, and an icon for "<Code inline=true>"ThemeToggle"</Code>". "
+                    "The trait requires "<Code inline=true>"Default"</Code>" (the provider\u{2019}s initial theme), "
+                    <Code inline=true>"Clone + Copy + PartialEq"</Code>", "<Code inline=true>"Send + Sync"</Code>", and "
+                    "serde\u{2019}s "<Code inline=true>"Serialize"</Code>" and "<Code inline=true>"DeserializeOwned"</Code>
+                    ", as "<Code inline=true>"<Root>"</Code>" stores the theme in local storage."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::{components::prelude::*, prelude::*};
+                        use serde::{Deserialize, Serialize};
+
+                        #[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize)]
+                        pub enum AppTheme {
+                            #[default]
+                            Light,
+                            Dark,
+                            HighContrast,
+                        }
+
+                        impl Theme for AppTheme {
+                            fn name(&self) -> &'static str {
+                                match self {
+                                    Self::Light => "light",
+                                    Self::Dark => "dark",
+                                    Self::HighContrast => "high-contrast",
+                                }
+                            }
+
+                            fn icon(&self) -> icondata::Icon {
+                                match self {
+                                    Self::Light => icondata::BsSun,
+                                    Self::Dark => icondata::BsMoon,
+                                    Self::HighContrast => icondata::BsCircleHalf,
+                                }
+                            }
+                        }
+
+                        view! {
+                            <Root default_theme=AppTheme::default()>
+                                <ThemeToggle off=AppTheme::Light on=AppTheme::HighContrast/>
+                            </Root>
+                        }
+                    "#)}
+                </Code>
+                <p>
+                    "The theme stylesheets define the variables of "<Code inline=true>"light"</Code>" and "
+                    <Code inline=true>"dark"</Code>" only. A theme with another name needs all of them under its own "
+                    "selector ("<Code inline=true>"[data-theme=\"high-contrast\"]"</Code>"): start from a copy of "
+                    <Code inline=true>"leptonic/themes/light.scss"</Code>" in your style directory."
                 </p>
             </Section>
 
@@ -74,16 +157,19 @@ pub fn PageThemes() -> impl IntoView {
                     {indoc!(r#"
                         @use "./leptonic/leptonic-themes";
 
+                        [data-theme] {
+                            --font-family: 'Roboto', sans-serif;
+                            --typography-code-font-family: 'JetBrains Mono', monospace;
+                            --link-color: var(--book-brand-text-color);
+                        }
+
                         [data-theme="light"] {
-                            --brand-color: #e66956;
-                            --drawer-background-color: none;
-                            --drawer-box-shadow: none;
+                            --book-brand-text-color: #a8352a;
                         }
 
                         [data-theme="dark"] {
-                            --brand-color: #e66956;
-                            --drawer-background-color: none;
-                            --drawer-box-shadow: none;
+                            --app-bar-background-color: #141414;
+                            --book-brand-text-color: #f08a7a;
                         }
                     "#)}
                 </Code>

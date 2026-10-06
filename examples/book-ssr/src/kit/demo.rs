@@ -5,19 +5,19 @@ use super::{Disclosure, demo_styles::styles_for};
 
 /// Frame for an interactive demo.
 ///
-/// `description` summarizes the demo for the Markdown export, which replaces the demo with
+/// `description` (required) summarizes the demo for the Markdown export, which replaces the demo with
 /// `*[Interactive Demo: <description>]*`. `source` (usually `include_str!("demos/<name>.rs")`) is shown in a
 /// "View source" [`Disclosure`], together with the demo styles it uses (see [`styles_for`]). With `source_open`, the
 /// source starts expanded; use it instead of repeating the demo code in a separate snippet.
 #[component]
 pub fn Demo(
-    #[prop(optional)] description: Option<&'static str>,
+    description: &'static str,
     #[prop(optional)] source: Option<&'static str>,
     #[prop(optional)] source_open: bool,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <div class="demo-shell">
+        <div class="doc-demo">
             <div class="demo" data-demo-description=description>
                 {children()}
             </div>

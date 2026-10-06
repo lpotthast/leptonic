@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/interactions/focusSafely.ts @ 6f664fe911
+// Upstream: react-aria/src/interactions/focusSafely.ts @ 99e6102368
 //! Focus utilities for managing element focus without side effects.
 //!
 //! This module provides utilities for focusing elements without triggering scroll,
@@ -51,6 +51,10 @@ pub fn focus_safely(element: &web_sys::Element) {
             hooks::{Modality, get_modality},
             utils::shadow_dom::get_active_element,
         };
+
+        if !element.is_connected() {
+            return;
+        }
 
         if get_modality() == Modality::Virtual {
             // Use ownerDocument to correctly handle iframes and shadow DOM.

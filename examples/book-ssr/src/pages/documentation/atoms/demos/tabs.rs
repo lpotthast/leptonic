@@ -41,10 +41,12 @@ pub fn TabsAtomDemo() -> impl IntoView {
             disabled_keys=disabled_keys
             is_disabled=all_disabled
             selected_key=selected
+            set_selected_key=selected
+            classes="demo-tabs"
         >
             <TabList aria_label="Product" classes="demo-tab-list">
                 {TABS
-                    .map(|(key, label)| view! { <Tab key=key classes=["demo-tab", "demo-atom-tab"]>{label}</Tab> })
+                    .map(|(key, label)| view! { <Tab key=key classes="demo-tab">{label}</Tab> })
                     .collect_view()}
             </TabList>
             <TabPanel key="details" classes="demo-tab-panel">
@@ -65,14 +67,14 @@ pub fn TabsAtomDemo() -> impl IntoView {
             </TabPanel>
         </Tabs>
 
-        <div class="demo-tabs-controls">
-            <Checkbox state=reviews_disabled>"Disable \u{201c}Reviews\u{201d}"</Checkbox>
-            <Checkbox state=all_disabled>"Disable all tabs"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=all_disabled set_selected=all_disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=reviews_disabled set_selected=reviews_disabled>"\u{201c}Reviews\u{201d} disabled"</Checkbox>
             // The app changes the selected tab by writing its state.
             <Button on_press=move |_| selected.set(Key::from("shipping")) color=ButtonColor::Secondary>
                 "Show shipping"
             </Button>
-            <p class="demo-tabs-status">"Selected: " {move || selected.get().to_string()}</p>
         </div>
+        <p class="demo-status">"Selected: " {move || selected.get().to_string()}</p>
     }
 }

@@ -5,158 +5,161 @@ use leptos::prelude::*;
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseColorHooks() -> impl IntoView {
     view! {
-        <DocPage title="Color Hooks">
+        <DocPage title="use_color_picker_state">
             <p>
-                "The color hooks are the building blocks of custom color pickers: 2D areas, channel sliders, hue wheels, "
-                "text fields and swatches. Most of them pair a state hook, which owns the color, with a behavior hook, "
-                "which adds interaction and ARIA. See the "<Link href=routes::doc::Color.materialize()>"Color overview"</Link>
-                " for concept guidance."
+                "The "<Code inline=true>"use_color_picker_state"</Code>" hook holds the one color that the parts of a color "
+                "picker share. The "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker atom"</Link>" uses "
+                "it for the atoms inside it; call it yourself for parts built from hooks. See the "
+                <Link href=routes::doc::ColorPicker.materialize()>"Color Picker overview"</Link>" for the concept."
             </p>
 
-            <p>
-                "They are based on "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useColorArea.html" target=LinkTarget::_Blank>
-                    "react-aria\u{2019}s color hooks"
-                </LinkExt>
-                " from the @react-aria/color and @react-stately/color packages."
-            </p>
+            <ReactAriaSource path="color/useColorPickerState.ts" package=UpstreamPackage::ReactStately/>
 
-            <Section title="Hook Families">
-                <DocTable headers=&["Hooks", "Purpose"]>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link></TableCell>
-                        <TableCell>
-                            "2D gradient area for adjusting two channels at once (e.g. saturation and brightness). Composes "
-                            <Code inline=true>"use_move"</Code>" with a center constraint."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link></TableCell>
-                        <TableCell>"Linear slider for a single channel. Wraps "<Code inline=true>"use_slider"</Code>" with a gradient track and color-aware ARIA."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorWheel.materialize()>"use_color_wheel"</Link></TableCell>
-                        <TableCell>"Circular hue wheel (0\u{00b0}\u{2013}360\u{00b0}): pointer input within the ring, conic gradient, polar thumb position."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link></TableCell>
-                        <TableCell>"Text input for hex color values ("<Code inline=true>"#RRGGBB"</Code>"). Validates while typing, commits on blur."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorChannelField.materialize()>"use_color_channel_field"</Link></TableCell>
-                        <TableCell>"Numeric input for a single channel value, built on the number field hooks."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::hooks::UseColorSwatch.materialize()>"use_color_swatch"</Link></TableCell>
-                        <TableCell>"Display-only color preview with "<Code inline=true>"role=\"img\""</Code>" and an accessible color name."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><a href="#use-color-picker-state">"use_color_picker_state"</a></TableCell>
-                        <TableCell>"State only: one color and a setter, to share between the parts of a picker."</TableCell>
-                    </TableRow>
-                </DocTable>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseColorPickerStateInput"</Code>" implements "<Code inline=true>"Default"</Code>
+                    ". The shared color is a "<Link href=format!("{}#color", routes::doc::Color.materialize())>"Color"</Link>
+                    ", which keeps the color space it was set in."
+                </p>
+                <ApiTable kind=ApiKind::Input of="UseColorPickerStateInput">
+                    <ApiRow name="default_value" ty="Color" default="black">"The initial color. Ignored with "<Code inline=true>"value"</Code>"."</ApiRow>
+                    <ApiRow name="value" ty="Option<ValueBinding<Color>>" default="None">"The color as app state, replacing "<Code inline=true>"default_value"</Code>"."</ApiRow>
+                    <ApiRow name="on_change" ty="Option<Callback<Color>>" default="None">"Called with every new color."</ApiRow>
+                </ApiTable>
             </Section>
 
-            <Section title="The ColorValue Trait">
+            <Section title="Return">
                 <p>
-                    "The color hooks are generic over the "<Code inline=true>"ColorValue"</Code>" trait, except "
-                    <Code inline=true>"use_color_field"</Code>", which edits an "<Code inline=true>"RGB8"</Code>
-                    " hex value. Each color type brings its own "<Code inline=true>"Channel"</Code>" type, so you can\u{2019}t "
-                    "accidentally ask an RGB color for its hue."
+                    "A "<Code inline=true>"Copy"</Code>" "<Code inline=true>"ColorPickerState"</Code>". "
+                    <Code inline=true>"set_color(color)"</Code>" sets the color and calls "<Code inline=true>"on_change"</Code>"."
+                </p>
+                <ApiTable kind=ApiKind::Fields of="ColorPickerState">
+                    <ApiRow name="color" ty="Signal<Color>">"The color, in the space it was last set in."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Example">
+                <p>
+                    "Use the picker state as the single source of truth. Bind each interactive part to it with "
+                    <Code inline=true>"value"</Code>", converting the shared "<Code inline=true>"Color"</Code>" into the "
+                    "part\u{2019}s color space with "<Code inline=true>"Color::to"</Code>". Parts that only show the color, like a "
+                    <Link href=routes::doc::color_swatch::Hook.materialize()>"swatch"</Link>", read it directly."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        pub trait ColorValue: Clone + Copy + PartialEq + Debug + Send + Sync + 'static {
-                            type Channel: Debug + Clone + Copy + PartialEq + Eq + Hash + Send + Sync + 'static;
+                        use leptonic::{
+                            hooks::*,
+                            utils::{
+                                ValueBinding,
+                                color::{Color, HSV, HsvChannel},
+                            },
+                        };
+                        use leptos::prelude::*;
 
-                            fn get_channel_value(&self, channel: Self::Channel) -> f64;
-                            fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
-                            fn get_channel_range(channel: Self::Channel) -> ColorChannelRange;
-                            fn channels() -> &'static [Self::Channel];
-                            fn to_css_string(&self) -> String;
-                            // ...
-                        }
+                        let picker = use_color_picker_state(UseColorPickerStateInput::default());
+                        // The shared color as HSV, for parts that edit HSV channels.
+                        let hsv = ValueBinding::new(
+                            Signal::derive(move || picker.color.get().to::<HSV>()),
+                            Callback::new(move |color: HSV| picker.set_color(Color::from(color))),
+                        );
+
+                        // Interactive parts edit the picker's color ...
+                        let area_state = use_color_area_state(UseColorAreaStateInput {
+                            value: Some(hsv),
+                            x_channel: Some(HsvChannel::Saturation),
+                            y_channel: Some(HsvChannel::Brightness),
+                            ..UseColorAreaStateInput::new(HSV::new())
+                        });
+                        let hue_state = use_color_slider_state(UseColorSliderStateInput {
+                            value: Some(hsv),
+                            ..UseColorSliderStateInput::new(HSV::new(), HsvChannel::Hue)
+                        });
+
+                        // ... and a display-only part reads it.
+                        let swatch = use_color_swatch(UseColorSwatchInput::new(Signal::derive(move || {
+                            picker.color.get().to::<HSV>()
+                        })));
                     ")}
                 </Code>
+            </Section>
 
-                <p>"Three implementations are provided, and they convert into each other with "<Code inline=true>"From"</Code>":"</p>
-
-                <DocTable headers=&["Type", "Channels"]>
-                    <TableRow><TableCell><Code inline=true>"HSV"</Code></TableCell><TableCell><Code inline=true>"HsvChannel"</Code>": Hue, Saturation, Brightness"</TableCell></TableRow>
-                    <TableRow><TableCell><Code inline=true>"HSL"</Code></TableCell><TableCell><Code inline=true>"HslChannel"</Code>": Hue, Saturation, Lightness"</TableCell></TableRow>
-                    <TableRow><TableCell><Code inline=true>"RGB8"</Code></TableCell><TableCell><Code inline=true>"RgbChannel"</Code>": Red, Green, Blue"</TableCell></TableRow>
+            <Section title="Hooks of the Parts">
+                <p>
+                    "Each part of a picker is a concept of its own, with a state hook that owns the color and a hook that "
+                    "adds interaction and ARIA. Their pages show how to render and style them."
+                </p>
+                <DocTable headers=&["Part", "Hooks"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::ColorArea.materialize()>"Color Area"</Link></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-color-area-state", routes::doc::color_area::Hook.materialize())>
+                                <Code inline=true>"use_color_area_state"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-area", routes::doc::color_area::Hook.materialize())>
+                                <Code inline=true>"use_color_area"</Code>
+                            </Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::ColorField.materialize()>"Color Field"</Link></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-color-field-state", routes::doc::color_field::Hook.materialize())>
+                                <Code inline=true>"use_color_field_state"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-field", routes::doc::color_field::Hook.materialize())>
+                                <Code inline=true>"use_color_field"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-channel-field-state", routes::doc::color_field::Hook.materialize())>
+                                <Code inline=true>"use_color_channel_field_state"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-channel-field", routes::doc::color_field::Hook.materialize())>
+                                <Code inline=true>"use_color_channel_field"</Code>
+                            </Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::ColorSlider.materialize()>"Color Slider"</Link></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-color-slider-state", routes::doc::color_slider::Hook.materialize())>
+                                <Code inline=true>"use_color_slider_state"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-slider", routes::doc::color_slider::Hook.materialize())>
+                                <Code inline=true>"use_color_slider"</Code>
+                            </Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::ColorSwatch.materialize()>"Color Swatch"</Link></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::color_swatch::Hook.materialize()><Code inline=true>"use_color_swatch"</Code></Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::ColorWheel.materialize()>"Color Wheel"</Link></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-color-wheel-state", routes::doc::color_wheel::Hook.materialize())>
+                                <Code inline=true>"use_color_wheel_state"</Code>
+                            </Link>", "
+                            <Link href=format!("{}#use-color-wheel", routes::doc::color_wheel::Hook.materialize())>
+                                <Code inline=true>"use_color_wheel"</Code>
+                            </Link>
+                        </TableCell>
+                    </TableRow>
                 </DocTable>
             </Section>
 
-            <Section title="Usage Pattern">
-                <p>
-                    "Create the state, pass it to the behavior hook, and spread the returned props onto your elements. "
-                    "The hook pages show complete demos, including styling."
-                </p>
-
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        // 1. Create the state.
-                        let state = use_color_area_state(UseColorAreaStateInput {
-                            default_value: HSV::new(),
-                            x_channel: HsvChannel::Saturation,
-                            y_channel: HsvChannel::Brightness,
-                            x_channel_step: None,
-                            y_channel_step: None,
-                            on_change: None,
-                            on_change_end: None,
-                        });
-
-                        // 2. Add behavior and ARIA.
-                        let area = use_color_area(UseColorAreaInput {
-                            state,
-                            is_disabled: Signal::stored(false),
-                            aria_label: Some("Color"),
-                            x_name: None,
-                            y_name: None,
-                            form: None,
-                        });
-
-                        // 3. Spread the props onto your elements.
-                        view! {
-                            <div {..area.area_props.into_attrs()}>
-                                <div {..area.thumb_props.into_attrs()}>
-                                    <input {..area.x_input_props.into_attrs()} />
-                                    <input {..area.y_input_props.into_attrs()} />
-                                </div>
-                            </div>
-                        }
-                    "#)}
-                </Code>
-            </Section>
-
-            <Section title="use_color_picker_state">
-                <p>
-                    "The simplest color state: one color and a setter. Use it as the single source of truth of a picker and "
-                    "keep the parts\u{2019} own states in sync with it. Takes its input by reference."
-                </p>
-
-                <Section title="Input" id="use-color-picker-state-input">
-                    <ApiTable kind=ApiKind::Input of="UseColorPickerStateInput">
-                        <ApiRow name="default_value" ty="C">"The initial color."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<C>>">"Called when the color changes."</ApiRow>
-                    </ApiTable>
-                </Section>
-
-                <Section title="Return" id="use-color-picker-state-return">
-                    <ApiTable kind=ApiKind::Return of="UseColorPickerStateReturn">
-                        <ApiRow name="color" ty="Signal<C>">"The current color."</ApiRow>
-                        <ApiRow name="set_color" ty="Callback<C>">"Sets the color and calls "<Code inline=true>"on_change"</Code>"."</ApiRow>
-                    </ApiTable>
-                </Section>
-            </Section>
-
             <SeeAlso>
-                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
-                <li><Link href=routes::doc::color::Component.materialize()>"ColorPicker component"</Link></li>
+                <li><Link href=routes::doc::ColorPicker.materialize()>"Color Picker"</Link></li>
+                <li><Link href=routes::doc::color_picker::Atom.materialize()>"Color Picker Atom"</Link></li>
+                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
+                <li><Link href=routes::doc::color_area::Hook.materialize()>"Color Area Hooks"</Link></li>
+                <li><Link href=routes::doc::color_wheel::Hook.materialize()>"Color Wheel Hooks"</Link></li>
+                <li><Link href=routes::doc::color_swatch::Hook.materialize()>"use_color_swatch"</Link></li>
+                <li><Link href=routes::doc::Color.materialize()>"Color"</Link></li>
             </SeeAlso>
         </DocPage>
     }

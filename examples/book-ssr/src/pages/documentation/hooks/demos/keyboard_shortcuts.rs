@@ -41,10 +41,16 @@ pub fn KeyboardShortcutsDemo() -> impl IntoView {
 
     view! {
         <div {..props.into_attrs()} tabindex="0" class="demo-keyboard-target">
-            "Focus me, then use \u{2190} / \u{2192}, Home, and Ctrl+S (\u{2318}S on a Mac)"
+            "Focus me, then press the arrow keys, Home, or Control + S (Command + S on a Mac)"
         </div>
-        <p>
-            {move || format!("Position: {}. Saved {} times.", position.get(), saves.get())}
+        <p class="demo-status">
+            {move || {
+                let saved = match saves.get() {
+                    1 => "1 time".to_owned(),
+                    n => format!("{n} times"),
+                };
+                format!("Position {}, saved {saved}.", position.get())
+            }}
         </p>
     }
 }

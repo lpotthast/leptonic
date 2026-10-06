@@ -22,7 +22,7 @@ pub struct ScrollEvent {
 }
 
 /// Input parameters for the `use_scroll_wheel` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseScrollWheelInput {
     /// Whether the scroll listener should be disabled.
     pub is_disabled: Signal<bool>,

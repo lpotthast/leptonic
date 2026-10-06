@@ -7,14 +7,18 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageAppBar() -> impl IntoView {
     view! {
-        <DocPage title="App Bar">
+        <DocPage title="App Bar Component">
             <p>
-                "The "<Code inline=true>"AppBar"</Code>" component is a horizontal bar that sticks to the top of its "
-                "scrolling parent. Many app layouts use one as their entry point, holding the app name, navigation and "
-                "global actions. It lays its children out in a row, with space between them."
+                "An app bar is the horizontal bar at the top of an app, holding its name, the main navigation and global "
+                "actions such as notifications or the user menu. The "<Code inline=true>"AppBar"</Code>" component renders "
+                "it as a "<Code inline=true>"<header>"</Code>" that sticks to the top of its scrolling parent and lays its "
+                "children out in a row, with the space between them."
             </p>
 
-            <Demo description="App bar sticking to the top of a scrolling container" source=include_str!("demos/app_bar.rs")>
+            <Demo
+                description="App bar with a title and two icon buttons, sticking to the top of a scrolling frame"
+                source=include_str!("demos/app_bar.rs")
+            >
                 <AppBarDemo/>
             </Demo>
 
@@ -31,17 +35,31 @@ pub fn PageAppBar() -> impl IntoView {
                 </ApiTable>
             </Section>
 
+            <Section title="Accessibility">
+                <p>
+                    "Rendered outside of "<Code inline=true>"<main>"</Code>", "<Code inline=true>"<article>"</Code>", "
+                    <Code inline=true>"<nav>"</Code>" and similar elements, a "<Code inline=true>"<header>"</Code>
+                    " is the page\u{2019}s "<Code inline=true>"banner"</Code>" landmark, which screen reader users jump to "
+                    "directly. Put the app bar next to your "<Code inline=true>"<main>"</Code>", not inside it, and wrap its "
+                    "links in a "<Code inline=true>"<nav>"</Code>". Icon-only buttons need an "
+                    <Code inline=true>"aria-label"</Code>", as in the demo: the "<Link href=routes::doc::Icon.materialize()>"Icon"</Link>
+                    " inside is hidden from screen readers."
+                </p>
+            </Section>
+
             <Section title="Styling">
                 <p>
-                    "The theme gives the bar a high "<Code inline=true>"z-index"</Code>" so that it stays above scrolling "
-                    "content. Override any of these CSS variables to adapt it to your design:"
+                    "The theme gives the bar a high "<Code inline=true>"z-index"</Code>" (1000) so that it stays above "
+                    "scrolling content. Override any of these CSS variables to adapt it to your design:"
                 </p>
                 <CssVariables prefix="--app-bar-" scss=theme_scss!("app-bar")/>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::components::Drawer.materialize()>"Drawer"</Link></li>
-                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
+                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
+                <li><Link href=routes::doc::Stack.materialize()>"Stack Component"</Link></li>
+                <li><Link href=routes::doc::Icon.materialize()>"Icon Component"</Link></li>
+                <li><Link href=routes::doc::Button.materialize()>"Button"</Link></li>
             </SeeAlso>
         </DocPage>
     }

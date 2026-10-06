@@ -1,11 +1,12 @@
 use leptos::prelude::*;
 
 use crate::{
+    Out,
     atoms::{
         dialog::{Dialog, DialogTrigger, DialogTriggerProps},
         popover::Popover as PopoverAtom,
     },
-    hooks::{DialogRole, OverlayTriggerState, PlacementX, PlacementY, PopoverModality},
+    hooks::{DialogRole, Placement, PopoverModality},
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -23,7 +24,7 @@ pub struct PopoverTrigger {
 /// atoms.
 ///
 /// ```ignore
-/// <Popover placement_y=PlacementY::Below>
+/// <Popover placement=Placement::Bottom>
 ///     <PopoverTrigger slot>
 ///         <Button>"Open"</Button>
 ///     </PopoverTrigger>
@@ -31,25 +32,24 @@ pub struct PopoverTrigger {
 /// </Popover>
 /// ```
 ///
-/// Bind the open state to app state with `state=rw_signal`.
+/// Bind the open state to app state with `is_open` and `set_open`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Popover(
     /// Slot for the trigger: put a `Button` in it, it opens and closes the popover.
     popover_trigger: PopoverTrigger,
 
-    /// The open state as app state (`state=rw_signal`) or a shared `OverlayTriggerState`.
-    /// Default: owned by the popover.
+    /// Whether the popover is open (controlled): a value or any signal. Default: owned by the
+    /// popover.
     #[prop(into, optional)]
-    state: Option<OverlayTriggerState>,
+    is_open: Option<Signal<bool>>,
+    /// Receives the open state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_open: Option<Out<bool>>,
 
-    /// Horizontal placement relative to trigger.
-    #[prop(into, default = Signal::stored(PlacementX::Center))]
-    placement_x: Signal<PlacementX>,
-
-    /// Vertical placement relative to trigger.
-    #[prop(into, default = Signal::stored(PlacementY::Above))]
-    placement_y: Signal<PlacementY>,
+    /// Where the popover goes relative to the trigger.
+    #[prop(into, default = Signal::stored(Placement::Top))]
+    placement: Signal<Placement>,
 
     /// Whether the popover takes over the page while open. Default: non-modal (the page stays
     /// usable).
@@ -57,12 +57,12 @@ pub fn Popover(
     modality: PopoverModality,
 
     /// Whether Escape no longer closes the popover.
-    #[prop(optional)]
-    is_keyboard_dismiss_disabled: bool,
+    #[prop(into, optional)]
+    is_keyboard_dismiss_disabled: Signal<bool>,
 
     /// Which outside interactions close the popover: `true` closes.
     #[prop(optional)]
-    should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
+    should_close_on_interact_outside: Option<crate::hooks::InteractOutsideFilter>,
 
     #[prop(optional)] role: DialogRole,
 
@@ -93,8 +93,7 @@ pub fn Popover(
                     {(popover_trigger.children)()}
                 </div>
                 <PopoverAtom
-                    placement_x=placement_x
-                    placement_y=placement_y
+                    placement=placement
                     modality=modality
                     is_keyboard_dismiss_disabled=is_keyboard_dismiss_disabled
                     nostrip:should_close_on_interact_outside=should_close_on_interact_outside
@@ -113,6 +112,7 @@ pub fn Popover(
             .into_any()
         }))
         .build();
-    trigger_props.state = state;
+    trigger_props.is_open = is_open;
+    trigger_props.set_open = set_open;
     DialogTrigger(trigger_props)
 }

@@ -2,76 +2,49 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
-    hooks::{SelectionMode, SortDescriptor, SortDirection, TableCollection, collections::Key},
+    hooks::{SelectionMode, TableCollection, collections::Selection},
 };
 use leptos::prelude::*;
 
-/// Name, moons, mean distance from the sun (million km).
-const PLANETS: [(&str, u32, u32); 4] = [
-    ("Mercury", 0, 58),
-    ("Venus", 0, 108),
-    ("Earth", 1, 150),
-    ("Mars", 2, 228),
-];
+/// Name and number of moons.
+const PLANETS: [(&str, u32); 3] = [("Venus", 0), ("Earth", 1), ("Mars", 2)];
 
 #[component]
 pub fn TableConceptDemo() -> impl IntoView {
-    // The table only tracks which column it is sorted by. Sorting the rows is up to you.
-    let sort = RwSignal::new(SortDescriptor {
-        column: Key::from("distance"),
-        direction: SortDirection::Ascending,
-    });
-    let planets = Memo::new(move |_| {
-        let mut planets = PLANETS.to_vec();
-        sort.with(|sort| {
-            match sort.column.as_str() {
-                Some("name") => planets.sort_by_key(|(name, _, _)| *name),
-                Some("moons") => planets.sort_by_key(|(_, moons, _)| *moons),
-                _ => planets.sort_by_key(|(_, _, distance)| *distance),
-            }
-            if sort.direction == SortDirection::Descending {
-                planets.reverse();
-            }
-        });
-        planets
-    });
-    let table = Memo::new(move |_| {
+    // The columns and rows: a key and a text per column, a key per row.
+    let table = Memo::new(|_| {
         Arc::new(TableCollection::build(|t| {
-            t.column("name", "Planet").row_header().allows_sorting();
-            t.column("moons", "Moons").allows_sorting();
-            t.column("distance", "Distance (million km)")
-                .allows_sorting();
-            for (name, moons, distance) in planets.get() {
+            t.column("name", "Planet").row_header();
+            t.column("moons", "Moons");
+            for (name, moons) in PLANETS {
                 t.row(name, name, |r| {
                     r.cell(name);
                     r.cell(moons.to_string());
-                    r.cell(distance.to_string());
                 });
             }
         }))
     });
+    let selection = RwSignal::new(Selection::default());
 
     view! {
-        <div class="demo-table-scroll">
-            <Table
-                table=table
-                selection_mode=SelectionMode::Single
-                default_sort_descriptor=sort.get_untracked()
-                on_sort_change=Callback::new(move |descriptor| sort.set(descriptor))
-                aria_label="Planets"
-                classes=["demo-table", "demo-atom-table"]
-            >
-                <TableHeader/>
-                <TableBody>
-                    <For each=move || planets.get() key=|(name, _, _)| *name let:planet>
-                        <TableRow key=planet.0 classes="demo-atom-table-row">
-                            <TableCell column="name">{planet.0}</TableCell>
-                            <TableCell column="moons">{planet.1}</TableCell>
-                            <TableCell column="distance">{planet.2}</TableCell>
+        <Table table selection_mode=SelectionMode::Single selection=selection set_selection=selection aria_label="Planets" classes=["demo-table", "demo-atom-table"]>
+            <TableHeader/>
+            <TableBody>
+                {PLANETS
+                    .map(|(name, moons)| view! {
+                        <TableRow key=name classes="demo-atom-table-row">
+                            <TableCell column="name">{name}</TableCell>
+                            <TableCell column="moons">{moons}</TableCell>
                         </TableRow>
-                    </For>
-                </TableBody>
-            </Table>
-        </div>
+                    })
+                    .collect_view()}
+            </TableBody>
+        </Table>
+        <p class="demo-status">
+            {move || selection.with(|selection| match selection {
+                Selection::Keys(keys) => keys.iter().next().map_or_else(|| "No planet selected.".to_owned(), |key| format!("Selected: {key}.")),
+                Selection::All => "All planets selected.".to_owned(),
+            })}
+        </p>
     }
 }

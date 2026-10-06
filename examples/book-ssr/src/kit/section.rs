@@ -49,7 +49,7 @@ pub fn Section(
 /// A heading with a "direct link" anchor, as rendered by pages and sections.
 pub(super) fn heading(level: u8, id: Oco<'static, str>, title: &'static str) -> AnyView {
     let link = view! {
-        <AnchorLink href=format!("#{id}") description=format!("Direct link to section: {title}")/>
+        <AnchorLink href=format!("#{id}") aria_label=format!("Direct link to section: {title}")/>
     };
     match level {
         1 => view! { <h1 id=id>{title}{link}</h1> }.into_any(),
@@ -62,7 +62,7 @@ pub(super) fn heading(level: u8, id: Oco<'static, str>, title: &'static str) -> 
 /// Anchor id for a heading: lowercase ASCII alphanumerics, everything else collapsed into single dashes.
 ///
 /// `"use_button"` becomes `use-button`, `"Hooks, Atoms & Components"` becomes `hooks-atoms-components`.
-pub fn slug(title: &str) -> String {
+pub(super) fn slug(title: &str) -> String {
     let mut slug = String::with_capacity(title.len());
     for c in title.chars() {
         if c.is_ascii_alphanumeric() {

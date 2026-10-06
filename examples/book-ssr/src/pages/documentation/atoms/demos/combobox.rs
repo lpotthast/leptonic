@@ -32,8 +32,8 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
             b.item(key, name).disabled(key == "fi");
         }
     });
-    // App state: the selected country and the text in the input. The combo box shows both, and the user\u{2019}s
-    // typing and choosing writes them.
+    // App state: the selected country and the text in the input. The combo box shows both, and the user's typing
+    // and choosing writes them.
     let value = RwSignal::new(vec![Key::from("de")]);
     let input_value = RwSignal::new(String::from("Germany"));
     let disabled = RwSignal::new(false);
@@ -43,15 +43,17 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
             collection=countries
             filter=use_contains_filter()
             value=value
+            set_value=value
             input_value=input_value
+            set_input_value=input_value
             placeholder="Search countries\u{2026}"
             is_disabled=disabled
             classes="demo-combo"
         >
             <Label classes="demo-combo-label">"Ship to"</Label>
             <div class="demo-combo-field">
-                <Input classes="demo-combo-input"/>
-                <ComboBoxButton classes="demo-combo-button">
+                <Input classes="demo-combo-atom-input"/>
+                <ComboBoxButton classes="demo-combo-atom-button">
                     <span aria-hidden="true">"\u{25bc}"</span>
                 </ComboBoxButton>
             </div>
@@ -64,19 +66,17 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
             </ComboBoxPopover>
         </ComboBox>
 
-        <div class="demo-flex-center-row">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-            // The app changes the selection by writing its state; the input then shows the country\u{2019}s name.
+        <p class="demo-status">
+            "Selected: "{move || value.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}
+            ". Typed: \u{201c}"{move || input_value.get()}"\u{201d}."
+        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            // The app changes the selection by writing its state; the input then shows the country's name.
             <Button on_press=move |_| value.set(vec![Key::from("se")]) color=ButtonColor::Secondary>
                 "Ship to Sweden"
             </Button>
         </div>
 
-        <p>
-            "Selected: "
-            <strong>{move || value.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}</strong>
-            ", typed: "
-            <strong>{move || format!("\u{201c}{}\u{201d}", input_value.get())}</strong>
-        </p>
     }
 }

@@ -1,41 +1,35 @@
 use leptos::prelude::*;
 use leptos_router::components::ToHref;
 
-pub use crate::hooks::LinkRel;
 use crate::{
     ScrollBehavior,
-    atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom},
+    atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom},
     hooks::{Href, LinkTarget, PressEvent},
     utils::{classes::Classes, styles::Styles},
 };
+pub use crate::{atoms::link::CurrentMatch, hooks::LinkRel};
 
+/// A themed link to an element on the same page. Without children, it shows a `#`.
 #[component]
 pub fn AnchorLink(
     /// The element to link to, by id: `"#my-anchor"` (or `"my-anchor"`).
     #[prop(into)]
     href: Href,
-
-    #[prop(into, optional)] scroll_behavior: Option<ScrollBehavior>,
-
-    /// Description of this anchor for accessibility.
-    /// If text is provided in children, this could be omitted.
-    /// If no children are provided, this component renders a single `#`,
-    /// which should be described using this field.
+    /// `None`: no scrolling. Default: smoothly.
+    #[prop(into, default = Some(ScrollBehavior::default()))]
+    scroll_behavior: Option<ScrollBehavior>,
+    /// Names the link when its content doesn't (e.g. the bare `#`).
     #[prop(into, optional)]
-    description: Option<Oco<'static, str>>,
-
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-
-    /// If no children are provided, this component renders a single `#` character.
-    #[prop(optional)]
-    children: Option<Children>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     view! {
         <AnchorLinkAtom
             href
-            nostrip:scroll_behavior
-            nostrip:description
+            scroll_behavior
+            aria_label
             classes=classes.add("leptonic-anchor-link")
             styles
         >
@@ -47,73 +41,44 @@ pub fn AnchorLink(
     }
 }
 
-/// A link to a location internal to this application. Potentially resolvable via
-/// client-side-routing.
-// TODO: Use router state again (leptos_router::location::State) (accepting a prop)
+/// A themed link to another page or resource; see the [`Link`](crate::atoms::link::Link) atom.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
-#[allow(clippy::type_complexity)]
 pub fn Link<H>(
-    /// Used to calculate the link's `href` attribute. Will be resolved relative
-    /// to the current route.
+    /// Where the link goes: a route (resolved relative to the current one) or a URL.
     href: H,
-
-    /// If `true`, the link is marked active when the location matches exactly;
-    /// if false, link is marked active if the current route starts with it.
-    #[prop(optional)]
-    exact: bool,
-
-    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
-    #[prop(into, optional)] classes: Classes,
-    #[prop(into, optional)] styles: Styles,
-    children: Children,
-) -> impl IntoView
-where
-    H: ToHref + Send + Sync + 'static,
-{
-    view! {
-        <LinkAtom href exact nostrip:on_press classes=classes.add("leptonic-link") styles=styles>
-            {children()}
-        </LinkAtom>
-    }
-}
-
-/// A link to a location external to this application.
-#[component]
-#[allow(clippy::needless_pass_by_value)] // `H` could be `&H`.
-pub fn LinkExt<H>(
-    /// Used to calculate the link's `href` attribute.
-    href: H,
-    target: LinkTarget,
-    /// The `rel` attribute values for the link. `NoOpener` is automatically
-    /// added when `target` is `Blank` for security reasons.
+    #[prop(optional)] target: LinkTarget,
+    /// The relationship of the linked document. `NoOpener` is added for `LinkTarget::Blank`.
     #[prop(optional)]
     rel: Vec<LinkRel>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    #[prop(optional)] current_match: CurrentMatch,
+    /// Replace the current history entry instead of adding one.
+    #[prop(optional)]
+    replace: bool,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
-    // TODO: Impl this prop
-    // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
-    // /// will skip this page.)
-    // #[prop(optional)]
-    // replace: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    children: Children,
+    children: ChildrenFn,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
 {
     view! {
-        <LinkExtAtom
+        <LinkAtom
             href
             target
             rel
-            is_disabled=disabled
+            is_disabled
+            current_match
+            replace
+            aria_label
             nostrip:on_press
             classes=classes.add("leptonic-link")
             styles
         >
             {children()}
-        </LinkExtAtom>
+        </LinkAtom>
     }
 }

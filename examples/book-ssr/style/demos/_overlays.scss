@@ -1,74 +1,219 @@
-// Demo styles of the Overlays pages (transitions: `_transitions.scss`).
+// Overlays: demos of Dialog, Drawer, Modal, Popover and Tooltip (backdrops, popovers and tooltips: `_shared.scss`).
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
-.demo-positioning-stage  { display: flex; width: 100%; height: 20em; justify-content: center; align-items: center; }
+// -- Stages --
 
-.demo-positioning-target { display: inline-flex; justify-content: center; align-items: center; width: 7em; height: 7em; padding: var(--book-space-s); border: 0.1em solid var(--brand-color); cursor: pointer; }
+// Room around a trigger, so its overlay fits into the demo.
+.demo-popover-stage        { display: flex; justify-content: center; padding: 4em; }
 
-.demo-positioned-overlay { background-color: var(--main-color); color: var(--book-surface-color); padding: var(--book-space-m); border-radius: var(--book-radius-s); }
+.demo-flex-center          { display: flex; justify-content: center; padding: var(--book-space-xl); }
 
-/* Animation hooks: the panel animates while `data-entering` / `data-exiting` are set */
-.demo-animated-panel { margin-top: var(--book-space-m); padding: var(--book-space-m); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-m); background: var(--book-surface-color-raised); }
+.demo-button-row-centered  { display: flex; align-items: center; justify-content: center; gap: var(--book-space-m); padding: var(--book-space-xl); }
 
-.demo-animated-panel[data-entering] { animation: demo-fade-in 300ms ease-out; }
+// -- Popover --
 
-.demo-animated-panel[data-exiting]  { animation: demo-fade-out 300ms ease-in forwards; }
+.demo-popover-narrow { max-width: 200px; }
 
-@keyframes demo-fade-in  { from { opacity: 0; transform: translateY(-0.5em); } to { opacity: 1; transform: none; } }
+// A popover's controls, stacked.
+.demo-popover-form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-m); }
 
-@keyframes demo-fade-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-0.5em); } }
+// Popover arrow: 16x8, a triangle drawn with borders pointing down at a trigger below the popover, turned for the
+// other sides (the arrow element's own transform centers it).
+.demo-popover-arrow {
+    display: flex;
+    width: 16px;
+    height: 8px;
+}
 
-// Without motion, the panel only fades. The animations still run, so the hooks still see them end.
+.demo-popover-arrow-shape {
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--book-surface-color);
+
+    .demo-popover-arrow[data-placement="bottom"] & { transform: rotate(180deg); }
+    .demo-popover-arrow[data-placement="left"] & { transform: rotate(-90deg); }
+    .demo-popover-arrow[data-placement="right"] & { transform: rotate(90deg); }
+}
+
+// Popover atom: grows out of its trigger while `data-entering`, shrinks back while `data-exiting`.
+.demo-popover-animated { transform-origin: var(--trigger-anchor-point); }
+
+.demo-popover-animated[data-entering] { animation: demo-pop-in var(--book-transition); }
+
+.demo-popover-animated[data-exiting] { animation: demo-pop-out var(--book-transition) forwards; }
+
+@keyframes demo-pop-in  { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+
+@keyframes demo-pop-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(0.9); } }
+
+// Without motion, the popover only fades. The animations still run, so the atom still sees them end.
 @media (prefers-reduced-motion: reduce) {
-    @keyframes demo-fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes demo-pop-in  { from { opacity: 0; } to { opacity: 1; } }
+
+    @keyframes demo-pop-out { from { opacity: 1; } to { opacity: 0; } }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    @keyframes demo-fade-out { from { opacity: 1; } to { opacity: 0; } }
+// -- Tooltip --
+
+.demo-tooltip-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    justify-items: center;
+    gap: var(--book-space-xl);
+    max-width: 400px;
+    margin: var(--book-space-xl) auto;
 }
 
-// Full-page layer behind an overlay; presses on it count as "outside".
-.demo-overlay-underlay {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    background: var(--book-backdrop-color);
+// Tooltip atom: fades in while `data-entering`, out while `data-exiting` (the atom keeps it rendered until the
+// animation ended). A fade doesn't move, so it stays under reduced motion.
+.demo-tooltip-fade {
+    &[data-entering] { animation: demo-tooltip-fade var(--book-transition); }
+    &[data-exiting] { animation: demo-tooltip-fade var(--book-transition) reverse forwards; }
 }
 
-// Centered overlay panel rendered in a portal.
-.demo-overlay-dialog {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    z-index: 1000;
-    max-width: 300px;
-    padding: var(--book-space-l);
-    transform: translate(-50%, -50%);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color-raised);
-    color: var(--main-color);
-    box-shadow: var(--book-shadow);
+@keyframes demo-tooltip-fade { from { opacity: 0; } }
+
+// Tooltip arrow: a 12x6 triangle in the tooltip's color, pointing down at a trigger below the tooltip, turned for
+// the other sides.
+.demo-tooltip-arrow {
+    display: flex;
+    width: 12px;
+    height: 6px;
 }
 
-// Overlay panel rendered in the page flow, below its trigger.
-.demo-overlay-inline-panel {
-    max-width: 300px;
-    margin-top: var(--book-space-s);
-    padding: var(--book-space-m);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color-raised);
-    color: var(--main-color);
-    box-shadow: var(--book-shadow);
+.demo-tooltip-arrow-shape {
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid var(--main-color);
+
+    .demo-tooltip-arrow[data-placement="bottom"] & { transform: rotate(180deg); }
+    .demo-tooltip-arrow[data-placement="left"] & { transform: rotate(-90deg); }
+    .demo-tooltip-arrow[data-placement="right"] & { transform: rotate(90deg); }
 }
 
-.demo-overlay-title {
-    margin: 0 0 var(--book-space-s) 0;
-}
-
-.demo-overlay-text {
-    margin: 0 0 var(--book-space-m) 0;
+// An info icon as a tooltip trigger (`Focusable` sets no data attributes: its focus ring comes from
+// `:focus-visible`).
+.demo-tooltip-icon {
+    display: inline-flex;
+    align-self: center;
     color: var(--book-muted-color);
+    font-size: var(--book-font-size-l);
+    border-radius: 50%;
+    cursor: help;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Dialog and modal --
+
+// A dialog: the `Dialog` atom or an element with `use_dialog`, centered by `.demo-backdrop`. It is focusable
+// (`tabindex="-1"`) and receives focus when no element inside it does.
+.demo-dialog {
+    width: 100%;
+    max-width: 26em;
+    padding: var(--book-space-l);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-l);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-dialog-title {
+    margin: 0 0 var(--book-space-s) 0;
+    font-size: var(--book-font-size-l);
+}
+
+.demo-dialog-description {
+    margin: 0 0 var(--book-space-l) 0;
+    color: var(--book-muted-color);
+}
+
+.demo-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--book-space-s);
+}
+
+// A dialog inside a popover: the popover draws the frame.
+.demo-popover-dialog {
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// The modal panel (`ModalContent`): slides in slightly, and out again. The atoms keep the modal rendered until the
+// exit animations finished.
+.demo-modal {
+    width: 100%;
+    max-width: 26em;
+
+    &[data-entering] { animation: demo-modal-slide var(--book-transition); }
+    &[data-exiting] { animation: demo-modal-slide var(--book-transition) reverse forwards; }
+}
+
+@keyframes demo-modal-slide {
+    from { transform: translateY(0.75em); }
+}
+
+// Without motion, the panel doesn't slide. The backdrop still fades, so the atoms still see an animation end.
+@media (prefers-reduced-motion: reduce) {
+    @keyframes demo-modal-slide {
+        from { transform: none; }
+    }
+}
+
+// -- Drawer --
+
+// A bordered, fixed-height frame with the drawer beside the content.
+.demo-drawer-frame {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width: 100%;
+    height: 20em;
+    overflow: hidden;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background-color: var(--book-surface-color);
+}
+
+// The scrollable page content next to the drawer.
+.demo-drawer-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding: var(--book-space-s);
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+// Drawer panel. Leptonic's theme layers drawers above the page; inside the demo frame, it stays below the book's
+// app bar.
+.demo-drawer {
+    z-index: auto;
+    padding: var(--book-space-s);
+    overflow-y: auto;
+    background-color: var(--brand-color-subtle);
+    box-sizing: border-box;
+
+    &[data-side="left"] { border-right: 1px solid var(--book-border-color); }
+    &[data-side="right"] { border-left: 1px solid var(--book-border-color); }
+}
+
+// Drawer that overlays the content instead of pushing it aside.
+.demo-drawer-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
 }

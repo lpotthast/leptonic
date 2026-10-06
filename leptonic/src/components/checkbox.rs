@@ -1,29 +1,35 @@
 use leptos::prelude::*;
 
 use crate::{
-    atoms::checkbox::{
-        Checkbox as CheckboxAtom, CheckboxGroup as CheckboxGroupAtom,
-        CheckboxGroupProps as CheckboxGroupAtomProps, CheckboxProps as CheckboxAtomProps,
+    Out,
+    atoms::{
+        checkbox::{
+            Checkbox as CheckboxAtom, CheckboxGroup as CheckboxGroupAtom,
+            CheckboxGroupProps as CheckboxGroupAtomProps, CheckboxProps as CheckboxAtomProps,
+        },
+        field::{Description, FieldError, Label, TextElement},
     },
-    atoms::field::{Description, FieldError, Label, TextElement},
     components::icon::Icon,
-    hooks::{Orientation, ToggleState, collections::Key},
+    hooks::{Orientation, collections::Key},
     utils::{classes::Classes, styles::Styles},
 };
 
 /// A checkbox with its label (the children).
 ///
-/// Its selection starts at `default_selected` and is reported through `on_change`; bind it to
-/// a signal with `state=ToggleState::from(rw_signal)` (or a `(read, write)` signal pair).
+/// Its selection starts at `default_selected` and is reported through `on_change`; or it is
+/// `is_selected`, and changes go to `set_selected` (e.g. both an `RwSignal<bool>`).
 /// Inside a [`CheckboxGroup`], give it a `value` instead.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn Checkbox(
     #[prop(optional)] default_selected: bool,
     #[prop(into, optional)] on_change: Option<Callback<bool>>,
-    /// External selection state, replacing `default_selected`.
+    /// The selection (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ToggleState>,
+    is_selected: Option<Signal<bool>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
     /// The checkbox's value in its [`CheckboxGroup`].
     #[prop(into, optional)]
     value: Option<Key>,
@@ -60,7 +66,8 @@ pub fn Checkbox(
         value,
         default_selected,
         on_change,
-        state,
+        is_selected,
+        set_selected,
         is_indeterminate,
         is_disabled,
         is_read_only,
@@ -93,6 +100,12 @@ pub fn CheckboxGroup(
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] description: Option<String>,
     #[prop(into, optional)] default_value: Vec<Key>,
+    /// The checked values (controlled): a value or any signal.
+    #[prop(into, optional)]
+    value: Option<Signal<Vec<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Vec<Key>>>,
     #[prop(into, optional)] on_change: Option<Callback<Vec<Key>>>,
     #[prop(default = Orientation::Vertical)] orientation: Orientation,
     #[prop(into, optional)] is_disabled: Signal<bool>,
@@ -125,6 +138,8 @@ pub fn CheckboxGroup(
     };
     CheckboxGroupAtom(CheckboxGroupAtomProps {
         default_value,
+        value,
+        set_value,
         on_change,
         is_disabled,
         is_read_only,

@@ -11,12 +11,8 @@ pub fn PageAtomSelect() -> impl IntoView {
     view! {
         <DocPage title="Select Atoms">
             <p>
-                "The select atoms render an unstyled, accessible dropdown select with the behavior of the "
-                <Link href=routes::doc::select::Hook.materialize()>"select hooks"</Link>": "
-                <Code inline=true>"Select"</Code>" holds the state, and you place its parts \u{2014} label, trigger, "
-                "popover and hidden form element \u{2014} where your design needs them. The options are a "
-                <Link href=routes::doc::listbox::Atom.materialize()>"ListBox"</Link>" in the popover. See the "
-                <Link href=routes::doc::Select.materialize()>"Select overview"</Link>" for concept guidance."
+                "The select atoms render an unstyled select whose parts you place where your design needs them. See "
+                "the "<Link href=routes::doc::Select.materialize()>"Select overview"</Link>" for concept guidance."
             </p>
 
             <Section title="Hooks Used">
@@ -38,10 +34,8 @@ pub fn PageAtomSelect() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"SelectPopover"</Code></TableCell>
                         <TableCell>
-                            <Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>", "
-                            <Link href=format!("{}#use-overlay-position", routes::doc::overlays::UseOverlay.materialize())>
-                                "use_overlay_position"
-                            </Link>", in a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
+                            <Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>
+                            ", rendered like a modal "<Link href=routes::doc::popover::Atom.materialize()>"Popover"</Link>
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -51,7 +45,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                     <TableRow>
                         <TableCell>
                             <Code inline=true>"SelectValue"</Code>", and the "
-                            <Link href=routes::doc::atoms::Field.materialize()>"field atoms"</Link>" "
+                            <Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>" "
                             <Code inline=true>"Label"</Code>", "<Code inline=true>"Description"</Code>", "
                             <Code inline=true>"FieldError"</Code>
                         </TableCell>
@@ -70,9 +64,12 @@ pub fn PageAtomSelect() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "A select is a "<Code inline=true>"Select"</Code>" containing its parts. The trigger contains a "
-                    <Code inline=true>"SelectValue"</Code>"; the popover contains a "<Code inline=true>"ListBox"</Code>
-                    " with one "<Code inline=true>"ListBoxItem"</Code>" per option:"
+                    "A "<Code inline=true>"Select"</Code>" holds the state and contains its parts: a "
+                    <Link href=routes::doc::field::Atom.materialize()>"Label"</Link>", a "
+                    <Code inline=true>"SelectTrigger"</Code>" with a "<Code inline=true>"SelectValue"</Code>", and a "
+                    <Code inline=true>"SelectPopover"</Code>" with a "
+                    <Link href=routes::doc::listbox::Atom.materialize()>"ListBox"</Link>" of one "
+                    <Code inline=true>"ListBoxItem"</Code>" per option:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -80,6 +77,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                             atoms::{field::Label, listbox::{ListBox, ListBoxItem}, select::*},
                             hooks::collections::{Key, use_list_collection},
                         };
+                        use leptos::{logging::log, prelude::*};
 
                         let fruits = use_list_collection(
                             Signal::stored(vec!["Apple", "Banana", "Cherry"]),
@@ -106,7 +104,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </Code>
                 <p>
                     "The listbox in the popover takes its options and settings from the select, so it needs no props. All "
-                    <Link href=routes::doc::listbox::Atom.materialize()>"listbox atoms"</Link>" work in it: "
+                    <Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link>" work in it: "
                     <Code inline=true>"ListBoxItems"</Code>", sections, item labels and descriptions."
                 </p>
             </Section>
@@ -120,13 +118,11 @@ pub fn PageAtomSelect() -> impl IntoView {
                     "demo is styled through the data attributes listed below."
                 </p>
                 <p>
-                    "The selected office lives in an "<Code inline=true>"RwSignal<Vec<Key>>"</Code>" of the demo, bound with "
-                    <Code inline=true>"value"</Code>": the select shows it, choosing an option writes it, and "
-                    "\u{201c}Clear\u{201d} empties it, so the placeholder shows again. ""A signal pair "<Code inline=true>"(read, write)"</Code>" works as well, and "
-                    <Code inline=true>"ValueBinding::new(signal, callback)"</Code>" binds any other storage."
+                    "The selected office lives in app state, passed as "<Code inline=true>"value"</Code>" and "
+                    <Code inline=true>"set_value"</Code>": \u{201c}Clear\u{201d} empties it, so the placeholder shows again."
                 </p>
                 <Demo
-                    description="Office select with a label, placeholder, description, sections, a disabled option, its value bound to app state and a disabled toggle"
+                    description="Office select with a label, placeholder, description, sections, a disabled option, its value controlled by app state and a disabled toggle"
                     source=include_str!("demos/select.rs")
                 >
                     <SelectAtomDemo/>
@@ -149,9 +145,9 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </Demo>
                 <p>
                     "For validation, pass "<Code inline=true>"validate"</Code>" (or "<Code inline=true>"is_invalid"</Code>
-                    ") and render a "<Link href=routes::doc::atoms::Field.materialize()>"FieldError"</Link>". "<Code inline=true>"name"</Code>
+                    ") and render a "<Link href=routes::doc::field::Atom.materialize()>"FieldError"</Link>". "<Code inline=true>"name"</Code>
                     " also matches errors reported by the server; see "
-                    <Link href=routes::doc::Forms.materialize()>"Forms"</Link>"."
+                    <Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link>"."
                 </p>
             </Section>
 
@@ -161,7 +157,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                     "contain any markup besides the parts."
                 </p>
                 <p>
-                    "Label it with a "<Link href=routes::doc::atoms::Field.materialize()>"Label"</Link>": a "
+                    "Label it with a "<Link href=routes::doc::field::Atom.materialize()>"Label"</Link>": a "
                     <Code inline=true>"<span>"</Code>" labelling the trigger and the listbox, which focuses the trigger when "
                     "clicked. A "<Code inline=true>"Description"</Code>" describes the trigger while it is rendered, and a "
                     <Code inline=true>"FieldError"</Code>" shows the validation errors while the select is invalid."
@@ -179,8 +175,11 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "The initially selected keys (at most one in "<Code inline=true>"Single"</Code>" mode). Resetting "
                             "the form restores it."
                         </ApiRow>
-                        <ApiRow name="value" ty="Option<ValueBinding<Vec<Key>>>" default="None">
-                            "The selected keys as app state (e.g. an "<Code inline=true>"RwSignal<Vec<Key>>"</Code>"), replacing "<Code inline=true>"default_value"</Code>"."
+                        <ApiRow name="value" ty="Option<Signal<Vec<Key>>>" default="None">
+                            "The selected keys (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
                             "Called with the selected keys, in collection order, when they change."
@@ -220,7 +219,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
-                            <Link href=routes::doc::atoms::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
+                            <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">
                             "The form field name of the "<Code inline=true>"HiddenSelect"</Code>", also used to match server "
@@ -266,7 +265,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                     "The text of the selected option (in "<Code inline=true>"Multiple"</Code>" mode: the options\u{2019} texts, "
                     "separated by commas), or the placeholder, as a "<Code inline=true>"<span>"</Code>". The text comes from "
                     "the collection\u{2019}s text values. To show something richer, read the selection from the "
-                    <a href="#composition">"context"</a>" instead."
+                    <AnchorLink href="#composition">"context"</AnchorLink>" instead."
                 </p>
                 <Section title="Props" id="select-value-props">
                     <ApiTable kind=ApiKind::Props of="SelectValue">
@@ -286,8 +285,8 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </p>
                 <Section title="Props" id="select-popover-props">
                     <ApiTable kind=ApiKind::Props of="SelectPopover">
-                        <ApiRow name="placement_x" ty="Signal<PlacementX>" default="Left">"Horizontal placement relative to the trigger."</ApiRow>
-                        <ApiRow name="placement_y" ty="Signal<PlacementY>" default="Below">"Vertical placement relative to the trigger."</ApiRow>
+                        <ApiRow name="placement" ty="Signal<Placement>" default="BottomStart">"Where the popover goes relative to the trigger, see "<Link href=format!("{}#placements", routes::doc::overlay_behavior::UseOverlayPosition.materialize())>"Placements"</Link>"."</ApiRow>
+                        <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">"A maximum height; the room available limits it further."</ApiRow>
                         <ApiRow name="offset, cross_offset" ty="Signal<f64>" default="0.0">
                             "Distance from the trigger and shift along its edge, in pixels."
                         </ApiRow>
@@ -351,7 +350,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </ApiTable>
                 <p>
                     "The items are "<Code inline=true>"ListBoxItem"</Code>"s, see the "
-                    <Link href=format!("{}#data-attributes", routes::doc::listbox::Atom.materialize())>"listbox atoms"</Link>"."
+                    <Link href=format!("{}#data-attributes", routes::doc::listbox::Atom.materialize())>"Listbox Atoms"</Link>"."
                 </p>
             </Section>
 
@@ -366,12 +365,12 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-trigger[data-focus-visible] { outline: 2px solid royalblue; outline-offset: 2px; }
+                        .my-trigger[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                         .my-trigger[data-open] .my-caret { transform: rotate(180deg); }
-                        .my-value[data-placeholder] { color: gray; }
-                        .my-option[data-focused] { background: #eef; }
-                        .my-option[data-focus-visible] { outline: 2px solid royalblue; outline-offset: -2px; }
-                        .my-option[data-selected] { font-weight: bold; }
+                        .my-value[data-placeholder] { color: var(--muted); }
+                        .my-option[data-focused] { background: var(--surface); }
+                        .my-option[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .my-option[data-selected] { color: var(--accent); font-weight: bold; }
                         .my-option[data-disabled] { opacity: 0.5; }
                     ")}
                 </Code>
@@ -384,7 +383,7 @@ pub fn PageAtomSelect() -> impl IntoView {
             <Section title="Composition">
                 <p>
                     "The parts find the select through the "<Code inline=true>"SelectCtx"</Code>" context. Your own "
-                    "components inside "<Code inline=true>"Select"</Code>" can read it too, e.g. to show the number of "
+                    "Leptos components inside "<Code inline=true>"Select"</Code>" can read it too, e.g. to show the number of "
                     "selected options in a multiple select\u{2019}s trigger:"
                 </p>
                 <Code language=Language::Rust>
@@ -406,24 +405,13 @@ pub fn PageAtomSelect() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="Select Component">
-                <p>
-                    "The "<Link href=routes::doc::select::Component.materialize()>"Select components"</Link>" ("
-                    <Code inline=true>"Select"</Code>", "<Code inline=true>"OptionalSelect"</Code>", "
-                    <Code inline=true>"Multiselect"</Code>") are built from these atoms. They add the leptonic theme, "
-                    "options of any type identified by their "<Code inline=true>"Display"</Code>" text, a search field in "
-                    "the popover, a value kept in sync with your signal, and chips for multiple selection. Use the atoms "
-                    "for your own design, sections, option descriptions, a label, validation or form submission."
-                </p>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Select.materialize()>"Select overview"</Link></li>
-                <li><Link href=routes::doc::select::Hook.materialize()>"Select hooks"</Link></li>
-                <li><Link href=routes::doc::listbox::Atom.materialize()>"ListBox atoms"</Link></li>
-                <li><Link href=routes::doc::atoms::Field.materialize()>"Field atoms"</Link></li>
-                <li><Link href=routes::doc::select::Component.materialize()>"Select components"</Link></li>
-                <li><Link href=routes::doc::Forms.materialize()>"Forms"</Link></li>
+                <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
+                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
+                <li><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></li>
+                <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

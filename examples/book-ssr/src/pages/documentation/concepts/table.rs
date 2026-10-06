@@ -24,18 +24,18 @@ pub fn PageTableOverview() -> impl IntoView {
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow><TableCell>"Show records with the same fields, to sort, compare and select"</TableCell><TableCell><b>"Table"</b></TableCell></TableRow>
                     <TableRow>
-                        <TableCell>"Show static tabular data without interaction"</TableCell>
-                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table component"</Link>" (styled HTML table)"</TableCell>
+                        <TableCell>"Show tabular data in the theme\u{2019}s look, without cell navigation or row selection"</TableCell>
+                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link>" (a styled HTML table)"</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Navigate a two-dimensional arrangement without column headers (a calendar, a palette)"</TableCell>
-                        <TableCell><Link href=routes::doc::grid::Hook.materialize()>"Grid"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::Grid.materialize()>"Grid"</Link></TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Show a list of selectable items with one column"</TableCell>
                         <TableCell>
                             <Link href=routes::doc::Listbox.materialize()>"Listbox"</Link>", or a "
-                            <Link href=routes::doc::grid::Atom.materialize()>"grid list"</Link>" if items contain buttons or links"
+                            <Link href=routes::doc::GridList.materialize()>"Grid List"</Link>" if items contain buttons or links"
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -50,26 +50,26 @@ pub fn PageTableOverview() -> impl IntoView {
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::table::Hook.materialize()>"Table hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></TableCell>
                         <TableCell>
                             "Keyboard navigation, sorting, row selection, column resizing and ARIA semantics for a table "
                             "whose every element you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::table::Atom.materialize()>"Table atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link></TableCell>
                         <TableCell>
-                            "The same behavior as unstyled components: "<Code inline=true>"Table"</Code>" renders the column "
+                            "The same behavior as unstyled atoms: "<Code inline=true>"Table"</Code>" renders the column "
                             "headers and selection checkboxes, you render the rows and cells and style them through data "
                             "attributes. A "<Code inline=true>"ResizableTableContainer"</Code>" around the table makes its "
                             "columns resizable."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table component"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></TableCell>
                         <TableCell>
-                            "A themed, static HTML table. It is not built on the table hooks yet: it has no keyboard "
-                            "navigation, sorting or selection."
+                            "A themed HTML table with pressable, sortable column headers. It is not built on the table "
+                            "hooks: it has no keyboard navigation between cells and no row selection."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -78,11 +78,12 @@ pub fn PageTableOverview() -> impl IntoView {
             <Section title="Quick Start">
                 <p>
                     "The table atoms are the quickest way to an interactive table. Describe the columns and rows as a "
-                    <Code inline=true>"TableCollection"</Code>", render a "<Code inline=true>"TableRow"</Code>" per row, and "
-                    "sort the data when the user presses a column header:"
+                    <Code inline=true>"TableCollection"</Code>" and render a "<Code inline=true>"TableRow"</Code>" per row. The "
+                    <Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link>" show sorting, multiple selection and "
+                    "resizable columns:"
                 </p>
 
-                <Demo description="Sortable planet table with single selection, built from the table atoms" source=include_str!("demos/table.rs") source_open=true>
+                <Demo description="Planet table with single selection, built from the table atoms" source=include_str!("demos/table.rs") source_open=true>
                     <TableConceptDemo/>
                 </Demo>
             </Section>
@@ -90,7 +91,7 @@ pub fn PageTableOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "Interactive tables follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/grid/" target=LinkTarget::_Blank>"Grid pattern"</LinkExt>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/grid/" target=LinkTarget::Blank>"Grid pattern"</Link>
                     " for data grids:"
                 </p>
 
@@ -117,14 +118,34 @@ pub fn PageTableOverview() -> impl IntoView {
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="ArrowUp / ArrowDown">"Move between rows; up from the first row reaches the column headers."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Move into a row\u{2019}s cells and between them, or between column headers."</KeyRow>
-                    <KeyRow keys="Home / End">"First or last row, or first or last cell of the row."</KeyRow>
-                    <KeyRow keys="Space">"Toggle the selection of the focused row."</KeyRow>
-                    <KeyRow keys="Enter / Space">"On a sortable column header: sort by it (again to reverse the order)."</KeyRow>
-                    <KeyRow keys="Enter">"Run the row\u{2019}s action; without one, toggle its selection."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all rows (multiple selection)."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">
+                        "Move between rows. "<Keys keys="ArrowUp"/>" from the first row moves to the column headers, and "
+                        "from a column header to its group\u{2019}s header; "<Keys keys="ArrowDown"/>" moves from a column "
+                        "header to its cell in the first row."
+                    </KeyRow>
+                    <KeyRow keys="ArrowRight / ArrowLeft">
+                        "From a row, move to its first or last cell; then between cells, and back to the row at the end. "
+                        "In a header row, move between the column headers. Mirrored in right-to-left languages."
+                    </KeyRow>
+                    <KeyRow keys="Home / End">"The first or last row; in a row\u{2019}s cells or a header row, its first or last cell."</KeyRow>
+                    <KeyRow keys="Control + Home / Control + End">
+                        "From a cell, the first or last cell of the table ("<Keys keys="Meta + Home"/>" / "
+                        <Keys keys="Meta + End"/>" on macOS)."
+                    </KeyRow>
+                    <KeyRow keys="PageUp / PageDown">"Move by the visible height."</KeyRow>
+                    <KeyRow keys="Space">"Select or deselect the focused row. On a sortable column header: sort by it."</KeyRow>
+                    <KeyRow keys="Enter">
+                        "On a sortable column header: sort by it (again to reverse the order). On a row: run its action, or "
+                        "select it if it has none."
+                    </KeyRow>
+                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
+                    <KeyRow keys="Any character">"Move to the next row whose text starts with the typed characters."</KeyRow>
+                    <KeyRow keys="Enter">
+                        "On a resizable column (arrowing onto its header focuses the resizer): start resizing."
+                    </KeyRow>
+                    <KeyRow keys="Arrow keys">"While resizing: narrow or widen the column by 10 pixels."</KeyRow>
+                    <KeyRow keys="Enter / Escape / Tab">"While resizing: finish; the column keeps its new width."</KeyRow>
                 </KeyboardTable>
 
                 <p>
@@ -132,6 +153,14 @@ pub fn PageTableOverview() -> impl IntoView {
                     " state when they move to the column header."
                 </p>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></li>
+                <li><Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link></li>
+                <li><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></li>
+                <li><Link href=routes::doc::Grid.materialize()>"Grid"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

@@ -128,9 +128,8 @@ pub fn TableResizingAtomDemo() -> impl IntoView {
                 </TableBody>
             </Table>
         </ResizableTableContainer>
-        <div class="demo-state-display">
-            <div><strong>"Resizing: "</strong>{move || if resizing.get() { "yes" } else { "no" }}</div>
-            <div><strong>"Reported sizes: "</strong>{sizes}</div>
-        </div>
+        <p class="demo-status">
+            "Resizing: "{move || if resizing.get() { "yes" } else { "no" }}". Reported sizes: "{sizes}"."
+        </p>
     }
 }

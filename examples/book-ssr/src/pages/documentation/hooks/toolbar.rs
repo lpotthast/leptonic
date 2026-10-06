@@ -12,10 +12,10 @@ pub fn PageUseToolbar() -> impl IntoView {
     view! {
         <DocPage title="use_toolbar">
             <p>
-                "A toolbar groups related controls, like the formatting buttons of a text editor. The "
-                <Code inline=true>"use_toolbar"</Code>" hook makes the toolbar one tab stop: "<Keys keys="Tab"/>
+                "The "<Code inline=true>"use_toolbar"</Code>" hook makes a group of controls one tab stop: "<Keys keys="Tab"/>
                 " enters and leaves it, the arrow keys move focus between its controls, and when focus comes back, it returns "
-                "to the control focused last. The hook moves focus itself, so the controls need no tabindex management."
+                "to the control focused last. The hook moves focus itself, so the controls need no tabindex management. "
+                "See the "<Link href=routes::doc::Toolbar.materialize()>"Toolbar overview"</Link>" for concept guidance."
             </p>
             <ReactAria hook="useToolbar"/>
 
@@ -46,6 +46,8 @@ pub fn PageUseToolbar() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+
                         let toolbar = use_toolbar(UseToolbarInput {
                             aria_label: "Text formatting".into(),
                             ..UseToolbarInput::default()
@@ -65,10 +67,11 @@ pub fn PageUseToolbar() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A horizontal toolbar of "<Link href=routes::doc::toggle_button::Hook.materialize()>"toggle buttons"</Link>
-                    ". Tab into it, move with the arrow keys, tab out and back in:"
+                    ", styled through the "<Code inline=true>"aria-pressed"</Code>" attribute they get. Tab into it, move "
+                    "with the arrow keys, tab out and back in:"
                 </p>
                 <Demo
-                    description="Horizontal text formatting toolbar with bold, italic and underline toggle buttons"
+                    description="Horizontal text formatting toolbar with bold, italic and underline toggle buttons and a preview"
                     source=include_str!("demos/toolbar_horizontal.rs")
                 >
                     <ToolbarHorizontalDemo/>
@@ -104,8 +107,10 @@ pub fn PageUseToolbar() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Navigation.materialize()>"Navigation"</Link></li>
-                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle button hooks"</Link></li>
+                <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar overview"</Link></li>
+                <li><Link href=routes::doc::toolbar::Atom.materialize()>"Toolbar Atom"</Link></li>
+                <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
+                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
             </SeeAlso>
         </DocPage>

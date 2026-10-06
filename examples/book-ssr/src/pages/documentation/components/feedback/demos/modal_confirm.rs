@@ -1,62 +1,45 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+/// A modal that enables its destructive action only once the user typed the repository's name.
 #[component]
 pub fn ModalConfirmDemo() -> impl IntoView {
-    let (show_confirm_modal, set_show_confirm_modal) = signal(false);
+    const REPOSITORY: &str = "leptonic";
 
-    view! {
-        <p><Button on_press=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></p>
+    let is_open = RwSignal::new(false);
+    let typed = RwSignal::new(String::new());
+    let (deleted, set_deleted) = signal(false);
+    let is_confirmed = Signal::derive(move || typed.with(|typed| typed == REPOSITORY));
 
-        <ConfirmModal
-            show_when=show_confirm_modal
-            requires_confirmation_of="ok".to_owned()
-            on_accept=move || set_show_confirm_modal.set(false)
-            on_cancel=move || set_show_confirm_modal.set(false)
-        />
-    }
-}
-
-#[component]
-pub fn ConfirmModal<A, C>(
-    #[prop(into)] show_when: Signal<bool>,
-    requires_confirmation_of: String,
-    on_accept: A,
-    on_cancel: C,
-) -> impl IntoView
-where
-    A: Fn() + Send + Sync + Copy + 'static,
-    C: Fn() + Send + Sync + Copy + 'static,
-{
-    let required = StoredValue::new(requires_confirmation_of);
-
-    let (input, set_input) = signal(String::new());
-
-    let confirmed = move || required.with_value(|r| input.with(|i| r == i));
-    let disabled = Signal::derive(move || !confirmed());
-
-    let on_accept = move || {
-        set_input.update(std::string::String::clear);
-        on_accept();
+    // Opening starts with an empty input.
+    let open = move || {
+        typed.set(String::new());
+        is_open.set(true);
     };
-    let on_cancel = move || {
-        set_input.update(std::string::String::clear);
-        on_cancel();
+    let delete = move || {
+        set_deleted.set(true);
+        is_open.set(false);
     };
 
     view! {
-        <Modal state=ValueBinding::new(
-            show_when,
-            Callback::new(move |open: bool| if !open { on_cancel() }),
-        )>
+        <Button on_press=move |_| if deleted.get() { set_deleted.set(false) } else { open() }>
+            {move || if deleted.get() { "Restore repository" } else { "Delete repository" }}
+        </Button>
+        <p class="demo-status">
+            {move || if deleted.get() { "The repository was deleted." } else { "The repository exists." }}
+        </p>
+
+        <Modal is_open=is_open set_open=is_open>
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
-                <TextField label=format!("Enter \u{201c}{}\u{201d} to confirm", required.get_value()) state=(input, set_input)/>
+                <TextField label=format!("Enter \u{201c}{REPOSITORY}\u{201d} to confirm") value=typed set_value=typed/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| on_accept() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
-                    <Button on_press=move |_| on_cancel() color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| is_open.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| delete() is_disabled=Signal::derive(move || !is_confirmed.get()) color=ButtonColor::Danger>
+                        "Delete"
+                    </Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

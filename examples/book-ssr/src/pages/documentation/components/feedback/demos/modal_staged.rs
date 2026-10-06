@@ -1,50 +1,50 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+/// Where the sign-up is: not started, at one of its two steps, or done.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Step {
+    Closed,
+    Account,
+    Newsletter,
+    Done,
+}
+
 #[component]
 pub fn ModalStagedDemo() -> impl IntoView {
-    let (show_staged_modal1, set_show_staged_modal1) = signal(false);
-    let (show_staged_modal2, set_show_staged_modal2) = signal(false);
+    let (step, set_step) = signal(Step::Closed);
+    let is_at = move |at: Step| Signal::derive(move || step.get() == at);
 
     view! {
-        <p><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></p>
+        <Button on_press=move |_| set_step.set(Step::Account)>"Sign up"</Button>
+        <p class="demo-status">
+            {move || match step.get() {
+                Step::Closed => "Not signed up yet.",
+                Step::Account | Step::Newsletter => "Signing up\u{2026}",
+                Step::Done => "Signed up.",
+            }}
+        </p>
 
-        <Modal
-            state=(show_staged_modal1, set_show_staged_modal1)
-        >
-            <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
-            <ModalBody>"Continue to the next step?"</ModalBody>
+        // Dismissing the first step cancels the sign-up.
+        <Modal is_open=is_at(Step::Account) set_open=move |open: bool| if !open { set_step.set(Step::Closed) }>
+            <ModalHeader><ModalTitle>"Step 1 of 2: Account"</ModalTitle></ModalHeader>
+            <ModalBody>"Create an account with your email address."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| {
-                        set_show_staged_modal1.set(false);
-                        set_show_staged_modal2.set(true);
-                    } color=ButtonColor::Info>"Next"</Button>
-                    <Button on_press=move |_| set_show_staged_modal1.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| set_step.set(Step::Closed) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| set_step.set(Step::Newsletter)>"Next"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
 
-        <Modal
-            // Closing the second modal goes back to the first.
-            state=ValueBinding::new(
-                show_staged_modal2.into(),
-                Callback::new(move |open| {
-                    set_show_staged_modal2.set(open);
-                    if !open {
-                        set_show_staged_modal1.set(true);
-                    }
-                }),
-            )
-        >
-            <ModalHeader><ModalTitle>"Next one"</ModalTitle></ModalHeader>
-            <ModalBody>"This modal replaced the first one. Going back reopens it."</ModalBody>
+        // Dismissing the second step goes back to the first.
+        <Modal is_open=is_at(Step::Newsletter) set_open=move |open: bool| if !open { set_step.set(Step::Account) }>
+            <ModalHeader><ModalTitle>"Step 2 of 2: Newsletter"</ModalTitle></ModalHeader>
+            <ModalBody>"Get a short email about new releases once a month."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| {
-                        set_show_staged_modal2.set(false);
-                        set_show_staged_modal1.set(true);
-                    } color=ButtonColor::Secondary>"Back"</Button>
+                    <Button on_press=move |_| set_step.set(Step::Account) color=ButtonColor::Secondary>"Back"</Button>
+                    <Button on_press=move |_| set_step.set(Step::Done)>"Finish"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

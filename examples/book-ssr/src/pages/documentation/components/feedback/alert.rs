@@ -7,11 +7,13 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageAlert() -> impl IntoView {
     view! {
-        <DocPage title="Alert">
+        <DocPage title="Alert Component">
             <p>
-                "An alert is a highlighted box that tells your users about something important: an operation succeeded, "
-                "something needs their attention, or an error occurred. The "<Code inline=true>"Alert"</Code>
-                " component shows a title, content and an icon, colored by its variant."
+                "An alert is a highlighted box in the flow of the page that tells your users about something important: "
+                "an operation succeeded, something needs their attention, or an error occurred. It stays until you remove "
+                "it. The themed "<Code inline=true>"Alert"</Code>" component shows a title, content and an icon, colored "
+                "by its variant. For a message that appears above the app and goes away on its own, use a "
+                <Link href=routes::doc::Toast.materialize()>"Toast"</Link>"."
             </p>
 
             <Demo description="Alerts in all four variants" source=include_str!("demos/alert_variants.rs")>
@@ -44,8 +46,7 @@ pub fn PageAlert() -> impl IntoView {
                 <p>
                     "All slots take their content as children. "<Code inline=true>"AlertPrepend"</Code>", "
                     <Code inline=true>"AlertTitle"</Code>" and "<Code inline=true>"AlertAppend"</Code>
-                    " also accept an inline "<Code inline=true>"style"</Code>" string. "
-                    "The "<Code inline=true>"AlertIcon"</Code>" component renders the icon of a variant on its own."
+                    " also accept an inline "<Code inline=true>"style"</Code>" string."
                 </p>
             </Section>
 
@@ -54,10 +55,9 @@ pub fn PageAlert() -> impl IntoView {
                     "Title and content are both optional. Set "<Code inline=true>"default_icon_slot"</Code>" to "
                     <Code inline=true>"AlertIconSlot::None"</Code>" and fill the "<Code inline=true>"AlertPrepend"</Code>
                     " and "<Code inline=true>"AlertAppend"</Code>" slots to replace the icon, or place an "
-                    <Code inline=true>"AlertIcon"</Code>" wherever you like. To restyle the slots, pass "
+                    <AnchorLink href="#alerticon">"AlertIcon"</AnchorLink>" wherever you like. To restyle the slots, pass "
                     <Code inline=true>"classes"</Code>" to the alert and target its "
-                    <Code inline=true>".leptonic-alert-*"</Code>
-                    " elements."
+                    <Code inline=true>".leptonic-alert-*"</Code>" elements."
                 </p>
 
                 <Demo
@@ -68,14 +68,47 @@ pub fn PageAlert() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="AlertIcon">
+                <p>
+                    "The icon of a variant on its own, e.g. inside the title. It is decorative: hidden from screen readers, "
+                    "like every "<Link href=routes::doc::Icon.materialize()>"Icon"</Link>"."
+                </p>
+                <ApiTable kind=ApiKind::Props of="AlertIcon">
+                    <ApiRow name="variant" ty="AlertVariant">"The variant whose icon to show. Required."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Accessibility">
+                <ul>
+                    <li>
+                        "An alert has "<Code inline=true>"role=\"alert\""</Code>": screen readers announce it right away "
+                        "when it is added to the page or its content changes, interrupting what they are reading. An alert "
+                        "rendered with the page is read as part of the page."
+                    </li>
+                    <li>
+                        "Every variant gets this role; there is currently no polite variant. For a message that "
+                        "shouldn\u{2019}t interrupt, announce it with "
+                        <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link>
+                        "\u{2019}s "<Code inline=true>"announce_polite"</Code>" instead of adding an alert."
+                    </li>
+                    <li>
+                        "The variant shows only as a color and an icon, which screen readers don\u{2019}t announce. Say "
+                        "what happened in the title or the content (\u{201c}Upload failed\u{201d}, not just "
+                        "\u{201c}Danger\u{201d})."
+                    </li>
+                </ul>
+            </Section>
+
             <Section title="Styling">
                 <p>"Override any of these CSS variables to adapt alerts to your design:"</p>
                 <CssVariables prefix="--alert-" scss=theme_scss!("alert")/>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::components::Toast.materialize()>"Toast"</Link></li>
-                <li><Link href=routes::doc::components::Icon.materialize()>"Icon"</Link></li>
+                <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
+                <li><Link href=routes::doc::Toast.materialize()>"Toast Component"</Link></li>
+                <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link></li>
+                <li><Link href=routes::doc::Icon.materialize()>"Icon Component"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -10,10 +10,7 @@ use leptonic::{
         },
     },
     hooks::CommitBehavior,
-    utils::{
-        ValueBinding,
-        number_formatter::{NumberFormatOptions, NumberStyle},
-    },
+    utils::number_formatter::{NumberFormatOptions, NumberStyle},
 };
 use leptos::prelude::*;
 
@@ -121,12 +118,9 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 </NumberField>
             </div>
 
-            // A bound value that rejects every change (react-aria: a controlled `value`).
+            // A value without a setter rejects every change (react-aria: a controlled `value`).
             <div id="nf-rejecting">
-                <NumberField state=ValueBinding::new(
-                    Signal::stored(Some(200_i32)),
-                    Callback::new(|_| {}),
-                )>
+                <NumberField value=Some(200)>
                     <Label>"Width"</Label>
                     <Steppers />
                 </NumberField>

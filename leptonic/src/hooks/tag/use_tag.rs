@@ -163,22 +163,16 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     // Keyboard and screen reader users learn how to remove tags.
     let focus_visible = use_focus_visible(UseFocusVisibleInput::default());
     let modality = focus_visible.modality;
-    let description_id = on_remove.and_then(|_| {
-        use_description(REMOVE_DESCRIPTION.into())
-            .ids()
-            .next()
-            .map(str::to_owned)
-    });
-    let aria_describedby = Signal::derive(move || {
-        description_id
-            .clone()
-            .filter(|_| matches!(modality.get(), Modality::Keyboard | Modality::Virtual))
-    });
+    let has_remove = on_remove.is_some();
+    let aria_describedby = use_description(Signal::derive(move || {
+        (has_remove && matches!(modality.get(), Modality::Keyboard | Modality::Virtual))
+            .then(|| REMOVE_DESCRIPTION.to_owned())
+    }));
 
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
         id: Some(button_id.clone().into()),
         aria_label: "Remove".into(),
-        aria_labelledby: Some(format!("{button_id} {row_id}").into()),
+        aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         is_disabled,
         on_press: Some(Callback::new(move |_: PressEvent| {
             on_remove.run(HashSet::from([key.get_value()]));

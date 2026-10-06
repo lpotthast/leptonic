@@ -6,9 +6,8 @@ use leptos::prelude::*;
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Hook-owned state instead of react-aria's controlled/uncontrolled `value`: the field's value
-//   lives in this state, changed through `set_value`. Reason: project-wide convention (C4); app
-//   state binds through `From<RwSignal<String>>` instead of a controlled `value`.
+// - Hook-owned state (C4): `default_value` + `on_change`, or `value` bound to app state (the atoms'
+//   `value` + `set_value`); every change goes through `set_value`.
 //
 // =============================================================================
 
@@ -62,7 +61,10 @@ impl From<(ReadSignal<String>, WriteSignal<String>)> for TextFieldState {
 /// Input of [`use_text_field_state`].
 #[derive(Debug, Clone, Default)]
 pub struct UseTextFieldStateInput {
+    /// The initial value. Ignored when `value` is bound.
     pub default_value: String,
+    /// The value as app state, replacing `default_value`.
+    pub value: Option<crate::utils::ValueBinding<String>>,
     /// Called when the value changes.
     pub on_change: Option<Callback<String>>,
 }
@@ -71,14 +73,17 @@ pub struct UseTextFieldStateInput {
 pub fn use_text_field_state(input: UseTextFieldStateInput) -> TextFieldState {
     let UseTextFieldStateInput {
         default_value,
+        value,
         on_change,
     } = input;
-    let value = RwSignal::new(default_value);
+    let binding =
+        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+    let value = binding.value;
     TextFieldState {
-        value: value.into(),
+        value,
         set_value: Callback::new(move |new: String| {
             if value.with_untracked(|v| *v != new) {
-                value.set(new.clone());
+                binding.set(new.clone());
                 if let Some(on_change) = on_change {
                     on_change.run(new);
                 }

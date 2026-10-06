@@ -36,12 +36,24 @@ const PAGES: &[&str] = &[
     "/atoms/popover",
     "/atoms/tooltip",
     "/atoms/menu",
+    "/atoms/disclosure",
+    "/atoms/link",
+    "/atoms/breadcrumbs",
+    "/atoms/progress-bar",
+    "/atoms/overlay-position",
+    "/atoms/color-area",
+    "/atoms/color-slider",
+    "/atoms/color-wheel",
+    "/atoms/color-field",
+    "/atoms/color-swatch",
+    "/atoms/color-picker",
 ];
 
-/// Element ids must be identical in the server-rendered HTML and in the hydrated page, and every
-/// id reference (`aria-labelledby`, `aria-controls`, ...) must point at an existing element.
-/// Random ids break both: attributes the client updates after hydration would reference ids
-/// that only exist on the server's side, or vice versa.
+/// Every element id of the server-rendered HTML must survive hydration, and every id reference
+/// (`aria-labelledby`, `aria-controls`, ...) must point at an existing element. Random ids break
+/// both: attributes the client updates after hydration would reference ids that only exist on the
+/// server's side, or vice versa. The client may add ids the server didn't render (a trigger gets
+/// one once a panel needs to reference it).
 pub struct HydrationIdTests {}
 
 #[async_trait]
@@ -62,9 +74,12 @@ impl BrowserTest<str> for HydrationIdTests {
                 "return [...document.querySelectorAll('body [id]:not([data-client-only])')].map(e => e.id);",
             )
             .await?;
-            assert_that!(client_ids)
-                .with_detail_message(format!("ids on {path}"))
-                .is_equal_to(server_ids);
+            let missing: BTreeSet<&String> = server_ids.difference(&client_ids).collect();
+            assert_that!(missing)
+                .with_detail_message(format!(
+                    "server-rendered ids missing after hydration on {path}"
+                ))
+                .is_empty();
 
             let dangling = string_set(
                 &page,

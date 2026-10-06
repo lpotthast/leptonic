@@ -1,280 +1,323 @@
-// Upstream: react-aria/src/color/useColorField.ts @ 6f664fe911
+// Upstream: react-aria/src/color/useColorField.ts @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    ev::{self, On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::{Event, FocusEvent, KeyboardEvent, WheelEvent};
+use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
-use super::use_color_field_state::UseColorFieldStateReturn;
+use super::use_color_field_state::ColorFieldState;
 use crate::{
     hooks::{
-        IntoAttrs,
-        interactions::use_scroll_wheel::{ScrollEvent, UseScrollWheelInput, use_scroll_wheel},
+        IntoAttrs, UseFocusWithinInput, UseFocusWithinReturn, UseScrollWheelInput,
+        UseSpinButtonInput, UseSpinButtonReturn,
+        form::{
+            use_form_reset::{UseFormResetInput, use_form_reset},
+            use_form_validation_state::ValidityStateSnapshot,
+            use_formatted_text_field::{FormattedTextFieldHandlers, use_formatted_text_field},
+            use_label::UseLabelProps,
+            use_text_field::{
+                UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
+                UseTextFieldReturn, use_text_field,
+            },
+            use_text_field_state::TextFieldState,
+        },
+        interactions::{use_keyboard::KeyboardEventWrapper, use_scroll_wheel::ScrollEvent},
+        use_focus_within, use_scroll_wheel, use_spin_button,
     },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaRole},
-        color::RGB8,
+        CapturedElement, EventHandler, SlotProps,
+        id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorField.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Does not compose with `use_spin_button` directly. Instead, the spinbutton
-//   ARIA attributes and keyboard handling are inlined for simplicity.
+// ## API DIFFERENCES
+// - Returns the label, description and error message props with the input's (as
+//   `use_text_field`), and the captured input element.
 //
-// - No `useFormattedTextField` composition. Uses direct event handlers.
+// =============================================================================
 
-/// Hex page step for PageUp/PageDown: increment/decrement by 16 (0x10).
-const HEX_PAGE_STEP: i64 = 0x10;
-
-/// Input parameters for `use_color_field`.
-#[derive(Debug, Clone)]
+/// Input of [`use_color_field`]. Start from [`UseColorFieldInput::new`].
+#[derive(Clone)]
 pub struct UseColorFieldInput {
-    /// The color field state (from `use_color_field_state`).
-    pub state: UseColorFieldStateReturn,
-
-    /// Whether the field is disabled.
+    pub state: ColorFieldState,
+    /// The input's id. Generated when `None`.
+    pub id: Option<String>,
+    /// Whether a visible label is rendered (with `label_props`).
+    pub has_label: Signal<bool>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
     pub is_disabled: Signal<bool>,
-
-    /// Whether the field is read-only.
     pub is_read_only: Signal<bool>,
-
-    /// An accessibility label for the field.
-    pub aria_label: Option<&'static str>,
-
-    /// Whether scroll-wheel adjustment is disabled.
+    pub is_required: Signal<bool>,
+    pub placeholder: MaybeProp<String>,
+    pub auto_focus: bool,
+    /// Whether the scroll wheel leaves the color alone (it steps while the field has focus).
     pub is_wheel_disabled: bool,
+    pub on_focus: Option<Callback<FocusEvent>>,
+    pub on_blur: Option<Callback<FocusEvent>>,
+    pub on_focus_change: Option<Callback<bool>>,
+    pub on_key_down: Option<Callback<KeyboardEventWrapper>>,
+    pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
 }
 
-/// Return value of `use_color_field`.
+impl UseColorFieldInput {
+    pub fn new(state: ColorFieldState) -> Self {
+        Self {
+            state,
+            id: None,
+            has_label: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            is_disabled: Signal::stored(false),
+            is_read_only: Signal::stored(false),
+            is_required: Signal::stored(false),
+            placeholder: MaybeProp::default(),
+            auto_focus: false,
+            is_wheel_disabled: false,
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+        }
+    }
+}
+
+/// Return value of [`use_color_field`].
 pub struct UseColorFieldReturn {
-    /// Props for the input element.
+    pub label_props: UseLabelProps,
     pub input_props: UseColorFieldInputProps,
+    pub description_props: SlotProps,
+    pub error_message_props: SlotProps,
+    /// The input element.
+    pub element: CapturedElement,
+    pub is_focused: Signal<bool>,
+    pub is_focus_visible: Signal<bool>,
+    pub is_invalid: Signal<bool>,
+    pub validation_errors: Signal<Vec<String>>,
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
-/// Props for the color field input element.
-#[derive(Debug)]
+/// Props of the color field's input.
+#[derive(Debug, Clone)]
 pub struct UseColorFieldInputProps {
-    role: AriaRole,
-    r#type: &'static str,
-    autocomplete: &'static str,
-    autocorrect: &'static str,
-    spellcheck: &'static str,
-    aria_label: Option<&'static str>,
-    aria_disabled: Signal<Option<AriaDisabled>>,
-    aria_valuenow: Signal<f64>,
-    aria_valuemin: f64,
-    aria_valuemax: f64,
-    aria_valuetext: Signal<String>,
-    on_input: EventHandler<Event>,
-    on_focus: EventHandler<FocusEvent>,
-    on_blur: EventHandler<FocusEvent>,
-    on_keydown: EventHandler<KeyboardEvent>,
-    on_wheel: EventHandler<WheelEvent>,
+    pub text_field: UseTextFieldInputProps,
+    pub on_beforeinput: EventHandler<InputEvent>,
+    pub on_compositionstart: EventHandler<CompositionEvent>,
+    pub on_compositionend: EventHandler<CompositionEvent>,
+    pub on_wheel: EventHandler<WheelEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
 }
+
+pub type UseColorFieldInputAttrs = (
+    UseTextFieldInputAttrs,
+    (
+        On<ev::beforeinput, SharedEventCallback<InputEvent>>,
+        On<ev::compositionstart, SharedEventCallback<CompositionEvent>>,
+        On<ev::compositionend, SharedEventCallback<CompositionEvent>>,
+        On<ev::wheel, SharedEventCallback<WheelEvent>>,
+        On<ev::focusin, SharedEventCallback<FocusEvent>>,
+        On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    ),
+);
 
 impl IntoAttrs for UseColorFieldInputProps {
     type Attrs = UseColorFieldInputAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::Type, self.r#type),
-            Attr(attr::Autocomplete, self.autocomplete),
-            attr::custom::custom_attribute("autocorrect", self.autocorrect),
-            Attr(attr::Spellcheck, self.spellcheck),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            self.on_input.into_on(ev::input),
-            self.on_focus.into_on(ev::focusin),
-            self.on_blur.into_on(ev::focusout),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_wheel.into_on(ev::wheel),
+            self.text_field.into_attrs(),
+            (
+                self.on_beforeinput.into_on(ev::beforeinput),
+                self.on_compositionstart.into_on(ev::compositionstart),
+                self.on_compositionend.into_on(ev::compositionend),
+                self.on_wheel.into_on(ev::wheel),
+                self.on_focusin.into_on(ev::focusin),
+                self.on_focusout.into_on(ev::focusout),
+            ),
         )
     }
 }
 
-/// Attribute tuple produced by [`UseColorFieldInputProps::into_attrs`].
-pub type UseColorFieldInputAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Type, &'static str>,
-    Attr<attr::Autocomplete, &'static str>,
-    attr::custom::CustomAttr<&'static str, &'static str>,
-    Attr<attr::Spellcheck, &'static str>,
-    Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaValuenow, Signal<f64>>,
-    Attr<attr::AriaValuemin, f64>,
-    Attr<attr::AriaValuemax, f64>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    On<ev::input, SharedEventCallback<Event>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::wheel, SharedEventCallback<WheelEvent>>,
-);
-
-/// Creates behavior and ARIA props for a hex color text input.
-///
-/// The input validates hex characters during typing and commits
-/// the value on blur. Uses `role="spinbutton"` with full ARIA support.
-///
-/// ## Keyboard support
-///
-/// - `ArrowUp` / `ArrowDown`: Increment/decrement hex value by 1
-/// - `PageUp` / `PageDown`: Increment/decrement by 16 (0x10)
-/// - `Home`: Jump to minimum (#000000)
-/// - `End`: Jump to maximum (#FFFFFF)
-///
-/// ## Scroll wheel
-///
-/// When the input is focused, scroll wheel adjusts the value up/down.
+/// Behavior and accessibility of a field for a color as hex text: typing is limited to hex
+/// digits, the color is committed on blur and Enter, arrow keys, Page Up/Down, Home/End and the
+/// scroll wheel step it (a text field with a spin button's keys).
 #[allow(clippy::too_many_lines)]
 pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
     let UseColorFieldInput {
         state,
-        is_disabled: disabled,
-        is_read_only: read_only,
+        id,
+        has_label,
         aria_label,
+        aria_labelledby,
+        aria_describedby,
+        is_disabled,
+        is_read_only,
+        is_required,
+        placeholder,
+        auto_focus,
         is_wheel_disabled,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
     } = input;
+    let inactive = move || is_disabled.get_untracked() || is_read_only.get_untracked();
 
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Spinbutton ARIA values.
-    let aria_valuenow = Signal::derive(move || {
-        state
-            .color_value
-            .get()
-            .map_or(0.0, |c| f64::from(c.to_hex_int()))
+    // Enter commits; its default action (submitting the form) is kept.
+    let shortcuts = KeyboardShortcuts::new().on(Shortcut::key("Enter"), move |_| {
+        if inactive() {
+            return ShortcutOutcome::Ignored;
+        }
+        state.commit();
+        state.validation.commit_validation.run(());
+        ShortcutOutcome::Custom {
+            prevent_default: false,
+            continue_propagation: false,
+        }
     });
-    let aria_valuetext = Signal::derive(move || {
-        state
-            .color_value
-            .get()
-            .map_or_else(String::new, |c| format!("#{c:X}"))
-    });
-
-    // Focus tracking for scroll wheel.
-    let (is_focused, set_is_focused) = signal(false);
-
-    let handle_focus = EventHandler::new(move |_: FocusEvent| {
-        set_is_focused.set(true);
+    let commit_on_blur = Callback::new(move |e: FocusEvent| {
+        state.commit();
+        if let Some(on_blur) = on_blur {
+            on_blur.try_run(e);
+        }
     });
 
-    let commit = state.commit;
-    let handle_blur = EventHandler::new(move |_: FocusEvent| {
-        set_is_focused.set(false);
-        commit.run(());
+    // Typing changes the text only while it is (the beginning of) a hex color.
+    let text_state = TextFieldState::new(
+        state.input_value,
+        Callback::new(move |text: String| {
+            if state.validate(&text) {
+                state.set_input_value(text);
+            }
+        }),
+    );
+    let UseTextFieldReturn {
+        label_props,
+        input_props: mut text_field_props,
+        description_props,
+        error_message_props,
+        element,
+        is_focused,
+        is_focus_visible,
+        is_invalid,
+        validation_errors,
+        validation_details,
+    } = use_text_field(UseTextFieldInput {
+        id: Some(id.unwrap_or_else(|| use_id("color-field"))),
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation: Some(state.validation),
+        validation_behavior: state.validation_behavior,
+        placeholder,
+        auto_complete: Some("off".to_owned()),
+        auto_correct: Some(false),
+        spell_check: Some(false),
+        auto_focus,
+        has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        on_focus,
+        on_blur: Some(commit_on_blur),
+        on_focus_change,
+        on_key_down,
+        on_key_up,
+        shortcuts: Some(shortcuts),
+        ..UseTextFieldInput::new(text_state)
     });
 
-    // Scroll wheel support.
-    let scroll_disabled = Signal::derive(move || {
-        is_wheel_disabled || disabled.get() || read_only.get() || !is_focused.get()
+    use_form_reset(UseFormResetInput {
+        element,
+        initial_value: state.default_color_value(),
+        on_reset: Callback::new(move |color| state.set_color_value(color)),
     });
-    let scroll_increment = state.increment;
-    let scroll_decrement = state.decrement;
-    let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
-        is_disabled: scroll_disabled,
+
+    let FormattedTextFieldHandlers {
+        on_beforeinput,
+        on_compositionstart,
+        on_compositionend,
+    } = use_formatted_text_field(
+        element,
+        Callback::new(move |text: String| state.validate(&text)),
+        Callback::new(move |text: String| state.set_input_value(text)),
+    );
+
+    // The spin button's keys (arrows, Page Up/Down, Home/End), not its role: the input stays a
+    // text box without value attributes (react-aria).
+    let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
+        value: Signal::derive(move || state.color_value.get().map(|c| f64::from(c.to_hex_int()))),
+        text_value: Signal::derive(move || state.color_value.get().map(|c| format!("#{c:X}"))),
+        min_value: Signal::stored(Some(0.0)),
+        max_value: Signal::stored(Some(f64::from(0xFF_FF_FF_u32))),
+        is_disabled,
+        is_read_only,
+        is_required,
+        on_increment: Some(Callback::new(move |()| state.increment())),
+        on_decrement: Some(Callback::new(move |()| state.decrement())),
+        on_increment_to_max: Some(Callback::new(move |()| state.increment_to_max())),
+        on_decrement_to_min: Some(Callback::new(move |()| state.decrement_to_min())),
+        ..UseSpinButtonInput::default()
+    });
+    let focusable = &mut text_field_props.focusable;
+    focusable.on_keydown = spin.on_keydown.chain(focusable.on_keydown.clone());
+    focusable.on_keyup = spin.on_keyup.chain(focusable.on_keyup.clone());
+    focusable.on_focus = spin.on_focus.chain(focusable.on_focus.clone());
+    focusable.on_blur = spin.on_blur.chain(focusable.on_blur.clone());
+
+    // The scroll wheel steps while the field has focus.
+    let UseFocusWithinReturn {
+        props: focus_within,
+        is_focus_within,
+    } = use_focus_within(UseFocusWithinInput {
+        is_disabled,
+        ..UseFocusWithinInput::default()
+    });
+    let wheel = use_scroll_wheel(UseScrollWheelInput {
+        is_disabled: Signal::derive(move || {
+            is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
+        }),
         on_scroll: Some(Callback::new(move |e: ScrollEvent| {
+            // Mostly horizontal (a trackpad): probably not meant to step.
             if e.delta_y.abs() <= e.delta_x.abs() {
                 return;
             }
             if e.delta_y > 0.0 {
-                scroll_decrement.run(());
+                state.increment();
             } else if e.delta_y < 0.0 {
-                scroll_increment.run(());
+                state.decrement();
             }
         })),
     });
 
-    // Input validation handler.
-    let set_input_value = state.set_input_value;
-    let validate = state.validate;
-    let handle_input = EventHandler::new(move |e: Event| {
-        let target = event_target::<web_sys::HtmlInputElement>(&e);
-        let text = target.value();
-        if validate.run(text.clone()) {
-            set_input_value.run(text);
-        } else {
-            // Revert the input to the last valid value.
-            target.set_value(&state.input_value.get_untracked());
-        }
-    });
-
-    // Keyboard handler with full spinbutton support.
-    let increment = state.increment;
-    let decrement = state.decrement;
-    let increment_to_max = state.increment_to_max;
-    let decrement_to_min = state.decrement_to_min;
-    let handle_keydown = EventHandler::new(move |e: KeyboardEvent| {
-        if disabled.get_untracked() || read_only.get_untracked() {
-            return;
-        }
-        let key = e.key();
-        match key.as_str() {
-            "ArrowUp" => {
-                e.prevent_default();
-                increment.run(());
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                decrement.run(());
-            }
-            "PageUp" => {
-                e.prevent_default();
-                // Increment by page step (16 / 0x10).
-                for _ in 0..HEX_PAGE_STEP {
-                    increment.run(());
-                }
-            }
-            "PageDown" => {
-                e.prevent_default();
-                // Decrement by page step (16 / 0x10).
-                for _ in 0..HEX_PAGE_STEP {
-                    decrement.run(());
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                decrement_to_min.run(());
-            }
-            "End" => {
-                e.prevent_default();
-                increment_to_max.run(());
-            }
-            _ => {}
-        }
-    });
-
     UseColorFieldReturn {
+        label_props,
         input_props: UseColorFieldInputProps {
-            role: AriaRole::Spinbutton,
-            r#type: "text",
-            autocomplete: "off",
-            autocorrect: "off",
-            spellcheck: "false",
-            aria_label,
-            aria_disabled,
-            aria_valuenow,
-            aria_valuemin: f64::from(RGB8::new().to_hex_int()),
-            aria_valuemax: f64::from(RGB8::from_hex_int(0xFF_FF_FF).to_hex_int()),
-            aria_valuetext,
-            on_input: handle_input,
-            on_focus: handle_focus,
-            on_blur: handle_blur,
-            on_keydown: handle_keydown,
-            on_wheel: scroll_wheel.props.on_wheel,
+            text_field: text_field_props,
+            on_beforeinput,
+            on_compositionstart,
+            on_compositionend,
+            on_wheel: wheel.props.on_wheel,
+            on_focusin: focus_within.on_focusin,
+            on_focusout: focus_within.on_focusout,
         },
+        description_props,
+        error_message_props,
+        element,
+        is_focused,
+        is_focus_visible,
+        is_invalid,
+        validation_errors,
+        validation_details,
     }
 }

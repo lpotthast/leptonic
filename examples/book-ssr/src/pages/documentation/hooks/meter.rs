@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{meter_battery::MeterBatteryDemo, meter_disk::MeterDiskDemo};
+use super::demos::meter_disk::MeterDiskDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -10,9 +10,9 @@ pub fn PageUseMeter() -> impl IntoView {
     view! {
         <DocPage title="use_meter">
             <p>
-                "A meter shows a scalar value within a known range, such as disk usage, battery level or a password\u{2019}s "
-                "strength. The "<Code inline=true>"use_meter"</Code>" hook gives an element the "<Code inline=true>"meter"</Code>
-                " role and the value attributes screen readers announce, and computes the percentage you size a fill with."
+                "The "<Code inline=true>"use_meter"</Code>" hook gives an element the "<Code inline=true>"meter"</Code>
+                " role and the value attributes screen readers announce, and computes the percentage you size a fill with. "
+                "See the "<Link href=routes::doc::Meter.materialize()>"Meter overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useMeter"/>
@@ -24,58 +24,66 @@ pub fn PageUseMeter() -> impl IntoView {
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseMeterInput">
-                    <ApiRow name="value" ty="Signal<f64>" default="0.0">"The current value."</ApiRow>
-                    <ApiRow name="min_value" ty="f64" default="0.0">"The lower bound of the range."</ApiRow>
-                    <ApiRow name="max_value" ty="f64" default="100.0">"The upper bound of the range."</ApiRow>
-                    <ApiRow name="label" ty="Option<String>" default="None">
-                        "Whether the meter has a visible label. When set, the meter gets "<Code inline=true>"aria-labelledby"</Code>
-                        " pointing to "<Code inline=true>"label_props.id"</Code>"; the text itself is not used, so render it in your "
-                        "label element."
+                    <ApiRow name="value" ty="Signal<T>" default="0">"The value, clamped to the range. Its number type "<Code inline=true>"T"</Code>" (e.g. "<Code inline=true>"f64"</Code>" or "<Code inline=true>"u64"</Code>") is the meter\u{2019}s."</ApiRow>
+                    <ApiRow name="min_value" ty="Signal<T>" default="0">"The start of the range."</ApiRow>
+                    <ApiRow name="max_value" ty="Signal<T>" default="100">"The end of the range."</ApiRow>
+                    <ApiRow name="format_options" ty="Signal<NumberFormatOptions>" default="percent">
+                        "How the value text is formatted: a percent style formats the percentage, other styles the value."
                     </ApiRow>
-                    <ApiRow name="show_value_label" ty="bool" default="true">
-                        "Currently has no effect: "<Code inline=true>"value_label"</Code>" is always computed."
-                    </ApiRow>
-                    <ApiRow name="format_options" ty="Option<MeterFormatOptions>" default="None">
-                        "How "<Code inline=true>"value_label"</Code>" is formatted, see "<a href="#format-options">"Format Options"</a>
-                        ". "<Code inline=true>"None"</Code>" shows the rounded percentage."
-                    </ApiRow>
+                    <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the formatted value text (e.g. \u{201c}1 of 4\u{201d})."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names it when there is no visible label."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming it."</ApiRow>
+                    <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing it."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
-                <ApiTable kind=ApiKind::Return of="UseMeterReturn">
-                    <ApiRow name="meter_props" ty="UseMeterProps">
-                        "Attributes for the meter element, see "<a href="#aria-attributes">"ARIA Attributes"</a>
-                        ". Spread with "<Code inline=true>"{..meter_props.into_attrs()}"</Code>"."
+                <p>
+                    <Code inline=true>"use_meter"</Code>" returns the "<Code inline=true>"UseProgressBarReturn"</Code>" of "
+                    <Link href=routes::doc::progress_bar::Hook.materialize()>"use_progress_bar"</Link>", with "
+                    <Code inline=true>"role=\"meter\""</Code>" instead of "<Code inline=true>"progressbar"</Code>"."
+                </p>
+                <ApiTable kind=ApiKind::Return of="UseProgressBarReturn">
+                    <ApiRow name="props" ty="UseProgressBarProps">
+                        "Spread on the meter element: "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-valuenow"</Code>", "<Code inline=true>"aria-valuemin"</Code>", "<Code inline=true>"aria-valuemax"</Code>", "
+                        <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
-                    <ApiRow name="label_props" ty="UseMeterLabelProps">"The "<Code inline=true>"id"</Code>" for your label element."</ApiRow>
-                    <ApiRow name="percentage" ty="Signal<f64>">
-                        "The value as a percentage of the range, clamped to 0 to 100, for sizing a fill."
+                    <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                    <ApiRow name="percentage" ty="Signal<Option<f64>>">
+                        "The value in percent of the range (0 to 100), to size a fill with. Always "<Code inline=true>"Some"</Code>
+                        " for a meter: the type is shared with "<Code inline=true>"use_progress_bar"</Code>", whose value can be unknown."
                     </ApiRow>
-                    <ApiRow name="value_label" ty="Signal<String>">
-                        "The formatted value, e.g. \u{201c}45%\u{201d}. Also used as "<Code inline=true>"aria-valuetext"</Code>"."
+                    <ApiRow name="value_text" ty="Signal<Option<String>>">
+                        "The formatted value (or "<Code inline=true>"value_label"</Code>"), also the "<Code inline=true>"aria-valuetext"</Code>
+                        ". Always "<Code inline=true>"Some"</Code>" for a meter."
                     </ApiRow>
-                    <ApiRow name="meter_id" ty="String">"The generated id of the meter."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let UseMeterReturn { meter_props, label_props, percentage, value_label, .. } = use_meter(
-                            UseMeterInput {
-                                value: Signal::derive(|| 72.5),
-                                label: Some("Disk Usage".to_string()),
-                                ..Default::default()
-                            }
-                        );
+                        use leptonic::{
+                            hooks::*,
+                            utils::{css::{computed_pct, computed_size}, style::WidthProperty, styles::Styles},
+                        };
+
+                        let UseProgressBarReturn { props, label_props, percentage, value_text } = use_meter(UseMeterInput {
+                            value: Signal::stored(72.5),
+                            has_label: true.into(),
+                            ..UseMeterInput::default()
+                        });
+                        let fill = Styles::new().add_reactive(move || {
+                            WidthProperty.declare(computed_size(computed_pct(percentage.get().unwrap_or_default())))
+                        });
 
                         view! {
-                            <label id=label_props.id>"Disk Usage"</label>
-                            <span>{move || value_label.get()}</span>
-                            <div {..meter_props.into_attrs()} class="track">
-                                // Size the fill from `percentage`.
-                                <div class="fill"></div>
+                            <span {..label_props.into_attrs()}>"Disk Usage"</span>
+                            <span>{value_text}</span>
+                            <div {..props.into_attrs()} class="track">
+                                <div class="fill" style=fill></div>
                             </div>
                         }
                     "#)}
@@ -83,48 +91,33 @@ pub fn PageUseMeter() -> impl IntoView {
             </Section>
 
             <Section title="Demo">
-                <p>"The fill color changes with the value. Both meters use the hook\u{2019}s "<Code inline=true>"value_label"</Code>" as text:"</p>
+                <p>
+                    "The label and the value text come from the hook; the demo sizes the fill from "
+                    <Code inline=true>"percentage"</Code>" and colors it by how full the disk is:"
+                </p>
 
                 <Demo description="Disk usage meter with buttons to change the value" source=include_str!("demos/meter_disk.rs")>
                     <MeterDiskDemo/>
                 </Demo>
-
-                <Demo description="Battery level meter with charge and discharge buttons" source=include_str!("demos/meter_battery.rs")>
-                    <MeterBatteryDemo/>
-                </Demo>
             </Section>
 
-            <Section title="Meter vs Progress Bar">
-                <DocTable headers=&["Use", "For"]>
-                    <TableRow>
-                        <TableCell><b>"Meter"</b></TableCell>
-                        <TableCell>"A value within a range that is not a task: disk usage, battery level, ratings."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::progress::Hook.materialize()>"Progress bar"</Link></TableCell>
-                        <TableCell>"The completion of a task over time: file uploads, loading."</TableCell>
-                    </TableRow>
-                </DocTable>
-            </Section>
-
-            <Section title="Format Options">
+            <Section title="Value Text">
                 <p>
-                    <Code inline=true>"MeterFormatOptions"</Code>" controls "<Code inline=true>"value_label"</Code>": "
-                    <Code inline=true>"MeterFormatStyle::Percent"</Code>" shows the percentage of the range (\u{201c}72.5%\u{201d}), "
-                    <Code inline=true>"MeterFormatStyle::Decimal"</Code>" shows the value itself (\u{201c}72.5\u{201d}). "
-                    <Code inline=true>"decimals"</Code>" sets the number of decimal places."
+                    <Code inline=true>"format_options"</Code>" decides how "<Code inline=true>"value_text"</Code>
+                    " (and with it "<Code inline=true>"aria-valuetext"</Code>") reads: the default percent style shows the "
+                    "percentage of the range (\u{201c}45%\u{201d}), any other style the value itself, e.g. with a unit. "
+                    "For text no number format can express, set "<Code inline=true>"value_label"</Code>"."
                 </p>
 
                 <Code language=Language::Rust>
-                    {indoc!(r"
+                    {indoc!(r#"
                         UseMeterInput {
-                            format_options: Some(MeterFormatOptions {
-                                style: MeterFormatStyle::Percent, // or Decimal
-                                decimals: 1,
-                            }),
-                            ..Default::default()
+                            value: Signal::stored(3),
+                            max_value: Signal::stored(4),
+                            value_label: "3 of 4 GB".into(),
+                            ..UseMeterInput::default()
                         }
-                    ")}
+                    "#)}
                 </Code>
             </Section>
 
@@ -135,16 +128,21 @@ pub fn PageUseMeter() -> impl IntoView {
                     <li><Code inline=true>"role=\"meter\""</Code></li>
                     <li><Code inline=true>"aria-valuenow"</Code>" \u{2014} the current value"</li>
                     <li><Code inline=true>"aria-valuemin"</Code>" / "<Code inline=true>"aria-valuemax"</Code>" \u{2014} the range"</li>
-                    <li><Code inline=true>"aria-valuetext"</Code>" \u{2014} "<Code inline=true>"value_label"</Code></li>
-                    <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} the label, if "<Code inline=true>"label"</Code>" is set"</li>
+                    <li><Code inline=true>"aria-valuetext"</Code>" \u{2014} "<Code inline=true>"value_text"</Code></li>
+                    <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} the label, with "<Code inline=true>"has_label"</Code></li>
                 </ul>
 
-                <p>"Without a "<Code inline=true>"label"</Code>", give the element an "<Code inline=true>"aria-label"</Code>" yourself."</p>
+                <p>
+                    "Without a visible label, name the meter with "<Code inline=true>"aria_label"</Code>" or "
+                    <Code inline=true>"aria_labelledby"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::DataDisplay.materialize()>"Data Display"</Link></li>
-                <li><Link href=routes::doc::Progress.materialize()>"Progress"</Link></li>
+                <li><Link href=routes::doc::Meter.materialize()>"Meter overview"</Link></li>
+                <li><Link href=routes::doc::meter::Atom.materialize()>"Meter Atoms"</Link></li>
+                <li><Link href=routes::doc::meter::Component.materialize()>"Meter Component"</Link></li>
+                <li><Link href=routes::doc::progress_bar::Hook.materialize()>"use_progress_bar"</Link></li>
             </SeeAlso>
         </DocPage>
     }

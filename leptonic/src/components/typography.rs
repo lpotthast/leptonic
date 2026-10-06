@@ -236,7 +236,7 @@ pub fn Code(
                 variant=ButtonVariant::Flat
                 on_press=move |_| {
                     let text = code_text.get_value();
-                    copy_to_clipboard(text.as_str(), on_success, on_err);
+                    copy_to_clipboard(text.to_string(), on_success, on_err);
                 }
             >
                 <Icon icon=icondata::VsCopy />
@@ -282,29 +282,17 @@ pub fn Code(
 }
 
 #[cfg(feature = "clipboard")]
-fn copy_to_clipboard(text: &str, on_success: Callback<(), ()>, on_err: Callback<(), ()>) {
-    match leptos_use::use_window().navigator() {
-        Some(navigator) => {
-            let promise = navigator.clipboard().write_text(text);
-            let future = wasm_bindgen_futures::JsFuture::from(promise);
-            wasm_bindgen_futures::spawn_local(async move {
-                match future.await {
-                    Ok(_result) => {
-                        on_success.run(());
-                    }
-                    Err(_err) => {
-                        on_err.run(());
-                    }
-                }
-            });
+fn copy_to_clipboard(text: String, on_success: Callback<(), ()>, on_err: Callback<(), ()>) {
+    leptos::task::spawn_local(async move {
+        match crate::utils::clipboard::write_text(&text).await {
+            Ok(()) => on_success.run(()),
+            Err(_) => on_err.run(()),
         }
-        None => {
-            on_err.run(());
-        }
-    }
+    });
 }
 
 #[cfg(not(feature = "clipboard"))]
-fn copy_to_clipboard(_text: &str, _on_success: Callback<()>, _on_err: Callback<()>) {
+#[allow(clippy::needless_pass_by_value)]
+fn copy_to_clipboard(_text: String, _on_success: Callback<()>, _on_err: Callback<()>) {
     tracing::warn!("Clipboard related functionality requires leptonic's 'clipboard' feature.");
 }

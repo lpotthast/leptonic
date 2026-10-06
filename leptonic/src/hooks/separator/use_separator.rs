@@ -1,5 +1,8 @@
-// Upstream: react-aria/src/separator/useSeparator.ts @ 6f664fe911
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/separator/useSeparator.ts @ 99e6102368
+use leptos::{
+    attr::{self, Attr},
+    prelude::*,
+};
 
 use crate::{
     hooks::IntoAttrs,
@@ -9,39 +12,55 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/separator/useSeparator.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - `element_type` is an enum (`SeparatorElementType`) instead of a tag name string; it defaults
+//   to `Hr` (react-aria: no element type, which behaves like any non-`hr` element).
+// - Of the DOM props react-aria passes through (`filterDOMProps` with labelable props), only `id`,
+//   `aria-label` and `aria-labelledby` are offered.
 //
+// =============================================================================
 
 /// The element type for a separator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SeparatorElementType {
-    /// An <hr> element.
+    /// An `<hr>` element: a separator by itself (horizontal).
     #[default]
     Hr,
-    /// A <div> element.
+    /// A `<div>` element, which gets `role="separator"` (e.g. vertical separators, separators in
+    /// menus).
     Div,
-    /// A <span> element.
+    /// A `<span>` element, which gets `role="separator"`.
     Span,
 }
 
 /// Input parameters for the `use_separator` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UseSeparatorInput {
-    /// The orientation of the separator.
+    /// The orientation of the separator. Default: horizontal.
     pub orientation: Orientation,
-
-    /// The element type.
+    /// The element the separator is rendered as.
     pub element_type: SeparatorElementType,
+    /// The element's id.
+    pub id: Option<String>,
+    /// Names the separator.
+    pub aria_label: MaybeProp<String>,
+    /// The ids of the elements naming the separator.
+    pub aria_labelledby: Option<String>,
 }
 
 impl Default for UseSeparatorInput {
+    /// A horizontal `<hr>` separator.
     fn default() -> Self {
         Self {
             orientation: Orientation::Horizontal,
             element_type: SeparatorElementType::Hr,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
         }
     }
 }
@@ -49,14 +68,17 @@ impl Default for UseSeparatorInput {
 /// The return value of the `use_separator` hook.
 pub struct UseSeparatorReturn {
     /// Props for the separator element.
-    pub separator_props: UseSeparatorProps,
+    pub props: UseSeparatorProps,
 }
 
-/// Props from `use_separator` that can be extracted and merged programmatically.
+/// Props for the separator element.
 #[derive(Debug)]
 pub struct UseSeparatorProps {
+    pub id: Option<String>,
     pub role: Option<AriaRole>,
     pub aria_orientation: Option<AriaOrientation>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
 }
 
 impl IntoAttrs for UseSeparatorProps {
@@ -64,54 +86,97 @@ impl IntoAttrs for UseSeparatorProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
+            Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
             Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
         )
     }
 }
 
 /// Attributes for the separator element.
 pub type UseSeparatorAttrs = (
+    Attr<attr::Id, Option<String>>,
     Attr<attr::Role, Option<AriaRole>>,
     Attr<attr::AriaOrientation, Option<AriaOrientation>>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
 );
 
-/// Provides the behavior and accessibility for a separator.
+/// Provides the accessibility of a separator, which divides content visually and semantically.
 ///
-/// A separator divides content visually and semantically.
+/// An `<hr>` is a horizontal separator by itself; other elements get `role="separator"` and, when
+/// vertical, `aria-orientation="vertical"` (horizontal is the default orientation).
 ///
 /// # Example
 ///
 /// ```ignore
-/// let separator = use_separator(UseSeparatorInput {
-///     orientation: Orientation::Horizontal,
-///     ..Default::default()
-/// });
+/// let separator = use_separator(UseSeparatorInput::default());
 ///
-/// view! {
-///     <hr {..separator.separator_props} />
-/// }
+/// view! { <hr {..separator.props.into_attrs()} /> }
 /// ```
 pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     let UseSeparatorInput {
         orientation,
         element_type,
+        id,
+        aria_label,
+        aria_labelledby,
     } = input;
 
-    // <hr> elements don't need role or aria-orientation
-    // Other elements need role="separator"
+    // Horizontal is the default `aria-orientation`; only vertical needs to be stated.
+    let aria_orientation =
+        (orientation == Orientation::Vertical).then_some(AriaOrientation::Vertical);
+    // An `<hr>` implicitly has the separator role and a horizontal orientation.
     let (role, aria_orientation) = match element_type {
         SeparatorElementType::Hr => (None, None),
-        SeparatorElementType::Div | SeparatorElementType::Span => (
-            Some(AriaRole::Separator),
-            Some(AriaOrientation::from(orientation)),
-        ),
+        SeparatorElementType::Div | SeparatorElementType::Span => {
+            (Some(AriaRole::Separator), aria_orientation)
+        }
     };
 
     UseSeparatorReturn {
-        separator_props: UseSeparatorProps {
+        props: UseSeparatorProps {
+            id,
             role,
             aria_orientation,
+            aria_label,
+            aria_labelledby,
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    fn props(orientation: Orientation, element_type: SeparatorElementType) -> UseSeparatorProps {
+        use_separator(UseSeparatorInput {
+            orientation,
+            element_type,
+            ..UseSeparatorInput::default()
+        })
+        .props
+    }
+
+    #[test]
+    fn hr_needs_no_role() {
+        let props = props(Orientation::Horizontal, SeparatorElementType::Hr);
+        assert_that!(props.role).is_none();
+        assert_that!(props.aria_orientation).is_none();
+    }
+
+    #[test]
+    fn other_elements_get_the_role_and_only_a_vertical_orientation() {
+        let horizontal = props(Orientation::Horizontal, SeparatorElementType::Div);
+        assert_that!(horizontal.role).is_equal_to(Some(AriaRole::Separator));
+        assert_that!(horizontal.aria_orientation).is_none();
+
+        let vertical = props(Orientation::Vertical, SeparatorElementType::Div);
+        assert_that!(vertical.role).is_equal_to(Some(AriaRole::Separator));
+        assert_that!(vertical.aria_orientation).is_equal_to(Some(AriaOrientation::Vertical));
     }
 }

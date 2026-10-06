@@ -1,55 +1,61 @@
 use leptonic::{
-    components::prelude::{Button, Checkbox},
+    atoms::prelude::{Label, Meter, MeterFill, MeterValueText},
+    components::prelude::Button,
     utils::{
         classes::Classes,
-        css::{CssColor, NonNegativeLengthPercentage, Size, css_custom_property, pct, rgb},
-        style::WidthProperty,
+        css::{CssColor, CssColorName, css_custom_property, var},
+        style::BackgroundColorProperty,
         styles::Styles,
     },
 };
 use leptos::prelude::*;
 
-// A typed custom property: only `CssColor` values can be assigned to it.
-// `.demo-meter-fill` reads it via `var(--demo-meter-fill)`.
-css_custom_property!(FILL_COLOR: CssColor = "--demo-meter-fill");
+// The theme's status colors, as typed custom properties: only `CssColor` values fit them.
+css_custom_property!(SUCCESS_COLOR: CssColor = "--success-color");
+css_custom_property!(WARN_COLOR: CssColor = "--warn-color");
 
 #[component]
 pub fn ClassesAndStylesMeterDemo() -> impl IntoView {
-    let (progress, set_progress) = signal(40_u8);
-    let (warm, set_warm) = signal(false);
+    // Used storage in GB, of 100 GB.
+    let (used, set_used) = signal(40_u32);
+    let is_almost_full = move || used.get() >= 80;
 
-    // Static look lives in CSS; the `complete` class follows the progress reactively.
-    let fill_classes =
-        Classes::from("demo-meter-fill").add_reactive("complete", move || progress.get() == 100);
+    // The look lives in CSS; a class follows the state reactively.
+    let fill_classes = Classes::from("demo-storage-meter-fill").add_reactive("demo-storage-meter-fill-high", is_almost_full);
 
-    // Only the genuinely dynamic values are inline styles, each a typed declaration.
-    // `progress` is always within 0..=100, so the panicking `pct` and `new` are safe here.
-    let fill_styles = Styles::builder()
-        .with_reactive(move || {
-            WidthProperty.declare(Size::from(NonNegativeLengthPercentage::new(pct(
-                progress.get()
-            ))))
+    // A typed, reactive declaration: the fill color follows the state, too.
+    let fill_styles = Styles::new().add_reactive(move || {
+        BackgroundColorProperty.declare(if is_almost_full() {
+            var(&WARN_COLOR, CssColor::Named(CssColorName::Olive))
+        } else {
+            var(&SUCCESS_COLOR, CssColor::Named(CssColorName::Green))
         })
-        .with_reactive(move || {
-            FILL_COLOR.declare(if warm.get() {
-                rgb(230, 105, 86)
-            } else {
-                rgb(74, 144, 217)
-            })
-        })
-        .build();
+    });
 
     view! {
-        <div class="demo-meter">
-            <div class=fill_classes style=fill_styles></div>
-        </div>
+        <Meter value=used classes="demo-storage-meter">
+            <div class="demo-storage-meter-header">
+                <Label>"Storage"</Label>
+                <MeterValueText/>
+            </div>
+            <div class="demo-storage-meter-track">
+                <MeterFill classes=fill_classes styles=fill_styles/>
+            </div>
+        </Meter>
 
-        <div class="demo-flex-center-row">
-            <Button on_press=move |_| set_progress.update(|p| *p = p.saturating_sub(10))>"-10%"</Button>
-            <Button on_press=move |_| set_progress.update(|p| *p = (*p + 10).min(100))>"+10%"</Button>
-            <span>{move || format!("{}%", progress.get())}</span>
+        <div class="demo-controls">
+            <Button
+                on_press=move |_| set_used.update(|used| *used = used.saturating_sub(10))
+                is_disabled=Signal::derive(move || used.get() == 0)
+            >
+                "Free 10 GB"
+            </Button>
+            <Button
+                on_press=move |_| set_used.update(|used| *used = (*used + 10).min(100))
+                is_disabled=Signal::derive(move || used.get() == 100)
+            >
+                "Use 10 GB"
+            </Button>
         </div>
-
-        <Checkbox state=(warm, set_warm)>"Warm accent color"</Checkbox>
     }
 }

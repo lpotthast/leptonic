@@ -1,0 +1,54 @@
+// Overlay Behavior: demos of use_overlay, use_overlay_trigger, use_overlay_position, use_close_on_scroll,
+// use_prevent_scroll and DismissButton.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// -- Positioning --
+
+.demo-positioning-stage  { display: flex; justify-content: center; align-items: center; width: 100%; height: 20em; }
+
+// A button built with `use_button`, which renders no data attributes: plain CSS states.
+.demo-positioning-target {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 7em;
+    height: 7em;
+    padding: var(--book-space-s);
+    border: 2px solid var(--brand-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Overlays --
+
+// Overlay panel rendered in the page flow, below its trigger.
+.demo-overlay-inline-panel {
+    max-width: 300px;
+    margin-top: var(--book-space-s);
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+// -- Close on scroll --
+
+// A scrollable list holding the overlay's trigger.
+.demo-close-on-scroll-list {
+    max-width: 300px;
+    max-height: 9em;
+    overflow-y: auto;
+    padding: 0 var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}

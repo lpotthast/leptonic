@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{PressEvent, UsePressInput, UsePressReturn, use_press},
-    utils::{classes::Classes, styles::Styles},
+    utils::{aria::AriaSort, classes::Classes, styles::Styles},
 };
 
 #[component]
@@ -74,7 +74,13 @@ pub fn TableRow(
 #[component]
 pub fn TableHeaderCell(
     #[prop(optional)] min_width: Option<bool>,
-    #[prop(optional, into)] on_press: Option<Callback<PressEvent>>,
+    /// Makes the header pressable (e.g. to sort by its column): it becomes focusable and reacts to
+    /// Enter and Space too.
+    #[prop(optional, into)]
+    on_press: Option<Callback<PressEvent>>,
+    /// The column's sort order, for assistive technology (`aria-sort`).
+    #[prop(optional, into)]
+    aria_sort: MaybeProp<AriaSort>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -82,37 +88,23 @@ pub fn TableHeaderCell(
     let UsePressReturn {
         props: press_props, ..
     } = use_press(UsePressInput {
-        is_disabled: false.into(),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(move |e| {
+        on_press: Some(Callback::new(move |e| {
             if let Some(on_press) = on_press {
                 on_press.run(e);
             }
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-        long_press_disabled: Signal::stored(false),
+        })),
+        ..UsePressInput::default()
     });
 
     let (press_attrs, press_styles) = press_props.into_parts();
     let styles = press_styles.merge(styles);
+    let tabindex = on_press.is_some().then_some(0);
 
     view! {
         <th
             {..press_attrs}
+            tabindex=tabindex
+            aria-sort=move || aria_sort.get()
             class=classes.add("leptonic-table-header-cell").add_reactive("min-width", min_width.unwrap_or(true))
             style=styles
         >

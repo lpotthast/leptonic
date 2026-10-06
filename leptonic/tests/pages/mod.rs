@@ -58,11 +58,25 @@ pub trait BaseActions {
             .detail(path)
             .await
             .context_with(|| format!("failed to go to {url}"))?;
-        self.wait_for_selector("body[data-hydrated]")
+        if let Err(error) = self
+            .wait_for_selector("body[data-hydrated]")
             .step("wait_for_hydration")
             .detail(path)
             .await
-            .context_with(|| format!("{url} did not finish hydrating"))?;
+        {
+            // Usually a panic while hydrating: report what the page caught.
+            let page_errors = self
+                .driver()
+                .execute("return window.__pageErrors || [];", vec![])
+                .await
+                .map(|errors| errors.json().to_string())
+                .unwrap_or_default();
+            return Err(error
+                .context(format!(
+                    "{url} did not finish hydrating; page errors: {page_errors}"
+                ))
+                .into_dynamic());
+        }
         Ok(())
     }
 
@@ -278,10 +292,16 @@ pub trait BaseActions {
         .await
     }
 
-    /// The element with ARIA `role` whose visible text is `text`.
+    /// The element with ARIA `role` (explicit, or implicit for links and buttons) whose visible
+    /// text is `text`.
     async fn by_role_and_text(&self, role: &str, text: &str) -> Result<WebElement, Report> {
         async {
-            let xpath = format!("//*[@role='{role}'][normalize-space(.)='{text}']");
+            let has_role = match role {
+                "button" => "(self::button or @role='button')".to_owned(),
+                "link" => "((self::a and @href) or @role='link')".to_owned(),
+                role => format!("@role='{role}'"),
+            };
+            let xpath = format!("//*[{has_role}][normalize-space(.)='{text}']");
             Ok(self
                 .driver()
                 .find(By::XPath(xpath))

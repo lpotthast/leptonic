@@ -13,7 +13,8 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                 "The "<Code inline=true>"use_focus_within"</Code>" hook tracks whether focus is anywhere inside an element. "
                 "Unlike "<Link href=routes::doc::focus::UseFocus.materialize()><Code inline=true>"use_focus"</Code></Link>
                 ", which only reacts to the element itself, it fires when focus enters or leaves the whole element tree. "
-                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>
+                " to compare it with the other focus building blocks."
             </p>
 
             <ReactAria hook="useFocusWithin"/>
@@ -26,7 +27,9 @@ pub fn PageUseFocusWithin() -> impl IntoView {
 
                 <ApiTable kind=ApiKind::Input of="UseFocusWithinInput">
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                        "Ignores focus events while true. Turning it on while focus is inside ends the focus-within state."
+                        "Ignores focus events while true. Turning it on while focus is inside ends the focus-within state: "
+                        <Code inline=true>"on_focus_within_change"</Code>" is called with "<Code inline=true>"false"</Code>
+                        ", "<Code inline=true>"on_blur_within"</Code>" is not called."
                     </ApiRow>
                     <ApiRow name="on_focus_within" ty="Option<Callback<FocusWithinEvent>>" default="None">
                         "Called when focus enters the element or one of its descendants."
@@ -57,30 +60,46 @@ pub fn PageUseFocusWithin() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "Use "<Code inline=true>"is_focus_within"</Code>" for conditional styling, for example to highlight a form group "
-                    "while one of its fields is focused:"
+                    "Use "<Code inline=true>"is_focus_within"</Code>" for conditional styling, for example to highlight a form "
+                    "group while one of its fields is focused. The hook sets no attribute itself, so expose the state as one:"
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+
                         let UseFocusWithinReturn { props, is_focus_within } =
                             use_focus_within(UseFocusWithinInput::default());
 
                         view! {
-                            <div {..props.into_attrs()} class:field-group-active=is_focus_within>
-                                <input type="text"/>
-                                <button>"Submit"</button>
+                            <div
+                                class="field-group"
+                                data-focus-within=move || is_focus_within.get().then_some("true")
+                                {..props.into_attrs()}
+                            >
+                                <input aria-label="Search"/>
+                                <button>"Search"</button>
                             </div>
                         }
                     "#)}
                 </Code>
+
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .field-group { border: 2px solid var(--border); }
+                        .field-group[data-focus-within] { border-color: var(--accent); }
+                    ")}
+                </Code>
             </Section>
 
             <Section title="Demo">
-                <p>"Click any element inside the container, then tab between them. The container stays focused-within."</p>
+                <p>
+                    "Click into the field, then tab between the field and the buttons: focus stays within the group, so "
+                    "neither callback fires. tab out of the group to end the focus-within state."
+                </p>
 
                 <Demo
-                    description="Focus-within state and event counts of a container with an input and two buttons"
+                    description="Focus-within state and enter and leave counts of a group with a field and two buttons"
                     source=include_str!("demos/focus_within.rs")
                 >
                     <FocusWithinDemo/>
@@ -109,7 +128,7 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocus.materialize()>"use_focus"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>" (its "<Code inline=true>"within"</Code>" mode)"</li>
             </SeeAlso>
         </DocPage>
     }

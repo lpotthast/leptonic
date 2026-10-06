@@ -7,7 +7,7 @@ use leptonic::{
         text_field::TextField,
     },
     components::prelude::Checkbox,
-    hooks::{TextFieldState, ValidationBehavior},
+    hooks::ValidationBehavior,
 };
 use leptos::prelude::*;
 
@@ -22,7 +22,7 @@ pub fn TextFieldAtomDemo() -> impl IntoView {
     view! {
         <div class="demo-form">
             <TextField
-                state=TextFieldState::from(name)
+                value=name set_value=name
                 is_required=true
                 validate=Arc::new(|name: &String| {
                     if name.trim().is_empty() { Err(vec!["Enter a display name.".to_owned()]) } else { Ok(()) }
@@ -33,29 +33,34 @@ pub fn TextFieldAtomDemo() -> impl IntoView {
                 classes="demo-field"
             >
                 <Label classes="demo-field-label">"Display name"</Label>
-                <Input classes=["demo-input", "demo-text-input", "demo-atom-input"]/>
+                <Input classes="demo-atom-input"/>
                 <FieldError classes="demo-field-error"/>
             </TextField>
 
             <TextField
-                state=TextFieldState::from(bio)
+                value=bio set_value=bio
                 max_length=BIO_MAX
                 placeholder="A few words about you"
                 is_disabled=disabled
                 classes="demo-field"
             >
                 <Label classes="demo-field-label">"Bio"</Label>
-                <TextArea classes=["demo-input", "demo-text-input", "demo-atom-input"]/>
+                <TextArea classes="demo-atom-input"/>
                 <Description classes="demo-field-description">
                     {move || format!("{} of {BIO_MAX} characters", bio.with(|bio| bio.chars().count()))}
                 </Description>
             </TextField>
         </div>
 
-        <p class="demo-status">{move || format!("Hello, {}!", name.get())}</p>
+        <p class="demo-status">
+            {move || name.with(|name| {
+                let name = name.trim();
+                if name.is_empty() { "Hello, stranger!".to_owned() } else { format!("Hello, {name}!") }
+            })}
+        </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

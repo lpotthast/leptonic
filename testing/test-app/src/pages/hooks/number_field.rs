@@ -13,7 +13,7 @@ pub fn PageHookNumberField() -> impl IntoView {
         ..UseNumberFieldStateInput::default()
     });
     let field = use_number_field(UseNumberFieldInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseNumberFieldInput::new(state)
     });
     let (dec_attrs, dec_styles) = use_button(field.decrement_button).props.into_parts();

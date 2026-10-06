@@ -31,6 +31,20 @@ pub fn use_id(prefix: &str) -> String {
     }
 }
 
+/// The id of the element captured by `element`, once rendered: its own, else `generated`, which it
+/// gets now. For components labelling something by an element they don't render (a trigger
+/// button): an id rendered by the component would clash with the element's own `attr:id`.
+pub fn ensure_element_id(
+    element: &leptos_element_capture::CapturedElement,
+    generated: &str,
+) -> Option<String> {
+    let el = element.get()?;
+    if el.id().is_empty() {
+        el.set_id(generated);
+    }
+    Some(el.id())
+}
+
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;

@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/numberfield/useNumberField.ts @ 99e6102368
-// Upstream: react-aria/src/textfield/useFormattedTextField.ts @ 99e6102368
 use leptos::{
     attr::{self, Attr},
     ev::{self, On, SharedEventCallback},
@@ -12,6 +11,7 @@ use web_sys::{ClipboardEvent, CompositionEvent, FocusEvent, InputEvent, WheelEve
 use super::{
     use_form_reset::{UseFormResetInput, use_form_reset},
     use_form_validation_state::{ValidationBehavior, ValidationResult, ValidityStateSnapshot},
+    use_formatted_text_field::{FormattedTextFieldHandlers, use_formatted_text_field},
     use_label::UseLabelProps,
     use_number_field_state::{CommitBehavior, NumberFieldState},
     use_text_field::{
@@ -56,7 +56,11 @@ use crate::{
 //   props (project convention).
 // - `name`/`form` belong to a hidden input holding the value, which the caller renders (as
 //   react-aria-components does); the hook only sets up the visible, formatted input.
-// - `useFormattedTextField` is part of this hook (no other field uses it yet).
+// - `useFormattedTextField` is `use_formatted_text_field`, whose handlers this hook merges.
+//
+// ## DIFFERENT BEHAVIOR
+// - The stepper buttons always have an id (react-aria: only while labelled by other elements):
+//   their labelling follows the field's label, which may appear later, and ids are static.
 //
 // ## OMITTED FEATURES
 // - Localized strings: "Increase"/"Decrease"/"Number field" are English until leptonic has a
@@ -72,7 +76,7 @@ pub struct UseNumberFieldInput<T: NumberValue> {
     /// The input's id. Generated when `None`.
     pub id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -97,7 +101,7 @@ impl<T: NumberValue> UseNumberFieldInput<T> {
         Self {
             state,
             id: None,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -270,7 +274,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             announce_assertive(new);
         }
         if let Some(on_blur) = on_blur {
-            on_blur.run(e);
+            on_blur.try_run(e);
         }
     });
 
@@ -425,60 +429,15 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         })),
     });
 
-    // Rejects edits that would make the text invalid, before the browser applies them.
-    let on_beforeinput = EventHandler::new(move |e: InputEvent| {
-        let Some(input) = element
-            .get_untracked()
-            .and_then(|el| el.dyn_ref::<web_sys::HtmlInputElement>().cloned())
-        else {
-            return;
-        };
-        let next = next_input_value(&input, &e.input_type(), e.data());
-        let allowed = match next {
-            NextValue::Allowed => true,
-            NextValue::Text(text) => state.validate(text),
-            NextValue::Unknown => false,
-        };
-        if !allowed {
-            e.prevent_default();
-        }
-    });
-
-    // Composed text (IMEs, autocorrect) can't be rejected while composing: restore the text from
-    // before the composition if the result is invalid.
-    let composition_start = StoredValue::new(None::<(String, Option<u32>, Option<u32>)>);
-    let on_compositionstart = EventHandler::new(move |_: CompositionEvent| {
-        if let Some(input) = element
-            .get_untracked()
-            .and_then(|el| el.dyn_ref::<web_sys::HtmlInputElement>().cloned())
-        {
-            composition_start.set_value(Some((
-                input.value(),
-                input.selection_start().ok().flatten(),
-                input.selection_end().ok().flatten(),
-            )));
-        }
-    });
-    let on_compositionend = EventHandler::new(move |_: CompositionEvent| {
-        let Some(input) = element
-            .get_untracked()
-            .and_then(|el| el.dyn_ref::<web_sys::HtmlInputElement>().cloned())
-        else {
-            return;
-        };
-        if state.validate(input.value()) {
-            return;
-        }
-        if let Some((value, start, end)) = composition_start.get_value() {
-            input.set_value(&value);
-            let _ = input.set_selection_range_with_direction(
-                start.unwrap_or(0),
-                end.unwrap_or(0),
-                "none",
-            );
-            state.set_input_value(value);
-        }
-    });
+    let FormattedTextFieldHandlers {
+        on_beforeinput,
+        on_compositionstart,
+        on_compositionend,
+    } = use_formatted_text_field(
+        element,
+        Callback::new(move |text: String| state.validate(text)),
+        Callback::new(move |text: String| state.set_input_value(text)),
+    );
 
     // Pasting over the whole text commits the pasted text right away, so it shows formatted.
     let on_paste = EventHandler::new(move |e: ClipboardEvent| {
@@ -503,15 +462,22 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
 
     // Stepper buttons: named "Increase <field label>", or "Increase" plus the labelling elements.
     let field_label = aria_label;
-    let labelled_by = (field_label.get_untracked().is_none())
-        .then(|| {
-            if has_label {
-                Some(label_props.id.clone())
-            } else {
-                aria_labelledby
-            }
+    let labelled_by = {
+        let label_id = label_props.id.clone();
+        Signal::derive(move || {
+            field_label
+                .get()
+                .is_none()
+                .then(|| {
+                    if has_label.get() {
+                        Some(label_id.clone())
+                    } else {
+                        aria_labelledby.clone()
+                    }
+                })
+                .flatten()
         })
-        .flatten();
+    };
     // Keeps focus in the input while it has it (the virtual keyboard stays); a mouse moves focus
     // to the input, touch and screen readers focus the button.
     let on_button_press_start = Callback::new(move |e: PressEvent| {
@@ -535,9 +501,10 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
                    custom_label: MaybeProp<String>,
                    can_step: Signal<bool>| {
         let button_id = use_id("number-field-stepper");
-        let uses_labelled_by = labelled_by.is_some() && custom_label.get_untracked().is_none();
+        // The id is always rendered (it may be needed once a label appears).
+        let own_id = button_id.clone();
         UseButtonInput {
-            id: uses_labelled_by.then(|| button_id.clone().into()),
+            id: Some(own_id.into()),
             aria_label: MaybeProp::derive(move || {
                 custom_label.get().or_else(|| {
                     Some(match field_label.get() {
@@ -546,8 +513,14 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
                     })
                 })
             }),
-            aria_labelledby: uses_labelled_by
-                .then(|| format!("{button_id} {}", labelled_by.clone().unwrap_or_default()).into()),
+            aria_labelledby: Signal::derive(move || {
+                if custom_label.get().is_some() {
+                    return None;
+                }
+                labelled_by
+                    .get()
+                    .map(|labelled_by| format!("{button_id} {labelled_by}"))
+            }),
             aria_controls: Signal::stored(Some(input_id.clone())),
             exclude_from_tab_order: Signal::stored(true),
             prevent_focus_on_press: true,
@@ -602,56 +575,6 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         validation_errors,
         validation_details,
     }
-}
-
-/// What a `beforeinput` would make of the input's text.
-enum NextValue {
-    /// Always allowed (undo/redo, line breaks submitting the form).
-    Allowed,
-    Text(String),
-    /// Not computable: rejected.
-    Unknown,
-}
-
-/// The input's text after the edit `input_type` (with `data`) would apply (react-aria's
-/// `useFormattedTextField`). Selections are UTF-16 offsets.
-fn next_input_value(
-    input: &web_sys::HtmlInputElement,
-    input_type: &str,
-    data: Option<String>,
-) -> NextValue {
-    let value: Vec<u16> = input.value().encode_utf16().collect();
-    let clamp = |offset: Option<u32>| {
-        usize::try_from(offset.unwrap_or(0))
-            .unwrap_or(usize::MAX)
-            .min(value.len())
-    };
-    let start = clamp(input.selection_start().ok().flatten());
-    let end = clamp(input.selection_end().ok().flatten()).max(start);
-    let text = |parts: &[&[u16]]| String::from_utf16_lossy(&parts.concat());
-    NextValue::Text(match input_type {
-        "historyUndo" | "historyRedo" | "insertLineBreak" => return NextValue::Allowed,
-        "deleteContentForward" if start == end => {
-            text(&[&value[..start], &value[(end + 1).min(value.len())..]])
-        }
-        "deleteContentBackward" if start == end => {
-            text(&[&value[..start.saturating_sub(1)], &value[start..]])
-        }
-        // Deleting the selection.
-        "deleteContent"
-        | "deleteByCut"
-        | "deleteByDrag"
-        | "deleteContentForward"
-        | "deleteContentBackward" => text(&[&value[..start], &value[end..]]),
-        "deleteSoftLineBackward" | "deleteHardLineBackward" => text(&[&value[start..]]),
-        _ => match data {
-            Some(data) => {
-                let data: Vec<u16> = data.encode_utf16().collect();
-                text(&[&value[..start], &data, &value[end..]])
-            }
-            None => return NextValue::Unknown,
-        },
-    })
 }
 
 /// With `CommitBehavior::Validate`: validates the range and step as a native number input

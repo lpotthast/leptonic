@@ -1,8 +1,10 @@
-// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{html, prelude::*};
-use leptos_use::{use_document, use_event_listener};
+use leptos_use::{
+    UseEventListenerOptions, use_document, use_event_listener, use_event_listener_with_options,
+};
 use wasm_bindgen::JsCast;
 
 use crate::{
@@ -10,7 +12,10 @@ use crate::{
     utils::{
         classes::Classes,
         focus_scope_tree::{self, FocusScopeParentContext},
+        focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
+        key::{KeyboardEventKey, KeyboardKey},
         scoped_context::scoped_view,
+        shadow_tree_walker::ShadowTreeWalker,
         styles::Styles,
     },
 };
@@ -28,6 +33,19 @@ use crate::{
 //
 // - Custom event name `leptonic-focus-scope-restore` instead of
 //   `react-aria-focus-scope-restore`
+//
+// - Scopes register in the component body (react-aria: a layout effect), which
+//   likewise registers all scopes mounting together before any auto-focuses.
+//
+// - Restoring skips a node to restore that is the body (focus was already lost
+//   when the scope mounted: Leptos may remove the element that opened the scope
+//   before it creates the scope, where React captures it during render) and
+//   falls back to the first element of the nearest ancestor scope.
+//
+// - Cleanup order: Leptos cleans up child owners before their parent's
+//   `on_cleanup` (React runs a parent's layout cleanups first). A scope inside
+//   another one unregisters first, so the outer scope decides about restoring
+//   with the inner one already gone from the tree.
 
 /// Custom event dispatched before a `FocusScope` restores focus.
 ///
@@ -84,9 +102,10 @@ pub struct FocusScopeContext {
 #[allow(clippy::too_many_lines)]
 #[component]
 pub fn FocusScope(
-    /// Whether to contain focus within the scope.
-    #[prop(default = false)]
-    contain: bool,
+    /// Whether to contain focus within the scope. May change while mounted (a non-modal popover
+    /// starts containing focus once a dialog is inside).
+    #[prop(into, optional)]
+    contain: Signal<bool>,
 
     /// Whether to restore focus when the scope unmounts.
     #[prop(default = false)]
@@ -139,24 +158,27 @@ pub fn FocusScope(
             previously_focused.set_value(document.active_element());
         }
 
-    // Register in the scope tree once the DOM element is available.
-    // Also store node_to_restore in the tree for stacked overlay propagation.
+    // Register in the scope tree right away (the element is read when needed), like react-aria's
+    // layout effect: scopes mounting together all register before any of them auto-focuses, so
+    // only a scope mounting later (while another one is active) is re-parented onto the active
+    // one. Also store node_to_restore in the tree for stacked overlay propagation.
+    focus_scope_tree::register_scope(
+        scope_id,
+        parent_id,
+        move || {
+            scope_ref
+                .try_get_untracked()
+                .flatten()
+                .map(|el| -> web_sys::Element { el.into() })
+        },
+        contain.get_untracked(),
+        restore_focus,
+    );
+    if restore_focus {
+        focus_scope_tree::set_node_to_restore(scope_id, previously_focused.get_value());
+    }
     Effect::new(move |_| {
         if scope_ref.get().is_some() {
-            focus_scope_tree::register_scope(
-                scope_id,
-                parent_id,
-                move || {
-                    scope_ref
-                        .try_get_untracked()
-                        .flatten()
-                        .map(|el| -> web_sys::Element { el.into() })
-                },
-                contain,
-            );
-            if restore_focus {
-                focus_scope_tree::set_node_to_restore(scope_id, previously_focused.get_value());
-            }
             // Focus may have moved in before the scope was registered (e.g. a dialog focusing
             // itself on mount); react-aria tracks the active scope from a layout effect, before
             // such effects run. Later focus moves are tracked by a document-level listener.
@@ -220,8 +242,12 @@ pub fn FocusScope(
         });
     }
 
-    // Focus containment via keydown handler and focusin listener.
-    if contain {
+    // Follow changes of `contain` (the scope tree's flag gates all containment handlers below).
+    Effect::new(move |_| focus_scope_tree::set_contain(scope_id, contain.get()));
+
+    // Focus containment via keydown handler and focusin listener, active while the scope contains
+    // focus.
+    {
         // Track the last focused element within the scope, so we can restore
         // focus to it when recapturing (rather than always jumping to the first).
         let focused_node: StoredValue<Option<web_sys::HtmlElement>, LocalStorage> =
@@ -236,7 +262,7 @@ pub fn FocusScope(
             leptos::ev::keydown,
             move |e: web_sys::KeyboardEvent| {
                 // Issue 1: Ignore modified Tab and composing input.
-                if e.key() != "Tab"
+                if e.typed_key() != KeyboardKey::Tab
                     || e.alt_key()
                     || e.ctrl_key()
                     || e.meta_key()
@@ -266,6 +292,18 @@ pub fn FocusScope(
                 }
             },
         );
+
+        // A restore event from inside this scope doesn't reach parent scopes (react-aria).
+        Effect::new(move |_| {
+            let Some(scope_el) = scope_ref.get() else {
+                return;
+            };
+            let _restore_cleanup = use_event_listener(
+                scope_el,
+                leptos::ev::Custom::<web_sys::CustomEvent>::new(RESTORE_FOCUS_EVENT),
+                |e: web_sys::CustomEvent| e.stop_propagation(),
+            );
+        });
 
         // Scope-level focusin: track focused element within the containing scope.
         Effect::new(move |_| {
@@ -325,18 +363,22 @@ pub fn FocusScope(
                         let Some(last_focused) = focused_node.try_get_value() else {
                             return;
                         };
-                        let recaptured = last_focused.is_some_and(|node| node.focus().is_ok());
+                        // As upstream: a node removed in the meantime can't take focus back.
+                        let recaptured = last_focused.is_some_and(|node| {
+                            node.is_connected() && {
+                                crate::utils::focus::focus_safely(&node);
+                                true
+                            }
+                        });
                         if !recaptured {
-                            fm.focus_first(FocusManagerOptions {
-                                tabbable: true,
-                                ..Default::default()
-                            });
+                            focus_first_safely(&fm);
                         }
                     });
                 }
             },
         );
 
+        let pending_blur = StoredValue::new(None::<AnimationFrameRequestHandle>);
         // Issue 3: Focusout handler — when focus leaves the scope (e.g., via
         // programmatic focus or click outside), recapture after focus settles.
         let fm_focusout = focus_manager.clone();
@@ -349,14 +391,25 @@ pub fn FocusScope(
             let _focusout_cleanup = use_event_listener(
                 scope_el,
                 leptos::ev::focusout,
-                move |_e: web_sys::FocusEvent| {
+                move |e: web_sys::FocusEvent| {
                     if !focus_scope_tree::should_contain_focus(scope_id) {
                         return;
                     }
 
-                    // Defer check to after focus settles via requestAnimationFrame.
+                    // Defer check to after focus settles via requestAnimationFrame. Only the
+                    // latest blur counts (react-aria cancels the pending frame): an earlier one
+                    // would bring focus back to an element that lost it before.
                     let fm = fm_focusout.clone();
-                    request_animation_frame(move || {
+                    let blurred = e.target().and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+                    if let Some(pending) = pending_blur.get_value() {
+                        pending.cancel();
+                    }
+                    let handle = request_animation_frame_with_handle(move || {
+                        let _ = pending_blur.try_set_value(None);
+                        // The scope may have unmounted (or stopped containing focus) since.
+                        if !focus_scope_tree::should_contain_focus(scope_id) {
+                            return;
+                        }
                         // Android TalkBack workaround: skip focus restore when
                         // in virtual/unknown modality on Android Chrome (Chrome
                         // bug #384844019). Matches react-aria behavior.
@@ -378,28 +431,37 @@ pub fn FocusScope(
                             focus_scope_tree::is_element_in_scope_or_descendant(a, scope_id)
                         });
 
+                        // As react-aria: focus goes back to the element that lost it (else the
+                        // first one in the scope), without scrolling.
                         if !in_scope {
-                            fm.focus_first(FocusManagerOptions {
-                                tabbable: true,
-                                ..Default::default()
-                            });
+                            focus_scope_tree::set_active_scope(scope_id);
+                            match blurred.filter(|blurred| blurred.is_connected()) {
+                                Some(blurred) => {
+                                    let _ = focused_node.try_set_value(
+                                        blurred.dyn_ref::<web_sys::HtmlElement>().cloned(),
+                                    );
+                                    crate::utils::focus::focus_safely(&blurred);
+                                }
+                                None => focus_first_safely(&fm),
+                            }
                         }
-                    });
+                    })
+                    .ok();
+                    pending_blur.set_value(handle);
                 },
             );
         });
     }
 
-    // Tab restoration for non-containing restore_focus scopes.
-    // When Tab is pressed inside such a scope, redirect focus to the element
-    // after node_to_restore rather than the next element in the scope. This
-    // enables clean Tab-out from overlays (matching react-aria's useRestoreFocus).
-    if restore_focus && !contain {
-        let _tab_cleanup = use_event_listener(
+    // Tabbing out of a non-containing scope that restores focus continues after the node to
+    // restore (react-aria's `useRestoreFocus`): e.g. Tab in a popover moves on from its trigger.
+    if restore_focus {
+        let _tab_cleanup = use_event_listener_with_options(
             use_document(),
             leptos::ev::keydown,
             move |e: web_sys::KeyboardEvent| {
-                if e.key() != "Tab"
+                if contain.get_untracked()
+                    || e.typed_key() != KeyboardKey::Tab
                     || e.alt_key()
                     || e.ctrl_key()
                     || e.meta_key()
@@ -407,61 +469,81 @@ pub fn FocusScope(
                 {
                     return;
                 }
-
-                // Only handle if focus is within this scope's subtree.
-                let active = use_document()
-                    .as_ref()
-                    .and_then(web_sys::Document::active_element);
-                let focus_in_scope = active.as_ref().is_some_and(|a| {
-                    focus_scope_tree::is_element_in_scope_or_descendant(a, scope_id)
-                });
-                if !focus_in_scope {
+                let Some(document) = use_document().as_ref().cloned() else {
+                    return;
+                };
+                let Some(focused) = document.active_element() else {
+                    return;
+                };
+                let in_scope = |el: &web_sys::Element| {
+                    focus_scope_tree::is_element_in_scope_or_descendant(el, scope_id)
+                };
+                if !in_scope(&focused) || !focus_scope_tree::should_restore_focus(scope_id) {
                     return;
                 }
 
-                let Some(node_to_restore) = focus_scope_tree::get_node_to_restore(scope_id) else {
-                    return;
-                };
+                // A node to restore that is gone (or the body) is forgotten.
+                let node_to_restore = focus_scope_tree::get_node_to_restore(scope_id).filter(|node| {
+                    node.is_connected() && node.dyn_ref::<web_sys::HtmlBodyElement>().is_none()
+                });
+                if node_to_restore.is_none() {
+                    focus_scope_tree::set_node_to_restore(scope_id, None);
+                }
 
-                // Get the scope element for checking containment.
-                let Some(scope_el) = scope_ref.get_untracked() else {
+                let Some(body) = document.body() else {
                     return;
                 };
-                let scope_element: web_sys::Element = scope_el.into();
+                let Some(mut walker) = get_focusable_tree_walker(
+                    &body,
+                    FocusableTreeWalkerOptions {
+                        tabbable: true,
+                        ..Default::default()
+                    },
+                ) else {
+                    return;
+                };
+                let step = |walker: &mut ShadowTreeWalker| {
+                    if e.shift_key() {
+                        walker.previous_node()
+                    } else {
+                        walker.next_node()
+                    }
+                    .and_then(|node| node.dyn_into::<web_sys::Element>().ok())
+                };
+                walker.set_current_node(&focused);
+                let next = step(&mut walker);
 
-                // Create a TreeWalker on body to find the next tabbable element
-                // from the node_to_restore position.
-                let Some(body) = use_document().as_ref().and_then(web_sys::Document::body) else {
+                // Only when the next element is outside the scope (or there is none).
+                let Some(node_to_restore) = node_to_restore else {
                     return;
                 };
-                let body_el: &web_sys::Element = body.unchecked_ref();
-                let Ok(walker) = body
-                    .owner_document()
-                    .unwrap()
-                    .create_tree_walker_with_what_to_show(body_el.as_ref(), 0x1)
-                else {
+                if next.as_ref().is_some_and(in_scope) {
                     return;
-                };
-
-                // Position walker at node_to_restore and walk to find next/previous
-                // tabbable element outside the scope.
+                }
+                // Skip the scope's own elements, in case it immediately follows the node to restore.
                 walker.set_current_node(&node_to_restore);
-
-                let next_el = if e.shift_key() {
-                    walk_to_tabbable_outside_scope(&walker, &scope_element, false)
-                } else {
-                    walk_to_tabbable_outside_scope(&walker, &scope_element, true)
+                let next = loop {
+                    match step(&mut walker) {
+                        Some(el) if in_scope(&el) => {}
+                        other => break other,
+                    }
                 };
 
                 e.prevent_default();
                 e.stop_propagation();
-
-                if let Some(el) = next_el {
-                    crate::utils::focus::focus_element(&el, false);
-                } else if let Some(html_el) = node_to_restore.dyn_ref::<web_sys::HtmlElement>() {
-                    let _ = html_el.focus();
+                if let Some(next) = next {
+                    crate::utils::focus::focus_element(&next, false);
+                } else if !focus_scope_tree::is_element_in_any_scope(&node_to_restore) {
+                    // Leaving the top-level scope: focus goes to the body.
+                    if let Some(focused) = focused.dyn_ref::<web_sys::HtmlElement>() {
+                        let _ = focused.blur();
+                    }
+                } else {
+                    // E.g. a menu in a popover: Tab closes the menu, back to its trigger.
+                    crate::utils::focus::focus_element(&node_to_restore, false);
                 }
             },
+            UseEventListenerOptions::default().capture(true),
         );
     }
 
@@ -497,15 +579,22 @@ pub fn FocusScope(
             // after the next frame, as react-aria does: by then, effects that ran because of the
             // unmount (e.g. a popover making the page interactive again) are done. Only restore
             // if focus fell to the body; otherwise it was moved on purpose.
-            let candidates = if should_restore {
-                focus_scope_tree::nodes_to_restore(scope_id)
+            // Without a node to restore in the DOM, focus goes to the first tabbable element of
+            // the nearest ancestor scope still mounted then.
+            let should_restore =
+                should_restore && focus_scope_tree::get_node_to_restore(scope_id).is_some();
+            let (candidates, ancestors) = if should_restore {
+                (
+                    focus_scope_tree::nodes_to_restore(scope_id),
+                    focus_scope_tree::ancestors(scope_id),
+                )
             } else {
-                Vec::new()
+                (Vec::new(), Vec::new())
             };
 
             focus_scope_tree::unregister_scope(scope_id);
 
-            if !candidates.is_empty() {
+            if should_restore {
                 request_animation_frame(move || {
                     let focus_on_body = use_document()
                         .as_ref()
@@ -514,12 +603,32 @@ pub fn FocusScope(
                     if !focus_on_body {
                         return;
                     }
-                    if let Some(element) = candidates.iter().find(|el| el.is_connected())
-                        && let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>()
-                        // Listeners can call preventDefault() to cancel restoration.
-                        && dispatch_restore_focus_event(html_el)
+                    // The body (focus was already lost when the scope mounted, e.g. the item that
+                    // opened it was removed first) can't take focus: the fallback applies.
+                    let target = candidates
+                        .into_iter()
+                        .find(|element| {
+                            element.is_connected()
+                                && element.dyn_ref::<web_sys::HtmlBodyElement>().is_none()
+                        })
+                        .or_else(|| {
+                            // As react-aria's `getFirstInScope`: tabbable, else focusable.
+                            ancestors.into_iter().find_map(|id| {
+                                let scope = focus_scope_tree::scope_element(id)?;
+                                let manager = FocusManager::new(move || Some(scope.clone()));
+                                [true, false].into_iter().find_map(|tabbable| {
+                                    manager.find_first(FocusManagerOptions {
+                                        tabbable,
+                                        ..Default::default()
+                                    })
+                                })
+                            })
+                        });
+                    // Listeners can call preventDefault() to cancel restoration.
+                    if let Some(element) = target
+                        && dispatch_restore_focus_event(&element)
                     {
-                        let _ = html_el.focus();
+                        crate::utils::focus::focus_safely(&element);
                     }
                 });
             }
@@ -547,6 +656,18 @@ pub fn FocusScope(
     }
 }
 
+/// Focuses the first tabbable element of a scope without scrolling (react-aria's
+/// `focusFirstInScope`; the focus manager's own `focus_first` scrolls, as upstream's).
+#[cfg(not(feature = "ssr"))]
+fn focus_first_safely(focus_manager: &FocusManager) {
+    if let Some(element) = focus_manager.find_first(FocusManagerOptions {
+        tabbable: true,
+        ..Default::default()
+    }) {
+        crate::utils::focus::focus_safely(&element);
+    }
+}
+
 /// Makes `scope_id` the active scope if focus is already within it.
 #[cfg(not(feature = "ssr"))]
 fn mark_active_if_focus_within(scope_id: focus_scope_tree::ScopeId) {
@@ -561,7 +682,7 @@ fn mark_active_if_focus_within(scope_id: focus_scope_tree::ScopeId) {
 
 /// Dispatch the [`RESTORE_FOCUS_EVENT`] on the target element.
 /// Returns `true` if the event was NOT cancelled (restoration should proceed).
-fn dispatch_restore_focus_event(target: &web_sys::HtmlElement) -> bool {
+fn dispatch_restore_focus_event(target: &web_sys::Element) -> bool {
     let init = web_sys::CustomEventInit::new();
     init.set_bubbles(true);
     init.set_cancelable(true);
@@ -571,34 +692,4 @@ fn dispatch_restore_focus_event(target: &web_sys::HtmlElement) -> bool {
     };
     // dispatch_event returns true if no handler called preventDefault.
     target.dispatch_event(&event).unwrap_or(true)
-}
-
-/// Walk a `TreeWalker` forward or backward to find the next tabbable element
-/// that is NOT inside `scope_element`.
-fn walk_to_tabbable_outside_scope(
-    walker: &web_sys::TreeWalker,
-    scope_element: &web_sys::Element,
-    forward: bool,
-) -> Option<web_sys::Element> {
-    let scope_node: &web_sys::Node = scope_element.unchecked_ref();
-    loop {
-        let node = if forward {
-            walker.next_node()
-        } else {
-            walker.previous_node()
-        };
-        let Ok(Some(node)) = node else {
-            return None;
-        };
-        let Some(el) = node.dyn_ref::<web_sys::Element>() else {
-            continue;
-        };
-        // Skip elements inside the scope.
-        if scope_node.contains(Some(&node)) {
-            continue;
-        }
-        if crate::utils::focusability::is_tabbable(el) {
-            return Some(el.clone());
-        }
-    }
 }

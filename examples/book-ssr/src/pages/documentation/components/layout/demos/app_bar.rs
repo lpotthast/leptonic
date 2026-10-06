@@ -3,22 +3,41 @@ use leptos::prelude::*;
 
 #[component]
 pub fn AppBarDemo() -> impl IntoView {
+    let (last_action, set_last_action) = signal(None::<&'static str>);
+
     view! {
-        <div class="demo-clf-frame demo-clf-frame-scroll">
-            <AppBar height=em(3.0) classes="demo-clf-app-bar">
-                <span class="demo-clf-app-bar-title">"Leptonic"</span>
-                <Stack orientation=StackOrientation::Horizontal spacing=em(1.0) classes="demo-clf-app-bar-actions">
-                    <Icon icon=icondata::BsBell/>
-                    <Icon icon=icondata::BsPower/>
-                </Stack>
+        // A scrolling frame standing in for the page: the bar sticks to its top.
+        <div class="demo-app-bar-frame" role="region" aria-label="Scrolling page" tabindex="0">
+            <AppBar height=em(3.0) classes="demo-app-bar">
+                <span class="demo-app-bar-title">"My App"</span>
+                <div class="demo-app-bar-actions">
+                    // Icon-only buttons are named with `aria-label`; the icons themselves are decorative.
+                    <Button
+                        variant=ButtonVariant::Flat
+                        attr:aria-label="Notifications"
+                        on_press=move |_| set_last_action.set(Some("Notifications"))
+                    >
+                        <Icon icon=icondata::BsBell/>
+                    </Button>
+                    <Button
+                        variant=ButtonVariant::Flat
+                        attr:aria-label="Log out"
+                        on_press=move |_| set_last_action.set(Some("Log out"))
+                    >
+                        <Icon icon=icondata::BsBoxArrowRight/>
+                    </Button>
+                </div>
             </AppBar>
 
-            <div class="demo-clf-frame-content">
-                <p>"Scroll \u{2193}"</p>
-                <Stack spacing=em(0.5)>
-                    {(0..10).map(|_| view! { <Skeleton height=em(3.0)/> }).collect_view()}
-                </Stack>
+            <div class="demo-app-bar-content">
+                {(0..8).map(|_| view! { <Skeleton animated=false height=em(3.0)/> }).collect_view()}
             </div>
         </div>
+        <p class="demo-status">
+            {move || match last_action.get() {
+                Some(action) => format!("Last action: {action}."),
+                None => "No action yet.".to_owned(),
+            }}
+        </p>
     }
 }

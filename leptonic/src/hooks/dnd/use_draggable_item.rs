@@ -13,7 +13,7 @@ use super::{
 };
 use crate::{
     hooks::{SelectionMode, UseButtonInput, collections::Key},
-    utils::{EventHandler, use_description::use_reactive_description},
+    utils::{EventHandler, use_description::use_description},
 };
 
 // =============================================================================
@@ -99,7 +99,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
 
     if describes {
         // The item itself starts drags: describe how (it has no click to start them).
-        let description = use_reactive_description(Signal::derive(move || {
+        let description = use_description(Signal::derive(move || {
             let modality = modality.get();
             let alt = has_action && modality == DragModality::Keyboard;
             let count = is_selected.get().then(|| keys_for_drag.get());

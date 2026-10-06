@@ -1,7 +1,8 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{kit::*, pages::documentation::atoms::demos::listbox::ListBoxAtomDemo, routes};
+use super::demos::listbox::ListboxConceptDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageListboxOverview() -> impl IntoView {
@@ -19,8 +20,8 @@ pub fn PageListboxOverview() -> impl IntoView {
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow><TableCell>"Present a visible list of selectable items"</TableCell><TableCell><b>"Listbox"</b></TableCell></TableRow>
                     <TableRow><TableCell>"Choose from a dropdown"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Toggle independent boolean options"</TableCell><TableCell><Link href=routes::doc::Checkbox.materialize()>"Checkbox group"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Choose one from a visible set"</TableCell><TableCell><Link href=routes::doc::Radio.materialize()>"Radio group"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Toggle independent boolean options"</TableCell><TableCell><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link>" group"</TableCell></TableRow>
+                    <TableRow><TableCell>"Choose one from a visible set"</TableCell><TableCell><Link href=routes::doc::Radio.materialize()>"Radio"</Link>" group"</TableCell></TableRow>
                 </DocTable>
             </Section>
 
@@ -33,19 +34,17 @@ pub fn PageListboxOverview() -> impl IntoView {
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::listbox::Hook.materialize()>"use_listbox"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></TableCell>
                         <TableCell>
-                            "Behavior and ARIA attributes for a listbox ("<Code inline=true>"use_listbox"</Code>"), its options ("
-                            <Code inline=true>"use_option"</Code>") and sections ("<Code inline=true>"use_listbox_section"</Code>
-                            ") in markup you render yourself."
+                            "Selection, keyboard navigation and ARIA attributes for a listbox, its options and sections in "
+                            "markup you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::listbox::Atom.materialize()>"ListBox atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></TableCell>
                         <TableCell>
-                            "Unstyled "<Code inline=true>"ListBox"</Code>", "<Code inline=true>"ListBoxItem"</Code>" and "
-                            <Code inline=true>"ListBoxSection"</Code>" components with that behavior, plus label and description "
-                            "slots for options. You style them through classes and data attributes."
+                            "An unstyled listbox, options and sections with that behavior, plus label and description slots "
+                            "for options. You style them through their data attributes."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -53,50 +52,60 @@ pub fn PageListboxOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The quickest way to a listbox is the headless "<Code inline=true>"ListBox"</Code>" atom. "
-                    "Describe the options as a collection (each with a key and a text for type-ahead, optionally in "
-                    "sections), then render one "<Code inline=true>"ListBoxItem"</Code>" per option, in the same order. "
-                    "The "<Link href=routes::doc::listbox::Atom.materialize()>"ListBox atoms"</Link>" page documents all "
-                    "parts; the "<Link href=routes::doc::listbox::Hook.materialize()>"listbox hooks"</Link>
-                    " build one from your own markup."
+                    "Describe the options as a collection (each with a key and a text for type-ahead) and render them in a "
+                    <Code inline=true>"ListBox"</Code>". The "<Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link>
+                    " page adds sections, option descriptions and disabled options."
                 </p>
 
-                <Demo
-                    description="Pizza topping listbox with sections, multiple selection, option descriptions and a disabled option"
-                    source=include_str!("../atoms/demos/listbox.rs")
-                    source_open=true
-                >
-                    <ListBoxAtomDemo/>
+                <Demo description="Fruit listbox with multiple selection" source=include_str!("demos/listbox.rs") source_open=true>
+                    <ListboxConceptDemo/>
                 </Demo>
             </Section>
 
             <Section title="Accessibility">
                 <p>
                     "Leptonic listboxes follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/listbox/" target=LinkTarget::_Blank>"Listbox pattern"</LinkExt>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/listbox/" target=LinkTarget::Blank>"Listbox pattern"</Link>
                     "."
                 </p>
 
                 <ul>
                     <li>
-                        <Code inline=true>"role=\"listbox\""</Code>" on the container, "<Code inline=true>"role=\"option\""</Code>
-                        " on each option, "<Code inline=true>"role=\"group\""</Code>" on sections"
+                        "The list has "<Code inline=true>"role=\"listbox\""</Code>", each option "<Code inline=true>"role=\"option\""</Code>
+                        " with "<Code inline=true>"aria-selected"</Code>", and each section "<Code inline=true>"role=\"group\""</Code>
+                        ", labelled by its heading."
                     </li>
-                    <li><Code inline=true>"aria-selected"</Code>" \u{2014} reflects the selection state of an option"</li>
-                    <li><Code inline=true>"aria-multiselectable"</Code>" \u{2014} present in multiple selection mode"</li>
-                    <li><Code inline=true>"aria-disabled"</Code>" \u{2014} marks disabled options"</li>
-                    <li>"Roving tabindex: the listbox is a single tab stop, arrow keys move focus between options"</li>
+                    <li>
+                        "With multiple selection, the list has "<Code inline=true>"aria-multiselectable"</Code>". Disabled "
+                        "options have "<Code inline=true>"aria-disabled"</Code>" and are skipped by the keyboard."
+                    </li>
+                    <li>"The listbox is a single tab stop; the arrow keys move the focus between its options."</li>
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move focus between options."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Move focus to the next or previous option (left and right in a horizontal listbox)."</KeyRow>
                     <KeyRow keys="Home / End">"Move focus to the first or last option."</KeyRow>
-                    <KeyRow keys="Space">"Toggle the selection of the focused option."</KeyRow>
-                    <KeyRow keys="Control + A / Command + A">"Select all options (multiple selection)."</KeyRow>
+                    <KeyRow keys="PageDown / PageUp">"Move focus by the visible height."</KeyRow>
+                    <KeyRow keys="Space">"Select or deselect the focused option."</KeyRow>
+                    <KeyRow keys="Shift + ArrowDown / Shift + ArrowUp">"Extend the selection (multiple selection)."</KeyRow>
+                    <KeyRow keys="Control + ArrowDown / Control + ArrowUp">
+                        "With the "<Code inline=true>"Replace"</Code>" selection behavior: move focus without selecting ("
+                        <Keys keys="Option"/>" instead of "<Keys keys="Control"/>" on macOS)."
+                    </KeyRow>
+                    <KeyRow keys="Enter">"Perform the option\u{2019}s action; without one, select it."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all options (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
-                    <KeyRow keys="Any character">"Type-ahead: focus the next option whose text starts with the typed text."</KeyRow>
+                    <KeyRow keys="Any character">"Focus the next option whose text starts with the typed text."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
+                <li><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></li>
+                <li><Link href=routes::doc::Select.materialize()>"Select"</Link></li>
+                <li><Link href=routes::doc::GridList.materialize()>"Grid List"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

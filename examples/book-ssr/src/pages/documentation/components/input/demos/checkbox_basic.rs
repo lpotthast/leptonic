@@ -3,10 +3,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn CheckboxBasicDemo() -> impl IntoView {
-    let (checked, set_checked) = signal(false);
+    let subscribed = RwSignal::new(false);
 
     view! {
-        <Checkbox state=(checked, set_checked) classes="demo-control-row">"Subscribe to the newsletter"</Checkbox>
-        <p class="demo-status">{move || if checked.get() { "Subscribed" } else { "Not subscribed" }}</p>
+        <Checkbox is_selected=subscribed set_selected=subscribed>"Subscribe to the newsletter"</Checkbox>
+        <p class="demo-status">{move || if subscribed.get() { "Subscribed." } else { "Not subscribed." }}</p>
     }
 }

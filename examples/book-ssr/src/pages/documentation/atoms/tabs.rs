@@ -16,10 +16,10 @@ pub fn PageAtomTabs() -> impl IntoView {
     view! {
         <DocPage title="Tabs Atoms">
             <p>
-                "The tab atoms render unstyled tabs with the behavior of the "
-                <Link href=routes::doc::tabs::Hook.materialize()>"tab hooks"</Link>": "<Code inline=true>"Tabs"</Code>
-                " holds the state, "<Code inline=true>"TabList"</Code>" contains a "<Code inline=true>"Tab"</Code>" per tab, "
-                "and a "<Code inline=true>"TabPanel"</Code>" per tab shows its content while it is selected. See the "
+                "The unstyled tab atoms: "<AnchorLink href="#tabs">"Tabs"</AnchorLink>" holds the state, "
+                <AnchorLink href="#tablist">"TabList"</AnchorLink>" contains a "<AnchorLink href="#tab">"Tab"</AnchorLink>
+                " per tab, and a "<AnchorLink href="#tabpanel">"TabPanel"</AnchorLink>" per tab shows its content while it is "
+                "selected. See the "
                 <Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link>" for concept guidance."
             </p>
 
@@ -46,7 +46,8 @@ pub fn PageAtomTabs() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "The tabs are a "<Link href=routes::doc::Collections.materialize()>"collection"</Link>
+                    "The tabs are a "<Link href=routes::doc::CollectionState.materialize()>"collection"</Link>" from "
+                    <Link href=format!("{}#use-collection", routes::doc::CollectionState.materialize())>"use_collection"</Link>
                     ". Render one "<Code inline=true>"Tab"</Code>" per collection item, in collection order, and a "
                     <Code inline=true>"TabPanel"</Code>" with the same key for each:"
                 </p>
@@ -79,13 +80,14 @@ pub fn PageAtomTabs() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "Click a tab, or tab into the tab list and use the arrow keys. \u{201c}Reviews\u{201d} is disabled through "
-                    <Code inline=true>"disabled_keys"</Code>"; uncheck the box to enable it. The demo is styled through the "
-                    "data attributes listed below. The selected tab lives in an "<Code inline=true>"RwSignal<Key>"</Code>
-                    " of the demo, bound with "<Code inline=true>"selected_key"</Code>"; \u{201c}Show shipping\u{201d} selects "
-                    "a tab by setting it (see "<a href="#binding-to-app-state">"Binding to App State"</a>")."
+                    <Code inline=true>"disabled_keys"</Code>"; uncheck the box to enable it. The tabs are styled through the "
+                    <AnchorLink href="#data-attributes">"data attributes"</AnchorLink>". The selected tab lives in an "
+                    <Code inline=true>"RwSignal<Key>"</Code>" of the demo, passed as "<Code inline=true>"selected_key"</Code>
+                    " and "<Code inline=true>"set_selected_key"</Code>"; \u{201c}Show shipping\u{201d} selects a tab by setting "
+                    "it (see "<AnchorLink href="#controlled-selection">"Controlled Selection"</AnchorLink>")."
                 </p>
                 <Demo
-                    description="Horizontal tabs styled through data attributes, with a toggleable disabled tab, a toggle disabling all tabs and a button selecting a tab"
+                    description="Horizontal tabs styled through data attributes, with a Disabled checkbox, a toggleable disabled tab and a button selecting a tab"
                     source=include_str!("demos/tabs.rs")
                 >
                     <TabsAtomDemo/>
@@ -93,7 +95,8 @@ pub fn PageAtomTabs() -> impl IntoView {
 
                 <p>
                     "Vertical tabs with manual activation: "<Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" move focus, "
-                    <Keys keys="Enter"/>" or "<Keys keys="Space"/>" selects the focused tab."
+                    <Keys keys="Enter"/>" or "<Keys keys="Space"/>" selects the focused tab. The layout comes from the "
+                    <Code inline=true>"data-orientation"</Code>" of "<Code inline=true>"Tabs"</Code>"."
                 </p>
                 <Demo
                     description="Vertical tabs with manual activation"
@@ -103,19 +106,25 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Binding to App State">
+            <Section title="Controlled Selection">
                 <p>
-                    "Bind "<Code inline=true>"selected_key"</Code>" to a signal to keep the selected tab in your app\u{2019}s "
-                    "state, e.g. to restore it or to switch tabs from elsewhere: the tabs show the signal\u{2019}s key, "
-                    "selecting a tab writes it, and setting it selects that tab. ""A signal pair "<Code inline=true>"(read, write)"</Code>" works as well, and "
-                    <Code inline=true>"ValueBinding::new(signal, callback)"</Code>" binds any other storage."
+                    "Pass "<Code inline=true>"selected_key"</Code>" and "<Code inline=true>"set_selected_key"</Code>" to keep the "
+                    "selected tab in your app\u{2019}s state, e.g. to restore it or to switch tabs from elsewhere: the tabs "
+                    "show the key "<Code inline=true>"selected_key"</Code>" reads, selecting a tab calls "
+                    <Code inline=true>"set_selected_key"</Code>", and changing your state selects that tab. "
+                    <Code inline=true>"selected_key"</Code>" takes any signal, "<Code inline=true>"set_selected_key"</Code>
+                    " any setter: an "<Code inline=true>"RwSignal"</Code>", a "<Code inline=true>"WriteSignal"</Code>
+                    ", a closure or a "<Code inline=true>"Callback"</Code>". Without "<Code inline=true>"set_selected_key"</Code>
+                    ", the selection is read-only."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{components::prelude::Button, hooks::Key};
+
                         let selected = RwSignal::new(Key::from("details"));
 
                         view! {
-                            <Tabs collection=collection selected_key=selected>
+                            <Tabs collection=collection selected_key=selected set_selected_key=selected>
                                 // TabList, Tab and TabPanel as above
                             </Tabs>
                             <Button on_press=move |_| selected.set(Key::from("shipping"))>"Show shipping"</Button>
@@ -135,8 +144,11 @@ pub fn PageAtomTabs() -> impl IntoView {
                         <ApiRow name="default_selected_key" ty="Option<Key>" default="None">
                             "The initially selected tab. "<Code inline=true>"None"</Code>": the first enabled tab."
                         </ApiRow>
-                        <ApiRow name="selected_key" ty="Option<ValueBinding<Key>>" default="None">
-                            "The selected tab as app state (e.g. an "<Code inline=true>"RwSignal<Key>"</Code>"), replacing "<Code inline=true>"default_selected_key"</Code>"."
+                        <ApiRow name="selected_key" ty="Option<Signal<Key>>" default="None">
+                            "The selected tab (controlled), replacing "<Code inline=true>"default_selected_key"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_selected_key" ty="Option<Out<Key>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_selection_change" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of the tab the user selects."
@@ -211,8 +223,7 @@ pub fn PageAtomTabs() -> impl IntoView {
             <Section title="Data Attributes">
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-orientation" ty="horizontal | vertical">
-                        "On "<Code inline=true>"Tabs"</Code>": the orientation. "<Code inline=true>"TabList"</Code>
-                        " carries it as "<Code inline=true>"aria-orientation"</Code>"."
+                        "On "<Code inline=true>"Tabs"</Code>": the orientation."
                     </ApiRow>
                     <ApiRow name="data-selected" ty="true">"On "<Code inline=true>"Tab"</Code>": the tab is selected."</ApiRow>
                     <ApiRow name="data-focused" ty="true">
@@ -224,24 +235,29 @@ pub fn PageAtomTabs() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"Tab"</Code>": the tab is being pressed."</ApiRow>
                 </ApiTable>
+                <p>
+                    "A "<Code inline=true>"Tab"</Code>" currently has no "<Code inline=true>"data-hovered"</Code>" or "
+                    <Code inline=true>"data-focus-visible"</Code>"; use "<Code inline=true>":hover"</Code>" and "
+                    <Code inline=true>":focus-visible"</Code>" for those."
+                </p>
             </Section>
 
             <Section title="Styling">
                 <p>
                     "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
                     "selectors. "<Code inline=true>"data-focused"</Code>" is also set after a click, so draw focus rings with "
-                    <Code inline=true>":focus-visible"</Code>":"
+                    <Code inline=true>":focus-visible"</Code>". Lay out a vertical tab list through the "
+                    <Code inline=true>"data-orientation"</Code>" of "<Code inline=true>"Tabs"</Code>":"
                 </p>
                 <Code language=Language::Css>
-                    {indoc!(r"
-                        .my-tab-list { display: flex; border-bottom: 2px solid #ddd; }
-                        .my-tabs[data-orientation='vertical'] { display: flex; }
-                        .my-tabs[data-orientation='vertical'] .my-tab-list { flex-direction: column; }
-
-                        .my-tab[data-selected] { border-bottom: 2px solid royalblue; }
-                        .my-tab[data-disabled] { opacity: 0.5; }
-                        .my-tab:focus-visible { outline: 2px solid royalblue; }
-                    ")}
+                    {indoc!(r#"
+                        .my-tab-list { display: flex; border-bottom: 2px solid var(--border); }
+                        .my-tabs[data-orientation="vertical"] { display: flex; }
+                        .my-tabs[data-orientation="vertical"] .my-tab-list { flex-direction: column; }
+                        .my-tab[data-selected] { border-bottom: 2px solid var(--accent); }
+                        .my-tab[data-disabled] { color: var(--muted); }
+                        .my-tab:focus-visible { outline: 2px solid var(--focus); }
+                    "#)}
                 </Code>
             </Section>
 
@@ -249,11 +265,13 @@ pub fn PageAtomTabs() -> impl IntoView {
                 <p>
                     "The parts find their tab list through the context: "<Code inline=true>"TabListData"</Code>" (provided by "
                     <Code inline=true>"Tabs"</Code>") and "<Code inline=true>"TabListItemData"</Code>" (provided by "
-                    <Code inline=true>"TabList"</Code>"). Your own components inside "<Code inline=true>"Tabs"</Code>
+                    <Code inline=true>"TabList"</Code>"). Your own Leptos components inside "<Code inline=true>"Tabs"</Code>
                     " can read the state, e.g. to show the selected tab elsewhere:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::TabListData;
+
                         #[component]
                         fn SelectedTab() -> impl IntoView {
                             let state = expect_context::<TabListData>().state;
@@ -263,14 +281,15 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </Code>
                 <p>
                     "Need panels that stay mounted while hidden, or a tab built from your own element? Use the "
-                    <Link href=routes::doc::tabs::Hook.materialize()>"hooks"</Link>" directly."
+                    <Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link>" directly."
                 </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
-                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs hooks"</Link></li>
-                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></li>
+                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>
     }

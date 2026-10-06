@@ -63,7 +63,7 @@ pub struct UseGridListInput {
     /// The element id (rows' ids derive from it). Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     /// Rows stacked, or wrapping in a grid of cards.
     pub layout: ListLayout,
     /// Replaces the list keyboard delegate.
@@ -88,7 +88,7 @@ impl UseGridListInput {
             element,
             id: None,
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
+            aria_labelledby: Signal::stored(None),
             layout: ListLayout::Stack,
             keyboard_delegate: None,
             options: CollectionOptions::default(),
@@ -140,7 +140,7 @@ pub struct UseGridListProps {
     pub id: String,
     pub role: Signal<AriaRole>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
     pub collection: UseSelectableCollectionProps,
@@ -153,7 +153,7 @@ pub type UseGridListAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, Signal<AriaRole>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
     UseSelectableCollectionAttrs,
     UseHasTabbableChildAttrs,
@@ -196,7 +196,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
         tree,
     } = input;
 
-    if aria_label.get_untracked().is_none() && aria_labelledby.is_none() {
+    if aria_label.get_untracked().is_none() && aria_labelledby.with_untracked(Option::is_none) {
         crate::utils::dev_warn!(
             "use_grid_list: an aria_label or aria_labelledby is required for accessibility"
         );

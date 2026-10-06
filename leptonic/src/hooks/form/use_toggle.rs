@@ -433,10 +433,10 @@ pub(crate) fn use_toggle_with(
     // The input itself: pressing it toggles natively (the `change` event).
     let press = use_press(UsePressInput {
         is_disabled,
+        on_press,
+        on_press_up,
         on_press_start,
         on_press_end,
-        on_press_up,
-        on_press: on_press.unwrap_or_else(|| Callback::new(|_| {})),
         on_press_change,
         ..UsePressInput::default()
     });
@@ -484,7 +484,7 @@ pub(crate) fn use_toggle_with(
                 on_press_up.run(e);
             }
         })),
-        on_press: Callback::new(move |e: PressEvent| {
+        on_press: Some(Callback::new(move |e: PressEvent| {
             if is_native_press(&e) {
                 e.continue_propagation();
                 return;
@@ -495,7 +495,7 @@ pub(crate) fn use_toggle_with(
             state.toggle();
             focus_handle.focus();
             validation.commit_validation.run(());
-        }),
+        })),
         ..UsePressInput::default()
     });
     let (label_press_props, label_press_styles) = label_press.props.into_inner();

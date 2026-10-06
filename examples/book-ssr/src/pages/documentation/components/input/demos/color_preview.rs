@@ -1,12 +1,15 @@
-use leptonic::{components::prelude::*, utils::color::HSV};
+use leptonic::{
+    components::prelude::*,
+    utils::color::{ColorValue, RGB8},
+};
 use leptos::prelude::*;
 
 #[component]
 pub fn ColorPreviewDemo() -> impl IntoView {
-    let rgb = Signal::stored(HSV::from_hue_fully_saturated(200.0).into_rgb8());
+    let sky_blue = RGB8 { r: 0, g: 170, b: 255 };
 
     view! {
-        <ColorPreview rgb=rgb classes="demo-color-preview-large"/>
-        <p class="demo-status">{move || format!("#{:X}", rgb.get())}</p>
+        <ColorPreview color=sky_blue classes="demo-color-preview-large"/>
+        <p class="demo-status">{format!("Showing {sky_blue}, announced as \u{201c}{}\u{201d}", sky_blue.color_name())}</p>
     }
 }

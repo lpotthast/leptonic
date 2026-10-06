@@ -1,46 +1,72 @@
-// The app shell: app bar, page content area and the menus covering the page on small screens.
+// The app shell: skip link, app bar, page area and the menus covering the page on small screens.
 
 html {
-  font-size: 16px;
-  scroll-behavior: smooth;
+  // The user's font size, not a fixed one: every rem of the book scales with it.
+  font-size: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
   margin: 0;
-  display: flex;
-  flex-direction: column;
+  color: var(--main-color);
+  background-color: var(--main-background-color);
 }
 
 #book-app-bar {
-  display: flex;
-  justify-content: center;
+  // Fixed instead of the theme's sticky, so that pages scroll underneath; `#book-page` makes room for it.
+  --app-bar-height: var(--book-app-bar-height);
+
   position: fixed;
 
   #book-app-bar-content {
     display: flex;
     justify-content: space-between;
     width: 100%;
+    padding: 0 var(--book-space-m);
   }
 
   #book-logo {
-    display: inline-flex;
-    height: 2.5em;
-    width: 2.5em;
-    margin-left: 1em;
+    display: block;
+    height: 2.5rem;
+    width: 2.5rem;
   }
 
-  .docs-link {
-    margin: 0 0 0 0.5em;
-    font-size: 1.17em;
+  .book-docs-link {
+    font-size: var(--book-font-size-l);
     font-weight: 700;
   }
 
-  .github-link {
+  .book-github-link {
     font-size: var(--book-font-size-xl);
   }
+}
 
-  .app-bar-theme-toggle {
-    margin-right: 1em;
+// Links and buttons of the shell show the book's focus ring.
+#book-app-bar,
+.book-main-menu {
+  .leptonic-link[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+    border-radius: var(--book-radius-s);
+  }
+}
+
+// "Skip to content", shown in the app bar while focused (leptonic's `VisuallyHidden` hides it otherwise).
+.book-skip-link a {
+  display: inline-block;
+  padding: var(--book-space-xs) var(--book-space-s);
+  border-radius: var(--book-radius-s);
+  background-color: var(--book-surface-color);
+  white-space: nowrap;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
   }
 }
 
@@ -52,17 +78,23 @@ body {
   text-transform: none;
 
   &:hover {
-    color: var(--brand-color);
+    color: var(--book-brand-text-color);
     background-color: var(--book-hover-background-color);
   }
 }
 
-#book-content {
-  display: block;
+#book-page {
   min-height: 100vh;
   padding-top: var(--book-app-bar-height);
-  color: var(--main-color);
-  background-color: var(--main-background-color);
+}
+
+// Every page's `<main>`: the target of the skip link, focused (not tabbable) once it is used.
+#book-main {
+  scroll-margin-top: var(--book-app-bar-height);
+
+  &:focus {
+    outline: none;
+  }
 }
 
 // Menus covering the page on small screens (`Sheet`): a panel at one side of the screen above leptonic's modal
@@ -77,10 +109,10 @@ body {
   position: fixed;
   top: 0;
   bottom: 0;
-  width: min(20em, 85vw);
+  width: min(20rem, 85vw);
   overflow-y: auto;
   color: var(--main-color);
-  background-color: var(--book-menu-background-color);
+  background-color: var(--book-surface-color);
   box-shadow: var(--book-shadow);
 
   &.book-sheet-left {
@@ -124,7 +156,7 @@ body {
   gap: var(--book-space-xl);
   padding: var(--book-space-m) 0;
 
-  .github-link {
-    font-size: 3em;
+  .book-github-link {
+    font-size: calc(2 * var(--book-font-size-xl));
   }
 }

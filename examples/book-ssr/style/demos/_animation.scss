@@ -1,0 +1,176 @@
+// Animation: demos of the animation hooks and the Transitions components.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// -- Animation hooks --
+
+// The panel animates while `data-entering` / `data-exiting` are set.
+.demo-animated-panel { margin-top: var(--book-space-m); padding: var(--book-space-m); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-m); background: var(--book-surface-color-raised); }
+
+.demo-animated-panel[data-entering] { animation: demo-fade-in 300ms ease-out; }
+
+.demo-animated-panel[data-exiting]  { animation: demo-fade-out 300ms ease-in forwards; }
+
+@keyframes demo-fade-in  { from { opacity: 0; transform: translateY(-0.5em); } to { opacity: 1; transform: none; } }
+
+@keyframes demo-fade-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-0.5em); } }
+
+// Without motion, the panel only fades. The animations still run, so the hooks still see them end.
+@media (prefers-reduced-motion: reduce) {
+    @keyframes demo-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+
+    @keyframes demo-fade-out { from { opacity: 1; } to { opacity: 0; } }
+}
+
+// -- Transitions --
+
+// A demo: the toggle button above the transitioned content.
+.demo-transitions-demo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+}
+
+// The content being transitioned.
+.demo-transitions-panel {
+    max-width: 28em;
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background-color: var(--brand-color-subtle);
+
+    p {
+        margin: 0;
+    }
+
+    p + p {
+        margin-top: var(--book-space-s);
+    }
+}
+
+// Horizontal collapse: a fixed-width sidebar next to the main content.
+.demo-transitions-row {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-height: 6em;
+}
+
+.demo-transitions-sidebar {
+    box-sizing: border-box;
+    width: 9em;
+    margin-right: var(--book-space-m);
+    padding: var(--book-space-m);
+    border-radius: var(--book-radius-m);
+    background-color: var(--brand-color);
+    color: var(--book-on-brand-color);
+}
+
+.demo-transitions-main {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+}
+
+// Side-by-side comparison of all transitions.
+.demo-transitions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8em, 1fr));
+    gap: var(--book-space-m);
+    width: 100%;
+}
+
+.demo-transitions-cell {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-s);
+    min-height: 7.5em;
+    padding: var(--book-space-m);
+    border: 1px dashed var(--book-border-color);
+    border-radius: var(--book-radius-m);
+}
+
+.demo-transitions-label {
+    font-size: var(--book-font-size-s);
+    color: var(--book-muted-color);
+}
+
+.demo-transitions-tile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 4em;
+    border-radius: var(--book-radius-m);
+    background-color: var(--brand-color);
+    color: var(--book-on-brand-color);
+    font-weight: 600;
+}
+
+// Clips content that slides outside of it.
+.demo-transitions-clip {
+    overflow: hidden;
+}
+
+// Grow, Slide and Zoom: the theme ships no styles for them, so the demos style `[data-in]` themselves. `visibility`
+// switches after the exit transition (and immediately on enter), so hidden content can't be focused or read by
+// screen readers.
+.demo-transitions-grow {
+    opacity: 0;
+    transform: scale(0.75, 0.5);
+    transform-origin: top center;
+    visibility: hidden;
+    transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0s 0.25s;
+
+    &[data-in] {
+        opacity: 1;
+        transform: none;
+        visibility: visible;
+        transition: opacity 0.25s ease-out, transform 0.25s ease-out, visibility 0s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &[data-in] {
+            transition: none;
+        }
+    }
+}
+
+.demo-transitions-slide {
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.3s;
+
+    &[data-in] {
+        transform: none;
+        visibility: visible;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &[data-in] {
+            transition: none;
+        }
+    }
+}
+
+.demo-transitions-zoom {
+    transform: scale(0);
+    visibility: hidden;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s 0.25s;
+
+    &[data-in] {
+        transform: none;
+        visibility: visible;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0s;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        &,
+        &[data-in] {
+            transition: none;
+        }
+    }
+}

@@ -2,33 +2,40 @@ use leptonic::{
     atoms::prelude::*,
     components::prelude::Checkbox,
     hooks::{HoverEndEvent, HoverStartEvent},
-    utils::classes::Classes,
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn HoverableDemo() -> impl IntoView {
-    let (hovered, set_hovered) = signal(false);
-    let (last_pointer, set_last_pointer) = signal(String::from("none"));
-    let (disabled, set_disabled) = signal(false);
+    let hovered = RwSignal::new(false);
+    let last_pointer = RwSignal::new(None::<String>);
+    let disabled = RwSignal::new(false);
 
     view! {
+        // The box is styled through the `data-hovered` attribute the atom adds.
         <Hoverable
             is_disabled=disabled
             on_hover_start=move |e: HoverStartEvent| {
-                set_hovered.set(true);
-                set_last_pointer.set(e.pointer_type.to_string());
+                hovered.set(true);
+                last_pointer.set(Some(e.pointer_type.to_string()));
             }
-            on_hover_end=move |_: HoverEndEvent| set_hovered.set(false)
+            on_hover_end=move |_: HoverEndEvent| hovered.set(false)
         >
-            <div class=Classes::from("demo-hover-target").add_reactive("hovered", hovered)>"Hover me"</div>
+            <div class="demo-hover-target">"Hover me"</div>
         </Hoverable>
 
-        <Checkbox state=(disabled, set_disabled)>"Disabled"</Checkbox>
-
-        <div class="demo-state-display">
-            <div><strong>"Hovered: "</strong>{move || hovered.get().to_string()}</div>
-            <div><strong>"Last pointer: "</strong>{last_pointer}</div>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
+
+        <p class="demo-status">
+            {move || {
+                let state = if hovered.get() { "Hovered" } else { "Not hovered" };
+                match last_pointer.get() {
+                    Some(pointer) => format!("{state}, last pointer type: {pointer}."),
+                    None => format!("{state}."),
+                }
+            }}
+        </p>
     }
 }

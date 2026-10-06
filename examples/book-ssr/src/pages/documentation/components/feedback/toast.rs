@@ -8,16 +8,18 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageToast() -> impl IntoView {
     view! {
-        <DocPage title="Toast">
+        <DocPage title="Toast Component">
             <p>
                 "A toast is a short, non-blocking notification that appears on top of your app and usually disappears "
-                "after a few seconds, for example to confirm that something was saved. Leptonic renders toasts in a "
+                "after a few seconds, for example to confirm that something was saved. Unlike an "
+                <Link href=routes::doc::Alert.materialize()>"Alert"</Link>", it isn\u{2019}t part of the page\u{2019}s "
+                "content. Leptonic renders toasts in a "
                 <Code inline=true>"ToastRoot"</Code>"; you create them by pushing a "<Code inline=true>"Toast"</Code>
                 " to the "<Code inline=true>"Toasts"</Code>" context."
             </p>
 
             <Demo
-                description="Form creating toasts with a chosen variant, timeout, header and body"
+                description="Form creating toasts with a chosen variant, timeout, header and body, and a button clearing them"
                 source=include_str!("demos/toast_creation.rs")
             >
                 <ToastCreationDemo/>
@@ -58,7 +60,7 @@ pub fn PageToast() -> impl IntoView {
             </Section>
 
             <Section title="Toast">
-                <ApiTable kind=ApiKind::Input of="Toast">
+                <ApiTable kind=ApiKind::Fields of="Toast">
                     <ApiRow name="id" ty="Uuid">
                         "Identifies the toast, for example to remove it with "<Code inline=true>"try_remove"</Code>"."
                     </ApiRow>
@@ -71,12 +73,15 @@ pub fn PageToast() -> impl IntoView {
                     <ApiRow name="header" ty="ViewFn">"The header content."</ApiRow>
                     <ApiRow name="body" ty="ViewFn">"The message content."</ApiRow>
                     <ApiRow name="timeout" ty="ToastTimeout">
-                        "When the toast disappears, see "<a href="#timeouts">"Timeouts"</a>"."
+                        "When the toast disappears, see "<AnchorLink href="#timeouts">"Timeouts"</AnchorLink>"."
                     </ApiRow>
                 </ApiTable>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::components::prelude::*;
+                        use uuid::Uuid;
+
                         let toasts = expect_context::<Toasts>();
 
                         toasts.push(Toast {
@@ -111,13 +116,38 @@ pub fn PageToast() -> impl IntoView {
                 </DocTable>
             </Section>
 
+            <Section title="Accessibility">
+                <p>
+                    "The toast component isn\u{2019}t accessible yet, and leptonic has no toast hooks or atoms to build an "
+                    "accessible one from. Keep these gaps in mind:"
+                </p>
+                <ul>
+                    <li>
+                        "Screen readers don\u{2019}t announce toasts: the toast container is no live region. Announce the "
+                        "message yourself with "<Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link>
+                        "\u{2019}s "<Code inline=true>"announce_polite"</Code>" when you push the toast."
+                    </li>
+                    <li>
+                        "The close icon reacts to mouse clicks only: it takes no focus and has no accessible name. A toast "
+                        "with "<Code inline=true>"ToastTimeout::None"</Code>" can\u{2019}t be closed with the keyboard, so "
+                        "remove it from your app with "<Code inline=true>"try_remove"</Code>" or "<Code inline=true>"clear"</Code>"."
+                    </li>
+                    <li>
+                        "Timed toasts disappear after their delay even while the pointer or focus is on them. Don\u{2019}t "
+                        "put information or actions into a toast that the user can\u{2019}t find elsewhere."
+                    </li>
+                </ul>
+            </Section>
+
             <Section title="Styling">
                 <p>"Override any of these CSS variables to adapt toasts to your design:"</p>
                 <CssVariables prefix="--toast-" scss=theme_scss!("toasts")/>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::components::Alert.materialize()>"Alert"</Link></li>
+                <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
+                <li><Link href=routes::doc::Alert.materialize()>"Alert Component"</Link></li>
+                <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link></li>
             </SeeAlso>
         </DocPage>
     }

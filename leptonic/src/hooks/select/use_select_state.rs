@@ -3,21 +3,23 @@ use std::collections::HashSet;
 
 use leptos::prelude::*;
 
-use crate::hooks::{
-    collections::{
-        CollectionMemo, FocusStrategy, Key, ListState, Node, Selection, SelectionMode,
-        SelectionOptions, UseListStateInput, use_list_state,
+use crate::{
+    hooks::{
+        collections::{
+            CollectionMemo, FocusStrategy, Key, ListState, Node, Selection, SelectionMode,
+            SelectionOptions, UseListStateInput, use_list_state,
+        },
+        form::use_form_validation_state::{
+            UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn,
+            ValidationBehavior, use_form_validation_state,
+        },
+        menu::use_menu_trigger_state::{
+            MenuTriggerState, MenuTriggerStateApi, UseMenuTriggerStateInput, use_menu_trigger_state,
+        },
+        overlay::use_overlay_trigger_state::OverlayState,
     },
-    form::use_form_validation_state::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
-        use_form_validation_state,
-    },
-    menu::use_menu_trigger_state::{
-        MenuTriggerState, MenuTriggerStateApi, UseMenuTriggerStateInput, use_menu_trigger_state,
-    },
-    overlay::use_overlay_trigger_state::OverlayState,
+    utils::ValueBinding,
 };
-use crate::utils::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -115,6 +117,10 @@ impl OverlayState for SelectState {
     fn close(&self) {
         SelectState::close(self);
     }
+
+    fn point(&self) -> Signal<Option<crate::utils::Point>> {
+        self.menu_trigger.overlay.point
+    }
 }
 
 impl MenuTriggerStateApi for SelectState {
@@ -128,6 +134,10 @@ impl MenuTriggerStateApi for SelectState {
 
     fn toggle(&self, focus_strategy: Option<FocusStrategy>) {
         SelectState::toggle(self, focus_strategy);
+    }
+
+    fn set_point(&self, point: Option<crate::utils::Point>) {
+        self.menu_trigger.overlay.set_point(point);
     }
 }
 
@@ -237,10 +247,19 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
 
     // Set once validation exists (it needs the list's value).
     let commit_validation: StoredValue<Option<Callback<()>>> = StoredValue::new(None);
+    // The value `on_change` last reported, to report only changes. A bound value changed by the app
+    // counts as reported (picking the previous value again is a change).
     let last_value = StoredValue::new(value.map_or_else(
         || default_value.clone(),
         |value| value.value.get_untracked(),
     ));
+    if let Some(value) = value {
+        Effect::watch(
+            move || value.value.get(),
+            move |value, _, _| last_value.set_value(value.clone()),
+            false,
+        );
+    }
     // The bound value as the list's selection ("select all" doesn't apply to selects).
     let selection_binding = value.map(|value| {
         ValueBinding::new(

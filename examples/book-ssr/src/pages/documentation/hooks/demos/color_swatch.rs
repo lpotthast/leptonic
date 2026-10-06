@@ -1,7 +1,4 @@
-use leptonic::{
-    hooks::*,
-    utils::{color::RGB8, css::CssColor, style::BackgroundColorProperty, styles::Styles},
-};
+use leptonic::{hooks::*, utils::color::RGB8};
 use leptos::prelude::*;
 
 const BLUE: RGB8 = RGB8 {
@@ -17,19 +14,18 @@ const GREEN: RGB8 = RGB8 {
 
 /// A swatch together with the accessible name it announces.
 #[component]
-fn Swatch(color: RGB8, #[prop(optional, into)] color_name: Option<String>) -> impl IntoView {
+fn Swatch(color: RGB8, #[prop(optional, into)] color_name: MaybeProp<String>) -> impl IntoView {
     let swatch = use_color_swatch(UseColorSwatchInput {
-        color: Signal::stored(color),
-        color_name: color_name.clone().map(Signal::stored),
-        aria_label: MaybeProp::default(),
+        color_name,
+        ..UseColorSwatchInput::new(Signal::stored(color))
     });
-
-    let label = color_name.unwrap_or_else(|| swatch.background_color.get_untracked());
-    let styles = Styles::new().add(BackgroundColorProperty.declare(CssColor::from(color)));
+    // The props carry the swatch's background color as a style.
+    let (props, styles) = swatch.color_swatch_props.into_inner();
+    let label = props.aria_label;
 
     view! {
         <figure class="demo-color-swatch-item">
-            <div {..swatch.props.into_attrs()} class="demo-color-swatch-hook" style=styles></div>
+            <div {..props.into_attrs()} class="demo-color-swatch-hook" style=styles></div>
             <figcaption>
                 "aria-label: " <code>{label}</code>
             </figcaption>

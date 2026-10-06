@@ -18,28 +18,29 @@ use crate::{
 //
 // - Legacy mouse/touch fallback (`process.env.NODE_ENV === 'test'` branch) — WASM always has `PointerEvent`.
 //
-// ## DIFFERENT BEHAVIOR
-//
-// - `on_interact_outside` callback receives `MouseEvent` (from the click event) rather than
-//   react-aria's loose `PointerEvent` typing. `on_interact_outside_start` receives a real
-//   `PointerEvent` from the pointerdown listener.
+// ## API DIFFERENCES
+// - Both callbacks get a `MouseEvent`: the `pointerdown` (a `PointerEvent`, which is one) and the
+//   `click` (react-aria's handlers are untyped).
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
 // - Uses `ElementCaptureAttr` instead of `RefObject`.
 
 /// Input parameters for the `use_interact_outside` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UseInteractOutsideInput {
     /// Whether the interact outside events should be disabled.
     pub is_disabled: Signal<bool>,
 
-    /// Handler called when an interaction starts outside the element.
-    pub on_interact_outside_start: Option<Callback<PointerEvent>>,
+    /// Handler called when an interaction starts outside the element (with the `pointerdown`).
+    pub on_interact_outside_start: Option<Callback<web_sys::MouseEvent>>,
 
     /// Handler called when an interaction completes outside the element.
     /// Receives a `MouseEvent` from the click listener (not `PointerEvent`).
     pub on_interact_outside: Option<Callback<web_sys::MouseEvent>>,
+    /// The element interactions are outside of (e.g. a popover group). Default: the element the
+    /// returned props are spread on (the props then capture nothing).
+    pub element: Option<CapturedElement>,
 }
 
 #[derive(Debug)]
@@ -83,11 +84,12 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 ///
 /// ```ignore
 /// let interact_outside = use_interact_outside(UseInteractOutsideInput {
-///     disabled: Signal::derive(|| false),
+///     is_disabled: Signal::derive(|| false),
 ///     on_interact_outside_start: None,
 ///     on_interact_outside: Some(Callback::new(|_| {
 ///         // Close the popover/dialog
 ///     })),
+///     element: None,
 /// });
 ///
 /// view! {
@@ -115,9 +117,16 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
             is_disabled: disabled,
             on_interact_outside_start,
             on_interact_outside,
+            element: external,
         } = input;
 
-        let element = CapturedElement::new();
+        let element = external.unwrap_or_else(CapturedElement::new);
+        // An external element is captured elsewhere; the props must not capture another one.
+        let capture = if external.is_some() {
+            CapturedElement::new()
+        } else {
+            element
+        };
 
         let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
 
@@ -156,7 +165,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                         && is_valid_event(&e, element.get_untracked().as_ref())
                     {
                         if let Some(on_interact_outside_start) = on_interact_outside_start {
-                            on_interact_outside_start.run(e);
+                            on_interact_outside_start.run(e.into());
                         }
                         is_pointer_down.set_value(true);
                     }
@@ -183,7 +192,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 
         UseInteractOutsideReturn {
             props: UseInteractOutsideProps {
-                element_capture: element.attr(),
+                element_capture: capture.attr(),
             },
         }
     }

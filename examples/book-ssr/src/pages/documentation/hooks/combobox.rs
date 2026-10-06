@@ -45,8 +45,14 @@ pub fn PageUseCombobox() -> impl IntoView {
                     <Link href=routes::doc::listbox::Hook.materialize()>"listbox"</Link>"."
                 </p>
 
+                <Section title="Example" id="use-combobox-state-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::{
+                            Key, UseComboBoxStateInput, use_collection, use_combobox_state, use_contains_filter,
+                        };
+                        use leptos::{logging::log, prelude::*};
+
                         let collection = use_collection(|b| {
                             b.item("apple", "Apple");
                             b.item("banana", "Banana");
@@ -60,8 +66,9 @@ pub fn PageUseCombobox() -> impl IntoView {
                         });
                     "#)}
                 </Code>
+                </Section>
 
-                <Section title="Input">
+                <Section title="Input" id="use-combobox-state-input">
                     <p>
                         "Create the input with "<Code inline=true>"UseComboBoxStateInput::new(collection)"</Code>
                         " and set further fields with struct update syntax."
@@ -101,13 +108,13 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "Further options that can\u{2019}t be focused or selected."
                         </ApiRow>
                         <ApiRow name="menu_trigger" ty="ComboBoxMenuTrigger" default="Input">
-                            "When the popover opens, see "<a href="#opening-the-popover">"Opening the popover"</a>"."
+                            "When the popover opens, see "<AnchorLink href="#opening-the-popover">"Opening the Popover"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="allows_empty_collection" ty="bool" default="false">
                             "Keep the popover open when no option matches, e.g. to show an empty state."
                         </ApiRow>
                         <ApiRow name="allows_custom_value" ty="bool" default="false">
-                            "Keep text that matches no option, see "<a href="#custom-values">"Custom values"</a>"."
+                            "Keep text that matches no option, see "<AnchorLink href="#custom-values">"Custom Values"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="should_close_on_blur" ty="bool" default="true">
                             "Commit the input and close the popover when focus leaves the combobox."
@@ -139,7 +146,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="Return">
+                <Section title="Return" id="use-combobox-state-return">
                     <p>
                         <Code inline=true>"use_combobox_state"</Code>" returns a "<Code inline=true>"ComboBoxState"</Code>
                         ". It is "<Code inline=true>"Copy"</Code>", so you can move it into any number of closures. Its "
@@ -253,7 +260,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                     </DocTable>
                 </Section>
 
-                <Section title="Opening the popover">
+                <Section title="Opening the Popover">
                     <p><Code inline=true>"menu_trigger"</Code>" decides when the popover opens:"</p>
                     <DocTable headers=&["ComboBoxMenuTrigger", "Opens the popover"]>
                         <TableRow>
@@ -276,7 +283,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                     </p>
                 </Section>
 
-                <Section title="Custom values">
+                <Section title="Custom Values">
                     <p>
                         "By default, the input only keeps text that belongs to an option: when focus leaves the combobox "
                         "(or on "<Keys keys="Enter"/>" without a focused option), the input shows the selected option\u{2019}s "
@@ -300,12 +307,16 @@ pub fn PageUseCombobox() -> impl IntoView {
                     <Link href=routes::doc::listbox::Hook.materialize()>"use_listbox"</Link>" for the listbox in the popover."
                 </p>
 
+                <Section title="Example" id="use-combobox-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptos::{ev, prelude::*};
+
                         let popover = CapturedElement::new();
                         let UseComboBoxReturn { label_on_click, input, input_props, button, listbox } =
                             use_combobox(UseComboBoxInput {
-                                has_label: true,
+                                has_label: true.into(),
                                 popover,
                                 ..UseComboBoxInput::new(state)
                             });
@@ -318,7 +329,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                         view! {
                             <label {..label_props.into_attrs()} {..label_attrs}>"Fruit"</label>
                             <input {..field_props.into_attrs()} {..input_props.into_attrs()}/>
-                            <button {..button_attrs} style=button_styles>"\u{25bc}"</button>
+                            <button {..button_attrs} style=button_styles><span aria-hidden="true">"▼"</span></button>
                             <Show when=move || state.is_open()>
                                 <div {..popover.attr()}>
                                     // `use_listbox(listbox.get_value())` and one `use_option` per item of its
@@ -332,12 +343,15 @@ pub fn PageUseCombobox() -> impl IntoView {
                 <p>
                     "The listbox shows "<Code inline=true>"state.list"</Code>", the options matching the input. Render one "
                     "option per item of "<Code inline=true>"data.state.collection"</Code>" (from "<Code inline=true>"use_listbox"</Code>
-                    "), not of the full collection. Options are focused virtually: DOM focus stays in the input, which points "
+                    "), not of the full collection. Options are focused "
+                    <Link href=routes::doc::focus::VirtualFocus.materialize()>"virtually"</Link>
+                    ": DOM focus stays in the input, which points "
                     "at the focused option with "<Code inline=true>"aria-activedescendant"</Code>". Style the focused option "
                     "with "<Code inline=true>"is_focused"</Code>" of "<Code inline=true>"use_option"</Code>"."
                 </p>
+                </Section>
 
-                <Section title="Input">
+                <Section title="Input" id="use-combobox-input">
                     <p>
                         "Create the input with "<Code inline=true>"UseComboBoxInput::new(state)"</Code>
                         " and set further fields with struct update syntax."
@@ -353,7 +367,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "signal to the state."
                         </ApiRow>
                         <ApiRow name="is_required" ty="bool" default="false">"Marks the input as required."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>" of "
                             <Code inline=true>"use_text_field"</Code>". It then labels the input, the button and the listbox."
                         </ApiRow>
@@ -381,7 +395,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="Return">
+                <Section title="Return" id="use-combobox-return">
                     <ApiTable kind=ApiKind::Return of="UseComboBoxReturn">
                         <ApiRow name="label_on_click" ty="EventHandler<MouseEvent>">
                             "For the label: clicking it focuses the input and shows its focus ring. Attach it with "
@@ -412,37 +426,42 @@ pub fn PageUseCombobox() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Keyboard">
-                <p>"All keys go to the input; the popover never takes focus."</p>
-                <KeyboardTable>
-                    <KeyRow keys="ArrowDown">
-                        "Open the popover with all options and focus the selected option, or the first one; when open, "
-                        "focus the next option."
-                    </KeyRow>
-                    <KeyRow keys="ArrowUp">
-                        "Open the popover with all options and focus the selected option, or the last one; when open, "
-                        "focus the previous option."
-                    </KeyRow>
-                    <KeyRow keys="Home / End">"When open: focus the first or last option."</KeyRow>
-                    <KeyRow keys="PageDown / PageUp">"When open: move the focus by a page of options."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Remove the focus from the options and move the text cursor."</KeyRow>
-                    <KeyRow keys="Enter">
-                        "Select the focused option and close the popover. Without a focused option, commit the input as "
-                        "when leaving it. While the popover is closed, the key event isn\u{2019}t prevented, so "
-                        <Keys keys="Enter"/>" also submits the form."
-                    </KeyRow>
-                    <KeyRow keys="Escape">"Close the popover and restore the selected option\u{2019}s text."</KeyRow>
-                    <KeyRow keys="Tab">"Select the focused option, close the popover and move focus to the next element."</KeyRow>
-                </KeyboardTable>
-                <p>"Disabled options are skipped."</p>
+            <Section title="use_contains_filter">
+                <p>
+                    "Returns the "<Code inline=true>"ComboBoxFilter"</Code>" most comboboxes want: an option matches when "
+                    "its text contains the input text, compared in the current locale, ignoring case and accents "
+                    "(\u{201c}ap\u{201d} matches \u{201c}Grape\u{201d}, \u{201c}cafe\u{201d} matches "
+                    "\u{201c}Caf\u{e9}\u{201d}). Pass it as "<Code inline=true>"filter"</Code>" of "
+                    <Code inline=true>"use_combobox_state"</Code>" or "<Code inline=true>"ComboBox"</Code>"."
+                </p>
+                <p>
+                    "Call it in a component: it reads the locale from the surrounding "
+                    <Code inline=true>"I18nProvider"</Code>" (else "<Code inline=true>"en-US"</Code>") each time it filters. "
+
+                    "For other matching (a prefix, a fuzzy search), pass your own function of the option text and the "
+                    "input text:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        use std::sync::Arc;
+
+                        use leptonic::hooks::ComboBoxFilter;
+
+                        let starts_with: ComboBoxFilter = Arc::new(|text: &str, input: &str| {
+                            text.to_lowercase().starts_with(&input.to_lowercase())
+                        });
+                    ")}
+                </Code>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
-                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></li>
-                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox hooks"</Link></li>
-                <li><Link href=routes::doc::text_field::Hook.materialize()>"Text field hooks"</Link></li>
-                <li><Link href=routes::doc::select::Hook.materialize()>"Select hooks"</Link></li>
+                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox Atoms"</Link></li>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
+                <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
+                <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+
             </SeeAlso>
         </DocPage>
     }

@@ -14,8 +14,7 @@ pub fn PageRadioOverview() -> impl IntoView {
             </p>
             <p>
                 "In leptonic, radios always live in a radio group, which holds the selected value. Each radio is a native "
-                <Code inline=true>"<input type=\"radio\">"</Code>" inside a "<Code inline=true>"<label>"</Code>
-                ", so the group submits with forms and takes part in validation."
+                "radio input inside its label, so the group submits with forms and takes part in validation."
             </p>
 
             <Section title="When to Use">
@@ -51,21 +50,21 @@ pub fn PageRadioOverview() -> impl IntoView {
                 </p>
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::radio::Hook.materialize()>"Radio hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::radio::Hook.materialize()>"Radio Hooks"</Link></TableCell>
                         <TableCell>
                             <Code inline=true>"use_radio_group"</Code>", "<Code inline=true>"use_radio"</Code>" and the group state: "
                             "group semantics, arrow-key navigation and validation for inputs and labels you render yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::radio::Atom.materialize()>"Radio atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></TableCell>
                         <TableCell>
                             "Unstyled "<Code inline=true>"RadioGroup"</Code>" and "<Code inline=true>"Radio"</Code>
                             " with label, description and error message parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::radio::Component.materialize()>"Radio component"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></TableCell>
                         <TableCell>"Themed "<Code inline=true>"RadioGroup"</Code>" and "<Code inline=true>"Radio"</Code>" with label and description."</TableCell>
                     </TableRow>
                 </DocTable>
@@ -73,11 +72,13 @@ pub fn PageRadioOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "A "<Code inline=true>"RadioGroup"</Code>" with a label holds the selected value; each "
-                    <Code inline=true>"Radio"</Code>" has a "<Code inline=true>"value"</Code>" and its label as children."
+                    "A "<Code inline=true>"RadioGroup"</Code>" with a label holds the selected key; pass it an "
+                    <Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"value"</Code>" and "<Code inline=true>"set_value"</Code>
+                    " to keep the selection in your app. Each "<Code inline=true>"Radio"</Code>" has a "
+                    <Code inline=true>"value"</Code>" and its label as children."
                 </p>
                 <Demo
-                    description="Radio group with two labeled shipping options and the current selection"
+                    description="Radio group with two labeled shipping options, the current selection and a disabled toggle"
                     source=include_str!("demos/radio.rs")
                     source_open=true
                 >
@@ -88,9 +89,9 @@ pub fn PageRadioOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "Radio groups follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/radio/" target=LinkTarget::_Blank>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/radio/" target=LinkTarget::Blank>
                         "Radio Group pattern"
-                    </LinkExt>"."
+                    </Link>"."
                 </p>
                 <ul>
                     <li>
@@ -111,11 +112,26 @@ pub fn PageRadioOverview() -> impl IntoView {
                 </ul>
                 <KeyboardTable>
                     <KeyRow keys="Tab">"Moves focus into and out of the group."</KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowRight">"Selects the next radio, wrapping around at the end."</KeyRow>
-                    <KeyRow keys="ArrowUp / ArrowLeft">"Selects the previous radio, wrapping around at the start."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowRight">
+                        "Focuses and selects the next radio, wrapping around at the end. Disabled radios are skipped."
+                    </KeyRow>
+                    <KeyRow keys="ArrowUp / ArrowLeft">"Focuses and selects the previous radio, wrapping around at the start."</KeyRow>
                     <KeyRow keys="Space">"Selects the focused radio."</KeyRow>
                 </KeyboardTable>
+                <p>
+                    "Both arrow key pairs work in either orientation. In right-to-left locales, "<Keys keys="ArrowRight"/>
+                    " moves backwards in horizontal groups."
+                </p>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::radio::Hook.materialize()>"Radio Hooks"</Link></li>
+                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></li>
+                <li><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></li>
+                <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link></li>
+                <li><Link href=routes::doc::Select.materialize()>"Select"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

@@ -1,332 +1,348 @@
-// Upstream: react-stately/src/color/useColorAreaState.ts @ 6f664fe911
-use std::fmt;
-
+// Upstream: react-stately/src/color/useColorAreaState.ts @ 99e6102368
 use leptos::prelude::*;
 
 use crate::utils::{
-    color::{ColorChannelRange, ColorValue},
+    ValueBinding,
+    color::ColorValue,
     math::{decimal_precision, snap_value_to_step},
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorAreaState.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Hook-owned state: The hook owns its WriteSignal internally and exposes a
-//   read-only Signal<C>. React-aria uses useControlledState for
-//   controlled/uncontrolled support. Callers must use the hook's mutation
-//   callbacks.
+// ## API DIFFERENCES
+// - Generic over the color type (`ColorValue`), whose channels are typed per color space; the
+//   color space is the type (react-aria: a `colorSpace` prop converting the value).
+// - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
+// - A `Copy` struct with signals and methods (C3).
+// - `x_channel_step`/`y_channel_step` override the channels' steps (leptonic addition).
+//
+// =============================================================================
 
-/// Input parameters for `use_color_area_state`.
+/// Input of [`use_color_area_state`]. Start from [`UseColorAreaStateInput::new`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseColorAreaStateInput<C: ColorValue> {
-    /// The initial color value.
+    /// The initial color.
     pub default_value: C,
-
-    /// Which channel maps to the X axis.
-    pub x_channel: C::Channel,
-
-    /// Which channel maps to the Y axis.
-    pub y_channel: C::Channel,
-
-    /// Optional override for the X channel step.
+    /// The color as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<C>>,
+    /// The channel on the horizontal axis. Default: the color space's first axis.
+    pub x_channel: Option<C::Channel>,
+    /// The channel on the vertical axis. Default: the color space's second axis.
+    pub y_channel: Option<C::Channel>,
+    /// The horizontal step. Default: the x channel's step.
     pub x_channel_step: Option<f64>,
-
-    /// Optional override for the Y channel step.
+    /// The vertical step. Default: the y channel's step.
     pub y_channel_step: Option<f64>,
-
-    /// Callback fired when the color changes during interaction.
+    /// Called with the color whenever it changes, also while dragging.
     pub on_change: Option<Callback<C>>,
-
-    /// Callback fired when interaction ends (e.g. drag release).
+    /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
 }
 
-/// Return value of `use_color_area_state`.
-pub struct UseColorAreaStateReturn<C: ColorValue> {
-    /// The current color (read-only).
-    pub value: Signal<C>,
-
-    /// The X-axis channel value.
-    pub x_value: Signal<f64>,
-
-    /// The Y-axis channel value.
-    pub y_value: Signal<f64>,
-
-    /// Which channel is on the X axis.
-    pub x_channel: C::Channel,
-
-    /// Which channel is on the Y axis.
-    pub y_channel: C::Channel,
-
-    /// The remaining (Z) channel not on either axis.
-    pub z_channel: C::Channel,
-
-    /// Whether the user is currently dragging.
-    pub is_dragging: Signal<bool>,
-
-    /// Set the dragging state. Fires `on_change_end` on false transition.
-    pub set_dragging: Callback<bool>,
-
-    /// Update the color from a normalized point (0.0–1.0 for each axis).
-    /// Y is inverted: 0.0 = top = max, 1.0 = bottom = min.
-    pub set_color_from_point: Callback<(f64, f64)>,
-
-    /// The current thumb position as normalized coordinates (0.0–1.0).
-    /// Derived from the current channel values.
-    pub thumb_position: Signal<(f64, f64)>,
-
-    /// Update the full color value (for external sources like number inputs).
-    pub set_value: Callback<C>,
-
-    /// Increment the X channel by the given step (or default step if None).
-    pub increment_x: Callback<Option<f64>>,
-
-    /// Decrement the X channel by the given step (or default step if None).
-    pub decrement_x: Callback<Option<f64>>,
-
-    /// Increment the Y channel by the given step (or default step if None).
-    pub increment_y: Callback<Option<f64>>,
-
-    /// Decrement the Y channel by the given step (or default step if None).
-    pub decrement_y: Callback<Option<f64>>,
-
-    /// The step size for the X channel.
-    pub x_channel_step: f64,
-
-    /// The step size for the Y channel.
-    pub y_channel_step: f64,
-
-    /// The page step size for the X channel.
-    pub x_channel_page_step: f64,
-
-    /// The page step size for the Y channel.
-    pub y_channel_page_step: f64,
-
-    /// Set the X channel to a specific value. Fires `on_change`.
-    pub set_x_value: Callback<f64>,
-
-    /// Set the Y channel to a specific value. Fires `on_change`.
-    pub set_y_value: Callback<f64>,
-
-    /// The display color (same as value for non-alpha color spaces).
-    pub display_color: Signal<C>,
-}
-
-impl<C: ColorValue> Clone for UseColorAreaStateReturn<C> {
-    fn clone(&self) -> Self {
+impl<C: ColorValue> UseColorAreaStateInput<C> {
+    /// An area starting at `default_value`, with the color space's default axes.
+    pub fn new(default_value: C) -> Self {
         Self {
-            value: self.value,
-            x_value: self.x_value,
-            y_value: self.y_value,
-            x_channel: self.x_channel,
-            y_channel: self.y_channel,
-            z_channel: self.z_channel,
-            is_dragging: self.is_dragging,
-            set_dragging: self.set_dragging,
-            set_color_from_point: self.set_color_from_point,
-            thumb_position: self.thumb_position,
-            set_value: self.set_value,
-            increment_x: self.increment_x,
-            decrement_x: self.decrement_x,
-            increment_y: self.increment_y,
-            decrement_y: self.decrement_y,
-            x_channel_step: self.x_channel_step,
-            y_channel_step: self.y_channel_step,
-            x_channel_page_step: self.x_channel_page_step,
-            y_channel_page_step: self.y_channel_page_step,
-            set_x_value: self.set_x_value,
-            set_y_value: self.set_y_value,
-            display_color: self.display_color,
+            default_value,
+            value: None,
+            x_channel: None,
+            y_channel: None,
+            x_channel_step: None,
+            y_channel_step: None,
+            on_change: None,
+            on_change_end: None,
         }
     }
 }
 
-impl<C: ColorValue> fmt::Debug for UseColorAreaStateReturn<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UseColorAreaStateReturn")
-            .field("x_channel", &self.x_channel)
-            .field("y_channel", &self.y_channel)
-            .field("z_channel", &self.z_channel)
-            .finish_non_exhaustive()
+/// The state of a 2D color area: the color, and the two channels its axes change.
+#[derive(Debug, Clone, Copy)]
+pub struct ColorAreaState<C: ColorValue> {
+    /// The color.
+    pub value: Signal<C>,
+    /// The x channel's value.
+    pub x_value: Signal<f64>,
+    /// The y channel's value.
+    pub y_value: Signal<f64>,
+    /// The channel on the horizontal axis.
+    pub x_channel: C::Channel,
+    /// The channel on the vertical axis.
+    pub y_channel: C::Channel,
+    /// The third channel, fixed in the area.
+    pub z_channel: C::Channel,
+    /// The horizontal step.
+    pub x_channel_step: f64,
+    /// The vertical step.
+    pub y_channel_step: f64,
+    /// The horizontal page step (Home/End).
+    pub x_channel_page_step: f64,
+    /// The vertical page step (PageUp/PageDown).
+    pub y_channel_page_step: f64,
+    /// Whether the thumb is being dragged.
+    pub is_dragging: Signal<bool>,
+    binding: ValueBinding<C>,
+    default_value: StoredValue<C>,
+    /// The color as last set: dragging sets several times before the binding has updated.
+    latest: StoredValue<C>,
+    dragging: RwSignal<bool>,
+    on_change_end: Option<Callback<C>>,
+}
+
+impl<C: ColorValue> ColorAreaState<C> {
+    /// The color the area started with (for form resets).
+    pub fn default_value(&self) -> C {
+        self.default_value.get_value()
+    }
+
+    /// Sets the color.
+    pub fn set_value(&self, color: C) {
+        if color != self.latest.get_value() {
+            self.latest.set_value(color);
+            self.binding.set(color);
+        }
+    }
+
+    /// Sets the x channel's value.
+    pub fn set_x_value(&self, value: f64) {
+        let color = self.latest.get_value();
+        if value != color.get_channel_value(self.x_channel) {
+            self.set_value(color.with_channel_value(self.x_channel, value));
+        }
+    }
+
+    /// Sets the y channel's value.
+    pub fn set_y_value(&self, value: f64) {
+        let color = self.latest.get_value();
+        if value != color.get_channel_value(self.y_channel) {
+            self.set_value(color.with_channel_value(self.y_channel, value));
+        }
+    }
+
+    /// Sets the color from a point of the area, each coordinate from 0 to 1 (`y` from the top).
+    /// The values snap to the steps.
+    pub fn set_color_from_point(&self, x: f64, y: f64) {
+        let color = self.latest.get_value();
+        let x_range = C::get_channel_range(self.x_channel);
+        let y_range = C::get_channel_range(self.y_channel);
+        let new_x = x_range.min_value + x.clamp(0.0, 1.0) * (x_range.max_value - x_range.min_value);
+        let new_y =
+            y_range.min_value + (1.0 - y.clamp(0.0, 1.0)) * (y_range.max_value - y_range.min_value);
+        let mut new_color = None;
+        if new_x != color.get_channel_value(self.x_channel) {
+            let snapped = snap(new_x, self.x_channel_step, &x_range);
+            new_color = Some(color.with_channel_value(self.x_channel, snapped));
+        }
+        if new_y != color.get_channel_value(self.y_channel) {
+            let snapped = snap(new_y, self.y_channel_step, &y_range);
+            new_color = Some(
+                new_color
+                    .unwrap_or(color)
+                    .with_channel_value(self.y_channel, snapped),
+            );
+        }
+        if let Some(new_color) = new_color {
+            self.set_value(new_color);
+        }
+    }
+
+    /// The thumb's position, each coordinate from 0 to 1 (`y` from the top). Tracked.
+    pub fn thumb_position(&self) -> (f64, f64) {
+        let x_range = C::get_channel_range(self.x_channel);
+        let y_range = C::get_channel_range(self.y_channel);
+        (
+            (self.x_value.get() - x_range.min_value) / (x_range.max_value - x_range.min_value),
+            1.0 - (self.y_value.get() - y_range.min_value)
+                / (y_range.max_value - y_range.min_value),
+        )
+    }
+
+    /// Increases the x channel by `step` (e.g. the page step).
+    pub fn increment_x(&self, step: f64) {
+        self.step_channel(self.x_channel, self.x_channel_step, step);
+    }
+
+    /// Decreases the x channel by `step`.
+    pub fn decrement_x(&self, step: f64) {
+        self.step_channel(self.x_channel, self.x_channel_step, -step);
+    }
+
+    /// Increases the y channel by `step`.
+    pub fn increment_y(&self, step: f64) {
+        self.step_channel(self.y_channel, self.y_channel_step, step);
+    }
+
+    /// Decreases the y channel by `step`.
+    pub fn decrement_y(&self, step: f64) {
+        self.step_channel(self.y_channel, self.y_channel_step, -step);
+    }
+
+    /// Adds `delta` to `channel`, snapped to the channel's `step` (react-aria: an increment past
+    /// the maximum lands on the maximum, which may be off the step grid).
+    fn step_channel(&self, channel: C::Channel, step: f64, delta: f64) {
+        let color = self.latest.get_value();
+        let range = C::get_channel_range(channel);
+        let target = color.get_channel_value(channel) + delta;
+        let value = if delta > 0.0 && target > range.max_value {
+            range.max_value
+        } else {
+            snap(target, step, &range)
+        };
+        if value != color.get_channel_value(channel) {
+            self.set_value(color.with_channel_value(channel, value));
+        }
+    }
+
+    /// Starts or ends dragging; ending it calls `on_change_end`.
+    pub fn set_dragging(&self, dragging: bool) {
+        let was_dragging = self.dragging.get_untracked();
+        self.dragging.set(dragging);
+        if was_dragging
+            && !dragging
+            && let Some(on_change_end) = self.on_change_end
+        {
+            on_change_end.run(self.latest.get_value());
+        }
+    }
+
+    /// The color to show (react-aria: without alpha; our color spaces have none).
+    pub fn display_color(&self) -> Signal<C> {
+        self.value
     }
 }
 
-/// Snaps a channel value to its step boundaries.
-fn snap_channel_value<C: ColorValue>(channel: C::Channel, value: f64, step: f64) -> f64 {
-    let range = C::get_channel_range(channel);
-    let precision = decimal_precision(step);
-    snap_value_to_step(value, range.min_value, range.max_value, step, precision)
+fn snap(value: f64, step: f64, range: &crate::utils::color::ColorChannelRange) -> f64 {
+    snap_value_to_step(
+        value,
+        range.min_value,
+        range.max_value,
+        step,
+        decimal_precision(step),
+    )
 }
 
-/// Converts a normalized coordinate (0.0–1.0) to a channel value.
-fn normalized_to_channel_value(normalized: f64, range: &ColorChannelRange) -> f64 {
-    range.min_value + normalized * (range.max_value - range.min_value)
-}
-
-/// Converts a channel value to a normalized coordinate (0.0–1.0).
-fn channel_value_to_normalized(value: f64, range: &ColorChannelRange) -> f64 {
-    let span = range.max_value - range.min_value;
-    if span == 0.0 {
-        0.0
-    } else {
-        (value - range.min_value) / span
-    }
-}
-
-/// Creates state for a 2D color area component.
-///
-/// The color area lets users adjust two channels of a color simultaneously
-/// by dragging a thumb within a 2D gradient area.
-#[allow(clippy::too_many_lines)]
-pub fn use_color_area_state<C: ColorValue>(
-    input: UseColorAreaStateInput<C>,
-) -> UseColorAreaStateReturn<C> {
+/// Creates the state of a 2D color area.
+pub fn use_color_area_state<C: ColorValue>(input: UseColorAreaStateInput<C>) -> ColorAreaState<C> {
     let UseColorAreaStateInput {
         default_value,
+        value,
         x_channel,
         y_channel,
-        x_channel_step: x_step_override,
-        y_channel_step: y_step_override,
+        x_channel_step,
+        y_channel_step,
         on_change,
         on_change_end,
     } = input;
 
-    // Determine the z channel (the one not on either axis).
-    let (_, _, z_channel) = C::get_color_space_axes(Some(x_channel), Some(y_channel));
-
-    // Get channel ranges and steps.
+    let (x_channel, y_channel, z_channel) = C::get_color_space_axes(x_channel, y_channel);
     let x_range = C::get_channel_range(x_channel);
     let y_range = C::get_channel_range(y_channel);
-    let x_step = x_step_override.unwrap_or(x_range.step);
-    let y_step = y_step_override.unwrap_or(y_range.step);
 
-    // Hook-owned state.
-    let (value, set_value_signal) = signal(default_value);
-    let (is_dragging, set_is_dragging) = signal(false);
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    // With app state, the color it holds at first is the one to reset to (react-aria).
+    let default_value = StoredValue::new(binding.value.get_untracked());
+    let latest = StoredValue::new(binding.value.get_untracked());
+    // The binding's value may also change from outside.
+    let bound = binding.value;
+    Effect::new(move || latest.set_value(bound.get()));
+    let binding = ValueBinding::new(
+        binding.value,
+        Callback::new(move |color: C| {
+            binding.set(color);
+            if let Some(on_change) = on_change {
+                on_change.run(color);
+            }
+        }),
+    );
 
-    // Derived channel value signals.
-    let x_value = Signal::derive(move || value.get().get_channel_value(x_channel));
-    let y_value = Signal::derive(move || value.get().get_channel_value(y_channel));
-
-    // Thumb position as normalized coordinates.
-    // Y is inverted: 0.0 = top = max_value, 1.0 = bottom = min_value.
-    let thumb_position = Signal::derive(move || {
-        let x_norm = channel_value_to_normalized(x_value.get(), &x_range);
-        let y_norm = 1.0 - channel_value_to_normalized(y_value.get(), &y_range);
-        (x_norm, y_norm)
-    });
-
-    // Display color (same as value for non-alpha spaces).
-    let display_color = Signal::derive(move || value.get());
-
-    // Internal: update color value and fire callbacks.
-    // Skips no-op updates to prevent reactive loops.
-    let update_color = move |new_color: C| {
-        if new_color == value.get_untracked() {
-            return;
-        }
-        set_value_signal.set(new_color);
-        if let Some(cb) = on_change {
-            cb.run(new_color);
-        }
-    };
-
-    // Set color from normalized point.
-    let set_color_from_point = Callback::new(move |(norm_x, norm_y): (f64, f64)| {
-        let norm_x = norm_x.clamp(0.0, 1.0);
-        let norm_y = norm_y.clamp(0.0, 1.0);
-
-        let x_val = normalized_to_channel_value(norm_x, &x_range);
-        // Y is inverted.
-        let y_val = normalized_to_channel_value(1.0 - norm_y, &y_range);
-
-        let x_snapped = snap_channel_value::<C>(x_channel, x_val, x_step);
-        let y_snapped = snap_channel_value::<C>(y_channel, y_val, y_step);
-
-        let current = value.get_untracked();
-        let new_color = current
-            .with_channel_value(x_channel, x_snapped)
-            .with_channel_value(y_channel, y_snapped);
-        update_color(new_color);
-    });
-
-    // Set full value (for external sources).
-    // Does NOT fire on_change to prevent reactive loops when syncing
-    // with an external signal that also listens to on_change.
-    // Skips no-op updates.
-    let set_value = Callback::new(move |new_color: C| {
-        if new_color != value.get_untracked() {
-            set_value_signal.set(new_color);
-        }
-    });
-
-    // Set dragging with on_change_end support.
-    let set_dragging = Callback::new(move |dragging: bool| {
-        let was_dragging = is_dragging.get_untracked();
-        set_is_dragging.set(dragging);
-        if was_dragging
-            && !dragging
-            && let Some(cb) = on_change_end
-        {
-            cb.run(value.get_untracked());
-        }
-    });
-
-    // Increment/decrement helpers.
-    let make_adjuster =
-        move |channel: C::Channel, step: f64, direction: f64| -> Callback<Option<f64>> {
-            let range = C::get_channel_range(channel);
-            Callback::new(move |custom_step: Option<f64>| {
-                let s = custom_step.unwrap_or(step);
-                let current = value.get_untracked();
-                let current_val = current.get_channel_value(channel);
-                let new_val = (current_val + s * direction).clamp(range.min_value, range.max_value);
-                let snapped = snap_channel_value::<C>(channel, new_val, s);
-                let new_color = current.with_channel_value(channel, snapped);
-                update_color(new_color);
-            })
-        };
-
-    let increment_x = make_adjuster(x_channel, x_step, 1.0);
-    let decrement_x = make_adjuster(x_channel, x_step, -1.0);
-    let increment_y = make_adjuster(y_channel, y_step, 1.0);
-    let decrement_y = make_adjuster(y_channel, y_step, -1.0);
-
-    // Direct channel value setters (for hidden range input onChange).
-    let set_x_value = Callback::new(move |new_val: f64| {
-        let snapped = snap_channel_value::<C>(x_channel, new_val, x_step);
-        let new_color = value.get_untracked().with_channel_value(x_channel, snapped);
-        update_color(new_color);
-    });
-    let set_y_value = Callback::new(move |new_val: f64| {
-        let snapped = snap_channel_value::<C>(y_channel, new_val, y_step);
-        let new_color = value.get_untracked().with_channel_value(y_channel, snapped);
-        update_color(new_color);
-    });
-
-    UseColorAreaStateReturn {
-        value: value.into(),
-        x_value,
-        y_value,
+    let dragging = RwSignal::new(false);
+    let value = binding.value;
+    ColorAreaState {
+        value,
+        x_value: Signal::derive(move || value.get().get_channel_value(x_channel)),
+        y_value: Signal::derive(move || value.get().get_channel_value(y_channel)),
         x_channel,
         y_channel,
         z_channel,
-        is_dragging: is_dragging.into(),
-        set_dragging,
-        set_color_from_point,
-        thumb_position,
-        set_value,
-        increment_x,
-        decrement_x,
-        increment_y,
-        decrement_y,
-        x_channel_step: x_step,
-        y_channel_step: y_step,
+        x_channel_step: x_channel_step.unwrap_or(x_range.step),
+        y_channel_step: y_channel_step.unwrap_or(y_range.step),
         x_channel_page_step: x_range.page_size,
         y_channel_page_step: y_range.page_size,
-        set_x_value,
-        set_y_value,
-        display_color,
+        is_dragging: dragging.into(),
+        binding,
+        default_value,
+        latest,
+        dragging,
+        on_change_end,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::utils::color::{HSV, HsvChannel};
+
+    fn state(color: HSV) -> ColorAreaState<HSV> {
+        use_color_area_state(UseColorAreaStateInput {
+            x_channel: Some(HsvChannel::Saturation),
+            y_channel: Some(HsvChannel::Brightness),
+            ..UseColorAreaStateInput::new(color)
+        })
+    }
+
+    #[test]
+    fn steps_snap_to_the_channel_step_and_stop_at_the_bounds() {
+        Owner::new().with(|| {
+            let area = state(HSV {
+                hue: 0.0,
+                saturation: 0.5,
+                value: 0.5,
+            });
+            area.increment_x(area.x_channel_page_step);
+            assert_that!(area.x_value.get_untracked()).is_equal_to(0.6);
+            area.decrement_y(area.y_channel_step);
+            assert_that!(area.y_value.get_untracked()).is_equal_to(0.49);
+            for _ in 0..10 {
+                area.increment_x(area.x_channel_page_step);
+            }
+            assert_that!(area.x_value.get_untracked()).is_equal_to(1.0);
+        });
+    }
+
+    #[test]
+    fn a_point_sets_both_channels_with_y_from_the_top() {
+        Owner::new().with(|| {
+            let area = state(HSV {
+                hue: 0.0,
+                saturation: 0.0,
+                value: 0.0,
+            });
+            area.set_color_from_point(0.25, 0.25);
+            assert_that!(area.x_value.get_untracked()).is_equal_to(0.25);
+            assert_that!(area.y_value.get_untracked()).is_equal_to(0.75);
+            assert_that!(area.thumb_position()).is_equal_to((0.25, 0.25));
+        });
+    }
+
+    #[test]
+    fn dragging_ends_with_on_change_end() {
+        Owner::new().with(|| {
+            let ends = RwSignal::new(Vec::new());
+            let area = use_color_area_state(UseColorAreaStateInput {
+                on_change_end: Some(Callback::new(move |c: HSV| ends.update(|e| e.push(c)))),
+                ..UseColorAreaStateInput::new(HSV {
+                    hue: 0.0,
+                    saturation: 0.5,
+                    value: 0.5,
+                })
+            });
+            area.set_dragging(true);
+            area.set_color_from_point(1.0, 0.0);
+            area.set_dragging(false);
+            assert_that!(ends.get_untracked().len()).is_equal_to(1);
+        });
     }
 }

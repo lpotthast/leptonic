@@ -23,9 +23,9 @@ pub fn PageUseSwitchHook() -> impl IntoView {
     view! {
         <DocPage title="Switch Hooks">
             <p>
-                "The "<Code inline=true>"use_switch"</Code>" hook makes an "<Code inline=true>"<input type=\"checkbox\" role=\"switch\">"</Code>
+                "The "<AnchorLink href="#use-switch">"use_switch"</AnchorLink>" hook makes an "<Code inline=true>"<input type=\"checkbox\" role=\"switch\">"</Code>
                 " inside a "<Code inline=true>"<label>"</Code>" an accessible on/off switch; you draw the track next to the "
-                "visually hidden input. "<Code inline=true>"use_toggle"</Code>" is the toggle behavior it is built on. See the "
+                "visually hidden input. "<AnchorLink href="#use-toggle">"use_toggle"</AnchorLink>" is the toggle behavior it is built on. See the "
                 <Link href=routes::doc::Switch.materialize()>"Switch overview"</Link>" for concept guidance."
             </p>
             <ReactAria hook="useSwitch"/>
@@ -43,7 +43,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                         ". Create it with "<Code inline=true>"UseSwitchInput::new(state)"</Code>"."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseToggleInput">
-                        <ApiRow name="state" ty="ToggleState">"Whether the switch is on, from "<Code inline=true>"use_toggle_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="ToggleState">"Whether the switch is on, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
                         <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
                             "Disabled, read-only, form and labelling settings: see "<Link href=toggle_options>"ToggleOptions"</Link>"."
                         </ApiRow>
@@ -56,7 +56,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                         ": "<Code inline=true>"label_props"</Code>" for the label, "<Code inline=true>"input_props"</Code>
                         " for the input (with "<Code inline=true>"role=\"switch\""</Code>"), and the state signals "
                         <Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_pressed"</Code>", "
-                        <Code inline=true>"is_focus_visible"</Code>", ... to style the track."
+                        <Code inline=true>"is_focus_visible"</Code>", \u{2026} to style the track."
                     </p>
                 </Section>
 
@@ -83,8 +83,12 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                     <Code inline=true>"UseToggleInput"</Code>" and returns the same "<Code inline=true>"UseToggleReturn"</Code>
                     " as "<Code inline=true>"use_switch"</Code>"."
                 </p>
+                <ReactAriaSource path="toggle/useToggle.ts"/>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+                        use leptos::prelude::*;
+
                         let state = use_toggle_state(UseToggleStateInput::default());
                         let toggle = use_toggle(UseToggleInput::new(state));
                         let (label_attrs, label_styles) = toggle.label_props.into_parts();
@@ -104,19 +108,12 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus to the switch."</KeyRow>
-                    <KeyRow keys="Space">"Turns the switch on or off."</KeyRow>
-                </KeyboardTable>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch overview"</Link></li>
-                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch atom"</Link></li>
-                <li><Link href=routes::doc::switch::Component.materialize()>"Switch component"</Link></li>
-                <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox hooks"</Link></li>
-                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle button hooks"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
+                <li><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></li>
+                <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
+                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -1,18 +1,16 @@
 use std::fmt::Display;
 
 use leptos::prelude::*;
-use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
     Out,
     atoms::{
+        button::Button,
+        field::Label,
         input::Input,
         listbox::{ListBox, ListBoxItem},
         search_field::SearchField,
-        select::{
-            HiddenSelect, Select as SelectAtom, SelectCtx, SelectPopover, SelectTrigger,
-            SelectValue,
-        },
+        select::{HiddenSelect, Select as SelectAtom, SelectPopover, SelectTrigger, SelectValue},
     },
     components::{
         chip::{Chip, ChipColor},
@@ -20,11 +18,11 @@ use crate::{
         prelude::Leptonic,
     },
     hooks::{
-        SelectMode, TextFieldState,
+        SelectMode,
         collections::{CollectionMemo, Key, use_list_collection},
     },
     prelude::ViewCallback,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, styles::Styles, visually_hidden::visually_hidden_styles},
 };
 
 /// Types usable as options of [`Select`], [`OptionalSelect`] and [`Multiselect`]. Options are
@@ -85,16 +83,13 @@ impl<O: SelectOption> Options<O> {
     }
 }
 
-/// Keeps the select's value in sync with a value owned by the caller.
-#[component]
-fn SyncValue(#[prop(into)] keys: Signal<Vec<Key>>) -> impl IntoView {
-    let state = expect_context::<SelectCtx>().state;
-    Effect::new(move |_| {
-        let keys = keys.get();
-        if untrack(|| state.value()) != keys {
-            state.set_value(keys);
-        }
-    });
+/// The field's visible label, while `label` is set.
+fn label_view(label: MaybeProp<String>) -> impl IntoView {
+    move || {
+        label
+            .get()
+            .map(|label| view! { <Label classes="leptonic-select-label">{label}</Label> })
+    }
 }
 
 /// The popover with search input and options, shared by the select components.
@@ -148,6 +143,16 @@ pub fn Select<O>(
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    /// A visible label above the select.
+    #[prop(into, optional)]
+    label: MaybeProp<String>,
+    /// Names the select when there is no visible `label`.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// The name of the hidden form element holding the selection.
+    #[prop(into, optional)]
+    name: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
@@ -162,16 +167,19 @@ where
     view! {
         <SelectAtom
             collection=options.collection
-            default_value=keys.get_untracked()
-            on_change=Callback::new(move |keys: Vec<Key>| {
+            value=keys
+            set_value=Callback::new(move |keys: Vec<Key>| {
                 if let Some(option) = options.lookup(&keys).into_iter().next() {
                     set_selected.set(option);
                 }
             })
+            aria_label=aria_label
+            is_disabled=is_disabled
+            nostrip:name=name
             classes=classes.add("leptonic-select")
             styles=styles
         >
-            <SyncValue keys=keys />
+            {label_view(label)}
             <SelectTrigger classes="leptonic-select-selected">
                 <SelectValue />
                 <SelectShowTriggerIcon />
@@ -195,6 +203,16 @@ pub fn OptionalSelect<O>(
     #[prop(into)] allow_deselect: Signal<bool>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    /// A visible label above the select.
+    #[prop(into, optional)]
+    label: MaybeProp<String>,
+    /// Names the select when there is no visible `label`.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// The name of the hidden form element holding the selection.
+    #[prop(into, optional)]
+    name: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
@@ -206,42 +224,42 @@ where
     let options = Options::new(options, search_text_provider, search_filter_provider);
     let keys = Signal::derive(move || selected.get().iter().map(option_key).collect::<Vec<_>>());
 
-    let deselect = move |e: MouseEvent| {
-        e.prevent_default();
-        e.stop_propagation();
-        set_selected.set(None);
-    };
-
     view! {
         <SelectAtom
             collection=options.collection
-            default_value=keys.get_untracked()
-            on_change=Callback::new(move |keys: Vec<Key>| {
+            value=keys
+            set_value=Callback::new(move |keys: Vec<Key>| {
                 set_selected.set(options.lookup(&keys).into_iter().next());
             })
+            aria_label=aria_label
+            is_disabled=is_disabled
+            nostrip:name=name
             classes=classes.add("leptonic-select")
             styles=styles
         >
-            <SyncValue keys=keys />
-            <SelectTrigger classes="leptonic-select-selected">
-                <SelectValue />
+            {label_view(label)}
+            // The clear button is the trigger's sibling: buttons can't contain buttons.
+            <div class="leptonic-select-control">
+                <SelectTrigger classes="leptonic-select-selected">
+                    <SelectValue />
+                    <SelectShowTriggerIcon />
+                </SelectTrigger>
                 {move || {
                     (allow_deselect.get() && selected.get().is_some())
                         .then(|| {
                             view! {
-                                // Inside the trigger: keep the press from opening the popover.
-                                <div
-                                    class="leptonic-select-deselect-trigger"
-                                    on:pointerdown=|e: PointerEvent| e.stop_propagation()
-                                    on:click=deselect
+                                <Button
+                                    classes="leptonic-select-deselect-trigger"
+                                    aria_label="Clear selection"
+                                    is_disabled=is_disabled
+                                    on_press=move |_| set_selected.set(None)
                                 >
                                     <Icon icon=icondata::BsXCircleFill />
-                                </div>
+                                </Button>
                             }
                         })
                 }}
-                <SelectShowTriggerIcon />
-            </SelectTrigger>
+            </div>
             <SelectOptionsPopover options=options render_option=render_option autofocus_search=autofocus_search />
             <HiddenSelect />
         </SelectAtom>
@@ -262,6 +280,16 @@ pub fn Multiselect<O>(
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    /// A visible label above the select.
+    #[prop(into, optional)]
+    label: MaybeProp<String>,
+    /// Names the select when there is no visible `label`.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// The name of the hidden form element holding the selection.
+    #[prop(into, optional)]
+    name: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
@@ -283,49 +311,49 @@ where
         <SelectAtom
             collection=options.collection
             selection_mode=SelectMode::Multiple
-            default_value=keys.get_untracked()
-            on_change=Callback::new(move |keys: Vec<Key>| {
+            value=keys
+            set_value=Callback::new(move |keys: Vec<Key>| {
                 let mut vec = options.lookup(&keys);
                 vec.sort();
                 vec.truncate(usize::try_from(max).unwrap_or(usize::MAX));
                 set_selected.set(vec);
             })
+            aria_label=aria_label
+            is_disabled=is_disabled
+            nostrip:name=name
             classes=classes.add("leptonic-select").add("leptonic-multiselect")
             styles=styles
         >
-            <SyncValue keys=keys />
-            <SelectTrigger classes="leptonic-select-selected">
+            {label_view(label)}
+            // The box holds the chips and the trigger side by side: the chips' dismiss buttons
+            // can't be inside the trigger button.
+            <div class="leptonic-select-control leptonic-select-selected">
                 {move || {
                     selected
                         .get()
                         .into_iter()
                         .map(|item| {
-                            let deselect_clone = item.clone();
+                            let dismiss_label = format!("Remove {}", search_text_provider.run(item.clone()));
+                            let removed = item.clone();
                             view! {
-                                // Inside the trigger: keep presses on chips from opening the popover.
-                                <div
-                                    class="leptonic-select-option"
-                                    on:pointerdown=|e: PointerEvent| e.stop_propagation()
+                                <Chip
+                                    color=ChipColor::Secondary
+                                    classes="leptonic-select-option"
+                                    dismiss_label=dismiss_label
+                                    on_dismiss=move |()| deselect.run(removed.clone())
                                 >
-                                    <Chip
-                                        color=ChipColor::Secondary
-                                        on:click=move |e: MouseEvent| {
-                                            e.stop_propagation();
-                                        }
-                                        dismissible=move |e: MouseEvent| {
-                                            e.stop_propagation();
-                                            deselect.run(deselect_clone.clone());
-                                        }
-                                    >
-                                        {render_option.render(item)}
-                                    </Chip>
-                                </div>
+                                    {render_option.render(item)}
+                                </Chip>
                             }
                         })
                         .collect_view()
                 }}
-                <SelectShowTriggerIcon />
-            </SelectTrigger>
+                <SelectTrigger classes="leptonic-multiselect-trigger">
+                    // The trigger's name includes the selection, as react-aria's value.
+                    <SelectValue styles=visually_hidden_styles() />
+                    <SelectShowTriggerIcon />
+                </SelectTrigger>
+            </div>
             <SelectOptionsPopover options=options render_option=render_option autofocus_search=autofocus_search />
             <HiddenSelect />
         </SelectAtom>
@@ -354,13 +382,7 @@ fn resolve_search_filter<O: SelectOption>(
 /// Internal: the caret up/down icon shown in the trigger area.
 #[component]
 fn SelectShowTriggerIcon() -> impl IntoView {
-    // Read is_open from any SelectCtx available. Since this is always
-    // inside a SelectTrigger, we can reach the context dynamically.
-    // However, SelectCtx is generic over K, so we pass the open state
-    // via a simple signal instead.
-    //
-    // For now, render a static down-caret. The open/close animation
-    // should be handled via CSS data-open attribute on the trigger.
+    // A static caret: styles can turn it with the trigger's `data-pressed`/`aria-expanded`.
     view! {
         <div class="leptonic-select-show-trigger">
             <Icon icon=icondata::BsCaretDownFill />
@@ -377,10 +399,11 @@ fn SelectSearchInput(
     // Mounted with the popover, so focusing on mount focuses on every opening.
     view! {
         <SearchField
-            state=TextFieldState::from(search)
+            value=search
+            set_value=search
             aria_label="Search"
             auto_focus=autofocus_search.get_untracked()
-            classes="leptonic-input search"
+            classes=["leptonic-input", "search"]
         >
             <Input />
         </SearchField>

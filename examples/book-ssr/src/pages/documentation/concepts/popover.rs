@@ -9,27 +9,26 @@ pub fn PagePopoverOverview() -> impl IntoView {
     view! {
         <DocPage title="Popover">
             <p>
-                "Popovers are floating overlays anchored to a trigger element. They show contextual content: rich "
-                "descriptions, small forms, previews."
-            </p>
-
-            <p>
-                "Under the hood, a popover combines dismissal (Escape, outside interaction, blur) with placement next to "
-                "the trigger that adapts to the available space."
+                "A popover is an overlay anchored to the element that opened it, its trigger. It shows content that "
+                "belongs to the trigger: a short explanation, a small form, a preview. It is placed next to the trigger "
+                "and moves to the other side when there is no room."
             </p>
 
             <Section title="When to Use">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
-                    <TableRow><TableCell>"Show rich contextual content anchored to an element"</TableCell><TableCell><b>"Popover"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Show content, even interactive, next to the element it belongs to"</TableCell><TableCell><b>"Popover"</b></TableCell></TableRow>
                     <TableRow><TableCell>"Block the page and require a decision"</TableCell><TableCell><Link href=routes::doc::Modal.materialize()>"Modal"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Show a short text label on hover or focus"</TableCell><TableCell><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Show a list of actions triggered by a button"</TableCell><TableCell><Link href=routes::doc::Menu.materialize()>"Menu"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Show a short text on hover or focus"</TableCell><TableCell><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Offer a list of actions"</TableCell><TableCell><Link href=routes::doc::Menu.materialize()>"Menu"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Let the user pick one value from a list"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
                 </DocTable>
 
                 <p>
-                    "Popovers are modal or non-modal. A non-modal popover lets you keep interacting with the page behind "
-                    "it (the Popover component\u{2019}s default). A modal popover traps focus, prevents scrolling and closes "
-                    "on any outside interaction (the atom\u{2019}s default, as for menus and selects)."
+                    "A popover is modal or non-modal. A modal popover takes over the page until it closes: a press outside "
+                    "closes it, focus stays inside and the page behind it is inert and doesn\u{2019}t scroll. A non-modal "
+                    "popover leaves the page usable: presses outside reach the page, and moving focus out of the popover or "
+                    "scrolling the page closes it. The atoms are modal by default, like menus and selects; the component is "
+                    "non-modal."
                 </p>
             </Section>
 
@@ -43,56 +42,72 @@ pub fn PagePopoverOverview() -> impl IntoView {
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
                         <TableCell><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></TableCell>
-                        <TableCell>"Positioning and dismiss behavior for elements you render yourself."</TableCell>
+                        <TableCell>"Placement and dismissal for an overlay you render and wire to its trigger yourself."</TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::popover::Atom.materialize()>"Popover atom"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></TableCell>
                         <TableCell>
-                            "An unstyled "<Code inline=true>"Popover"</Code>" opened by a "<Code inline=true>"DialogTrigger"</Code>
-                            " around a button, or by your own state."
+                            "An unstyled popover opened by a "<Code inline=true>"DialogTrigger"</Code>" around a button, an "
+                            "arrow pointing at the trigger, and data attributes for styling and animation."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::popover::Component.materialize()>"Popover component"</Link></TableCell>
-                        <TableCell>"A themed popover that opens when its trigger button is pressed, with dialog semantics."</TableCell>
+                        <TableCell><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></TableCell>
+                        <TableCell>"A themed, non-modal popover with a dialog inside, opened by the button in its trigger slot."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
-                <p>
-                    "The component is the quickest way to a popover. A "<Code inline=true>"Button"</Code>
-                    " inside the trigger slot toggles it without any wiring:"
-                </p>
+                <p>"The component is the quickest way to a popover: the button in its trigger slot opens and closes it."</p>
 
-                <Demo description="Popover component toggled by a button" source=include_str!("demos/popover.rs") source_open=true>
+                <Demo description="Popover component opened by a button" source=include_str!("demos/popover.rs") source_open=true>
                     <PopoverConceptDemo/>
                 </Demo>
             </Section>
 
             <Section title="Accessibility">
-                <p>"The popover component behaves as follows:"</p>
+                <p>
+                    "A popover\u{2019}s content is a dialog, following the WAI-ARIA "
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/" target=LinkTarget::Blank>"Dialog pattern"</Link>
+                    ":"
+                </p>
 
                 <ul>
                     <li>
                         "The content has "<Code inline=true>"role=\"dialog\""</Code>" (or "<Code inline=true>"\"alertdialog\""</Code>
-                        "). Hidden dismiss buttons at its start and end let screen reader users close it."
+                        "). Its title names it; without one, the trigger does."
                     </li>
                     <li>
                         "The trigger has "<Code inline=true>"aria-expanded"</Code>" and, while the popover is open, "
                         <Code inline=true>"aria-controls"</Code>" pointing to it."
                     </li>
                     <li>
-                        "A modal popover traps focus and hides the rest of the page from assistive technology. A non-modal "
-                        "popover lets focus move freely."
+                        "When the popover opens, focus moves into the dialog and stays there; when it closes, focus returns "
+                        "to the trigger."
                     </li>
+                    <li>
+                        "A hidden dismiss button at the end of the popover (and at its start, if modal) lets screen reader "
+                        "users close it without a keyboard."
+                    </li>
+                    <li>"A modal popover hides the rest of the page from assistive technology while it is open."</li>
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="Escape">"Closes the popover."</KeyRow>
-                    <KeyRow keys="Tab">"Moves focus. In a modal popover, focus stays inside."</KeyRow>
+                    <KeyRow keys="Enter / Space">"On the trigger: opens or closes the popover."</KeyRow>
+                    <KeyRow keys="Tab / Shift + Tab">"Moves focus within the popover."</KeyRow>
+                    <KeyRow keys="Escape">"Closes the popover and returns focus to the trigger."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></li>
+                <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
+                <li><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></li>
+                <li><Link href=routes::doc::Dialog.materialize()>"Dialog"</Link></li>
+                <li><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></li>
+                <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

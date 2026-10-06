@@ -196,8 +196,24 @@ async fn arrow_down_opens_with_the_selected_option_focused(page: &Page<'_>) -> R
     page.wait_for_selector(LISTBOX).await?;
     expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
     expect_virtual_focus(page, "Durian").await?;
+    // Count the synthetic focus events the input gets from now on.
+    page.driver
+        .execute(
+            "window.__virtualInputFocus = 0; arguments[0].addEventListener('focus', e => { \
+             if (!e.isTrusted) window.__virtualInputFocus++; });",
+            vec![input(page).await?.to_json()?],
+        )
+        .await?;
     input(page).await?.send_keys(Key::Escape).await?;
-    page.wait_for_no_selector(LISTBOX).await
+    page.wait_for_no_selector(LISTBOX).await?;
+    // No option is virtually focused any more: a virtual focus event on the input lets its focus
+    // ring show again (react-aria's "re-show focus ring" effect).
+    let count = page
+        .driver
+        .execute("return window.__virtualInputFocus;", vec![])
+        .await?;
+    assert_that!(count.json().as_u64()).is_equal_to(Some(1));
+    Ok(())
 }
 
 /// Single selection: emptying the input clears the value.

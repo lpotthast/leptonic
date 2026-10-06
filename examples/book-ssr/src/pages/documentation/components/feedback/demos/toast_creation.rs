@@ -1,14 +1,37 @@
-use leptonic::components::prelude::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::{Orientation, collections::Key},
+};
 use leptos::prelude::*;
-use strum::IntoEnumIterator;
 use uuid::Uuid;
+
+/// The variants and timeouts to choose from, with their radio labels.
+const VARIANTS: [(&str, ToastVariant); 4] = [
+    ("Success", ToastVariant::Success),
+    ("Info", ToastVariant::Info),
+    ("Warn", ToastVariant::Warn),
+    ("Error", ToastVariant::Error),
+];
+const TIMEOUTS: [(&str, ToastTimeout); 3] = [
+    ("3 seconds", ToastTimeout::DefaultDelay),
+    ("15 seconds", ToastTimeout::CustomDelay(time::Duration::seconds(15))),
+    ("Until closed", ToastTimeout::None),
+];
+
+/// The option whose label is selected.
+fn chosen<T: Copy>(options: &[(&str, T)], selected: Option<&Key>) -> Option<T> {
+    options
+        .iter()
+        .find(|(label, _)| selected == Some(&Key::from(*label)))
+        .map(|(_, option)| *option)
+}
 
 #[component]
 pub fn ToastCreationDemo() -> impl IntoView {
-    let (variant, set_variant) = signal(ToastVariant::Success);
-    let (timeout, set_timeout) = signal(ToastTimeout::DefaultDelay);
-    let (header, set_header) = signal("Header".to_owned());
-    let (body, set_body) = signal("Body".to_owned());
+    let header = RwSignal::new("Saved".to_owned());
+    let body = RwSignal::new("Your changes were saved.".to_owned());
+    let variant = RwSignal::new(Some(Key::from(VARIANTS[0].0)));
+    let timeout = RwSignal::new(Some(Key::from(TIMEOUTS[0].0)));
 
     let toasts = expect_context::<Toasts>();
 
@@ -18,37 +41,38 @@ pub fn ToastCreationDemo() -> impl IntoView {
         toasts.push(Toast {
             id: Uuid::new_v4(),
             created_at: time::OffsetDateTime::now_utc(),
-            variant: variant.get_untracked(),
+            variant: variant.with_untracked(|key| chosen(&VARIANTS, key.as_ref())).unwrap_or_default(),
             header: (move || header.clone()).into(),
             body: (move || body.clone()).into(),
-            timeout: timeout.get_untracked(),
+            timeout: timeout
+                .with_untracked(|key| chosen(&TIMEOUTS, key.as_ref()))
+                .unwrap_or(ToastTimeout::DefaultDelay),
         });
     };
 
     view! {
-        <div class="demo-clf-form">
-            <TextField label="Header" state=(header, set_header)/>
-            <TextField label="Body" state=(body, set_body)/>
+        <div class="demo-form">
+            <TextField label="Header" value=header set_value=header/>
+            <TextField label="Body" value=body set_value=body/>
 
-            <Select
-                options={ToastVariant::iter().collect::<Vec<_>>()}
-                selected=variant
-                set_selected=set_variant
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}").into_view()
-            />
+            <RadioGroup label="Variant" orientation=Orientation::Horizontal value=variant set_value=variant>
+                {VARIANTS.iter().map(|(label, _)| view! { <Radio value=*label>{*label}</Radio> }).collect_view()}
+            </RadioGroup>
 
-            <Select
-                options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
-                selected=timeout
-                set_selected=set_timeout
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}").into_view()
-            />
-
-            <div>
-                <Button on_press=create_toast>"Create Toast"</Button>
-            </div>
+            <RadioGroup label="Timeout" orientation=Orientation::Horizontal value=timeout set_value=timeout>
+                {TIMEOUTS.iter().map(|(label, _)| view! { <Radio value=*label>{*label}</Radio> }).collect_view()}
+            </RadioGroup>
         </div>
+
+        <div class="demo-inline-controls">
+            <Button on_press=create_toast>"Create Toast"</Button>
+            <Button variant=ButtonVariant::Outlined on_press=move |_| toasts.clear()>"Clear All"</Button>
+        </div>
+        <p class="demo-status">
+            {move || match toasts.toasts.with(Vec::len) {
+                1 => "1 toast shown.".to_owned(),
+                count => format!("{count} toasts shown."),
+            }}
+        </p>
     }
 }

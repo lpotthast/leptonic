@@ -174,7 +174,6 @@ pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
-
     use time::macros::datetime;
 
     use super::SaveReplaceYear;

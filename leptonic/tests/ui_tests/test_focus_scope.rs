@@ -1,3 +1,4 @@
+// Upstream: react-aria/test/focus/FocusScope.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -30,6 +31,9 @@ impl BrowserTest<str> for FocusScopeTests {
         test_containment_blocks_escape(&page).await?;
         test_outer_to_inner_navigation(&page).await?;
         test_nested_restore_focuses_outermost(&page).await?;
+        test_restore_fallback(&page).await?;
+        test_dialog_from_menu(&page).await?;
+        test_restore_on_blur(&page).await?;
 
         Ok(())
     }
@@ -208,4 +212,68 @@ async fn test_outer_to_inner_navigation(page: &FocusScopePage<'_>) -> Result<(),
     assert_that!(is_in_inner_scope).is_equal_to(true);
 
     Ok(())
+}
+
+/// Without a node to restore in the DOM, focus goes to the first tabbable element of the nearest
+/// ancestor scope; without one there, it stays on the body (upstream: "does not throw when there is
+/// no focusable element to restore focus to").
+async fn test_restore_fallback(page: &FocusScopePage<'_>) -> Result<(), Report> {
+    page.goto().await?;
+    for (prefix, expected) in [
+        ("test-fs-fallback", Some("test-fs-fallback-other")),
+        ("test-fs-fallback-empty", None),
+    ] {
+        page.element(&format!("{prefix}-target"))
+            .await?
+            .click()
+            .await?;
+        page.wait_for_active_id(&format!("{prefix}-inside")).await?;
+        page.element(&format!("{prefix}-inside"))
+            .await?
+            .click()
+            .await?;
+        page.wait_for_no_selector(&format!("#{prefix}-inside"))
+            .await?;
+        if let Some(id) = expected {
+            page.wait_for_active_id(id).await?;
+        } else {
+            // Give a wrong restoration the frame it would take.
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            let tag = page
+                .driver
+                .execute("return document.activeElement.tagName;", vec![])
+                .await?;
+            assert_that!(tag.json().as_str()).is_equal_to(Some("BODY"));
+        }
+    }
+    Ok(())
+}
+
+/// A dialog opened from a menu and rendered outside it restores focus to the menu's trigger (the
+/// item it was opened from is gone). Upstream: "tracks node to restore if the node to restore was
+/// removed in another part of the tree".
+async fn test_dialog_from_menu(page: &FocusScopePage<'_>) -> Result<(), Report> {
+    page.goto().await?;
+    page.element("test-fs-open-menu").await?.focus().await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_active_id("test-fs-open-dialog").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_active_id("test-fs-close-dialog").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_no_selector("#test-fs-close-dialog").await?;
+    page.wait_for_active_id("test-fs-open-menu").await
+}
+
+/// Focus lost to the body (a script blurs the focused element) goes back to that element, not the
+/// first one in the scope. Upstream: "should restore focus to the last focused element in the
+/// scope on focus out".
+async fn test_restore_on_blur(page: &FocusScopePage<'_>) -> Result<(), Report> {
+    page.goto().await?;
+    page.click_contain_btn_1().await?;
+    page.send_keys_to_active(Key::Tab).await?;
+    page.wait_for_active_id("test-fs-contain-btn-2").await?;
+    page.driver
+        .execute("document.activeElement.blur();", vec![])
+        .await?;
+    page.wait_for_active_id("test-fs-contain-btn-2").await
 }

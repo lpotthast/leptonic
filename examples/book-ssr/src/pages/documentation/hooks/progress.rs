@@ -2,10 +2,7 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{
-    progress_determinate::ProgressDeterminateDemo,
-    progress_indeterminate::ProgressIndeterminateDemo,
-};
+use super::demos::progress_bar::ProgressBarHookDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -15,7 +12,7 @@ pub fn PageUseProgressBar() -> impl IntoView {
             <p>
                 "The "<Code inline=true>"use_progress_bar"</Code>" hook makes an element announce the progress of a task, "
                 "either as a value in a range (determinate) or as ongoing activity (indeterminate). "
-                "See the "<Link href=routes::doc::Progress.materialize()>"Progress overview"</Link>" for concept guidance."
+                "See the "<Link href=routes::doc::ProgressBar.materialize()>"Progress Bar overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useProgressBar"/>
@@ -27,102 +24,123 @@ pub fn PageUseProgressBar() -> impl IntoView {
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseProgressBarInput">
-                    <ApiRow name="value" ty="Signal<Option<f64>>" default="Some(0.0)">
-                        "The current value. "<Code inline=true>"None"</Code>" omits "<Code inline=true>"aria-valuenow"</Code>"."
+                    <ApiRow name="value" ty="Signal<Option<T>>" default="Some(0)">
+                        "The progress, clamped to the range; "<Code inline=true>"None"</Code>" while it isn\u{2019}t known (indeterminate)."
                     </ApiRow>
-                    <ApiRow name="min_value" ty="f64" default="0.0">"The value at which no progress has been made."</ApiRow>
-                    <ApiRow name="max_value" ty="f64" default="100.0">"The value at which the task is complete."</ApiRow>
-                    <ApiRow name="label" ty="Option<String>" default="None">
-                        "Whether the progress bar has a visible label. When set, the progress bar gets "
-                        <Code inline=true>"aria-labelledby"</Code>" pointing to "<Code inline=true>"label_props.id"</Code>
-                        "; the text itself is not used, so render it in your label element."
+                    <ApiRow name="min_value" ty="Signal<T>" default="0">"The start of the range."</ApiRow>
+                    <ApiRow name="max_value" ty="Signal<T>" default="100">"The end of the range."</ApiRow>
+                    <ApiRow name="format_options" ty="Signal<NumberFormatOptions>" default="percent">
+                        "How the value text is formatted: a percent style formats the percentage, other styles the value."
                     </ApiRow>
-                    <ApiRow name="show_value_label" ty="bool" default="true">
-                        "Currently has no effect: "<Code inline=true>"value_label"</Code>" is always computed."
-                    </ApiRow>
-                    <ApiRow name="is_indeterminate" ty="bool" default="false">
-                        "Whether progress is ongoing without a known value. Removes "<Code inline=true>"aria-valuenow"</Code>
-                        " and "<Code inline=true>"aria-valuetext"</Code>"."
-                    </ApiRow>
+                    <ApiRow name="value_label" ty="MaybeProp<String>" default="None">"Replaces the formatted value text (e.g. \u{201c}1 of 4\u{201d})."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names it when there is no visible label."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming it."</ApiRow>
+                    <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of elements describing it."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseProgressBarReturn">
-                    <ApiRow name="progress_props" ty="UseProgressBarProps">
-                        "Attributes for the progress bar element, see "<a href="#aria-attributes">"ARIA attributes"</a>
-                        ". Spread with "<Code inline=true>"{..progress_props.into_attrs()}"</Code>"."
+                    <ApiRow name="props" ty="UseProgressBarProps">
+                        "Spread on the progress bar element: "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-valuenow"</Code>", "<Code inline=true>"aria-valuemin"</Code>", "<Code inline=true>"aria-valuemax"</Code>", "
+                        <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
-                    <ApiRow name="label_props" ty="UseProgressBarLabelProps">
-                        "The "<Code inline=true>"id"</Code>" for your label element."
-                    </ApiRow>
-                    <ApiRow name="percentage" ty="Signal<Option<f64>>">
-                        "The value as a percentage of the range (0 to 100), for sizing a fill. "
-                        <Code inline=true>"None"</Code>" while indeterminate or without a value."
-                    </ApiRow>
-                    <ApiRow name="value_label" ty="Signal<String>">
-                        "The rounded percentage as text, e.g. \u{201c}65%\u{201d}. Empty while indeterminate."
-                    </ApiRow>
-                    <ApiRow name="is_indeterminate" ty="bool">"The "<Code inline=true>"is_indeterminate"</Code>" input."</ApiRow>
-                    <ApiRow name="progress_id" ty="String">"The generated id of the progress bar."</ApiRow>
+                    <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                    <ApiRow name="percentage" ty="Signal<Option<f64>>">"The value in percent of the range (0 to 100); "<Code inline=true>"None"</Code>" while indeterminate."</ApiRow>
+                    <ApiRow name="value_text" ty="Signal<Option<String>>">"The formatted value (or "<Code inline=true>"value_label"</Code>"); "<Code inline=true>"None"</Code>" while indeterminate."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{
+                            hooks::*,
+                            utils::{css::{computed_pct, computed_size}, style::WidthProperty, styles::Styles},
+                        };
+
                         let progress = use_progress_bar(UseProgressBarInput {
-                            value: Signal::derive(|| Some(45.0)),
-                            label: Some("Uploading".to_string()),
-                            ..Default::default()
+                            value: Signal::stored(Some(45.0)),
+                            has_label: true.into(),
+                            ..UseProgressBarInput::default()
+                        });
+                        let percentage = progress.percentage;
+                        let fill = Styles::new().add_optional(move || {
+                            percentage.get().map(|p| WidthProperty.declare(computed_size(computed_pct(p))))
                         });
 
                         view! {
-                            <label id=progress.label_props.id>"Uploading"</label>
-                            <div {..progress.progress_props.into_attrs()} class="track">
-                                // Size the fill from `progress.percentage`.
-                                <div class="fill"></div>
+                            <span {..progress.label_props.into_attrs()}>"Uploading"</span>
+                            <span>{progress.value_text}</span>
+                            <div {..progress.props.into_attrs()} class="track">
+                                <div class="fill" style=fill></div>
                             </div>
-                            <span>{move || progress.value_label.get()}</span>
                         }
                     "#)}
                 </Code>
             </Section>
 
-            <Section title="Determinate Progress">
-                <p>"A known value within a range. The fill width follows "<Code inline=true>"percentage"</Code>":"</p>
+            <Section title="Demo">
+                <p>
+                    "The fill width follows "<Code inline=true>"percentage"</Code>". With \u{201c}Duration unknown\u{201d}, "
+                    "the value becomes "<Code inline=true>"None"</Code>": the value text disappears and the fill slides "
+                    "back and forth."
+                </p>
 
-                <Demo description="Determinate progress bar with buttons to change the value" source=include_str!("demos/progress_determinate.rs")>
-                    <ProgressDeterminateDemo/>
+                <Demo description="Progress bar with buttons to change the value and an indeterminate toggle" source=include_str!("demos/progress_bar.rs")>
+                    <ProgressBarHookDemo/>
                 </Demo>
             </Section>
 
             <Section title="Indeterminate Progress">
-                <p>"For tasks of unknown duration, set "<Code inline=true>"is_indeterminate"</Code>" and animate the fill with CSS:"</p>
+                <p>
+                    "For tasks of unknown duration, pass "<Code inline=true>"None"</Code>" as the value. "
+                    <Code inline=true>"percentage"</Code>" and "<Code inline=true>"value_text"</Code>" become "
+                    <Code inline=true>"None"</Code>", and the element loses "<Code inline=true>"aria-valuenow"</Code>
+                    " and "<Code inline=true>"aria-valuetext"</Code>", so screen readers announce a busy bar without a value. "
+                    "Style that state through the missing attribute; without motion, stripe the whole track so that it "
+                    "can\u{2019}t be mistaken for a partial fill:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .track { position: relative; overflow: hidden; }
+                        .track:not([aria-valuenow]) .fill { position: absolute; width: 40%; animation: slide 1.5s infinite ease-in-out; }
+                        @keyframes slide { from { left: -40%; } to { left: 100%; } }
 
-                <Demo description="Indeterminate progress bar with an animated fill" source=include_str!("demos/progress_indeterminate.rs")>
-                    <ProgressIndeterminateDemo/>
-                </Demo>
+                        @media (prefers-reduced-motion: reduce) {
+                            .track:not([aria-valuenow]) .fill {
+                                left: 0; width: 100%; animation: none;
+                                background: repeating-linear-gradient(-45deg, var(--accent) 0 0.5em, var(--surface) 0.5em 1em);
+                            }
+                        }
+                    ")}
+                </Code>
             </Section>
 
-            <Section title="ARIA attributes">
+            <Section title="ARIA Attributes">
                 <p>"The progress bar element gets:"</p>
 
                 <ul>
                     <li><Code inline=true>"role=\"progressbar\""</Code></li>
                     <li><Code inline=true>"aria-valuenow"</Code>" \u{2014} the current value, absent while indeterminate"</li>
                     <li><Code inline=true>"aria-valuemin"</Code>" / "<Code inline=true>"aria-valuemax"</Code>" \u{2014} the range"</li>
-                    <li><Code inline=true>"aria-valuetext"</Code>" \u{2014} "<Code inline=true>"value_label"</Code>", absent while indeterminate"</li>
-                    <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} the label, if "<Code inline=true>"label"</Code>" is set"</li>
+                    <li><Code inline=true>"aria-valuetext"</Code>" \u{2014} "<Code inline=true>"value_text"</Code>", absent while indeterminate"</li>
+                    <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} the label, with "<Code inline=true>"has_label"</Code></li>
                 </ul>
 
-                <p>"Without a "<Code inline=true>"label"</Code>", give the element an "<Code inline=true>"aria-label"</Code>" yourself."</p>
+                <p>
+                    "Without a visible label, name the progress bar with "<Code inline=true>"aria_label"</Code>" or "
+                    <Code inline=true>"aria_labelledby"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Progress.materialize()>"Progress overview"</Link></li>
-                <li><Link href=routes::doc::progress::Component.materialize()>"Progress component"</Link></li>
-                <li><Link href=routes::doc::hooks::UseMeter.materialize()>"use_meter"</Link></li>
+                <li><Link href=routes::doc::ProgressBar.materialize()>"Progress Bar overview"</Link></li>
+                <li><Link href=routes::doc::progress_bar::Atom.materialize()>"Progress Bar Atoms"</Link></li>
+                <li><Link href=routes::doc::progress_bar::Component.materialize()>"Progress Bar Component"</Link></li>
+                <li><Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -6,11 +6,11 @@ use leptonic::{
         IntoAttrs, SelectionMode, TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput,
         UseTagReturn,
         collections::{
-            Key, SelectionOptions, UseListStateInput, use_list_collection, use_list_state,
+            Key, Selection, SelectionOptions, UseListStateInput, use_list_collection, use_list_state,
         },
         use_button, use_tag, use_tag_group,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -18,7 +18,9 @@ const ALL_TAGS: [&str; 5] = ["Rust", "Leptos", "WebAssembly", "Accessibility", "
 
 #[component]
 pub fn TagDemo() -> impl IntoView {
+    // App state: the tags, and the selected ones.
     let tags = RwSignal::new(ALL_TAGS.to_vec());
+    let selection = RwSignal::new(Selection::default());
 
     let collection =
         use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
@@ -26,6 +28,7 @@ pub fn TagDemo() -> impl IntoView {
         collection,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
+            selection: Some(selection.into()),
             ..SelectionOptions::default()
         },
     });
@@ -35,13 +38,30 @@ pub fn TagDemo() -> impl IntoView {
         data,
         ..
     } = use_tag_group(UseTagGroupInput {
-        has_label: true,
+        has_label: true.into(),
         // Removing is up to you: drop the keys from your data.
         on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
             tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
         })),
         ..UseTagGroupInput::new(state, CapturedElement::new())
     });
+
+    let status = move || {
+        let tags = match tags.with(Vec::len) {
+            1 => "1 tag".to_owned(),
+            count => format!("{count} tags"),
+        };
+        let selected = selection.with(|selection| match selection {
+            Selection::All => "all".to_owned(),
+            Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
+            Selection::Keys(keys) => {
+                let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
+                keys.sort();
+                keys.join(", ")
+            }
+        });
+        format!("{tags}. Selected: {selected}.")
+    };
 
     view! {
         <span {..label_props.into_attrs()} class="demo-tag-group-label">"Technologies"</span>
@@ -50,10 +70,10 @@ pub fn TagDemo() -> impl IntoView {
                 <Tag group=data.clone() key=Key::from(tag)/>
             </For>
         </div>
-        <p class="demo-caption">
-            "Click tags to select them. Delete or Backspace removes the focused tag, or all selected tags."
-        </p>
-        <Button on_press=move |_| tags.set(ALL_TAGS.to_vec())>"Restore all"</Button>
+        <p class="demo-status">{status}</p>
+        <div class="demo-controls">
+            <Button on_press=move |_| tags.set(ALL_TAGS.to_vec())>"Restore all"</Button>
+        </div>
     }
 }
 
@@ -71,11 +91,15 @@ fn Tag(group: TagGroupData, key: Key) -> impl IntoView {
     // Only present when the group allows removing tags.
     let remove = remove_button.map(|input| {
         let (attrs, styles) = use_button(input).props.into_parts();
-        view! { <button {..attrs} class="demo-tag-remove" style=styles>"\u{00d7}"</button> }
+        view! {
+            <button {..attrs} class="demo-tag-remove" style=styles>
+                <span aria-hidden="true">"\u{00d7}"</span>
+            </button>
+        }
     });
 
     view! {
-        <div {..attrs} class=Classes::from("demo-tag").add_reactive("focus-visible", is_focus_visible) style=styles>
+        <div {..attrs} data-focus-visible=move || is_focus_visible.get().then_some("") class="demo-tag" style=styles>
             <div {..grid_cell_props.into_attrs()} class="demo-tag-cell">{text} {remove}</div>
         </div>
     }

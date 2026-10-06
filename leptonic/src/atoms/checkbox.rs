@@ -1,28 +1,34 @@
 // Upstream: react-aria-components/src/Checkbox.tsx @ 99e6102368
 use leptos::{context::Provider, prelude::*};
 
+use super::{
+    field::{FieldContext, LabelContext},
+    form::use_validation_behavior,
+};
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
-        CheckboxGroupData, IntoAttrs, ToggleOptions, ToggleState, UseCheckboxGroupInput,
+        CheckboxGroupData, IntoAttrs, ToggleOptions, UseCheckboxGroupInput,
         UseCheckboxGroupItemInput, UseCheckboxGroupReturn, UseCheckboxGroupStateInput,
         UseCheckboxInput, UseCheckboxReturn, UseHoverInput, UseToggleStateInput, ValidateFn,
         ValidationBehavior, collections::Key, use_checkbox, use_checkbox_group,
         use_checkbox_group_item, use_checkbox_group_state, use_hover, use_toggle_state,
     },
-    utils::data_attributes::flag,
-    utils::{classes::Classes, styles::Styles, visually_hidden::visually_hidden_styles},
+    utils::{
+        ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        visually_hidden::visually_hidden_styles,
+    },
 };
-
-use super::field::{FieldContext, FieldLabelProps};
-use super::form::use_validation_behavior;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - No controlled `isSelected`/`value` (hook-owned state, project-wide convention): a checkbox
-//   bound to app state takes a `state` (`ToggleState::from(rw_signal)`, or `ToggleState::new`).
+// - State (C4): `default_selected` + `on_change`, or `is_selected` + `set_selected`; the group's
+//   `default_value` + `on_change`, or `value` + `set_value` (react-aria: `isSelected`/`value`
+//   + `onChange`).
 // - Render props become `data-*` attributes plus plain children.
 //
 // =============================================================================
@@ -41,7 +47,7 @@ pub struct CheckboxGroupCtx {
 /// `data-required`.
 ///
 /// Inside a [`CheckboxGroup`], `value` is required and the group holds the selection
-/// (`default_selected` and `state` don't apply).
+/// (`default_selected`, `is_selected` and `set_selected` don't apply).
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn Checkbox(
@@ -52,10 +58,12 @@ pub fn Checkbox(
     /// Called when the checkbox is checked or unchecked.
     #[prop(into, optional)]
     on_change: Option<Callback<bool>>,
-    /// External selection state, replacing `default_selected`. Bind a signal with
-    /// `state=ToggleState::from(rw_signal)`.
+    /// Whether the toggle is selected (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ToggleState>,
+    is_selected: Option<Signal<bool>>,
+    /// Receives the selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
     /// Shows the checkbox as partially checked, regardless of its selection.
     #[prop(into, optional)]
     is_indeterminate: Signal<bool>,
@@ -115,15 +123,14 @@ pub fn Checkbox(
             ..UseCheckboxGroupItemInput::new(group.data, value)
         })
     } else {
-        let state = if let Some(state) = state {
-            on_change.map_or(state, |on_change| state.with_on_change(on_change))
-        } else {
-            use_toggle_state(UseToggleStateInput {
-                default_selected,
-                on_change,
-                is_read_only,
-            })
-        };
+        let (value, on_change) =
+            ValueBinding::from_state_props(is_selected, set_selected, on_change);
+        let state = use_toggle_state(UseToggleStateInput {
+            default_selected,
+            value,
+            on_change,
+            is_read_only,
+        });
         use_checkbox(UseCheckboxInput {
             is_indeterminate,
             options: ToggleOptions {
@@ -174,6 +181,12 @@ pub fn Checkbox(
 #[component]
 pub fn CheckboxGroup(
     #[prop(into, optional)] default_value: Vec<Key>,
+    /// The checked values (controlled): a value or any signal.
+    #[prop(into, optional)]
+    value: Option<Signal<Vec<Key>>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Vec<Key>>>,
     #[prop(into, optional)] on_change: Option<Callback<Vec<Key>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
@@ -198,8 +211,11 @@ pub fn CheckboxGroup(
     children: Children,
 ) -> impl IntoView {
     let validation_behavior = use_validation_behavior(validation_behavior);
+    let (value, on_change) =
+        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
         default_value,
+        value,
         on_change,
         is_disabled,
         is_read_only,
@@ -210,7 +226,8 @@ pub fn CheckboxGroup(
         name,
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let UseCheckboxGroupReturn {
         props,
         label_props,
@@ -231,8 +248,8 @@ pub fn CheckboxGroup(
         ..UseCheckboxGroupInput::new(state)
     });
     let ctx = CheckboxGroupCtx { data };
+    let label = LabelContext::span(label_props).with_presence(label_presence);
     let field = FieldContext {
-        label: FieldLabelProps::span(label_props),
         description: description_props,
         error_message: error_message_props,
         is_invalid,
@@ -242,7 +259,7 @@ pub fn CheckboxGroup(
 
     view! {
         <Provider value=ctx>
-            <Provider value=field>
+            <Provider value=label><Provider value=field>
                 <div
                     {..props.into_attrs()}
                     class=classes
@@ -254,7 +271,7 @@ pub fn CheckboxGroup(
                 >
                     {children()}
                 </div>
-            </Provider>
+            </Provider></Provider>
         </Provider>
     }
 }

@@ -1,34 +1,39 @@
-use leptonic::{hooks::*, utils::classes::Classes};
+use leptonic::{components::prelude::Checkbox, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
 
 #[component]
 pub fn BasicButtonDemo() -> impl IntoView {
     let presses = RwSignal::new(0u32);
+    let disabled = RwSignal::new(false);
 
     // A `<div>` that looks, behaves and is announced like a button.
     let UseButtonReturn {
         props,
         is_pressed,
         is_hovered,
-        is_focus_visible,
         ..
     } = use_button(UseButtonInput {
         element_type: ButtonElementType::Other,
-        on_press: Some(Callback::new(move |_| presses.update(|p| *p += 1))),
+        is_disabled: disabled.into(),
+        on_press: Some(Callback::new(move |_| presses.update(|n| *n += 1))),
         ..Default::default()
     });
-
     let (attrs, styles) = props.into_parts();
 
+    // The hook sets `role`, `tabindex`, `aria-disabled` and `data-focus-visible`; the pressed and hovered states
+    // are its return values, rendered as data attributes for the stylesheet.
     view! {
-        <div {..attrs} style=styles class=Classes::from("demo-btn")>
+        <div {..attrs} style=styles class="demo-hook-button" data-pressed=flag(is_pressed) data-hovered=flag(is_hovered)>
             "Press me"
         </div>
-        <p>
-            {move || format!("Pressed {} times. ", presses.get())}
-            {move || is_pressed.get().then_some("Pressing. ")}
-            {move || is_hovered.get().then_some("Hovered. ")}
-            {move || is_focus_visible.get().then_some("Focus visible.")}
+        <p class="demo-status">
+            {move || match presses.get() {
+                1 => "Pressed 1 time.".to_owned(),
+                n => format!("Pressed {n} times."),
+            }}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

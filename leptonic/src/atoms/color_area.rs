@@ -1,146 +1,124 @@
 //! Headless 2D color area atom for selecting two color channels simultaneously.
+// Upstream: react-aria-components/src/ColorArea.tsx @ 99e6102368
 
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 
+use super::color_picker::ColorPickerContext;
 use crate::{
-    hooks::{
-        IntoAttrs, UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state,
-    },
+    Out,
+    atoms::color_thumb::{AreaThumbParts, ColorThumbContext, ThumbParts},
+    hooks::{UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state},
     utils::{
-        classes::Classes,
-        color::ColorValue,
-        css::{
-            ForcedColorAdjust, LengthPercentageAuto, Opacity, TouchAction, computed_pct,
-            computed_size,
-        },
-        style::{
-            BottomProperty, ForcedColorAdjustProperty, HeightProperty, LeftProperty,
-            OpacityProperty, TouchActionProperty, WidthProperty,
-        },
-        styles::Styles,
+        ValueBinding, classes::Classes, color::ColorValue, data_attributes::flag, styles::Styles,
     },
 };
 
-/// A headless 2D color area component built on `use_color_area_state` + `use_color_area`.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The thumb's background is the current color (react-aria-components: a render prop).
+// - The value is split into `value` (a value or any signal) and `set_value` (an `Out`), plus
+//   `default_value` and `on_change` (C4).
+// - Render props become `data-*` attributes.
+//
+// =============================================================================
+
+/// A 2D color area: drag its [`ColorThumb`](super::color_thumb::ColorThumb) or press the area to change two channels of a color.
 ///
-/// Renders a container div with a gradient background and a draggable thumb.
-/// Users select two color channels simultaneously by dragging within the area.
+/// ```ignore
+/// <ColorArea default_value=HSV::default() aria_label="Color">
+///     <ColorThumb />
+/// </ColorArea>
+/// ```
 ///
-/// Two visually hidden `<input type="range">` elements inside the thumb provide
-/// screen reader semantics and form submission support.
-///
-/// Apply your own sizing, border, and styling via attrs/classes.
+/// Data attributes: `data-disabled`.
 #[component]
-pub fn ColorArea<C: ColorValue>(
-    /// The initial color value.
-    #[prop(into)]
-    default_value: C,
-    /// Which channel maps to the X axis.
-    x_channel: C::Channel,
-    /// Which channel maps to the Y axis.
-    y_channel: C::Channel,
-    /// Whether the area is disabled.
-    #[prop(into, optional)]
-    is_disabled: Signal<bool>,
-    /// Callback fired when the color changes.
+#[allow(clippy::too_many_arguments)]
+pub fn ColorArea<C: ColorValue + Default>(
+    /// The initial color. Default: the color type's default.
     #[prop(optional)]
+    default_value: Option<C>,
+    /// The color (controlled): a value or any signal. Default: the `ColorPicker`'s around it.
+    #[prop(into, optional)]
+    value: Option<Signal<C>>,
+    /// Receives the new color: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<C>>,
+    /// Called with the color whenever it changes, also while dragging.
+    #[prop(into, optional)]
     on_change: Option<Callback<C>>,
-    /// Callback fired when interaction ends.
-    #[prop(optional)]
-    on_change_end: Option<Callback<C>>,
-    /// Accessibility label.
+    /// Called with the color when the user stops dragging.
     #[prop(into, optional)]
-    aria_label: Option<&'static str>,
-    /// HTML `name` attribute for the hidden X-axis range input.
+    on_change_end: Option<Callback<C>>,
+    /// The channel on the horizontal axis. Default: the color space's first axis.
     #[prop(optional)]
-    x_name: Option<&'static str>,
-    /// HTML `name` attribute for the hidden Y-axis range input.
+    x_channel: Option<C::Channel>,
+    /// The channel on the vertical axis. Default: the color space's second axis.
     #[prop(optional)]
-    y_name: Option<&'static str>,
-    /// HTML `form` attribute for form association.
-    #[prop(optional)]
-    form: Option<&'static str>,
+    y_channel: Option<C::Channel>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Names the area.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_describedby: Option<String>,
+    /// The name of the x channel's input, for form submission.
+    #[prop(into, optional)]
+    x_name: Option<String>,
+    /// The name of the y channel's input, for form submission.
+    #[prop(into, optional)]
+    y_name: Option<String>,
+    /// The id of a `<form>` the inputs belong to.
+    #[prop(into, optional)]
+    form: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    /// Optional custom thumb content.
-    #[prop(optional)]
-    children: Option<Children>,
+    /// The `ColorThumb`, and anything else to draw on the area.
+    children: Children,
 ) -> impl IntoView {
+    let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
+    let binding = binding.or_else(ColorPickerContext::binding::<C>);
     let state = use_color_area_state(UseColorAreaStateInput {
-        default_value,
+        value: binding,
         x_channel,
         y_channel,
-        x_channel_step: None,
-        y_channel_step: None,
         on_change,
         on_change_end,
+        ..UseColorAreaStateInput::new(default_value.unwrap_or_default())
     });
-
     let area = use_color_area(UseColorAreaInput {
-        state: state.clone(),
         is_disabled,
         aria_label,
+        aria_labelledby,
+        aria_describedby,
         x_name,
         y_name,
         form,
+        ..UseColorAreaInput::new(state)
     });
-
-    let bg = area.background;
-    let thumb_color = area.thumb_color;
-    let thumb_x = area.thumb_x_percent;
-    let thumb_y = area.thumb_y_percent;
-
-    // `background` and the thumb color are computed CSS strings (gradients, color functions),
-    // which have no checked grammar in `leptos-css` yet.
-    let styles = styles
-        .add_optional_unchecked("background", move || Some(bg.get()))
-        .add_optional_unchecked("background-blend-mode", move || {
-            Some(area.background_blend_mode.get().unwrap_or("normal"))
-        })
-        .add_unchecked("position", "relative")
-        .add(TouchActionProperty.declare(TouchAction::None))
-        .add_unchecked("user-select", "none")
-        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
-
-    let thumb_styles = Styles::new()
-        .add_unchecked("position", "absolute")
-        .add_reactive(move || {
-            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(thumb_x.get())))
-        })
-        .add_reactive(move || {
-            BottomProperty.declare(LengthPercentageAuto::from(computed_pct(thumb_y.get())))
-        })
-        .add_unchecked("transform", "translate(-50%, 50%)")
-        .add_optional_unchecked("background-color", move || Some(thumb_color.get()));
-
-    let hidden_input_styles = Styles::builder()
-        .with(OpacityProperty.declare(Opacity::new(0.0001)))
-        .with(WidthProperty.declare(computed_size(computed_pct(100.0))))
-        .with(HeightProperty.declare(computed_size(computed_pct(100.0))))
-        .with_unchecked("pointer-events", "none")
-        .with_unchecked("position", "absolute")
-        .build();
+    let color = state.display_color();
+    let context = ColorThumbContext::new(
+        Signal::derive(move || color.get().to_css_string()),
+        state.is_dragging,
+        is_disabled,
+        ThumbParts::Area(Box::new(AreaThumbParts {
+            thumb: area.thumb_props,
+            x_input: area.x_input_props,
+            y_input: area.y_input_props,
+        })),
+    );
+    let (area_attrs, area_styles) = area.color_area_props.into_parts();
 
     view! {
         <div
-            {..area.area_props.into_attrs()}
+            {..area_attrs}
             class=classes
-            style=styles
+            style=area_styles.merge(styles)
+            data-disabled=flag(is_disabled)
         >
-            <div
-                {..area.thumb_props.into_attrs()}
-                style=thumb_styles
-            >
-                <input
-                    {..area.x_input_props.into_attrs()}
-                    style=hidden_input_styles.clone()
-                />
-                <input
-                    {..area.y_input_props.into_attrs()}
-                    style=hidden_input_styles
-                />
-                {children.map(|c| c())}
-            </div>
+            <Provider value=context>{children()}</Provider>
         </div>
     }
 }

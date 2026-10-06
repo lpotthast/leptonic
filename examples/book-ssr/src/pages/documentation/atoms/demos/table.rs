@@ -71,7 +71,7 @@ fn sorted(sort: Option<&SortDescriptor>) -> Vec<Member> {
 
 #[component]
 pub fn TableAtomDemo() -> impl IntoView {
-    // App state: the sorting and the selection. The table shows them, and the user\u{2019}s sorting and selecting
+    // App state: the sorting and the selection. The table shows them, and the user's sorting and selecting
     // writes them.
     let sort = RwSignal::new(Some(SortDescriptor {
         column: Key::from("name"),
@@ -111,7 +111,9 @@ pub fn TableAtomDemo() -> impl IntoView {
                 disabled_keys=Signal::stored(HashSet::from([Key::from("alan")]))
                 disabled_behavior=DisabledBehavior::All
                 selection=selection
+                set_selection=selection
                 sort_descriptor=sort
+                set_sort_descriptor=sort
                 aria_label="Team"
                 classes=["demo-table", "demo-atom-table"]
             >
@@ -127,10 +129,14 @@ pub fn TableAtomDemo() -> impl IntoView {
                 </TableBody>
             </Table>
         </div>
-        <div class="demo-flex-center-row">
-            <div class="demo-state-display">
-                <div><strong>"Selected: "</strong>{move || selection.with(describe)}</div>
-            </div>
+        <p class="demo-status">
+            {move || sort.with(|sort| match sort {
+                Some(sort) => format!("Sorted by {}, {}. ", sort.column, direction(sort.direction)),
+                None => "Not sorted. ".to_owned(),
+            })}
+            "Selected: "{move || selection.with(describe)}"."
+        </p>
+        <div class="demo-controls">
             // The app changes sorting and selection by writing its state. `None` clears the sorting.
             <Button on_press=move |_| sort.set(None) color=ButtonColor::Secondary>"Clear sorting"</Button>
             <Button on_press=move |_| selection.set(Selection::default()) color=ButtonColor::Secondary>
@@ -149,5 +155,12 @@ fn describe(selection: &Selection) -> String {
             keys.sort();
             keys.join(", ")
         }
+    }
+}
+
+fn direction(direction: SortDirection) -> &'static str {
+    match direction {
+        SortDirection::Ascending => "ascending",
+        SortDirection::Descending => "descending",
     }
 }

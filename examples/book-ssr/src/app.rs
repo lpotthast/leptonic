@@ -1,13 +1,14 @@
 use leptonic::{
+    atoms::prelude::{AnchorLink as AnchorLinkAtom, VisuallyHidden},
     components::prelude::*,
     hooks::LinkTarget,
     prelude::*,
-    utils::css::{CssDimension, em},
+    utils::{css::em, focus::focus_element},
 };
 use leptos::prelude::*;
 use leptos_meta::{Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{components::Router, hooks::use_location};
-use leptos_use::use_media_query;
+use leptos_use::{use_document, use_media_query};
 
 use crate::{
     pages::documentation::doc_search::DocSearch,
@@ -22,10 +23,25 @@ const VERSION_LABEL: &str = "v0.6.0 (main)";
 
 const GITHUB_URL: &str = "https://github.com/lpotthast/leptonic";
 
+/// Describes the book where a page has no description of its own (search engines, link previews).
+pub const SITE_DESCRIPTION: &str =
+    "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks, atoms and themed components.";
+
+/// Id of every page's `<main>`, the target of the skip link.
+pub const MAIN_ID: &str = "book-main";
+
+/// The widest screen with the small-screen layout: the navigation and the app bar links become menus.
+///
+/// Coupled with `$small` in `style/book/_theme.scss`, which switches the layout in CSS: change both together.
+pub const SMALL_SCREEN_MAX_WIDTH: &str = "800px";
+
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        <html lang="en">
+        // The theme provider mirrors the current theme onto `<html>` once hydrated. Until then, the server's default
+        // theme applies, so that the page background (on `<body>`, outside the provider) has its theme colors from
+        // the start.
+        <html lang="en" data-theme=LeptonicTheme::default().name()>
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -48,7 +64,8 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 
                 <link rel="preconnect" href="https://fonts.googleapis.com"/>
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-                <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet"/>
+                // The weights of the style guide: 400 text, 600 emphasis, 700 headings, and italic text.
+                <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
             </head>
             <body>
                 <App/>
@@ -62,7 +79,6 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Meta name="description" content="Leptonic"/>
         <Meta name="theme-color" content="#e66956"/>
 
         <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css")/>
@@ -70,6 +86,7 @@ pub fn App() -> impl IntoView {
         <MetaLink rel="icon" href="/res/icon/leptonic_x64.png"/>
         <MetaLink rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png"/>
 
+        // Fallback; every page sets its own title (and description).
         <Title text="Leptonic"/>
 
         <Root default_theme=LeptonicTheme::default()>
@@ -81,8 +98,6 @@ pub fn App() -> impl IntoView {
         </Root>
     }
 }
-
-pub const APP_BAR_HEIGHT: Height = CssDimension::em(3.5);
 
 /// Responsive layout state shared by the app shell and the documentation layout.
 ///
@@ -102,9 +117,11 @@ impl AppLayoutContext {
     }
 }
 
+/// The shell around every page: the skip link, the app bar (the page's `<header>`) and the main menu of small
+/// screens. Pages render their own `<main id="book-main">` (see [`MAIN_ID`]), so that it holds only their content.
 #[component]
 pub fn Layout(children: Children) -> impl IntoView {
-    let is_small = use_media_query("(max-width: 800px)");
+    let is_small = use_media_query(format!("(width <= {SMALL_SCREEN_MAX_WIDTH})"));
     let location = use_location();
     let is_doc = Memo::new(move |_| location.pathname.get().starts_with("/doc"));
 
@@ -129,16 +146,18 @@ pub fn Layout(children: Children) -> impl IntoView {
 
     let logo = move || {
         view! {
-            <Link href=routes::Root.materialize()>
-                <img src="/res/leptonic.svg" id="book-logo" alt="Leptonic logo"/>
+            <Link href=routes::Root.materialize() classes="book-logo-link">
+                <img src="/res/leptonic.svg" id="book-logo" alt="Leptonic start page"/>
             </Link>
         }
     };
 
     view! {
-        <AppBar attr:id="book-app-bar" height=APP_BAR_HEIGHT>
+        // The app bar (a `<header>`) is layered by leptonic's theme; the skip link shows inside it while focused.
+        <AppBar attr:id="book-app-bar">
             <div id="book-app-bar-content">
-                <Stack orientation=StackOrientation::Horizontal spacing=CssDimension::Zero>
+                <Stack orientation=StackOrientation::Horizontal spacing=em(0.5)>
+                    <SkipLink/>
                     {move || match (is_doc.get(), is_small.get()) {
                         (false, true) => logo().into_any(),
                         (true, true) => view! {
@@ -147,7 +166,7 @@ pub fn Layout(children: Children) -> impl IntoView {
                         }.into_any(),
                         (_, false) => view! {
                             {logo}
-                            <Link href=routes::Doc.materialize() classes="docs-link">"Docs"</Link>
+                            <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
                         }.into_any(),
                     }}
                 </Stack>
@@ -160,16 +179,16 @@ pub fn Layout(children: Children) -> impl IntoView {
                         }.into_any()
                     } else {
                         view! {
-                            <Link href=routes::doc::Changelog.materialize()>{VERSION_LABEL}</Link>
+                            <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
                             <GithubLink/>
-                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark classes="app-bar-theme-toggle"/>
+                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark classes="book-theme-toggle"/>
                         }.into_any()
                     }}
                 </Stack>
             </div>
         </AppBar>
 
-        <main id="book-content">{children()}</main>
+        <div id="book-page">{children()}</div>
 
         <Sheet
             is_open=Signal::derive(move || is_small.get() && ctx.main_menu_open.get())
@@ -177,12 +196,35 @@ pub fn Layout(children: Children) -> impl IntoView {
             label="Menu"
             side=SheetSide::Right
         >
-            <div class="book-main-menu">
+            <nav class="book-main-menu" aria-label="Main">
+                <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
+                <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
                 <GithubLink/>
-                <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
-                <Link href=routes::doc::Changelog.materialize()>{VERSION_LABEL}</Link>
-            </div>
+                <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark classes="book-theme-toggle"/>
+            </nav>
         </Sheet>
+    }
+}
+
+/// "Skip to content": the first focusable element of every page, visible only while focused. Moves focus to the
+/// page's `<main>`, so that the next Tab continues in the content.
+#[component]
+fn SkipLink() -> impl IntoView {
+    let focus_main = move |_| {
+        if let Some(main) = use_document()
+            .as_ref()
+            .and_then(|document| document.get_element_by_id(MAIN_ID))
+        {
+            focus_element(&main, false);
+        }
+    };
+
+    view! {
+        <VisuallyHidden is_focusable=true classes="book-skip-link">
+            <AnchorLinkAtom href=format!("#{MAIN_ID}") scroll_behavior=None on_press=focus_main>
+                "Skip to content"
+            </AnchorLinkAtom>
+        </VisuallyHidden>
     }
 }
 
@@ -206,8 +248,8 @@ fn MenuButton(label: &'static str, icon: icondata::Icon, open: RwSignal<bool>) -
 #[component]
 fn GithubLink() -> impl IntoView {
     view! {
-        <LinkExt href=GITHUB_URL target=LinkTarget::_Blank classes="github-link">
+        <Link href=GITHUB_URL target=LinkTarget::Blank classes="book-github-link">
             <Icon icon=icondata::BsGithub aria_label="Leptonic on GitHub"/>
-        </LinkExt>
+        </Link>
     }
 }

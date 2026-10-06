@@ -5,27 +5,17 @@ use leptos::prelude::*;
 pub fn GridDemo() -> impl IntoView {
     view! {
         <Grid gap=em(0.6)>
+            // Two columns per row on phones, four on desktops; on tablets, three and then a full-width one.
             <Row>
-                <Col md=3 sm=4 xs=6>
-                    <Skeleton animated=false>"Item 1"</Skeleton>
-                </Col>
-                <Col md=3 sm=4 xs=6>
-                    <Skeleton animated=false>"Item 2"</Skeleton>
-                </Col>
-                <Col md=3 sm=4 xs=6>
-                    <Skeleton animated=false>"Item 3"</Skeleton>
-                </Col>
-                <Col md=3 sm=12 xs=6>
-                    <Skeleton animated=false>"Item 4"</Skeleton>
-                </Col>
+                <Col xs=6 sm=4 md=3><div class="demo-grid-item">"Item 1"</div></Col>
+                <Col xs=6 sm=4 md=3><div class="demo-grid-item">"Item 2"</div></Col>
+                <Col xs=6 sm=4 md=3><div class="demo-grid-item">"Item 3"</div></Col>
+                <Col xs=6 sm=12 md=3><div class="demo-grid-item">"Item 4"</div></Col>
             </Row>
+            // Stacked on phones; side by side, two thirds and one third, on desktops.
             <Row>
-                <Col md=8 sm=6 xs=12>
-                    <Skeleton animated=false>"Item 5"</Skeleton>
-                </Col>
-                <Col md=4 sm=6 xs=12>
-                    <Skeleton animated=false>"Item 6"</Skeleton>
-                </Col>
+                <Col xs=12 sm=6 md=8><div class="demo-grid-item">"Item 5"</div></Col>
+                <Col xs=12 sm=6 md=4><div class="demo-grid-item">"Item 6"</div></Col>
             </Row>
         </Grid>
     }

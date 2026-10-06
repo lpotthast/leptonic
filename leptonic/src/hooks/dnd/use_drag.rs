@@ -31,9 +31,10 @@ use crate::{
     utils::{
         EventHandler,
         event_listeners::{Listener, listen},
+        key::{KeyboardEventKey, KeyboardKey},
         platform::{browser::is_webkit, device::is_ios},
         pointer_type::PointerType,
-        use_description::use_reactive_description,
+        use_description::use_description,
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
@@ -346,7 +347,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     });
 
     let modality = use_drag_modality();
-    let description = use_reactive_description(Signal::derive(move || {
+    let description = use_description(Signal::derive(move || {
         let modality = modality.get();
         Some(
             if is_dragging.get() {
@@ -380,7 +381,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let on_target_itself =
         |e: &web_sys::Event| e.target().is_some() && e.target() == e.current_target();
     let on_keydown_capture = move |e: KeyboardEvent| {
-        if on_target_itself(&e) && e.key() == "Enter" {
+        if on_target_itself(&e) && e.typed_key() == KeyboardKey::Enter {
             e.prevent_default();
             e.stop_propagation();
         }
@@ -389,7 +390,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         if is_disabled.get_untracked() {
             return;
         }
-        if on_target_itself(&e) && e.key() == "Enter" {
+        if on_target_itself(&e) && e.typed_key() == KeyboardKey::Enter {
             e.prevent_default();
             e.stop_propagation();
             if let Some(target) = e

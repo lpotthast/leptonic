@@ -37,6 +37,9 @@ use crate::{
 // - Touch: react-aria increments once more when a finger is lifted after the button already
 //   spun, because `onPressEnd` resets the "spinning" flag before checking it. Leptonic records
 //   whether the button was spinning on press up, so a tap steps once and a hold only spins.
+// - Without a value and text, `aria-valuetext` is "Empty" (react-aria: "undefined").
+// - The returned stepper buttons are disabled while the spin button is disabled or read-only
+//   (react-aria leaves that to the caller, e.g. `useNumberField`).
 //
 // ## API DIFFERENCES
 // - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
@@ -295,10 +298,11 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
     let aria_text_value = Memo::new(move |_| match text_value.get() {
         Some(text) if text.is_empty() => "Empty".to_owned(),
         Some(text) => text.replacen('-', "\u{2212}", 1),
-        None => value
-            .get()
-            .map_or_else(|| "undefined".to_owned(), |v| v.to_string())
-            .replacen('-', "\u{2212}", 1),
+        // Without a value: "Empty" as well (react-aria: the text "undefined").
+        None => value.get().map_or_else(
+            || "Empty".to_owned(),
+            |v| v.to_string().replacen('-', "\u{2212}", 1),
+        ),
     });
 
     Effect::new(move |previous: Option<()>| {
@@ -375,6 +379,8 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
             })),
             on_focus: Some(on_focus),
             on_blur: Some(on_blur),
+            // A disabled or read-only spin button can't be stepped by its buttons either.
+            is_disabled: Signal::derive(move || disabled.get() || read_only.get()),
             ..UseButtonInput::default()
         }
     };
@@ -396,7 +402,9 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
             on_keydown: keyboard_props.on_keydown,
             on_keyup: keyboard_props.on_keyup,
             on_focus: EventHandler::new(move |e: FocusEvent| on_focus.run(e)),
-            on_blur: EventHandler::new(move |e: FocusEvent| on_blur.run(e)),
+            on_blur: EventHandler::new(move |e: FocusEvent| {
+                on_blur.try_run(e);
+            }),
         },
         increment_button: stepper(Direction::Up),
         decrement_button: stepper(Direction::Down),

@@ -1,17 +1,17 @@
-use leptonic::{components::prelude::*, hooks::collections::Key};
+use leptonic::{components::prelude::*, hooks::Key};
 use leptos::prelude::*;
 
 #[component]
 pub fn RadioBasicDemo() -> impl IntoView {
-    let (selected, set_selected) = signal(None::<Key>);
+    let answer = RwSignal::new(None::<Key>);
 
     view! {
-        <RadioGroup aria_label="Answer" on_change=move |value| set_selected.set(value)>
+        <RadioGroup aria_label="Answer" value=answer set_value=answer>
             <Radio value="yes">"Yes"</Radio>
             <Radio value="no">"No"</Radio>
         </RadioGroup>
         <p class="demo-status">
-            {move || selected.get().map_or_else(|| "Nothing selected".to_owned(), |v| format!("Selected: {v}"))}
+            {move || answer.get().map_or_else(|| "Nothing selected.".to_owned(), |answer| format!("Answer: {answer}."))}
         </p>
     }
 }

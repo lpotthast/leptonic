@@ -38,14 +38,38 @@ impl ItemElements {
     /// item) is cleaned up.
     pub fn register(&self, key: Key, element: CapturedElement) {
         let elements = self.elements;
-        let id = elements
+        let (id, previous) = elements
             .try_update_value(|(next_id, map)| {
                 let id = *next_id;
                 *next_id += 1;
-                map.insert(key.clone(), (id, element));
-                id
+                let previous = map.insert(key.clone(), (id, element));
+                (id, previous.map(|(_, element)| element))
             })
             .unwrap_or_default();
+        #[cfg(not(debug_assertions))]
+        let _ = previous;
+        // Once mounted (development only): two rendered items with one key confuse focus and
+        // selection (focus can bounce between them). The item registered before with this key
+        // must be gone by then (a re-rendered item replaces its old element).
+        #[cfg(debug_assertions)]
+        if let Some(previous) = previous {
+            let key = key.clone();
+            Effect::new(move || {
+                let Some(mine) = element.get() else {
+                    return;
+                };
+                if let Some(previous) = previous.get_untracked()
+                    && *previous != *mine
+                    && previous.is_connected()
+                    && mine.is_connected()
+                {
+                    crate::utils::dev_warn!(
+                        "Two items of a collection are rendered with the key {key:?}. Each key may \
+                         only be rendered once."
+                    );
+                }
+            });
+        }
         on_cleanup(move || {
             // The collection may be disposed before its items.
             let _ = elements.try_update_value(|(_, map)| {

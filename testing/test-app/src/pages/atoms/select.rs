@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
-use leptonic::atoms::field::Label;
 use leptonic::{
     atoms::{
+        field::Label,
         listbox::{ListBox, ListBoxItem},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
     hooks::collections::{Key, use_collection, use_list_collection},
-    utils::ValueBinding,
 };
 use leptos::prelude::*;
 
@@ -22,26 +21,25 @@ pub fn PageAtomSelect() -> impl IntoView {
         |fruit| (*fruit).to_owned(),
     );
     let changes = RwSignal::new(Vec::<String>::new());
-    // As crudkit's page size select: options from a memo, a derived value binding, `<For>` items.
+    // As crudkit's page size select: options from a memo, a derived value with its setter, `<For>` items.
     let page_size = RwSignal::new(10_u32);
+    let bound_changes = RwSignal::new(0_u32);
     let options = Memo::new(|_| vec![10_u32, 25, 50]);
     let sizes = use_collection(move |b| {
         for option in options.get() {
             b.item(Key::from(option.to_string()), option.to_string());
         }
     });
-    let bound = ValueBinding::new(
-        Signal::derive(move || vec![Key::from(page_size.get().to_string())]),
-        Callback::new(move |keys: Vec<Key>| {
-            if let Some(size) = keys
-                .first()
-                .and_then(|k| k.as_str())
-                .and_then(|k| k.parse().ok())
-            {
-                page_size.set(size);
-            }
-        }),
-    );
+    let selected_size = Signal::derive(move || vec![Key::from(page_size.get().to_string())]);
+    let set_page_size = Callback::new(move |keys: Vec<Key>| {
+        if let Some(size) = keys
+            .first()
+            .and_then(|k| k.as_str())
+            .and_then(|k| k.parse().ok())
+        {
+            page_size.set(size);
+        }
+    });
 
     view! {
         <div id="test-page-atom-select">
@@ -75,7 +73,12 @@ pub fn PageAtomSelect() -> impl IntoView {
             <button id="test-sel-after">"After"</button>
             // Bound to app state (`value`), as crudkit's page size select.
             <div id="test-sel-bound">
-                <Select collection=sizes value=bound>
+                <Select
+                    collection=sizes
+                    value=selected_size
+                    set_value=set_page_size
+                    on_change=move |_| bound_changes.update(|c| *c += 1)
+                >
                     <Label>"Page size"</Label>
                     <SelectTrigger>
                         <SelectValue />
@@ -99,6 +102,8 @@ pub fn PageAtomSelect() -> impl IntoView {
                     {page_size}
                 </span>
             </div>
+            <div>"Bound changes: " <span id="test-sel-bound-changes">{bound_changes}</span></div>
+            <button id="test-sel-bound-reset" on:click=move |_| page_size.set(10)>"Reset page size"</button>
             <div>"Changes: " <span id="test-sel-changes">{move || changes.get().join(" | ")}</span></div>
         </div>
     }

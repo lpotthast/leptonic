@@ -4,30 +4,39 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
+const CONNECTION_LOST: &str = "Connection lost. Your changes are not saved.";
+
 #[component]
 pub fn LiveAnnouncerDemo() -> impl IntoView {
-    let count = RwSignal::new(0u32);
-    let last = RwSignal::new(String::from("nothing yet"));
+    let items = RwSignal::new(0u32);
+    let last = RwSignal::new(String::from("none yet"));
 
-    let polite = move |_| {
-        count.update(|c| *c += 1);
-        let message = format!("{} items in your cart.", count.get_untracked());
+    let add_to_cart = move |_| {
+        items.update(|items| *items += 1);
+        let count = items.get_untracked();
+        let message = if count == 1 {
+            String::from("1 item in your cart.")
+        } else {
+            format!("{count} items in your cart.")
+        };
         announce_polite(message.as_str());
-        last.set(format!("\u{201c}{message}\u{201d} (polite)"));
+        last.set(format!("announced \u{201c}{message}\u{201d} politely."));
     };
-    let assertive = move |_| {
-        announce_assertive("Connection lost. Your changes are not saved.");
-        last.set(
-            "\u{201c}Connection lost. Your changes are not saved.\u{201d} (assertive)".to_owned(),
-        );
+    let lose_connection = move |_| {
+        announce_assertive(CONNECTION_LOST);
+        last.set(format!("announced \u{201c}{CONNECTION_LOST}\u{201d} assertively."));
+    };
+    let clear = move |_| {
+        clear_announcer(None);
+        last.set(String::from("cleared the pending announcements."));
     };
 
     view! {
         <div class="demo-flex-center-row">
-            <Button on_press=polite>"Add to cart"</Button>
-            <Button on_press=assertive>"Simulate connection loss"</Button>
-            <Button on_press=move |_| clear_announcer(None)>"Clear"</Button>
+            <Button on_press=add_to_cart>"Add to cart"</Button>
+            <Button on_press=lose_connection>"Simulate connection loss"</Button>
+            <Button on_press=clear>"Clear"</Button>
         </div>
-        <p class="demo-caption">"Last announcement: "{last}</p>
+        <p class="demo-status">"Last action: "{last}</p>
     }
 }

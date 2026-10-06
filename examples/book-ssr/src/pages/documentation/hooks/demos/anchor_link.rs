@@ -1,30 +1,32 @@
-use leptonic::{ScrollBehavior, components::prelude::*, hooks::*};
+use leptonic::{components::prelude::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn AnchorLinkDemo() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
 
-    let UseAnchorLinkReturn { props, .. } = use_anchor_link(UseAnchorLinkInput {
-        href: Href::from("#my-anchor-element"),
-        scroll_behavior: Some(ScrollBehavior::Smooth),
-        is_disabled: disabled.into(),
-        element_type: LinkElementType::Anchor,
-        // The link only shows "#", so describe where it leads.
-        description: Some(Oco::Borrowed("Jump to the anchor target")),
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
+    // Scrolls smoothly by default.
+    let link = use_anchor_link(UseAnchorLinkInput {
+        link: UseLinkInput {
+            is_disabled: disabled.into(),
+            // The link only shows "#", so name where it leads.
+            aria_label: "Jump to the returns policy".into(),
+            ..UseLinkInput::default()
+        },
+        ..UseAnchorLinkInput::new("#use-anchor-link-demo-target")
     });
-    let (link_attrs, link_styles) = props.into_parts();
+    let (link_attrs, link_styles) = link.props.into_parts();
 
     view! {
-        <a {..link_attrs} style=link_styles class="leptonic-anchor-link">"#"</a>
+        <p>
+            "Returns "
+            <a {..link_attrs} class="demo-link" style=link_styles>"#"</a>
+        </p>
+        <p>"Orders ship within two working days, in recyclable packaging."</p>
+        <p id="use-anchor-link-demo-target" class="demo-anchor-target">"Return anything within 30 days."</p>
 
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
-
-        <div id="my-anchor-element" class="demo-anchor-target">
-            "This is the anchor target element."
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

@@ -1,7 +1,4 @@
-use leptonic::{
-    components::prelude::*,
-    hooks::{collections::Key, *},
-};
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 const SIZES: [(&str, &str); 3] = [("s", "Small"), ("m", "Medium"), ("l", "Large")];
@@ -19,10 +16,20 @@ pub fn RadioDemo() -> impl IntoView {
         ..UseRadioGroupStateInput::default()
     });
     let group = use_radio_group(UseRadioGroupInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseRadioGroupInput::new(state)
     });
     let data = group.data;
+
+    // The label of the selected size.
+    let selected_size = move || {
+        state.selected_value.get().and_then(|selected| {
+            SIZES
+                .into_iter()
+                .find(|(value, _)| Key::from(*value) == selected)
+                .map(|(_, label)| label)
+        })
+    };
 
     view! {
         <div {..group.props.into_attrs()} class="demo-choice-group">
@@ -34,12 +41,12 @@ pub fn RadioDemo() -> impl IntoView {
         </div>
 
         <p class="demo-status">
-            {move || state.selected_value.get().map_or_else(|| "Nothing selected".to_owned(), |v| format!("Selected: {v}"))}
+            {move || selected_size().map_or_else(|| "No size selected.".to_owned(), |size| format!("Size: {size}."))}
         </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-            <Checkbox state=read_only>"Read-only"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
         </div>
     }
 }
@@ -51,6 +58,7 @@ fn SizeRadio(group: RadioGroupData, value: &'static str, label: &'static str) ->
     let (input_attrs, input_styles) = radio.input_props.into_parts();
     let is_focus_visible = radio.is_focus_visible;
 
+    // The hook tracks keyboard focus; `data-focus-visible` lets the stylesheet draw a focus ring around the input.
     view! {
         <label
             {..label_attrs}

@@ -33,8 +33,6 @@ use crate::{
 //   from the `aria_labelledby` prop (which wins over the title).
 //
 // ## DIFFERENT BEHAVIOR
-// - `useOverlayFocusContain`: focus containment is the `FocusScope` (atom `ModalContent`) the
-//   consumer renders around the dialog.
 // - The missing-title warning runs once after mount (`dev_warn!`), when the slots are known.
 //
 // =============================================================================
@@ -150,6 +148,9 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
         is_entering,
         fallback_aria_labelledby,
     } = input;
+
+    // A dialog in a non-modal popover makes it contain focus.
+    crate::hooks::use_overlay_focus_contain();
 
     let dialog_id = use_id("dialog");
     let title = use_slot("dialog-title");

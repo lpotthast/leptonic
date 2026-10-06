@@ -1,97 +1,60 @@
-// Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 6f664fe911
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 99e6102368
+use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::{hooks::IntoAttrs, utils::id::use_id};
+use crate::hooks::IntoAttrs;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/breadcrumbs/useBreadcrumbs.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## DIFFERENT BEHAVIOR
+// - The default label is English ("Breadcrumbs") until localized strings are ported.
 //
-// NOTE: This hook intentionally has no `disabled` input.
-// `aria-disabled` is meant for interactive elements (buttons, links, inputs),
-// not for structural/landmark elements like `<nav>`. Disabling breadcrumbs is
-// a per-item concern, handled by `use_breadcrumb_item` via `is_disabled`.
-// React-aria's Spectrum `Breadcrumbs` component offers a container-level
-// `isDisabled` prop, but it simply forwards it to each child item — it does
-// not set anything on the `<nav>` element itself.
-//
+// =============================================================================
 
-/// Input parameters for the `use_breadcrumbs` hook.
-#[derive(Debug, Clone)]
+/// The label of breadcrumbs without an `aria_label`.
+const DEFAULT_LABEL: &str = "Breadcrumbs";
+
+/// Input of [`use_breadcrumbs`].
+#[derive(Debug, Clone, Default)]
 pub struct UseBreadcrumbsInput {
-    /// The label for the breadcrumbs navigation.
-    pub label: Option<String>,
+    /// Names the navigation landmark. Default: "Breadcrumbs".
+    pub aria_label: MaybeProp<String>,
 }
 
-impl Default for UseBreadcrumbsInput {
-    fn default() -> Self {
-        Self {
-            label: Some("Breadcrumbs".to_string()),
-        }
-    }
-}
-
-/// The return value of the `use_breadcrumbs` hook.
+/// Return value of [`use_breadcrumbs`].
+#[derive(Debug)]
 pub struct UseBreadcrumbsReturn {
-    /// Props for the breadcrumbs navigation element.
-    pub nav_props: UseBreadcrumbsProps,
-
-    /// The ID of the navigation.
-    pub nav_id: String,
+    /// For the breadcrumbs' list (an `<ol>`, as react-aria-components); wrap it in a `<nav>`.
+    pub props: UseBreadcrumbsProps,
 }
 
-/// Props from `use_breadcrumbs` that can be extracted and merged programmatically.
+/// The navigation element's props from [`use_breadcrumbs`].
 #[derive(Debug)]
 pub struct UseBreadcrumbsProps {
-    pub id: String,
-    pub aria_label: Option<String>,
+    pub aria_label: Signal<String>,
 }
 
 impl IntoAttrs for UseBreadcrumbsProps {
     type Attrs = UseBreadcrumbsAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaLabel, self.aria_label),
-        )
+        Attr(attr::AriaLabel, self.aria_label)
     }
 }
 
-/// Attributes for the breadcrumbs navigation element.
-pub type UseBreadcrumbsAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::AriaLabel, Option<String>>,
-);
+/// Spread onto the list: `<ol {..attrs}/>`.
+pub type UseBreadcrumbsAttrs = Attr<attr::AriaLabel, Signal<String>>;
 
-/// Provides the behavior and accessibility for a breadcrumbs component.
-///
-/// Breadcrumbs show a navigation trail for the current location.
-///
-/// # Example
-///
-/// ```ignore
-/// let breadcrumbs = use_breadcrumbs(UseBreadcrumbsInput::default());
-///
-/// view! {
-///     <nav {..breadcrumbs.nav_props}>
-///         <ol>
-///             // Breadcrumb items...
-///         </ol>
-///     </nav>
-/// }
-/// ```
+/// Breadcrumbs: the trail of links to the current page, a list named "Breadcrumbs" inside a
+/// navigation landmark. Render each item with [`use_breadcrumb_item`](super::use_breadcrumb_item).
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
-    let UseBreadcrumbsInput { label } = input;
-
-    let nav_id = use_id("breadcrumbs");
-
+    let UseBreadcrumbsInput { aria_label } = input;
     UseBreadcrumbsReturn {
-        nav_props: UseBreadcrumbsProps {
-            id: nav_id.clone(),
-            aria_label: label,
+        props: UseBreadcrumbsProps {
+            aria_label: Signal::derive(move || {
+                aria_label.get().unwrap_or_else(|| DEFAULT_LABEL.to_owned())
+            }),
         },
-        nav_id,
     }
 }

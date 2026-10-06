@@ -204,10 +204,8 @@ pub fn TableHookDemo() -> impl IntoView {
                 </tbody>
             </table>
         </div>
-        <div class="demo-state-display">
-            <div><strong>"Selected: "</strong>{selected}</div>
-            <div><strong>"Sorted by: "</strong>{sorting}</div>
-        </div>
+        <p class="demo-status">"Selected: "{selected}". Sorted by: "{sorting}"."</p>
+
     }
 }
 

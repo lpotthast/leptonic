@@ -3,15 +3,14 @@ use leptos::prelude::*;
 
 use super::{form::use_validation_behavior, text_field::provide_text_field_contexts};
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, IntoAttrs, TextFieldState,
-        UseButtonInput, UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput,
-        UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_search_field,
-        use_text_field_state,
+        AutoCapitalize, EnterKeyHint, InputMode, InputType, IntoAttrs, UseButtonInput,
+        UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput, UseTextFieldStateInput,
+        ValidateFn, ValidationBehavior, use_button, use_search_field, use_text_field_state,
     },
-    utils::data_attributes::flag,
-    utils::scoped_context::scoped_view,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, data_attributes::flag, scoped_context::scoped_view, styles::Styles},
 };
 
 // =============================================================================
@@ -19,8 +18,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - As [`TextField`](super::text_field::TextField): no controlled `value`, the input's attributes
-//   are props of the field.
+// - As [`TextField`](super::text_field::TextField): `value` + `set_value` (C4), the input's
+//   attributes are props of the field.
 // - The clear button is the `SearchFieldClearButton` part (react-aria-components: any `Button`,
 //   configured through `ButtonContext`). Reason: Leptos contexts are typed; a dedicated part
 //   needs no generic button context.
@@ -49,10 +48,12 @@ pub fn SearchField(
     /// Called when the value changes.
     #[prop(into, optional)]
     on_change: Option<Callback<String>>,
-    /// External value state, replacing `default_value`. Bind a signal with
-    /// `state=TextFieldState::from(rw_signal)`.
+    /// The value (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<TextFieldState>,
+    value: Option<Signal<String>>,
+    /// Receives the new value: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<String>>,
     /// Called with the value when Enter is pressed. Without it, Enter submits the form.
     #[prop(into, optional)]
     on_submit: Option<Callback<String>>,
@@ -96,16 +97,16 @@ pub fn SearchField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let state = if let Some(state) = state {
-        on_change.map_or(state, |on_change| state.with_on_change(on_change))
-    } else {
-        use_text_field_state(UseTextFieldStateInput {
-            default_value,
-            on_change,
-        })
-    };
+    let (value, on_change) =
+        crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
+    let state = use_text_field_state(UseTextFieldStateInput {
+        default_value,
+        value,
+        on_change,
+    });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let UseSearchFieldReturn {
         text_field,
         clear_button,
@@ -149,7 +150,7 @@ pub fn SearchField(
     // component).
     scoped_view(
         move || {
-            provide_text_field_contexts(text_field);
+            provide_text_field_contexts(text_field, label_presence);
             provide_context(SearchFieldCtx {
                 clear_button: StoredValue::new(clear_button),
             });

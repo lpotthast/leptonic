@@ -20,7 +20,8 @@ pub fn PageComponentTextField() -> impl IntoView {
                 <TextField
                     label="Name"
                     description="Your full name."
-                    state=name
+                    value=name
+                    set_value=name
                     is_required=true
                 />
             </div>
@@ -43,12 +44,12 @@ pub fn PageComponentTextField() -> impl IntoView {
             </button>
 
             <div id="cmp-query">
-                <SearchField label="Search" state=query />
+                <SearchField label="Search" value=query set_value=query />
             </div>
             <div>"Query: " <span id="cmp-query-value">{query}</span></div>
 
             <div id="cmp-count">
-                <NumberField label="Count" state=count max_value=4 />
+                <NumberField label="Count" value=count set_value=count max_value=4 />
             </div>
             <div>
                 "Count: "

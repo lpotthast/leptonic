@@ -1,51 +1,44 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{components::prelude::*, hooks::*, prelude::icondata};
 use leptos::prelude::*;
 
 #[component]
 pub fn DisclosureDemo() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
 
-    let UseDisclosureStateReturn {
-        is_expanded,
-        expand,
-        collapse,
-        ..
-    } = use_disclosure_state(false);
-
+    let state = use_disclosure_state(UseDisclosureStateInput::default());
     let UseDisclosureReturn {
-        trigger_props,
-        content_props,
+        button,
+        panel_props,
         ..
     } = use_disclosure(UseDisclosureInput {
-        is_expanded,
         is_disabled: disabled.into(),
-        on_expanded_change: Some(Callback::new(move |expanded: bool| {
-            if expanded {
-                expand.run(());
-            } else {
-                collapse.run(());
-            }
-        })),
+        ..UseDisclosureInput::new(state)
     });
+    // The trigger is a button: `use_button` with the disclosure's configuration.
+    let (button_attrs, button_styles) = use_button(button).props.into_parts();
 
     view! {
         <div class="demo-disclosure">
-            <button {..trigger_props.into_attrs()} class="demo-disclosure-trigger">
-                <span>"What is a disclosure?"</span>
-                <span class="demo-disclosure-chevron" aria-hidden="true">"\u{25bc}"</span>
-            </button>
+            <h4 class="demo-disclosure-heading">
+                // Styled through `aria-expanded` and `disabled`, which the hooks set.
+                <button {..button_attrs} style=button_styles class="demo-disclosure-trigger demo-hook-disclosure-trigger">
+                    "What is a disclosure?"
+                    <Icon icon=icondata::BsChevronDown classes="demo-disclosure-chevron"/>
+                </button>
+            </h4>
 
-            // The hook sets `aria-hidden` on the collapsed panel; the stylesheet hides it based on that attribute.
-            <div {..content_props.into_attrs()} class="demo-disclosure-panel">
+            // Collapsed, the panel is `hidden="until-found"`: find in page still finds (and expands) it.
+            <div {..panel_props.into_attrs()} class="demo-disclosure-panel">
                 <p>
-                    "A disclosure is a widget that shows or hides content. It consists of a button that toggles the "
-                    "visibility of a panel. You find it in FAQs, accordions and collapsible sections."
+                    "A button that shows and hides a panel of content. You find it in FAQs, accordions and "
+                    "collapsible sections."
                 </p>
             </div>
         </div>
 
-        <Checkbox state=(disabled, set_disabled) classes=["demo-form-row", "demo-mt-1"]>"Disabled"</Checkbox>
-
-        <p>"Expanded: " {move || is_expanded.get()}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
+        <p class="demo-status">{move || if state.is_expanded.get() { "Expanded" } else { "Collapsed" }}</p>
     }
 }

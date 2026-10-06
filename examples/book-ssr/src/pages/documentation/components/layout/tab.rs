@@ -10,11 +10,12 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageTab() -> impl IntoView {
     view! {
-        <DocPage title="Tabs component">
+        <DocPage title="Tabs Components">
             <p>
-                "The themed "<Code inline=true>"Tabs"</Code>" component spreads content over several panels, of which "
-                "only one is shown at a time. Every "<Code inline=true>"Tab"</Code>" inside it is one panel with a label; "
-                "selecting the label brings the panel into view. See the "
+                "The themed "<AnchorLink href="#tabs">"Tabs"</AnchorLink>" component spreads content over several panels, of "
+                "which only one is shown at a time. Every "<AnchorLink href="#tab">"Tab"</AnchorLink>" inside it is one panel "
+                "with a label; selecting the label brings the panel into view. Its tabs can only be selected with a pointer "
+                "(see "<AnchorLink href="#accessibility">"Accessibility"</AnchorLink>"). See the "
                 <Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link>" for concept guidance."
             </p>
 
@@ -22,20 +23,22 @@ pub fn PageTab() -> impl IntoView {
                 <TabBasicDemo/>
             </Demo>
 
-            <Section title="Props">
-                <Section title="Tabs">
+            <Section title="Tabs">
+                <Section title="Props" id="tabs-props">
                     <ApiTable kind=ApiKind::Props of="components::tabs::Tabs">
                         <ApiRow name="mount" ty="Option<Mount>" default="None">
-                            "Default mount mode of the contained tabs, see "<a href="#mounting">"Mounting"</a>"."
+                            "Default mount mode of the contained tabs, see "<AnchorLink href="#mounting">"Mounting"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Additional classes and styles."
                         </ApiRow>
-                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"Tab"</Code>"s."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"Tab"</Code>"s. Required."</ApiRow>
                     </ApiTable>
                 </Section>
+            </Section>
 
-                <Section title="Tab">
+            <Section title="Tab">
+                <Section title="Props" id="tab-props">
                     <ApiTable kind=ApiKind::Props of="components::tab::Tab">
                         <ApiRow name="name" ty="Oco<'static, str>">
                             "Uniquely identifies the tab within its "<Code inline=true>"Tabs"</Code>". Required."
@@ -49,14 +52,14 @@ pub fn PageTab() -> impl IntoView {
                             "Mount mode of this tab. Overrides the mode of the "<Code inline=true>"Tabs"</Code>
                             "; without either, "<Code inline=true>"Mount::Once"</Code>" applies."
                         </ApiRow>
-                        <ApiRow name="on_show" ty="Option<Out<()>
-                            >" default="None">"Called whenever the tab comes into view."
+                        <ApiRow name="on_show" ty="Option<Out<()>>" default="None">
+                            "Called whenever the tab comes into view."
                         </ApiRow>
-                        <ApiRow name="on_hide" ty="Option<Out<()>
-                            >" default="None">"Called whenever the tab gets hidden."
+                        <ApiRow name="on_hide" ty="Option<Out<()>>" default="None">
+                            "Called whenever the tab gets hidden."
                         </ApiRow>
-                        <ApiRow name="id" ty="Option<Uuid>" default="None">
-                            "Internal identifier of the tab. A random one is generated if omitted."
+                        <ApiRow name="id" ty="Option<Oco<'static, str>>" default="None">
+                            "The tab panel\u{2019}s id. A generated one, stable across server rendering and hydration, if omitted."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Additional classes and styles of the panel."
@@ -109,6 +112,18 @@ pub fn PageTab() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="Accessibility">
+                <p>
+                    "The component predates the tab hooks and isn\u{2019}t built on them. Its tab list and panels have the "
+                    <Code inline=true>"tablist"</Code>" and "<Code inline=true>"tabpanel"</Code>" roles, but each tab is a "
+                    <Code inline=true>"<div role=\"tab\">"</Code>" that reacts to clicks only: it isn\u{2019}t focusable, the "
+                    "arrow keys don\u{2019}t move between the tabs, and it has no "<Code inline=true>"aria-selected"</Code>" or "
+                    <Code inline=true>"aria-controls"</Code>". Keyboard and screen reader users can\u{2019}t switch tabs. Use the "
+                    <Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link>" (or the "
+                    <Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link>") where that matters."
+                </p>
+            </Section>
+
             <Section title="Styling">
                 <p>"Override any of these CSS variables to adapt tabs to your design:"</p>
                 <CssVariables prefix="--tab-" scss=theme_scss!("tabs")/>
@@ -116,7 +131,8 @@ pub fn PageTab() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
-                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs hooks"</Link></li>
+                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></li>
+                <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }

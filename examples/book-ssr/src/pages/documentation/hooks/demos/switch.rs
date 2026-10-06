@@ -47,9 +47,9 @@ pub fn SwitchDemo() -> impl IntoView {
             {move || if state.is_selected.get() { "Notifications are on." } else { "Notifications are off." }}
         </p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-            <Checkbox state=read_only>"Read-only"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
         </div>
     }
 }

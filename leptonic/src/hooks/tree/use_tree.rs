@@ -65,7 +65,7 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
     let mut tree = use_grid_list(UseGridListInput {
         id,
         aria_label,
-        aria_labelledby,
+        aria_labelledby: Signal::stored(aria_labelledby),
         options,
         on_action,
         tree: Some(state.expansion),

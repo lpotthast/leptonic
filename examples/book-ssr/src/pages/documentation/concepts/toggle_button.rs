@@ -11,11 +11,11 @@ pub fn PageToggleButtonOverview() -> impl IntoView {
             <p>
                 "A toggle button is a button that stays pressed until it is pressed again, like the bold button of a text "
                 "editor. Toggle button groups combine several of them: either any number can be pressed (bold, italic, "
-                "underline), or exactly one (left, center or right alignment)."
+                "underline), or at most one (left, center or right alignment)."
             </p>
             <p>
                 "Leptonic builds toggle buttons on its "<Link href=routes::doc::Button.materialize()>"button"</Link>
-                " behavior and groups on the "<Link href=routes::doc::hooks::UseToolbar.materialize()>"toolbar"</Link>
+                " behavior and groups on the "<Link href=routes::doc::Toolbar.materialize()>"toolbar"</Link>
                 ": a group is one tab stop, and the arrow keys move between its buttons."
             </p>
 
@@ -52,14 +52,14 @@ pub fn PageToggleButtonOverview() -> impl IntoView {
                 </p>
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle button hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></TableCell>
                         <TableCell>
-                            <Code inline=true>"use_toggle_button"</Code>" and the group hooks: the input of "
-                            <Code inline=true>"use_button"</Code>" for buttons you render yourself."
+                            "Toggle behavior and ARIA attributes for buttons and groups you render yourself, built on "
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::toggle_button::Atom.materialize()>"Toggle button atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::toggle_button::Atom.materialize()>"Toggle Button Atoms"</Link></TableCell>
                         <TableCell>
                             "Unstyled "<Code inline=true>"ToggleButton"</Code>" and "<Code inline=true>"ToggleButtonGroup"</Code>
                             ", styled through data attributes."
@@ -70,9 +70,12 @@ pub fn PageToggleButtonOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"Bind the atom to a signal with "<Code inline=true>"state"</Code>" and style it through "<Code inline=true>"data-selected"</Code>":"</p>
+                <p>
+                    "Bind the atom to a signal with "<Code inline=true>"is_selected"</Code>" and "
+                    <Code inline=true>"set_selected"</Code>", and style it through "<Code inline=true>"data-selected"</Code>":"
+                </p>
                 <Demo
-                    description="Star toggle button bound to a signal, showing its state"
+                    description="Star toggle button bound to a signal, with a disabled toggle"
                     source=include_str!("demos/toggle_button.rs")
                     source_open=true
                 >
@@ -85,23 +88,38 @@ pub fn PageToggleButtonOverview() -> impl IntoView {
                     <li>
                         "A toggle button is a "<Code inline=true>"<button>"</Code>" with "<Code inline=true>"aria-pressed"</Code>
                         ", following the WAI-ARIA "
-                        <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/button/" target=LinkTarget::_Blank>"Button pattern"</LinkExt>
+                        <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/button/" target=LinkTarget::Blank>"Button pattern"</Link>
                         ". Keep its label the same in both states; the pressed state is announced separately."
                     </li>
                     <li>
                         "A group is a "<Code inline=true>"role=\"toolbar\""</Code>" (WAI-ARIA "
-                        <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/" target=LinkTarget::_Blank>"Toolbar pattern"</LinkExt>
+                        <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/" target=LinkTarget::Blank>"Toolbar pattern"</Link>
                         "). With single selection, it is a "<Code inline=true>"role=\"radiogroup\""</Code>" of buttons with "
                         <Code inline=true>"role=\"radio\""</Code>" and "<Code inline=true>"aria-checked"</Code>"."
                     </li>
                     <li>"Give the group an accessible name with "<Code inline=true>"aria_label"</Code>" or "<Code inline=true>"aria_labelledby"</Code>"."</li>
                 </ul>
                 <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus to the button, or into and out of a group."</KeyRow>
+                    <KeyRow keys="Tab / Shift + Tab">
+                        "Moves focus to the button. A group is one tab stop; entering it again focuses the button focused last."
+                    </KeyRow>
                     <KeyRow keys="Space / Enter">"Toggles the focused button."</KeyRow>
-                    <KeyRow keys="Arrow keys">"In a group: focuses the next or previous button along the group\u{2019}s orientation."</KeyRow>
+                    <KeyRow keys="ArrowRight / ArrowLeft">
+                        "In a horizontal group: focuses the next or previous button (the other way round in right-to-left "
+                        "languages)."
+                    </KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"In a vertical group: focuses the next or previous button."</KeyRow>
                 </KeyboardTable>
+                <p>"The arrow keys only move focus; they don\u{2019}t change the selection, not even in a single-selection group."</p>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
+                <li><Link href=routes::doc::toggle_button::Atom.materialize()>"Toggle Button Atoms"</Link></li>
+                <li><Link href=routes::doc::Button.materialize()>"Button"</Link></li>
+                <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar"</Link></li>
+                <li><Link href=routes::doc::Switch.materialize()>"Switch"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

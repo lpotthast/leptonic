@@ -12,20 +12,29 @@ pub fn PageUseInteractOutside() -> impl IntoView {
             <p>
                 "The "<Code inline=true>"use_interact_outside"</Code>" hook detects clicks and touches outside an element, "
                 "for example to close a popover. See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>
-                " for domain guidance."
+                " to compare it with the other interaction building blocks."
             </p>
 
-            <ReactAria hook="useInteractOutside"/>
+            <ReactAriaSource path="interactions/useInteractOutside.ts"/>
 
             <Section title="Input">
-                <p><Code inline=true>"UseInteractOutsideInput"</Code>" has no "<Code inline=true>"Default"</Code>", so you set all three fields."</p>
+                <p>
+                    <Code inline=true>"UseInteractOutsideInput"</Code>" implements "<Code inline=true>"Default"</Code>
+                    " (enabled, no callbacks), so you name only the fields you need."
+                </p>
 
                 <ApiTable kind=ApiKind::Input of="UseInteractOutsideInput">
-                    <ApiRow name="is_disabled" ty="Signal<bool>">"Stop detecting outside interactions while "<Code inline=true>"true"</Code>"."</ApiRow>
-                    <ApiRow name="on_interact_outside_start" ty="Option<Callback<PointerEvent>>">
-                        "Called on "<Code inline=true>"pointerdown"</Code>" outside the element."
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Stop detecting outside interactions while "<Code inline=true>"true"</Code>"."</ApiRow>
+                    <ApiRow name="element" ty="Option<CapturedElement>" default="None">
+                        "The element interactions are outside of, when it is captured elsewhere (e.g. a group of popovers). With "
+                        <Code inline=true>"None"</Code>", it is the element the returned props are spread on; with an element, "
+                        "the props capture nothing."
                     </ApiRow>
-                    <ApiRow name="on_interact_outside" ty="Option<Callback<web_sys::MouseEvent>>">
+                    <ApiRow name="on_interact_outside_start" ty="Option<Callback<web_sys::MouseEvent>>" default="None">
+                        "Called on "<Code inline=true>"pointerdown"</Code>" outside the element, with the "
+                        <Code inline=true>"PointerEvent"</Code>" (which is a "<Code inline=true>"MouseEvent"</Code>")."
+                    </ApiRow>
+                    <ApiRow name="on_interact_outside" ty="Option<Callback<web_sys::MouseEvent>>" default="None">
                         "Called on "<Code inline=true>"click"</Code>" outside the element, if the interaction also started outside."
                     </ApiRow>
                 </ApiTable>
@@ -43,16 +52,18 @@ pub fn PageUseInteractOutside() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let (is_open, set_is_open) = signal(true);
+                        use leptonic::hooks::*;
+                        use leptos::prelude::*;
 
-                        let interact_outside = use_interact_outside(UseInteractOutsideInput {
-                            is_disabled: Signal::stored(false),
-                            on_interact_outside_start: None,
-                            on_interact_outside: Some(Callback::new(move |_| set_is_open.set(false))),
+                        let is_open = RwSignal::new(true);
+
+                        let UseInteractOutsideReturn { props } = use_interact_outside(UseInteractOutsideInput {
+                            on_interact_outside: Some(Callback::new(move |_| is_open.set(false))),
+                            ..Default::default()
                         });
 
                         view! {
-                            <div {..interact_outside.props.into_attrs()}>"Click outside to close"</div>
+                            <div {..props.into_attrs()}>"Click outside to close"</div>
                         }
                     "#)}
                 </Code>
@@ -78,9 +89,9 @@ pub fn PageUseInteractOutside() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
-                <li><Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
+                <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior overview"</Link></li>
                 <li><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></li>
-                <li><Link href=routes::doc::modal::Hook.materialize()>"use_modal"</Link></li>
+                <li><Link href=routes::doc::modal::Hook.materialize()>"Modal Hooks"</Link></li>
             </SeeAlso>
         </DocPage>
     }

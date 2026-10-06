@@ -1,162 +1,154 @@
-// Upstream: react-aria/src/color/useColorSlider.ts @ 6f664fe911
-use std::borrow::Cow;
-
+// Upstream: react-aria/src/color/useColorSlider.ts @ 99e6102368
 use leptos::prelude::*;
 
-use super::use_color_slider_state::UseColorSliderStateReturn;
+use super::use_color_slider_state::ColorSliderState;
 use crate::{
     hooks::slider::{
         UseSliderInput, UseSliderReturn, UseSliderThumbInput, UseSliderThumbReturn, use_slider,
         use_slider_thumb,
     },
     utils::{
-        color::ColorValue, i18n::use_direction, locale::WritingDirection, orientation::Orientation,
+        color::ColorValue, css::ForcedColorAdjust, i18n::use_direction, locale::WritingDirection,
+        orientation::Orientation, style::ForcedColorAdjustProperty, styles::Styles,
+        visually_hidden::visually_hidden_full_size_styles,
     },
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorSlider.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Delegates to `use_slider` and `use_slider_thumb` for interaction logic.
-//   Adds color-specific gradient computation and ARIA valuetext.
+// ## API DIFFERENCES
+// - Returns the `use_slider` and `use_slider_thumb` results with the color's additions: the
+//   value text and `track_styles` (the gradient) and `input_styles` (visually hidden).
+// - Disabled and orientation come from the state (C8), not repeated on the input.
+//
+// ## OMITTED FEATURES
+// - Localized names: channel, hue and color names are English until leptonic has localized
+//   strings.
+//
+// =============================================================================
 
-/// Input parameters for `use_color_slider`.
+/// Input of [`use_color_slider`]. Start from [`UseColorSliderInput::new`].
 #[derive(Debug, Clone)]
 pub struct UseColorSliderInput<C: ColorValue> {
-    /// The color slider state (from `use_color_slider_state`).
-    pub state: UseColorSliderStateReturn<C>,
-
-    /// Whether the slider is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Slider orientation.
-    pub orientation: Signal<Orientation>,
-
-    /// An accessibility label for the slider. When `None`, auto-generates
-    /// from the channel name (e.g., "Hue", "Saturation").
-    pub aria_label: Option<&'static str>,
-
-    /// The name attribute for form submission.
-    pub name: Option<&'static str>,
+    pub state: ColorSliderState<C>,
+    /// Whether a visible label is rendered (with `label_props`).
+    pub has_label: Signal<bool>,
+    /// Names the slider. Without any label, the channel's name does.
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    /// The name of the input, for form submission.
+    pub name: Option<String>,
+    /// The id of a `<form>` the input belongs to.
+    pub form: Option<String>,
 }
 
-/// Return value of `use_color_slider`.
+impl<C: ColorValue> UseColorSliderInput<C> {
+    pub fn new(state: ColorSliderState<C>) -> Self {
+        Self {
+            state,
+            has_label: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            name: None,
+            form: None,
+        }
+    }
+}
+
+/// Return value of [`use_color_slider`].
+#[derive(Debug)]
 pub struct UseColorSliderReturn {
-    /// The underlying slider hook return (group, label, output, track props).
+    /// The slider: label, output and track (whose styles are `track_styles`).
     pub slider: UseSliderReturn,
-
-    /// The slider thumb hook return (thumb, input props).
+    /// The thumb and its input (with the color's value text).
     pub thumb: UseSliderThumbReturn,
-
-    /// CSS gradient background for the track.
-    pub background: Signal<String>,
-
-    /// CSS style string for the track including gradient and `forced-color-adjust: none`.
-    pub track_style: Signal<String>,
+    /// The track's gradient (merge with the track props' styles).
+    pub track_styles: Styles,
+    /// Hides the input visually across the thumb (merge into the input's style).
+    pub input_styles: Styles,
 }
 
-/// Creates behavior and ARIA props for a color channel slider.
-///
-/// Composes `use_slider` and `use_slider_thumb` with color-specific
-/// gradient generation and ARIA labels.
+/// Behavior and accessibility of a slider changing one channel of a color, on top of
+/// [`use_slider`] and [`use_slider_thumb`]: a gradient track, the channel's value text.
 pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColorSliderReturn {
     let UseColorSliderInput {
         state,
-        is_disabled: disabled,
-        orientation,
+        has_label,
         aria_label,
+        aria_labelledby,
+        aria_describedby,
         name,
+        form,
     } = input;
-
     let channel = state.channel;
 
-    // Auto-generate aria-label from channel name when none is provided.
-    let effective_label = aria_label.unwrap_or_else(|| C::get_channel_name(state.channel));
-
-    let slider_return = use_slider(UseSliderInput {
-        state: state.slider_state,
-        aria_label: Some(effective_label),
-        aria_labelledby: None,
+    // Without any label, the channel names the slider (react-aria).
+    let has_other_label = aria_labelledby.is_some();
+    let aria_label = MaybeProp::derive(move || {
+        aria_label.get().or_else(|| {
+            (!has_label.get() && !has_other_label).then(|| C::get_channel_name(channel).to_owned())
+        })
     });
 
-    // Build enriched ARIA valuetext with hue/color name appended.
-    let value_signal = state.value;
-    let enriched_valuetext = Signal::derive(move || {
-        let color = value_signal.get();
-        let mut text = color.format_channel_value(channel);
-        if let Some(hue_name) = color.get_hue_name_for_channel(channel) {
-            text.push_str(", ");
-            text.push_str(hue_name);
-        }
-        text
+    let slider = use_slider(UseSliderInput {
+        has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        ..UseSliderInput::new(state.slider)
     });
-
-    let thumb_return = use_slider_thumb(UseSliderThumbInput {
-        state: state.slider_state,
-        track: slider_return.track_ref,
-        index: 0,
+    let mut thumb = use_slider_thumb(UseSliderThumbInput {
+        is_disabled: state.slider.is_disabled,
         name,
-        aria_label: Some(Cow::Borrowed(effective_label)),
-        aria_labelledby: None,
-        is_disabled: disabled,
-        decimal_places: None,
-        aria_describedby: None,
-        aria_details: None,
-        aria_errormessage: None,
-        aria_valuetext: Some(enriched_valuetext),
+        form,
+        ..UseSliderThumbInput::new(state.slider, &slider)
     });
-
-    // Generate gradient background using display_color and channel-specific stops.
-    let display_color_signal = state.display_color;
-    // The gradient runs against the text direction in right-to-left layouts.
-    let writing_direction = use_direction();
-    let background = Signal::derive(move || {
-        let color = display_color_signal.get();
-        let range = C::get_channel_range(channel);
-
-        let stops: Vec<String> = if let Some(fixed_stops) = range.gradient_stops {
-            fixed_stops
-                .iter()
-                .map(|&val| color.with_channel_value(channel, val).to_css_string())
-                .collect()
+    let value = state.value;
+    thumb.input_props.aria_valuetext = Signal::derive(move || {
+        // The hue names a hue slider, the color the other channels (react-aria).
+        let color = value.get();
+        let name = if C::hue_channel() == Some(channel) {
+            color.hue_name()
         } else {
-            vec![
-                color
-                    .with_channel_value(channel, range.min_value)
-                    .to_css_string(),
-                color
-                    .with_channel_value(channel, range.max_value)
-                    .to_css_string(),
-            ]
+            color.color_name()
         };
-
-        let direction = match orientation.get() {
-            Orientation::Horizontal => {
-                if writing_direction.get() == WritingDirection::Rtl {
-                    "to left"
-                } else {
-                    "to right"
-                }
-            }
-            Orientation::Vertical => "to top",
-        };
-
-        format!("linear-gradient({direction}, {})", stops.join(", "))
+        format!("{}, {name}", color.format_channel_value(channel))
     });
 
-    // Combined track style with forced-color-adjust for high contrast mode.
-    let track_style = Signal::derive(move || {
-        format!(
-            "background: {}; forced-color-adjust: none;",
-            background.get()
-        )
-    });
+    let display_color = state.display_color();
+    let orientation = state.slider.orientation;
+    let direction = use_direction();
+    let background = move || {
+        let color = display_color.get();
+        let range = C::get_channel_range(channel);
+        let stops: Vec<String> = match range.gradient_stops {
+            Some(stops) => stops
+                .iter()
+                .map(|&stop| color.with_channel_value(channel, stop).to_css_string())
+                .collect(),
+            None => [range.min_value, range.max_value]
+                .map(|stop| color.with_channel_value(channel, stop).to_css_string())
+                .to_vec(),
+        };
+        let to = match (orientation.get(), direction.get()) {
+            (Orientation::Vertical, _) => "top",
+            (Orientation::Horizontal, WritingDirection::Ltr) => "right",
+            (Orientation::Horizontal, WritingDirection::Rtl) => "left",
+        };
+        Some(format!("linear-gradient(to {to}, {})", stops.join(", ")))
+    };
 
     UseColorSliderReturn {
-        slider: slider_return,
-        thumb: thumb_return,
-        background,
-        track_style,
+        slider,
+        thumb,
+        track_styles: Styles::new()
+            .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None))
+            // A computed gradient: no checked grammar in `leptos-css` yet.
+            .add_optional_unchecked("background", background),
+        input_styles: visually_hidden_full_size_styles(),
     }
 }

@@ -16,13 +16,13 @@ use leptos_browser_test::{Report, ResultExt};
 use crate::pages::BookPage;
 
 /// Whether the dark theme applies: the body background is dark.
-const IS_DARK: &str = "const c = getComputedStyle(document.body).backgroundColor.match(/\\d+/g); \
+pub const IS_DARK: &str = "const c = getComputedStyle(document.body).backgroundColor.match(/\\d+/g); \
                        return !!c && (+c[0] + +c[1] + +c[2]) / 3 < 80;";
 
 /// Whether all CSS transitions finished. The server renders the light theme (the theme choice lives in the browser's
 /// local storage), and hydration switches to the dark one: until their transitions finish, elements that transition
 /// their colors (buttons, demo targets) still show light-theme colors.
-const TRANSITIONS_FINISHED: &str = "return document.getAnimations().every(a => !(a instanceof CSSTransition) || a.playState !== 'running');";
+pub const TRANSITIONS_FINISHED: &str = "return document.getAnimations().every(a => !(a instanceof CSSTransition) || a.playState !== 'running');";
 
 /// Demo elements that don't fit the dark theme: bright panels (at least 48 x 32 px, so that small shapes like a
 /// switch's knob don't count), or dark text on a dark background.
@@ -32,7 +32,7 @@ const DARK_THEME_PROBLEMS: &str = r"
     for (const el of document.querySelectorAll('.demo *')) {
         const cs = getComputedStyle(el);
         const label = el.tagName.toLowerCase() + '.' + [...el.classList].join('.');
-        if (cs.display !== 'none' && el.offsetWidth >= 48 && el.offsetHeight >= 32 && lum(cs.backgroundColor) > 0.85) out.push('bright background: ' + label);
+        if (cs.display !== 'none' && el.offsetWidth >= 48 && el.offsetHeight >= 32 && lum(cs.backgroundColor) > 0.85) out.push('bright background: ' + label + ' “' + el.textContent.trim().slice(0, 30) + '” (' + cs.backgroundColor + ')');
         const ownText = [...el.childNodes].some(n => n.nodeType === 3 && /[A-Za-z0-9]/.test(n.textContent));
         if (ownText && lum(cs.color) < 0.2 && lum(cs.backgroundColor) < 0.3 && lum(getComputedStyle(el.closest('.demo')).backgroundColor) < 0.3) out.push('dark text: ' + label);
     }
@@ -118,7 +118,7 @@ impl BrowserTest<str> for PageContentTests {
         // Switch to the dark theme as a user would; it is remembered for all following pages.
         page.goto("/doc/overview").await?;
         driver
-            .find(By::Css(".app-bar-theme-toggle"))
+            .find(By::Css("#book-app-bar .book-theme-toggle"))
             .await
             .context("the app bar has a theme toggle")?
             .click()

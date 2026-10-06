@@ -390,7 +390,18 @@ pub fn use_selectable_collection(
 
     let mut once = KeyboardShortcuts::new();
     for (key, home) in [("Home", true), ("End", false)] {
-        for shortcut in with_selection_modifiers(key) {
+        // Upstream also takes Cmd (+ Shift) on macOS: its `isCtrlKeyPressed` is Meta there,
+        // which goes to the collection's first/last item (and extends the selection).
+        let cmd = device::is_mac()
+            .then(|| {
+                [
+                    Shortcut::key(key).primary(),
+                    Shortcut::key(key).primary().shift(),
+                ]
+            })
+            .into_iter()
+            .flatten();
+        for shortcut in with_selection_modifiers(key).into_iter().chain(cmd) {
             once = once.on(shortcut, move |e| home_end(e, home));
         }
     }

@@ -9,7 +9,6 @@ use leptonic::{
         use_button, use_hidden_select, use_listbox, use_option, use_overlay, use_select,
         use_select_state,
     },
-    utils::classes::Classes,
 };
 use leptos::prelude::*;
 
@@ -39,7 +38,7 @@ pub fn SelectDemo() -> impl IntoView {
         hidden_select,
         ..
     } = use_select(UseSelectInput {
-        has_label: true,
+        has_label: true.into(),
         is_disabled: disabled.into(),
         name: Some("fruit".to_owned()),
         ..UseSelectInput::new(state)
@@ -50,7 +49,7 @@ pub fn SelectDemo() -> impl IntoView {
 
     let selected_text = move || {
         state.selected_items().first().map_or_else(
-            || "Select a fruit...".to_owned(),
+            || "Select a fruit\u{2026}".to_owned(),
             |n| n.text_value.to_string(),
         )
     };
@@ -77,12 +76,12 @@ pub fn SelectDemo() -> impl IntoView {
             <FruitHiddenSelect hidden_select=hidden_select.clone() />
         </div>
 
-        <Checkbox state=disabled>"Disabled"</Checkbox>
-
-        <p>
-            "Selected: "
-            <strong>{move || state.selected_key().map_or_else(|| "None".to_owned(), |k| k.to_string())}</strong>
+        <p class="demo-status">
+            "Selected: "{move || state.selected_key().map_or_else(|| "none".to_owned(), |key| key.to_string())}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -90,12 +89,9 @@ pub fn SelectDemo() -> impl IntoView {
 #[component]
 fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView {
     let overlay = use_overlay(UseOverlayInput {
-        is_open: Signal::stored(true),
-        on_close: close,
-        is_dismissable: true,
-        should_close_on_blur: true,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
+        is_dismissable: true.into(),
+        should_close_on_blur: true.into(),
+        ..UseOverlayInput::new(Signal::stored(true), close)
     });
     let UseListBoxReturn { props, data } = use_listbox(listbox);
 
@@ -114,11 +110,11 @@ fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView 
     }
 }
 
+/// An option. The hook sets `aria-selected`; the focus is shown through `data-focused`, rendered from `is_focused`.
 #[component]
 fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
         props,
-        is_selected,
         is_focused,
         ..
     } = use_option(UseOptionInput {
@@ -128,15 +124,10 @@ fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> imp
     let (attrs, styles) = props.into_parts();
 
     view! {
-        <div
-            {..attrs}
-            style=styles
-            class=Classes::from("demo-select-option")
-                .add_reactive("selected", is_selected)
-                .add_reactive("focused", is_focused)
-        >
+        <div {..attrs} style=styles data-focused=move || is_focused.get().then_some("") class="demo-select-option">
             {label}
         </div>
+
     }
 }
 

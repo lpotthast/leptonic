@@ -21,9 +21,9 @@ pub use disclosure::Disclosure;
 /// The rows of a [`DocTable`].
 pub use leptonic::components::table::{TableCell, TableRow};
 pub use members::SectionMembers;
-pub use page::DocPage;
-pub use reference::{ReactAria, ReactAriaSource, SeeAlso};
-pub use section::{Section, slug};
+pub use page::{DocPage, DocPageHeader};
+pub use reference::{ReactAria, ReactAriaSource, SeeAlso, UpstreamPackage};
+pub use section::Section;
 pub use table::{ApiKind, ApiRow, ApiTable, DocTable, KeyRow, KeyboardTable, Keys};
 pub use theme::CssVariables;
 

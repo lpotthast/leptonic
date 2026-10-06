@@ -1,124 +1,83 @@
-// Upstream: react-stately/src/color/useColorWheelState.ts @ 6f664fe911
-use std::fmt;
-
+// Upstream: react-stately/src/color/useColorWheelState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::color::ColorValue;
+use crate::utils::{ValueBinding, color::ColorValue};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorWheelState.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Hook-owned state: The hook owns its WriteSignal internally and exposes a
-//   read-only Signal<C>. React-aria uses useControlledState.
+// ## API DIFFERENCES
+// - Generic over the color type (`ColorValue`); `channel` names its hue channel (react-aria
+//   converts the color to HSL and uses its hue).
+// - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
+// - A `Copy` struct with signals and methods (C3).
 //
-// - Coordinate convention: 0° at 12 o'clock (top), increasing clockwise.
-//   React-aria uses 0° at 3 o'clock with `conic-gradient(from 90deg, ...)`.
-//   Both are internally consistent; ours is arguably more intuitive for users.
+// =============================================================================
 
-/// Input parameters for `use_color_wheel_state`.
-#[derive(Debug, Clone)]
+/// Input of [`use_color_wheel_state`]. Start from [`UseColorWheelStateInput::new`].
+#[derive(Debug, Clone, Copy)]
 pub struct UseColorWheelStateInput<C: ColorValue> {
-    /// The initial color value. Defaults to red (hue=0) at full saturation.
+    /// The initial color.
     pub default_value: C,
-
-    /// Which channel this wheel controls (typically the hue channel).
+    /// The color as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<C>>,
+    /// The color type's hue channel, which the wheel changes.
     pub channel: C::Channel,
-
-    /// Whether the wheel is disabled.
     pub is_disabled: Signal<bool>,
-
-    /// Callback fired when the color changes during interaction.
+    /// Called with the color whenever it changes, also while dragging.
     pub on_change: Option<Callback<C>>,
-
-    /// Callback fired when interaction ends.
+    /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
 }
 
-/// Return value of `use_color_wheel_state`.
-pub struct UseColorWheelStateReturn<C: ColorValue> {
-    /// The current full color.
+impl<C: ColorValue> UseColorWheelStateInput<C> {
+    /// A wheel changing the hue `channel` of `default_value`.
+    pub fn new(default_value: C, channel: C::Channel) -> Self {
+        Self {
+            default_value,
+            value: None,
+            channel,
+            is_disabled: Signal::stored(false),
+            on_change: None,
+            on_change_end: None,
+        }
+    }
+}
+
+/// The state of a color wheel: the color and its hue.
+#[derive(Debug, Clone, Copy)]
+pub struct ColorWheelState<C: ColorValue> {
+    /// The color.
     pub value: Signal<C>,
-
-    /// Set the full color value (for external/programmatic updates).
-    /// Does not fire `on_change`.
-    pub set_value: Callback<C>,
-
-    /// Which channel this wheel controls.
-    pub channel: C::Channel,
-
-    /// The current channel value (e.g. hue 0–360), derived from value.
+    /// Its hue, in degrees.
     pub hue: Signal<f64>,
-
-    /// Set the channel value directly (e.g. hue 0–360).
-    pub set_hue: Callback<f64>,
-
-    /// Set the channel value from Cartesian coordinates relative to the wheel center.
-    /// Parameters: (x, y, radius) where x/y are relative to center.
-    pub set_hue_from_point: Callback<(f64, f64, f64)>,
-
-    /// Get the thumb position as Cartesian coordinates from center.
-    /// Parameter: radius. Returns (x, y).
-    pub get_thumb_position: Callback<f64, (f64, f64)>,
-
-    /// Increment the channel value by step (or default step).
-    pub increment: Callback<Option<f64>>,
-
-    /// Decrement the channel value by step (or default step).
-    pub decrement: Callback<Option<f64>>,
-
-    /// Whether the user is dragging.
-    pub is_dragging: Signal<bool>,
-
-    /// Set dragging state. Fires `on_change_end` on false transition.
-    pub set_dragging: Callback<bool>,
-
-    /// Display color: the color at the current channel value with maximum vividness
-    /// for gradient rendering.
-    pub display_color: Signal<C>,
-
-    /// The step size for channel value changes.
+    /// The hue channel.
+    pub channel: C::Channel,
+    /// The hue's step.
     pub step: f64,
-
-    /// The page step size for channel value changes.
+    /// The hue's page step (PageUp/PageDown, Shift + arrow keys).
     pub page_step: f64,
-
-    /// Whether the wheel is disabled.
     pub is_disabled: Signal<bool>,
+    /// Whether the thumb is being dragged.
+    pub is_dragging: Signal<bool>,
+    binding: ValueBinding<C>,
+    default_value: StoredValue<C>,
+    latest: StoredValue<C>,
+    dragging: RwSignal<bool>,
+    on_change_end: Option<Callback<C>>,
 }
 
-// All fields are Copy (Signal<T>, Callback<T>, and C::Channel are Copy).
-// Manual impls avoid the derive macro's incorrect generic bounds.
-impl<C: ColorValue> Copy for UseColorWheelStateReturn<C> {}
-#[allow(clippy::expl_impl_clone_on_copy)]
-impl<C: ColorValue> Clone for UseColorWheelStateReturn<C> {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-impl<C: ColorValue> fmt::Debug for UseColorWheelStateReturn<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UseColorWheelStateReturn")
-            .field("channel", &self.channel)
-            .finish_non_exhaustive()
-    }
-}
-
-/// Wraps a value to [min, max) using the channel range.
-fn wrap_value(v: f64, min: f64, max: f64) -> f64 {
-    let range = max - min;
-    ((v - min) % range + range) % range + min
-}
-
-/// Rounds a value to the nearest step.
 fn round_to_step(value: f64, step: f64) -> f64 {
     (value / step).round() * step
 }
 
-/// Floors a value, but returns `v - 1` if `v` is already an integer.
-/// Used for decrement wrapping so that decrementing from the minimum reaches
-/// the last valid step position below the maximum.
+/// The positive remainder of `n / m`.
+fn modulo(n: f64, m: f64) -> f64 {
+    ((n % m) + m) % m
+}
+
+/// `v` rounded down, and one less if it is whole already.
 fn round_down(v: f64) -> f64 {
     let r = v.floor();
     if (r - v).abs() < f64::EPSILON {
@@ -128,157 +87,180 @@ fn round_down(v: f64) -> f64 {
     }
 }
 
-/// Converts Cartesian coordinates (relative to center) to an angular channel value.
-/// 0° is at the top (12 o'clock), increasing clockwise.
-/// The returned value is in the range [0, 360).
-fn cartesian_to_angle(x: f64, y: f64) -> f64 {
-    // atan2 gives angle from positive X axis, counter-clockwise.
-    // We want 0° at top (negative Y), clockwise.
-    let angle_rad = f64::atan2(x, -y);
-    let angle_deg = angle_rad.to_degrees();
-    ((angle_deg % 360.0) + 360.0) % 360.0
+impl<C: ColorValue> ColorWheelState<C> {
+    /// The color the wheel started with (for form resets).
+    pub fn default_value(&self) -> C {
+        self.default_value.get_value()
+    }
+
+    /// Sets the color.
+    pub fn set_value(&self, color: C) {
+        if color != self.latest.get_value() {
+            self.latest.set_value(color);
+            self.binding.set(color);
+        }
+    }
+
+    fn current_hue(&self) -> f64 {
+        self.latest.get_value().get_channel_value(self.channel)
+    }
+
+    /// Sets the hue, snapped to the step (360 wraps around to 0).
+    pub fn set_hue(&self, hue: f64) {
+        let hue = if hue > 360.0 { 0.0 } else { hue };
+        let hue = round_to_step(modulo(hue, 360.0), self.step);
+        if hue != self.current_hue() {
+            self.set_value(
+                self.latest
+                    .get_value()
+                    .with_channel_value(self.channel, hue),
+            );
+        }
+    }
+
+    /// Sets the hue of the point (`x`, `y`) relative to the wheel's center (`y` down).
+    pub fn set_hue_from_point(&self, x: f64, y: f64, radius: f64) {
+        let degrees = (y / radius).atan2(x / radius).to_degrees();
+        self.set_hue((degrees + 360.0) % 360.0);
+    }
+
+    /// The thumb's position relative to the center on a circle of `radius` (0° at 3 o'clock,
+    /// clockwise). Tracked.
+    pub fn thumb_position(&self, radius: f64) -> (f64, f64) {
+        let radians = (360.0 - self.hue.get() + 90.0).to_radians();
+        (radians.sin() * radius, radians.cos() * radius)
+    }
+
+    /// Increases the hue by `step` (at least the step), wrapping around.
+    pub fn increment(&self, step: f64) {
+        let step = step.max(self.step);
+        let range = C::get_channel_range(self.channel);
+        let mut hue = self.current_hue() + step;
+        if hue >= range.max_value {
+            hue = range.min_value;
+        }
+        self.set_hue(round_to_step(modulo(hue, 360.0), step));
+    }
+
+    /// Decreases the hue by `step` (at least the step), wrapping around.
+    pub fn decrement(&self, step: f64) {
+        let step = step.max(self.step);
+        let hue = self.current_hue();
+        if hue == 0.0 {
+            // Not just 360 - step: the previous step may be closer to 0 than a step.
+            self.set_hue(round_down(360.0 / step) * step);
+        } else {
+            self.set_hue(round_to_step(modulo(hue - step, 360.0), step));
+        }
+    }
+
+    /// Starts or ends dragging; ending it calls `on_change_end`.
+    pub fn set_dragging(&self, dragging: bool) {
+        let was_dragging = self.dragging.get_untracked();
+        self.dragging.set(dragging);
+        if was_dragging
+            && !dragging
+            && let Some(on_change_end) = self.on_change_end
+        {
+            on_change_end.run(self.latest.get_value());
+        }
+    }
+
+    /// The hue at full saturation, to draw the thumb with.
+    pub fn display_color(&self) -> Signal<C> {
+        let (value, channel) = (self.value, self.channel);
+        Signal::derive(move || value.get().get_display_color(channel))
+    }
 }
 
-/// Converts an angular channel value to Cartesian coordinates on a circle of given radius.
-/// 0° is at the top (12 o'clock), increasing clockwise.
-fn angle_to_cartesian(angle: f64, radius: f64) -> (f64, f64) {
-    let angle_rad = (angle - 90.0).to_radians();
-    let x = radius * angle_rad.cos();
-    let y = radius * angle_rad.sin();
-    (x, y)
-}
-
-/// Creates state for a circular channel wheel component.
-///
-/// Typically used for hue wheels, but works with any angular channel of a
-/// [`ColorValue`] type.
-#[allow(clippy::needless_pass_by_value)]
+/// Creates the state of a color wheel changing a color's hue.
 pub fn use_color_wheel_state<C: ColorValue>(
     input: UseColorWheelStateInput<C>,
-) -> UseColorWheelStateReturn<C> {
+) -> ColorWheelState<C> {
     let UseColorWheelStateInput {
         default_value,
+        value,
         channel,
-        is_disabled: disabled,
+        is_disabled,
         on_change,
         on_change_end,
     } = input;
 
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    let default_value = StoredValue::new(binding.value.get_untracked());
+    let latest = StoredValue::new(binding.value.get_untracked());
+    let bound = binding.value;
+    Effect::new(move || latest.set_value(bound.get()));
+    let binding = ValueBinding::new(
+        binding.value,
+        Callback::new(move |color: C| {
+            binding.set(color);
+            if let Some(on_change) = on_change {
+                on_change.run(color);
+            }
+        }),
+    );
     let range = C::get_channel_range(channel);
-    let step = range.step;
-    let page_step = range.page_size;
-    let max_value = range.max_value;
-    let min_value = range.min_value;
-
-    let (value, set_value_signal) = signal(default_value);
-    let (is_dragging, set_is_dragging) = signal(false);
-
-    let hue = Signal::derive(move || value.get().get_channel_value(channel));
-
-    let update_channel_value = move |new_val: f64| {
-        // React-aria guard: if value exceeds max, snap to min so you can always
-        // get back to the start of the range.
-        let clamped = if new_val > max_value {
-            min_value
-        } else {
-            new_val
-        };
-        let wrapped = wrap_value(round_to_step(clamped, step), min_value, max_value);
-        let current = value.get_untracked();
-        // Skip no-op updates (matches react-aria's `if (hue !== v)` guard).
-        if (current.get_channel_value(channel) - wrapped).abs() < f64::EPSILON {
-            return;
-        }
-        let new_color = current.with_channel_value(channel, wrapped);
-        set_value_signal.set(new_color);
-        if let Some(cb) = on_change {
-            cb.run(new_color);
-        }
-    };
-
-    let set_hue = Callback::new(move |h: f64| {
-        update_channel_value(h);
-    });
-
-    let set_hue_from_point = Callback::new(move |(x, y, _radius): (f64, f64, f64)| {
-        // Convert Cartesian to angular value. For hue (0-360), the angle maps 1:1.
-        // For channels with different ranges, scale from the [0, 360) angle to the
-        // channel range.
-        let angle = cartesian_to_angle(x, y);
-        let channel_val = min_value + (angle / 360.0) * (max_value - min_value);
-        update_channel_value(channel_val);
-    });
-
-    let get_thumb_position = Callback::new(move |radius: f64| -> (f64, f64) {
-        let channel_val = hue.get_untracked();
-        // Map channel value to angle in [0, 360).
-        let angle = (channel_val - min_value) / (max_value - min_value) * 360.0;
-        angle_to_cartesian(angle, radius)
-    });
-
-    let increment = Callback::new(move |custom_step: Option<f64>| {
-        let s = f64::max(custom_step.unwrap_or(step), step);
-        let current_val = hue.get_untracked();
-        let new_val = current_val + s;
-        // Wrap to min when reaching or exceeding max.
-        if new_val >= max_value {
-            update_channel_value(min_value);
-        } else {
-            update_channel_value(round_to_step(wrap_value(new_val, min_value, max_value), s));
-        }
-    });
-
-    let decrement = Callback::new(move |custom_step: Option<f64>| {
-        let s = f64::max(custom_step.unwrap_or(step), step);
-        let current_val = hue.get_untracked();
-        if (current_val - min_value).abs() < f64::EPSILON {
-            // At min: jump to the last valid step position below max.
-            // E.g., for hue step=15: round_down(360/15) * 15 = round_down(24) * 15 = 23 * 15 = 345.
-            let range_size = max_value - min_value;
-            update_channel_value(min_value + round_down(range_size / s) * s);
-        } else {
-            update_channel_value(round_to_step(
-                wrap_value(current_val - s, min_value, max_value),
-                s,
-            ));
-        }
-    });
-
-    let set_dragging = Callback::new(move |dragging: bool| {
-        let was_dragging = is_dragging.get_untracked();
-        set_is_dragging.set(dragging);
-        if was_dragging
-            && !dragging
-            && let Some(cb) = on_change_end
-        {
-            cb.run(value.get_untracked());
-        }
-    });
-
-    // Programmatic set_value: does NOT fire on_change (matches use_color_area_state pattern).
-    let set_value = Callback::new(move |new_color: C| {
-        if new_color != value.get_untracked() {
-            set_value_signal.set(new_color);
-        }
-    });
-
-    let display_color = Signal::derive(move || value.get().get_display_color(channel));
-
-    UseColorWheelStateReturn {
-        value: value.into(),
-        set_value,
+    let value = binding.value;
+    let dragging = RwSignal::new(false);
+    ColorWheelState {
+        value,
+        hue: Signal::derive(move || value.get().get_channel_value(channel)),
         channel,
-        hue,
-        set_hue,
-        set_hue_from_point,
-        get_thumb_position,
-        increment,
-        decrement,
-        is_dragging: is_dragging.into(),
-        set_dragging,
-        display_color,
-        step,
-        page_step,
-        is_disabled: disabled,
+        step: range.step,
+        page_step: range.page_size,
+        is_disabled,
+        is_dragging: dragging.into(),
+        binding,
+        default_value,
+        latest,
+        dragging,
+        on_change_end,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::utils::color::{HSV, HsvChannel};
+
+    fn wheel(hue: f64) -> ColorWheelState<HSV> {
+        use_color_wheel_state(UseColorWheelStateInput::new(
+            HSV {
+                hue,
+                saturation: 1.0,
+                value: 1.0,
+            },
+            HsvChannel::Hue,
+        ))
+    }
+
+    #[test]
+    fn steps_wrap_around() {
+        Owner::new().with(|| {
+            let state = wheel(359.0);
+            state.increment(1.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(0.0);
+            state.decrement(1.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(359.0);
+            state.set_hue(0.0);
+            state.decrement(state.page_step);
+            assert_that!(state.hue.get_untracked()).is_equal_to(345.0);
+        });
+    }
+
+    #[test]
+    fn zero_degrees_is_at_three_o_clock() {
+        Owner::new().with(|| {
+            let state = wheel(0.0);
+            let (x, y) = state.thumb_position(100.0);
+            assert_that!(x.round()).is_equal_to(100.0);
+            assert_that!(y.round().abs()).is_equal_to(0.0);
+            // Below the center: 90° (clockwise).
+            state.set_hue_from_point(0.0, 50.0, 50.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(90.0);
+        });
     }
 }

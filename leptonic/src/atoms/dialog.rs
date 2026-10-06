@@ -1,3 +1,4 @@
+// Upstream: react-aria-components/src/Dialog.tsx @ 99e6102368
 use leptos::{
     context::Provider,
     prelude::*,
@@ -6,6 +7,7 @@ use leptos::{
 
 use super::press::PressResponder;
 use crate::{
+    Out,
     hooks::{
         DialogRole, IntoAttrs, OverlayTriggerState, PressResponderTrigger, UseDialogInput,
         UseDialogReturn, UseOverlayTriggerStateInput, use_dialog, use_overlay_trigger_state,
@@ -16,11 +18,28 @@ use crate::{
         classes::Classes,
         dev_warn,
         heading_level::HeadingLevel,
-        id::use_id,
+        id::{ensure_element_id, use_id},
         slot_id::{SlotProps, use_slot},
         styles::Styles,
     },
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `DialogTitle` and `DialogDescription` instead of `Heading slot="title"` and a described-by
+//   slot; the title's level is the typed `HeadingLevel`.
+// - `DialogTrigger`'s open state (C4): `default_open` + `on_open_change`, or `is_open` +
+//   `set_open`.
+// - Render props (`close`) are not offered: close through the trigger's or the overlay's open
+//   state.
+// - The trigger gets its props through a `PressResponder`; an untitled dialog is named by the
+//   trigger's rendered id (its own `attr:id`, else a generated one), ensured once the dialog
+//   renders (react-aria-components merges both ids into one).
+//
+// =============================================================================
 
 /// Context provided by [`Dialog`] for its [`DialogTitle`] and [`DialogDescription`].
 #[derive(Debug, Clone)]
@@ -125,6 +144,31 @@ pub fn DialogDescription(
     view! { <div {..props.into_attrs()} class=classes style=styles>{children()}</div> }
 }
 
+/// The open state of an overlay atom (`ModalBackdrop`, `Popover`) from its state props, as RAC's
+/// overlays: its own state when it gets `is_open` or `default_open`, or isn't in a
+/// [`DialogTrigger`]; the trigger's state otherwise (then `set_open` and `on_open_change` belong on
+/// the trigger).
+pub(crate) fn overlay_open_state(
+    is_open: Option<Signal<bool>>,
+    set_open: Option<crate::Out<bool>>,
+    default_open: Option<bool>,
+    on_open_change: Option<Callback<bool>>,
+    context: Option<DialogTriggerContext>,
+) -> OverlayTriggerState {
+    match context {
+        Some(context) if is_open.is_none() && default_open.is_none() => context.state,
+        _ => {
+            let (value, on_open_change) =
+                crate::utils::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+            use_overlay_trigger_state(UseOverlayTriggerStateInput {
+                default_open: default_open.unwrap_or(false),
+                value,
+                on_open_change,
+            })
+        }
+    }
+}
+
 /// Context from a [`DialogTrigger`] to the overlay it opens ([`Popover`](super::popover::Popover),
 /// [`ModalBackdrop`](super::modal::ModalBackdrop)).
 #[derive(Debug, Clone, Copy)]
@@ -154,11 +198,7 @@ impl DialogTriggerContext {
     /// now. An untitled dialog is named by it. Called on demand (not on render), so the server
     /// and the hydrated page agree on the trigger's attributes.
     pub fn ensure_trigger_id(&self) -> Option<String> {
-        let el = self.trigger.get()?;
-        if el.id().is_empty() {
-            el.set_id(&self.generated_trigger_id.get_value());
-        }
-        Some(el.id())
+        ensure_element_id(&self.trigger, &self.generated_trigger_id.get_value())
     }
 }
 
@@ -179,24 +219,26 @@ impl DialogTriggerContext {
 /// ```
 #[component]
 pub fn DialogTrigger(
-    /// Whether the overlay starts open. Ignored when `state` is given.
+    /// Whether the overlay starts open. Ignored with `is_open`.
     #[prop(optional)]
     default_open: bool,
-    /// Called when the overlay opens or closes. Ignored when `state` is given.
+    /// Called when the overlay opens or closes.
     #[prop(into, optional)]
     on_open_change: Option<Callback<bool>>,
-    /// The open state as app state (`state=rw_signal`) or a shared [`OverlayTriggerState`],
-    /// replacing `default_open`.
+    /// Whether the overlay is open (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<OverlayTriggerState>,
+    is_open: Option<Signal<bool>>,
+    /// Receives the open state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
-    let state = state.unwrap_or_else(|| {
-        use_overlay_trigger_state(UseOverlayTriggerStateInput {
-            default_open,
-            on_open_change,
-            ..UseOverlayTriggerStateInput::default()
-        })
+    let (value, on_open_change) =
+        crate::utils::ValueBinding::from_state_props(is_open, set_open, on_open_change);
+    let state = use_overlay_trigger_state(UseOverlayTriggerStateInput {
+        default_open,
+        value,
+        on_open_change,
     });
     // The trigger needs an id to name an untitled dialog. Its own (`attr:id`) wins, which only the
     // rendered element shows (react-aria-components merges both ids into one).

@@ -28,6 +28,8 @@ struct ScopeNode {
     children: Vec<ScopeId>,
     get_element: GetElementFn,
     contain: bool,
+    /// Whether the scope restores focus when it unmounts.
+    restore: bool,
     /// The element that had focus before this scope was mounted.
     /// Used for focus restoration when the scope unmounts.
     node_to_restore: Option<web_sys::Element>,
@@ -58,8 +60,9 @@ thread_local! {
 
 /// Tracks the active scope (react-aria: `useActiveScopeTracker`): on every `focusin`, the deepest
 /// registered scope containing the focused element becomes the active scope; focus outside all
-/// scopes leaves it unchanged. One capturing listener on the document, installed when the first
-/// scope registers, so it never depends on the order of the scopes' effects.
+/// scopes ends the activity of a scope that neither contains nor restores focus. One capturing
+/// listener on the document, installed by the first scope that mounts, so it never depends on
+/// the order of the scopes' effects.
 #[cfg(not(feature = "ssr"))]
 pub fn ensure_active_scope_tracking() {
     use wasm_bindgen::closure::Closure;
@@ -111,6 +114,16 @@ pub fn set_active_scope_to_deepest_containing(element: &web_sys::Element) {
             .max_by_key(|id| depth(*id));
         if let Some(deepest) = deepest {
             tree.active_scope = Some(deepest);
+        } else {
+            // Focus outside every scope ends a plain scope's activity (react-aria's
+            // `useActiveScopeTracker`); a containing or restoring one stays active.
+            let plain = tree
+                .active_scope
+                .and_then(|active| tree.nodes.get(&active))
+                .is_some_and(|node| !node.contain && !node.restore);
+            if plain {
+                tree.active_scope = None;
+            }
         }
     });
 }
@@ -133,8 +146,25 @@ pub fn register_scope(
     parent: Option<ScopeId>,
     get_element: impl Fn() -> Option<web_sys::Element> + 'static,
     contain: bool,
+    restore: bool,
 ) {
     TREE.with_borrow_mut(|tree| {
+        // A scope mounting outside the active scope (e.g. a dialog opened from a menu, rendered
+        // elsewhere) gets the active scope as its parent, so restoring and containing chain
+        // through it (react-aria's `FocusScope`). Scopes inside the active one keep their parent
+        // (the descendant check); a parent that isn't registered (yet) is kept as well.
+        let parent_registered = parent.is_none_or(|parent| tree.nodes.contains_key(&parent));
+        let parent = match (parent, tree.active_scope) {
+            (parent, Some(active))
+                if parent_registered
+                    && tree.nodes.contains_key(&active)
+                    && !parent.is_some_and(|parent| is_descendant_of(tree, parent, active)) =>
+            {
+                Some(active)
+            }
+            (parent, _) => parent,
+        };
+
         // Add as child of parent.
         if let Some(parent_id) = parent
             && let Some(parent_node) = tree.nodes.get_mut(&parent_id)
@@ -149,9 +179,19 @@ pub fn register_scope(
                 children: Vec::new(),
                 get_element: Box::new(get_element),
                 contain,
+                restore,
                 node_to_restore: None,
             },
         );
+    });
+}
+
+/// Changes whether a registered scope contains focus.
+pub fn set_contain(id: ScopeId, contain: bool) {
+    TREE.with_borrow_mut(|tree| {
+        if let Some(node) = tree.nodes.get_mut(&id) {
+            node.contain = contain;
+        }
     });
 }
 
@@ -173,6 +213,7 @@ pub fn unregister_scope(id: ScopeId) {
             .and_then(|node| node.node_to_restore.clone());
 
         if let Some(my_el) = my_element
+            && my_node_to_restore.is_some()
             && let Some(my_node) = my_el.dyn_ref::<web_sys::Node>()
         {
             for (other_id, other_node) in &mut tree.nodes {
@@ -188,19 +229,27 @@ pub fn unregister_scope(id: ScopeId) {
             }
         }
 
-        // Remove from parent's children list.
-        if let Some(node) = tree.nodes.get(&id)
-            && let Some(parent_id) = node.parent
-            && let Some(parent_node) = tree.nodes.get_mut(&parent_id)
-        {
+        // The active scope (this one, or one inside it) passes to the parent (react-aria).
+        let was_active = tree
+            .active_scope
+            .is_some_and(|active| active == id || is_descendant_of(tree, active, id));
+
+        // Remove from the parent's children; this scope's children move to the parent.
+        let Some(node) = tree.nodes.remove(&id) else {
+            return;
+        };
+        if let Some(parent_node) = node.parent.and_then(|parent| tree.nodes.get_mut(&parent)) {
             parent_node.children.retain(|child| *child != id);
+            parent_node.children.extend(node.children.iter().copied());
+        }
+        for child in &node.children {
+            if let Some(child_node) = tree.nodes.get_mut(child) {
+                child_node.parent = node.parent;
+            }
         }
 
-        tree.nodes.remove(&id);
-
-        // Clear active scope if it was this one.
-        if tree.active_scope == Some(id) {
-            tree.active_scope = None;
+        if was_active {
+            tree.active_scope = node.parent.filter(|parent| tree.nodes.contains_key(parent));
         }
     });
 }
@@ -235,6 +284,34 @@ pub fn nodes_to_restore(scope_id: ScopeId) -> Vec<web_sys::Element> {
         }
         nodes
     })
+}
+
+/// Whether `element` is inside any registered scope.
+pub fn is_element_in_any_scope(element: &web_sys::Element) -> bool {
+    TREE.with_borrow(|tree| {
+        tree.nodes.values().any(|node| {
+            (node.get_element)()
+                .is_some_and(|scope| scope.contains(Some(element.unchecked_ref::<web_sys::Node>())))
+        })
+    })
+}
+
+/// The parent scopes of `scope_id`, innermost first.
+pub fn ancestors(scope_id: ScopeId) -> Vec<ScopeId> {
+    TREE.with_borrow(|tree| {
+        let mut ids = Vec::new();
+        let mut current = tree.nodes.get(&scope_id).and_then(|node| node.parent);
+        while let Some(id) = current {
+            ids.push(id);
+            current = tree.nodes.get(&id).and_then(|node| node.parent);
+        }
+        ids
+    })
+}
+
+/// The element of a scope, if it is still registered.
+pub fn scope_element(id: ScopeId) -> Option<web_sys::Element> {
+    TREE.with_borrow(|tree| tree.nodes.get(&id).and_then(|node| (node.get_element)()))
 }
 
 /// Check whether this scope should actually perform focus restoration.

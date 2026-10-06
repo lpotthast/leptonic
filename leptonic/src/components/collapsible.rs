@@ -1,209 +1,129 @@
-use std::sync::{Arc, RwLock};
+use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
-use tracing::warn;
-use uuid::Uuid;
+use leptos::prelude::*;
 
 use crate::{
+    Out,
+    atoms::{
+        button::Button,
+        disclosure::{Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
+    },
     components::icon::Icon,
+    hooks::{DisclosureGroupExpansion, collections::Key},
     utils::{classes::Classes, styles::Styles},
 };
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum OnOpen {
-    #[default]
-    DoNothing,
-    CloseOthers,
-}
-
-#[derive(Debug, Clone)]
-pub struct CollapsiblesContext {
-    pub default_on_open: OnOpen,
-    pub collapsibles: Arc<RwLock<Vec<CollapsibleContext>>>,
-}
-
-impl CollapsiblesContext {
-    /// # Panics
-    ///
-    /// Panics if the internal `RwLock` is poisoned.
-    pub fn register(&mut self, ctx: CollapsibleContext) {
-        let mut vec = self.collapsibles.write().unwrap();
-        vec.push(ctx);
-        drop(vec);
-    }
-
-    /// # Panics
-    ///
-    /// Panics if the internal `RwLock` is poisoned.
-    pub fn collapsible_changed(&self, id: Uuid, on_open: Option<OnOpen>, new_state: bool) {
-        //debug!("Collapsibles:: collapsible_changed:: {id} {new_state}");
-        match on_open.unwrap_or(self.default_on_open) {
-            OnOpen::DoNothing => (),
-            OnOpen::CloseOthers => {
-                if new_state {
-                    let vec = self.collapsibles.read().unwrap();
-                    for ctx in vec.iter() {
-                        if ctx.id != id {
-                            ctx.set_show.update(move |it| *it = false);
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct CollapsibleContext {
-    pub id: Uuid,
-    pub show: ReadSignal<bool>,
-    pub set_show: WriteSignal<bool>,
-    pub on_open: Option<OnOpen>,
-    pub parent: Option<CollapsiblesContext>,
-}
-
-impl CollapsibleContext {
-    pub fn toggle(&self) {
-        self.set_show.update(|it| *it = !*it);
-        if let Some(parent) = &self.parent {
-            parent.collapsible_changed(self.id, self.on_open, self.show.get());
-        }
-    }
-}
-
+/// A group of [`Collapsible`]s: by default, opening one closes the others (an accordion). Give
+/// each collapsible an `id` to address it in `default_expanded_keys` and `expanded_keys`.
 #[component]
+#[allow(clippy::implicit_hasher)]
 pub fn Collapsibles(
-    default_on_open: OnOpen,
+    /// Whether one or several collapsibles can be open at once.
+    #[prop(optional)]
+    expansion: DisclosureGroupExpansion,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// The initially open collapsibles (their `id`s).
+    #[prop(into, optional)]
+    default_expanded_keys: Vec<Key>,
+    /// The open collapsibles (controlled): a value or any signal.
+    #[prop(into, optional)]
+    expanded_keys: Option<Signal<HashSet<Key>>>,
+    /// Receives the open collapsibles: an `RwSignal`, `WriteSignal`, closure, ...
+    #[prop(into, optional)]
+    set_expanded_keys: Option<Out<HashSet<Key>>>,
+    #[prop(into, optional)] on_expanded_change: Option<Callback<HashSet<Key>>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let context = CollapsiblesContext {
-        default_on_open,
-        collapsibles: Arc::new(RwLock::new(vec![])),
-    };
     view! {
-        <Provider value=context>
-            <div class=classes.add("leptonic-collapsibles") style=styles>{children()}</div>
-        </Provider>
+        <DisclosureGroup
+            expansion=expansion
+            is_disabled=is_disabled
+            default_expanded_keys=default_expanded_keys
+            nostrip:expanded_keys=expanded_keys
+            nostrip:set_expanded_keys=set_expanded_keys
+            nostrip:on_expanded_change=on_expanded_change
+            classes=classes.add("leptonic-collapsibles")
+            styles=styles
+        >
+            {children()}
+        </DisclosureGroup>
     }
 }
 
-pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContext {
-    let id = Uuid::new_v4();
-
-    let (show, set_show) = signal(open);
-
-    let mut parent = use_context::<CollapsiblesContext>();
-
-    if parent.is_none() && on_open.is_some() {
-        warn!(
-            "Collapsible {id}: Setting on_open on a Collapsible when that collapsible is not a Child of a Collapsibles parent element is pointless. Remove the argument or wrap this Collapsible in a Collapsibles."
-        );
-    }
-
-    let ctx = CollapsibleContext {
-        id,
-        show,
-        set_show,
-        on_open,
-        parent: parent.clone(),
-    };
-
-    if let Some(parent) = parent.as_mut() {
-        parent.register(ctx.clone());
-    }
-    provide_context(ctx.clone());
-
-    ctx
-}
-
+/// A themed collapsible section: a header button showing and hiding the body. In a
+/// [`Collapsibles`] group, opening one can close the others.
+///
+/// ```ignore
+/// <Collapsible>
+///     <CollapsibleHeader slot>"Details"</CollapsibleHeader>
+///     <CollapsibleBody slot>"Content"</CollapsibleBody>
+/// </Collapsible>
+/// ```
 #[component]
 pub fn Collapsible(
-    /// Whether this collapsible should initially be opened.
-    #[prop(optional, default = false)]
-    open: bool,
-    #[prop(optional)] on_open: Option<OnOpen>,
+    /// The collapsible's key in a surrounding [`Collapsibles`].
+    #[prop(into, optional)]
+    id: Option<Key>,
+    /// Whether the body starts open. Ignored with `is_expanded` or in a group.
+    #[prop(optional)]
+    default_expanded: bool,
+    /// Whether the body is open (controlled): a value or any signal.
+    #[prop(into, optional)]
+    is_expanded: Option<Signal<bool>>,
+    /// Receives the open state: an `RwSignal`, `WriteSignal`, closure, ...
+    #[prop(into, optional)]
+    set_expanded: Option<Out<bool>>,
+    #[prop(into, optional)] on_expanded_change: Option<Callback<bool>>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     collapsible_header: CollapsibleHeader,
     collapsible_body: CollapsibleBody,
 ) -> impl IntoView {
-    let collapsible = use_collapsible(open, on_open);
-    let id_str = collapsible.id.to_string();
+    let CollapsibleHeader { children: header } = collapsible_header;
+    let CollapsibleBody {
+        children: body,
+        classes: body_classes,
+    } = collapsible_body;
     view! {
-        <div class=classes.add("leptonic-collapsible") style=styles id=id_str>
-            <CollapsibleHeaderInternal collapsible_header />
-            <CollapsibleBodyInternal collapsible_body />
-        </div>
+        <Disclosure
+            nostrip:id=id
+            default_expanded=default_expanded
+            nostrip:is_expanded=is_expanded
+            nostrip:set_expanded=set_expanded
+            nostrip:on_expanded_change=on_expanded_change
+            is_disabled=is_disabled
+            classes=classes.add("leptonic-collapsible")
+            styles=styles
+        >
+            <DisclosureTrigger>
+                <Button classes="leptonic-collapsible-header">
+                    <span class="leptonic-collapsible-header-content">{header()}</span>
+                    // Turned while open (`data-expanded` on the collapsible).
+                    <span class="leptonic-collapsible-caret">
+                        <Icon icon=icondata::BsCaretDownFill />
+                    </span>
+                </Button>
+            </DisclosureTrigger>
+            <DisclosurePanel classes=body_classes.add("leptonic-collapsible-body")>
+                <div class="leptonic-collapsible-body-content">{body()}</div>
+            </DisclosurePanel>
+        </Disclosure>
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct CollapsibleHeaderWrapperContext {
-    collapsible_ctx: CollapsibleContext,
-}
-
-/// # Panics
-///
-/// Will panic if not called under a `Collapsible` component.
-pub fn use_collapsible_header() -> CollapsibleHeaderWrapperContext {
-    CollapsibleHeaderWrapperContext {
-        collapsible_ctx: use_context::<CollapsibleContext>()
-            .expect("A CollapsibleHeader must be placed inside a Collapsible component."),
-    }
-}
-
+/// The header slot of a [`Collapsible`]: the content of its header button.
 #[slot]
 pub struct CollapsibleHeader {
     children: Children,
 }
 
-#[component]
-fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl IntoView {
-    let ctx = use_collapsible_header();
-    let ctx2 = use_collapsible_header();
-    view! {
-        <div
-            class="leptonic-collapsible-header-wrapper"
-            on:click=move |_| ctx.collapsible_ctx.toggle()
-        >
-            <div class="leptonic-collapsible-header">{(collapsible_header.children)()}</div>
-
-            {move || {
-                if ctx2.collapsible_ctx.show.get() {
-                    view! { <Icon icon=icondata::BsCaretUpFill /> }.into_any()
-                } else {
-                    view! { <Icon icon=icondata::BsCaretDownFill /> }.into_any()
-                }
-            }}
-        </div>
-    }
-}
-
+/// The body slot of a [`Collapsible`].
 #[slot]
 pub struct CollapsibleBody {
     children: Children,
-
-    // TODO: This does not allow for reactive classes, nor are any other attributes allowed on this slot.... Find a different solution.
     #[prop(into, optional)]
-    class: String,
-}
-
-#[component]
-fn CollapsibleBodyInternal(collapsible_body: CollapsibleBody) -> impl IntoView {
-    let collapsible_ctx = use_context::<CollapsibleContext>()
-        .expect("A CollapsibleHeader must be placed inside a Collapsible component.");
-
-    let class = if collapsible_body.class.is_empty() {
-        "leptonic-collapsible-body".to_owned()
-    } else {
-        format!("leptonic-collapsible-body {}", collapsible_body.class)
-    };
-
-    view! {
-        <div class=class class:show=move || collapsible_ctx.show.get()>
-            {(collapsible_body.children)()}
-        </div>
-    }
+    classes: Classes,
 }

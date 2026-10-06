@@ -135,7 +135,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
             !allows_sorting
                 || (is_selection_column && selection.selection_mode() == SelectionMode::Single)
         }),
-        on_press: Callback::new(move |_| state.sort(&sort_key, None)),
+        on_press: Some(Callback::new(move |_| state.sort(&sort_key, None))),
         ..UsePressInput::default()
     });
     let (press_props, press_styles) = press.props.into_inner();

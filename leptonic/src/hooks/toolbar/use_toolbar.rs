@@ -70,7 +70,7 @@ pub struct UseToolbarProps {
     pub role: Signal<AriaRole>,
     pub aria_orientation: AriaOrientation,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_focus_capture: EventHandler<FocusEvent>,
@@ -81,7 +81,7 @@ pub type UseToolbarAttrs = (
     Attr<attr::Role, Signal<AriaRole>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     ElementCaptureAttr,
     On<Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
     On<Capture<ev::focus>, SharedEventCallback<FocusEvent>>,
@@ -233,7 +233,6 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         }
     });
 
-    let has_label = aria_label.get_untracked().is_some();
     UseToolbarReturn {
         props: UseToolbarProps {
             role: Signal::derive(move || {
@@ -245,7 +244,12 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
             }),
             aria_orientation: orientation.into(),
             aria_label,
-            aria_labelledby: aria_labelledby.filter(|_| !has_label),
+            // Only without `aria_label` (react-aria), also when the label changes.
+            aria_labelledby: Signal::derive(move || {
+                aria_labelledby
+                    .clone()
+                    .filter(|_| aria_label.read().is_none())
+            }),
             element_capture: element.attr(),
             on_keydown_capture,
             on_focus_capture,

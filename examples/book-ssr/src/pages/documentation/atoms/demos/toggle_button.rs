@@ -7,10 +7,10 @@ pub fn ToggleButtonAtomDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     view! {
-        <ToggleButton state=muted is_disabled=disabled classes="demo-toggle-button">"Mute"</ToggleButton>
-        <p class="demo-status">{move || if muted.get() { "Muted" } else { "Not muted" }}</p>
-        <div class="demo-toggle-settings">
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <ToggleButton is_selected=muted set_selected=muted is_disabled=disabled classes="demo-atom-toggle-button">"Mute"</ToggleButton>
+        <p class="demo-status">{move || if muted.get() { "Muted." } else { "Not muted." }}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

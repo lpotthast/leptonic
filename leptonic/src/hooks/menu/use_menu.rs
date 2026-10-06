@@ -11,9 +11,9 @@ use crate::{
     hooks::{
         IntoAttrs, Orientation,
         collections::{
-            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
-            UseSelectableCollectionAttrs, UseSelectableCollectionProps, UseSelectableListInput,
-            use_selectable_list,
+            AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
+            ListLayout, ListState, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
+            UseSelectableListInput, use_selectable_list,
         },
     },
     utils::{CapturedElement, EventHandler, aria::AriaRole, id::use_id},
@@ -28,8 +28,11 @@ use crate::{
 // - Items get the menu's settings through the returned `MenuData` (react-aria: a `WeakMap`
 //   keyed by the state), which the caller hands to `use_menu_item`.
 //
+// - A submenu gets its id, label, closing and keyboard handling as `submenu` (from
+//   `use_submenu_trigger`); its items come from its own list state.
+//
 // ## OMITTED FEATURES
-// - Submenus (`useSubmenuTrigger`, tree state) and virtual focus.
+// - Virtual focus.
 //
 // =============================================================================
 
@@ -53,6 +56,10 @@ pub struct UseMenuInput {
     pub on_action: Option<Callback<Key>>,
     /// Called when an item asks the menu to close (after its action).
     pub on_close: Option<Callback<()>>,
+    /// Makes the menu a submenu (from `use_submenu_trigger`): it takes the submenu's id, label and
+    /// focus on opening, closes the whole menu tree after an action, and returns to its trigger
+    /// on the arrow key towards the parent menu and on Escape.
+    pub submenu: Option<super::SubmenuProps>,
 }
 
 impl UseMenuInput {
@@ -72,6 +79,7 @@ impl UseMenuInput {
             keyboard_delegate: None,
             on_action: None,
             on_close: None,
+            submenu: None,
         }
     }
 }
@@ -140,8 +148,32 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
         mut options,
         keyboard_delegate,
         on_action,
-        on_close,
+        mut on_close,
+        submenu,
     } = input;
+    let (mut id, mut aria_labelledby) = (id, aria_labelledby);
+    let mut submenu_keyboard = None;
+    if let Some(submenu) = submenu {
+        id = Some(submenu.id);
+        aria_labelledby = MaybeProp::from(submenu.aria_labelledby);
+        // The menu's own `on_close`, then the whole tree closes.
+        let close_all = submenu.on_close;
+        let own = on_close;
+        on_close = Some(Callback::new(move |()| {
+            if let Some(own) = own {
+                own.run(());
+            }
+            close_all.run(());
+        }));
+        let auto_focus = submenu.auto_focus;
+        options.auto_focus = Signal::derive(move || {
+            auto_focus.get().map(|strategy| match strategy {
+                FocusStrategy::First => AutoFocus::First,
+                FocusStrategy::Last => AutoFocus::Last,
+            })
+        });
+        submenu_keyboard = submenu.keyboard;
+    }
 
     // Checked once mounted: a label may arrive after creation (a menu trigger's id).
     #[cfg(debug_assertions)]
@@ -169,7 +201,12 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     // Escape bubbles to the overlay (which closes the menu) instead of clearing the selection.
     let list_keydown = collection.on_keydown;
     collection.on_keydown = EventHandler::new(move |e: KeyboardEvent| {
-        if e.key() != "Escape" {
+        use crate::utils::key::{KeyboardEventKey, KeyboardKey};
+        // A submenu handles the arrow key towards its parent and Escape first.
+        if let Some(keyboard) = &submenu_keyboard {
+            keyboard.on_keydown.call(e.clone());
+        }
+        if e.typed_key() != KeyboardKey::Escape {
             list_keydown.call(e);
         }
     });

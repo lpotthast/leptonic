@@ -108,6 +108,12 @@ async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_selector(MENU).await?;
     assert_that!(page.count_matching("[role=menuitemcheckbox]").await?).is_equal_to(3);
     assert_that!(page.count_matching("[role=group]").await?).is_equal_to(2);
+    // A `Separator` in a menu is a `<div role="separator">` ("should support separators").
+    assert_that!(
+        page.count_matching("[role=menu] div[role=separator]")
+            .await?
+    )
+    .is_equal_to(1);
 
     // The first item: "Sidebar".
     let sidebar = page.css("[role=menuitemcheckbox]").await?;
@@ -147,8 +153,9 @@ async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
     let describedby = trigger.attr("aria-describedby").await?.unwrap_or_default();
     let description = page.element(&describedby).await?;
     // Hidden from view, so read its text content.
-    assert_that!(description.prop("textContent").await?)
-        .is_equal_to(Some("Long press or press Alt + ArrowDown to open menu".to_owned()));
+    assert_that!(description.prop("textContent").await?).is_equal_to(Some(
+        "Long press or press Alt + ArrowDown to open menu".to_owned(),
+    ));
 
     // A press is the button's own action.
     trigger.click().await?;

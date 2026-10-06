@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::{
         button::Button,
-        dialog::{Dialog, DialogTitle},
+        dialog::{Dialog, DialogTitle, DialogTrigger},
         field::Label,
         input::Input,
         modal::{ModalBackdrop, ModalContent},
@@ -15,27 +15,29 @@ use ringbuf::{
     traits::{Consumer, Observer, RingBuffer},
 };
 
-/// A dialog with a form. Focus moves to the input when it opens and back to the trigger when it closes, as the focus
-/// log shows. Clicking the backdrop or pressing Escape closes it without saving.
+/// A dialog with a form, opened through a `DialogTrigger`. Focus moves to the input when it opens and back to the
+/// trigger when it closes, as the focus log shows. Clicking the backdrop or pressing Escape closes it without saving.
 #[component]
 pub fn ModalFormDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
+    let is_open = RwSignal::new(false);
     let (name, set_name) = signal(String::from("Leptonic"));
     let draft = RwSignal::new(String::new());
     let (focus_log, set_focus_log) = signal(HeapRb::<String>::new(50));
 
-    let open = move |_| {
-        draft.set(name.get_untracked());
-        set_is_open.set(true);
+    // Runs for every change of the open state, also when the user dismisses the modal.
+    let set_open = move |open: bool| {
+        if open {
+            draft.set(name.get_untracked());
+        }
+        is_open.set(open);
     };
-    let close = move || set_is_open.set(false);
     let save = move |e: ev::SubmitEvent| {
         e.prevent_default();
         let new_name = draft.get_untracked().trim().to_owned();
         if !new_name.is_empty() {
             set_name.set(new_name);
         }
-        close();
+        is_open.set(false);
     };
 
     // Logs where focus goes: the trigger, or elements inside the dialog.
@@ -55,12 +57,32 @@ pub fn ModalFormDemo() -> impl IntoView {
     };
 
     view! {
-        <div class="demo-modal-atoms-row" on:focusin=log_focus>
-            <Button on_press=open classes="demo-modal-atoms-btn">"Rename project"</Button>
-            <span class="demo-modal-atoms-status">"Project: " <strong>{name}</strong></span>
+        <div on:focusin=log_focus>
+            <DialogTrigger is_open=is_open set_open=set_open>
+                <Button classes="demo-btn">"Rename project"</Button>
+                <ModalBackdrop is_dismissable=true classes="demo-backdrop">
+                    <ModalContent classes="demo-modal">
+                        <Dialog classes="demo-dialog">
+                            <DialogTitle classes="demo-dialog-title">"Rename project"</DialogTitle>
+                            // The modal is rendered into the document body, so it logs its focus changes itself.
+                            <form class="demo-form" on:submit=save on:focusin=log_focus>
+                                <TextField value=draft set_value=draft name="project-name" classes="demo-field">
+                                    <Label classes="demo-field-label">"Name"</Label>
+                                    <Input classes="demo-atom-input"/>
+                                </TextField>
+                                <div class="demo-dialog-actions">
+                                    <Button on_press=move |_| is_open.set(false) classes="demo-btn">"Cancel"</Button>
+                                    <Button button_type=ButtonType::Submit classes="demo-btn-primary">"Save"</Button>
+                                </div>
+                            </form>
+                        </Dialog>
+                    </ModalContent>
+                </ModalBackdrop>
+            </DialogTrigger>
         </div>
+        <p class="demo-status">"Project: " {name}</p>
 
-        <pre class="demo-modal-atoms-log">
+        <pre class="demo-event-log">
             {move || {
                 focus_log
                     .with(|log| {
@@ -72,30 +94,5 @@ pub fn ModalFormDemo() -> impl IntoView {
                     })
             }}
         </pre>
-
-        <ModalBackdrop
-            state=(is_open, set_is_open)
-            is_dismissable=true
-            classes="demo-modal-atoms-backdrop"
-        >
-            <ModalContent classes="demo-modal-atoms-panel">
-                <Dialog classes="demo-modal-atoms-dialog">
-                    <DialogTitle classes="demo-modal-atoms-title">"Rename project"</DialogTitle>
-                    // The dialog is rendered into the document body, so it logs its focus changes itself.
-                    <form class="demo-modal-atoms-form" on:submit=save on:focusin=log_focus>
-                        <TextField state=draft name="project-name" classes="demo-modal-atoms-field">
-                            <Label classes="demo-modal-atoms-label">"Name"</Label>
-                            <Input classes="demo-modal-atoms-input"/>
-                        </TextField>
-                        <div class="demo-modal-atoms-actions">
-                            <Button on_press=move |_| close() classes="demo-modal-atoms-btn">"Cancel"</Button>
-                            <Button button_type=ButtonType::Submit classes="demo-modal-btn-primary">
-                                "Save"
-                            </Button>
-                        </div>
-                    </form>
-                </Dialog>
-            </ModalContent>
-        </ModalBackdrop>
     }
 }

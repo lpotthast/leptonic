@@ -7,7 +7,7 @@ pub fn LabelBasicDemo() -> impl IntoView {
         label_props,
         field_props,
     } = use_label(UseLabelInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseLabelInput::default()
     });
 

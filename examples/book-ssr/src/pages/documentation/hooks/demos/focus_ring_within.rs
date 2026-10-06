@@ -1,23 +1,26 @@
 use leptonic::hooks::*;
 use leptos::prelude::*;
-use leptos_classes::Classes;
 
 #[component]
 pub fn FocusRingWithinDemo() -> impl IntoView {
-    let focus_ring_within = use_focus_ring(UseFocusRingInput {
+    let UseFocusRingReturn {
+        props,
+        is_focus_visible,
+        ..
+    } = use_focus_ring(UseFocusRingInput {
         within: true,
         ..Default::default()
     });
 
     view! {
-        <div {..focus_ring_within.props.into_attrs()} class=Classes::from("demo-focus-group")>
-            <input type="text" placeholder="Tab here\u{2026}" class=Classes::from(["demo-focus-item", "demo-focus-ring"])/>
-            <button class=Classes::from(["demo-focus-item", "demo-focus-ring"])>"Or here"</button>
+        // One ring around the group (`[data-focus-visible]`) while its field or button has keyboard focus.
+        <div class="demo-focus-group" {..props.into_attrs()}>
+            <input type="search" aria-label="Search" placeholder="Search\u{2026}" class="demo-focus-plain"/>
+            <button type="button" class="demo-focus-plain">"Go"</button>
         </div>
 
-        <p class=Classes::from("demo-mt-1")>
-            "Focus within: " <strong>{ move || focus_ring_within.is_focused.get().to_string() }</strong>
-            " | Focus ring (within) visible: " <strong>{ move || focus_ring_within.is_focus_visible.get().to_string() }</strong>
+        <p class="demo-status">
+            {move || if is_focus_visible.get() { "The group shows its ring." } else { "The group shows no ring." }}
         </p>
     }
 }

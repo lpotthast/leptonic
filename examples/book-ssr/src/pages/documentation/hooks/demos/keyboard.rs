@@ -44,7 +44,9 @@ pub fn KeyboardDemo() -> impl IntoView {
             </div>
         </FocusRing>
 
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=set_disabled>"Disabled"</Checkbox>
+        </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
 

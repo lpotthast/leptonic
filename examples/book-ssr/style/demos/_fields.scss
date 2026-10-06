@@ -1,0 +1,321 @@
+// Fields: demos of Checkbox, Field, Form, NumberField, Radio, SearchField, Slider, Switch and TextField.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. State comes from the data
+// attributes the atoms render (`data-selected`, `data-focus-visible`, ...); hook demos style the attributes the hooks
+// set. Colors use the book's theme tokens, so demos work in light and dark mode.
+
+// -- Field parts --
+
+.demo-field-description { margin: 0; font-size: var(--book-font-size-s); color: var(--book-muted-color); }
+
+// Validation errors as a list (field atoms page).
+.demo-field-error-list { margin: 0; padding-left: var(--book-space-l); }
+
+.demo-no-margin { margin-top: 0; }
+
+// -- Text, search and number fields --
+
+// An input with buttons next to it (a search field's clear button, a number field's steppers).
+.demo-input-row { display: flex; align-items: center; gap: var(--book-space-s); }
+
+// The input of a number field built with the hooks.
+.demo-number-input { width: 80px; text-align: center; }
+
+// SearchField atom: the clear button is hidden while the field is empty.
+.demo-search-field[data-empty] .demo-search-field-clear { visibility: hidden; }
+
+// NumberField atom: the group draws the field's border and focus ring around the input and the stepper buttons.
+.demo-number-field-group {
+    display: inline-flex;
+    align-self: flex-start;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    overflow: hidden;
+    transition: border-color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-invalid] { border-color: var(--danger-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-disabled] { opacity: 0.5; }
+}
+
+// The input inside the group: the group shows its border and focus.
+.demo-number-field-input { width: 5em; padding: var(--book-space-s); border: none; background: transparent; color: var(--main-color); font: inherit; text-align: center; }
+
+.demo-number-field-stepper {
+    padding: 0 var(--book-space-m);
+    border: none;
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-pressed] { background: var(--brand-color-subtle); }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// -- Checkbox, radio and switch --
+
+// A native checkbox or radio with its label. The hook demos set `data-focus-visible` from the hook's
+// `is_focus_visible`; the browser's own outline is removed by leptonic's reset.
+.demo-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    margin-top: var(--book-space-s);
+    cursor: pointer;
+
+    &[data-focus-visible] input { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// A checkbox drawn next to its visually hidden input: the `<label>` carries the state.
+.demo-check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    cursor: pointer;
+    user-select: none;
+
+    // The ring goes around the drawn control instead (see below).
+    &[data-focus-visible] { outline: none; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+    &[data-readonly] { cursor: default; }
+}
+
+.demo-check-box {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    border: 2px solid var(--book-muted-color);
+    border-radius: var(--book-radius-s);
+    color: var(--book-on-brand-color);
+    font-size: var(--book-font-size-s);
+    line-height: 1;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    .demo-check[data-hovered] & { border-color: var(--brand-color); }
+    .demo-check[data-selected] &,
+    .demo-check[data-indeterminate] & { background: var(--brand-color); border-color: var(--brand-color); }
+    .demo-check[data-selected] &::after { content: "\2713"; }
+    .demo-check[data-indeterminate] &::after { content: "\2013"; }
+    .demo-check[data-focus-visible] & { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    .demo-check[data-invalid] & { border-color: var(--danger-color); }
+}
+
+// A radio drawn next to its visually hidden input.
+.demo-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    cursor: pointer;
+    user-select: none;
+
+    // The ring goes around the drawn control instead (see below).
+    &[data-focus-visible] { outline: none; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+    &[data-readonly] { cursor: default; }
+}
+
+.demo-radio-circle {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    border: 2px solid var(--book-muted-color);
+    border-radius: 50%;
+    transition: border-color var(--book-transition);
+
+    &::after {
+        content: "";
+        width: 0.55em;
+        height: 0.55em;
+        border-radius: 50%;
+    }
+
+    .demo-radio[data-hovered] & { border-color: var(--brand-color); }
+    .demo-radio[data-selected] & { border-color: var(--brand-color); }
+    .demo-radio[data-selected] &::after { background: var(--brand-color); }
+    .demo-radio[data-focus-visible] & { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    .demo-radio[data-invalid] & { border-color: var(--danger-color); }
+}
+
+// A switch: a track with a thumb, next to the label text.
+.demo-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    cursor: pointer;
+    user-select: none;
+
+    // The ring goes around the drawn control instead (see below).
+    &[data-focus-visible] { outline: none; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+    &[data-readonly] { cursor: default; }
+}
+
+.demo-switch-track {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 44px;
+    height: 24px;
+    padding: 2px;
+    box-sizing: border-box;
+    border-radius: var(--book-radius-pill);
+    background: var(--book-muted-color);
+    transition: background-color var(--book-transition);
+
+    .demo-switch[data-selected] & { background: var(--brand-color); }
+    .demo-switch[data-focus-visible] & { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-switch-thumb {
+    display: block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--book-surface-color);
+    box-shadow: var(--book-shadow-s);
+    transition: transform var(--book-transition);
+
+    .demo-switch[data-selected] & { transform: translateX(20px); }
+
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+
+// A group of checkboxes or radios with its label, description and error message.
+.demo-choice-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-s);
+}
+
+// The checkboxes or radios of a group, in a row for horizontal groups.
+.demo-choice-group-items {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-s);
+
+    [data-orientation="horizontal"] > & { flex-direction: row; flex-wrap: wrap; gap: var(--book-space-m); }
+}
+
+.demo-choice-group-label { font-weight: 600; }
+
+.demo-choice-group-description { display: block; margin: 0; font-size: var(--book-font-size-s); color: var(--book-muted-color); }
+
+.demo-choice-group-error { display: block; margin: 0; font-size: var(--book-font-size-s); color: var(--danger-color); }
+
+// -- Slider --
+//
+// `--demo-slider-accent` colors the fill and thumbs; the color classes below override it. Track, fill and thumbs
+// are positioned by the slider (inline styles along the track); these rules size them and center the thumbs across
+// the track. Atom demos style state through the atoms' data attributes. Hook demos style what the hooks set (the
+// thumb input's `disabled`) and the `data-focus-visible` of a `use_focus_ring` composed on each thumb.
+
+.demo-slider          { --demo-slider-accent: var(--brand-color); display: flex; align-items: center; gap: var(--book-space-m); }
+
+// Label, track and marks below each other, all as wide as the slider.
+.demo-slider-stacked  { flex-direction: column; align-items: stretch; gap: var(--book-space-s); }
+
+.demo-slider-label    { min-width: 6em; font-weight: 600; }
+
+.demo-slider-track    { position: relative; flex: 1; height: 8px; background: var(--book-border-color); border-radius: var(--book-radius-s); cursor: pointer; }
+
+.demo-slider-stacked .demo-slider-track { flex: none; }
+
+// The fill spans the track's height; the slider sets where it starts and how long it is.
+.demo-slider-fill     { position: absolute; inset: 0 auto 0 0; background-color: var(--demo-slider-accent); border-radius: var(--book-radius-s); }
+
+// The slider sets the thumb's position along the track and centers it on its value; `top` and `left` center it
+// across the track, whichever the slider doesn't set.
+.demo-slider-thumb {
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background-color: var(--demo-slider-accent);
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    cursor: grab;
+
+    &[data-hovered]       { box-shadow: var(--book-shadow); }
+    &[data-dragging]      { cursor: grabbing; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// The value above a thumb (`SliderThumbTooltip`), shown while it has `data-visible`.
+.demo-slider-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: var(--book-space-s);
+    padding: var(--book-space-xs) var(--book-space-s);
+    background: var(--book-surface-color-raised);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    box-shadow: var(--book-shadow);
+    font-size: var(--book-font-size-s);
+    white-space: nowrap;
+    pointer-events: none;
+
+    &[data-visible] { display: block; }
+}
+
+.demo-slider-output   { min-width: 3em; text-align: right; }
+
+.demo-slider-output-wide { min-width: 5em; }
+
+// Marks below the track, as wide as the track; each centered on its position.
+.demo-slider-marks    { position: relative; height: 1.5em; }
+
+.demo-slider-mark {
+    transform: translateX(-50%);
+    font-size: var(--book-font-size-s);
+    color: var(--book-muted-color);
+
+    &[data-in-range] { color: var(--main-color); font-weight: 600; }
+}
+
+// Vertical sliders: the atoms set `data-orientation`, the hook demo adds `.demo-slider-vertical`. The track runs
+// from the bottom up; the fill spans its width and grows from the bottom.
+.demo-slider[data-orientation="vertical"],
+.demo-slider-vertical { height: 150px; }
+
+.demo-slider-track[data-orientation="vertical"],
+.demo-slider-vertical .demo-slider-track { flex: none; width: 8px; height: 100%; }
+
+.demo-slider-fill[data-orientation="vertical"],
+.demo-slider-vertical .demo-slider-fill { inset: auto 0 0 0; }
+
+// Disabled sliders: `data-disabled` on the atoms, a disabled thumb input in hook demos.
+.demo-slider[data-disabled],
+.demo-slider:has(input:disabled) { opacity: 0.5; }
+
+.demo-slider-track[data-disabled],
+.demo-slider-thumb[data-disabled],
+.demo-slider:has(input:disabled) .demo-slider-track,
+.demo-slider:has(input:disabled) .demo-slider-thumb { cursor: not-allowed; }
+
+.demo-slider-blue   { --demo-slider-accent: var(--book-categorical-1); }
+
+.demo-slider-green  { --demo-slider-accent: var(--book-categorical-2); }
+
+.demo-slider-purple { --demo-slider-accent: var(--book-categorical-3); }
+
+.demo-slider-orange { --demo-slider-accent: var(--book-categorical-4); }
+
+// Volume slider: a slider between two icons.
+.demo-volume-icon { width: 2.5em; height: 2.5em; }
+
+.demo-volume-slider { width: 10em; }

@@ -1,11 +1,16 @@
 use leptonic::{
     components::prelude::{AnchorLink, Button, ButtonColor, ButtonSize, ButtonVariant},
-    utils::live_announcer::announce_polite,
+    utils::{clipboard::write_text, live_announcer::announce_polite},
 };
 use leptos::{context::Provider, prelude::*};
+use leptos_meta::{Meta, Title};
 use leptos_router::hooks::use_location;
 
 use super::section::{Parent, heading, slug};
+use crate::{
+    app::{MAIN_ID, SITE_DESCRIPTION},
+    nav::nav,
+};
 
 /// One heading of the page, as listed in the table of contents.
 #[derive(Debug, Clone)]
@@ -34,8 +39,13 @@ impl TocRegistry {
     }
 }
 
-/// A documentation page: the `<article>` (exported as Markdown) and a table of contents generated from its
-/// [`Section`](super::Section)s.
+/// Content a layout around the page shows at the top of a [`DocPage`]'s `<main>`, above the article: the concept name
+/// and tabs of [`ConceptLayout`](crate::pages::documentation::concept_layout::ConceptLayout).
+#[derive(Clone)]
+pub struct DocPageHeader(pub ViewFn);
+
+/// A documentation page: the page's `<main>` with the `<article>` (exported as Markdown), and next to it a table of
+/// contents generated from its [`Section`](super::Section)s. Sets the document title and description.
 ///
 /// The `title` becomes the page's `<h1>`. Its anchor id is the slug of the title unless `id` is given.
 #[component]
@@ -57,14 +67,65 @@ pub fn DocPage(
             <Provider value=page>{children()}</Provider>
         </Provider>
     };
+    let header = use_context::<DocPageHeader>().map(|header| move || header.0.run());
+    let description = use_location()
+        .pathname
+        .with_untracked(|path| page_description(path, title));
 
     view! {
-        <article class="doc-article">
-            <CopyAsMarkdownButton/>
-            {heading(1, id, title)}
-            {content}
-        </article>
+        <Title text=format!("{title} \u{2013} Leptonic")/>
+        <Meta name="description" content=description/>
+        <main id=MAIN_ID class="doc-main" tabindex="-1">
+            {header}
+            <article class="doc-article">
+                <div class="doc-article-header">
+                    {heading(1, id, title)}
+                    <CopyAsMarkdownButton/>
+                </div>
+                {content}
+            </article>
+        </main>
         <TableOfContents entries=toc.0.get_value()/>
+    }
+}
+
+/// The description of the page at `path` for search engines and link previews, from its entry in the navigation: the
+/// summary of a page, the summary of a concept for its layer pages, the members of a group for its overview.
+fn page_description(path: &str, title: &str) -> String {
+    for group in nav().groups() {
+        if group.overview.as_deref() == Some(path) && !group.entries.is_empty() {
+            let members: Vec<&str> = group.entries.iter().map(|entry| entry.title).collect();
+            return format!("{} in leptonic: {}.", group.title, list(&members));
+        }
+        for entry in &group.entries {
+            if entry.href == path {
+                return format!("{}.", entry.summary);
+            }
+            if entry.tabs.iter().any(|tab| tab.href == path) {
+                return format!("{title}: {}.", lowercase_first(entry.summary));
+            }
+        }
+    }
+    SITE_DESCRIPTION.to_owned()
+}
+
+/// `["A", "B", "C"]` as "A, B and C".
+fn list(items: &[&str]) -> String {
+    match items {
+        [] => String::new(),
+        [single] => (*single).to_owned(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    }
+}
+
+/// Lowercases the first letter of a sentence, unless it starts an acronym or identifier ("UI", "ARIA").
+fn lowercase_first(text: &str) -> String {
+    let mut chars = text.chars();
+    match (chars.next(), chars.next()) {
+        (Some(first), Some(second)) if first.is_uppercase() && second.is_lowercase() => {
+            first.to_lowercase().chain(text[first.len_utf8()..].chars()).collect()
+        }
+        _ => text.to_owned(),
     }
 }
 
@@ -89,21 +150,63 @@ fn TableOfContents(entries: Vec<TocEntry>) -> impl IntoView {
     }
 }
 
-/// Copies the Markdown export of the current page (`<path>.md`) to the clipboard, and confirms it visibly and to screen
-/// readers.
+/// The outcome of the last copy, shown on the button for a moment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CopyState {
+    Idle,
+    Copied,
+    Failed,
+}
+
+/// Copies the Markdown export of the current page (`<path>.md`) to the clipboard, and confirms it (or the failure)
+/// visibly and to screen readers.
+///
+/// The export is fetched ahead, when the button mounts: Safari only allows writing to the clipboard while handling the
+/// press, not after awaiting a download.
 #[component]
 fn CopyAsMarkdownButton() -> impl IntoView {
-    let location = use_location();
-    let copied = RwSignal::new(false);
+    let md_url = StoredValue::new(format!(
+        "{}.md",
+        use_location().pathname.get_untracked()
+    ));
+    let markdown = StoredValue::new(None::<String>);
+    let state = RwSignal::new(CopyState::Idle);
+
+    // Effects only run in the browser.
+    Effect::new(move |_| {
+        leptos::task::spawn_local(async move {
+            if let Some(text) = fetch_text(&md_url.get_value()).await {
+                markdown.set_value(Some(text));
+            }
+        });
+    });
 
     let copy = move |_| {
-        let md_url = format!("{}.md", location.pathname.get_untracked());
+        let (prefetched, url) = (markdown.get_value(), md_url.get_value());
+        // Spawned right away, so that the clipboard write still belongs to the press when the Markdown was prefetched.
         leptos::task::spawn_local(async move {
-            if copy_url_contents(&md_url).await.is_some() {
-                copied.set(true);
-                announce_polite("Copied the page as Markdown");
-                set_timeout(move || copied.set(false), std::time::Duration::from_secs(2));
-            }
+            let text = match prefetched {
+                Some(text) => Some(text),
+                None => fetch_text(&url).await,
+            };
+            let copied = match text {
+                Some(text) => write_text(&text).await.is_ok(),
+                None => false,
+            };
+            state.set(if copied {
+                CopyState::Copied
+            } else {
+                CopyState::Failed
+            });
+            announce_polite(if copied {
+                "Copied the page as Markdown"
+            } else {
+                "Couldn\u{2019}t copy the page"
+            });
+            set_timeout(
+                move || state.set(CopyState::Idle),
+                std::time::Duration::from_secs(2),
+            );
         });
     };
 
@@ -113,17 +216,20 @@ fn CopyAsMarkdownButton() -> impl IntoView {
             variant=ButtonVariant::Outlined
             color=ButtonColor::Secondary
             size=ButtonSize::Small
-            classes="copy-md-button"
-            attr:title="Copy page as Markdown"
+            classes="doc-copy-markdown"
         >
-            {move || if copied.get() { "Copied!" } else { "Copy as MD" }}
+            {move || match state.get() {
+                CopyState::Idle => "Copy as Markdown",
+                CopyState::Copied => "Copied",
+                CopyState::Failed => "Copy failed",
+            }}
         </Button>
     }
 }
 
-/// Fetches `url` and writes the response text to the clipboard. `None` if any step fails.
+/// Fetches `url` as text. `None` if any step fails.
 #[cfg(not(feature = "ssr"))]
-async fn copy_url_contents(url: &str) -> Option<()> {
+async fn fetch_text(url: &str) -> Option<String> {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_futures::JsFuture;
 
@@ -133,19 +239,55 @@ async fn copy_url_contents(url: &str) -> Option<()> {
         .await
         .ok()?
         .unchecked_into();
-    let text = JsFuture::from(response.text().ok()?)
+    if !response.ok() {
+        return None;
+    }
+    JsFuture::from(response.text().ok()?)
         .await
         .ok()?
-        .as_string()?;
-    JsFuture::from(window.navigator().clipboard().write_text(&text))
-        .await
-        .ok()?;
-    Some(())
+        .as_string()
 }
 
-/// Click handlers never run on the server.
+/// Effects never run on the server.
 #[cfg(feature = "ssr")]
 #[allow(clippy::unused_async)]
-async fn copy_url_contents(_url: &str) -> Option<()> {
+async fn fetch_text(_url: &str) -> Option<String> {
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::{list, lowercase_first, page_description};
+    use crate::{app::SITE_DESCRIPTION, nav::nav};
+
+    #[test]
+    fn lists_items_in_prose() {
+        assert_that!(list(&["A"])).is_equal_to("A");
+        assert_that!(list(&["A", "B", "C"])).is_equal_to("A, B and C");
+    }
+
+    #[test]
+    fn lowercases_sentences_but_not_acronyms() {
+        assert_that!(lowercase_first("Triggers an action")).is_equal_to("triggers an action");
+        assert_that!(lowercase_first("UI elements")).is_equal_to("UI elements");
+    }
+
+    /// Every page of the navigation gets a description of its own.
+    #[test]
+    fn every_page_has_a_description() {
+        let mut missing = Vec::new();
+        for page in nav().pages() {
+            let description = page_description(page, "Title");
+            if description == SITE_DESCRIPTION
+                && !nav()
+                    .groups()
+                    .any(|group| group.overview.as_deref() == Some(page) && group.entries.is_empty())
+            {
+                missing.push(page);
+            }
+        }
+        assert_that!(missing).is_empty();
+    }
 }

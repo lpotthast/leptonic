@@ -1,6 +1,8 @@
 #![recursion_limit = "256"]
 
 pub mod app;
+#[cfg(test)]
+mod contrast_check;
 pub mod kit;
 #[cfg(feature = "ssr")]
 pub mod markdown;

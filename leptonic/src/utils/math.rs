@@ -8,10 +8,6 @@ pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
     }
 }
 
-pub(crate) fn value_in_range(min: f64, max: f64, percentage: f64) -> f64 {
-    (max - min).mul_add(percentage, min)
-}
-
 /// Returns the number of decimal places in a floating-point value.
 ///
 /// Used to precompute precision once, avoiding repeated string allocations
@@ -121,38 +117,8 @@ mod tests {
 
     use super::{
         DecimalOperation, calculate_page_size, decimal_precision, handle_decimal_operation,
-        percentage_in_range, round_to_precision, snap_value_to_step, value_in_range,
+        round_to_precision, snap_value_to_step,
     };
-
-    #[test]
-    fn test_simple_range() {
-        assert_that!(percentage_in_range(0.0, 100.0, 75.0)).is_equal_to(0.75);
-        assert_that!(value_in_range(0.0, 100.0, 0.75)).is_equal_to(75.0);
-    }
-
-    #[test]
-    fn test_min() {
-        assert_that!(percentage_in_range(50.0, 100.0, 50.0)).is_equal_to(0.0);
-        assert_that!(value_in_range(50.0, 100.0, 0.0)).is_equal_to(50.0);
-    }
-
-    #[test]
-    fn test_max() {
-        assert_that!(percentage_in_range(50.0, 100.0, 100.0)).is_equal_to(1.0);
-        assert_that!(value_in_range(50.0, 100.0, 1.0)).is_equal_to(100.0);
-    }
-
-    #[test]
-    fn test_zero_range() {
-        assert_that!(percentage_in_range(50.0, 50.0, 50.0)).is_equal_to(0.0);
-        assert_that!(value_in_range(50.0, 50.0, 0.5)).is_equal_to(50.0);
-    }
-
-    #[test]
-    fn test_range_negative_to_positive_skewed() {
-        assert_that!(percentage_in_range(-20.0, 12.0, 0.0)).is_equal_to(0.625);
-        assert_that!(value_in_range(-20.0, 12.0, 0.625)).is_equal_to(0.0);
-    }
 
     #[test]
     fn test_decimal_precision() {

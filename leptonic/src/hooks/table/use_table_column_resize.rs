@@ -35,7 +35,7 @@ use crate::{
         pointer_type::PointerType,
         shadow_dom::get_active_element,
         style::TouchActionProperty,
-        use_description::use_reactive_description,
+        use_description::use_description,
         visually_hidden::visually_hidden_styles,
     },
 };
@@ -386,7 +386,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         let end = resizer.clone();
         use_move(UseMoveInput {
             is_disabled: Signal::stored(false),
-            axis: Signal::stored(None),
+            axis: Signal::stored(crate::hooks::MoveAxis::Both),
             on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
                 column_resize_width.set_value(start.current_width());
                 if e.pointer_type == PointerType::Mouse {
@@ -420,10 +420,6 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                     end.end();
                 }
             })),
-            on_position_change: None,
-            constraint: None,
-            allow_container_click: false,
-            initial_position: None,
         })
         .props
     };
@@ -443,7 +439,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         let start = resizer.clone();
         let press = resizer.clone();
         use_press(UsePressInput {
-            prevent_focus_on_press: true,
+            prevent_focus_on_press: Signal::stored(true),
             on_press_start: Some(Callback::new(move |e: PressEvent| {
                 let m = e.modifiers;
                 if m.ctrl_key
@@ -464,14 +460,14 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                     start.start();
                 }
             })),
-            on_press: Callback::new(move |e: PressEvent| {
+            on_press: Some(Callback::new(move |e: PressEvent| {
                 let ends = (e.pointer_type == PointerType::Touch
                     && press.was_focused_on_resize_start.get_value())
                     || e.pointer_type == PointerType::Mouse;
                 if ends && state.resizing_column.get_untracked().is_some() {
                     press.end();
                 }
-            }),
+            })),
             ..UsePressInput::default()
         })
     };
@@ -550,7 +546,7 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
             && !is_resizing.get();
         describes.then(|| messages::RESIZER_DESCRIPTION.to_owned())
     });
-    let aria_describedby = use_reactive_description(description);
+    let aria_describedby = use_description(description);
 
     let width_of = move |f: fn(&TableColumnResizeState, &Key) -> f64| {
         let column = column.clone();

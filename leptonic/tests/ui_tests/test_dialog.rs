@@ -73,6 +73,39 @@ impl BrowserTest<str> for DialogTests {
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector("[role=alertdialog]").await?;
         page.wait_for_active_id("test-dialog-open-other").await?;
+
+        // A button inside a modal opened by a `DialogTrigger` doesn't press through the trigger's
+        // responder: it counts, the modal stays open.
+        page.click_element_with_id("test-dialog-trigger").await?;
+        page.wait_for_selector("[role=dialog][aria-label=Triggered]")
+            .await?;
+        page.click_element_with_id("test-dialog-count").await?;
+        page.wait_for_text("test-dialog-count", "Count 1").await?;
+        assert_that!(
+            page.count_matching("[role=dialog][aria-label=Triggered]")
+                .await?
+        )
+        .is_equal_to(1);
+        page.send_keys_to_active(Key::Escape).await?;
+        page.wait_for_no_selector("[role=dialog][aria-label=Triggered]")
+            .await?;
+        page.wait_for_active_id("test-dialog-trigger").await?;
+        // Backdrop and modal animate in and out; they stay rendered until the exit animations ended,
+        // then focus returns to the opener.
+        page.click_element_with_id("test-dialog-open-animated")
+            .await?;
+        page.wait_for_selector(".test-animated-modal[data-entering]")
+            .await?;
+        page.wait_for_selector(".test-animated-modal:not([data-entering])")
+            .await?;
+        page.send_keys_to_active(Key::Escape).await?;
+        page.wait_for_selector(".test-animated-backdrop[data-exiting]")
+            .await?;
+        page.wait_for_selector(".test-animated-modal[data-exiting]")
+            .await?;
+        page.wait_for_no_selector(".test-animated-backdrop").await?;
+        page.wait_for_active_id("test-dialog-open-animated").await?;
+
         page.expect_no_page_errors().await
     }
 }

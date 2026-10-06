@@ -3,26 +3,17 @@ use leptos::prelude::*;
 
 #[component]
 pub fn LinkInternalDemo() -> impl IntoView {
-    let internal_link = use_link(UseLinkInput {
-        href: Some("#demo".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: Signal::default(),
-        element_type: LinkElementType::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
+    let link = use_link(UseLinkInput {
+        href: Signal::stored(Some("/doc/link".to_owned())),
+        ..UseLinkInput::default()
     });
-
-    let (link_props, link_styles) = internal_link.props.into_inner();
+    let (link_attrs, link_styles) = link.props.into_parts();
 
     view! {
-        <div>
-            <strong>"Internal Link: "</strong>
-            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
-                "Jump to demo section"
-            </a>
-        </div>
+        <p>
+            "Back to the "
+            <a {..link_attrs} class="demo-link" style=link_styles>"Link overview"</a>
+            "."
+        </p>
     }
 }

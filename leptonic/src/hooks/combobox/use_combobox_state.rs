@@ -3,19 +3,22 @@ use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 
-use crate::hooks::{
-    collections::{
-        Collection, CollectionMemo, FocusStrategy, Key, ListState, Node, Selection, SelectionMode,
-        SelectionOptions, UseListStateInput, use_list_state, use_list_state_view,
+use crate::{
+    hooks::{
+        collections::{
+            Collection, CollectionMemo, FocusStrategy, Key, ListState, Node, Selection,
+            SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
+            use_list_state_view,
+        },
+        form::use_form_validation_state::{
+            UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn,
+            ValidationBehavior, use_form_validation_state,
+        },
+        menu::use_menu_trigger_state::{UseMenuTriggerStateInput, use_menu_trigger_state},
+        select::SelectMode,
     },
-    form::use_form_validation_state::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
-        use_form_validation_state,
-    },
-    menu::use_menu_trigger_state::{UseMenuTriggerStateInput, use_menu_trigger_state},
-    select::SelectMode,
+    utils::ValueBinding,
 };
-use crate::utils::ValueBinding;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -210,6 +213,10 @@ impl crate::hooks::menu::use_menu_trigger_state::MenuTriggerStateApi for ComboBo
 
     fn toggle(&self, focus_strategy: Option<FocusStrategy>) {
         ComboBoxState::toggle(self, focus_strategy, MenuTriggerAction::Manual);
+    }
+
+    fn set_point(&self, point: Option<crate::utils::Point>) {
+        self.inner().menu.overlay.set_point(point);
     }
 }
 
@@ -527,7 +534,19 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         None => original.get(),
     });
 
-    let last_reported = StoredValue::new(default_value.clone());
+    // The value `on_change` last reported, to report only changes. A bound value changed by the app
+    // counts as reported (picking the previous value again is a change).
+    let last_reported = StoredValue::new(value.map_or_else(
+        || default_value.clone(),
+        |value| value.value.get_untracked(),
+    ));
+    if let Some(value) = value {
+        Effect::watch(
+            move || value.value.get(),
+            move |value, _, _| last_reported.set_value(value.clone()),
+            false,
+        );
+    }
     let base = use_list_state(UseListStateInput {
         collection: original,
         selection: SelectionOptions {

@@ -22,6 +22,8 @@ pub struct ConvertedPage {
     pub related: Vec<Link>,
     /// The `<article>` as Markdown.
     pub markdown: String,
+    /// The `<article>` as plain text, without demos, for search.
+    pub text: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,13 +100,53 @@ pub fn convert_page(html: &str) -> Option<ConvertedPage> {
             String::new()
         });
 
+    let mut text = String::new();
+    plain_text(article, &mut text);
+    let text = normalize_whitespace(&text);
+
     Some(ConvertedPage {
         title,
         description,
         sections,
         related,
         markdown,
+        text,
     })
+}
+
+/// Elements whose start and end separate words.
+const BLOCK_ELEMENTS: &[&str] = &[
+    "article", "section", "div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "dl", "dt", "dd",
+    "table", "thead", "tbody", "tr", "th", "td", "pre", "blockquote", "br", "hr",
+];
+
+/// Appends the text a reader sees in `element`: without demos (`Demo`), buttons and the `#` anchors of headings.
+fn plain_text(element: ElementRef<'_>, out: &mut String) {
+    let value = element.value();
+    if matches!(value.name(), "button" | "script" | "style" | "svg")
+        || value.has_class("doc-demo", scraper::CaseSensitivity::CaseSensitive)
+        || is_anchor_link(element)
+    {
+        return;
+    }
+    let block = BLOCK_ELEMENTS.contains(&value.name());
+    if block {
+        out.push(' ');
+    }
+    for child in element.children() {
+        match child.value() {
+            scraper::Node::Text(text) => out.push_str(text),
+            scraper::Node::Element(_) => {
+                if let Some(child) = ElementRef::wrap(child) {
+                    plain_text(child, out);
+                }
+            }
+            _ => {}
+        }
+    }
+    if block {
+        out.push(' ');
+    }
 }
 
 fn selector(css: &str) -> Selector {
@@ -138,7 +180,7 @@ fn normalize_whitespace(text: &str) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Shortens `text` to at most `max_len` bytes at a word boundary, marking the cut with "...".
+/// Shortens `text` to at most `max_len` bytes at a word boundary, marking the cut with "…".
 fn shorten(text: &str, max_len: usize) -> String {
     if text.len() <= max_len {
         return text.to_owned();
@@ -149,7 +191,7 @@ fn shorten(text: &str, max_len: usize) -> String {
     }
     let cut = &text[..end];
     let cut = cut.rfind(' ').map_or(cut, |space| &cut[..space]);
-    format!("{cut}...")
+    format!("{cut}\u{2026}")
 }
 
 /// Links to documentation pages point to their Markdown export: `/doc/button#props` becomes `/doc/button.md#props`.
@@ -191,17 +233,15 @@ fn has_class(element: &Element<'_>, class: &str) -> bool {
 /// Demos (`Demo`) become a placeholder naming their description, followed by their Rust source.
 #[allow(clippy::needless_pass_by_value)] // Signature required by `ElementHandler`.
 fn handle_div(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerResult> {
-    if !has_class(&element, "demo-shell") {
+    if !has_class(&element, "doc-demo") {
         return handlers.fallback(element);
     }
     let description = find_element(element.node, &|node| {
         element_attr(node, "data-demo-description").is_some()
     })
-    .and_then(|demo| element_attr(&demo, "data-demo-description"));
-    let mut markdown = match description {
-        Some(description) => format!("\n\n*\\[Interactive Demo: {description}\\]*\n\n"),
-        None => "\n\n*\\[Interactive Demo\\]*\n\n".to_owned(),
-    };
+    .and_then(|demo| element_attr(&demo, "data-demo-description"))
+    .unwrap_or_default();
+    let mut markdown = format!("\n\n*\\[Interactive Demo: {description}\\]*\n\n");
     let source = find_element(element.node, &|node| {
         element_attr(node, "data-language").as_deref() == Some("rust")
     });
@@ -345,7 +385,7 @@ mod tests {
     fn converts_demos_code_and_keys() {
         let page = page(
             r#"<h1>T</h1>
-            <div class="demo-shell"><div class="demo" data-demo-description="Press counter"><button>x</button></div>
+            <div class="doc-demo"><div class="demo" data-demo-description="Press counter"><button>x</button></div>
             <div class="doc-disclosure"><button aria-expanded="false">View source</button>
             <div aria-hidden="true"><code class="leptonic-code" data-language="rust">fn demo() {}</code></div></div></div>
             <p><code class="leptonic-code" data-inline="true">use_press</code> and <kbd class="leptonic-kbd-key">Enter</kbd></p>
@@ -360,8 +400,19 @@ mod tests {
     }
 
     #[test]
+    fn plain_text_separates_blocks_and_leaves_out_demos_and_anchors() {
+        let page = page(
+            r##"<div class="doc-article-header"><h1 id="t">Title<a class="leptonic-anchor-link" href="#t">#</a></h1>
+            <button>Copy as Markdown</button></div><p>The <code>use_press</code>es hook.</p>
+            <div class="doc-demo"><div class="demo" data-demo-description="Counter"><button>Press</button><p>Pressed 0 times</p></div></div>
+            <section><h2 id="input">Input</h2><ul><li>One</li><li>Two</li></ul></section>"##,
+        );
+        assert_that!(page.text).is_equal_to("Title The use_presses hook. Input One Two");
+    }
+
+    #[test]
     fn shorten_cuts_at_word_boundary() {
         assert_that!(shorten("short", 10)).is_equal_to("short");
-        assert_that!(shorten("one two three", 9)).is_equal_to("one two...");
+        assert_that!(shorten("one two three", 9)).is_equal_to("one two\u{2026}");
     }
 }

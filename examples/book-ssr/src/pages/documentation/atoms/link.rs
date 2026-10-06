@@ -3,145 +3,245 @@ use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
-    link_button::LinkButtonDemo, link_external::LinkExternalDemo, link_internal::LinkInternalDemo,
-    link_rel::LinkRelDemo,
+    anchor_link::AnchorLinkAtomDemo, link::LinkAtomDemo, link_button::LinkButtonAtomDemo,
+    link_external::LinkExternalAtomDemo,
 };
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageAtomLink() -> impl IntoView {
     view! {
-        <DocPage title="Link atom">
+        <DocPage title="Link Atoms">
             <p>
-                "The "<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkExt"</Code>" components take users to "
-                "another page of your app or to another site. See the "
-                <Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
-            </p>
-
-            <p>
-                "Both exist as unstyled atoms in "<Code inline=true>"leptonic::atoms::link"</Code>" and as themed components "
-                "in "<Code inline=true>"leptonic::components::prelude"</Code>". The components add the "
-                <Code inline=true>"leptonic-link"</Code>" class and take the same props. The demos use the components."
+                "The unstyled "<AnchorLink href="#link">"Link"</AnchorLink>" takes users to another page of your app or "
+                "another site, "<AnchorLink href="#linkbutton">"LinkButton"</AnchorLink>" does the same with the look of a "
+                "button, and "<AnchorLink href="#anchorlink">"AnchorLink"</AnchorLink>" scrolls to an element on the current "
+                "page. See the "<Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
             </p>
 
             <Section title="Hooks Used">
-                <p>
-                    <Link href=routes::doc::link::UseLink.materialize()><Code inline=true>"use_link"</Code></Link>
-                    ", which composes "<Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>", "
-                    <Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link>" and "
-                    <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>"."
-                </p>
-            </Section>
-
-            <Section title="Link">
-                <p>
-                    "A link inside your app. It renders leptos_router\u{2019}s "<Code inline=true>"<A>"</Code>
-                    ", so navigation happens on the client and "<Code inline=true>"href"</Code>
-                    " is resolved relative to the current route."
-                </p>
-
-                <ApiTable kind=ApiKind::Props of="atoms::link::Link">
-                    <ApiRow name="href" ty="impl ToHref">"The link target."</ApiRow>
-                    <ApiRow name="exact" ty="bool" default="false">
-                        "Whether the link is only marked as active ("<Code inline=true>"aria-current=\"page\""</Code>
-                        ") when the location matches exactly, instead of when it starts with the target."
-                    </ApiRow>
-                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called when the link is pressed."</ApiRow>
-                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<a>"</Code>"."</ApiRow>
-                    <ApiRow name="children" ty="Children">"The link content."</ApiRow>
-                </ApiTable>
-
-                <Demo description="Link to the current page" source=include_str!("demos/link_internal.rs")>
-                    <LinkInternalDemo/>
-                </Demo>
-            </Section>
-
-            <Section title="LinkExt">
-                <p>"A link to another site. It renders a plain "<Code inline=true>"<a>"</Code>" without the router."</p>
-
-                <ApiTable kind=ApiKind::Props of="atoms::link::LinkExt">
-                    <ApiRow name="href" ty="impl ToHref">"The link target."</ApiRow>
-                    <ApiRow name="target" ty="LinkTarget">
-                        "Where to open the link, e.g. "<Code inline=true>"LinkTarget::_Blank"</Code>" for a new tab. Required."
-                    </ApiRow>
-                    <ApiRow name="rel" ty="Vec<LinkRel>" default="vec![]">
-                        "Values of the "<Code inline=true>"rel"</Code>" attribute. With "<Code inline=true>"LinkTarget::_Blank"</Code>
-                        ", "<Code inline=true>"LinkRel::NoOpener"</Code>" is added automatically."
-                    </ApiRow>
-                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link is disabled."</ApiRow>
-                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called when the link is pressed."</ApiRow>
-                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<a>"</Code>"."</ApiRow>
-                    <ApiRow name="children" ty="Children">"The link content."</ApiRow>
-                </ApiTable>
-
-                <Demo description="Icon link to GitHub opening in a new tab" source=include_str!("demos/link_external.rs")>
-                    <LinkExternalDemo/>
-                </Demo>
-
-                <Section title="Rel Attribute">
-                    <p>
-                        <Code inline=true>"rel"</Code>" describes the relationship to the linked page, for example "
-                        <Code inline=true>"LinkRel::NoFollow"</Code>" for links search engines should not follow:"
-                    </p>
-
-                    <Demo description="External link with nofollow and noreferrer" source=include_str!("demos/link_rel.rs")>
-                        <LinkRelDemo/>
-                    </Demo>
-                </Section>
+                <DocTable headers=&["Atom", "Hook"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Link"</Code></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-link", routes::doc::link::Hook.materialize())>"use_link"</Link>
+                            ", which composes "<Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>", "
+                            <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>", "
+                            <Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link>" and "
+                            <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"LinkButton"</Code></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" on an anchor element"
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"AnchorLink"</Code></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-anchor-link", routes::doc::link::Hook.materialize())>"use_anchor_link"</Link>
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
             </Section>
 
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::link::{Link, LinkExt};
+                        use leptonic::{atoms::prelude::Link, hooks::LinkTarget};
 
                         view! {
                             <Link href="/settings" classes="my-link">"Settings"</Link>
-                            <LinkExt href="https://leptos.dev" target=LinkTarget::_Blank classes="my-link">
-                                "Leptos"
-                            </LinkExt>
+                            <Link href="https://leptos.dev" target=LinkTarget::Blank classes="my-link">"Leptos"</Link>
                         }
                     "#)}
                 </Code>
             </Section>
 
-            <Section title="Data Attributes">
-                <ApiTable kind=ApiKind::DataAttributes>
-                    <ApiRow name="data-focus-visible" ty="true">"Present while the link has keyboard focus."</ApiRow>
-                </ApiTable>
+            <Section title="Demo">
+                <p>
+                    "The pages of this concept as a navigation. The link to this page has "
+                    <Code inline=true>"aria-current=\"page\""</Code>"; the overview link uses "
+                    <Code inline=true>"CurrentMatch::Exact"</Code>", as every other page lies below its route. The links are "
+                    "styled through the "<AnchorLink href="#data-attributes">"data attributes"</AnchorLink>" only."
+                </p>
+                <Demo description="A navigation of four links, the current one marked, with a Disabled checkbox" source=include_str!("demos/link.rs")>
+                    <LinkAtomDemo/>
+                </Demo>
             </Section>
 
-            <Section title="Styling">
+            <Section title="Link">
                 <p>
-                    "Style the atoms with "<Code inline=true>"classes"</Code>". Target "<Code inline=true>"[data-focus-visible]"</Code>
-                    " for a focus ring, "<Code inline=true>"[aria-current=\"page\"]"</Code>" for the active "
-                    <Code inline=true>"Link"</Code>" and "<Code inline=true>"[aria-disabled=\"true\"]"</Code>" for a disabled "
-                    <Code inline=true>"LinkExt"</Code>". The themed components read these CSS variables:"
+                    "Renders leptos_router\u{2019}s "<Code inline=true>"<A>"</Code>", so it needs a surrounding "
+                    <Code inline=true>"<Router>"</Code>": links within your app navigate on the client, a relative "
+                    <Code inline=true>"href"</Code>" is resolved against the current route, and the link has "
+                    <Code inline=true>"aria-current=\"page\""</Code>" while its route is the current one. Links to other "
+                    "sites are left to the browser. A disabled link renders as a "<Code inline=true>"<span role=\"link\">"</Code>
+                    " without "<Code inline=true>"href"</Code>": it can\u{2019}t be followed in any way."
                 </p>
 
-                <CssVariables prefix="--link-" scss=theme_scss!("link")/>
+                <Section title="Props" id="link-props">
+                    <ApiTable kind=ApiKind::Props of="atoms::link::Link">
+                        <ApiRow name="href" ty="impl ToHref">"A route of your app or a URL. Required."</ApiRow>
+                        <ApiRow name="target" ty="LinkTarget" default="Same">
+                            "Where to open the link, e.g. "<Code inline=true>"LinkTarget::Blank"</Code>" for a new tab."
+                        </ApiRow>
+                        <ApiRow name="rel" ty="Vec<LinkRel>" default="empty">
+                            "Values of the "<Code inline=true>"rel"</Code>" attribute. "<Code inline=true>"LinkRel::NoOpener"</Code>
+                            " is added for "<Code inline=true>"LinkTarget::Blank"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link can\u{2019}t be followed."</ApiRow>
+                        <ApiRow name="current_match" ty="CurrentMatch" default="Prefix">
+                            "When the link is the current page: "<Code inline=true>"Prefix"</Code>" while the location is its route or "
+                            "below it, "<Code inline=true>"Exact"</Code>" only on its route."
+                        </ApiRow>
+                        <ApiRow name="replace" ty="bool" default="false">
+                            "Replace the current history entry instead of adding one (client-side navigation only)."
+                        </ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the link when its content doesn\u{2019}t."</ApiRow>
+                        <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called when the link is pressed."</ApiRow>
+                        <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
+                            "Called when a pointer starts or stops hovering the link."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the link element."</ApiRow>
+                        <ApiRow name="children" ty="ChildrenFn">
+                            "The link content, rendered again when the link is disabled or enabled. Required."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Links to Other Sites">
+                    <p>
+                        "Give a URL as "<Code inline=true>"href"</Code>", usually with "<Code inline=true>"LinkTarget::Blank"</Code>
+                        ". "<Code inline=true>"rel"</Code>" describes the relationship to the linked page, e.g. "
+                        <Code inline=true>"LinkRel::NoFollow"</Code>" for links search engines should not follow."
+                    </p>
+                    <Demo description="A link to another site, opening in a new tab" source=include_str!("demos/link_external.rs")>
+                        <LinkExternalAtomDemo/>
+                    </Demo>
+                </Section>
             </Section>
 
             <Section title="LinkButton">
                 <p>
-                    "A link that looks like a button. Don\u{2019}t put a "<Code inline=true>"Button"</Code>" inside a "
-                    <Code inline=true>"Link"</Code>"; HTML doesn\u{2019}t allow interactive content inside links. Use "
-                    <Code inline=true>"LinkButton"</Code>" instead: it takes "<Code inline=true>"href"</Code>", "
-                    <Code inline=true>"target"</Code>" and "<Code inline=true>"exact"</Code>" like a link and the variant, "
-                    "color, size and disabled props of the "<Link href=routes::doc::button::Component.materialize()>"Button component"</Link>
-                    ". The \u{201c}Read the docs\u{201d} button on the welcome page is one."
+                    "A link that looks like a button. HTML doesn\u{2019}t allow a button inside a link; use "
+                    <Code inline=true>"LinkButton"</Code>" instead. Like "<Code inline=true>"Link"</Code>", it renders "
+                    "leptos_router\u{2019}s "<Code inline=true>"<A>"</Code>" and has "<Code inline=true>"aria-current=\"page\""</Code>
+                    " on the current page; disabled, it renders an "<Code inline=true>"<a>"</Code>" without "
+                    <Code inline=true>"href"</Code>". The demo reuses the styles of the "
+                    <Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link>" demo."
                 </p>
 
-                <Demo description="Link styled as a button" source=include_str!("demos/link_button.rs")>
-                    <LinkButtonDemo/>
+                <Demo description="A link styled as a button, with a Disabled checkbox" source=include_str!("demos/link_button.rs")>
+                    <LinkButtonAtomDemo/>
                 </Demo>
+
+                <Section title="Props" id="link-button-props">
+                    <ApiTable kind=ApiKind::Props of="atoms::button::LinkButton">
+                        <ApiRow name="href" ty="impl ToHref">"A route of your app or a URL. Required."</ApiRow>
+                        <ApiRow name="target" ty="LinkTarget" default="Same">"Where to open the link."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link can\u{2019}t be followed."</ApiRow>
+                        <ApiRow name="current_match" ty="CurrentMatch" default="Prefix">
+                            "When the link is the current page, as for "<AnchorLink href="#link-props">"Link"</AnchorLink>"."
+                        </ApiRow>
+                        <ApiRow name="aria_haspopup, aria_expanded" ty="Option<Signal<Option<AriaHasPopup>>>, Option<Signal<Option<AriaExpanded>>>" default="None">
+                            "Popup attributes, for a link that opens something."
+                        </ApiRow>
+                        <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
+                            "Called when a pointer starts or stops hovering the link."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the link element."</ApiRow>
+                        <ApiRow name="children" ty="ChildrenFn">
+                            "The content, rendered again when the link is disabled or enabled. Required."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="AnchorLink">
+                <p>
+                    "Links to an element on the current page by its id. Pressing it scrolls the element into view and puts "
+                    "the id into the URL without adding a history entry. Anchor links are most common next to headings, "
+                    "where a bare "<Code inline=true>"#"</Code>" needs an "<Code inline=true>"aria_label"</Code>
+                    " saying where it leads."
+                </p>
+
+                <Demo description="A text link and a # link next to a heading, both pointing to the heading" source=include_str!("demos/anchor_link.rs")>
+                    <AnchorLinkAtomDemo/>
+                </Demo>
+
+                <Section title="Props" id="anchor-link-props">
+                    <ApiTable kind=ApiKind::Props of="atoms::link::AnchorLink">
+                        <ApiRow name="href" ty="Href">
+                            "The id of the element to link to: "<Code inline=true>"\"#returns\""</Code>" or "
+                            <Code inline=true>"\"returns\""</Code>". Converts from "<Code inline=true>"&'static str"</Code>", "
+                            <Code inline=true>"String"</Code>" and "<Code inline=true>"Oco"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="scroll_behavior" ty="Option<ScrollBehavior>" default="Some(Smooth)">
+                            "How to scroll to the element; smooth scrolling is instant while reduced motion is preferred. "
+                            <Code inline=true>"None"</Code>" doesn\u{2019}t scroll; only the URL fragment changes."
+                        </ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
+                            "Names the link when its content doesn\u{2019}t, such as a bare "<Code inline=true>"#"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called after scrolling."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<a>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The link content. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="Data Attributes">
+                <ApiTable kind=ApiKind::DataAttributes>
+                    <ApiRow name="data-pressed" ty="true">"While the link is pressed."</ApiRow>
+                    <ApiRow name="data-hovered" ty="true">"While a pointer hovers the link."</ApiRow>
+                    <ApiRow name="data-focused" ty="true">"While the link has focus."</ApiRow>
+                    <ApiRow name="data-focus-visible" ty="true">"While the link has keyboard focus."</ApiRow>
+                    <ApiRow name="data-disabled" ty="true">
+                        "While the link is disabled ("<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>")."
+                    </ApiRow>
+                </ApiTable>
+                <p>
+                    "The current page\u{2019}s "<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>" have "
+                    <Code inline=true>"aria-current=\"page\""</Code>", set by the router."
+                </p>
+            </Section>
+
+            <Section title="Styling">
+                <p>
+                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
+                    "selectors:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r#"
+                        .my-link { color: var(--accent); }
+                        .my-link[data-hovered] { text-decoration-thickness: 2px; }
+                        .my-link[aria-current="page"] { font-weight: 600; text-decoration: none; }
+                        .my-link[data-disabled] { color: var(--muted); cursor: not-allowed; }
+                        .my-link[data-focus-visible] { outline: 2px solid var(--focus); }
+                    "#)}
+                </Code>
+                <p>
+                    "For the themed look, use the "<Link href=routes::doc::link::Component.materialize()>"Link Components"</Link>"."
+                </p>
+            </Section>
+
+            <Section title="Composition">
+                <p>
+                    "A "<Link href=routes::doc::breadcrumbs::Atom.materialize()>"Breadcrumb"</Link>" hands the "
+                    <Code inline=true>"Link"</Code>" inside it its disabled state, its "<Code inline=true>"aria-current"</Code>
+                    " and the breadcrumbs\u{2019} "<Code inline=true>"on_action"</Code>", which add to the link\u{2019}s own props."
+                </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
-                <li><Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
-                <li><Link href=routes::doc::link::AnchorLinkAtom.materialize()>"AnchorLink atom"</Link></li>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Button atom"</Link></li>
+                <li><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></li>
+                <li><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></li>
+                <li><Link href=routes::doc::breadcrumbs::Atom.materialize()>"Breadcrumbs Atoms"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }

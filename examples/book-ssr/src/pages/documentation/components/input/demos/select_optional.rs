@@ -30,19 +30,20 @@ pub fn SelectOptionalDemo() -> impl IntoView {
             name: "Alice".to_owned(),
         },
     ];
-    let (assignee, set_assignee) = signal(Option::<User>::None);
+    let assignee = RwSignal::new(Option::<User>::None);
 
     view! {
         <OptionalSelect
+            label="Assignee"
             options=users
             search_text_provider=move |u: User| u.name
             render_option=move |u: User| u.name
             selected=assignee
-            set_selected=set_assignee
+            set_selected=assignee
             allow_deselect=true
         />
         <p class="demo-status">
-            {move || assignee.get().map_or_else(|| "Unassigned".to_owned(), |user| format!("Assigned to {user}"))}
+            {move || assignee.get().map_or_else(|| "Unassigned.".to_owned(), |user| format!("Assigned to {}.", user.name))}
         </p>
     }
 }

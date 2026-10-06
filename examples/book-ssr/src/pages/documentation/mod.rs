@@ -4,7 +4,7 @@ pub mod concept_layout;
 pub mod concepts;
 pub mod doc_layout;
 pub mod doc_search;
-pub mod domains;
 pub mod getting_started;
+pub mod groups;
 pub mod hooks;
 pub mod utils;

@@ -13,6 +13,7 @@ pub mod grid;
 pub mod icon;
 pub mod kbd;
 mod link;
+pub mod meter;
 pub mod modal;
 pub mod number_field;
 pub mod popover;
@@ -56,7 +57,7 @@ pub mod prelude {
         card::Card,
         checkbox::{Checkbox, CheckboxGroup},
         chip::{Chip, ChipColor},
-        collapsible::{Collapsible, CollapsibleBody, CollapsibleHeader, Collapsibles, OnOpen},
+        collapsible::{Collapsible, CollapsibleBody, CollapsibleHeader, Collapsibles},
         color_picker::{ColorPalette, ColorPicker, ColorPreview, HueSlider},
         date_selector::DateSelector,
         datetime_input::DateTimeInput,
@@ -64,7 +65,8 @@ pub mod prelude {
         grid::{Col, ColAlign, Grid, Row},
         icon::Icon,
         kbd::{KbdConcatenate, KbdKey, KbdShortcut, KbdShortcutRoot},
-        link::{AnchorLink, Link, LinkExt, LinkRel},
+        link::{AnchorLink, CurrentMatch, Link, LinkRel},
+        meter::Meter,
         modal::{Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle},
         number_field::NumberField,
         popover::{Popover, PopoverTrigger},
@@ -100,6 +102,4 @@ pub mod prelude {
         typography::{Code, Language, Li, Ul},
     };
     pub use crate::hooks::LinkTarget;
-    /// App state bindings for `state`/`value`/`selection` props.
-    pub use crate::utils::ValueBinding;
 }

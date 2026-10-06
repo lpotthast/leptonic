@@ -3,7 +3,6 @@ use leptos_use::use_document;
 
 use crate::{
     components::switch::{Switch, SwitchIcons, SwitchVariant},
-    hooks::ToggleState,
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -122,11 +121,8 @@ where
 {
     let theme = use_theme::<T>()
         .expect("<ThemeToggle/> component should be nested within a <ThemeProvider/>.");
-    let state = ToggleState::new(
-        Signal::derive(move || theme.theme().get() == on),
-        theme.theme().get_untracked() == on,
-        Callback::new(move |selected: bool| theme.set_theme(if selected { on } else { off })),
-    );
+    let is_selected = Signal::derive(move || theme.theme().get() == on);
+    let set_selected = move |selected: bool| theme.set_theme(if selected { on } else { off });
     let aria_label = MaybeProp::derive(move || {
         Some(
             aria_label
@@ -137,7 +133,8 @@ where
 
     view! {
         <Switch
-            state
+            is_selected
+            set_selected
             aria_label
             variant
             icons=SwitchIcons { on: on.icon(), off: off.icon() }

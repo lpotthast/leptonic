@@ -45,8 +45,6 @@ pub enum ApiKind {
     Props,
     /// `data-*` attributes an atom renders: Attribute, Values, Description.
     DataAttributes,
-    /// CSS custom properties a component reads: Variable, Description.
-    CssVariables,
 }
 
 impl ApiKind {
@@ -56,12 +54,7 @@ impl ApiKind {
             Self::Return | Self::Fields => &["Field", "Type", "Description"],
             Self::Props => &["Prop", "Type", "Default", "Description"],
             Self::DataAttributes => &["Attribute", "Values", "Description"],
-            Self::CssVariables => &["Variable", "Description"],
         }
-    }
-
-    const fn has_type(self) -> bool {
-        !matches!(self, Self::CssVariables)
     }
 
     const fn has_default(self) -> bool {
@@ -90,7 +83,7 @@ pub fn ApiTable(
 /// One entry of an [`ApiTable`]. The children describe it.
 ///
 /// `name` may list several entries sharing a row, separated by `", "` (`"on_focus, on_blur"`). `ty` is the type (or
-/// the possible values of a data attribute). `default` is shown in tables with a default column; rows without one show
+/// the possible values of a data attribute), written on one line with single spaces (a unit test checks it). `default` is shown in tables with a default column; rows without one show
 /// a dash.
 #[component]
 pub fn ApiRow(
@@ -118,7 +111,7 @@ pub fn ApiRow(
     view! {
         <TableRow>
             <TableCell classes="doc-table-name">{names}</TableCell>
-            {kind.has_type().then(|| view! { <TableCell attr:data-label=label(1)><TypeOrDash ty/></TableCell> })}
+            <TableCell attr:data-label=label(1)><TypeOrDash ty/></TableCell>
             {kind.has_default().then(|| view! { <TableCell attr:data-label=label(2)><CodeOrDash code=default/></TableCell> })}
             <TableCell attr:data-label=label(description_column)>{children.map(|children| children())}</TableCell>
         </TableRow>

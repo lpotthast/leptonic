@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use leptonic::atoms::field::Label;
 use leptonic::{
     atoms::{
         combobox::{ComboBox, ComboBoxButton, ComboBoxPopover},
+        field::Label,
         input::Input,
         listbox::{ListBox, ListBoxItems},
     },

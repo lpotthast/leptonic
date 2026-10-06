@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
+    Out,
     hooks::{
         DisabledBehavior, IntoAttrs, ListBoxData, Orientation, SelectionBehavior, SelectionMode,
         UseListBoxInput, UseListBoxReturn, UseListBoxSectionInput, UseListBoxSectionReturn,
@@ -13,9 +14,10 @@ use crate::{
         },
         use_listbox, use_listbox_section, use_option,
     },
-    utils::ValueBinding,
-    utils::data_attributes::flag,
-    utils::{CapturedElement, SlotProps, classes::Classes, styles::Styles},
+    utils::{
+        CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
+        styles::Styles,
+    },
 };
 
 /// Provided by components that render a [`ListBox`] for their own options (a select's or combo
@@ -73,10 +75,12 @@ pub fn ListBox(
     /// The initially selected keys.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
-    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
-    /// `default_selected_keys`.
+    /// The selection (controlled), replacing `default_selected_keys`: a value or any signal.
     #[prop(into, optional)]
-    selection: Option<ValueBinding<Selection>>,
+    selection: Option<Signal<Selection>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selection: Option<Out<Selection>>,
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(optional)] disabled_behavior: DisabledBehavior,
@@ -99,6 +103,8 @@ pub fn ListBox(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (selection, on_selection_change) =
+        ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let element = CapturedElement::new();
     let input = if let Some(parent) = use_context::<ListBoxParent>() {
         parent.input.get_value()
@@ -125,7 +131,7 @@ pub fn ListBox(
         });
         UseListBoxInput {
             aria_label,
-            aria_labelledby,
+            aria_labelledby: Signal::stored(aria_labelledby),
             orientation,
             layout,
             options: CollectionOptions {

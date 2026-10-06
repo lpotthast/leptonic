@@ -3,10 +3,14 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SliderConceptDemo() -> impl IntoView {
-    let (volume, set_volume) = signal(50.0_f64);
+    let volume = RwSignal::new(50_u8);
+    let disabled = RwSignal::new(false);
 
     view! {
-        <Slider value=volume set_value=set_volume min=0.0 max=100.0 step=1.0/>
-        <p>{move || format!("Volume: {:.0}", volume.get())}</p>
+        <Slider value=volume set_value=volume min_value=0 max_value=100 is_disabled=disabled aria_label="Volume"/>
+        <p class="demo-status">{move || format!("Volume: {}.", volume.get())}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

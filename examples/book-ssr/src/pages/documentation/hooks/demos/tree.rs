@@ -7,7 +7,7 @@ use leptonic::{
         collections::{Key, Selection, SelectionOptions, use_collection},
         use_button, use_tree, use_tree_item, use_tree_state,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -65,7 +65,7 @@ pub fn TreeDemo() -> impl IntoView {
                 <TreeItem tree=data.clone() key/>
             </For>
         </div>
-        <p class="demo-caption">"Selected: "{selected}</p>
+        <p class="demo-status">"Selected: "{selected}</p>
     }
 }
 
@@ -89,7 +89,7 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
         let (attrs, styles) = use_button(expand_button).props.into_parts();
         view! {
             <button {..attrs} aria-label=expand_button_label class="demo-tree-item-toggle" style=styles>
-                {move || if is_expanded.get() { "\u{25be}" } else { "\u{25b8}" }}
+                <span aria-hidden="true">{move || if is_expanded.get() { "\u{25be}" } else { "\u{25b8}" }}</span>
             </button>
         }
         .into_any()
@@ -98,7 +98,7 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
     };
 
     view! {
-        <div {..attrs} class=Classes::from("demo-tree-item").add_reactive("focus-visible", item.is_focus_visible) style=styles>
+        <div {..attrs} data-focus-visible=move || item.is_focus_visible.get().then_some("") class="demo-tree-item" style=styles>
             <div {..item.grid_cell_props.into_attrs()} class="demo-tree-item-content">{toggle}{text}</div>
         </div>
     }

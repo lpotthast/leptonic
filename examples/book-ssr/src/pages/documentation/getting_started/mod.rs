@@ -1,4 +1,6 @@
+pub mod accessibility;
 pub mod architecture;
+pub mod callbacks;
 pub mod changelog;
 pub mod classes_and_styles;
 pub mod demos;
@@ -6,4 +8,5 @@ pub mod event_propagation;
 pub mod forms;
 pub mod installation;
 pub mod overview;
+pub mod ssr;
 pub mod themes;

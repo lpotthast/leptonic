@@ -41,8 +41,9 @@ pub struct UseLabelInput {
     pub id: Option<String>,
     /// The label element's id. Generated when `None`.
     pub label_id: Option<String>,
-    /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    /// Whether a visible label is rendered (with `label_props`). A signal, so atoms can follow
+    /// whether their `Label` part is actually rendered.
+    pub has_label: Signal<bool>,
     pub label_element_type: LabelElementType,
     /// Labels the field when there is no visible label. Next to a visible label, it is added to the
     /// field's name.
@@ -83,13 +84,13 @@ impl IntoAttrs for UseLabelProps {
 pub struct UseLabelFieldProps {
     pub id: String,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
 }
 
 pub type UseLabelFieldAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
 );
 
 impl IntoAttrs for UseLabelFieldProps {
@@ -109,7 +110,7 @@ impl IntoAttrs for UseLabelFieldProps {
 /// message.
 ///
 /// ```ignore
-/// let label = use_label(UseLabelInput { has_label: true, ..UseLabelInput::default() });
+/// let label = use_label(UseLabelInput { has_label: true.into(), ..UseLabelInput::default() });
 /// view! {
 ///     <label {..label.label_props.into_attrs()}>"Email"</label>
 ///     <input type="email" {..label.field_props.into_attrs()} />
@@ -128,35 +129,61 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
     let id = id.unwrap_or_else(|| use_id("field"));
     let label_id = label_id.unwrap_or_else(|| use_id("label"));
 
-    let has_aria_label = aria_label.get_untracked().is_some();
-    let mut labelled_by = Vec::new();
-    if has_label {
-        labelled_by.push(label_id.clone());
-    } else if aria_labelledby.is_none() && !has_aria_label {
-        crate::utils::dev_warn!(
-            "If you do not provide a visible label, you must specify an aria-label or \
-             aria-labelledby attribute for accessibility"
-        );
+    // Checked once mounted: an atom knows only then whether its `Label` rendered.
+    #[cfg(debug_assertions)]
+    {
+        let has_aria_labelledby = aria_labelledby.is_some();
+        Effect::new(move || {
+            if !has_label.get() && !has_aria_labelledby && aria_label.with(Option::is_none) {
+                crate::utils::dev_warn!(
+                    "If you do not provide a visible label, you must specify an aria-label or \
+                     aria-labelledby attribute for accessibility"
+                );
+            }
+        });
     }
-    labelled_by.extend(aria_labelledby);
-    // With an `aria-label` next to other labels, the field labels itself too, so that both make up
-    // its name (react-aria's `useLabels`).
-    if has_aria_label && !labelled_by.is_empty() {
-        labelled_by.push(id.clone());
-    }
+    let labelled_by = {
+        let (id, label_id) = (id.clone(), label_id.clone());
+        Signal::derive(move || {
+            let mut labelled_by = Vec::new();
+            if has_label.get() {
+                labelled_by.push(label_id.clone());
+            }
+            labelled_by.extend(
+                aria_labelledby
+                    .iter()
+                    .flat_map(|ids| ids.split_whitespace())
+                    .map(str::to_owned),
+            );
+            // With an `aria-label` next to other labels, the field labels itself too (first), so
+            // that both make up its name (react-aria's `useLabels`).
+            if aria_label.with(Option::is_some) && !labelled_by.is_empty() {
+                labelled_by.insert(0, id.clone());
+            }
+            dedup_ids(&mut labelled_by);
+            (!labelled_by.is_empty()).then(|| labelled_by.join(" "))
+        })
+    };
 
     UseLabelReturn {
         label_props: UseLabelProps {
             id: label_id,
-            html_for: (has_label && label_element_type == LabelElementType::Label)
-                .then(|| id.clone()),
+            // Only a rendered `<label>` uses it.
+            html_for: (label_element_type == LabelElementType::Label).then(|| id.clone()),
         },
         field_props: UseLabelFieldProps {
             id,
-            aria_labelledby: (!labelled_by.is_empty()).then(|| labelled_by.join(" ")),
+            aria_labelledby: labelled_by,
             aria_label,
         },
     }
+}
+
+/// Removes repeated ids, keeping the first occurrence (react-aria's `useLabels` collects them in
+/// a `Set`).
+pub(crate) fn dedup_ids(ids: &mut Vec<String>) {
+    let mut seen = std::collections::HashSet::new();
+    ids.retain(|id| seen.insert(id.clone()));
 }
 
 #[cfg(test)]
@@ -170,11 +197,12 @@ mod tests {
         Owner::new().with(|| {
             let label = use_label(UseLabelInput {
                 id: Some("f".to_owned()),
-                has_label: true,
+                has_label: Signal::stored(true),
                 ..UseLabelInput::default()
             });
             let label_id = label.label_props.id.clone();
-            assert_that!(label.field_props.aria_labelledby).is_equal_to(Some(label_id));
+            assert_that!(label.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some(label_id));
             assert_that!(label.label_props.html_for).is_equal_to(Some("f".to_owned()));
         });
     }
@@ -184,11 +212,12 @@ mod tests {
         Owner::new().with(|| {
             let label = use_label(UseLabelInput {
                 label_id: Some("l".to_owned()),
-                has_label: true,
+                has_label: Signal::stored(true),
                 aria_labelledby: Some("other".to_owned()),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby).is_equal_to(Some("l other".to_owned()));
+            assert_that!(label.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some("l other".to_owned()));
         });
     }
 
@@ -201,7 +230,26 @@ mod tests {
                 aria_labelledby: Some("other".to_owned()),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby).is_equal_to(Some("other f".to_owned()));
+            assert_that!(label.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some("f other".to_owned()));
+        });
+    }
+
+    /// Upstream: "should combine aria-labelledby if visible label and aria-label is also
+    /// provided".
+    #[test]
+    fn aria_label_visible_label_and_labelled_by_combine_field_first() {
+        Owner::new().with(|| {
+            let label = use_label(UseLabelInput {
+                id: Some("f".to_owned()),
+                label_id: Some("l".to_owned()),
+                has_label: Signal::stored(true),
+                aria_label: "aria".into(),
+                aria_labelledby: Some("foo f".to_owned()),
+                ..UseLabelInput::default()
+            });
+            assert_that!(label.field_props.aria_labelledby.get_untracked())
+                .is_equal_to(Some("f l foo".to_owned()));
         });
     }
 
@@ -212,7 +260,7 @@ mod tests {
                 aria_label: "Name".into(),
                 ..UseLabelInput::default()
             });
-            assert_that!(label.field_props.aria_labelledby).is_none();
+            assert_that!(label.field_props.aria_labelledby.get_untracked()).is_none();
         });
     }
 
@@ -220,12 +268,12 @@ mod tests {
     fn span_labels_have_no_for_attribute() {
         Owner::new().with(|| {
             let label = use_label(UseLabelInput {
-                has_label: true,
+                has_label: Signal::stored(true),
                 label_element_type: LabelElementType::Span,
                 ..UseLabelInput::default()
             });
             assert_that!(label.label_props.html_for).is_none();
-            assert_that!(label.field_props.aria_labelledby)
+            assert_that!(label.field_props.aria_labelledby.get_untracked())
                 .is_equal_to(Some(label.label_props.id.clone()));
         });
     }

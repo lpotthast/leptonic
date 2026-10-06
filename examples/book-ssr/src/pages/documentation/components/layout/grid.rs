@@ -5,14 +5,15 @@ use super::demos::grid::GridDemo;
 use crate::{kit::*, routes};
 
 #[component]
-pub fn PageGrid() -> impl IntoView {
+pub fn PageGridLayout() -> impl IntoView {
     view! {
-        <DocPage title="Grid component">
+        <DocPage title="Grid Layout Components">
             <p>
-                "The "<Code inline=true>"Grid"</Code>" component is a responsive 12-column layout grid built from "
-                <Code inline=true>"Row"</Code>"s and "<Code inline=true>"Col"</Code>"s. It arranges content and has no "
-                "keyboard navigation or selection. For an interactive data grid, see the "
-                <Link href=routes::doc::Grid.materialize()>"Grid overview"</Link>"."
+                "A grid layout arranges content in rows and columns that adapt to the screen width: side by side on wide "
+                "screens, stacked on narrow ones. The "<Code inline=true>"Grid"</Code>" component is a responsive "
+                "12-column layout built from rows ("<Code inline=true>"Row"</Code>") and columns ("<Code inline=true>"Col"</Code>"). It only "
+                "arranges content: it has no keyboard navigation, selection or ARIA role. For rows and cells that users "
+                "navigate with the arrow keys, see the interactive "<Link href=routes::doc::Grid.materialize()>"Grid"</Link>"."
             </p>
 
             <Demo
@@ -22,8 +23,9 @@ pub fn PageGrid() -> impl IntoView {
                 <GridDemo/>
             </Demo>
 
-            <Section title="Props">
-                <Section title="Grid">
+            <Section title="Grid">
+                <p>"The container of the rows. Its "<Code inline=true>"gap"</Code>" spaces the rows and the columns in them."</p>
+                <Section title="Props" id="grid-props">
                     <ApiTable kind=ApiKind::Props of="components::grid::Grid">
                         <ApiRow name="gap" ty="CssDimension">
                             "Space between rows and between the columns of a row. Required."
@@ -34,8 +36,11 @@ pub fn PageGrid() -> impl IntoView {
                         <ApiRow name="children" ty="Children">"The rows."</ApiRow>
                     </ApiTable>
                 </Section>
+            </Section>
 
-                <Section title="Row">
+            <Section title="Row">
+                <p>"A row of columns, wrapping the columns that don\u{2019}t fit next to each other."</p>
+                <Section title="Props" id="row-props">
                     <ApiTable kind=ApiKind::Props of="Row">
                         <ApiRow name="gap" ty="Option<CssDimension>" default="None">
                             "Overrides the grid\u{2019}s gap for this row and everything inside it."
@@ -46,8 +51,11 @@ pub fn PageGrid() -> impl IntoView {
                         <ApiRow name="children" ty="Children">"The columns."</ApiRow>
                     </ApiTable>
                 </Section>
+            </Section>
 
-                <Section title="Col">
+            <Section title="Col">
+                <p>"A column spanning some of the 12 columns of its row, per "<AnchorLink href="#breakpoints">"breakpoint"</AnchorLink>"."</p>
+                <Section title="Props" id="col-props">
                     <ApiTable kind=ApiKind::Props of="Col">
                         <ApiRow name="xs" ty="Option<u32>" default="None">
                             "Number of the 12 columns to span from the smallest screens on. "
@@ -91,8 +99,10 @@ pub fn PageGrid() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Grid.materialize()>"Grid overview"</Link></li>
-                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
+                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
+                <li><Link href=routes::doc::Stack.materialize()>"Stack Component"</Link></li>
+                <li><Link href=routes::doc::CardAndTile.materialize()>"Card & Tile Components"</Link></li>
+                <li><Link href=routes::doc::Grid.materialize()>"Grid"</Link>" (interactive rows and cells)"</li>
             </SeeAlso>
         </DocPage>
     }

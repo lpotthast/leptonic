@@ -5,8 +5,13 @@ use leptos::prelude::*;
 pub fn IconDemo() -> impl IntoView {
     view! {
         <div class="demo-control-row">
-            <Icon icon=icondata::BsFolderFill classes="demo-icon-large"/>
-            <Icon icon=icondata::BsFolder classes="demo-icon-large"/>
+            // Decorative: the text next to it says the same, so screen readers skip the icon.
+            <span class="demo-icon-with-text">
+                <Icon icon=icondata::BsFolderFill classes="demo-icon-large"/>
+                "Projects"
+            </span>
+            // Meaningful on its own: `aria_label` makes it an image with that name.
+            <Icon icon=icondata::BsCloudCheck aria_label="Synced" classes="demo-icon-large"/>
         </div>
     }
 }

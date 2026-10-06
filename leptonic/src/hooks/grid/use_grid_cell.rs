@@ -27,6 +27,7 @@ use crate::{
         focus::focus_safely,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
         i18n::use_direction,
+        key::{KeyboardEventKey, KeyboardKey},
         locale::WritingDirection,
         node_contains,
         owner_alive::OwnerAlive,
@@ -301,10 +302,10 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             }
         };
 
-        let key = e.key();
-        match key.as_str() {
-            "ArrowLeft" | "ArrowRight" => {
-                let right = key == "ArrowRight";
+        let key = e.typed_key();
+        match key {
+            KeyboardKey::ArrowLeft | KeyboardKey::ArrowRight => {
+                let right = key == KeyboardKey::ArrowRight;
                 // "Forward" in the reading direction.
                 let forward = right != rtl;
                 let mut focusable = if forward {
@@ -355,7 +356,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
                     }
                 }
             }
-            "ArrowUp" | "ArrowDown" if !e.alt_key() => {
+            KeyboardKey::ArrowUp | KeyboardKey::ArrowDown if !e.alt_key() => {
                 e.stop_propagation();
                 e.prevent_default();
                 redispatch(&e);
@@ -379,11 +380,11 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         let on_cell = e
             .target()
             .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &cell);
-        if !on_cell && e.key() != "Tab" {
+        if !on_cell && e.typed_key() != KeyboardKey::Tab {
             e.stop_propagation();
             return;
         }
-        if e.key() == "Tab"
+        if e.typed_key() == KeyboardKey::Tab
             && let Some(active) = cell.owner_document().as_ref().and_then(get_active_element)
             && let Some(mut walker) = get_focusable_tree_walker(
                 &cell,

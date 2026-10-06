@@ -28,6 +28,34 @@ pub fn get_active_element(doc: &web_sys::Document) -> Option<web_sys::Element> {
     Some(active)
 }
 
+/// Whether `node` contains `other` (or is it), across shadow roots and slots: a slotted element
+/// counts as inside its slot's parent, an element in a shadow root as inside its host.
+#[cfg_attr(feature = "ssr", allow(dead_code))]
+pub fn node_contains(node: &web_sys::Node, other: &web_sys::Node) -> bool {
+    let mut current = Some(other.clone());
+    while let Some(candidate) = current {
+        if candidate == *node {
+            return true;
+        }
+        let slot_parent = (!candidate.has_type::<web_sys::HtmlSlotElement>())
+            .then(|| {
+                candidate
+                    .dyn_ref::<web_sys::Element>()?
+                    .assigned_slot()?
+                    .parent_node()
+            })
+            .flatten();
+        current = match slot_parent {
+            Some(parent) => Some(parent),
+            None => match candidate.dyn_ref::<web_sys::ShadowRoot>() {
+                Some(shadow) => Some(shadow.host().into()),
+                None => candidate.parent_node(),
+            },
+        };
+    }
+    false
+}
+
 /// Get the true event target, accounting for shadow DOM retargeting.
 ///
 /// When an event originates inside a shadow root, `event.target` is retargeted
@@ -43,4 +71,23 @@ pub fn get_event_target<E: AsRef<web_sys::Event>>(event: &E) -> Option<web_sys::
         }
     }
     event.target()
+}
+
+/// The targets a listener for a non-composed event (`scroll`, `change`, ...) from inside `from`
+/// must be added to (react-aria's `getPropagationTargets`): `from`'s window, and every shadow root
+/// between `from` and the document, since such events don't cross shadow boundaries.
+#[cfg_attr(feature = "ssr", allow(dead_code))]
+pub fn propagation_targets(from: &web_sys::Element) -> Vec<web_sys::EventTarget> {
+    let mut targets: Vec<web_sys::EventTarget> = from
+        .owner_document()
+        .and_then(|document| document.default_view())
+        .map(Into::into)
+        .into_iter()
+        .collect();
+    let mut current = from.get_root_node();
+    while let Some(shadow_root) = current.dyn_ref::<web_sys::ShadowRoot>() {
+        targets.push(shadow_root.clone().into());
+        current = shadow_root.host().get_root_node();
+    }
+    targets
 }

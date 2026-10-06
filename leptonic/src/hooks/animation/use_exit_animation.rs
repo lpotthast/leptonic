@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/utils/animation.ts @ 6f664fe911
+// Upstream: react-aria/src/utils/animation.ts @ 99e6102368
 //! Hook for tracking CSS exit animations on an element.
 //!
 //! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/animation.ts>
@@ -28,12 +28,28 @@ pub enum ExitState {
 }
 
 /// Input for [`use_exit_animation`].
+#[derive(Debug, Clone, Copy)]
 pub struct UseExitAnimationInput {
     /// The element to track exit animations on.
     pub element: CapturedElement,
 
     /// Logically open state. When this goes `false`, the exit animation begins.
     pub is_open: Signal<bool>,
+
+    /// Called with the element when the exit starts (e.g. to start a Web Animation, which is
+    /// awaited like CSS ones).
+    pub on_exit: Option<Callback<send_wrapper::SendWrapper<web_sys::Element>>>,
+}
+
+impl UseExitAnimationInput {
+    /// Tracks the exit of `element` once `is_open` turns `false`.
+    pub fn new(element: CapturedElement, is_open: Signal<bool>) -> Self {
+        Self {
+            element,
+            is_open,
+            on_exit: None,
+        }
+    }
 }
 
 /// Return value of [`use_exit_animation`].
@@ -63,10 +79,7 @@ pub struct UseExitAnimationReturn {
 /// let element = CapturedElement::new();
 ///
 /// let UseExitAnimationReturn { is_exiting, exit_state } =
-///     use_exit_animation(UseExitAnimationInput {
-///         element,
-///         is_open: state.is_open,
-///     });
+///     use_exit_animation(UseExitAnimationInput::new(element, state.is_open));
 ///
 /// // Keep element mounted while exiting:
 /// // <Show when=move || state.is_open.get() || is_exiting.get()>
@@ -77,12 +90,16 @@ pub struct UseExitAnimationReturn {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationReturn {
-    let UseExitAnimationInput { element, is_open } = input;
+    let UseExitAnimationInput {
+        element,
+        is_open,
+        on_exit,
+    } = input;
 
     #[cfg(feature = "ssr")]
     {
         // During SSR, no animations — state directly follows is_open.
-        let _ = element;
+        let _ = (element, on_exit);
         UseExitAnimationReturn {
             is_exiting: Signal::derive(|| false),
             exit_state: Signal::derive(move || {
@@ -136,10 +153,16 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
                 }
             });
 
-            if exit_state.get() == ExitState::Exiting
-                && let Some(el) = element.get()
+            if exit_state.get() != ExitState::Exiting {
+                return;
+            }
+            // Never rendered (e.g. a modal without `ModalContent`): nothing can animate.
+            let Some(el) = element.get() else {
+                set_exit_state.set(ExitState::Closed);
+                return;
+            };
             {
-                let cancel = watch_animations(&el, move || {
+                let cancel = watch_animations(&el, on_exit, move || {
                     // Only transition to Closed if still Exiting (not interrupted).
                     set_exit_state.update(|state| {
                         if *state == ExitState::Exiting {
@@ -159,7 +182,12 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
             });
         });
 
-        let is_exiting = Signal::derive(move || exit_state.get() == ExitState::Exiting);
+        // Exiting from the moment `is_open` turns false (react-aria derives it while rendering):
+        // the state machine's effect catches up after, but a consumer keeping the element rendered
+        // while exiting must not drop it in between.
+        let is_exiting = Signal::derive(move || {
+            !is_open.get() && matches!(exit_state.get(), ExitState::Open | ExitState::Exiting)
+        });
 
         UseExitAnimationReturn {
             is_exiting,

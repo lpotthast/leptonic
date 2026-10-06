@@ -11,42 +11,38 @@ pub fn PageUseColorSwatch() -> impl IntoView {
         <DocPage title="use_color_swatch">
             <p>
                 "The "<Code inline=true>"use_color_swatch"</Code>" hook gives a display-only color preview its accessible "
-                "semantics: an image of a color with a name screen readers can announce. It works with any "
-                <Link href=routes::doc::color::Hooks.materialize()>"color type"</Link>". See the "
-                <Link href=routes::doc::Color.materialize()>"Color overview"</Link>" for concept guidance."
+                "semantics: an image of a color with a name screen readers can announce. See the "
+                <Link href=routes::doc::ColorSwatch.materialize()>"Color Swatch overview"</Link>" for the concept."
             </p>
 
             <ReactAria hook="useColorSwatch"/>
 
-            <Section title="Demo">
-                <p>"The first swatch is named after its CSS color, the second one has a "<Code inline=true>"color_name"</Code>"."</p>
-
-                <Demo description="Two color swatches and their accessible names" source=include_str!("demos/color_swatch.rs")>
-                    <ColorSwatchDemo/>
-                </Demo>
-            </Section>
-
             <Section title="Input">
-                <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
-
                 <ApiTable kind=ApiKind::Input of="UseColorSwatchInput">
-                    <ApiRow name="color" ty="Signal<C>">"The color to display. "<Code inline=true>"C"</Code>" is any "<Code inline=true>"ColorValue"</Code>"."</ApiRow>
-                    <ApiRow name="color_name" ty="Option<Signal<String>>">
-                        "A name for the color, used as the "<Code inline=true>"aria-label"</Code>". "<Code inline=true>"None"</Code>
-                        " uses the CSS color string, e.g. "<Code inline=true>"rgb(66, 135, 245)"</Code>"."
+                    <ApiRow name="color" ty="Signal<Color>">
+                        "The color to display. Required. "<Code inline=true>"UseColorSwatchInput::new"</Code>" takes any "
+                        "color value or a signal of one (a "<Code inline=true>"ColorProp"</Code>", see "
+                        <Link href=format!("{}#colorvalue", routes::doc::Color.materialize())><Code inline=true>"Color Values"</Code></Link>")."
                     </ApiRow>
-                    <ApiRow name="aria_label" ty="MaybeProp<String>">"Replaces the "<Code inline=true>"aria-label"</Code>" entirely."</ApiRow>
+                    <ApiRow name="color_name" ty="MaybeProp<String>" default="None">
+                        "Replaces the color\u{2019}s generated name, e.g. \u{201c}Ocean\u{201d} instead of \u{201c}dark "
+                        "vibrant cyan blue\u{201d}."
+                    </ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
+                        "Added to the color\u{2019}s name: the swatch is announced as \u{201c}vibrant red, Background\u{201d}."
+                    </ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the swatch as well."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The swatch\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseColorSwatchReturn">
-                    <ApiRow name="props" ty="UseColorSwatchProps">
+                    <ApiRow name="color_swatch_props" ty="PropsWithStyles<UseColorSwatchProps>">
                         <Code inline=true>"role=\"img\""</Code>", "<Code inline=true>"aria-roledescription=\"color swatch\""</Code>
-                        " and the "<Code inline=true>"aria-label"</Code>". Spread "<Code inline=true>"{..props.into_attrs()}"</Code>"."
-                    </ApiRow>
-                    <ApiRow name="background_color" ty="Signal<String>">
-                        "The color as a CSS string (e.g. "<Code inline=true>"rgb(128, 64, 32)"</Code>") for the background."
+                        ", the id and the "<Code inline=true>"aria-label"</Code>", plus the swatch\u{2019}s background color as a "
+                        "style. "<Code inline=true>"into_inner()"</Code>" splits them into props and "<Code inline=true>"Styles"</Code>
+                        "; spread "<Code inline=true>"{..props.into_attrs()}"</Code>" and pass "<Code inline=true>"style=styles"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -54,29 +50,38 @@ pub fn PageUseColorSwatch() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let swatch = use_color_swatch(UseColorSwatchInput {
-                            color: Signal::stored(RGB8 { r: 66, g: 135, b: 245 }),
-                            color_name: Some(Signal::stored("Ocean blue".to_owned())),
-                            aria_label: MaybeProp::default(),
-                        });
+                        use leptonic::{hooks::*, utils::color::RGB8};
+                        use leptos::prelude::*;
 
-                        view! { <div {..swatch.props.into_attrs()} class="swatch"></div> }
+                        let swatch = use_color_swatch(UseColorSwatchInput {
+                            color_name: "Ocean blue".into(),
+                            ..UseColorSwatchInput::new(Signal::stored(RGB8 { r: 66, g: 135, b: 245 }))
+                        });
+                        let (props, styles) = swatch.color_swatch_props.into_inner();
+
+                        view! { <div {..props.into_attrs()} class="swatch" style=styles></div> }
                     "#)}
                 </Code>
 
                 <p>
-                    "Set the background from "<Code inline=true>"background_color"</Code>" and add "
-                    <Code inline=true>"forced-color-adjust: none"</Code>
-                    ", so Windows high contrast mode doesn\u{2019}t replace the color. The "<Code inline=true>"ColorSwatch"</Code>
-                    " atom does both for you."
+                    "The styles set the background color and "<Code inline=true>"forced-color-adjust: none"</Code>
+                    ", so Windows high contrast mode doesn\u{2019}t replace the color. The "
+                    <Link href=routes::doc::color_swatch::Atom.materialize()>"Color Swatch Atom"</Link>" renders the element for you."
                 </p>
             </Section>
 
+            <Section title="Demo">
+                <p>"The first swatch is announced with its generated color name, the second one with its "<Code inline=true>"color_name"</Code>"."</p>
+
+                <Demo description="Two color swatches and their accessible names" source=include_str!("demos/color_swatch.rs")>
+                    <ColorSwatchDemo/>
+                </Demo>
+            </Section>
+
             <SeeAlso>
-                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
-                <li><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></li>
-                <li><Link href=routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link></li>
-                <li><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link></li>
+                <li><Link href=routes::doc::ColorSwatch.materialize()>"Color Swatch"</Link></li>
+                <li><Link href=routes::doc::color_swatch::Atom.materialize()>"Color Swatch Atom"</Link></li>
+                <li><Link href=routes::doc::color_picker::Hook.materialize()>"use_color_picker_state"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -9,9 +9,9 @@ pub fn PageSeparatorOverview() -> impl IntoView {
     view! {
         <DocPage title="Separator">
             <p>
-                "Separators are visual dividers that create clear boundaries between sections of content. "
-                "They carry semantic meaning \u{2014} assistive technology announces them as thematic breaks, "
-                "distinguishing them from purely decorative borders or spacing."
+                "A separator is a line dividing sections of content or groups of controls, such as the items of a menu "
+                "or the button groups of a toolbar. Unlike a border or spacing, it carries meaning: screen readers "
+                "announce it as a boundary."
             </p>
 
             <Section title="When to Use">
@@ -24,7 +24,7 @@ pub fn PageSeparatorOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Separators exist as a hook and as a component. See "
+                    "Separators exist at all three layers. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -38,14 +38,18 @@ pub fn PageSeparatorOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::separator::Component.materialize()>"Separator component"</Link></TableCell>
-                        <TableCell>"A themed horizontal "<Code inline=true>"<hr>"</Code>"."</TableCell>
+                        <TableCell><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></TableCell>
+                        <TableCell>"An unstyled separator in the right element for its orientation (and inside menus)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></TableCell>
+                        <TableCell>"A themed line, horizontal or vertical."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
-                <p>"The component is the quickest way to a separator:"</p>
+                <p>"The themed component draws the line for you:"</p>
 
                 <Demo description="Horizontal separator between two paragraphs" source=include_str!("demos/separator.rs") source_open=true>
                     <SeparatorConceptDemo/>
@@ -55,21 +59,34 @@ pub fn PageSeparatorOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "Separators follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/TR/wai-aria-1.2/#separator" target=LinkTarget::_Blank>"separator role"</LinkExt>
+                    <Link href="https://www.w3.org/TR/wai-aria-1.2/#separator" target=LinkTarget::Blank>"separator role"</Link>
                     ". They are not focusable and have no keyboard interaction."
                 </p>
 
                 <ul>
                     <li>
-                        <Code inline=true>"role=\"separator\""</Code>" is set on elements other than "<Code inline=true>"<hr>"</Code>
-                        "; a native "<Code inline=true>"<hr>"</Code>" has the role implicitly."
+                        "A horizontal separator is an "<Code inline=true>"<hr>"</Code>", which has the role implicitly. "
+                        "Other elements get "<Code inline=true>"role=\"separator\""</Code>"."
                     </li>
                     <li>
-                        <Code inline=true>"aria-orientation"</Code>" (\u{201c}horizontal\u{201d} or \u{201c}vertical\u{201d}) "
-                        "is set alongside the role. Horizontal is the default."
+                        "Vertical separators get "<Code inline=true>"aria-orientation=\"vertical\""</Code>". Horizontal is "
+                        "the role\u{2019}s default orientation, so horizontal separators carry no "
+                        <Code inline=true>"aria-orientation"</Code>"."
+                    </li>
+                    <li>
+                        "Name a separator ("<Code inline=true>"aria_label"</Code>") only where the boundary itself needs "
+                        "explaining; most separators need no name."
                     </li>
                 </ul>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
+                <li><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></li>
+                <li><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></li>
+                <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar"</Link></li>
+                <li><Link href=routes::doc::Menu.materialize()>"Menu"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

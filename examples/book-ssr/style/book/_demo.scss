@@ -1,6 +1,6 @@
 // Frame of interactive demos (`Demo`): the demo area, followed by the "View source" and "View styles" disclosures.
 
-.demo-shell {
+.doc-demo {
   margin: var(--book-space-m) 0;
   border: 2px solid var(--brand-color);
   border-radius: var(--book-radius-m);
@@ -23,7 +23,7 @@
   }
 }
 
-// `Disclosure` (kit): a trigger button and its panel, hidden while collapsed (the hook sets `aria-hidden`).
+// `Disclosure` (kit): a trigger button and its panel, hidden while collapsed (by its `hidden` attribute).
 .doc-disclosure-trigger {
   display: flex;
   align-items: center;
@@ -32,7 +32,7 @@
   padding: var(--book-space-s) var(--book-space-m);
   border: none;
   background: none;
-  color: var(--brand-color);
+  color: var(--book-brand-text-color);
   font: inherit;
   font-size: var(--book-font-size-s);
   text-align: start;
@@ -61,6 +61,3 @@
   }
 }
 
-.doc-disclosure-panel[aria-hidden="true"] {
-  display: none;
-}

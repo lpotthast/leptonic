@@ -3,15 +3,20 @@ use std::time::Duration;
 
 use leptos::{context::Provider, portal::Portal, prelude::*};
 
+use super::{overlay_arrow::OverlayArrowContext, press::ClearTriggerContexts};
 use crate::{
+    Out,
     hooks::{
-        FocusableContext, FocusableContextAttrs, IntoAttrs, PhysicalPlacementX, PlacementX,
-        PlacementY, TooltipTiming, TooltipTriggerMode, TooltipTriggerState, UseCloseOnScrollInput,
-        UseOverlayPositionInput, UseOverlayPositionReturn, UseTooltipInput, UseTooltipTriggerInput,
-        UseTooltipTriggerReturn, UseTooltipTriggerStateInput, use_close_on_scroll,
-        use_overlay_position, use_tooltip, use_tooltip_trigger, use_tooltip_trigger_state,
+        FocusableContext, FocusableContextAttrs, IntoAttrs, Placement, PlacementAxis,
+        TooltipTiming, TooltipTriggerMode, TooltipTriggerState, UseEnterAnimationInput,
+        UseExitAnimationInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseTooltipInput,
+        UseTooltipTriggerInput, UseTooltipTriggerReturn, UseTooltipTriggerStateInput,
+        use_enter_animation, use_exit_animation, use_overlay_position, use_tooltip,
+        use_tooltip_trigger, use_tooltip_trigger_state,
     },
-    utils::{CapturedElement, ValueBinding, classes::Classes, styles::Styles},
+    utils::{
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -21,12 +26,13 @@ use crate::{
 // ## API DIFFERENCES
 // - The trigger props reach the trigger (any focusable atom: `Button`, `Link`, ...) through
 //   `FocusableContext`, as react-aria-components' `FocusableProvider`.
-// - The open state is hook-owned (`default_open` + `on_open_change`, or `state` bound to app
-//   state) instead of a controlled `isOpen`.
-// - Placement is two typed axes; render props become `data-placement` plus plain children.
+// - Open state (C4): `default_open` + `on_open_change`, or `is_open` + `set_open` (react-aria:
+//   `isOpen` + `onOpenChange`).
+// - `placement` is the typed `Placement` enum; render props become `data-placement` plus plain
+//   children.
 //
 // ## OMITTED FEATURES
-// - `OverlayArrow`, entry/exit animations (`should_skip_animation` is exposed on the state),
+// - Entry/exit animations (`should_skip_animation` is exposed on the state),
 //   `UNSTABLE_portalContainer`.
 //
 // =============================================================================
@@ -56,20 +62,25 @@ pub fn TooltipTrigger(
     trigger: TooltipTriggerMode,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Whether pressing the trigger closes the tooltip.
-    #[prop(default = true)]
-    should_close_on_press: bool,
+    #[prop(into, default = Signal::stored(true))]
+    should_close_on_press: Signal<bool>,
     #[prop(optional)] default_open: bool,
     #[prop(into, optional)] on_open_change: Option<Callback<bool>>,
-    /// The open state as app state (e.g. an `RwSignal<bool>`), replacing `default_open`.
+    /// Whether the tooltip is open (controlled): a value or any signal.
     #[prop(into, optional)]
-    state: Option<ValueBinding<bool>>,
+    is_open: Option<Signal<bool>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_open: Option<Out<bool>>,
     children: Children,
 ) -> impl IntoView {
+    let (is_open, on_open_change) =
+        ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
         delay,
         close_delay,
         default_open,
-        value: state,
+        value: is_open,
         on_open_change,
     });
     let UseTooltipTriggerReturn {
@@ -122,14 +133,18 @@ pub fn TooltipTrigger(
 }
 
 /// The tooltip of the [`TooltipTrigger`] around it: `role="tooltip"`, describing the trigger,
-/// positioned next to it (above by default) while open. Hovering it keeps it open.
+/// positioned next to it (above by default) while open. Hovering it keeps it open; scrolling closes
+/// it. Put an [`OverlayArrow`](super::overlay_arrow::OverlayArrow) in it for an arrow pointing at
+/// the trigger.
 ///
-/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping).
+/// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping). CSS
+/// variable: `--trigger-anchor-point` (the point closest to the trigger).
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Tooltip(
-    #[prop(into, default = Signal::stored(PlacementX::Center))] placement_x: Signal<PlacementX>,
-    #[prop(into, default = Signal::stored(PlacementY::Above))] placement_y: Signal<PlacementY>,
+    /// Where the tooltip goes relative to the trigger.
+    #[prop(into, default = Signal::stored(Placement::Top))]
+    placement: Signal<Placement>,
     /// The distance from the trigger, in pixels.
     #[prop(into, optional)]
     offset: Signal<f64>,
@@ -140,77 +155,106 @@ pub fn Tooltip(
     /// Whether the tooltip flips to the other side when there is no room.
     #[prop(into, default = Signal::stored(true))]
     should_flip: Signal<bool>,
+    /// The minimum distance between an `OverlayArrow` and the tooltip's edges.
+    #[prop(into, optional)]
+    arrow_boundary_offset: Signal<f64>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let TooltipTriggerContext {
+    let Some(TooltipTriggerContext {
         state,
         tooltip_id,
         trigger,
-    } = expect_context::<TooltipTriggerContext>();
+    }) = use_context::<TooltipTriggerContext>()
+    else {
+        crate::utils::dev_warn!("A <Tooltip> must be inside a <TooltipTrigger>.");
+        return ().into_any();
+    };
     let is_open = state.overlay.is_open;
 
     let UseOverlayPositionReturn {
         props: position_props,
-        resolved_placement_x,
-        resolved_placement_y,
+        arrow_props,
+        placement: resolved_placement,
+        trigger_anchor_point,
+        ..
     } = use_overlay_position(UseOverlayPositionInput {
-        target: trigger,
-        placement_x,
-        placement_y,
+        placement,
         offset,
         cross_offset,
         container_padding,
         should_flip,
-        max_height: None,
-        is_open,
-    });
-    // As react-aria: scrolling closes the tooltip right away.
-    use_close_on_scroll(UseCloseOnScrollInput {
-        is_open,
-        trigger_element: trigger,
-        on_close: Callback::new(move |()| state.close(TooltipTiming::Immediate)),
+        arrow_boundary_offset,
+        // As react-aria: scrolling closes the tooltip right away.
+        on_close: Some(Callback::new(move |()| {
+            state.close(TooltipTiming::Immediate);
+        })),
+        ..UseOverlayPositionInput::new(trigger, is_open)
     });
     let tooltip = use_tooltip(UseTooltipInput {
         state: Some(state),
         ..UseTooltipInput::default()
     });
 
-    let placement = Memo::new(move |_| match resolved_placement_y.get() {
-        PlacementY::Above | PlacementY::Top => "top",
-        PlacementY::Bottom | PlacementY::Below => "bottom",
-        PlacementY::Center => match resolved_placement_x.get() {
-            PhysicalPlacementX::OuterLeft | PhysicalPlacementX::Left => "left",
-            PhysicalPlacementX::Center
-            | PhysicalPlacementX::Right
-            | PhysicalPlacementX::OuterRight => "right",
-        },
-    });
     let (position_attrs, position_styles) = position_props.into_parts();
+    let anchor_point = Styles::builder()
+        .with_optional_unchecked("--trigger-anchor-point", move || {
+            trigger_anchor_point
+                .get()
+                .map(|point| format!("{}px {}px", point.x, point.y))
+        })
+        .build();
+    let arrow_context = StoredValue::new(OverlayArrowContext::new(arrow_props, resolved_placement));
     let position_attrs = StoredValue::new(position_attrs);
     let tooltip_attrs = StoredValue::new(tooltip.props.into_attrs());
     let classes = StoredValue::new(classes);
-    let styles = StoredValue::new(position_styles.merge(styles));
+    let styles = StoredValue::new(position_styles.merge(anchor_point).merge(styles));
     let children = StoredValue::new(children);
     let tooltip_id = StoredValue::new(tooltip_id);
+    // The tooltip stays rendered while its exit animations run (`data-exiting`).
+    let element = CapturedElement::new();
+    let is_exiting = use_exit_animation(UseExitAnimationInput {
+        element,
+        is_open,
+        on_exit: None,
+    })
+    .is_exiting;
 
     view! {
-        <Portal>
-            <Show when=move || is_open.get()>
+        // No portal container while closed: a modal would make it inert.
+        <Show when=move || is_open.get() || is_exiting.get()>
+            {
+                // Entering (per opening) once the placement is known (react-aria-components).
+                let entering = CapturedElement::new();
+                let is_entering = use_enter_animation(UseEnterAnimationInput {
+                    is_ready: Signal::derive(move || resolved_placement.get().is_some()),
+                    ..UseEnterAnimationInput::new(entering)
+                })
+                .is_entering;
+                view! {
+            <Portal>
                 <div
                     {..position_attrs.get_value()}
                     {..tooltip_attrs.get_value()}
+                    {..element.attr().chain(entering.attr())}
+                    data-entering=flag(is_entering)
+                    data-exiting=flag(is_exiting)
                     id=tooltip_id.get_value()
                     role="tooltip"
                     class=classes.get_value()
                     style=styles.get_value()
-                    data-placement=move || placement.get()
+                    data-placement=move || resolved_placement.get().map(PlacementAxis::as_str)
                 >
                     // The tooltip's own content is no trigger.
-                    <Provider value=FocusableContext::default()>{(children.get_value())()}</Provider>
+                    <ClearTriggerContexts>
+                        <Provider value=arrow_context.get_value()>{(children.get_value())()}</Provider>
+                    </ClearTriggerContexts>
                 </div>
-            </Show>
-        </Portal>
+            </Portal>
+                }
+            }
+        </Show>
     }
+    .into_any()
 }

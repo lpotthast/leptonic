@@ -8,7 +8,7 @@ pub fn TextFieldStateDemo() -> impl IntoView {
 
     view! {
         <div class="demo-form">
-            <TextField label="City" state=city/>
+            <TextField label="City" value=city set_value=city/>
         </div>
         <div class="demo-control-row demo-mt-1">
             <Button on_press=move |_| city.update(|city| *city = city.to_uppercase())>"Uppercase"</Button>

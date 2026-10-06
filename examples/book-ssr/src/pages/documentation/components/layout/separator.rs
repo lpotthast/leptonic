@@ -7,20 +7,24 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageSeparator() -> impl IntoView {
     view! {
-        <DocPage title="Separator component">
+        <DocPage title="Separator Component">
             <p>
-                "The "<Code inline=true>"Separator"</Code>" component renders a horizontal "<Code inline=true>"<hr>"</Code>
-                " between two blocks of content. See the "
+                "The themed "<Code inline=true>"Separator"</Code>" component draws a line between content: a horizontal "
+                <Code inline=true>"<hr>"</Code>", or a vertical separator between side-by-side content. See the "
                 <Link href=routes::doc::Separator.materialize()>"Separator overview"</Link>
                 " for concept guidance."
             </p>
 
-            <Demo description="Separator between two paragraphs" source=include_str!("demos/separator.rs")>
+            <Demo description="Horizontal separator between paragraphs and a vertical one in a row" source=include_str!("demos/separator.rs")>
                 <SeparatorDemo/>
             </Demo>
 
             <Section title="Props">
-                <ApiTable kind=ApiKind::Props of="Separator">
+                <ApiTable kind=ApiKind::Props of="components::separator::Separator">
+                    <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                        "A vertical separator stretches to the height of its row; put it in a flex container."
+                    </ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the separator."</ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Additional classes and styles."
                     </ApiRow>
@@ -28,17 +32,14 @@ pub fn PageSeparator() -> impl IntoView {
             </Section>
 
             <Section title="Styling">
-                <p>
-                    "The "<Code inline=true>"<hr>"</Code>" carries the classes "<Code inline=true>"leptonic-separator"</Code>
-                    " and "<Code inline=true>"solid"</Code>". The theme doesn\u{2019}t style it, so it looks like the "
-                    "browser\u{2019}s default "<Code inline=true>"<hr>"</Code>". Target these classes, or pass your own, to "
-                    "change its appearance."
-                </p>
+                <p>"Override any of these CSS variables to adapt separators to your design:"</p>
+                <CssVariables prefix="--separator-" scss=theme_scss!("separator")/>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Separator.materialize()>"Separator overview"</Link></li>
                 <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
+                <li><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></li>
             </SeeAlso>
         </DocPage>
     }

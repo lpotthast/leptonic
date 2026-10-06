@@ -1,15 +1,11 @@
-use leptonic::{
-    components::prelude::*,
-    hooks::*,
-    utils::{classes::Classes, css::em},
-};
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn HasTabbableChildDemo() -> impl IntoView {
-    let (show_button, set_show_button) = signal(true);
-    let (show_input, set_show_input) = signal(true);
-    let (disabled, set_disabled) = signal(false);
+    let show_button = RwSignal::new(true);
+    let show_input = RwSignal::new(true);
+    let disabled = RwSignal::new(false);
 
     let UseHasTabbableChildReturn {
         has_tabbable_child,
@@ -22,35 +18,30 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
     let container_tabindex = move || if has_tabbable_child.get() { -1 } else { 0 };
 
     view! {
-        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) classes="demo-mb-1">
-            <Checkbox state=(show_button, set_show_button) classes="demo-form-row">"Show button"</Checkbox>
-            <Checkbox state=(show_input, set_show_input) classes="demo-form-row">"Show input"</Checkbox>
-            <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
-        </Stack>
-
-        <div
-            {..props.into_attrs()}
-            tabindex=container_tabindex
-            class=Classes::from("demo-focus-scope")
-        >
-            <p class=Classes::from("demo-container-title")>
-                "Container (tabindex=" {container_tabindex} ")"
-            </p>
-            <div class=Classes::from("demo-focus-row")>
-                <Show when=move || show_button.get()>
-                    <button class=Classes::from("demo-focus-item")>"Tabbable button"</button>
-                </Show>
-                <Show when=move || show_input.get()>
-                    <input type="text" placeholder="Tabbable input" class=Classes::from("demo-focus-item")/>
-                </Show>
-            </div>
+        <div role="group" aria-label="Attachments" class="demo-focus-scope" tabindex={container_tabindex} {..props.into_attrs()}>
+            <Show when=move || show_button.get() fallback=|| view! { <p class="demo-focus-hint">"No actions."</p> }>
+                <button type="button" class="demo-focus-item">"Add file"</button>
+            </Show>
+            <Show when=move || show_input.get()>
+                <label class="demo-focus-label">
+                    "Note "
+                    <input type="text" class="demo-focus-item"/>
+                </label>
+            </Show>
         </div>
 
-        <p>
-            "Has tabbable child: "
-            <strong class=Classes::builder().with_toggle(has_tabbable_child, "demo-state-active", "demo-state-inactive").build()>
-                { move || if has_tabbable_child.get() { "true" } else { "false" } }
-            </strong>
+        <p class="demo-status">
+            {move || if has_tabbable_child.get() {
+                "The group has a tabbable child, so Tab skips the group itself (tabindex -1)."
+            } else {
+                "The group has no tabbable child, so it is a tab stop itself (tabindex 0)."
+            }}
         </p>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=show_button set_selected=show_button>"Show button"</Checkbox>
+            <Checkbox is_selected=show_input set_selected=show_input>"Show field"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

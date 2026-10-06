@@ -1,0 +1,457 @@
+// Collections: demos of Grid, GridList, Listbox, Menu, TagGroup and Tree (Table: `_table.scss`).
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// -- Listbox hooks --
+//
+// Styled through the ARIA attributes `use_option` sets and `data-focus-visible`, which the demo renders from the
+// hook's `is_focus_visible`.
+
+.demo-listbox                       { max-width: 250px; margin: var(--book-space-m) 0; overflow: hidden; border: 2px solid var(--brand-color); border-radius: var(--book-radius-m); }
+
+.demo-listbox-option {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    cursor: pointer;
+    transition: background-color var(--book-transition), color var(--book-transition);
+
+    &[aria-selected="true"] { background: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible]   { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+    &[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
+}
+
+.demo-listbox-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-radius: var(--book-radius-s);
+
+    .demo-listbox-option[aria-selected="true"] & { border-color: var(--book-on-brand-color); }
+
+}
+
+// -- ListBox atoms --
+
+// The listbox with its visible label.
+.demo-lb {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    width: 18em;
+    max-width: 100%;
+}
+
+.demo-lb-label {
+    font-weight: 600;
+}
+
+// Focus moves to the options; the listbox itself only has it while it is empty.
+.demo-lb-listbox {
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// A section's heading (`heading_classes`) and its group of options (`classes`).
+.demo-lb-heading {
+    padding: var(--book-space-s) var(--book-space-s) var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.demo-lb-group {
+    display: flex;
+    flex-direction: column;
+}
+
+// An option. Options receive DOM focus; `data-focus-visible` marks keyboard focus.
+.demo-lb-item {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    // `ListBoxItem` renders no hover attribute, so `:hover` stands in.
+    &:hover:not([data-disabled]) {
+        background: var(--brand-color-subtle);
+    }
+
+    // Replaces the theme's generic focus ring, which would be clipped by the scroll container.
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[data-pressed] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+// The checkbox drawn in front of an option; filled while the option is selected.
+.demo-lb-check {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    border: 1px solid var(--book-muted-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+
+    [data-selected] > & {
+        border-color: var(--brand-color);
+        background: var(--brand-color);
+        box-shadow: inset 0 0 0 2px var(--book-surface-color);
+    }
+}
+
+.demo-lb-price {
+    margin-left: auto;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+}
+
+// -- Grid list --
+//
+// The atom demo styles `GridListItem` through its `data-*` attributes; the hook demo styles the ARIA attributes
+// `use_grid_list_item` sets and `:focus-visible`.
+
+.demo-grid-list      { max-width: 360px; overflow: hidden; border: 1px solid var(--book-border-color); border-radius: var(--book-radius-m); }
+
+.demo-grid-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--book-transition), outline-color var(--book-transition);
+
+    &:last-child { border-bottom: none; }
+    &[data-focus-visible] { outline-color: var(--book-focus-color); }
+    &[data-selected] { background-color: var(--brand-color-subtle); }
+    &[data-pressed] { background-color: var(--book-hover-background-color); }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// A row of the hook demo, styled through the ARIA attributes `use_grid_list_item` sets.
+.demo-grid-list-row {
+    padding: var(--book-space-xs) var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--book-transition);
+
+    &:last-child { border-bottom: none; }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+    &[aria-selected="true"] { background-color: var(--brand-color-subtle); }
+    &[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-grid-list-cell { display: flex; align-items: center; gap: var(--book-space-s); width: 100%; }
+
+.demo-grid-list-icon { flex: none; font-size: var(--book-font-size-l); }
+
+.demo-grid-list-name { flex: 1; }
+
+
+// -- Grid --
+
+// Color palette grid (use_grid demo): rows are palettes, cells are a name and colors. Selection belongs to the row
+// (`aria-selected`, set by `use_grid_row`); rows and cells take DOM focus, shown by `:focus-visible`.
+.demo-palette-grid { display: flex; flex-direction: column; gap: var(--book-space-s); }
+
+.demo-palette-row  {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s);
+    border: 2px solid transparent;
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &[aria-selected="true"] { border-color: var(--brand-color); background: var(--brand-color-subtle); }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-palette-name {
+    width: 4em;
+    font-weight: 600;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-palette-cell {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--book-radius-s);
+    outline: 3px solid transparent;
+    outline-offset: 2px;
+
+    &:focus-visible { outline-color: var(--book-focus-color); }
+
+}
+
+// Grid atoms: a message list styled through the atoms' data attributes. Keyboard focus is on a row or, after
+// ArrowRight, on a cell: both render `data-focus-visible`.
+.demo-messages      { display: table; width: 100%; max-width: 32em; border-collapse: collapse; }
+
+.demo-messages > *  { display: table-row-group; }
+
+.demo-messages-row {
+    display: table-row;
+    cursor: pointer;
+
+    &[data-selected] { background: var(--brand-color-subtle); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-messages-cell {
+    display: table-cell;
+    padding: var(--book-space-s) var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+
+// -- Tree --
+
+// Indentation by `aria-level`, highlight by `aria-selected` (both set by `use_tree_item`), keyboard focus by
+// `data-focus-visible`, which the demo renders from the hook's `is_focus_visible`.
+.demo-tree { max-width: 300px; margin: var(--book-space-m) 0; padding: var(--book-space-s); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-s); }
+
+.demo-tree-item {
+    padding: var(--book-space-xs) var(--book-space-s);
+    border-radius: var(--book-radius-s);
+    outline: none;
+    cursor: pointer;
+
+    &[aria-level="2"] { padding-left: 2em; }
+    &[aria-level="3"] { padding-left: 3.5em; }
+    &[aria-selected="true"] { background: var(--brand-color-subtle); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+.demo-tree-item-content { display: flex; align-items: center; gap: var(--book-space-s); }
+
+.demo-tree-item-toggle  {
+    width: 1.25em;
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    text-align: center;
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
+// -- Menu --
+
+// The trigger of the menu hooks demo, with an arrow that turns while the menu is open (`aria-expanded`, set by
+// `use_menu_trigger`). Its items are styled through the ARIA attributes `use_menu_item` sets and `data-focused` /
+// `data-focus-visible`, which the demo renders from the hook's state.
+.demo-menu-trigger            { display: flex; align-items: center; gap: var(--book-space-s); }
+
+.demo-menu-arrow {
+    display: inline-block;
+    transition: transform var(--book-transition);
+
+    [aria-expanded="true"] > & { transform: rotate(180deg); }
+
+    @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+
+.demo-menu-list {
+    min-width: 180px;
+    margin: 0;
+    padding: var(--book-space-xs) 0;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    list-style: none;
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-focused] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[aria-disabled="true"] {
+
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+.demo-menu-section {
+    list-style: none;
+
+    ul {
+        margin: 0;
+        padding: 0;
+    }
+
+    & + &,
+    .demo-menu-item + & {
+        border-top: 1px solid var(--book-border-color);
+    }
+}
+
+.demo-menu-heading {
+    display: block;
+    padding: var(--book-space-s) var(--book-space-m) var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.demo-menu-check {
+    width: 1em;
+    color: var(--book-brand-text-color);
+}
+
+// Menu atoms: items styled through their data attributes.
+.demo-menu-atom-item {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    cursor: pointer;
+    outline: none;
+
+    &[data-focused], &[data-open] { background: var(--brand-color-subtle); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+}
+
+// The check mark in front of a checkable item, shown while it is selected.
+.demo-menu-atom-check {
+    width: 1em;
+    color: var(--book-brand-text-color);
+
+    [data-selected] > &::before { content: "\2713"; }
+}
+
+// The arrow of a submenu trigger item (`data-has-submenu`).
+.demo-menu-atom-arrow {
+    margin-left: auto;
+    color: var(--book-muted-color);
+
+    [data-has-submenu][data-open] > & { color: var(--book-brand-text-color); }
+}
+
+
+.demo-menu-atom-shortcut {
+    margin-left: auto;
+    padding-left: var(--book-space-l);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+}
+
+// -- Tag group --
+//
+// Styled through the ARIA attributes `use_tag` sets and `data-focus-visible`, which the demo renders from the hook's
+// `is_focus_visible`.
+
+.demo-tag-group-label { display: block; margin-bottom: var(--book-space-s); font-weight: 600; }
+
+.demo-tag-group       { display: flex; flex-wrap: wrap; gap: var(--book-space-s); }
+
+.demo-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-xs);
+    padding: var(--book-space-xs) var(--book-space-s);
+    border-radius: var(--book-radius-pill);
+    background: var(--brand-color-subtle);
+    cursor: pointer;
+    outline: none;
+
+    &[aria-selected="true"] { background: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible] { box-shadow: 0 0 0 2px var(--book-focus-color); }
+}
+
+.demo-tag-cell { display: inline-flex; align-items: center; gap: var(--book-space-xs); }
+
+.demo-tag-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
+// The Listbox overview's Quick Start, styled through the data attributes of `ListBoxItem`.
+.demo-fruit-listbox {
+    max-width: 14em;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    // The listbox takes focus itself only while it has no options.
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-fruit-option {
+    padding: var(--book-space-s) var(--book-space-m);
+    border-radius: var(--book-radius-s);
+    cursor: pointer;
+
+    &[data-selected] { background: var(--brand-color-subtle); font-weight: 600; }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+}

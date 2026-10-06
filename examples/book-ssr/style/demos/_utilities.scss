@@ -1,0 +1,57 @@
+// Utilities: demos of use_spin_button, use_clipboard, I18nProvider and the formatters.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// The value element of the spin button demo; it has the focus while the arrow keys change the value.
+.demo-spinbutton {
+    min-width: 3em;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[aria-disabled="true"] { color: var(--book-muted-color); }
+}
+
+// The stepper buttons of the spin button demo stay focusable while disabled, so `use_button` sets `aria-disabled`.
+.demo-spin-stepper {
+    min-width: 2.5em;
+
+    &[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// The shopping list of the use_clipboard demo: focusable, so the clipboard shortcuts reach it.
+.demo-clipboard-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-s);
+    padding: var(--book-space-m) var(--book-space-l);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    ul { margin: 0; }
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-clipboard-empty { margin: 0; color: var(--book-muted-color); }
+
+// The results of the I18nProvider and formatter demos: a label and the formatted text per row.
+.demo-format-list {
+    display: grid;
+    grid-template-columns: minmax(8em, max-content) 1fr;
+    gap: var(--book-space-xs) var(--book-space-m);
+    margin: var(--book-space-m) 0 0;
+
+    dt { color: var(--book-muted-color); }
+    dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+}
+
+// The sorted words of the Collator demo.
+.demo-collator-list {
+    columns: 2;
+    margin: var(--book-space-m) 0 0;
+}

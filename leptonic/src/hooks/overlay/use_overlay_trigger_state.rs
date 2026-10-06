@@ -68,6 +68,10 @@ pub trait OverlayState: Copy + Send + Sync + 'static {
     fn is_open(&self) -> bool;
     /// Closes the overlay.
     fn close(&self);
+    /// Where a point-anchored overlay (a context menu) opened. Default: none.
+    fn point(&self) -> Signal<Option<Point>> {
+        Signal::stored(None)
+    }
 }
 
 impl OverlayState for OverlayTriggerState {
@@ -75,12 +79,16 @@ impl OverlayState for OverlayTriggerState {
         self.is_open.get()
     }
 
+    fn point(&self) -> Signal<Option<Point>> {
+        self.point
+    }
+
     fn close(&self) {
         OverlayTriggerState::close(self);
     }
 }
 
-/// An overlay whose open state is app state (e.g. `state=rw_signal` on `ModalBackdrop`).
+/// An overlay whose open state is app state.
 impl From<ValueBinding<bool>> for OverlayTriggerState {
     fn from(value: ValueBinding<bool>) -> Self {
         use_overlay_trigger_state(UseOverlayTriggerStateInput {

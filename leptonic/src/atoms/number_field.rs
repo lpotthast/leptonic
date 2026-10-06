@@ -2,22 +2,23 @@
 use leptos::prelude::*;
 
 use super::{
-    field::{FieldContext, FieldLabelProps},
+    field::{FieldContext, LabelContext},
     form::use_validation_behavior,
     input::{InputContext, InputState},
 };
 use crate::{
+    Out,
+    atoms::field::LabelPresence,
     hooks::{
         CommitBehavior, IntoAttrs, UseButtonInput, UseFocusRingInput, UseHoverInput,
         UseNumberFieldGroupProps, UseNumberFieldInput, UseNumberFieldReturn,
         UseNumberFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_focus_ring,
         use_hover, use_number_field, use_number_field_state,
     },
-    utils::data_attributes::flag,
-    utils::scoped_context::scoped_view,
+    utils::number_value::OptionalNumberSignal,
     utils::{
-        NumberValue, ValueBinding, classes::Classes, number_formatter::NumberFormatOptions,
-        styles::Styles,
+        NumberValue, ValueBinding, classes::Classes, data_attributes::flag,
+        number_formatter::NumberFormatOptions, scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -27,10 +28,9 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Generic over the value type (C15): `NumberField<u8>`, `NumberField<f64>`, ..., usually
-//   inferred from `default_value` or `state`.
-// - No controlled `value` (hook-owned state, project-wide convention): `default_value` and
-//   `on_change`, or a `state` bound to app state (`state=rw_signal` with an
-//   `RwSignal<Option<T>>`).
+//   inferred from `default_value` or `value` (an `OptionalNumberSignal`).
+// - Value (C4): `default_value` + `on_change`, or `value` + `set_value` (react-aria: `value` +
+//   `onChange`).
 // - The group and the stepper buttons are the `NumberFieldGroup`, `NumberFieldIncrementButton`
 //   and `NumberFieldDecrementButton` parts (react-aria-components: `Group` and `Button`s with
 //   `slot="increment"`/`"decrement"`). Reason: Leptos contexts are typed; dedicated parts need
@@ -64,10 +64,13 @@ pub fn NumberField<T: NumberValue>(
     /// The initial value (`None`: empty).
     #[prop(optional)]
     default_value: Option<T>,
-    /// The value as app state, replacing `default_value`: `state=rw_signal` with an
-    /// `RwSignal<Option<T>>`.
+    /// The value (controlled), replacing `default_value`: a number, an `Option` (`None`: empty),
+    /// or any signal of them.
     #[prop(into, optional)]
-    state: Option<ValueBinding<Option<T>>>,
+    value: Option<OptionalNumberSignal<T>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_value: Option<Out<Option<T>>>,
     /// Called when a committed value changes.
     #[prop(into, optional)]
     on_change: Option<Callback<Option<T>>>,
@@ -111,9 +114,14 @@ pub fn NumberField<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (value, on_change) = ValueBinding::from_state_props(
+        value.map(OptionalNumberSignal::into_signal),
+        set_value,
+        on_change,
+    );
     let state = use_number_field_state(UseNumberFieldStateInput {
         default_value,
-        value: state,
+        value,
         on_change,
         min_value: Signal::derive(move || min_value.get()),
         max_value: Signal::derive(move || max_value.get()),
@@ -128,7 +136,8 @@ pub fn NumberField<T: NumberValue>(
         name: name.clone(),
     });
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
-    let has_label = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
+    let has_label = label_presence.has_label;
     let UseNumberFieldReturn {
         group_props,
         label_props,
@@ -162,8 +171,8 @@ pub fn NumberField<T: NumberValue>(
     // Contexts for the children only, with the `<div>` as the root (getting attributes set on the
     // component).
     let provide = move || {
+        provide_context(LabelContext::label(label_props).with_presence(label_presence));
         provide_context(FieldContext {
-            label: FieldLabelProps::label(label_props),
             description: description_props,
             error_message: error_message_props,
             is_invalid,

@@ -45,7 +45,9 @@ pub struct UseListBoxInput {
     /// listbox, e.g. a select trigger's `aria-controls`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    /// The ids of the elements naming the listbox (a signal: e.g. a field's label ids follow
+    /// whether its label is rendered).
+    pub aria_labelledby: Signal<Option<String>>,
     pub orientation: Orientation,
     /// Items stacked (one per row/column) or wrapping in a grid.
     pub layout: ListLayout,
@@ -76,7 +78,7 @@ impl UseListBoxInput {
             element,
             id: None,
             aria_label: MaybeProp::default(),
-            aria_labelledby: None,
+            aria_labelledby: Signal::stored(None),
             orientation: Orientation::Vertical,
             layout: ListLayout::Stack,
             keyboard_delegate: None,
@@ -121,7 +123,7 @@ pub struct UseListBoxProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
     pub aria_orientation: AriaOrientation,
     /// Focus, keyboard and tab-index handling (`use_selectable_list`), including focus-within
@@ -133,7 +135,7 @@ pub type UseListBoxAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     UseSelectableCollectionAttrs,

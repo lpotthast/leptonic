@@ -7,6 +7,10 @@ use leptonic::{
     utils::CapturedElement,
 };
 use leptos::prelude::*;
+use ringbuf::{
+    HeapRb,
+    traits::{Consumer, RingBuffer},
+};
 
 const URL: &str = "https://leptos.dev";
 
@@ -14,12 +18,12 @@ const URL: &str = "https://leptos.dev";
 #[component]
 pub fn DragToDropDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
-    let last_drag = RwSignal::new(String::from("none"));
+    let last_drag = RwSignal::new(String::from("none yet"));
 
     // A note: plain text, which may be moved, copied or linked (the default).
     let note = use_drag(UseDragInput {
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
-            last_drag.set(format!("Note, {:?}", e.drop_operation));
+            last_drag.set(format!("Note ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
         ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("Water the plants")]))
@@ -30,7 +34,7 @@ pub fn DragToDropDemo() -> impl IntoView {
             vec![DropOperation::Copy, DropOperation::Link]
         })),
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
-            last_drag.set(format!("Link, {:?}", e.drop_operation));
+            last_drag.set(format!("Link ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
         ..UseDragInput::new(Callback::new(|()| {
@@ -68,11 +72,11 @@ pub fn DragToDropDemo() -> impl IntoView {
             </div>
         </div>
 
-        <Checkbox state=disabled>"Disable dragging"</Checkbox>
-
-        <div class="demo-state-display">
-            <strong>"Last drag ended: "</strong>{last_drag}
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
+
+        <p class="demo-status">"Last drag ended: "{last_drag}</p>
     }
 }
 
@@ -100,7 +104,8 @@ fn Target(
     hint: &'static str,
     get_drop_operation: Option<Callback<DropOperationQuery, DropOperation>>,
 ) -> impl IntoView {
-    let dropped = RwSignal::new(Vec::<String>::new());
+    // The last 50 drops.
+    let dropped = RwSignal::new(HeapRb::<String>::new(50));
     let UseDropReturn {
         drop_props,
         is_drop_target,
@@ -110,11 +115,9 @@ fn Target(
         on_drop: Some(Callback::new(move |e: DropEvent| {
             let operation = e.drop_operation;
             dropped.update(|dropped| {
-                dropped.extend(
-                    e.items
-                        .iter()
-                        .map(|item| format!("{} ({operation:?})", describe(item))),
-                );
+                for item in &e.items {
+                    dropped.push_overwrite(format!("{} ({operation:?})", describe(item)));
+                }
             });
         })),
         ..UseDropInput::new(CapturedElement::new())
@@ -134,7 +137,7 @@ fn Target(
                 <span class="demo-caption">{hint}</span>
             </div>
             <ul class="demo-dnd-dropped" aria-label=format!("Dropped on {title}")>
-                {move || dropped.get().into_iter().map(|entry| view! { <li>{entry}</li> }).collect_view()}
+                {move || dropped.with(|dropped| dropped.iter().cloned().map(|entry| view! { <li>{entry}</li> }).collect_view())}
             </ul>
         </div>
     }

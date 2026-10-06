@@ -1,0 +1,57 @@
+// Buttons: demos of the Button and ToggleButton concepts (toggle buttons: `_shared.scss`, also used by color demos).
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+// The Button atom, styled only through the data attributes it renders.
+.demo-atom-button {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// A `<div>` made a button with `use_button`: styled through the attributes the hook sets (`aria-disabled`,
+// `data-focus-visible`) and the states it returns, which the demo renders as `data-pressed` and `data-hovered`.
+.demo-hook-button {
+    display: inline-block;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// The ToggleButton atom, styled only through the data attributes it renders.
+.demo-atom-toggle-button {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--book-transition), border-color var(--book-transition), color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-selected] { background: var(--brand-color); border-color: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}

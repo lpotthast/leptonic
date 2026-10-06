@@ -1,6 +1,7 @@
 use leptonic::{
     atoms::tabs::{Tab, TabList, TabPanel, Tabs},
-    hooks::use_collection,
+    components::prelude::Checkbox,
+    hooks::{collections::Key, use_collection},
 };
 use leptos::prelude::*;
 
@@ -12,13 +13,15 @@ pub fn TabsConceptDemo() -> impl IntoView {
         b.item("activity", "Activity");
         b.item("members", "Members");
     });
+    let selected = RwSignal::new(Key::from("overview"));
+    let disabled = RwSignal::new(false);
 
     view! {
-        <Tabs collection=collection>
+        <Tabs collection=collection selected_key=selected set_selected_key=selected is_disabled=disabled classes="demo-tabs">
             <TabList aria_label="Project" classes="demo-tab-list">
-                <Tab key="overview" classes=["demo-tab", "demo-atom-tab"]>"Overview"</Tab>
-                <Tab key="activity" classes=["demo-tab", "demo-atom-tab"]>"Activity"</Tab>
-                <Tab key="members" classes=["demo-tab", "demo-atom-tab"]>"Members"</Tab>
+                <Tab key="overview" classes="demo-tab">"Overview"</Tab>
+                <Tab key="activity" classes="demo-tab">"Activity"</Tab>
+                <Tab key="members" classes="demo-tab">"Members"</Tab>
             </TabList>
             <TabPanel key="overview" classes="demo-tab-panel">
                 <p>"Three open milestones, due next month."</p>
@@ -30,5 +33,9 @@ pub fn TabsConceptDemo() -> impl IntoView {
                 <p>"Ada, Grace and Linus."</p>
             </TabPanel>
         </Tabs>
+        <p class="demo-status">{move || format!("Selected tab: {}.", selected.get())}</p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

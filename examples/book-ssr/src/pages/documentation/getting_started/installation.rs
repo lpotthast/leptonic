@@ -10,10 +10,10 @@ pub fn PageInstallation() -> impl IntoView {
         <DocPage title="Installation">
             <p>
                 "The quickest start is one of the templates, "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkTarget::_Blank>"leptonic-template-ssr"</LinkExt>
+                <Link href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkTarget::Blank>"leptonic-template-ssr"</Link>
                 " or "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::_Blank>"leptonic-template-csr"</LinkExt>
-                ". To add leptonic to an existing app, follow the "<a href="#custom-setup">"custom setup"</a>"."
+                <Link href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::Blank>"leptonic-template-csr"</Link>
+                ". To add leptonic to an existing app, follow the "<AnchorLink href="#custom-setup">"custom setup"</AnchorLink>"."
             </p>
 
             <Section title="Templates">
@@ -37,14 +37,11 @@ pub fn PageInstallation() -> impl IntoView {
                 <p>"You use leptonic the same way in both."</p>
             </Section>
 
-            <Section title="Custom setup">
-                <Section title="Dependency and features">
+            <Section title="Custom Setup">
+                <Section title="Dependency and Features">
                     <p>
-                        "Leptonic is split into three layers, each behind a feature (see "
-                        <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                        "). Only "<Code inline=true>"hooks"</Code>" is enabled by default. Enable "<Code inline=true>"components"</Code>
-                        " (which includes the atoms) to use the pre-built components, or "<Code inline=true>"full"</Code>
-                        " for everything, including the rich text editor, syntax highlighting and clipboard support."
+                        "Add leptonic with the features you need. "<Code inline=true>"full"</Code>" enables every layer and "
+                        "every extra:"
                     </p>
 
                     <Code language=Language::Shell>
@@ -55,7 +52,8 @@ pub fn PageInstallation() -> impl IntoView {
 
                     <p>
                         "For SSR, forward your app\u{2019}s "<Code inline=true>"ssr"</Code>" and "<Code inline=true>"hydrate"</Code>
-                        " features to leptonic\u{2019}s features of the same name:"
+                        " features to leptonic\u{2019}s features of the same name (see "
+                        <Link href=routes::doc::Ssr.materialize()>"Server-Side Rendering"</Link>"):"
                     </p>
 
                     <Code language=Language::Toml>
@@ -65,9 +63,73 @@ pub fn PageInstallation() -> impl IntoView {
                             ssr = ["leptos/ssr", "leptonic/ssr"]
                         "#)}
                     </Code>
+
+                    <Section title="Feature Flags">
+                        <p>
+                            "Each layer (see "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                            ") is a feature that includes the layers below it; the extras include the components."
+                        </p>
+                        <DocTable headers=&["Feature", "Enables"]>
+                            <TableRow>
+                                <TableCell><Code inline=true>"hooks"</Code></TableCell>
+                                <TableCell>"The hooks and utilities. The only default feature."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"atoms"</Code></TableCell>
+                                <TableCell>"The atoms, and "<Code inline=true>"hooks"</Code>"."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"components"</Code></TableCell>
+                                <TableCell>"The themed components, and "<Code inline=true>"atoms"</Code>"."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"clipboard"</Code></TableCell>
+                                <TableCell>
+                                    "Copying to the clipboard: the copy button of code blocks ("
+                                    <Link href=routes::doc::Typography.materialize()>"Code"</Link>") and "
+                                    <Code inline=true>"leptonic::utils::clipboard::write_text"</Code>"."
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"syntax-highlight"</Code></TableCell>
+                                <TableCell>"Syntax highlighting of code blocks, with syntect."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"sanitize"</Code></TableCell>
+                                <TableCell>
+                                    <Link href=routes::doc::SanitizedHtml.materialize()>"Sanitized HTML"</Link>
+                                    ", with ammonia."
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"tiptap"</Code></TableCell>
+                                <TableCell>
+                                    "The "<Link href=routes::doc::RichTextEditor.materialize()>"Rich Text Editor"</Link>
+                                    ". The build script copies its JavaScript into your app."
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"full"</Code></TableCell>
+                                <TableCell>
+                                    "All of the above: "<Code inline=true>"hooks"</Code>", "<Code inline=true>"atoms"</Code>", "
+                                    <Code inline=true>"components"</Code>", "<Code inline=true>"clipboard"</Code>", "
+                                    <Code inline=true>"syntax-highlight"</Code>", "<Code inline=true>"sanitize"</Code>" and "
+                                    <Code inline=true>"tiptap"</Code>"."
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"ssr"</Code>", "<Code inline=true>"hydrate"</Code></TableCell>
+                                <TableCell>"Server-side rendering and hydration. Not part of "<Code inline=true>"full"</Code>"."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"nightly"</Code></TableCell>
+                                <TableCell>"Leptos\u{2019} "<Code inline=true>"nightly"</Code>" feature. Not part of "<Code inline=true>"full"</Code>"."</TableCell>
+                            </TableRow>
+                        </DocTable>
+                    </Section>
                 </Section>
 
-                <Section title="Build configuration">
+                <Section title="Build Configuration">
                     <p>
                         "Leptonic is written against web-sys\u{2019} unstable API signatures, so your app has to opt in. Add a "
                         <Code inline=true>".cargo/config.toml"</Code>" next to your "<Code inline=true>"Cargo.toml"</Code>":"
@@ -94,13 +156,13 @@ pub fn PageInstallation() -> impl IntoView {
                     </Code>
                 </Section>
 
-                <Section title="Styles and static files">
+                <Section title="Styles and Static Files">
                     <p>
                         "The default styling comes from the "
-                        <LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::_Blank>
+                        <Link href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::Blank>
                             "leptonic-theme"
-                        </LinkExt>
-                        " crate. Leptonic\u{2019}s build script copies the themes and other static files into your project, so you "
+                        </Link>
+                        " crate. Leptonic\u{2019}s build script copies the themes into your project, so you "
                         "have to tell it where to put them. Add this to your "<Code inline=true>"Cargo.toml"</Code>
                         " (we assume your "<Code inline=true>"main.scss"</Code>" lives in "<Code inline=true>"style/"</Code>"):"
                     </p>
@@ -110,9 +172,6 @@ pub fn PageInstallation() -> impl IntoView {
                             [package.metadata.leptonic]
                             # Where the build script copies the leptonic themes to.
                             style-dir = "style"
-
-                            # Where the build script copies static JS dependencies (of the rich text editor) to.
-                            js-dir = "public/js"
                         "#)}
                     </Code>
 
@@ -154,12 +213,31 @@ pub fn PageInstallation() -> impl IntoView {
                     </Code>
                 </Section>
 
-                <Section title="The Root component">
+                <Section title="The Root Component">
                     <p>
                         "Render your app inside leptonic\u{2019}s "<Code inline=true>"<Root>"</Code>
-                        " component, exactly once. It provides theming, the infrastructure of "
-                        <Link href=routes::doc::Modal.materialize()>"modals"</Link>" and "
-                        <Link href=routes::doc::components::Toast.materialize()>"toasts"</Link>", and global event listeners."
+                        " component, exactly once (a second one logs a warning). It provides:"
+                    </p>
+                    <ul>
+                        <li>
+                            "The theme: a "<Code inline=true>"ThemeProvider"</Code>" starting with "
+                            <Code inline=true>"default_theme"</Code>", which remembers the user\u{2019}s choice in local "
+                            "storage and sets "<Code inline=true>"data-theme"</Code>" on "<Code inline=true>"<html>"</Code>
+                            " (see "<Link href=routes::doc::Themes.materialize()>"Themes"</Link>")."
+                        </li>
+                        <li>"The "<Link href=routes::doc::Toast.materialize()>"toasts"</Link>" area ("<Code inline=true>"ToastRoot"</Code>")."</li>
+                        <li>
+                            "The "<Code inline=true>"Leptonic"</Code>" context, with "<Code inline=true>"is_mobile_device"</Code>
+                            " and "<Code inline=true>"is_desktop_device"</Code>" signals read from the user agent."
+                        </li>
+                        <li>
+                            "The "<Code inline=true>"--leptonic-vh"</Code>" CSS variable on "<Code inline=true>"<html>"</Code>
+                            ": the window\u{2019}s inner height, updated when it is resized."
+                        </li>
+                    </ul>
+                    <p>
+                        "Modals, popovers and tooltips need nothing from "<Code inline=true>"<Root>"</Code>": they render "
+                        "into "<Code inline=true>"<body>"</Code>" through Leptos\u{2019} "<Code inline=true>"Portal"</Code>"."
                     </p>
 
                     <Code language=Language::Rust>
@@ -173,7 +251,7 @@ pub fn PageInstallation() -> impl IntoView {
 
                                 view! {
                                     <Root default_theme=LeptonicTheme::default()>
-                                        <h2>"Welcome to Leptonic"</h2>
+                                        <h1>"Welcome to Leptonic"</h1>
                                         <p>"Count: " {move || count.get()}</p>
                                         <Button on_press=move |_| set_count.update(|c| *c += 1)>
                                             "Increase"
@@ -185,8 +263,12 @@ pub fn PageInstallation() -> impl IntoView {
                     </Code>
 
                     <p>
-                        "Components, atoms and hooks have their own preludes: "<Code inline=true>"leptonic::components::prelude"</Code>", "
-                        <Code inline=true>"leptonic::atoms::prelude"</Code>" and "<Code inline=true>"leptonic::hooks"</Code>"."
+                        "Import leptonic through its preludes: "<Code inline=true>"leptonic::components::prelude"</Code>" for "
+                        "the components, "<Code inline=true>"leptonic::atoms::prelude"</Code>" for the atoms (usually as "
+                        <Code inline=true>"use leptonic::atoms::prelude as atoms;"</Code>", as their names overlap with the "
+                        "components\u{2019}), "<Code inline=true>"leptonic::hooks"</Code>" for the hooks, and "
+                        <Code inline=true>"leptonic::prelude"</Code>" for the shared types ("<Code inline=true>"Out"</Code>", "
+                        <Code inline=true>"ValueBinding"</Code>", "<Code inline=true>"icondata"</Code>", \u{2026})."
                     </p>
                 </Section>
             </Section>

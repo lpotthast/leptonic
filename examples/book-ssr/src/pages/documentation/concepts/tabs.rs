@@ -20,9 +20,9 @@ pub fn PageTabsOverview() -> impl IntoView {
                     <TableRow><TableCell>"Switch between parallel content panels"</TableCell><TableCell><b>"Tabs"</b></TableCell></TableRow>
                     <TableRow>
                         <TableCell>"Expand/collapse independent sections"</TableCell>
-                        <TableCell><Link href=routes::doc::Collapsible.materialize()>"Collapsible"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::Disclosure.materialize()>"Disclosure"</Link></TableCell>
                     </TableRow>
-                    <TableRow><TableCell>"Navigate between pages"</TableCell><TableCell><Link href=routes::doc::Link.materialize()>"Router / Link"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Navigate between pages"</TableCell><TableCell><Link href=routes::doc::Link.materialize()>"Link"</Link></TableCell></TableRow>
                     <TableRow>
                         <TableCell>"Choose a value from options"</TableCell>
                         <TableCell>
@@ -42,7 +42,7 @@ pub fn PageTabsOverview() -> impl IntoView {
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::tabs::Hook.materialize()>"Tab hooks"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></TableCell>
                         <TableCell>
                             "Behavior and ARIA attributes for a tab list, tabs and panels you render yourself: "
                             <Code inline=true>"use_tab_list_state"</Code>", "<Code inline=true>"use_tab_list"</Code>", "
@@ -50,7 +50,7 @@ pub fn PageTabsOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::tabs::Atom.materialize()>"Tab atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></TableCell>
                         <TableCell>
                             "Unstyled "<Code inline=true>"Tabs"</Code>", "<Code inline=true>"TabList"</Code>", "
                             <Code inline=true>"Tab"</Code>" and "<Code inline=true>"TabPanel"</Code>" built on the hooks, "
@@ -58,11 +58,11 @@ pub fn PageTabsOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::tabs::Component.materialize()>"Tabs component"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></TableCell>
                         <TableCell>
-                            "Themed tabs with a tab bar and panels. It predates the tab hooks and is not built on them: its "
-                            "tabs are mouse-only, without keyboard navigation, "<Code inline=true>"aria-selected"</Code>" or "
-                            "tab-to-panel references."
+                            "Themed tabs with a tab bar and panels, configured per tab with a name and a label. They predate "
+                            "the tab hooks and are not built on them: their tabs can only be selected with a pointer, without "
+                            "keyboard navigation, "<Code inline=true>"aria-selected"</Code>" or tab-to-panel references."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -71,7 +71,8 @@ pub fn PageTabsOverview() -> impl IntoView {
             <Section title="Quick Start">
                 <p>
                     "The atoms: a collection of tabs, a "<Code inline=true>"TabList"</Code>" with a "<Code inline=true>"Tab"</Code>
-                    " per tab and a "<Code inline=true>"TabPanel"</Code>" per tab. The classes come from the demo stylesheet."
+                    " per tab and a "<Code inline=true>"TabPanel"</Code>" per tab. The classes come from the demo stylesheet, "
+                    "which styles the tabs through their data attributes."
                 </p>
 
                 <Demo description="Tabbed content panels built with the tab atoms" source=include_str!("demos/tabs.rs") source_open=true>
@@ -82,7 +83,7 @@ pub fn PageTabsOverview() -> impl IntoView {
             <Section title="Accessibility">
                 <p>
                     "The tab hooks and atoms follow the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/tabs/" target=LinkTarget::_Blank>"Tabs pattern"</LinkExt>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/tabs/" target=LinkTarget::Blank>"Tabs pattern"</Link>
                     ":"
                 </p>
 
@@ -107,16 +108,26 @@ pub fn PageTabsOverview() -> impl IntoView {
                     <KeyRow keys="ArrowRight / ArrowLeft">
                         "Move to the next or previous enabled tab, wrapping around (mirrored in right-to-left locales)."
                     </KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move to the next or previous enabled tab (vertical tab lists)."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">
+                        "Move to the next or previous enabled tab (vertical tab lists, where the left and right arrows keep working)."
+                    </KeyRow>
                     <KeyRow keys="Home / End">"Move to the first or last enabled tab."</KeyRow>
                     <KeyRow keys="Enter / Space">"Select the focused tab (manual activation; otherwise moving selects)."</KeyRow>
                 </KeyboardTable>
 
                 <p>
-                    "The legacy "<Link href=routes::doc::tabs::Component.materialize()>"Tabs component"</Link>" renders the "
-                    "roles, but none of the keyboard interaction or the other attributes."
+                    "The "<Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link>" render the roles, but "
+                    "none of the keyboard interaction or the other attributes."
                 </p>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></li>
+                <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></li>
+                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
+                <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

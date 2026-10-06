@@ -7,9 +7,6 @@ edition = "2024"
 # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
 style-dir = "style"
 
-# REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory.
-js-dir = "public/js"
-
 [package.metadata.leptos]
 output-name = "leptonic-test-app"
 # `--cfg=erase_components` comes from the repository's `.cargo/config.toml` (identical flags for all builds).

@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/interactions/useMove.ts @ 6f664fe911
+// Upstream: react-aria/src/interactions/useMove.ts @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{
@@ -17,6 +17,7 @@ use crate::{
         i18n::use_direction,
         locale::WritingDirection,
         modifiers::{EventModifiers, Modifiers},
+        point::Point,
         pointer_type::PointerType,
         text_selection::{disable_text_selection, restore_text_selection},
     },
@@ -26,7 +27,7 @@ use crate::{
 
 // ## INTENTIONAL DEVIATIONS
 //
-// - `axis` constraint: Provided as a `Signal<Option<MoveAxis>>` on `UseMoveInput`
+// - `axis` constraint: Provided as a `Signal<MoveAxis>` on `UseMoveInput`
 //   so callers can dynamically lock movement to a single axis.
 //   React-aria does not have a built-in axis constraint on `useMove`.
 //
@@ -34,20 +35,19 @@ use crate::{
 //   position in page coordinates.
 //   React-aria's `MoveStartEvent` does not include position data.
 //
-// - Constrained movement system (`MoveConstraint` enum + associated
-//   `UseMoveInput` fields): Enables area-bounded movement within a container
-//   element, with normalized/pixel position tracking and container-click
-//   support. React-aria has no equivalent; this absorbs the leptonic-specific
-//   `use_move_within` hook.
+// - Constrained movement (`use_constrained_move(input, MoveConstraintOptions)`: the
+//   `MoveConstraint` mode, container clicks, the initial position and
+//   `on_position_change`): area-bounded movement within a container element,
+//   with normalized and pixel (`Point`) positions. React-aria has no
+//   equivalent; this absorbs the leptonic-specific `use_move_within` hook.
 //
 // - `NormalizedPosition` type: Typed wrapper for normalized [0.0, 1.0]
 //   coordinates, preventing accidental mixing with pixel or page coordinates.
 //   React-aria uses raw numbers.
 //
-// - `on_position_change` callback: Fires whenever the constrained normalized
-//   position changes (pointer drag, container click, keyboard, programmatic).
-//   Enables imperative sync without reactive Effects. React-aria has no
-//   equivalent.
+// - `MoveConstraintOptions::on_position_change`: fires whenever the constrained
+//   normalized position changes (pointer drag, container click, keyboard,
+//   programmatic), for imperative sync without reactive Effects.
 //
 // ## OMISSIONS
 //
@@ -118,8 +118,8 @@ pub struct UseMoveInput {
     /// Whether movement is disabled.
     pub is_disabled: Signal<bool>,
 
-    /// Optional axis constraint for movement. When `None`, movement is unrestricted.
-    pub axis: Signal<Option<MoveAxis>>,
+    /// The axes the element moves along. Default: [`MoveAxis::Both`].
+    pub axis: Signal<MoveAxis>,
 
     /// Callback fired when movement starts.
     pub on_move_start: Option<Callback<MoveStartEvent>>,
@@ -129,21 +129,44 @@ pub struct UseMoveInput {
 
     /// Callback fired when movement ends.
     pub on_move_end: Option<Callback<MoveEndEvent>>,
+}
 
-    /// Callback fired whenever the constrained normalized position changes.
-    /// Only active when `constraint` is `Some`.
-    pub on_position_change: Option<Callback<NormalizedPosition>>,
+impl Default for UseMoveInput {
+    /// Free movement in both axes, no callbacks.
+    fn default() -> Self {
+        Self {
+            is_disabled: Signal::stored(false),
+            axis: Signal::stored(MoveAxis::Both),
+            on_move_start: None,
+            on_move: None,
+            on_move_end: None,
+        }
+    }
+}
 
-    /// Optional constraint mode for area-bounded movement within a container.
-    pub constraint: Option<MoveConstraint>,
-
-    /// If true, clicking the container moves the element to that position.
-    /// Only active when `constraint` is `Some`.
+/// Area-bounded movement of the element within its container ([`use_constrained_move`]).
+#[derive(Clone, Copy)]
+pub struct MoveConstraintOptions {
+    /// Whether the element's center or its bounding box stays within the container.
+    pub mode: MoveConstraint,
+    /// Whether pressing the container moves the element to that position.
     pub allow_container_click: bool,
+    /// Where the element starts, normalized to the container.
+    pub initial_position: NormalizedPosition,
+    /// Called whenever the normalized position changes.
+    pub on_position_change: Option<Callback<NormalizedPosition>>,
+}
 
-    /// Initial normalized position for constrained movement.
-    /// Only active when `constraint` is `Some`.
-    pub initial_position: Option<NormalizedPosition>,
+impl MoveConstraintOptions {
+    /// Movement constrained by `mode`, starting at the top left, without container clicks.
+    pub fn new(mode: MoveConstraint) -> Self {
+        Self {
+            mode,
+            allow_container_click: false,
+            initial_position: NormalizedPosition::default(),
+            on_position_change: None,
+        }
+    }
 }
 
 pub struct UseMoveReturn {
@@ -152,9 +175,6 @@ pub struct UseMoveReturn {
 
     /// Whether the element is currently being moved.
     pub is_moving: Signal<bool>,
-
-    /// Constraint-related return values (present when `constraint` was configured).
-    pub constraint: Option<UseMoveConstraintReturn>,
 }
 
 /// Props from `use_move` that can be extracted and merged programmatically.
@@ -183,8 +203,14 @@ pub type UseMoveAttrs = (
     ElementCaptureAttr,
 );
 
-/// Return values specific to constrained movement.
-pub struct UseMoveConstraintReturn {
+/// Return value of [`use_constrained_move`].
+pub struct UseConstrainedMoveReturn {
+    /// Props for the movable element. Call `.into_attrs()` for view spreading.
+    pub props: UseMoveProps,
+
+    /// Whether the element is currently being moved.
+    pub is_moving: Signal<bool>,
+
     /// Props for the container element. Call `.into_attrs()` for view spreading.
     pub container_props: UseMoveContainerProps,
 
@@ -192,7 +218,7 @@ pub struct UseMoveConstraintReturn {
     pub normalized_position: Signal<NormalizedPosition>,
 
     /// Pixel position relative to the container.
-    pub pixel_position: Signal<(f64, f64)>,
+    pub pixel_position: Signal<Point>,
 
     /// Programmatically set normalized position.
     pub set_position: Callback<NormalizedPosition>,
@@ -236,20 +262,63 @@ struct MoveState {
 /// The pixel step size for keyboard-initiated movement.
 const KEYBOARD_STEP_PX: f64 = 1.0;
 
-/// # Panics
-///
-/// Panics if the current target of the pointer event is not available.
-#[allow(clippy::too_many_lines, clippy::similar_names)]
+/// The parts of constrained movement besides the movable element's.
+struct ConstraintParts {
+    container_props: UseMoveContainerProps,
+    normalized_position: Signal<NormalizedPosition>,
+    pixel_position: Signal<Point>,
+    set_position: Callback<NormalizedPosition>,
+}
+
+/// Moves an element by pointer drags and arrow keys, reporting the deltas (react-aria's
+/// `useMove`).
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
+    move_with(input, None).0
+}
+
+/// Moves an element within a container element ([`MoveConstraintOptions`]): the deltas as
+/// [`use_move`], plus its position in the container (normalized and in pixels), container presses
+/// and a programmatic setter.
+pub fn use_constrained_move(
+    input: UseMoveInput,
+    options: MoveConstraintOptions,
+) -> UseConstrainedMoveReturn {
+    let (UseMoveReturn { props, is_moving }, constraint) = move_with(input, Some(options));
+    let Some(ConstraintParts {
+        container_props,
+        normalized_position,
+        pixel_position,
+        set_position,
+    }) = constraint
+    else {
+        unreachable!("constraint options give the constraint's parts");
+    };
+    UseConstrainedMoveReturn {
+        props,
+        is_moving,
+        container_props,
+        normalized_position,
+        pixel_position,
+        set_position,
+    }
+}
+
+/// Movement, constrained to a container with `options` (whose parts it returns then).
+#[allow(clippy::too_many_lines, clippy::similar_names)]
+fn move_with(
+    input: UseMoveInput,
+    options: Option<MoveConstraintOptions>,
+) -> (UseMoveReturn, Option<ConstraintParts>) {
     #[cfg(feature = "ssr")]
     {
         let (is_moving, _) = signal(false);
         let movable_element = CapturedElement::new();
-        let constraint_return = input.constraint.map(|_| {
+        let _ = input;
+        let constraint_return = options.map(|options| {
             let container_element = CapturedElement::new();
-            let (normalized_position, _) = signal(input.initial_position.unwrap_or_default());
-            let (pixel_position, _) = signal((0.0, 0.0));
-            UseMoveConstraintReturn {
+            let (normalized_position, _) = signal(options.initial_position);
+            let (pixel_position, _) = signal(Point::default());
+            ConstraintParts {
                 container_props: UseMoveContainerProps {
                     element_capture: container_element.attr(),
                     on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
@@ -260,15 +329,17 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             }
         });
 
-        UseMoveReturn {
-            props: UseMoveProps {
-                on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
-                on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
-                element_capture: movable_element.attr(),
+        (
+            UseMoveReturn {
+                props: UseMoveProps {
+                    on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
+                    on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
+                    element_capture: movable_element.attr(),
+                },
+                is_moving: is_moving.into(),
             },
-            is_moving: is_moving.into(),
-            constraint: constraint_return,
-        }
+            constraint_return,
+        )
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -279,11 +350,11 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             on_move_start,
             on_move,
             on_move_end,
-            on_position_change,
-            constraint,
-            allow_container_click,
-            initial_position,
         } = input;
+        let constraint = options.map(|options| options.mode);
+        let allow_container_click = options.is_some_and(|options| options.allow_container_click);
+        let initial_position = options.map(|options| options.initial_position);
+        let on_position_change = options.and_then(|options| options.on_position_change);
 
         let constrain_center = matches!(constraint, Some(MoveConstraint::Center));
         // Right-to-left layouts mirror the horizontal axis of constrained positions.
@@ -303,7 +374,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         let constraint_state = constraint.map(|_| {
             let initial_pos = initial_position.unwrap_or_default();
             let (normalized_position, set_normalized_position) = signal(initial_pos);
-            let (pixel_position, set_pixel_position) = signal((0.0, 0.0));
+            let (pixel_position, set_pixel_position) = signal(Point::default());
             let container_element = CapturedElement::new();
 
             ConstraintState {
@@ -399,13 +470,13 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 // Apply axis constraints
                 let current_axis = axis.get_untracked();
                 match current_axis {
-                    Some(MoveAxis::Horizontal) => {
-                        pixel_y = pixel_position.get_untracked().1;
+                    MoveAxis::Horizontal => {
+                        pixel_y = pixel_position.get_untracked().y;
                     }
-                    Some(MoveAxis::Vertical) => {
-                        pixel_x = pixel_position.get_untracked().0;
+                    MoveAxis::Vertical => {
+                        pixel_x = pixel_position.get_untracked().x;
                     }
-                    _ => {}
+                    MoveAxis::Both => {}
                 }
 
                 // Clamp to available range
@@ -453,24 +524,25 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     let (old_x, old_y) = s.last_pos;
                     let (new_x, new_y) = (e.page_x(), e.page_y());
 
-                    s.moved = true;
                     s.last_pos = (new_x, new_y);
 
                     // Apply axis filtering.
                     let current_axis = axis.get_untracked();
                     let delta_x = match current_axis {
-                        Some(MoveAxis::Vertical) => 0.0,
+                        MoveAxis::Vertical => 0.0,
                         _ => new_x - old_x,
                     };
                     let delta_y = match current_axis {
-                        Some(MoveAxis::Horizontal) => 0.0,
+                        MoveAxis::Horizontal => 0.0,
                         _ => new_y - old_y,
                     };
 
-                    // Zero-delta filtering: skip if no actual movement occurred.
+                    // Zero-delta filtering: skip if no actual movement occurred. Only real movement
+                    // starts the move (react-aria's `didMove`).
                     if delta_x == 0.0 && delta_y == 0.0 {
                         return;
                     }
+                    s.moved = true;
 
                     let pt = s.pointer_type.clone();
 
@@ -493,7 +565,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                             calc(client_x, client_y, drag_offset)
                         {
                             cs.set_normalized_position.set(norm_pos);
-                            cs.set_pixel_position.set((pixel_x, pixel_y));
+                            cs.set_pixel_position.set(Point::new(pixel_x, pixel_y));
                             cs.last_pixel_pos.set_value((pixel_x, pixel_y));
                             if let Some(cb) = on_position_change {
                                 cb.run(norm_pos);
@@ -612,7 +684,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                             calc(client_x, client_y, drag_offset)
                     {
                         cs.set_normalized_position.set(norm_pos);
-                        cs.set_pixel_position.set((pixel_x, pixel_y));
+                        cs.set_pixel_position.set(Point::new(pixel_x, pixel_y));
                         cs.last_pixel_pos.set_value((pixel_x, pixel_y));
                         if let Some(cb) = on_position_change {
                             cb.run(norm_pos);
@@ -672,9 +744,9 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             // Apply axis filtering
             let current_axis = axis.get_untracked();
             match current_axis {
-                Some(MoveAxis::Vertical) => dx = 0.0,
-                Some(MoveAxis::Horizontal) => dy = 0.0,
-                _ => {}
+                MoveAxis::Vertical => dx = 0.0,
+                MoveAxis::Horizontal => dy = 0.0,
+                MoveAxis::Both => {}
             }
 
             // Zero-delta check after axis filtering
@@ -742,7 +814,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
 
                 if let Some((norm_pos, pixel_x, pixel_y)) = clamped {
                     cs.set_normalized_position.set(norm_pos);
-                    cs.set_pixel_position.set((pixel_x, pixel_y));
+                    cs.set_pixel_position.set(Point::new(pixel_x, pixel_y));
                     cs.last_pixel_pos.set_value((pixel_x, pixel_y));
                     if let Some(cb) = on_position_change {
                         cb.run(norm_pos);
@@ -786,53 +858,60 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             let set_normalized = cs.set_normalized_position;
             let set_pixel = cs.set_pixel_position;
             let last_pixel = cs.last_pixel_pos;
-            let set_position_callback = Callback::new(move |pos: NormalizedPosition| {
-                let norm_x = pos.x.clamp(0.0, 1.0);
-                let norm_y = pos.y.clamp(0.0, 1.0);
-                let norm_pos = NormalizedPosition {
-                    x: norm_x,
-                    y: norm_y,
-                };
-
-                if let Some((container_rect, movable_rect)) = container_element
+            // The pixel position of a normalized one, once both elements are mounted.
+            let pixel_for = move |norm_x: f64, norm_y: f64| {
+                let (container_rect, movable_rect) = container_element
                     .get_untracked()
                     .map(|e| e.get_bounding_client_rect())
                     .zip(
                         movable_element
                             .get_untracked()
                             .map(|e| e.get_bounding_client_rect()),
-                    )
-                {
-                    let container_width = container_rect.width();
-                    let container_height = container_rect.height();
-                    let movable_width = movable_rect.width();
-                    let movable_height = movable_rect.height();
-
-                    let (available_width, available_height) = if constrain_center {
-                        (container_width, container_height)
-                    } else {
-                        (
-                            (container_width - movable_width).max(0.0),
-                            (container_height - movable_height).max(0.0),
-                        )
-                    };
-
-                    let adjusted_norm_x = if is_rtl() { 1.0 - norm_x } else { norm_x };
-                    let pixel_x = adjusted_norm_x * available_width;
-                    let pixel_y = norm_y * available_height;
-
-                    set_normalized.set(norm_pos);
-                    set_pixel.set((pixel_x, pixel_y));
-                    last_pixel.set_value((pixel_x, pixel_y));
+                    )?;
+                let (available_width, available_height) = if constrain_center {
+                    (container_rect.width(), container_rect.height())
                 } else {
-                    set_normalized.set(norm_pos);
+                    (
+                        (container_rect.width() - movable_rect.width()).max(0.0),
+                        (container_rect.height() - movable_rect.height()).max(0.0),
+                    )
+                };
+                let adjusted_norm_x = if is_rtl() { 1.0 - norm_x } else { norm_x };
+                Some((adjusted_norm_x * available_width, norm_y * available_height))
+            };
+
+            // The pixel position starts at the initial position as soon as it can be measured.
+            let normalized = cs.normalized_position;
+            Effect::new(move |done: Option<bool>| {
+                if done == Some(true) {
+                    return true;
+                }
+                let _ = (container_element.get(), movable_element.get());
+                let pos = normalized.get_untracked();
+                let Some((pixel_x, pixel_y)) = pixel_for(pos.x, pos.y) else {
+                    return false;
+                };
+                set_pixel.set(Point::new(pixel_x, pixel_y));
+                last_pixel.set_value((pixel_x, pixel_y));
+                true
+            });
+
+            let set_position_callback = Callback::new(move |pos: NormalizedPosition| {
+                let norm_pos = NormalizedPosition {
+                    x: pos.x.clamp(0.0, 1.0),
+                    y: pos.y.clamp(0.0, 1.0),
+                };
+                set_normalized.set(norm_pos);
+                if let Some((pixel_x, pixel_y)) = pixel_for(norm_pos.x, norm_pos.y) {
+                    set_pixel.set(Point::new(pixel_x, pixel_y));
+                    last_pixel.set_value((pixel_x, pixel_y));
                 }
                 if let Some(cb) = on_position_change {
                     cb.run(norm_pos);
                 }
             });
 
-            UseMoveConstraintReturn {
+            ConstraintParts {
                 container_props: UseMoveContainerProps {
                     element_capture: container_element.attr(),
                     on_pointerdown: EventHandler::new(handle_container_pointer_down),
@@ -843,15 +922,17 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             }
         });
 
-        UseMoveReturn {
-            props: UseMoveProps {
-                on_pointerdown: EventHandler::new(handle_pointer_down),
-                on_keydown: EventHandler::new(handle_keydown),
-                element_capture: movable_element.attr(),
+        (
+            UseMoveReturn {
+                props: UseMoveProps {
+                    on_pointerdown: EventHandler::new(handle_pointer_down),
+                    on_keydown: EventHandler::new(handle_keydown),
+                    element_capture: movable_element.attr(),
+                },
+                is_moving: is_moving.into(),
             },
-            is_moving: is_moving.into(),
-            constraint: constraint_return,
-        }
+            constraint_return,
+        )
     }
 }
 
@@ -861,8 +942,8 @@ struct ConstraintState {
     constrain_center: bool,
     normalized_position: ReadSignal<NormalizedPosition>,
     set_normalized_position: WriteSignal<NormalizedPosition>,
-    pixel_position: ReadSignal<(f64, f64)>,
-    set_pixel_position: WriteSignal<(f64, f64)>,
+    pixel_position: ReadSignal<Point>,
+    set_pixel_position: WriteSignal<Point>,
     container_element: CapturedElement,
     drag_offset: StoredValue<(f64, f64), LocalStorage>,
     last_pixel_pos: StoredValue<(f64, f64), LocalStorage>,

@@ -17,8 +17,7 @@ use super::{
         UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
         ValidityStateSnapshot, use_form_validation_state,
     },
-    use_label::LabelElementType,
-    use_label::UseLabelProps,
+    use_label::{LabelElementType, UseLabelProps},
     use_text_field_state::TextFieldState,
 };
 use crate::{
@@ -202,7 +201,7 @@ pub struct UseTextFieldInput {
     /// The label element's id. Generated when `None`.
     pub label_id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -251,7 +250,7 @@ impl UseTextFieldInput {
             auto_focus: false,
             exclude_from_tab_order: false,
             label_id: None,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -311,7 +310,7 @@ pub struct UseTextFieldInputProps {
     pub inputmode: Option<&'static str>,
     pub enterkeyhint: Option<&'static str>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_required: Signal<Option<AriaRequired>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
@@ -349,7 +348,7 @@ pub type UseTextFieldInputAttrs = (
     ),
     (
         Attr<attr::AriaLabel, MaybeProp<String>>,
-        Attr<attr::AriaLabelledby, Option<String>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
         Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
@@ -412,7 +411,8 @@ impl IntoAttrs for UseTextFieldInputProps {
 ///
 /// ```ignore
 /// let state = use_text_field_state(UseTextFieldStateInput::default());
-/// let field = use_text_field(UseTextFieldInput { has_label: true, ..UseTextFieldInput::new(state) });
+/// let field =
+///     use_text_field(UseTextFieldInput { has_label: true.into(), ..UseTextFieldInput::new(state) });
 /// view! {
 ///     <label {..field.label_props.into_attrs()}>"Name"</label>
 ///     <input {..field.input_props.into_attrs()} />

@@ -1,24 +1,35 @@
-use leptonic::{components::prelude::*, utils::css::em};
+use std::collections::HashSet;
+
+use leptonic::{components::prelude::*, hooks::collections::Key, utils::css::em};
 use leptos::prelude::*;
 
 #[component]
 pub fn CollapsibleDemo() -> impl IntoView {
+    // App state: the open collapsibles, by `id`.
+    let open = RwSignal::new(HashSet::from([Key::from("shipping")]));
+
     view! {
-        <Collapsibles default_on_open=OnOpen::CloseOthers>
+        // An accordion: opening one collapsible closes the others.
+        <Collapsibles expanded_keys=open set_expanded_keys=open>
             <Stack spacing=em(0.6)>
-                <Collapsible open=true>
-                    <CollapsibleHeader slot>"Header 1"</CollapsibleHeader>
-                    <CollapsibleBody slot>"Opening this collapsible closes all others."</CollapsibleBody>
+                <Collapsible id="shipping">
+                    <CollapsibleHeader slot>"Shipping"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Orders ship within two working days."</CollapsibleBody>
                 </Collapsible>
-                <Collapsible>
-                    <CollapsibleHeader slot>"Header 2"</CollapsibleHeader>
-                    <CollapsibleBody slot>"Opening this collapsible closes all others."</CollapsibleBody>
+                <Collapsible id="returns">
+                    <CollapsibleHeader slot>"Returns"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Return anything within 30 days."</CollapsibleBody>
                 </Collapsible>
-                <Collapsible on_open=OnOpen::DoNothing>
-                    <CollapsibleHeader slot>"Header 3 \u{2014} OnOpen::DoNothing"</CollapsibleHeader>
-                    <CollapsibleBody slot>"Opening this collapsible leaves the others as they are."</CollapsibleBody>
+                <Collapsible id="warranty">
+                    <CollapsibleHeader slot>"Warranty"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Two years on all products."</CollapsibleBody>
                 </Collapsible>
             </Stack>
         </Collapsibles>
+
+        <p class="demo-status">
+            "Open: "
+            {move || open.get().iter().next().map_or_else(|| "none".to_owned(), ToString::to_string)}
+        </p>
     }
 }

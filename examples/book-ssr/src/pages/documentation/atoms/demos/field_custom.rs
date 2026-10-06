@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::field::{Description, FieldContext, FieldError, FieldLabelProps, Label, TextElement},
+    atoms::field::{Description, FieldContext, FieldError, Label, LabelContext, TextElement},
     hooks::{IntoAttrs, UseFieldInput, UseFieldReturn, ValidityStateSnapshot, use_field},
 };
 use leptos::{context::Provider, prelude::*};
@@ -15,8 +15,8 @@ fn validate(username: &str) -> Vec<String> {
     errors
 }
 
-/// A text field built from `use_field`. It provides a `FieldContext`, so the `Label`,
-/// `Description` and `FieldError` atoms inside it label and describe its input.
+/// A text field built from `use_field`. It provides a `LabelContext` and a `FieldContext`, so the
+/// `Label`, `Description` and `FieldError` atoms inside it label and describe its input.
 #[component]
 pub fn FieldCustomDemo() -> impl IntoView {
     let username = RwSignal::new("leptos".to_owned());
@@ -30,13 +30,13 @@ pub fn FieldCustomDemo() -> impl IntoView {
         error_message_props,
         ..
     } = use_field(UseFieldInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseFieldInput::default()
     });
 
+    // A `<label for=..>`: the input is a native form control.
+    let label = LabelContext::label(label_props);
     let field = FieldContext {
-        // A `<label for=..>`: the input is a native form control.
-        label: FieldLabelProps::label(label_props),
         description: description_props,
         error_message: error_message_props,
         is_invalid,
@@ -50,6 +50,7 @@ pub fn FieldCustomDemo() -> impl IntoView {
     };
 
     view! {
+        <Provider value=label>
         <Provider value=field>
             <div class="demo-field">
                 <Label classes="demo-field-label">"Username"</Label>
@@ -69,6 +70,7 @@ pub fn FieldCustomDemo() -> impl IntoView {
                     </ul>
                 </FieldError>
             </div>
+        </Provider>
         </Provider>
     }
 }

@@ -11,7 +11,7 @@ pub fn PageForms() -> impl IntoView {
         <DocPage title="Forms & Validation">
             <p>
                 "Leptonic\u{2019}s field hooks ("<Link href=routes::doc::text_field::Hook.materialize()>"text fields"</Link>", "
-                <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"number fields"</Link>", "
+                <Link href=routes::doc::number_field::Hook.materialize()>"number fields"</Link>", "
                 <Link href=routes::doc::checkbox::Hook.materialize()>"checkboxes"</Link>", "
                 <Link href=routes::doc::radio::Hook.materialize()>"radio groups"</Link>", "
                 <Link href=routes::doc::switch::Hook.materialize()>"switches"</Link>", \u{2026}) work inside native "
@@ -22,16 +22,18 @@ pub fn PageForms() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "Both fields are required. The username shows errors as you type; the email field waits for submission and "
-                    "uses the browser\u{2019}s constraint validation (try submitting an invalid address). \u{201c}Simulate server "
-                    "error\u{201d} reports an error for the username field, as a server action would."
+                    "A "<Link href=routes::doc::Form.materialize()>"Form"</Link>" atom with two "
+                    <Link href=routes::doc::text_field::Component.materialize()>"TextField"</Link>"s, both required. The "
+                    "username shows errors as you type; the email field waits for submission and uses the browser\u{2019}s "
+                    "constraint validation (try submitting an invalid address). \u{201c}Simulate server error\u{201d} "
+                    "reports an error for the username field, as a server action would; it shows until the value changes."
                 </p>
                 <Demo description="Form with realtime and native validation, server errors and reset" source=include_str!("demos/forms.rs")>
                     <FormsDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Validating a field">
+            <Section title="Validating a Field">
                 <p>
                     "Field hooks take a "<Code inline=true>"validate"</Code>" function: "<Code inline=true>"Ok(())"</Code>
                     " for a valid value, "<Code inline=true>"Err(messages)"</Code>" otherwise. The native constraints ("
@@ -40,10 +42,15 @@ pub fn PageForms() -> impl IntoView {
                     <Code inline=true>"is_invalid"</Code>" and "<Code inline=true>"validation_errors"</Code>", set "
                     <Code inline=true>"aria-invalid"</Code>", and reference the error message element ("
                     <Code inline=true>"error_message_props"</Code>") while you render it. Field atoms show the errors with a "
-                    <Link href=routes::doc::atoms::Field.materialize()>"FieldError"</Link>"."
+                    <Link href=routes::doc::field::Atom.materialize()>"FieldError"</Link>"."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use std::sync::Arc;
+
+                        use leptonic::hooks::*;
+
+                        let state = use_text_field_state(UseTextFieldStateInput::default());
                         let field = use_text_field(UseTextFieldInput {
                             name: Some("username".to_owned()),
                             is_required: true.into(),
@@ -56,10 +63,10 @@ pub fn PageForms() -> impl IntoView {
                 </Code>
             </Section>
 
-            <Section title="Validation behavior">
+            <Section title="Validation Behavior">
                 <p>
                     "The field hooks default to "<Code inline=true>"Aria"</Code>". The field atoms default to the behavior of "
-                    "the surrounding "<Link href=routes::doc::atoms::Form.materialize()>"Form"</Link>" atom, else "
+                    "the surrounding "<Link href=routes::doc::Form.materialize()>"Form"</Link>" atom, else "
                     <Code inline=true>"Native"</Code>", which also moves focus to the first invalid field on submission."
                 </p>
                 <DocTable headers=&["ValidationBehavior", "Errors are shown"]>
@@ -82,7 +89,7 @@ pub fn PageForms() -> impl IntoView {
                 </DocTable>
             </Section>
 
-            <Section title="Validation sources">
+            <Section title="Validation Sources">
                 <p>"A field combines several sources; the first one reporting a result wins:"</p>
                 <ol>
                     <li>
@@ -95,14 +102,18 @@ pub fn PageForms() -> impl IntoView {
                 </ol>
             </Section>
 
-            <Section title="Server errors">
+            <Section title="Server Errors">
                 <p>
                     "Provide a "<Code inline=true>"FormValidationContext"</Code>" around the form and fill it with the errors a "
-                    "server action returned, keyed by field name (the "<Link href=routes::doc::atoms::Form.materialize()>"Form"</Link>
+                    "server action returned, keyed by field name (the "<Link href=routes::doc::Form.materialize()>"Form"</Link>
                     " atom does this for its "<Code inline=true>"validation_errors"</Code>"):"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use std::collections::HashMap;
+
+                        use leptonic::hooks::FormValidationContext;
+
                         let errors = RwSignal::new(HashMap::<String, Vec<String>>::new());
 
                         view! {
@@ -117,14 +128,14 @@ pub fn PageForms() -> impl IntoView {
                 </Code>
             </Section>
 
-            <Section title="Form reset">
+            <Section title="Form Reset">
                 <p>
                     "When a form is reset, every field restores its initial value (e.g. "<Code inline=true>"default_value"</Code>
                     " of "<Code inline=true>"use_text_field_state"</Code>") and its displayed validation."
                 </p>
             </Section>
 
-            <Section title="Building your own fields">
+            <Section title="Building Your Own Fields">
                 <p>"The field hooks are built from three hooks, which you can use for fields of your own:"</p>
                 <DocTable headers=&["Hook", "Purpose"]>
                     <TableRow>

@@ -1,382 +1,555 @@
-// Upstream: react-stately/src/slider/useSliderState.ts @ 6f664fe911
+// Upstream: react-stately/src/slider/useSliderState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::{
-    hooks::slider::ThumbIdx,
-    utils::{
-        math::{calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step},
-        orientation::Orientation,
-    },
+use crate::utils::{
+    ValueBinding,
+    i18n::{Locale, use_locale},
+    list_formatter::{ListFormatOptions, ListFormatType, ListFormatter},
+    number_formatter::{NumberFormatOptions, NumberFormatter, use_number_formatter},
+    number_value::NumberValue,
+    orientation::Orientation,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Generic over the value type (`NumberValue`: integers or floats), as the number field (C15).
+// - Hook-owned values (C4): `default_values` + `on_change`, or `value` bound to app state.
+// - `min_value`, `max_value` and `step` are signals; the number format is `NumberFormatOptions`
+//   with the locale from the i18n context.
+// - A `Copy` struct with methods (C3); thumbs are addressed by `usize` index.
 //
+// ## DIFFERENT BEHAVIOR
+// - Two values are formatted "a – b" (react-aria: `Intl.NumberFormat.formatRange`, which ICU4X
+//   lacks); more as a list of units, as react-aria.
+//
+// =============================================================================
 
-/// Specifies how slider values are managed.
-#[derive(Clone)]
-pub enum SliderValues {
-    /// Uncontrolled mode: the hook manages state internally, initialized with these values.
-    Uncontrolled(Vec<f64>),
-    /// Controlled mode: an external signal is the source of truth.
-    Controlled(Signal<Vec<f64>>),
-}
-
-/// Input parameters for creating slider state.
-#[derive(Clone)]
-pub struct UseSliderStateInput {
-    /// How the slider values are managed (uncontrolled or controlled).
-    pub values: SliderValues,
-
-    /// The minimum value of the slider.
-    pub min_value: f64,
-
-    /// The maximum value of the slider.
-    pub max_value: f64,
-
-    /// The step increment. When `None`, the slider operates in continuous mode.
-    pub step: Option<f64>,
-
-    /// Whether the slider is disabled.
+/// Input of [`use_slider_state`]. Start from [`UseSliderStateInput::new`].
+#[derive(Debug, Clone)]
+pub struct UseSliderStateInput<T: NumberValue> {
+    /// The initial values, one per thumb, in ascending order. Default: one thumb at
+    /// `min_value`.
+    pub default_values: Option<Vec<T>>,
+    /// The values as app state, replacing `default_values`.
+    pub value: Option<ValueBinding<Vec<T>>>,
+    pub min_value: Signal<T>,
+    pub max_value: Signal<T>,
+    /// The step between values. Default: 1.
+    pub step: Signal<T>,
     pub is_disabled: Signal<bool>,
-
-    /// The current orientation of the slider.
     pub orientation: Signal<Orientation>,
-
-    /// Callback fired when any value changes during interaction.
-    pub on_change: Option<Callback<Vec<f64>>>,
-
-    /// Callback fired when the user finishes dragging (all thumbs released).
-    pub on_change_end: Option<Callback<Vec<f64>>>,
+    /// How values are formatted for assistive technology and outputs.
+    pub format_options: Signal<NumberFormatOptions>,
+    /// Formats a thumb's value for assistive technology instead of `format_options` (e.g. a
+    /// color channel's value).
+    pub value_label: Option<Callback<T, String>>,
+    /// The step of PageUp/PageDown. Default: a tenth of the range (a multiple of the step).
+    pub page_size: Option<Signal<T>>,
+    /// Called with the values whenever they change, also while dragging.
+    pub on_change: Option<Callback<Vec<T>>>,
+    /// Called with the values when the user stops dragging (or after a keyboard change).
+    pub on_change_end: Option<Callback<Vec<T>>>,
 }
 
-/// State for managing multi-thumb slider values.
+impl<T: NumberValue> UseSliderStateInput<T> {
+    /// A slider from `min_value` to `max_value` in steps of 1.
+    pub fn new(min_value: T, max_value: T) -> Self {
+        Self {
+            default_values: None,
+            value: None,
+            min_value: Signal::stored(min_value),
+            max_value: Signal::stored(max_value),
+            step: Signal::stored(T::ONE),
+            is_disabled: Signal::default(),
+            orientation: Signal::stored(Orientation::Horizontal),
+            format_options: Signal::default(),
+            value_label: None,
+            page_size: None,
+            on_change: None,
+            on_change_end: None,
+        }
+    }
+}
+
+/// The state of a slider with one or more thumbs.
 #[derive(Debug, Clone, Copy)]
-pub struct UseSliderStateReturn {
+pub struct SliderState<T: NumberValue> {
+    /// The thumbs' values, in ascending order.
+    pub values: Signal<Vec<T>>,
+    /// The smallest value of the range.
+    pub min_value: Signal<T>,
+    /// The largest value of the range.
+    pub max_value: Signal<T>,
+    /// The step between values.
+    pub step: Signal<T>,
     /// Whether the slider is disabled.
     pub is_disabled: Signal<bool>,
-
-    /// The current orientation of the slider.
+    /// The axis of the track.
     pub orientation: Signal<Orientation>,
+    /// The thumb with focus.
+    pub focused_thumb: Signal<Option<usize>>,
+    binding: ValueBinding<Vec<T>>,
+    default_values: StoredValue<Vec<T>>,
+    /// The values as last set: dragging sets several times before the binding has updated.
+    latest: StoredValue<Vec<T>>,
+    dragging: RwSignal<Vec<bool>>,
+    set_focused_thumb: WriteSignal<Option<usize>>,
+    editable: StoredValue<Vec<bool>>,
+    formatting: Memo<NumberFormatter>,
+    locale: Signal<Locale>,
+    value_label: Option<Callback<T, String>>,
+    page_size_override: Option<Signal<T>>,
+    on_change_end: Option<Callback<Vec<T>>>,
+}
 
-    /// The current values of all thumbs.
-    pub values: Signal<Vec<f64>>,
+#[derive(Debug, Clone, Copy)]
+enum StepDirection {
+    Up,
+    Down,
+}
 
-    /// Get the value of a specific thumb.
-    pub get_thumb_value: Callback<ThumbIdx, f64>,
-
-    /// Set the value of a specific thumb.
-    pub set_thumb_value: Callback<(ThumbIdx, f64)>,
-
-    /// Set a thumb's value as a percentage (0.0-1.0).
-    pub set_thumb_percent: Callback<(ThumbIdx, f64)>,
-
-    /// Get a thumb's value as a percentage (0.0-1.0).
-    pub get_thumb_percent: Callback<ThumbIdx, f64>,
-
-    /// Get the minimum allowed value for a thumb (constrained by previous thumb).
-    pub get_thumb_min_value: Callback<ThumbIdx, f64>,
-
-    /// Get the maximum allowed value for a thumb (constrained by next thumb).
-    pub get_thumb_max_value: Callback<ThumbIdx, f64>,
-
-    /// Increment a thumb's value. Optional `step_size` for Shift+Arrow.
-    pub increment_thumb: Callback<(ThumbIdx, Option<f64>)>,
-
-    /// Decrement a thumb's value. Optional `step_size` for Shift+Arrow.
-    pub decrement_thumb: Callback<(ThumbIdx, Option<f64>)>,
-
-    /// Check if a specific thumb is being dragged.
-    pub is_thumb_dragging: Callback<ThumbIdx, bool>,
-
-    /// Set the dragging state for a specific thumb.
-    pub set_thumb_dragging: Callback<(ThumbIdx, bool)>,
-
-    /// The currently focused thumb index (if any).
-    pub focused_thumb: Signal<Option<ThumbIdx>>,
-
-    /// Set which thumb is focused.
-    pub set_focused_thumb: Callback<Option<ThumbIdx>>,
-
-    /// The step value (`None` for continuous mode).
-    pub step: Option<f64>,
-
-    /// The page size for PageUp/PageDown and Shift+Arrow.
-    pub page_size: f64,
-
-    /// The minimum value.
-    pub min_value: f64,
-
-    /// The maximum value.
-    pub max_value: f64,
-
+impl<T: NumberValue> SliderState<T> {
     /// The number of thumbs.
-    pub num_thumbs: usize,
+    pub fn thumb_count(&self) -> usize {
+        self.values.with(Vec::len)
+    }
 
-    /// Convert any value to a percentage (0.0-1.0).
-    pub get_value_percent: Callback<f64, f64>,
+    /// The value of thumb `index` (tracked).
+    pub fn thumb_value(&self, index: usize) -> T {
+        self.values.with(|values| values[index])
+    }
 
-    /// Convert a percentage (0.0-1.0) to a value.
-    pub get_percent_value: Callback<f64, f64>,
+    /// The values the slider started with (for form resets).
+    pub fn default_values(&self) -> Vec<T> {
+        self.default_values.get_value()
+    }
 
-    /// Check if a specific thumb is editable.
-    pub is_thumb_editable: Callback<ThumbIdx, bool>,
+    /// The smallest value thumb `index` can take: the previous thumb's value or `min_value`.
+    pub fn thumb_min_value(&self, index: usize) -> T {
+        if index == 0 {
+            self.min_value.get()
+        } else {
+            self.values.with(|values| values[index - 1])
+        }
+    }
 
-    /// Set whether a specific thumb is editable.
-    pub set_thumb_editable: Callback<(ThumbIdx, bool)>,
+    /// The largest value thumb `index` can take: the next thumb's value or `max_value`.
+    pub fn thumb_max_value(&self, index: usize) -> T {
+        self.values.with(|values| {
+            if index + 1 >= values.len() {
+                self.max_value.get()
+            } else {
+                values[index + 1]
+            }
+        })
+    }
+
+    /// Sets thumb `index` to `value`, snapped to the step and kept between its neighbors.
+    /// Ignored while the slider is disabled or the thumb isn't editable.
+    pub fn set_thumb_value(&self, index: usize, value: T) {
+        if self.is_disabled.get_untracked() || !self.is_thumb_editable(index) {
+            return;
+        }
+        let (min, max) = untrack(|| (self.thumb_min_value(index), self.thumb_max_value(index)));
+        let value = value.snap_to_step(Some(min), Some(max), self.step.get_untracked());
+        // While dragging, the binding may not have caught up with the last set values yet;
+        // otherwise it holds the current values (also after changes by the app).
+        let mut values = if self
+            .dragging
+            .with_untracked(|d| d.iter().any(|dragging| *dragging))
+        {
+            self.latest.get_value()
+        } else {
+            self.values.get_untracked()
+        };
+        if values.get(index) == Some(&value) {
+            return;
+        }
+        values[index] = value;
+        self.latest.set_value(values.clone());
+        self.binding.set(values);
+    }
+
+    /// Sets thumb `index` to the value at `percent` (0.0 to 1.0) of the range.
+    pub fn set_thumb_percent(&self, index: usize, percent: f64) {
+        if let Some(value) = untrack(|| self.percent_value(percent)) {
+            self.set_thumb_value(index, value);
+        }
+    }
+
+    /// Where thumb `index` is in the range, from 0.0 to 1.0 (tracked).
+    pub fn thumb_percent(&self, index: usize) -> f64 {
+        self.value_percent(self.thumb_value(index))
+    }
+
+    /// Where `value` is in the range, from 0.0 to 1.0 (tracked).
+    pub fn value_percent(&self, value: T) -> f64 {
+        let min = self.min_value.get().to_f64();
+        let max = self.max_value.get().to_f64();
+        if max == min {
+            return 0.0;
+        }
+        (value.to_f64() - min) / (max - min)
+    }
+
+    /// The value at `percent` (0.0 to 1.0) of the range, rounded to the step (tracked).
+    pub fn percent_value(&self, percent: f64) -> Option<T> {
+        let min = self.min_value.get();
+        let max = self.max_value.get();
+        let step = self.step.get();
+        let (min_f, max_f, step_f) = (min.to_f64(), max.to_f64(), step.to_f64());
+        let value = percent.mul_add(max_f - min_f, min_f);
+        let rounded = if step_f > 0.0 {
+            ((value - min_f) / step_f).round().mul_add(step_f, min_f)
+        } else {
+            value
+        };
+        T::from_f64(rounded.clamp(min_f.min(max_f), max_f.max(min_f)))
+            .map(|value| value.snap_to_step(Some(min), Some(max), step))
+    }
+
+    /// Whether thumb `index` is being dragged (tracked).
+    pub fn is_thumb_dragging(&self, index: usize) -> bool {
+        self.dragging
+            .with(|dragging| dragging.get(index).copied().unwrap_or(false))
+    }
+
+    /// Starts or ends dragging thumb `index`. When the last thumb stops being dragged,
+    /// `on_change_end` is called.
+    pub fn set_thumb_dragging(&self, index: usize, dragging: bool) {
+        if self.is_disabled.get_untracked() || !self.is_thumb_editable(index) {
+            return;
+        }
+        if dragging {
+            self.latest.set_value(self.values.get_untracked());
+        }
+        let was_dragging = self
+            .dragging
+            .with_untracked(|d| d.get(index).copied().unwrap_or(false));
+        self.dragging.update(|d| {
+            if d.len() <= index {
+                d.resize(index + 1, false);
+            }
+            d[index] = dragging;
+        });
+        if was_dragging
+            && !self
+                .dragging
+                .with_untracked(|d| d.iter().any(|dragging| *dragging))
+            && let Some(on_change_end) = self.on_change_end
+        {
+            on_change_end.run(self.latest.get_value());
+        }
+    }
+
+    pub fn set_focused_thumb(&self, index: Option<usize>) {
+        self.set_focused_thumb.set(index);
+    }
+
+    /// Whether thumb `index` can be changed.
+    pub fn is_thumb_editable(&self, index: usize) -> bool {
+        self.editable
+            .with_value(|editable| editable.get(index).copied().unwrap_or(true))
+    }
+
+    /// Makes thumb `index` (not) changeable (a disabled thumb).
+    pub fn set_thumb_editable(&self, index: usize, editable: bool) {
+        self.editable.update_value(|e| {
+            if e.len() <= index {
+                e.resize(index + 1, true);
+            }
+            e[index] = editable;
+        });
+    }
+
+    /// Increases thumb `index` by `step_size` (at least the step).
+    pub fn increment_thumb(&self, index: usize, step_size: Option<T>) {
+        self.step_thumb(index, step_size, StepDirection::Up);
+    }
+
+    /// Decreases thumb `index` by `step_size` (at least the step).
+    pub fn decrement_thumb(&self, index: usize, step_size: Option<T>) {
+        self.step_thumb(index, step_size, StepDirection::Down);
+    }
+
+    fn step_thumb(&self, index: usize, step_size: Option<T>, direction: StepDirection) {
+        let (step, min, max, value) = untrack(|| {
+            (
+                self.step.get(),
+                self.min_value.get(),
+                self.max_value.get(),
+                self.thumb_value(index),
+            )
+        });
+        let size = step_size.map_or(step, |size| {
+            if size.to_f64() > step.to_f64() {
+                size
+            } else {
+                step
+            }
+        });
+        // Beyond the type's bounds: the range's end.
+        let target = match direction {
+            StepDirection::Up => value.checked_add(size).unwrap_or(max),
+            StepDirection::Down => value.checked_sub(size).unwrap_or(min),
+        };
+        self.set_thumb_value(index, target.snap_to_step(Some(min), Some(max), step));
+    }
+
+    /// The step of PageUp/PageDown: a tenth of the range, a multiple of the step, at least the
+    /// step (tracked).
+    pub fn page_size(&self) -> T {
+        if let Some(page_size) = self.page_size_override {
+            return page_size.get();
+        }
+        let step = self.step.get();
+        let range = self.max_value.get().to_f64() - self.min_value.get().to_f64();
+        let step_f = step.to_f64();
+        let page = range / 10.0;
+        let page = if step_f > 0.0 {
+            (page / step_f).round() * step_f
+        } else {
+            page
+        };
+        T::from_f64(page.max(step_f)).map_or(step, |page| page.snap_to_step(Some(step), None, step))
+    }
+
+    /// The formatted value of thumb `index`, for `aria-valuetext` (tracked).
+    pub fn thumb_value_label(&self, index: usize) -> String {
+        let value = self.thumb_value(index);
+        match self.value_label {
+            Some(value_label) => value_label.run(value),
+            None => self.format_value(value),
+        }
+    }
+
+    /// `value` formatted with the slider's format options (tracked).
+    pub fn format_value(&self, value: T) -> String {
+        self.formatting.with(|f| f.format(value))
+    }
+
+    /// All values formatted, for an output: one value, "a – b", or a list (tracked).
+    pub fn formatted_values(&self) -> String {
+        self.values.with(|values| {
+            self.formatting.with(|number| match values.as_slice() {
+                [] => String::new(),
+                [value] => number.format(*value),
+                [start, end] => {
+                    format!("{} \u{2013} {}", number.format(*start), number.format(*end))
+                }
+                values => {
+                    let formatted: Vec<String> = values.iter().map(|v| number.format(*v)).collect();
+                    let parts: Vec<&str> = formatted.iter().map(String::as_str).collect();
+                    // Rare (three or more thumbs): created when needed, it isn't `Send`.
+                    let list = ListFormatter::new(
+                        &self.locale.get(),
+                        &ListFormatOptions {
+                            r#type: ListFormatType::Unit,
+                            ..ListFormatOptions::default()
+                        },
+                    );
+                    list.format(&parts)
+                }
+            })
+        })
+    }
 }
 
-/// Clamp a value within a range without step snapping (continuous mode).
-/// Handles reversed ranges where `min > max`.
-fn clamp_value(value: f64, min: f64, max: f64) -> f64 {
-    let lower = f64::min(min, max);
-    let upper = f64::max(min, max);
-    value.clamp(lower, upper)
-}
-
-/// Internal representation of slider state ownership.
-#[derive(Clone, Copy)]
-enum InternalState {
-    Uncontrolled {
-        read: ReadSignal<Vec<f64>>,
-        write: WriteSignal<Vec<f64>>,
-    },
-    Controlled,
-}
-
-/// Creates sharable state for a multi-thumb slider component.
-#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
-pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
+/// Manages the values of a slider with one or more thumbs.
+pub fn use_slider_state<T: NumberValue>(input: UseSliderStateInput<T>) -> SliderState<T> {
     let UseSliderStateInput {
-        values,
+        default_values,
+        value,
         min_value,
         max_value,
         step,
-        is_disabled: disabled,
+        is_disabled,
         orientation,
+        format_options,
+        value_label,
+        page_size,
         on_change,
         on_change_end,
     } = input;
 
-    // Precompute precision once to avoid repeated string allocations
-    let precision = step.map(decimal_precision);
-
-    let (num_thumbs, state, values) = match values {
-        SliderValues::Uncontrolled(defaults) => {
-            let mut processed: Vec<f64> = defaults
-                .iter()
-                .map(|v| match (step, precision) {
-                    (Some(s), Some(p)) => snap_value_to_step(*v, min_value, max_value, s, p),
-                    _ => clamp_value(*v, min_value, max_value),
-                })
-                .collect();
-            processed.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-            let num = processed.len();
-            let (read, write) = signal(processed);
-            let values: Signal<Vec<f64>> = read.into();
-            (num, InternalState::Uncontrolled { read, write }, values)
-        }
-        SliderValues::Controlled(ext) => {
-            let num = ext.with_untracked(Vec::len);
-            (num, InternalState::Controlled, ext)
-        }
-    };
-
-    let (dragging_thumbs, set_dragging_thumbs) = signal(vec![false; num_thumbs]);
-    let (focused_thumb, set_focused_thumb) = signal(Option::<usize>::None);
-    let (editable_thumbs, set_editable_thumbs) = signal(vec![true; num_thumbs]);
-
-    // Page size: use step-based calculation when step is present, else 10% of range.
-    let page_size = match step {
-        Some(s) => calculate_page_size(min_value, max_value, s),
-        None => (max_value - min_value) / 10.0,
-    };
-
-    // Default keyboard increment: step if present, else 1% of range.
-    let default_increment = match step {
-        Some(s) => s,
-        None => (max_value - min_value) / 100.0,
-    };
-
-    // Helper to constrain a value for the given thumb index.
-    let constrain_value = move |index: usize, new_value: f64| -> f64 {
-        let vals = values.get_untracked();
-
-        let thumb_min = if index == 0 {
-            min_value
-        } else {
-            vals.get(index - 1).copied().unwrap_or(min_value)
-        };
-        let thumb_max = if index >= vals.len() - 1 {
-            max_value
-        } else {
-            vals.get(index + 1).copied().unwrap_or(max_value)
-        };
-
-        match (step, precision) {
-            (Some(s), Some(p)) => snap_value_to_step(new_value, thumb_min, thumb_max, s, p),
-            _ => clamp_value(new_value, thumb_min, thumb_max),
-        }
-    };
-
-    // Helper to set a thumb's value with constraints
-    let update_thumb_value = move |index: usize, new_value: f64| {
-        if disabled.get_untracked() {
-            return;
-        }
-
-        let snapped = constrain_value(index, new_value);
-
-        match state {
-            InternalState::Uncontrolled { read, write } => {
-                write.update(|vals| {
-                    if let Some(v) = vals.get_mut(index) {
-                        *v = snapped;
-                    }
-                });
-                if let Some(on_change) = on_change {
-                    on_change.run(read.get_untracked());
-                }
-            }
-            InternalState::Controlled => {
-                if let Some(on_change) = on_change {
-                    let mut new_vals = values.get_untracked();
-                    if let Some(v) = new_vals.get_mut(index) {
-                        *v = snapped;
-                    }
-                    on_change.run(new_vals);
-                }
-            }
-        }
-    };
-
-    // Check if all thumbs have stopped dragging for on_change_end
-    let check_change_end = move || {
-        if let Some(on_change_end) = on_change_end
-            && dragging_thumbs.get_untracked().iter().all(|d| !d)
-        {
-            on_change_end.run(values.get_untracked());
-        }
-    };
-
-    UseSliderStateReturn {
-        is_disabled: disabled,
-        orientation,
-        values,
-        get_thumb_value: Callback::new(move |index: usize| {
-            values
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(min_value)
-        }),
-        set_thumb_value: Callback::new(move |(index, value): (usize, f64)| {
-            update_thumb_value(index, value);
-        }),
-        set_thumb_percent: Callback::new(move |(index, percent): (usize, f64)| {
-            let range = max_value - min_value;
-            let new_value = min_value + percent.clamp(0.0, 1.0) * range;
-            update_thumb_value(index, new_value);
-        }),
-        get_thumb_percent: Callback::new(move |index: usize| {
-            let val = values
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(min_value);
-            percentage_in_range(min_value, max_value, val)
-        }),
-        get_thumb_min_value: Callback::new(move |index: usize| {
-            if index == 0 {
-                min_value
+    // Each value is snapped to the step, between its neighbors (react-stately's
+    // `restrictValues`).
+    let restrict = move |values: Vec<T>| -> Vec<T> {
+        let (min, max, step) = (
+            min_value.get_untracked(),
+            max_value.get_untracked(),
+            step.get_untracked(),
+        );
+        let mut restricted: Vec<T> = values.clone();
+        for index in 0..values.len() {
+            let lower = if index == 0 { min } else { values[index - 1] };
+            let upper = if index + 1 == values.len() {
+                max
             } else {
-                values
-                    .get_untracked()
-                    .get(index - 1)
-                    .copied()
-                    .unwrap_or(min_value)
-            }
-        }),
-        get_thumb_max_value: Callback::new(move |index: usize| {
-            let vals = values.get_untracked();
-            if index >= vals.len() - 1 {
-                max_value
-            } else {
-                vals.get(index + 1).copied().unwrap_or(max_value)
-            }
-        }),
-        increment_thumb: Callback::new(move |(index, step_size): (usize, Option<f64>)| {
-            let current = values
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(min_value);
-            let increment = step_size.unwrap_or(default_increment);
-            update_thumb_value(index, current + increment);
-        }),
-        decrement_thumb: Callback::new(move |(index, step_size): (usize, Option<f64>)| {
-            let current = values
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(min_value);
-            let decrement = step_size.unwrap_or(default_increment);
-            update_thumb_value(index, current - decrement);
-        }),
-        is_thumb_dragging: Callback::new(move |index: usize| {
-            dragging_thumbs
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(false)
-        }),
-        set_thumb_dragging: Callback::new(move |(index, dragging): (usize, bool)| {
-            if disabled.get_untracked() {
-                return;
-            }
+                values[index + 1]
+            };
+            restricted[index] = values[index].snap_to_step(Some(lower), Some(upper), step);
+        }
+        restricted
+    };
 
-            set_dragging_thumbs.update(|thumbs| {
-                if let Some(t) = thumbs.get_mut(index) {
-                    *t = dragging;
-                }
-            });
-            if !dragging {
-                check_change_end();
+    // The values a form reset restores: `default_values`, else the initial bound values (as
+    // upstream's `initialValues`), else the minimum.
+    let defaults = match (default_values, value) {
+        (Some(default_values), _) => restrict(default_values),
+        (None, Some(value)) => value.value.get_untracked(),
+        (None, None) => vec![min_value.get_untracked()],
+    };
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(defaults.clone())));
+    let initial = binding.value.get_untracked();
+    let thumbs = initial.len();
+    let latest = StoredValue::new(initial);
+    let binding = ValueBinding::new(
+        binding.value,
+        Callback::new(move |values: Vec<T>| {
+            binding.set(values.clone());
+            if let Some(on_change) = on_change {
+                on_change.run(values);
             }
         }),
-        focused_thumb: focused_thumb.into(),
-        set_focused_thumb: Callback::new(move |thumb: Option<usize>| {
-            set_focused_thumb.set(thumb);
-        }),
-        step,
-        page_size,
+    );
+
+    let locale = use_locale();
+    let formatting = use_number_formatter(format_options);
+
+    let (focused_thumb, set_focused_thumb) = signal(None);
+    SliderState {
+        values: binding.value,
         min_value,
         max_value,
-        num_thumbs,
-        get_value_percent: Callback::new(move |value: f64| {
-            percentage_in_range(min_value, max_value, value).clamp(0.0, 1.0)
-        }),
-        get_percent_value: Callback::new(move |percent: f64| {
-            let clamped = percent.clamp(0.0, 1.0);
-            let raw_value = min_value + clamped * (max_value - min_value);
-            match (step, precision) {
-                (Some(s), Some(p)) => snap_value_to_step(raw_value, min_value, max_value, s, p),
-                _ => clamp_value(raw_value, min_value, max_value),
-            }
-        }),
-        is_thumb_editable: Callback::new(move |index: usize| {
-            editable_thumbs
-                .get_untracked()
-                .get(index)
-                .copied()
-                .unwrap_or(true)
-        }),
-        set_thumb_editable: Callback::new(move |(index, editable): (usize, bool)| {
-            set_editable_thumbs.update(|thumbs| {
-                if let Some(t) = thumbs.get_mut(index) {
-                    *t = editable;
-                }
+        step,
+        is_disabled,
+        orientation,
+        focused_thumb: focused_thumb.into(),
+        binding,
+        default_values: StoredValue::new(defaults),
+        latest,
+        dragging: RwSignal::new(vec![false; thumbs]),
+        set_focused_thumb,
+        editable: StoredValue::new(vec![true; thumbs]),
+        formatting,
+        locale,
+        value_label,
+        page_size_override: page_size,
+        on_change_end,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    fn state<T: NumberValue>(input: UseSliderStateInput<T>) -> SliderState<T> {
+        use_slider_state(input)
+    }
+
+    #[test]
+    fn snaps_and_clamps_values() {
+        Owner::new().with(|| {
+            let slider = state(UseSliderStateInput {
+                step: Signal::stored(5),
+                default_values: Some(vec![12, 90]),
+                ..UseSliderStateInput::new(0, 100)
             });
-        }),
+            // Each value snaps relative to its neighbor's (react-stately's `restrictValues`): 90
+            // above 12 in steps of 5 is 92.
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![10, 92]);
+            // A thumb stays between its neighbors.
+            slider.set_thumb_value(0, 95);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![90, 92]);
+            slider.set_thumb_value(1, 200);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![90, 100]);
+        });
+    }
+
+    #[test]
+    fn a_bound_slider_resets_to_its_initial_values_and_follows_the_app() {
+        Owner::new().with(|| {
+            let app = RwSignal::new(vec![20, 80]);
+            let slider = state(UseSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                ..UseSliderStateInput::new(0, 100)
+            });
+            assert_that!(slider.default_values()).is_equal_to(vec![20, 80]);
+            // A step on one thumb keeps the other thumb's value as the app set it.
+            app.set(vec![30, 60]);
+            slider.set_thumb_value(0, 40);
+            assert_that!(app.get_untracked()).is_equal_to(vec![40, 60]);
+        });
+    }
+
+    #[test]
+    fn steps_by_at_least_the_step_and_pages_by_a_tenth() {
+        Owner::new().with(|| {
+            let slider = state(UseSliderStateInput {
+                step: Signal::stored(2.0),
+                ..UseSliderStateInput::new(0.0, 50.0)
+            });
+            assert_that!(slider.page_size()).is_equal_to(6.0);
+            slider.increment_thumb(0, None);
+            assert_that!(slider.thumb_value(0)).is_equal_to(2.0);
+            slider.increment_thumb(0, Some(1.0));
+            assert_that!(slider.thumb_value(0)).is_equal_to(4.0);
+            slider.decrement_thumb(0, Some(slider.page_size()));
+            assert_that!(slider.thumb_value(0)).is_equal_to(0.0);
+        });
+    }
+
+    #[test]
+    fn percent_conversions_round_to_the_step() {
+        Owner::new().with(|| {
+            let slider = state(UseSliderStateInput {
+                step: Signal::stored(10u8),
+                ..UseSliderStateInput::new(0, 200)
+            });
+            assert_that!(slider.percent_value(0.26)).is_equal_to(Some(50));
+            slider.set_thumb_percent(0, 0.5);
+            assert_that!(slider.thumb_percent(0)).is_equal_to(0.5);
+        });
+    }
+
+    #[test]
+    fn on_change_end_after_the_last_drag() {
+        Owner::new().with(|| {
+            let ended = RwSignal::new(None::<Vec<i32>>);
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![10, 20]),
+                on_change_end: Some(Callback::new(move |values| ended.set(Some(values)))),
+                ..UseSliderStateInput::new(0, 100)
+            });
+            slider.set_thumb_dragging(0, true);
+            slider.set_thumb_value(0, 15);
+            assert_that!(ended.get_untracked()).is_none();
+            slider.set_thumb_dragging(0, false);
+            assert_that!(ended.get_untracked()).is_equal_to(Some(vec![15, 20]));
+        });
+    }
+
+    #[test]
+    fn disabled_and_non_editable_thumbs_ignore_changes() {
+        Owner::new().with(|| {
+            let disabled = RwSignal::new(false);
+            let slider = state(UseSliderStateInput {
+                is_disabled: disabled.into(),
+                ..UseSliderStateInput::new(0, 10)
+            });
+            slider.set_thumb_editable(0, false);
+            slider.set_thumb_value(0, 5);
+            assert_that!(slider.thumb_value(0)).is_equal_to(0);
+            slider.set_thumb_editable(0, true);
+            disabled.set(true);
+            slider.set_thumb_value(0, 5);
+            assert_that!(slider.thumb_value(0)).is_equal_to(0);
+        });
     }
 }

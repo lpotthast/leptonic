@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -8,52 +8,83 @@ pub fn PageOverview() -> impl IntoView {
     view! {
         <DocPage title="Overview">
             <p>
-                "Leptonic is an accessible component library for the "
-                <LinkExt href="https://leptos.dev/" target=LinkTarget::_Blank>"Leptos"</LinkExt>" web framework."
+                "Leptonic is an accessible UI library for the "
+                <Link href="https://leptos.dev/" target=LinkTarget::Blank>"Leptos"</Link>" web framework."
             </p>
 
             <p>
                 "It comes in three layers. "<b>"Hooks"</b>", ported from "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/" target=LinkTarget::_Blank>"react-aria"</LinkExt>
+                <Link href="https://react-spectrum.adobe.com/react-aria/" target=LinkTarget::Blank>"react-aria"</Link>
                 ", implement interaction and accessibility: pressing, hovering, keyboard navigation, focus management, "
-                "selection, overlays and the ARIA semantics of widgets like menus, listboxes and sliders. "<b>"Atoms"</b>
-                " wrap hooks into unstyled single-element components. "<b>"Components"</b>" are themed, ready-made UI: "
-                "buttons, inputs, selects, sliders, date pickers, a rich text editor, modals, toasts, tabs, tables and more. "
-                "Read "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>" to pick the layer "
-                "that fits your project."
+                "selection, overlays and the ARIA patterns of menus, listboxes, sliders and more. "<b>"Atoms"</b>
+                " are unstyled Leptos components that apply hooks to one element each. "<b>"Components"</b>" are themed, "
+                "ready-made UI: buttons, text fields, selects, sliders, date pickers, a rich text editor, modals, toasts, "
+                "tabs, tables and more. "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                " explains the layers and helps you pick the one that fits your project."
             </p>
 
             <p>
                 "Get started with the "<Link href=routes::doc::Installation.materialize()>"Installation"</Link>
                 " instructions, or browse the concepts in the sidebar. Every page is also available as Markdown: append "
-                <Code inline=true>".md"</Code>" to its URL, or start at the "<a href="/doc/llm-index.md">"index"</a>"."
+                <Code inline=true>".md"</Code>" to its URL, or start at the "
+                <Link href="/doc/llm-index.md" rel=vec![LinkRel::External]>"index of all pages"</Link>"."
             </p>
 
-            <Section title="Need help?">
+            <Section title="How the Documentation Is Organized">
+                <p>"The sidebar has four parts:"</p>
                 <ul>
                     <li>
-                        "Ask in the Leptos "
-                        <LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkTarget::_Blank>"Discord"</LinkExt>" server."
+                        <b>"Getting started"</b>": this overview, the "
+                        <Link href=routes::doc::Installation.materialize()>"installation"</Link>" and the "
+                        <Link href=routes::doc::Changelog.materialize()>"changelog"</Link>"."
                     </li>
                     <li>
-                        "If you think you found a bug, open an "
-                        <LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkTarget::_Blank>"issue"</LinkExt>"."
+                        <b>"Guides"</b>": topics every other page builds on, such as the layers, "
+                        <Link href=routes::doc::EventPropagation.materialize()>"event propagation"</Link>", "
+                        <Link href=routes::doc::Themes.materialize()>"themes"</Link>", "
+                        <Link href=routes::doc::Forms.materialize()>"forms and validation"</Link>" and "
+                        <Link href=routes::doc::Accessibility.materialize()>"accessibility"</Link>"."
+                    </li>
+                    <li>
+                        <b>"Concepts"</b>": the UI elements your app places on its pages (a button, a select, a table), "
+                        "in groups by purpose such as "<Link href=routes::doc::Fields.materialize()>"Fields"</Link>" or "
+                        <Link href=routes::doc::Overlays.materialize()>"Overlays"</Link>". A concept leptonic implements at "
+                        "several layers has an overview, which explains it and helps you choose a layer, and a tab per layer "
+                        "(Hook, Atom, Component; in the plural when the layer has several pieces) with the full reference. "
+                        "Start with the overview\u{2019}s Quick Start. The markers "<b>"H A C"</b>" next to a concept in the "
+                        "sidebar show which layers it has; missing layers are dimmed. A concept with one layer has a single "
+                        "page."
+                    </li>
+                    <li>
+                        <b>"Building blocks"</b>": the hooks, atoms and utilities that give an element one behavior many "
+                        "concepts share, such as "<Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>
+                        " or "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>". They are grouped "
+                        "into areas ("<Link href=routes::doc::Interactions.materialize()>"Interactions"</Link>", "
+                        <Link href=routes::doc::Focus.materialize()>"Focus"</Link>", \u{2026}), listed by name with a badge "
+                        "of their kind. Use them when you build an element of your own."
+                    </li>
+                </ul>
+                <p>"Most groups and areas have an overview page that compares their members and helps you choose between them."</p>
+            </Section>
+
+            <Section title="Help and Contributing">
+                <ul>
+                    <li>
+                        "Ask questions in the Leptos "
+                        <Link href="https://discord.gg/x8NhWWYTV2" target=LinkTarget::Blank>"Discord"</Link>" server."
+                    </li>
+                    <li>
+                        "Report bugs and missing features in the "
+                        <Link href="https://github.com/lpotthast/leptonic/issues" target=LinkTarget::Blank>"issues"</Link>
+                        ". Code contributions are welcome."
                     </li>
                     <li>
                         "Compare your setup with the "
-                        <LinkExt href="https://github.com/lpotthast/leptonic/tree/main/examples/book-ssr" target=LinkTarget::_Blank>
+                        <Link href="https://github.com/lpotthast/leptonic/tree/main/examples/book-ssr" target=LinkTarget::Blank>
                             "source of this book"
-                        </LinkExt>", which is built with leptonic."
+                        </Link>", which is built with leptonic."
                     </li>
                 </ul>
-            </Section>
-
-            <Section title="Contribute">
-                <p>
-                    "Missing a component or a feature, or found a bug? Tell us in the Discord server or in the "
-                    <LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkTarget::_Blank>"issues"</LinkExt>
-                    ". Code contributions are always welcome."
-                </p>
             </Section>
         </DocPage>
     }

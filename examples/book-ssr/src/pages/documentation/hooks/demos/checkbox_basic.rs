@@ -25,7 +25,7 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
     let (input_attrs, input_styles) = checkbox.input_props.into_parts();
     let is_focus_visible = checkbox.is_focus_visible;
 
-    // `data-focus-visible` draws a focus ring around the label for keyboard users.
+    // The hook tracks keyboard focus; `data-focus-visible` lets the stylesheet draw a focus ring around the input.
     view! {
         <label
             {..label_attrs}
@@ -38,10 +38,14 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
         </label>
 
         <p class="demo-status">
-            {move || format!("Checked: {}, indeterminate: {}", state.is_selected.get(), is_indeterminate.get())}
+            {move || {
+                let checked = if state.is_selected.get() { "Checked" } else { "Not checked" };
+                let shown = if is_indeterminate.get() { ", shown as indeterminate." } else { "." };
+                format!("{checked}{shown}")
+            }}
         </p>
 
-        <div class="demo-toggle-settings">
+        <div class="demo-controls">
             <Button
                 variant=ButtonVariant::Flat
                 size=ButtonSize::Small
@@ -49,7 +53,7 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
             >
                 "Toggle indeterminate"
             </Button>
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

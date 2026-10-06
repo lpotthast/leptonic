@@ -12,7 +12,10 @@ use web_sys::MouseEvent;
 
 use crate::{
     hooks::{IntoAttrs, LabelElementType, UseLabelProps, ValidationResult, ValidityStateSnapshot},
-    utils::{EventHandler, SlotProps, classes::Classes, dev_warn, styles::Styles, use_slot},
+    utils::{
+        CapturedElement, EventHandler, SlotProps, classes::Classes, dev_warn, styles::Styles,
+        use_slot,
+    },
 };
 
 // =============================================================================
@@ -20,8 +23,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - One `FieldContext` replaces `LabelContext`, `TextContext` (slots `description` and
-//   `errorMessage`) and `FieldErrorContext`. Reason: Leptos contexts are typed, so the slot
+// - `LabelContext` as upstream; one `FieldContext` replaces `TextContext` (slots `description`
+//   and `errorMessage`) and `FieldErrorContext`. Reason: Leptos contexts are typed, so the slot
 //   strings become separate `Description` and `FieldError` components.
 // - `Text`'s `description` slot is the `Description` component. `elementType` strings become
 //   `TextElement`.
@@ -31,11 +34,11 @@ use crate::{
 //
 // =============================================================================
 
-/// What a field atom (text field, checkbox group, select, ...) provides to its [`Label`],
-/// [`Description`] and [`FieldError`]. Field atoms built from hooks provide it to use these parts.
+/// What a field atom (text field, checkbox group, select, ...) provides to its [`Description`]
+/// and [`FieldError`] (beside a [`LabelContext`] for its [`Label`]). Field atoms built from hooks
+/// provide it to use these parts.
 #[derive(Debug, Clone)]
 pub struct FieldContext {
-    pub label: FieldLabelProps,
     /// `description_props` of the field's hook.
     pub description: SlotProps,
     /// `error_message_props` of the field's hook.
@@ -48,9 +51,10 @@ pub struct FieldContext {
 /// The message of a [`FieldError`] for a validation result; `None` shows no error.
 pub type FieldErrorMessage = Arc<dyn Fn(&ValidationResult) -> Option<String> + Send + Sync>;
 
-/// How a field's [`Label`] is rendered.
+/// What an atom with a visible label (a field, a progress bar, ...) provides to its [`Label`]: how
+/// the label is rendered.
 #[derive(Debug, Clone)]
-pub struct FieldLabelProps {
+pub struct LabelContext {
     /// `label_props` of the field's hook.
     pub props: UseLabelProps,
     /// The element the label is rendered as (`Span` for fields a `<label>` can't label: groups,
@@ -58,15 +62,18 @@ pub struct FieldLabelProps {
     pub element_type: LabelElementType,
     /// Handles clicks on the label, for fields whose label isn't a `<label>` (focusing the field).
     pub on_click: EventHandler<MouseEvent>,
+    /// Captures the rendered label (see [`LabelPresence`]).
+    element: CapturedElement,
 }
 
-impl FieldLabelProps {
+impl LabelContext {
     /// A `<label>` labelling its field natively.
     pub fn label(props: UseLabelProps) -> Self {
         Self {
             props,
             element_type: LabelElementType::Label,
             on_click: EventHandler::empty(),
+            element: CapturedElement::new(),
         }
     }
 
@@ -76,6 +83,16 @@ impl FieldLabelProps {
             props,
             element_type: LabelElementType::Span,
             on_click: EventHandler::empty(),
+            element: CapturedElement::new(),
+        }
+    }
+
+    /// Reports the rendered label to `presence`.
+    #[must_use]
+    pub(crate) fn with_presence(self, presence: LabelPresence) -> Self {
+        Self {
+            element: presence.element,
+            ..self
         }
     }
 
@@ -83,6 +100,36 @@ impl FieldLabelProps {
     #[must_use]
     pub fn with_on_click(self, on_click: EventHandler<MouseEvent>) -> Self {
         Self { on_click, ..self }
+    }
+}
+
+/// Whether an atom's [`Label`] part is rendered, for its hook's `has_label` (react-aria-components:
+/// `useSlot`). Until mounted, it guesses from the atom's ARIA props (a label is expected without
+/// `aria-label` and `aria-labelledby`), so server-rendered HTML references a likely label; then it
+/// follows the rendered label.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LabelPresence {
+    pub has_label: Signal<bool>,
+    element: CapturedElement,
+}
+
+impl LabelPresence {
+    pub(crate) fn new(aria_label: MaybeProp<String>, aria_labelledby: Option<&String>) -> Self {
+        let guess = aria_label.get_untracked().is_none() && aria_labelledby.is_none();
+        let element = CapturedElement::new();
+        let mounted = RwSignal::new(false);
+        // Effects run on the client only, after the children (and the label) are rendered.
+        Effect::new(move || mounted.set(true));
+        Self {
+            has_label: Signal::derive(move || {
+                if mounted.get() {
+                    element.get().is_some()
+                } else {
+                    guess
+                }
+            }),
+            element,
+        }
     }
 }
 
@@ -95,29 +142,31 @@ pub enum TextElement {
     Div,
 }
 
-/// The visible label of the field around it. Outside a field, a plain `<label>`.
+/// The visible label of the atom around it (see [`LabelContext`]). Outside one, a plain `<label>`.
 #[component]
 pub fn Label(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    match use_context::<FieldContext>().map(|ctx| ctx.label) {
-        Some(FieldLabelProps {
+    match use_context::<LabelContext>() {
+        Some(LabelContext {
             props,
             element_type: LabelElementType::Span,
             on_click,
+            element,
         }) => EitherOf3::A(view! {
-            <span {..props.into_attrs()} {..(on_click.into_on(ev::click),)} class=classes style=styles>
+            <span {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}
             </span>
         }),
-        Some(FieldLabelProps {
+        Some(LabelContext {
             props,
             element_type: LabelElementType::Label,
             on_click,
+            element,
         }) => EitherOf3::B(view! {
-            <label {..props.into_attrs()} {..(on_click.into_on(ev::click),)} class=classes style=styles>
+            <label {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}
             </label>
         }),

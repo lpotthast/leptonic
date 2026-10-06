@@ -64,7 +64,7 @@ pub struct UseSelectInput {
     pub is_disabled: Signal<bool>,
     pub is_required: bool,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -90,7 +90,7 @@ impl UseSelectInput {
             id: None,
             is_disabled: Signal::stored(false),
             is_required: false,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -284,15 +284,27 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         let ids: Vec<String> = ids.into_iter().flatten().collect();
         (!ids.is_empty()).then(|| ids.join(" "))
     };
-    // Labelled by aria-label (the trigger itself), unless other labels exist.
-    let self_label =
-        (has_aria_label && field_props.aria_labelledby.is_none()).then(|| trigger_id.clone());
-    let trigger_labelledby = join(vec![
-        Some(value_id.clone()),
-        field_props.aria_labelledby.clone(),
-        self_label.clone(),
-    ]);
-    let listbox_labelledby = join(vec![field_props.aria_labelledby.clone(), self_label]);
+    // Labelled by aria-label (the trigger itself), unless other labels exist. Both follow the
+    // field's labels (e.g. whether its label is rendered).
+    let field_labelledby = field_props.aria_labelledby;
+    let self_label = {
+        let trigger_id = trigger_id.clone();
+        move || {
+            (has_aria_label && field_labelledby.with(Option::is_none)).then(|| trigger_id.clone())
+        }
+    };
+    let trigger_labelledby = {
+        let (value_id, self_label) = (value_id.clone(), self_label.clone());
+        Signal::derive(move || {
+            join(vec![
+                Some(value_id.clone()),
+                field_labelledby.get(),
+                self_label(),
+            ])
+        })
+    };
+    let listbox_labelledby =
+        Signal::derive(move || join(vec![field_labelledby.get(), self_label()]));
 
     // -- Focus --
     let trigger_on_focus = Callback::new(move |e: FocusEvent| {
@@ -313,7 +325,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
             return;
         }
         if let Some(on_blur) = on_blur {
-            on_blur.run(e);
+            on_blur.try_run(e);
         }
         if let Some(on_focus_change) = on_focus_change {
             on_focus_change.run(false);
@@ -322,7 +334,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     });
     let listbox_on_blur = Callback::new(move |e: FocusWithinEvent| {
         if let Some(on_blur) = on_blur {
-            on_blur.run(e.event.clone());
+            on_blur.try_run(e.event.clone());
         }
         if let Some(on_focus_change) = on_focus_change {
             on_focus_change.run(false);
@@ -333,7 +345,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     let trigger = UseButtonInput {
         id: Some(trigger_id.clone().into()),
         aria_label,
-        aria_labelledby: trigger_labelledby.map(Into::into),
+        aria_labelledby: trigger_labelledby,
         aria_describedby: field_props.aria_describedby,
         shortcuts: Some(shortcuts),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {

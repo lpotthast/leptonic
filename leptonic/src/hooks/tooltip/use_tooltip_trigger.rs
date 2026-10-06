@@ -52,7 +52,7 @@ pub struct UseTooltipTriggerInput {
     pub trigger: TooltipTriggerMode,
 
     /// Whether pressing the trigger should close the tooltip. Default: `true`.
-    pub should_close_on_press: bool,
+    pub should_close_on_press: Signal<bool>,
 }
 
 /// What triggers the tooltip.
@@ -70,7 +70,7 @@ impl Default for UseTooltipTriggerInput {
         Self {
             is_disabled: Signal::derive(|| false),
             trigger: TooltipTriggerMode::Hover,
-            should_close_on_press: true,
+            should_close_on_press: Signal::stored(true),
         }
     }
 }
@@ -266,7 +266,7 @@ pub fn use_tooltip_trigger(
 
     // --- Press start (pointer down or key down on the trigger) ---
     let press_start = move || {
-        if !should_close_on_press {
+        if !should_close_on_press.get_untracked() {
             return;
         }
         is_focused.set_value(false);

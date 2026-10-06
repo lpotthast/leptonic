@@ -1,130 +1,161 @@
-// Upstream: react-stately/src/color/useColorChannelFieldState.ts @ 6f664fe911
-use std::fmt;
-
+// Upstream: react-stately/src/color/useColorChannelFieldState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::color::ColorValue;
+use crate::{
+    hooks::form::{
+        use_form_validation_state::{ValidateFn, ValidationBehavior},
+        use_number_field_state::{
+            NumberFieldState, UseNumberFieldStateInput, use_number_field_state,
+        },
+    },
+    utils::{ValueBinding, color::ColorValue},
+};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorChannelFieldState.ts
-
-// ## INTENTIONAL DEVIATIONS
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Hook-owned state: The hook owns its color state internally.
+// ## API DIFFERENCES
+// - Generic over the color type (`ColorValue`), the color space is the type.
+// - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
+// - A `Copy` struct (C3) holding the channel's `NumberFieldState` (react-aria: the number field
+//   state spread into the channel field state).
 //
-// - Does not wrap `useNumberFieldState` directly. Instead, provides the
-//   channel value as a signal that can be passed to `use_number_field`.
+// =============================================================================
 
-/// Input parameters for `use_color_channel_field_state`.
-#[derive(Debug, Clone)]
+/// Input of [`use_color_channel_field_state`]. Start from
+/// [`UseColorChannelFieldStateInput::new`].
+#[derive(Clone)]
 pub struct UseColorChannelFieldStateInput<C: ColorValue> {
-    /// The initial color value.
-    pub default_value: C,
-
-    /// Which channel this field edits.
+    /// The initial color (`None`: empty).
+    pub default_value: Option<C>,
+    /// The color as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<Option<C>>>,
+    /// The channel the field edits.
     pub channel: C::Channel,
-
-    /// Callback fired when the color changes.
-    pub on_change: Option<Callback<C>>,
+    pub is_disabled: Signal<bool>,
+    pub is_read_only: Signal<bool>,
+    pub is_invalid: Signal<bool>,
+    pub validate: Option<ValidateFn<Option<f64>>>,
+    pub validation_behavior: ValidationBehavior,
+    /// The field's name, matching server errors.
+    pub name: Option<String>,
+    /// Called with the color when the channel's value is committed.
+    pub on_change: Option<Callback<Option<C>>>,
 }
 
-/// Return value of `use_color_channel_field_state`.
-pub struct UseColorChannelFieldStateReturn<C: ColorValue> {
-    /// The current full color.
-    pub color_value: Signal<C>,
-
-    /// Update the full color.
-    pub set_color_value: Callback<C>,
-
-    /// The value of the specific channel (for binding to a number input).
-    pub channel_value: Signal<Option<f64>>,
-
-    /// Update the channel value (maps back to full color).
-    pub set_channel_value: Callback<Option<f64>>,
-
-    /// The channel this field edits.
-    pub channel: C::Channel,
-
-    /// The minimum value for this channel.
-    pub min_value: f64,
-
-    /// The maximum value for this channel.
-    pub max_value: f64,
-
-    /// The step value for this channel.
-    pub step: f64,
-}
-
-impl<C: ColorValue> Clone for UseColorChannelFieldStateReturn<C> {
-    fn clone(&self) -> Self {
+impl<C: ColorValue> UseColorChannelFieldStateInput<C> {
+    /// An empty field for `channel`.
+    pub fn new(channel: C::Channel) -> Self {
         Self {
-            color_value: self.color_value,
-            set_color_value: self.set_color_value,
-            channel_value: self.channel_value,
-            set_channel_value: self.set_channel_value,
-            channel: self.channel,
-            min_value: self.min_value,
-            max_value: self.max_value,
-            step: self.step,
+            default_value: None,
+            value: None,
+            channel,
+            is_disabled: Signal::stored(false),
+            is_read_only: Signal::stored(false),
+            is_invalid: Signal::stored(false),
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            name: None,
+            on_change: None,
         }
     }
 }
 
-impl<C: ColorValue> fmt::Debug for UseColorChannelFieldStateReturn<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("UseColorChannelFieldStateReturn")
-            .field("channel", &self.channel)
-            .finish_non_exhaustive()
+/// The state of a field editing one channel of a color.
+#[derive(Clone, Copy)]
+pub struct ColorChannelFieldState<C: ColorValue> {
+    /// The color.
+    pub color_value: Signal<Option<C>>,
+    /// The channel the field edits.
+    pub channel: C::Channel,
+    /// The number field of the channel's value.
+    pub number: NumberFieldState<f64>,
+    binding: ValueBinding<Option<C>>,
+    default_color_value: StoredValue<Option<C>>,
+}
+
+impl<C: ColorValue> ColorChannelFieldState<C> {
+    /// Sets the color.
+    pub fn set_color_value(&self, color: Option<C>) {
+        self.binding.set(color);
+    }
+
+    /// The color to reset to (for form resets).
+    pub fn default_color_value(&self) -> Option<C> {
+        self.default_color_value.get_value()
     }
 }
 
-/// Creates state for a single-channel numeric input field.
-///
-/// Bridges between a full color value and a number input for one channel.
-/// Changes to the channel value are mapped back to the full color via
-/// `with_channel_value`.
-pub fn use_color_channel_field_state<C: ColorValue>(
-    input: &UseColorChannelFieldStateInput<C>,
-) -> UseColorChannelFieldStateReturn<C> {
+/// The darkest color of the type: every channel at its minimum (react-aria uses black for an
+/// empty field's channel changes).
+fn black<C: ColorValue + Default>() -> C {
+    C::channels().iter().fold(C::default(), |color, &channel| {
+        color.with_channel_value(channel, C::get_channel_range(channel).min_value)
+    })
+}
+
+/// Creates the state of a field editing one channel of a color (a number field).
+pub fn use_color_channel_field_state<C: ColorValue + Default>(
+    input: UseColorChannelFieldStateInput<C>,
+) -> ColorChannelFieldState<C> {
     let UseColorChannelFieldStateInput {
         default_value,
+        value,
         channel,
+        is_disabled,
+        is_read_only,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
         on_change,
-    } = *input;
+    } = input;
+
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    let default_color_value = StoredValue::new(binding.value.get_untracked());
+    let color_value = binding.value;
+    let binding = ValueBinding::new(
+        color_value,
+        Callback::new(move |color: Option<C>| {
+            binding.set(color);
+            if let Some(on_change) = on_change {
+                on_change.run(color);
+            }
+        }),
+    );
 
     let range = C::get_channel_range(channel);
-
-    let (color_value, set_color_value_signal) = signal(default_value);
-
-    let channel_value = Signal::derive(move || Some(color_value.get().get_channel_value(channel)));
-
-    let update_color = move |new_color: C| {
-        set_color_value_signal.set(new_color);
-        if let Some(cb) = on_change {
-            cb.run(new_color);
-        }
-    };
-
-    let set_color_value = Callback::new(move |new_color: C| {
-        update_color(new_color);
+    let number = use_number_field_state(UseNumberFieldStateInput {
+        value: Some(ValueBinding::new(
+            Signal::derive(move || color_value.get().map(|c| c.get_channel_value(channel))),
+            Callback::new(move |value: Option<f64>| {
+                binding.set(value.map(|value| {
+                    color_value
+                        .get_untracked()
+                        .unwrap_or_else(black::<C>)
+                        .with_channel_value(channel, value)
+                }));
+            }),
+        )),
+        min_value: Signal::stored(Some(range.min_value)),
+        max_value: Signal::stored(Some(range.max_value)),
+        step: Signal::stored(Some(range.step)),
+        format_options: Signal::stored(C::get_channel_format_options(channel)),
+        is_disabled,
+        is_read_only,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
+        ..UseNumberFieldStateInput::default()
     });
 
-    let set_channel_value = Callback::new(move |val: Option<f64>| {
-        if let Some(v) = val {
-            let clamped = v.clamp(range.min_value, range.max_value);
-            let current = color_value.get_untracked();
-            let new_color = current.with_channel_value(channel, clamped);
-            update_color(new_color);
-        }
-    });
-
-    UseColorChannelFieldStateReturn {
-        color_value: color_value.into(),
-        set_color_value,
-        channel_value,
-        set_channel_value,
+    ColorChannelFieldState {
+        color_value,
         channel,
-        min_value: range.min_value,
-        max_value: range.max_value,
-        step: range.step,
+        number,
+        binding,
+        default_color_value,
     }
 }

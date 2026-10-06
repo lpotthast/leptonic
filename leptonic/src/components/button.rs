@@ -7,7 +7,7 @@ use crate::{
     atoms,
     hooks::{ButtonType, HoverEndEvent, HoverStartEvent, LinkTarget, PressEvent},
     utils::{
-        aria::{AriaExpanded, AriaHasPopup},
+        aria::{AriaExpanded, AriaHasPopup, AriaPressed},
         classes::Classes,
         styles::Styles,
     },
@@ -104,18 +104,22 @@ pub fn Button(
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<Option<AriaHasPopup>>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
+    /// Whether a toggling button is pressed (e.g. a toolbar's "Bold" while bold text is selected).
+    #[prop(into, optional)]
+    aria_pressed: Signal<Option<AriaPressed>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let mut props = atoms::button::ButtonProps::builder()
         .button_type(button_type)
-        .is_disabled(disabled)
+        .is_disabled(is_disabled)
         .aria_haspopup(aria_haspopup)
         .aria_expanded(aria_expanded)
+        .aria_pressed(aria_pressed)
         .classes(classes.add("leptonic-btn"))
         .styles(styles)
         .children(children)
@@ -159,26 +163,23 @@ pub fn ButtonWrapper(
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
-#[allow(unused_variables)] // `active` is a planned prop not yet used
 pub fn LinkButton<H>(
     href: H,
-    #[prop(into, optional)] target: Option<LinkTarget>,
+    #[prop(optional)] target: LinkTarget,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
-    #[prop(into, optional)] active: Option<Signal<bool>>, // TODO: Use
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Option<Signal<Option<AriaHasPopup>>>,
     #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    /// If `true`, the link is marked active when the location matches exactly;
-    /// if false, link is marked active if the current route starts with it.
+    /// When the link is the current page (`aria-current="page"`).
     #[prop(optional)]
-    exact: bool,
-    children: Children,
+    current_match: crate::atoms::link::CurrentMatch,
+    children: ChildrenFn,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
@@ -186,10 +187,10 @@ where
     atoms::button::LinkButton(atoms::button::LinkButtonProps {
         href,
         target,
-        is_disabled: disabled.unwrap_or_default(),
+        is_disabled,
         aria_haspopup,
         aria_expanded,
-        exact,
+        current_match,
         children,
         on_hover_start,
         on_hover_end,

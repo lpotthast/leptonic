@@ -1,8 +1,8 @@
 //! Markdown export of the documentation.
 //!
 //! Every `/doc/...` page is also served as Markdown at `/doc/....md`: the middleware renders the page through Leptos'
-//! SSR, converts its `<article>` and caches the result. `/doc/llm-index.md` lists all pages. The book's search runs on
-//! the cached Markdown.
+//! SSR, converts its `<article>` and caches the result. `/doc/llm-index.md` lists all pages in the order of the
+//! navigation. The book's search runs on the plain text of the cached pages.
 
 mod convert;
 mod index;
@@ -24,7 +24,10 @@ use axum::{
 };
 use tokio::sync::{RwLock, watch};
 
-use self::convert::{ConvertedPage, Heading, Link, convert_page};
+use self::{
+    convert::{ConvertedPage, Heading, Link, convert_page},
+    search::SearchText,
+};
 use crate::nav::{PageKind, nav};
 
 const LLM_INDEX_PATH: &str = "/doc/llm-index.md";
@@ -42,6 +45,7 @@ pub struct CachedDoc {
     pub kind: PageKind,
     /// The page's `##` sections, linked from the index.
     pub sections: Vec<Heading>,
+    search: SearchText,
 }
 
 /// Markdown exports of all documentation pages, keyed by their `.md` path. Filled at startup by
@@ -151,12 +155,14 @@ fn to_cached_doc(path: &str, kind: PageKind, page: ConvertedPage) -> CachedDoc {
         sections,
         related,
         markdown,
+        text,
     } = page;
     CachedDoc {
         markdown: format!(
             "{}{markdown}",
             frontmatter(path, &title, kind, &description, &related)
         ),
+        search: SearchText::new(&title, text, &sections),
         title,
         description,
         kind,
@@ -168,11 +174,12 @@ impl PageKind {
     fn as_str(self) -> &'static str {
         match self {
             Self::Guide => "guide",
-            Self::Domain => "domain",
+            Self::Overview => "overview",
             Self::Concept => "concept",
             Self::Hook => "hook",
             Self::Atom => "atom",
             Self::Component => "component",
+            Self::Utility => "utility",
         }
     }
 }
@@ -186,7 +193,7 @@ fn frontmatter(
 ) -> String {
     let mut fm = String::from("---\n");
     let _ = writeln!(fm, "title: {}", yaml_string(title));
-    let _ = writeln!(fm, "layer: {}", kind.as_str());
+    let _ = writeln!(fm, "kind: {}", kind.as_str());
     let _ = writeln!(fm, "path: {}", yaml_string(path));
     if !description.is_empty() {
         let _ = writeln!(fm, "description: {}", yaml_string(description));
@@ -271,7 +278,7 @@ mod tests {
             }],
         );
         assert_that!(fm).is_equal_to(
-            "---\ntitle: \"Button\"\nlayer: concept\npath: \"/doc/button\"\ndescription: \"Say \\\"hi\\\"\"\n\
+            "---\ntitle: \"Button\"\nkind: concept\npath: \"/doc/button\"\ndescription: \"Say \\\"hi\\\"\"\n\
              related:\n  - title: \"use_button\"\n    path: \"/doc/button/hook.md\"\n---\n\n"
                 .to_owned(),
         );

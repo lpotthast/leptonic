@@ -18,8 +18,7 @@ use crate::{
         },
         form::{
             use_field::{UseFieldInput, UseFieldReturn, use_field},
-            use_label::LabelElementType,
-            use_label::UseLabelProps,
+            use_label::{LabelElementType, UseLabelProps},
         },
         gridlist::{
             GridListData, KeyboardNavigationBehavior, UseGridListAttrs, UseGridListInput,
@@ -54,7 +53,7 @@ pub struct UseTagGroupInput {
     /// The element id. Generated when `None`.
     pub id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -74,7 +73,7 @@ impl UseTagGroupInput {
             state,
             element,
             id: None,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,

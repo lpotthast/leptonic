@@ -1,53 +1,39 @@
 use std::time::Duration;
 
-use leptonic::hooks::{PlacementX, PlacementY, *};
+use leptonic::{hooks::*, utils::CapturedElement};
 use leptos::{portal::Portal, prelude::*};
-use leptos_element_capture::CapturedElement;
 
 /// Tooltips placed on all four sides of their trigger.
 #[component]
 pub fn PositioningDemo() -> impl IntoView {
     view! {
-        <div class="demo-overlays-tooltip-grid">
-            <PositionedTooltip label="Above" placement_x=PlacementX::Center placement_y=PlacementY::Above/>
-            <PositionedTooltip label="Below" placement_x=PlacementX::Center placement_y=PlacementY::Below/>
-            <PositionedTooltip label="Left" placement_x=PlacementX::OuterLeft placement_y=PlacementY::Center/>
-            <PositionedTooltip label="Right" placement_x=PlacementX::OuterRight placement_y=PlacementY::Center/>
+        <div class="demo-tooltip-grid">
+            <PositionedTooltip label="Above" placement=Placement::Top/>
+            <PositionedTooltip label="Below" placement=Placement::Bottom/>
+            <PositionedTooltip label="Left" placement=Placement::Left/>
+            <PositionedTooltip label="Right" placement=Placement::Right/>
         </div>
     }
 }
 
+/// A button with a tooltip at `placement`.
 #[component]
-fn PositionedTooltip(
-    label: &'static str,
-    placement_x: PlacementX,
-    placement_y: PlacementY,
-) -> impl IntoView {
-    let target_element = CapturedElement::new();
+fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView {
+    let trigger_element = CapturedElement::new();
 
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: Duration::from_millis(200),
-        close_delay: Duration::from_millis(50),
+        delay: Duration::from_millis(500),
         ..Default::default()
     });
     let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
     let tooltip = use_tooltip(UseTooltipInput {
-        is_disabled: Signal::stored(false),
         state: Some(state),
-        on_open: None,
-        on_close: None,
+        ..Default::default()
     });
-
     let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::stored(placement_x),
-        placement_y: Signal::stored(placement_y),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
+        placement: Signal::stored(placement),
+        offset: Signal::stored(6.0),
+        ..UseOverlayPositionInput::new(trigger_element, trigger.is_open)
     });
 
     let is_open = trigger.is_open;
@@ -59,7 +45,7 @@ fn PositionedTooltip(
     let tooltip_attrs = StoredValue::new(tooltip.props.into_attrs());
 
     view! {
-        <button {..target_element.attr()} {..trigger.trigger_props.into_attrs()} class="demo-btn-dark">
+        <button {..trigger_element.attr()} {..trigger.trigger_props.into_attrs()} class="demo-btn">
             {label}
         </button>
 
@@ -71,9 +57,9 @@ fn PositionedTooltip(
                     style=position_styles.get_value()
                     id=tooltip_id.get_value()
                     role=tooltip_role
-                    class="demo-overlays-tooltip"
+                    class="demo-tooltip"
                 >
-                    {format!("Tooltip: {label}")}
+                    {format!("Placed {}", label.to_lowercase())}
                 </div>
             </Show>
         </Portal>

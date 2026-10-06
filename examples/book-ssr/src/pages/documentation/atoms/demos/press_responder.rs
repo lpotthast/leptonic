@@ -13,7 +13,7 @@ use ringbuf::{
 #[component]
 pub fn PressResponderDemo() -> impl IntoView {
     let (events, set_events) = signal(HeapRb::<&'static str>::new(50));
-    let (disabled, set_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
 
     let parent_on_press = Callback::new(move |_: PressEvent| {
         set_events.update(|events| {
@@ -28,15 +28,16 @@ pub fn PressResponderDemo() -> impl IntoView {
 
     view! {
         <PressResponder on_press=parent_on_press is_disabled=disabled>
-            <Pressable is_disabled=false on_press=child_on_press>
-                <button class="demo-press-button">"Press me"</button>
+            <Pressable on_press=child_on_press>
+                // The responder only stops the presses: tell assistive technology (and CSS) yourself.
+                <button class="demo-press-button" aria-disabled=move || disabled.get().then_some("true")>
+                    "Press me"
+                </button>
             </Pressable>
         </PressResponder>
 
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disable through the PressResponder"</Checkbox>
-
-        <div class="demo-inline-controls">
-            <span>"Event log"</span>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
             <Button
                 variant=ButtonVariant::Outlined
                 size=ButtonSize::Small
@@ -45,6 +46,7 @@ pub fn PressResponderDemo() -> impl IntoView {
                 "Clear log"
             </Button>
         </div>
+
         <pre class="demo-event-log">
             {move || events.with(|events| events.iter().copied().collect::<Vec<_>>().join("\n"))}
         </pre>

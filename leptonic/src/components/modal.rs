@@ -1,11 +1,12 @@
 use leptos::prelude::*;
 
 use crate::{
+    Out,
     atoms::{
         dialog::{Dialog, DialogTitle},
         modal::{ModalBackdrop, ModalContent},
     },
-    hooks::{DialogRole, OverlayTriggerState},
+    hooks::DialogRole,
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -24,7 +25,7 @@ use crate::{
 /// view! {
 ///     <Button on_press=move |_| show.set(true)>"Open"</Button>
 ///
-///     <Modal state=show>
+///     <Modal is_open=show set_open=show>
 ///         <ModalHeader><ModalTitle>"Confirm"</ModalTitle></ModalHeader>
 ///         <ModalBody>"Are you sure?"</ModalBody>
 ///         <ModalFooter>
@@ -38,19 +39,22 @@ use crate::{
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Modal(
-    /// Whether the modal is open: app state (`state=rw_signal`, `state=(read, write)`) or an
-    /// [`OverlayTriggerState`]. Escape and (when dismissable) clicking the backdrop close it.
+    /// Whether the modal is open: a value or any signal.
     #[prop(into)]
-    state: OverlayTriggerState,
+    is_open: Signal<bool>,
+    /// Receives the open state when Escape or (when dismissable) clicking the backdrop closes the
+    /// modal: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into)]
+    set_open: Out<bool>,
 
-    /// Whether clicking outside / pressing Escape closes the modal.
-    /// Defaults to `true` (most modals are dismissable).
-    #[prop(default = true)]
-    is_dismissable: bool,
+    /// Whether clicking outside closes the modal (Escape closes it unless
+    /// `is_keyboard_dismiss_disabled`). Defaults to `true` (most modals are dismissable).
+    #[prop(into, default = Signal::stored(true))]
+    is_dismissable: Signal<bool>,
 
     /// Whether Escape key dismiss is disabled (even when dismissable).
-    #[prop(default = false)]
-    is_keyboard_dismiss_disabled: bool,
+    #[prop(into, optional)]
+    is_keyboard_dismiss_disabled: Signal<bool>,
 
     /// Names the modal when it has no [`ModalTitle`] (which names it automatically).
     #[prop(into, optional)]
@@ -77,7 +81,8 @@ pub fn Modal(
 
     view! {
         <ModalBackdrop
-            state=state
+            is_open=is_open
+            set_open=set_open
             is_dismissable=is_dismissable
             is_keyboard_dismiss_disabled=is_keyboard_dismiss_disabled
         >

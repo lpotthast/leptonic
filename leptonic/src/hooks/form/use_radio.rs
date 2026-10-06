@@ -286,10 +286,10 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
 
     let press = use_press(UsePressInput {
         is_disabled,
+        on_press,
+        on_press_up,
         on_press_start,
         on_press_end,
-        on_press_up,
-        on_press: on_press.unwrap_or_else(|| Callback::new(|_| {})),
         on_press_change,
         ..UsePressInput::default()
     });
@@ -301,13 +301,13 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
         on_press_start,
         on_press_end,
         on_press_up,
-        on_press: Callback::new(move |e: PressEvent| {
+        on_press: Some(Callback::new(move |e: PressEvent| {
             if let Some(on_press) = on_press {
                 on_press.run(e);
             }
             state.set_selected_value(Some(pressed_value.clone()));
             focus_handle.focus();
-        }),
+        })),
         on_press_change,
         ..UsePressInput::default()
     });

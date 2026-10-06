@@ -9,43 +9,41 @@ pub use use_link::*;
 
 #[cfg(debug_assertions)]
 pub(crate) fn debug_validate_element_type(element_type: LinkElementType, el: &web_sys::Element) {
-    let actual = el.tag_name().to_uppercase();
-    let expected = match element_type {
-        LinkElementType::Anchor => "A",
-        LinkElementType::Span => "SPAN",
-        LinkElementType::Button => "BUTTON",
-    };
+    let is_anchor = el.tag_name().eq_ignore_ascii_case("A");
     debug_assert_eq!(
-        actual, expected,
-        "element_type is {element_type:?} but actual element is <{actual}>. \
-         Update element_type to match the element used in the view."
+        is_anchor,
+        element_type == LinkElementType::Anchor,
+        "element_type is {element_type:?} but the element is <{}>. Update element_type to match \
+         the element used in the view.",
+        el.tag_name()
     );
 }
 
+/// Where to open a link's document (the `target` attribute).
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum LinkTarget {
-    /// Opens the linked document in a new window or tab.
-    _Blank,
-    /// Opens the linked document in the same frame as it was clicked (this is the default).
+    /// In a new tab or window (`_blank`).
+    Blank,
+    /// In the same browsing context (`_self`, the default).
     #[default]
-    _Self,
-    /// Opens the linked document in the parent frame.
-    _Parent,
-    /// Opens the linked document in the full body of the window.
-    _Top,
-    /// Opens the linked document in the frame with the given name.
-    Frame { with_name: Oco<'static, str> },
+    Same,
+    /// In the parent browsing context (`_parent`).
+    Parent,
+    /// In the topmost browsing context (`_top`).
+    Top,
+    /// In the browsing context (frame, window) with this name.
+    Named(Oco<'static, str>),
 }
 
 impl LinkTarget {
-    /// Returns the corresponding HTML `target` attribute string.
+    /// The `target` attribute value.
     pub(crate) fn to_oco(&self) -> Oco<'static, str> {
-        match &self {
-            LinkTarget::_Blank => Oco::Borrowed("_blank"),
-            LinkTarget::_Self => Oco::Borrowed("_self"),
-            LinkTarget::_Parent => Oco::Borrowed("_parent"),
-            LinkTarget::_Top => Oco::Borrowed("_top"),
-            LinkTarget::Frame { with_name } => with_name.clone(),
+        match self {
+            Self::Blank => Oco::Borrowed("_blank"),
+            Self::Same => Oco::Borrowed("_self"),
+            Self::Parent => Oco::Borrowed("_parent"),
+            Self::Top => Oco::Borrowed("_top"),
+            Self::Named(name) => name.clone(),
         }
     }
 }

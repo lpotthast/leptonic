@@ -1,71 +1,71 @@
-use leptos::{html, prelude::*};
-use leptos_use::{UseElementSizeReturn, use_element_size};
+use leptos::prelude::*;
 
-use crate::utils::{
-    classes::Classes,
-    css::{computed_pct, computed_px, computed_size},
-    style::WidthProperty,
-    styles::Styles,
+use crate::{
+    atoms::{
+        field::Label,
+        progress_bar::{ProgressBar as ProgressBarAtom, ProgressBarFill, ProgressBarValueText},
+    },
+    utils::{
+        classes::Classes,
+        number_formatter::NumberFormatOptions,
+        number_value::{NumberValue, OptionalNumberSignal},
+        styles::Styles,
+    },
 };
 
+/// A themed progress bar: a track filled up to the progress, with the value text on top. `None`
+/// shows indeterminate progress (an animated fill).
+///
+/// ```ignore
+/// view! { <ProgressBar value=uploaded max_value=total_bytes aria_label="Upload" /> }
+/// ```
+#[allow(clippy::too_many_arguments)]
 #[component]
-pub fn ProgressBar(
-    #[prop(into, default = Signal::from(100.0))] max: Signal<f64>,
-    #[prop(into)] progress: Signal<Option<f64>>,
+pub fn ProgressBar<T: NumberValue>(
+    /// The progress: a number, an `Option`, or any signal of them. `None`: indeterminate.
+    #[prop(into)]
+    value: OptionalNumberSignal<T>,
+    /// Default: 0.
+    #[prop(into, optional)]
+    min_value: Option<Signal<T>>,
+    /// Default: 100.
+    #[prop(into, optional)]
+    max_value: Option<Signal<T>>,
+    /// How the value text is formatted. Default: percent.
+    #[prop(into, optional)]
+    format_options: Option<Signal<NumberFormatOptions>>,
+    /// Replaces the formatted value text (e.g. "1 of 4").
+    #[prop(into, optional)]
+    value_label: MaybeProp<String>,
+    /// The visible label above the bar. Without it, set `aria_label`.
+    #[prop(into, optional)]
+    label: Option<String>,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    /// Whether the value text shows in the bar. Default: true.
+    #[prop(into, default = true)]
+    show_value: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let el: NodeRef<html::Div> = NodeRef::new();
-
-    let UseElementSizeReturn { width, height: _ } = use_element_size(el);
-
-    // Calculates the percentage done in range [0, 1].
-    let percentage_done = Signal::derive(move || {
-        let max = max.get();
-        progress
-            .get()
-            .map(|it| f64::max(it, 0.0))
-            .map(|pos_progress| {
-                let percentage = if max == 0.0 { 0.0 } else { pos_progress / max };
-                percentage.clamp(0.0, 1.0)
-            })
-    });
-
-    let fill_width_px = Signal::derive(move || {
-        let width = width.get();
-        let percentage_done = percentage_done.get();
-
-        percentage_done.map(|percentage_done| percentage_done * width)
-    });
-
-    let fill_styles = Styles::new().add_reactive(move || {
-        WidthProperty.declare(computed_size(match fill_width_px.get() {
-            Some(px_val) => computed_px(px_val),
-            None => computed_pct(20.0),
-        }))
-    });
-
+    if label.is_none() && aria_label.get_untracked().is_none() {
+        crate::utils::dev_warn!("A <ProgressBar> needs a `label` or an `aria_label`.");
+    }
     view! {
-        <div
-            class=classes.add("leptonic-progress-bar")
-            style=styles
-            node_ref=el
-            data-indeterminate=move || progress.get().is_none()
+        <ProgressBarAtom
+            value
+            nostrip:min_value=min_value
+            nostrip:max_value=max_value
+            nostrip:format_options=format_options
+            value_label
+            aria_label
+            classes=classes.add("leptonic-progress-bar")
+            styles
         >
+            {label.map(|label| view! { <Label classes="leptonic-progress-bar-label">{label}</Label> })}
             <div class="leptonic-progress-bar-background">
-                <div class="leptonic-progress-bar-fill" style=fill_styles>
-                    <div class="leptonic-progress-bar-fill-overlay" />
-                </div>
-
-                <Show when=move || percentage_done.get().is_some() fallback=|| ()>
-                    <div class="leptonic-progress-info">
-                        {move || match percentage_done.get() {
-                            Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
-                            None => String::new(),
-                        }}
-                    </div>
-                </Show>
+                <ProgressBarFill classes="leptonic-progress-bar-fill" />
+                {show_value.then(|| view! { <ProgressBarValueText classes="leptonic-progress-info" /> })}
             </div>
-        </div>
+        </ProgressBarAtom>
     }
 }

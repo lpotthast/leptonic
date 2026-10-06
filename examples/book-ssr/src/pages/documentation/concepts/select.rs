@@ -1,4 +1,3 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
@@ -10,22 +9,22 @@ pub fn PageSelectOverview() -> impl IntoView {
     view! {
         <DocPage title="Select">
             <p>
-                "A select is a dropdown for choosing from a predefined list of options. "
-                "It\u{2019}s the go-to control when the option set is too large for radio buttons "
-                "but the user still needs to pick from a constrained list. "
-                "The component layer offers three variants: "<Code inline=true>"Select"</Code>
-                " (exactly one option), "<Code inline=true>"OptionalSelect"</Code>
-                " (one or none), and "<Code inline=true>"Multiselect"</Code>"."
+                "A select is a button showing the chosen option that opens a list of options in a popover. It is the "
+                "control of choice when there are too many options for radio buttons, but the user still picks from a "
+                "fixed list, and the options should take no space until they are needed."
+            </p>
+            <p>
+                "A select is a form field: it has a label, can be required and validated, and submits its value with "
+                "a form through a hidden native element."
             </p>
 
             <Section title="When to Use">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
-                    <TableRow><TableCell>"Choose one from many predefined options"</TableCell><TableCell><b>"Select"</b></TableCell></TableRow>
-                    <TableRow><TableCell>"Choose one or none"</TableCell><TableCell><b>"OptionalSelect"</b></TableCell></TableRow>
-                    <TableRow><TableCell>"Choose multiple from a list"</TableCell><TableCell><b>"Multiselect"</b></TableCell></TableRow>
-                    <TableRow><TableCell>"Search-and-select with free text"</TableCell><TableCell><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Choose from 2\u{2013}5 visible options"</TableCell><TableCell><Link href=routes::doc::Radio.materialize()>"Radio"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Choose one or several options from a list that opens on demand"</TableCell><TableCell><b>"Select"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Find an option in a long list by typing part of its name"</TableCell><TableCell><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Choose one of two to five options that stay visible"</TableCell><TableCell><Link href=routes::doc::Radio.materialize()>"Radio"</Link></TableCell></TableRow>
                     <TableRow><TableCell>"Show the options without a popover"</TableCell><TableCell><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Run an action rather than set a value"</TableCell><TableCell><Link href=routes::doc::Menu.materialize()>"Menu"</Link></TableCell></TableRow>
                 </DocTable>
             </Section>
 
@@ -38,101 +37,84 @@ pub fn PageSelectOverview() -> impl IntoView {
 
                 <DocTable headers=&["Layer", "What you get"]>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::select::Hook.materialize()>"use_select"</Link></TableCell>
-                        <TableCell>"Behavior and ARIA attributes for a trigger, a listbox popover and a hidden native select you render yourself."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::select::Atom.materialize()>"Select atoms"</Link></TableCell>
+                        <TableCell><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></TableCell>
                         <TableCell>
-                            "Unstyled parts ("<Code inline=true>"SelectTrigger"</Code>", "<Code inline=true>"SelectValue"</Code>", "
-                            <Code inline=true>"SelectPopover"</Code>", \u{2026}) with that behavior, a positioned popover and a "
-                            "hidden form element. The options are a "<Code inline=true>"ListBox"</Code>", with sections and "
-                            "descriptions if you need them."
+                            "State, keyboard interaction and ARIA attributes for a trigger, a listbox popover and a hidden "
+                            "native select that you render and position yourself."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Link href=routes::doc::select::Component.materialize()>"Select component"</Link></TableCell>
-                        <TableCell>"Themed, searchable "<Code inline=true>"Select"</Code>", "<Code inline=true>"OptionalSelect"</Code>" and "<Code inline=true>"Multiselect"</Code>" over any option type."</TableCell>
+                        <TableCell><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></TableCell>
+                        <TableCell>
+                            "Unstyled trigger, value, popover and hidden form element with that behavior. The options are a "
+                            "listbox, so they can have sections and descriptions; you style the parts through data attributes."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></TableCell>
+                        <TableCell>
+                            "Themed selects over your own option type, with a search input in the popover: one option, one "
+                            "or none, or several."
+                        </TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
                 <p>
-                    "The simplest way to use a select is the component layer. Options can be any type that implements "
-                    <Code inline=true>"Clone + PartialEq + Display + Send + Sync"</Code>". The displayed text identifies an "
-                    "option, so it must be unique among the options. "<Code inline=true>"search_text_provider"</Code>
-                    " gives the text to search by, "<Code inline=true>"render_option"</Code>" renders an option."
+                    "The themed component takes the options as values of your own type. Its "<Code inline=true>"label"</Code>
+                    " names the select for everyone, including screen reader users:"
                 </p>
 
-                <Demo description="Coffee size select" source=include_str!("demos/select.rs") source_open=true>
+                <Demo description="Coffee size select with a label and a disabled toggle" source=include_str!("demos/select.rs") source_open=true>
                     <SelectConceptDemo/>
                 </Demo>
-
-                <p>
-                    "For full control over markup and styling, compose the headless "
-                    <Link href=routes::doc::select::Atom.materialize()>"Select atoms"</Link>" instead: "
-                    <Code inline=true>"Select"</Code>" with a "<Link href=routes::doc::atoms::Field.materialize()>"Label"</Link>", "
-                    <Code inline=true>"SelectTrigger"</Code>" (containing "<Code inline=true>"SelectValue"</Code>"), "
-                    <Code inline=true>"SelectPopover"</Code>" (containing a "<Code inline=true>"ListBox"</Code>
-                    " with one "<Code inline=true>"ListBoxItem"</Code>" per option) and "
-                    <Code inline=true>"HiddenSelect"</Code>" for forms. The options come from a collection, "
-                    "just like for a "<Link href=routes::doc::listbox::Atom.materialize()>"ListBox"</Link>
-                    ", so they can have sections and descriptions. A minimal select in a form:"
-                </p>
-
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        let fruits = use_list_collection(
-                            Signal::stored(vec!["Apple", "Banana", "Cherry"]),
-                            |fruit| Key::from(*fruit),
-                            |fruit| (*fruit).to_owned(),
-                        );
-
-                        view! {
-                            <Select collection=fruits name="fruit" on_change=Callback::new(|keys: Vec<Key>| log!("{keys:?}"))>
-                                <Label>"Fruit"</Label>
-                                <SelectTrigger><SelectValue placeholder="Pick a fruit" /></SelectTrigger>
-                                <SelectPopover>
-                                    <ListBox>
-                                        <ListBoxItem key="Apple">"Apple"</ListBoxItem>
-                                        <ListBoxItem key="Banana">"Banana"</ListBoxItem>
-                                        <ListBoxItem key="Cherry">"Cherry"</ListBoxItem>
-                                    </ListBox>
-                                </SelectPopover>
-                                <HiddenSelect />
-                            </Select>
-                        }
-                    "#)}
-                </Code>
             </Section>
 
             <Section title="Accessibility">
                 <p>
                     "The trigger is a button that opens a listbox popover, following the WAI-ARIA "
-                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/listbox/" target=LinkTarget::_Blank>"Listbox pattern"</LinkExt>
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/listbox/" target=LinkTarget::Blank>"Listbox pattern"</Link>
                     " once open."
                 </p>
 
                 <ul>
                     <li>
-                        <Code inline=true>"aria-haspopup=\"listbox\""</Code>" and "<Code inline=true>"aria-expanded"</Code>
-                        " \u{2014} on the trigger, reflecting the popover state"
+                        "The trigger has "<Code inline=true>"aria-haspopup=\"listbox\""</Code>" and "
+                        <Code inline=true>"aria-expanded"</Code>". It is labelled by the label and the selected value, so "
+                        "screen readers announce both."
                     </li>
-                    <li>"The trigger is labelled by the selected value and the label"</li>
-                    <li><Code inline=true>"role=\"listbox\""</Code>" \u{2014} on the options container"</li>
-                    <li><Code inline=true>"role=\"option\""</Code>" + "<Code inline=true>"aria-selected"</Code>" \u{2014} on each option"</li>
-                    <li>"A visually hidden native "<Code inline=true>"<select>"</Code>" takes part in forms and autofill"</li>
+                    <li>
+                        "The popover holds a "<Code inline=true>"listbox"</Code>" of "<Code inline=true>"option"</Code>
+                        "s with "<Code inline=true>"aria-selected"</Code>". It is modal: focus stays inside, and the rest "
+                        "of the page is hidden from assistive technology until it closes."
+                    </li>
+                    <li>
+                        "A visually hidden native "<Code inline=true>"<select>"</Code>" mirrors the value, so the select "
+                        "takes part in forms and browser autofill."
+                    </li>
                 </ul>
 
                 <KeyboardTable>
-                    <KeyRow keys="Enter / Space / ArrowDown">"Open the popover."</KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move between options."</KeyRow>
-                    <KeyRow keys="Enter / Space">"Select the focused option."</KeyRow>
-                    <KeyRow keys="Escape">"Close the popover."</KeyRow>
-                    <KeyRow keys="Any character">"Type-ahead: jump to the first option starting with the typed text."</KeyRow>
+                    <KeyRow keys="Enter / Space / ArrowDown">"On the trigger: open the popover and focus the selected (or first) option."</KeyRow>
+                    <KeyRow keys="ArrowUp">"On the trigger: open the popover and focus the selected (or last) option."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowRight">"On the trigger, with single selection: select the previous or next option without opening the popover."</KeyRow>
+                    <KeyRow keys="Any character">"On the trigger, with single selection: select the next option starting with the typed text. In the popover: focus it."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"In the popover: move between options."</KeyRow>
+                    <KeyRow keys="Home / End">"In the popover: focus the first or last option."</KeyRow>
+                    <KeyRow keys="Enter / Space">"In the popover: select the focused option; with single selection, also close the popover."</KeyRow>
+                    <KeyRow keys="Escape">"Close the popover and return focus to the trigger."</KeyRow>
                 </KeyboardTable>
             </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
+                <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
+                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
+                <li><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></li>
+                <li><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+            </SeeAlso>
         </DocPage>
     }
 }

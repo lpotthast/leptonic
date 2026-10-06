@@ -19,6 +19,10 @@
 
     &[data-animated] {
         animation: loading 1.5s infinite;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+        }
     }
 
     @keyframes loading {

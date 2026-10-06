@@ -13,6 +13,8 @@ const RECIPES: &[&str] = &[
 #[component]
 pub fn SearchFieldDemo() -> impl IntoView {
     let (query, set_query) = signal(None::<String>);
+    let disabled = RwSignal::new(false);
+    let read_only = RwSignal::new(false);
 
     let results = move || {
         query.with(|query| match query {
@@ -40,9 +42,15 @@ pub fn SearchFieldDemo() -> impl IntoView {
                 placeholder="e.g. soup"
                 on_submit=move |query: String| set_query.set(Some(query))
                 on_clear=move |()| set_query.set(None)
+                is_disabled=disabled
+                is_read_only=read_only
             />
         </div>
         <p class="demo-status">{results}</p>
-        <p class="demo-caption">"Enter searches, Escape or the clear button empties the field."</p>
+
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+        </div>
     }
 }

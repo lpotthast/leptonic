@@ -1,42 +1,53 @@
 use leptonic::{
+    atoms::prelude::FocusScope,
     components::prelude::*,
-    hooks::{PlacementX, PlacementY, collections::Key, *},
-    utils::css::em,
+    hooks::{collections::Key, *},
+    utils::{css::em, id::use_id},
 };
 use leptos::{portal::Portal, prelude::*};
 
+/// The sides of the trigger the demo offers, with their labels.
+const SIDES: [(&str, Side); 6] = [
+    ("Top", Side::Top),
+    ("Bottom", Side::Bottom),
+    ("Left", Side::Left),
+    ("Right", Side::Right),
+    ("Start", Side::Start),
+    ("End", Side::End),
+];
+
+/// The alignments along the side, with their labels.
+const ALIGNMENTS: [(&str, Align); 3] = [
+    ("Start", Align::Start),
+    ("Center", Align::Center),
+    ("End", Align::End),
+];
+
 #[component]
 pub fn PlacementPopoverDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (placement_x, set_placement_x) = signal(PlacementX::Center);
-    let (placement_y, set_placement_y) = signal(PlacementY::Below);
+    let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
+    let is_open = state.is_open;
+    let side = RwSignal::new(Side::Bottom);
+    let align = RwSignal::new(Align::Center);
+    let placement = Signal::derive(move || side.get().placement(align.get()));
+    let title_id = use_id("placement-title");
 
     let UsePopoverReturn {
         props,
         trigger_props,
         id,
-        resolved_placement_x,
-        resolved_placement_y,
+        placement: resolved_placement,
         ..
     } = use_popover(UsePopoverInput {
-        placement_x: placement_x.into(),
-        placement_y: placement_y.into(),
-        offset: 0.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        modality: PopoverModality::Modal,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-        ..UsePopoverInput::new(OverlayTriggerState::from((is_open, set_is_open)))
+        placement,
+        offset: Signal::stored(8.0),
+        ..UsePopoverInput::new(state)
     });
 
-    // The trigger: a button toggling the popover, announcing it with `aria-haspopup`, `aria-expanded` and
-    // `aria-controls`.
     let UseOverlayTriggerReturn {
         props: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open.into(),
+        show: is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -44,104 +55,143 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
         props: button_props,
         ..
     } = use_button(UseButtonInput {
-        on_press: Some(Callback::new(move |_| {
-            set_is_open.update(|open| *open = !*open);
-        })),
-        aria_haspopup: Signal::stored(overlay_trigger.aria_haspopup),
+        on_press: Some(Callback::new(move |_| state.toggle())),
         aria_expanded: overlay_trigger.aria_expanded,
         aria_controls: overlay_trigger.aria_controls,
         ..UseButtonInput::default()
     });
     let (button_attrs, button_styles) = button_props.into_parts();
-    let (popover_props, popover_styles) = props.into_parts();
-    let popover_props = StoredValue::new(popover_props);
+    let (popover_attrs, popover_styles) = props.into_parts();
+    let popover_attrs = StoredValue::new(popover_attrs);
     let popover_styles = StoredValue::new(popover_styles);
+    let title_id = StoredValue::new(title_id);
 
     view! {
         <Grid gap=em(0.5) classes="demo-mb-1">
             <Row>
                 <Col xs=6 classes="demo-option-group">
-                    <strong>"Horizontal"</strong>
                     <RadioGroup
+                        label="Side"
                         classes="demo-radio-list"
-                        aria_label="Horizontal placement"
-                        default_value=format!("{:?}", placement_x.get_untracked())
-                        on_change={move |value: Option<Key>| {
-                            set_placement_x.set(match value.map(|v| v.to_string()).as_deref() {
-                                Some("OuterLeft") => PlacementX::OuterLeft,
-                                Some("Left") => PlacementX::Left,
-                                Some("Center") => PlacementX::Center,
-                                Some("Right") => PlacementX::Right,
-                                Some("OuterRight") => PlacementX::OuterRight,
-                                _ => return,
-                            });
+                        default_value="Bottom"
+                        on_change={move |key: Option<Key>| {
+                            if let Some(new_side) = option_for(&SIDES, key) {
+                                side.set(new_side);
+                            }
                         }}
                     >
-                        <Radio value="OuterLeft" classes="demo-form-row">"OuterLeft"</Radio>
-                        <Radio value="Left" classes="demo-form-row">"Left"</Radio>
-                        <Radio value="Center" classes="demo-form-row">"Center"</Radio>
-                        <Radio value="Right" classes="demo-form-row">"Right"</Radio>
-                        <Radio value="OuterRight" classes="demo-form-row">"OuterRight"</Radio>
+                        {SIDES.into_iter().map(|(label, _)| view! { <Radio value=label>{label}</Radio> }).collect_view()}
                     </RadioGroup>
                 </Col>
                 <Col xs=6 classes="demo-option-group">
-                    <strong>"Vertical"</strong>
                     <RadioGroup
+                        label="Alignment"
                         classes="demo-radio-list"
-                        aria_label="Vertical placement"
-                        default_value=format!("{:?}", placement_y.get_untracked())
-                        on_change={move |value: Option<Key>| {
-                            set_placement_y.set(match value.map(|v| v.to_string()).as_deref() {
-                                Some("Above") => PlacementY::Above,
-                                Some("Top") => PlacementY::Top,
-                                Some("Center") => PlacementY::Center,
-                                Some("Bottom") => PlacementY::Bottom,
-                                Some("Below") => PlacementY::Below,
-                                _ => return,
-                            });
+                        default_value="Center"
+                        on_change={move |key: Option<Key>| {
+                            if let Some(new_align) = option_for(&ALIGNMENTS, key) {
+                                align.set(new_align);
+                            }
                         }}
                     >
-                        <Radio value="Above" classes="demo-form-row">"Above"</Radio>
-                        <Radio value="Top" classes="demo-form-row">"Top"</Radio>
-                        <Radio value="Center" classes="demo-form-row">"Center"</Radio>
-                        <Radio value="Bottom" classes="demo-form-row">"Bottom"</Radio>
-                        <Radio value="Below" classes="demo-form-row">"Below"</Radio>
+                        {ALIGNMENTS.into_iter().map(|(label, _)| view! { <Radio value=label>{label}</Radio> }).collect_view()}
                     </RadioGroup>
                 </Col>
             </Row>
         </Grid>
 
         <div class="demo-popover-stage">
-            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn-primary">
-                {move || if is_open.get() { "Close" } else { "Open Popover" }}
+            <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn">
+                "Open popover"
             </button>
         </div>
+        <p class="demo-status">
+            {move || match (is_open.get(), resolved_placement.get()) {
+                (true, Some(side)) => format!("Open on the {} side.", side.as_str()),
+                _ => "Closed.".to_owned(),
+            }}
+        </p>
 
         <Portal>
             <Show when=move || is_open.get()>
-                <div class="demo-popover-underlay" />
-                <div
-                    {..popover_props.get_value()}
-                    class="demo-overlays-popover"
-                    style=popover_styles.get_value()
-                >
-                    <p class="demo-overlays-text">
-                        {move || {
-                            format!("Requested: {:?} / {:?}", placement_x.get(), placement_y.get())
-                        }}
-                    </p>
-                    // Differs from the requested placement when the popover had to flip.
-                    <p class="demo-overlays-text">
-                        {move || {
-                            format!(
-                                "Resolved: {:?} / {:?}",
-                                resolved_placement_x.get(),
-                                resolved_placement_y.get(),
-                            )
-                        }}
-                    </p>
-                </div>
+                <div class="demo-popover-underlay"/>
+                <FocusScope contain=true restore_focus=true auto_focus=true>
+                    <div
+                        {..popover_attrs.get_value()}
+                        style=popover_styles.get_value()
+                        class="demo-popover"
+                        role="dialog"
+                        aria-labelledby=title_id.get_value()
+                        tabindex="-1"
+                    >
+                        <h2 id=title_id.get_value() class="demo-overlay-title">"Placement"</h2>
+                        // Differs from the requested side when the popover had to flip.
+                        <p class="demo-overlay-text">
+                            {move || {
+                                format!(
+                                    "Opened on the {} side.",
+                                    resolved_placement.get().map_or("?", PlacementAxis::as_str),
+                                )
+                            }}
+                        </p>
+                    </div>
+                </FocusScope>
             </Show>
         </Portal>
+    }
+}
+
+/// The option whose label is `key`.
+fn option_for<T: Copy>(options: &[(&'static str, T)], key: Option<Key>) -> Option<T> {
+    let key = key?;
+    options
+        .iter()
+        .find(|(label, _)| Key::from(*label) == key)
+        .map(|(_, option)| *option)
+}
+
+/// A side of the trigger.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Side {
+    Top,
+    Bottom,
+    Left,
+    Right,
+    Start,
+    End,
+}
+
+/// The alignment along the side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Align {
+    Start,
+    Center,
+    End,
+}
+
+impl Side {
+    /// The placement for this side and alignment (top and bottom align horizontally, the other
+    /// sides vertically).
+    fn placement(self, align: Align) -> Placement {
+        match (self, align) {
+            (Side::Top, Align::Start) => Placement::TopStart,
+            (Side::Top, Align::Center) => Placement::Top,
+            (Side::Top, Align::End) => Placement::TopEnd,
+            (Side::Bottom, Align::Start) => Placement::BottomStart,
+            (Side::Bottom, Align::Center) => Placement::Bottom,
+            (Side::Bottom, Align::End) => Placement::BottomEnd,
+            (Side::Left, Align::Start) => Placement::LeftTop,
+            (Side::Left, Align::Center) => Placement::Left,
+            (Side::Left, Align::End) => Placement::LeftBottom,
+            (Side::Right, Align::Start) => Placement::RightTop,
+            (Side::Right, Align::Center) => Placement::Right,
+            (Side::Right, Align::End) => Placement::RightBottom,
+            (Side::Start, Align::Start) => Placement::StartTop,
+            (Side::Start, Align::Center) => Placement::Start,
+            (Side::Start, Align::End) => Placement::StartBottom,
+            (Side::End, Align::Start) => Placement::EndTop,
+            (Side::End, Align::Center) => Placement::End,
+            (Side::End, Align::End) => Placement::EndBottom,
+        }
     }
 }

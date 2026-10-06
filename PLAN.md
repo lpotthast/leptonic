@@ -2,7 +2,7 @@
 
 The only todo list of the repository: library (`leptonic/`, `leptonic-theme/`, `testing/`) and book
 (`examples/book-ssr/`, section "Book"). Living document. Keep it short: remove finished items (git history has
-them), add new findings as they come up. Last refreshed: 2026-10-05 (library-wide audit; raw findings with file/line
+them), add new findings as they come up. Last refreshed: 2026-10-06 (R3f done, C10 keys; disclosure done, review findings in R1; library-wide audit 2026-10-05; raw findings with file/line
 details in `documentation/audit-2026-10-05.md`, referenced below as "audit §n").
 
 ## Guiding decisions
@@ -27,8 +27,8 @@ details in `documentation/audit-2026-10-05.md`, referenced below as "audit §n")
 - **Tests are the definition of done.** Pure logic and `*_state` hooks get native unit tests. DOM behavior gets
   browser tests against `testing/test-app`, derived from react-aria's own tests. A hook without a test is not
   finished.
-- **Docs follow code.** Every hook, atom and component change updates its book-ssr page (owned by the book session:
-  send it a heads-up; only minimal compile fixes from here).
+- **Docs follow code.** Every hook, atom and component change updates its book-ssr page in the same piece of work
+  (one session owns library and book since 2026-10-05).
 - **Target modern browsers.** Where react-aria carries code for old browsers, we omit it.
 
 ## API conventions (decided 2026-10-05, audit §1)
@@ -47,9 +47,12 @@ goes beyond them.
 - **C3 State shape:** `use_x_state(..) -> XState`, a `Copy` struct with read-only `Signal`s and methods
   (`set_value`, `toggle`, ...), not `*StateReturn` structs of `Callback` fields with tuple arguments. Reason: methods
   are discoverable, typed and cheap; callbacks-as-getters are a JS props-bag shape.
-- **C4 Hook-owned state:** no controlled inputs (`value` + `on_change`, `SliderValues::Controlled`,
-  `is_open: Option<Signal>`): `default_*` + `on_*_change` + state methods. `is_invalid: Signal<bool>` is OR-ed into
-  the validation state (no `Option<Signal<bool>>` where `Some(false)` forces valid).
+- **C4 Hook-owned state:** hooks: `default_*` + `on_*_change` + state methods, or a `ValueBinding` to app state; the
+  mutation path stays the hook's. Atoms and components (the user's rule, 2026-10-06): controlled state as two props,
+  a readable `<x>` (`#[prop(into)]`: value, any signal, closure) and `set_<x>: Out<T>` (RwSignal, WriteSignal,
+  StoredValue, closure, Callback; for `is_<x>` the setter is `set_<x>`), never one combined binding; uncontrolled `default_<x>` + `on_<x>_change`.
+  `is_invalid: Signal<bool>` is OR-ed into the validation state (no `Option<Signal<bool>>` where `Some(false)` forces
+  valid).
 - **C5 Locale and direction come from the i18n context:** hooks never take `is_rtl`/`writing_direction`/`locale`.
   One reactive accessor `use_locale() -> Signal<Locale>` (plus `use_direction()`); `Locale: FromStr` with an error
   type (no silent en-US fallback). Locale-derived defaults (first day of week, hour cycle) are `Option<_>` = "from
@@ -82,13 +85,17 @@ goes beyond them.
 
 ## Waiting on the user
 
-- **Upstream release:** chrome-for-testing-manager on chrome-for-testing 0.5 (parses the new `linux-arm64`
-  platform), then browser-test on that. Prepared on branch `cft-0.5-linux-arm64` in `../chrome-for-testing-manager`
-  (version bumped to 0.12.1). Afterwards remove the temporary `[patch.crates-io]` in the root `Cargo.toml`.
 - **leptos-styles suggestion:** an `add_reactive_unchecked` method; today an always-present reactive unchecked value
   needs `add_optional_unchecked(prop, move || Some(..))`. leptos-css lacks `Margin::all`-style helpers.
+- **leptos-tiptap suggestion** (2026-10-06): attributes for the editable element (tiptap's `editorProps.attributes`;
+  0.10's `UseTiptapEditorInput` has none), so it can be labelled (`aria-label`/`aria-labelledby`; leptonic's
+  `TiptapEditor` labels only its group).
 - **leptos-element-capture suggestions:** `PartialEq`/`Eq`/`Hash` (identity) for `CapturedElement` (the collection
   item registry tracks registration ids instead); `try_get_untracked` for deferred callbacks (audit §2 B5).
+- **Name of the third layer:** "component" is the styled layer (`leptonic::components`, feature `components`), but
+  readers also know it as a Leptos `#[component]` and as a UI element. The book now says "concept" for UI elements
+  and "styled component" where needed (2026-10-06). Renaming the layer itself (e.g. `styled`) would remove the last
+  ambiguity but changes the public module and feature names: decide.
 - **Commits:** nothing has been committed; the working tree holds all changes.
 
 ## Consumers
@@ -127,8 +134,53 @@ R4 items are pulled in where a family needs them.
   input and native `required`, switch on a real input, search field value property, checkbox `checked` property and
   `required`), slider screen-reader input and thumb focus (R3g), controlled tooltip state (R3d), macOS Meta keyup
   synthesis and `preventFocus` re-ports (R3e), legacy components' random ids (their rebuilds).
+- [x] Review 2026-10-06 (overlays, positioning, menu, separator), fixed: `OverlayArrow` on every open; `Show` around
+  `Portal` (no empty portal container while closed); SSR `use_press` merges the responder's `force_is_pressed`;
+  `use_overlay` releases the element it pushed; `use_overlay_position` (`max_height: Some(0.0)` is 0, initial scale,
+  synchronous `PositionUpdater::update`, tracks the scroll element, boundary check across shadow roots via
+  `utils::shadow_dom::node_contains`); a disabled responder disables the button itself (no keyboard opening, no
+  long-press description); overlay content clears both trigger contexts (`ClearTriggerContexts`: a button in a modal
+  opened by a `DialogTrigger` no longer toggles it); non-modal popovers with a dialog contain focus
+  (`OverlayFocusContain`, reactive `FocusScope::contain`); `aria_hide_outside` walks like upstream's TreeWalker
+  (cells of hidden rows, the root itself); `Tooltip` without `TooltipTrigger` warns; `atoms/dialog.rs` deviation
+  block; overlay flags are signals and the outside filter an `InteractOutsideFilter` (C10/C11); menu keys typed.
+  Browser tests: `test_aria_hide_outside.rs` (new), dialog, popover, overlay position.
+- [x] Review 2026-10-06 (links, breadcrumbs, toolbar, disclosure, button, key sweep), fixed: a `Region` disclosure
+  panel rendered two `role` attributes (the role is now a signal in the hook's panel props) and panel attrs were
+  single-use; `Button`/`LinkButton` `data-disabled` from the merged disabled state (`UseButtonReturn::is_disabled`);
+  a disabled `LinkButton` renders an `<a>` without `href`; a single-expansion disclosure group reduces keys
+  deterministically (first default, else the smallest key: `HashSet` order differed between server and client);
+  a popover's focus containment is per opening, modals provide their own; `AnchorLink` keeps `history.state`;
+  no description element for an empty description; `use_button` takes `Vec<LinkRel>`/`LinkTarget`/`Signal<Option<
+  String>>` href like links; `target` is a plain `LinkTarget` (default `Same`); `AnchorLink`'s `None` scroll
+  behavior means "don't scroll"; toolbar labelling reactive. Tests added: toolbar vertical and RTL, disclosure
+  region role (server HTML) and repeated Enter.
+- [ ] Test gaps from that review: `aria_hide_outside` MutationObserver cases (elements added outside, into hidden
+  containers, inside a target, reparented, top-layer) and "unhide after reorder"; popover reopened without its
+  dialog (containment reset); link hover/focus/press data attributes and Enter; `AnchorLink` (scroll, hash without
+  history entry); disabled `LinkButton`; disclosure group `on_expanded_change`, nested groups, focus ring.
+- [x] SSR global state (audit 2026-10-06; rule in `documentation/hooks-implementation.md`, "Global State and SSR"):
+  `use_description` is reactive and client-only (one API; the tag's description no longer touches the registry on
+  the server); themed `Tab` and `TiptapEditor` ids from `use_id` (were random `Uuid`s: hydration mismatch, the
+  editor could not attach); `use_prevent_scroll` releases only a count it holds (a disabled instance unmounting
+  re-enabled scrolling under an open overlay).
 
 ### R2. Library-wide conventions (mechanical, before the families)
+- [x] C4 state props (the user's rule, 2026-10-06): every atom and component takes `<x>` (`Signal<T>`) +
+  `set_<x>: Out<T>` (`is_<x>` → `set_<x>`: `is_open`/`set_open`, `is_selected`/`set_selected`,
+  `is_expanded`/`set_expanded`) beside `default_<x>` + `on_<x>_change`; `ValueBinding::from_state_props`
+  turns the props into the hook's binding (no `set_<x>`: read-only; no `<x>`: `set_<x>` receives every
+  change). Converted: tooltip, menu (open, selection), listbox, grid list, grid, table (selection,
+  sorting), select, combobox (value, input value), tabs, number field, disclosure (+ group), collapsible,
+  slider, checkbox, switch, toggle button, text and search field, dialog trigger, modal backdrop, popover,
+  themed modal/popover/number field/text fields/checkbox/switch/theme toggle. New controlled values:
+  radio, checkbox and toggle button groups (`UseRadioGroupStateInput::value`, ...). `ListState` props
+  stay (whole shared collection states for composition, not a value). Test app and book usages
+  converted; unit tests for `from_state_props` and a bound radio group, browser test of a controlled
+  and a fixed radio group.
+- [x] C10 key comparisons (2026-10-06): all `e.key()` string comparisons are `KeyboardEventKey::typed_key()`
+  (`use_press`'s keyboard helpers take `&KeyboardKey`; the macOS Meta map is keyed by it). `use_date_field`'s
+  keydown match is still empty: upstream's `useDatePickerGroup` arrow navigation between segments (R3h).
 - [x] C1–C13 documented in `documentation/hooks-implementation.md` ("API Conventions", standard deviation block
   format with mandatory reasons) and as global entries in `hooks/mod.rs`.
 - [x] C1: `is_disabled`/`is_read_only`/`is_required` on all hook inputs, states, contexts and atom props
@@ -181,119 +233,28 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
   fix (the state now re-reads registered inputs' native validity before each commit). Browser tests from RAC
   `Checkbox`/`CheckboxGroup`/`RadioGroup`/`Switch`/`ToggleButton`/`ToggleButtonGroup` and `useToolbar` tests.
   Open: no styled ToggleButton component yet.
-- [ ] **c. Text inputs and fields:** done 2026-10-05: `use_label` re-ported, `use_field` built on it
-  (`aria_label: MaybeProp<String>` on all field hooks, `UseFieldLabelProps` → `UseLabelProps`); C14 field parts
-  (`atoms::field`: `FieldContext`, `Label`, `Description`, `FieldError`; per-family parts of CheckboxGroup,
-  RadioGroup, Select, ComboBox removed, ComboBox label is a `<label for>` as upstream); text field C1/C2
-  (`is_required: Signal<bool>`, `placeholder: MaybeProp<String>`, `is_focused` returned, no `value` attribute on
-  textareas), `TextFieldState::from(RwSignal)`/`with_on_change`; atoms `TextField`, `Input`/`TextArea`
-  (`InputContext`), `Form` (`FormContext`, server errors); field atoms default to the `Form`'s validation behavior,
-  else `Native` (as RAC; was `Aria`); `use_form_validation` re-ported (textarea/select, focuses the first invalid
-  field with keyboard modality, `focus` option, the hidden select focuses the trigger); browser test from RAC
-  `TextField`/`Form` tests; `use_search_field` re-ported on `use_text_field` (input wraps a `UseTextFieldInput`,
-  returns the clear button's `UseButtonInput`; `use_search_field_state` gone), SearchField atom +
-  `SearchFieldClearButton`, browser test from RAC `SearchField` and `useSearchField` tests; number field generic over
-  its value type (C15: `utils::NumberValue` for all primitive numbers, exact integers; `utils::ValueBinding<T>` binds
-  app state; `NumberFieldState<T>` per C3 with settings read from it (C8), `CommitBehavior::{Snap, Validate}` with
-  native range validation, snapping to explicit steps only; `use_number_field` re-ported on `use_text_field` (shared
-  validation state, `beforeinput` filtering, composition, paste, wheel, stepper labels, hidden input left to the
-  caller); NumberField atom + `NumberFieldGroup`/`NumberFieldIncrementButton`/`NumberFieldDecrementButton`; one generic
-  `Input` for every field (`InputContext` holds a type-erased attribute factory, so ComboBox and custom fields use it
-  too; `ComboBoxInput` removed); formatter generic and exact (ICU4X decimals, half-expand rounding, grouping by
-  default as Intl, significant/integer digits and sign display implemented, the unimplemented `notation` and
-  `compact_display` removed), parser generic (no group separators without grouping, leading separators allowed as
-  upstream); browser test from RAC `NumberField` tests; `FieldError` `message` function over the validation result
-  (RAC's render function; `FieldContext.validation_details`). Open: re-port `NumberParser` fully from `@internationalized/number` (other numbering systems when
-  pasting, literal stripping from formatted parts, unit plurals, accounting sign, fr-FR/Swiss group characters,
-  percent rounding) together with a formatter that knows currencies/units from CLDR; `TextFieldState`/`ToggleState`
-  onto `ValueBinding`?. Done 2026-10-05: legacy `TextInput`/`PasswordInput`/`NumberInput`/`Label`/`Field`/
-  `FormControl` deleted (with `label.scss`, `form.scss`, `field.scss` and dead `input.scss` rules) after the book moved
-  to the themed `TextField`/`SearchField`/`NumberField` (new component page). Themed field gaps found by the book,
-  done: `input_type` is a `Signal` (hook, atoms, components; show-password fixture), `label`/`description` are
-  `MaybeProp` (C2), `id`/`form`/`pattern`/`input_mode`/`aria_describedby` passed through, `SearchField` validation
-  props; browser test extended (not run yet: harness agent has the suites). `DateTimeInput` and the
-  `Select` search still style through the legacy `leptonic-input`/`leptonic-input-field` classes (`input.scss`).
-- [ ] **d. Overlays:** done 2026-10-05: `use_overlay_trigger_state` → `OverlayTriggerState` (C3, `ValueBinding`,
-  `point: Option<Point>`, new `utils::Point`); `MenuTriggerState` on it (+ submenu stack); `use_menu_trigger` generic
-  over `MenuTriggerStateApi` (implemented by `MenuTriggerState`, `SelectState`, `ComboBoxState`); the non-upstream
-  `use_modal_state`/`use_dialog_state` (and `confirm`) removed. Done 2026-10-05: `use_dialog` re-ported to
-  99e6102368 (title and content as slots referenced while rendered, alert dialogs described by their content,
-  `aria_labelledby`/`aria_describedby`/`is_entering`, missing-name `dev_warn!`; no `title`/`description` text
-  inputs); `Dialog` atom renders `<section>`, `DialogTitle` a heading (`HeadingLevel`, default `<h2>`),
-  `DialogDescription` the content slot; themed `Modal` lost `title`/`description` (its `ModalTitle` names it);
-  dialog browser test checks naming/description. Done 2026-10-05: `use_modal_backdrop` re-ported to 99e6102368 on
-  `OverlayTriggerState` (`UseModalBackdropInput::new(state)`, `is_entering` with `keep_visible`); `ModalBackdrop`
-  atom and themed `Modal` take `state: OverlayTriggerState` (from `RwSignal<bool>`, a signal pair or a
-  `ValueBinding`) instead of `is_open`/`show_when` + `on_close`; `ValueBinding` in the preludes. Done 2026-10-05:
-  `use_popover` re-ported on `OverlayTriggerState` (`UsePopoverInput::new(state)`, optional `trigger`, non-modal
-  popovers close on scroll); new `DialogTrigger` atom (owns the state, passes press handler + `aria-expanded`/
-  `aria-controls` + trigger capture to its `Button` through `PressResponder`'s new `trigger` props, merged in
-  `use_button`); new `Popover` atom on `use_popover` (state/trigger from the `DialogTrigger` or props, modal by
-  default with dismiss buttons, `ClearPressResponder` for its content, `data-placement`; old
-  `PopoverTrigger`/`PopoverContent`/`PopoverContext` removed); a `Dialog` in a `DialogTrigger` is its `aria-controls`;
-  `ModalBackdrop`'s `state` falls back to the `DialogTrigger`; themed `Popover` rebuilt on them (`state` replaces
-  `show_when`/`on_close`); fixture + browser test from RAC `Popover.test.js`. FocusScope: the active scope is tracked by
-  one document-level `focusin` listener (react-aria `useActiveScopeTracker`) plus a check at registration; a scope
-  whose dialog focused itself before the scope's own listener existed was never active, so focus wasn't restored
-  after an outside click. Done 2026-10-05: `use_tooltip_trigger_state` re-ported to 99e6102368 →
-  `TooltipTriggerState` (C3) on `OverlayTriggerState` (`value` binding), `Duration` delays, `open`/`close` take
-  `TooltipTiming` (C10), `should_skip_animation`, a pending close isn't restarted, replaced tooltips close at once and
-  leave the registry. Done 2026-10-05: `FocusableContext` extended (react-aria-components' `FocusableProvider`):
-  `aria_describedby` (merged into the element's own description by use_button/text field/toggle/radio, rendered by the
-  links) and `attrs` (further attributes, spread through the `Send + Sync` `FocusableContextAttr`), disabled elements
-  get none; new `TooltipTrigger`/`Tooltip` atoms on it (any focusable atom is a trigger; the hook enum is now
-  `TooltipTriggerMode`); fixture + browser test from RAC `Tooltip.test.js` (hover delay, warm-up, leave, focus,
-  Escape). Done 2026-10-05: `OverlayState` trait (`OverlayTriggerState`, menu/select/combo box states; the menu
-  trait extends it), `use_popover` generic over it (returns `popover_element`), one `render_popover` for the `Popover`
-  atom, `SelectPopover` (modal, as RAC) and `ComboBoxPopover` (non-modal), both with offset/padding/flip props; tests
-  check the select's modality. Done 2026-10-05: an untitled `Dialog` in a `DialogTrigger` is named by the trigger
-  (`UseDialogInput::fallback_aria_labelledby`; `DialogTriggerContext::ensure_trigger_id` gives the trigger an id when
-  the dialog mounts, keeping an own `attr:id`); popover test from RAC `Dialog.test.js`.
-  Done 2026-10-05: `use_overlay` re-ported to 99e6102368 (Escape through `use_keyboard` shortcuts, bubbling when
-  keyboard dismissal is disabled); `underlay_props`/`backdrop_props` removed from `use_overlay`, `use_popover`,
-  `use_modal_backdrop` (upstream's are empty since the Firefox workaround was dropped; underlay elements stay).
-  Done 2026-10-05: `PopoverModality { Modal, NonModal }` replaces `is_non_modal: bool` (C10 "no bools meaning modes")
-  in `UsePopoverInput` and the `Popover` atom/component.
-  Done 2026-10-05: a modal popover without a dialog inside is the dialog (RAC): `role="dialog"`, `tabindex="-1"`,
-  focused once rendered unless focus is inside, named by `aria_label`/`aria_labelledby` (new `Popover` props) or the
-  `DialogTrigger`'s trigger; the select's popover is named like its listbox; tests from RAC `Popover.test.js`.
-  Done 2026-10-05: `aria_hide_outside` re-ported to 99e6102368 with `HideMode { AriaHidden (default), Inert }`
-  (react-aria's `shouldUseInert`): modal backdrop and modal popovers use `inert`, the combo box and drags
-  `aria-hidden` as upstream, so the page stays usable behind an open combo box (before, everything was inert: a
-  click on another button only closed the combo box); combo box test checks it.
-  Done 2026-10-05: Menu atoms (`MenuTrigger`, `Menu`, `MenuItem` with `MenuItemLabel`/`MenuItemDescription`/
-  `MenuItemShortcut`, `MenuItems`, `MenuSection`; RAC `Menu.test.tsx` subset in `test_menu_atoms.rs`): the trigger
-  hands its button press handlers, ARIA props and shortcuts through `PressResponder` (new `shortcuts`), the popover
-  its state through `DialogTriggerContext::new`; the menu is labelled by the trigger's rendered id
-  (`UseMenuInput::aria_labelledby` is a `MaybeProp` now); closing the overlay state any way also closes submenus.
-  Done 2026-10-05: long-press menu triggers (`MenuTrigger trigger=MenuTriggerType::LongPress`; `PressResponder` carries
-  long-press callbacks and the description; upstream's text "Long press or press Alt + ArrowDown to open menu").
-  Open: overlay position:
-  arrow, point targets, scroll anchoring, visual viewport;
-  `use_submenu_trigger`, `use_context_menu`, separators in menus; exit animations (`use_enter_animation` hiding, `watch_animations`
-  filter); fixtures + tests.
-- [ ] **e. Interactions and focus:** `PressResponderContext::registered` is never read (no warning for responders
-  without a pressable child); `UseFocusVisibleInput::auto_focus` is overwritten by an effect once tracking is
-  enabled; `use_press` `force_*` → typed options, `on_press: Option`; `use_move`
-  constraint split (`use_constrained_move` or `MoveConstraintConfig`), `axis: Signal<MoveAxis>`, `Point`; focus event
-  payloads unified (`UseInteractOutsideInput` mixes `PointerEvent` and `MouseEvent`); `FocusManager` atom renamed (clash); Pressable atom on its child (no wrapper div), PressResponder
-  OR-ing; FocusScope re-parenting, restore fallback, `focus_safely`; FocusRing `is_text_input`; `Focusable`
-  component; re-sync leftovers (press pointer capture release, focus-visible pointer sub-types, focus manager
-  focus with scrolling); tests from upstream's interaction tests.
-- [ ] **f. Link, button, breadcrumbs, toolbar, disclosure:** non-anchor breadcrumb items lack `role="link"`; check
-  whether a disabled `use_link` `<a>` keeps its `href` (focusable/navigable); `UseLinkInput`/`UseAnchorLinkInput`
-  lack `Default`/`new`; legacy `CollapsibleBody` takes a static `class: String`; typed `Href`, `LinkTarget::{Blank, Same, Parent, Top,
-  Named}`, consistent href/rel/aria_current types, typed form attributes, Button atom pass-through (aria/id/form),
-  `Link`+`LinkExt` merged, a `replace` option (don't add a history entry); breadcrumbs on `use_link`; toolbar focus management (RTL, wrap, restore, nested);
-  disclosure on `use_button`, `region`→`group`, `hidden="until-found"`, `use_disclosure_group_state`; atoms
-  Breadcrumbs/Toolbar/Disclosure(Group)/Link data attributes; rebuild `components/collapsible.rs`.
-- [ ] **g. Slider, meter, progress, separator, spin button:** `use_separator` sets `aria-orientation="horizontal"`
-  explicitly (react-aria omits it); the theme doesn't style the Separator (`solid` class does nothing); slider's
-  stale "type=hidden" deviation note; the Slider component has no `aria_label` (unnamed thumbs); `UseSliderStateReturn` tuple callbacks (C3/C10),
-  `RangeSlider` classes/styles without `into`; drop `SliderValues`, `Step` enum, required thumb
-  `index`, `Fraction`, label wiring and output ids, `on_change_end` for keys, form reset, `NumberFormatOptions` for
-  value labels, `None` = indeterminate progress, aria-label inputs, meter `role="meter progressbar"` fallback; atoms Meter/ProgressBar/Separator; rebuild their
-  components; slider test header from upstream.
+- [ ] **c. Text inputs and fields:** open: re-port `NumberParser` fully from `@internationalized/number` (other
+  numbering systems when pasting, literal stripping from formatted parts, unit plurals, accounting sign, fr-FR/Swiss
+  group characters, percent rounding) together with a formatter that knows currencies/units/percent patterns
+  from CLDR (`format_percent` appends `%`; German expects `50 %`), and re-sync `number_formatter.rs` (header still
+  `@ 6f664fe911`);
+  `DateTimeInput` and the `Select` search still style through
+  the legacy `leptonic-input`/`leptonic-input-field` classes (`input.scss`).
+- [x] **d. Overlays:** done 2026-10-06 (submenus, subdialogs, context menus, close on scroll, entry/exit
+  animations; see Done).
+- [x] **e. Interactions and focus:** done 2026-10-06 (see Done): `use_press`/`use_move`/focus APIs, `Pressable` and
+  `Focusable` on their child, FocusScope re-sync (re-parenting, restore fallback, `focus_safely`, blur and Tab
+  handling), browser tests from all of upstream's interaction tests (macOS/iOS-only paths of `useContextMenu` need
+  those platforms).
+- [ ] **f. Link, button, breadcrumbs, toolbar:** (the Pressable atom applies a responder's trigger props, done
+  2026-10-06) rest: breadcrumbs and toolbar as concept pages in the book (overview + layers); localized default
+  label of breadcrumbs (R4 localized strings).
+- [x] **g. Meter, progress, spin button:** done 2026-10-06 (see Done), with a themed `Meter` component.
+- [x] **Label slots:** done 2026-10-06 (see Done): the select's trigger and listbox, the combo box's button and
+  listbox, the number field's steppers and the slider's thumbs follow whether the label is rendered.
+- [ ] **Legacy components and the state-props rule (C4):** `Drawer` (`shown`, no setter), `DateTimeInput`
+  (`get`/`set`), `DateSelector` (`value` + `on_change: Out`) get `<x>` + `set_<x>` when rebuilt (R3h for the date
+  ones).
 - [ ] **h. Calendar and date picker:** `time::Date`/`PrimitiveDateTime`, `Granularity`, `HourCycle`, `DateRange`,
   `time::Time` for time fields; segments in locale order, `beforeinput`/composition typing, invalid values kept,
   placeholder/leading zeros; single-date `use_calendar`, `use_date_range_picker`, calendar base outputs (prev/next
@@ -318,13 +279,9 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
   `components/{date_selector,datetime_input}.rs` (`DateSelector` is mouse-only: clickable divs, no roles/keyboard/
   focus, only `use_calendar_state`; `DateTimeInput` panics without a value (`get().unwrap()`), its time selector is
   a TODO).
-- [ ] **i. Color:** `use_color_area`'s deviation note claims the Y input becomes focusable after keyboard use (it
-  always has `tabindex=-1` + `aria-hidden`); `use_color_swatch` claims no deviations (no localized color name,
-  `aria_label` replaces instead of joining the name); `use_color_channel_field` has no `name`/`form`, hardcoded
-  validation, Page Up/Down ignore the channel's page size; state shape per C3, one `set_value`/`on_change` rule, `use_color_area` keyboard step/page step,
-  thumb sync for Page/Home/End, `on_change_end`, color field disabled/commit; `Color` CSS parsing, `FromStr`, alpha;
-  typed `track_style`/`BlendMode`; atoms ColorSlider/ColorField/ColorWheel/ColorPicker/ColorSwatchPicker; rebuild
-  `components/color_picker.rs`.
+- [ ] **i. Color:** (mostly done 2026-10-06, see Done) Left: alpha (react-aria's `Color` has an alpha channel:
+  `RGBA8` is an unused stub; `Color` parsing rejects `#rgba`/`rgba()`/`hsla()`/`hsba()`; swatches of transparent
+  colors, the alpha channel in sliders and fields)).
 - [ ] **j. Collections leftovers:** `use_listbox` doc example calls a nonexistent `UseOptionInput::new`;
   `UseHiddenSelectInput::trigger_id` is documented but ignored; legacy `Table`/`TableHeaderCell` treat `None` as
   defaults (`min_width` defaults to true), `table.scss` comments out `bordered`'s cell border; `ListBox`/`GridList` atoms' `collection`/`state` alternatives → one typed source;
@@ -333,11 +290,12 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
   Table), Select (`value: ValueBinding<Vec<Key>>`) and the table's sort (`sort_descriptor`, `None` clears it), with
   unit tests; also ComboBox (`value`, `input_value`), Tabs (`selected_key: ValueBinding<Key>`) and
   `UseSingleSelectListStateInput::selected_key` (unit tests written, not run yet: browser-test checkout mid-edit
-  blocks dev-dependency builds); still open: ToggleButtonGroup, tree expansion; focus-mode enum names; tree input (keyboard delegate, Tab navigation,
+  blocks dev-dependency builds); still open: tree expansion; focus-mode enum names; tree input (keyboard delegate, Tab navigation,
   select on press up); tag group options; menu item links; per-item `on_action`; combobox item actions/links,
   `aria-labelledby` fallback, missing props (`should_focus_wrap`, `on_open_change`, ...); tab links; grid list
   selection checkbox (labelled by its row); `SelectionManager` cell selection/layout ranges; load more; DnD on the
-  collection atoms + drag preview + tree drops; TagGroup/Tree atoms; Autocomplete, then searchable
+  collection atoms + drag preview + tree drops; TagGroup/Tree atoms; Autocomplete (with upstream's `getPointerType`
+  from `useFocusVisible`, which only `useAutocomplete` reads; we track no pointer type yet), then searchable
   Select/Multiselect (search keeps focus, collection unfiltered for the trigger text); legacy `components::select`
   issues; combo box label click shows no focus ring (check upstream first); `atoms::prelude` with `Grid*`/`Table*` once the legacy names are gone; table resizing leftovers (cursor
   overlay while mouse-resizing, resizer `data-focused`/`data-focus-visible`/`data-hovered` via focus ring + hover
@@ -345,7 +303,7 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
 - [ ] **k. Toast and landmark:** `use_toast`/`use_toast_region`/queue state, `use_landmark`; Toast atoms; rebuild
   `components/toast.rs`; `drawer.rs` onto the Modal atom + animation hooks; `transitions/*` onto `hooks/animation`
   (theme styles, reduced motion, `inert` while hidden); `alert.rs` roles; `icon.rs` decorative `aria-hidden`,
-  its `width`/`height` props have no effect (theme `svg { width: 100% }`); `Chip.color` treats `None` as a default.
+  its `width`/`height` props have no effect (theme `svg { width: 100% }`).
 
 ### R4. Cross-cutting
 - [x] One value for boolean state attributes (2026-10-05): `"true"` everywhere (as react-aria-components), through
@@ -354,8 +312,8 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
   (visually hidden) for glyphs and abbreviations; `Icon` is decorative (`aria-hidden`) unless labelled (`role="img"`
   + `aria-label`, which was rendered as a literal `aria_label` attribute); the themed `Button` has `button_type` and
   an optional `on_press`. Open: legacy `TableHeaderCell` always attaches
-  `use_press`, so static table headers (the book's documentation tables) are press targets. No `Disclosure` atom
-  yet (the book composes `use_disclosure` + `use_disclosure_state` itself) and no hook-based Drawer/sheet (the book
+  `use_press`, so static table headers (the book's documentation tables) are press targets. No hook-based
+  Drawer/sheet (the book
   composes `ModalBackdrop` + `ModalContent` + `Dialog`; neither has exit animations). Optional `Callback` props with generic arguments
   (`on_selection_change: Option<Callback<HashSet<Key>>>`) can't infer an untyped closure in `view!` (E0282).
 - [ ] From crudkit (2026-10-05), grid: in a `use_table_cell` cell with `CellFocusMode::Child`, Enter on a `Button`
@@ -427,8 +385,247 @@ Ordered by user impact and readiness. Details: audit §1.2 (API), §3 (gaps), §
 - [ ] Native test helper for hooks (`with_owner`) and a way to run Effects natively, for `*_state` hooks.
 - [ ] Extend the hydration id test to every fixture that generates ids.
 - [x] Parallel browser tests: done (see the Book section's "Parallel browser tests").
+- [ ] Clippy in release too: some lints depend on type sizes that differ in release (`MaybeProp`, `StoredValue`: 8
+  bytes, so `trivially_copy_pass_by_ref` fires only there; found 2026-10-06). `just clippy` checks debug builds only;
+  add a release run (CI or the recipe) once the user decides on the cost.
+- [x] Stale theme in browser runs (2026-10-06): with an outer `CARGO_TARGET_DIR`, leptonic's build script found no
+  app and the test-app never got theme changes; and cargo-leptos may compile the styles before the build script
+  writes the theme. The harness now writes the theme itself before starting the app (`leptonic_theme::generate`) and
+  passes `LEPTONIC_APP_DIR`.
+- [ ] Chrome profiles leak (browser-test crate, user's): chromedriver's `/tmp/org.chromium.Chromium.scoped_dir.*`
+  profiles stay behind when a session isn't quit cleanly (killed runs, `QuitSessionTimeout`). 2026-10-06: 785 of
+  them (14 GB) filled the /tmp quota and blocked every agent's tool output (removed). Fix in browser-test: pass an
+  own `--user-data-dir` per session and remove it in its drop/cleanup, or sweep stale ones at startup.
 
 ## Done (summary)
+
+Interactions (R3e, 2026-10-06): a `PressResponder` without a pressable child warns (its `registered` flag); `use_press`
+takes `propagation: PressPropagation` (`Stop`, `Continue`) instead of `force_propagation`, the never-used
+`force_prevent_default` is gone, `on_press` is an `Option`, the config flags are signals and the long-press
+description a `MaybeProp` (also on `UseButtonInput` and `PressResponder`); `use_focus_visible` keeps `auto_focus` (it
+re-syncs only after being disabled); `use_interact_outside` passes `MouseEvent`s to both callbacks; the `FocusManager`
+atom is `FocusManagerProvider` (no clash with the hook's type); `Pressable` puts its handlers onto its child
+(`AddAnyAttr`, no wrapper), makes it focusable where it has no `tabindex`, and warns without a role (browser test from
+`Pressable.test.js`); the responder's OR-ed flags are documented. `Pressable` also takes a surrounding
+`PressResponder`'s trigger props (`aria-haspopup`/`-expanded`/`-controls`, the element to position at, as
+`usePress` merges them). Two items rendered with one collection key warn in development (they made focus bounce
+between them and froze the page). `use_move`: the constraint-only fields are grouped in `MoveConstraintOptions` (`mode`,
+`allow_container_click`, `initial_position`, `on_position_change`; `MoveConstraintOptions::new(mode)`),
+`UseMoveInput: Default`, `axis: Signal<MoveAxis>` (no `None` next to `MoveAxis::Both`) and `pixel_position:
+Signal<Point>` (C13). The `FocusRing` atom takes `is_text_input` and sets `data-focused` (upstream's `focusClass`); test from
+`useFocusVisible.test.js` ("emits on modality change (text input)"). New `Focusable` atom (upstream's `Focusable`: handlers onto its
+child, `tabindex` where the child has none and kept in sync, upstream's role checks); `Pressable` shares its child
+handling and now also takes a `FocusableContext`'s description and attributes, so both work as custom tooltip
+triggers (tests from `Focusable.test.js` and `Tooltip.test.js`). FocusScope (audit "Interactions / focus"): scopes register in their
+component body (as upstream's layout effect: all scopes mounting together register before any auto-focuses), a scope
+mounting outside the active scope gets it as parent, an unmounting scope's children move to its parent and the active
+scope passes to the parent; restoring falls back to the first tabbable element of the nearest ancestor scope still
+mounted (and skips the body), and restores and recaptures with `focus_safely`; `focus_safely` re-synced (returns
+for disconnected elements). Focus escaping a containing scope comes back without scrolling (upstream's
+`focusFirstInScope`, not the scrolling focus manager), and a blur goes back to the element that lost focus. Tests: "does not throw when there is no focusable element to restore focus to" (with
+and without another element) and "tracks node to restore if the node to restore was removed in another part of the
+tree", "should restore focus to the last focused element in the scope on focus out". Of the
+re-sync leftovers, press pointer capture release already matched upstream; the focus manager scrolls like upstream's.
+Interaction tests (R3e, 2026-10-06) from upstream's `useHover`, `useMove`, `useKeyboard`, `useLongPress` and
+`PressResponder` tests (fixtures `hooks/{hover,move,keyboard,long-press}`, synthetic pointer/key events where WebDriver
+has no equivalent). They found: a long press never cancelled the press (its synthetic `pointercancel` didn't bubble to
+the document listener, so `on_long_press_end` never fired and the press stayed active); long press callbacks now
+precede the press callbacks, as upstream's `useLongPress` + `usePress`.
+Review of R3e (2026-10-06), fixed: blur recapture refocuses the element that lost focus (re-checking containment in
+the frame); the Tab handling of non-containing restoring scopes is upstream's (only when the next element is outside
+the scope, `should_restore_focus`, gone nodes forgotten, blur when leaving the top-level scope; capture phase);
+focus outside all scopes ends a plain scope's activity (tree knows `restore`); restore fallback also takes focusable
+elements, dispatches the restore event on any element, and the event stops at each scope's boundary; deviations
+documented (registration in the body, body skipped, cleanup order); `Focusable` auto-focuses after setting the
+`tabindex`; `manage_child` per element, no warning on unmount, SSR-safe storage (a local `StoredValue` dropped on
+another server thread panicked the server); `Pressable` merges the long-press description into `aria-describedby`;
+`use_move` starts only on real movement and starts the pixel position at `initial_position`; the duplicate-key
+warning compares with the replaced entry; release-only clippy lints (`trivially_copy_pass_by_ref` on `MaybeProp` and
+`StoredValue`, 8 bytes in release) fixed. Further tests: `useInteractOutside` (inside/outside, other buttons, pointer up
+alone, disabled), `useContextMenu` (right click position, prevented and stopped, no handler, no Ctrl+Enter off macOS),
+`focusSafely` (deferred focus with virtual modality, not onto a removed element). Left as is: stale focusout frames aren't cancelled (each re-checks
+containment, later corrected: a stale frame from an earlier blur could win, so only the latest one runs, as
+upstream); a `FocusScope` created without an owner stays in the scope tree.
+Label slots (2026-10-06): `UseButtonInput::aria_labelledby` and `UseListBoxInput::aria_labelledby` are
+`Signal<Option<String>>`; the select, combo box, number field steppers and slider thumbs derive their labelling from
+the label's presence (thumb ids now come from the group's stable id, the stepper ids are always rendered: deviations
+documented); `use_label` puts the field's own id first and dedupes ids, as `useLabels` (our order made the computed
+name "label aria-label" instead of "aria-label label"; unit test from `useLabel.test.js`); browser test
+`label_slots_tests` (labels toggled after mount).
+Color area (R3i, 2026-10-06): `use_color_area_state` → `ColorAreaState<C>` (C3 methods, C4 `value` binding, default
+axes, steps snapped to the channel step: page steps used to snap to themselves); `use_color_area` re-ported (keyboard
+shortcuts, arrow steps with Shift for page steps through `use_move`'s keyboard deltas instead of pixel moves, thumb and
+area presses with global pointer up, focus handling of the two inputs with `tabindex`/`aria-hidden`, value text,
+labels as `useLabels`, visually hidden inputs, form reset, gradient and thumb styles in the returned props);
+`get_area_gradient` takes the writing direction, the RGB gradient's layers are upstream's; atoms `ColorArea` (C4,
+`String` props, `data-disabled`) and `ColorThumb` (one element each; the thumb renders the two hidden inputs, as
+RAC's and our `SliderThumb`); the `ColorPalette` component is built on them. Browser test from react-spectrum's
+`ColorArea.test.tsx` (`color_area_tests`). Color slider: `ColorSliderState<C>` (C3/C4, input by value, disabled/orientation only on the
+state), `use_color_slider` returns typed `track_styles`/`input_styles` and labels as upstream (the channel's name on
+the group without labels); atoms `ColorSlider`, `ColorSliderTrack`, `ColorSliderOutput`. Color wheel: re-ported
+(0° at 3 o'clock as upstream, was 12 o'clock; steps wrap like upstream's; track/thumb/input props with upstream's
+styles: conic gradient, clip path); atoms `ColorWheel`, `ColorWheelTrack`. One `ColorThumb` for area, slider and
+wheel (`ColorThumbContext`, as RAC's `InternalColorThumbContext`). Browser tests `color_slider_tests`,
+`color_wheel_tests`.
+Color fields, names, swatches, picker (R3i, 2026-10-06): `use_color_field(_state)` (hex text, C3/C4, validation,
+spin keys, scroll wheel, form reset) and `use_color_channel_field(_state)` on the number field (channel format
+options, name/form, validation); atoms `ColorField`, `ColorChannelField<C>`; `use_formatted_text_field` shared with the
+number field. Color names as upstream (`color_name()`/`hue_name()`, OKLCH; in the value texts of area, slider and
+wheel; unit test from `Color.test.tsx`). `use_color_swatch` re-ported (name joined with `aria_label`, `color_name`,
+labelledby with its own id, styles in the props); atoms `ColorSwatch` (color optional in a picker),
+`ColorSwatchPicker`/`ColorSwatchPickerItem`/`ColorSwatchPickerItems` (a single-selection grid `ListBox` keyed by hex). Then
+(found by the book): `ColorSwatch` shows any color (`ColorProp`: any color value or signal of one, no type
+parameter); a `ColorSwatchPickerItem` provides its color to the swatch inside (`ColorSwatchPickerItemContext`, before
+a `ColorPicker`'s) and takes `is_disabled` (registered as the listbox's disabled keys); `ColorSwatchPickerItems` lost
+its type parameters and renders a swatch by default. The button theme's disabled colors are variables
+(`--button-disabled-*`, dark values) instead of light-only literals.
+`Color` enum (replaces the unused `ColorSpace`; keeps the space it was set in, `to::<C>()`, `FromStr` as `parseColor`
+without alpha, `Display`); `ColorValue: From<Color> + Into<Color>`, `to_rgb8`, `hue_channel`; typed `BlendMode`;
+`ColorChannel { type Color }`: `ColorSlider`, `ColorWheel` and `ColorChannelField` are generic over the channel and
+infer the color type from it.
+`use_color_picker_state` re-ported (`Color`, C3/C4); atom `ColorPicker` (no element; `ColorPickerContext`, which every
+color atom without its own value binds to). Styled `ColorPicker` rebuilt on the atoms (C4 `Color`; preview, palette,
+hue slider, HSB and RGB channel fields, hex field), `ColorPreview`/`ColorPalette`/`HueSlider` wrap atoms. Fixed on the
+way: RGB → HSV/HSL gave negative hues (`%` instead of `rem_euclid`), HSV → RGB8 truncated instead of rounding, the
+hidden inputs' styles added `width`/`height` twice (`visually_hidden_full_size_styles`). Browser tests
+`color_field_tests`, `color_swatch_tests`, `color_picker_tests` (RAC `ColorPicker.test.js`),
+`color_picker_component_tests`; color pages in `hydration_ids_tests`.
+
+Virtual focus (2026-10-06, found by the book): `use_combobox` ports upstream's "re-show focus ring" effect (a
+virtual focus event on the focused input once no option is virtually focused; check in `combobox_tests`). Checked:
+`use_selectable_item`'s `move_virtual_focus` runs after the input's `aria-activedescendant` changed, so in a combo box
+it sends nothing, as upstream's (React commits the attribute before `useEffect`; Leptos' render effects run before
+`Effect::new`); only an autocomplete, which sets the attribute in its focus listener, gets the events.
+
+Review 2026-10-06 (label slots, submenus, context menus, animations), fixed: submenu popovers don't close on
+scroll (upstream's `!isSubmenu`); popovers and modals stop containing focus while exiting; the combo box's button and
+listbox reference the label only if one is rendered; the safe-triangle side is re-measured per opening; the macOS
+Control+Enter fallback survives an unmount; `use_label` warns about a missing label after mount (atoms' presence);
+an exit without a rendered element closes at once.
+
+Entry/exit animations (R3d, 2026-10-06): `animation.ts` re-synced (the element is hidden with layout-neutral
+styles until ready, `on_enter`/`on_exit` callbacks, only running document-timeline animations are awaited, earlier
+transitions cancelled; `is_exiting` derived synchronously, so an element kept while exiting is never remounted);
+`Popover` (entering once placed), `ModalBackdrop` + `ModalContent` (waiting for both) and `Tooltip` render
+`data-entering`/`data-exiting` and stay mounted until their exit animations end; a popover's underlay only while
+open. Browser checks with CSS animations in the popover and dialog tests.
+
+Close on scroll (R3d, 2026-10-06): `use_close_on_scroll` re-synced to 99e6102368 (a54c33a8e: listens on the
+window and every shadow root around the trigger, `utils::shadow_dom::propagation_targets`; shadow-aware
+containment); popover test from `useOverlayPosition.test.tsx`'s scroll tests.
+
+Context menus (R3d, 2026-10-06): `use_context_menu` (right click, Shift+F10, Control+Enter fallback on macOS,
+long press on iOS through the element's own `use_press`), `MenuTriggerType::ContextMenu` (opens at the point,
+no `aria-haspopup`/`-expanded`/`-controls`, a right click outside closes), `UseButtonInput::on_context_menu` and
+`PressResponder`'s, `MenuTriggerStateApi::set_point` (the menu trigger state now forwards its overlay's point to the
+popover); `MenuTrigger` gives its popover RAC's defaults (`BottomStart`, offset 0 for context menus), scoped to
+it (`ClearTriggerContexts` resets them inside overlays); popovers carry RAC's `data-trigger`. Subdialogs
+(`SubmenuKind::Dialog`): as RAC, a submenu's popover is a dialog (unless it holds one), contains focus and is focused
+on opening unless opened by pointer; browser test from RAC's "should contain focus for subdialogs". Browser test
+from RAC's context menu tests.
+
+Submenus (R3d, 2026-10-06): `use_submenu_trigger_state` (level from the root's stack, an `OverlayTriggerState`
+view for the popover), `use_submenu_trigger` (press/hover-with-delay/arrow opening, arrow/Escape/focusing another
+item closing, RTL), `use_safely_mouse_to_submenu` (the parent menu ignores the pointer while it heads for the
+submenu); `use_menu_item` trigger mode (no action/selection, `aria-haspopup`/`-expanded`/`-controls`, no DOM focus
+on mouse down) and `use_menu` submenu props; popover groups (`use_overlay`/`use_interact_outside`/`use_popover`
+`group`, a root popover's `display: contents` container its submenus' popovers mount into, as RAC's
+`PopoverGroupContext`; the overlay stack counts entries per open overlay); atoms `SubmenuTrigger` (key of its trigger
+`MenuItem`, a `Popover` with a `Menu` of its own collection), `Menu` keeps a root state without trigger, `Popover`
+defaults (`EndTop`, non-modal) inside a submenu; trigger items get `data-has-submenu`/`data-open`. Browser test from
+RAC's submenu tests (`test_submenu.rs`), book section on the menu atom page.
+
+Label slots (2026-10-06): `has_label` of `use_label` and the hooks on it is a `Signal<bool>` and `aria-labelledby`
+follows it; atoms detect their `Label` part (`LabelPresence`: a guess from the ARIA props until mounted, so server
+HTML references a likely label, then whether the `Label` rendered, captured through `LabelContext`), as RAC's
+`useSlot`. No more dangling `aria-labelledby` without a `Label`, and a `Label` next to an `aria_label` names the
+element together with it (themed `ProgressBar`/`Meter` keep both). Browser checks in the progress bar test.
+
+Review 2026-10-06 (state-props sweep, progress/meter), fixed: `LabelContext` was provided in component bodies
+(reaching sibling `Label`s), now through `Provider`s (browser check); a bound slider resets to its initial values
+and a step keeps the app's other thumb values; `set_values`/`set_open` work without the value prop; `ModalBackdrop`
+and `Popover` got `default_open`/`on_open_change` with RAC's local-vs-trigger state rule (`overlay_open_state`);
+select and combo box report picking the previous value after the app changed a bound value (browser check); typed
+fill width; `NumberFormatter` builds its ICU formatter once (`icu_provider` `sync` feature: ICU formatters are now
+`Send + Sync`); stale docs; theme stripes loop seamlessly and respect reduced motion.
+
+Meter and progress bar (R3g, 2026-10-06): `use_progress_bar` re-ported generic over `NumberValue` (`value:
+Signal<Option<T>>`, `None` = indeterminate; `format_options` with upstream's percent default through the new
+`use_number_formatter`; `value_label`; labelling through `use_label` with a `<span>` label; returns `props`,
+`label_props`, `percentage`, `value_text`), `use_meter` on it (`role="meter"`); atoms `ProgressBar<T>`/`Meter<T>` with
+the parts `ProgressBarFill`/`MeterFill` and `ProgressBarValueText`/`MeterValueText` (RAC's render props) and
+`data-indeterminate`; themed `ProgressBar` rebuilt on the atom. `LabelContext` split from `FieldContext` (RAC's
+design: any atom with a visible label provides one). `NumberSignal<T>`/`OptionalNumberSignal<T>`: number props whose
+conversions accept only `NumberValue`s, so a generic component's `T` is inferred (`#[prop(into)] Signal<T>` can't:
+Leptos also converts any value into `Signal<Option<_>>`). Unit tests from `useProgressBar.test.js`, browser test from
+RAC's `ProgressBar.test.js`/`Meter.test.js`; atom pages in the book. The number fields' and the themed slider's
+`value` props are `OptionalNumberSignal`/`NumberSignal` too (`<NumberField value=Some(200)>` infers `i32`).
+`use_spin_button` was already at upstream 99e6102368 (keyboard repeats, typed shortcuts); new browser test from
+`useSpinButton.test.js` (roles and ARIA props, keys and page fallbacks, disabled/read-only, announcements with the
+minus sign).
+
+Slider (R3g, 2026-10-06): `use_slider_state` re-ported generic over `NumberValue` (`SliderState<T>`, C3, `Signal`
+range/step, `ValueBinding`, `format_options`, `value_label`/`page_size` for the color slider; react-stately's
+`restrictValues` snapping), `use_slider` (on `use_field`: label, description, error slots; track presses on
+`pointerdown`), `use_slider_thumb` (visually hidden `<input type="range">`, keyboard through `use_move` and
+shortcuts, form reset), `use_slider_marks` on `f64` inputs with reactive `in_range`; atoms `Slider<T>` (type-erased
+context for its parts), `SliderTrack`, `SliderFill` (upstream's, with `offset`), `SliderThumb`, `SliderOutput`,
+`SliderThumbTooltip`, `SliderMarks`/`SliderMark`; themed `Slider<T>`/`RangeSlider<T>` (`value` + `set_value`,
+`RangeInclusive`); `NumberValue::from_f64`; color slider on the new state. Browser test from RAC `Slider.test.js`.
+
+Links, breadcrumbs, toolbar (R3f, 2026-10-06): `use_link` re-ported (explicit props like `use_button`; `Default`;
+`href` signal, not rendered while disabled; `tabindex` for non-anchor links; `aria_label`; hover/focus state; a
+surrounding responder's trigger props, capture, shortcuts and disabled state), `LinkElementType::{Anchor, Other}`,
+`LinkTarget::{Blank, Same, Parent, Top, Named}` (`noopener` added for `Blank`); `use_anchor_link` on `use_link`
+(`UseAnchorLinkInput::new(href)` + nested `UseLinkInput`); one `Link` atom (`LinkExt` merged; `<A>` while enabled,
+`<span role="link">` while disabled; `current_match: CurrentMatch`, `replace`, `target`, `rel`, data attributes;
+`LinkContext` for containers); `use_breadcrumbs`/`use_breadcrumb_item` re-ported (item on `use_link`, current item
+disabled with `aria-current`), atoms `Breadcrumbs`/`Breadcrumb` (`is_current`, `on_action`); `Toolbar` atom; Button
+atom `form` (`ButtonFormAttributes` with typed `FormMethod`, `FormEncType`, `LinkTarget`). Browser tests from RAC
+`Link`/`Breadcrumbs`/`Toolbar`; book pages for the atoms, link/breadcrumbs hook pages updated.
+
+Disclosure (R3f, 2026-10-06): `use_disclosure` re-ported (configures `use_button`, `role="group"` panel,
+`hidden="until-found"` with `beforematch`, `--disclosure-panel-width/height` for transitions),
+`use_disclosure_state` (C3/C4) and `use_disclosure_group_state` (`DisclosureGroupExpansion`); atoms `Disclosure`,
+`DisclosureTrigger`, `DisclosurePanel`, `DisclosureGroup`; themed `Collapsible`/`Collapsibles` rebuilt on them (`OnOpen`
+gone). Browser test from RAC `Disclosure.test.js`; the hydration check now accepts ids the client adds. Book: hook
+page, new atom page, collapsible pages, kit `Disclosure` on the atoms.
+
+Text inputs and fields (R3c, 2026-10-05): `use_label`/`use_field` re-ported, C14 field parts (`atoms::field`:
+`FieldContext`, `Label`, `Description`, `FieldError`), text field C1/C2, atoms `TextField`/`Input`/`TextArea`/`Form`
+(validation behavior from the form, else `Native`), `use_form_validation` re-ported, `use_search_field` on
+`use_text_field` + SearchField atom, number field generic over its value type (C15: `NumberValue`, `ValueBinding`,
+`NumberFieldState<T>`, ICU4X formatter/parser) + NumberField atom, one generic `Input` for every field; legacy
+`TextInput`/`PasswordInput`/`NumberInput`/`Label`/`Field`/`FormControl` deleted; themed field gaps fixed
+(`input_type` signal, `MaybeProp` texts, pass-through attributes). Browser tests from RAC
+`TextField`/`Form`/`SearchField`/`NumberField`.
+
+Overlay positioning (R3d, 2026-10-06): `calculate_position` + `use_overlay_position` re-ported to 99e6102368:
+typed `Placement` (upstream's 22 placements) replaces the two-axis `PlacementX`/`PlacementY`; absolute positioning in
+the containing block (containing-block detection, margins, visual viewport origin, scale-independent sizes,
+`bottom`/`right` anchoring); arrows (`arrow_props`, `OverlayArrow` atom with optional children), `target_rect` (the
+state's `point` for context menus), `trigger_anchor_point`/`--trigger-anchor-point`, `--trigger-width`, user
+`max_height`, `boundary`, `should_update_position`, `PositionUpdater`, scroll anchoring, pinch-zoom freeze,
+close-on-scroll inside the hook and suppressed while the visual viewport resizes; `data-placement` from the resolved
+side (was wrong for side placements); Select/ComboBox popovers default to `BottomStart` (RAC). Native tests: upstream's
+`calculatePosition.test.ts` matrix; browser test `test_overlay_position.rs` (offset, centering, arrow, flip,
+`--trigger-width`). Menu `Separator`s.
+
+Separator (R3g, 2026-10-06): `use_separator` re-ported (C9 `props`, `aria-orientation` only when vertical, id and
+labels), `Separator` atom (`<hr>`, else `<div role="separator">`; inside a `Menu` always a `div`), themed `Separator`
+on it with `orientation` and theme styles (`--separator-*`); book atom page, component page with CSS variables.
+
+Overlays (R3d, 2026-10-05): one `OverlayTriggerState` (C3, `ValueBinding`, `point`) under the menu, tooltip, select
+and combo box states (`OverlayState`/`MenuTriggerStateApi` traits); re-ported to 99e6102368: `use_dialog` (title and
+content slots, fallback name from a `DialogTrigger`), `use_modal_backdrop`, `use_popover` (generic over the state,
+`PopoverModality`), `use_overlay` (Escape via shortcuts, no underlay props), `aria_hide_outside` (`HideMode`),
+`use_tooltip_trigger_state` (`Duration` delays, `TooltipTiming`); atoms `DialogTrigger`, `Dialog`/`DialogTitle`/
+`DialogDescription`, `ModalBackdrop`/`ModalContent`, `Popover` (modal popover is the dialog unless one is inside),
+`TooltipTrigger`/`Tooltip` (through the extended `FocusableContext`), `MenuTrigger` (press and long press)/`Menu`/
+`MenuItem`(+label/description/shortcut)/`MenuItems`/`MenuSection`; `SelectPopover`/`ComboBoxPopover` on the shared
+popover rendering; `PressResponder` carries trigger ARIA props, shortcuts and long-press callbacks; FocusScope's
+active scope tracked document-wide; themed `Modal`/`Popover` rebuilt. Browser tests from RAC
+`Popover`/`Dialog`/`Tooltip`/`Menu` and React Spectrum `MenuTrigger` tests.
 
 Collections migration (design: `documentation/design-collections.md`): core (`Key`, `Collection` + builder,
 `SelectionManager`, list state and delegates, `use_selectable_collection`), listbox + select, menu, combobox
@@ -451,7 +648,37 @@ waits for them, under "Waiting on the library" below.
 - Screenshots of affected pages when changing visuals (`just book-serve-isolated` for a second instance).
 - Checks build against the live library, as the user's `just serve` does (separate target directory only).
 
+### Navigation restructure (decided and done 2026-10-06)
+Rules: `documentation/documentation-strategy.md` ("Terminology", "Navigation", title rule); the sidebar is
+`src/nav.rs` (parts Guides / Concepts / Building blocks, placement rules unit-tested), URLs in `src/routes.rs` (old
+URLs redirect from `moved_*` modules). Concepts that are hook- or component-only today (Tree, Tag Group, Date
+Field, Time Field, Color Field/Slider/Wheel, Alert, Toast, ...) get an overview and tabs once a second layer exists.
+
 ### Next
+- [x] Book audit fixes (2026-10-06): conventions in the strategy ("Prose", multi-item layer pages) and STYLE_GUIDE
+  (§2 contrast tokens, §3 files per sidebar group, §5 Demos); demo stylesheets per group; shell, kit, search and
+  chrome; every area's pages and demos. The interrupted areas were re-checked and their open items fixed.
+- [x] Short Quick Start demos of their own for the Combobox, Grid, Grid List, Menu and Table overviews (2026-10-06);
+  full book browser run green (26/26, incl. the new WCAG contrast check, which now skips collapsed sidebar groups).
+- [x] Event Propagation guide: a demo with nested pressables (a card with a button whose press callbacks may
+  continue propagation), now that `use_press` stops events like upstream.
+- [x] Virtual focus (`utils/virtual_focus.rs`: `move_virtual_focus`, `get_virtually_focused_element`) is
+  undocumented: Focus area or the Combobox Hooks tab. Done 2026-10-06: utility page `/doc/focus/virtual-focus`
+  (virtual focus vs. roving tab index, `should_use_virtual_focus` in collection hooks, the four functions, demo,
+  accessibility), linked from the Focus overview, Combobox Hooks and Collection State.
+- [x] Color pages after the library's R3i rework: document the final color API (field/channel field atoms, swatch
+  picker, picker state and atom, the Color type, the ColorPicker component) once the library session sends its
+  summary. Done 2026-10-06: Color Field is a concept with overview, Hooks and Atoms tabs (Keyboard moved to the
+  overview); new Color Swatch Picker concept (atoms, `/doc/color-swatch-picker`) and Color Picker Atom tab; the Color
+  overview documents the color types, `ColorValue`/`ColorChannel`, `Color` and color names (with a parsing demo),
+  which the pages link instead of the picker state page; slider/wheel atom tables use the channel generic `Ch`; the
+  component page, previews and demos on `Color`; changelog (Color, ColorPicker props, conversion fixes).
+- [ ] `Focusable` atom (new 2026-10-06, `atoms/focusable.rs`): a section next to `Pressable` (props table,
+  custom tooltip trigger example, as upstream's "Custom trigger"); the FocusRing atom's new `is_text_input` and
+  `data-focused` rows are in.
+- [x] Overlay features from R3d (2026-10-06): context menus (Menu atoms section and demo, `use_context_menu` page in
+  Interactions, since `use_button` and `PressResponder` use it too), submenu hooks on the Menu hooks page, subdialogs,
+  `data-entering`/`data-exiting`/`data-trigger` and exit animations on the Popover, Modal and Tooltip atoms.
 - [x] Shell tests (2026-10-05, `tests/ui_tests/test_shell.rs`): search (button, results, Escape clearing then
   closing, Enter opening the first result), Ctrl+K, the phone-width documentation menu (opens as a dialog with focus
   inside, Escape closes it and returns focus), a demo's "View source" (`aria-expanded`, code hidden/shown). Clicks
@@ -490,15 +717,139 @@ waits for them, under "Waiting on the library" below.
   atoms; the hook page's mode table says `TooltipTriggerMode`.
 
 ### Waiting on the library
-- Kit `Disclosure` → Disclosure atom (R3f), `Sheet` → hook-based Drawer (R3k), search results → Autocomplete with
-  arrow keys through results (R3j), themed `Button` with `button_type` (form demos still use native submit/reset
-  buttons, R4), `KbdKey` accessible names (R4).
+- `Sheet` → hook-based Drawer (R3k), search results → Autocomplete with arrow keys through results (R3j).
 - Document once implemented: table sort announcement, tree tables; the `Label` atom (renders a `for` pointing at a
   generated id nothing has, R3c).
 
 ## Findings log (most recent first)
 
 Library and book. Book entries are marked "Book".
+
+- Found by the book's re-check (2026-10-06; both done 2026-10-06: `utils::HideMode` exported, Cmd (+ Shift) +
+  Home/End registered on macOS): `HideMode` isn't exported from `utils` (`utils/mod.rs:66`; the book's
+  `aria_hide_outside` page says only the default mode is available); on macOS, Command + Home/End do nothing in
+  collections: `with_selection_modifiers` (`hooks/collections/use_selectable_collection.rs:191-199`) registers
+  Home/End plain, with Shift and with Alt, never with Meta, so `is_ctrl_key_pressed` can't be true (upstream: Cmd +
+  Home/End move to the first/last item).
+- Theme and component gaps stated on the book's Buttons/Fields pages (2026-10-06; done 2026-10-06: the button theme
+  matches `data-disabled` (buttons and link buttons), `ButtonSize::Big` has styles, the styled `Slider` has disabled
+  styles, a thumb focus ring (`data-focus-visible`) and a vertical layout, `SliderMark` places marks by orientation
+  and writing direction (`inset-inline-start`/`bottom`); browser tests `button_components_tests`,
+  `slider_components_tests`. `TiptapEditor`: `default_value` + `on_change` (the instance reads its content once), a
+  group named by `aria_label`, the menu a `Toolbar` (arrow keys) of buttons with `aria-pressed` (the styled `Button`
+  got `aria_pressed`), the theme's menu styles matched `[variant]` instead of `[data-variant]` (never applied), focus
+  shows on the editor's border; `tiptap_editor_components_tests`. Then moved to leptos-tiptap 0.10 (its JS ships as
+  wasm-bindgen snippets: no more `leptos-tiptap-build`, JS copying, `js-dir` metadata or `Root` script tags, and no
+  race between the tiptap bundle and hydration, which made the test flaky); `TiptapEditor` on `use_tiptap_editor`
+  with C4 HTML props `value`/`set_value`/`default_value`/`on_change: Callback<String>`): the styled `Button` looks enabled
+  when disabled (the theme matches only `[aria-disabled="true"]`, the atom renders `disabled` + `data-disabled`;
+  `button.scss:119, 252, 396`); `ButtonSize::Big` has no styles; the styled `Slider`/`RangeSlider` have no disabled
+  styling, no thumb focus ring and no vertical layout; `SliderMark` positions with `left` regardless of orientation
+  (vertical marks; check right-to-left too); `TiptapEditor` reads `value` once (`get_untracked`: a `default_value` in
+  disguise, against the state-props rule), has no `label`/`aria_label`, and its menu buttons don't announce the active
+  format (`aria-pressed`).
+- Library gaps found by the book's content agents (2026-10-06; all done 2026-10-06: `use_press` ported upstream's
+  propagation (triggers return "should stop", each handler stops once; browser checks from upstream's "event
+  bubbling" tests); `Chip` takes `on_dismiss` and renders a `Button` named by `dismiss_label` ("Dismiss"), `color` is a
+  plain `Signal`; the `Multiselect`'s chips and the `OptionalSelect`'s clear button moved out of the trigger button
+  (buttons can't contain buttons) into a `.leptonic-select-control` box; blur paths `try_run` their callbacks (a
+  focused button removed by its own press blurred after disposal and panicked; documented in hooks-implementation.md,
+  "Blur After Disposal"); `use_move` without constraint, `use_constrained_move(input, options)` returns its parts
+  without `Option`; `Pressable` as upstream, which sets neither data attributes nor `aria-disabled`): `use_press`'s click handler always stops the click
+  unless `PressPropagation::Continue` (upstream stops it only when press-up/press-end don't continue), so a parent
+  press never sees a nested one (blocks the Event Propagation demo); the `Chip` component's dismiss icon reacts to
+  clicks only (not focusable, not announced); `use_move` returns the constraint parts as `Option` although
+  `constraint` was given (callers `expect`); `Pressable` sets no data attributes and no `aria-disabled` when a
+  surrounding `PressResponder` disables it.
+- Library findings of the book audit (2026-10-06; details with file:line in the book session's audit reports).
+  Done 2026-10-06: `use_focus_ring` drops `is_focused` when disabled (test); `use_spin_button` reads "Empty"
+  without a value and disables its returned steppers with the spin button (test); `Default` for
+  `UseInteractOutsideInput`/`UseScrollWheelInput`/`UseFocusInput`, `UseOverlayInput::new`,
+  `UseExitAnimationInput::new`; `LinkButton`'s unused `active` removed; `use_search_field` uses `expect_target`;
+  `ColorArea`/`ColorSwatch` in `atoms::prelude` (grid/table/tabs wait for the legacy names, item a); doc comments
+  (`has_label` examples, `use_exit_animation` example, radio's C4 note, modal `is_dismissable`, select's
+  `SelectLabel`, radio `orientation`, table resizer keyboard flow); `GridRow` `data-focus-visible`, `GridCell`
+  `data-focused`/`data-focus-visible`, `Hoverable` `data-hovered` (tests); legacy tabs internals `pub(crate)`;
+  `AppBar` is a `<header>`, `Alert` has `role="alert"`, `Skeleton` stops animating with reduced motion, the light
+  theme's `--link-color` is `#b83f2b` (5.5:1 on white). The hooks' focus visibility (slider thumb, color area/slider)
+  is as upstream: callers compose `use_focus_ring` (the atoms set the data attributes). `use_prevent_scroll` returns
+  nothing (as upstream; its input has `Default`); `Announcement::LabelledBy(Vec<String>)`; public
+  `utils::clipboard::write_text` (`clipboard` feature, async, `ClipboardError`), used by `Code`. The styled
+  `Select`/`OptionalSelect`/`Multiselect` take `label`, `aria_label`, `is_disabled` and `name`, and bind their value
+  through the atom's `value`/`set_value` (no syncing effect); opening them panicked (`classes="leptonic-input
+  search"`: whitespace in a class name), found by the new `select_components_tests`. The styled `TableHeaderCell` is
+  focusable when pressable and takes `aria_sort` (`table_components_tests`). C1: the styled `Button`, `LinkButton`,
+  `DateTimeInput` and `TiptapEditor` take `is_disabled` (was `disabled`; book call sites sent to its session).
+  Open below (minus those):
+  - Accessibility of styled components: `Select` has no `label`/`aria_label`/`name`/`is_disabled` (its Quick Start
+    renders an unnamed select); `TabSelector` is a div with `on:click`, no tabindex, no `aria-selected`; sortable
+    `TableHeaderCell`s aren't focusable; `Drawer` has no dismissal, focus containment or scroll lock; `Alert` and
+    `Toast` have no role/live region, and `ToastTimeout::None` toasts close by mouse only; `Skeleton` animates without
+    a reduced-motion rule; `ColorPicker`'s palette uses `use_move` instead of `use_color_area` (no role, name or
+    tabindex); `AppBar` renders a `div` (should be `<header>`); the theme's `--link-color` (brand red) fails 4.5:1 on
+    the light background.
+  - Focus visibility: `use_slider_thumb`, `use_color_area` and `use_color_slider` expose no focus-visible state (their
+    focused element is a visually hidden input), so styled demos can't show keyboard focus; `GridRow` lacks
+    `data-focus-visible`, `GridCell` `data-focused`/`data-focus-visible`; `Hoverable` sets no `data-hovered`.
+  - Behavior: color area arrow keys move 1 px (`use_move`) instead of the channel step; `use_focus_ring`'s
+    `is_focused` stays true when disabled while focused; `use_spin_button` sets `aria-valuetext="undefined"` for
+    `None` and `is_disabled` doesn't disable its steppers; `use_color_field` sets neither `value` nor
+    `disabled`/`readonly` (the book demo works around it).
+  - API shape: no `Default` for `UseInteractOutsideInput`, `UseScrollWheelInput`, `UseFocusInput`,
+    `UseExitAnimationInput`, `UseOverlayInput`; `aria_label: Option<&'static str>` on color area/slider/wheel/fields;
+    `ColorArea` atom has `&'static str` props, no `value` + `set_value`, no data attributes; `use_color_picker_state`
+    and color slider/channel states take their input by reference; color slider state and hook both need
+    `is_disabled`/`orientation`; `use_move` returns `Option` constraint parts that callers `expect`;
+    `date_picker` dialog props lack `IntoAttrs`; `NumberFormatOptions` currency/unit are strings;
+    `Announcement::LabelledBy(String)` takes a space-separated list; `use_prevent_scroll` returns empty props;
+    `LinkButton` has an unused `active` prop; `disabled` vs `is_disabled` naming; `components::tabs::{use_tabs,
+    TabsContent, TabSelectors, TabsContext}` should be `pub(crate)`; `atoms::prelude` lacks the grid, table, tabs,
+    color area and color swatch atoms; a public clipboard utility (the book's copy button duplicates `Code`'s private
+    `copy_to_clipboard`); `use_search_field` uses `e.target().and_then(..)` instead of `expect_target()`.
+  - Stale or wrong doc comments: `has_label: true` examples (`use_field.rs:93`, `use_text_field.rs:414`,
+    `use_progress_bar.rs:142`, `use_meter.rs:80`), the `use_exit_animation` example lacks `on_exit`,
+    `atoms/radio.rs:28-29` and `:60`, `atoms/modal.rs:55` and `components/modal.rs:50` (`is_dismissable` and
+    Escape), `atoms/table.rs:67`, `atoms/select.rs:97` (names a nonexistent `SelectLabel`).
+  - Outdated plan entries: "the `ProgressBar` component renders no ARIA" (it is built on the atom now); R3k "icon
+    aria-hidden" is done.
+- FocusScope restore vs. a deferred auto focus (2026-10-06, also upstream): a native `<button>` activated by Enter
+  fires a click with `detail == 0`, which counts as a virtual click, so a scope it mounts auto-focuses with
+  `focus_safely` one frame later; an unmounting `restore_focus` scope's frame can run first and win (focus ends on
+  its node to restore). Not hit by our atoms (menu items press via `use_press`, keyboard modality); the test-app's
+  "Dialog from a menu" uses keydown handlers like upstream's test. Revisit if a user report shows it.
+- Leftovers of the C4 state-prop sweep in library doc comments (2026-10-06, found by the book's wording pass):
+  `atoms/checkbox.rs` says `state` doesn't apply inside a group; the `ModalBackdrop` example in `atoms/modal.rs` uses
+  `state=is_open`; `ModalBackdrop`'s `is_dismissable` doc says it covers Escape (the book says outside clicks only:
+  check which is true). `DateTimeInput` still takes `get`/`set` instead of `value`/`set_value`.
+- Book (2026-10-06): `atoms/grid.rs` and `atoms/grid_list.rs` don't follow the atom-page structure (CSS examples
+  with `rgba()`, plain "Escape"/"Enter" instead of `Keys`): rewrite. The Marks demo in `atoms/slider.rs` is inline in
+  the page, without `source`: move it into `demos/`.
+- More gaps found while writing the book's concept pages (2026-10-06): `DateTimeInput` panics when opened without
+  a value (`get.get().unwrap()` in `components/datetime_input.rs`); `ColorPicker`'s `ColorPalette` uses `use_move`
+  instead of `use_color_area` and has no role, name or tabindex (keyboard and screen reader users can't reach it);
+  the `Select` component has no `label`/`description` props unlike TextField/SearchField/NumberField; the comment in
+  `atoms/search_field.rs` ("As TextField: no controlled `value`") is stale; `use_clipboard` lives in `hooks::dnd` and
+  needs no `clipboard` feature (the feature only enables the `Code` copy button); `DismissButton`'s label is fixed
+  English; nothing uses `utils::DateTimeFormatter` yet. The doc comment of `use_breadcrumbs` says its props and
+  `aria_label` belong to the navigation landmark, while the attrs type and the atom put them on the `<ol>` (the book
+  follows the atom).
+- Gaps found while writing the book's group overviews (2026-10-06): the `Toast` component has no role or live
+  region (`Alert` has `role="alert"` now) (screen readers aren't told; apps must use the live announcer); `Drawer` has no dismissal, focus containment or scroll lock; the `Chip`
+  component doesn't build on the tag group hooks and `ColorPicker` not on the color hooks; `components::card`,
+  `tile` and `sanitized_html` were undocumented.
+- Leptos `erase_components` and spread attributes (2026-10-06): in erased builds (our `.cargo/config.toml`, and
+  cargo-leptos' dev builds), attributes spread onto a component (`attr:id`, ...) are applied once, to the elements
+  the component first renders (`AnyViewWithAttrs`); when the component's root element is replaced (a reactive
+  branch switching `<a>`/`<span>`), they are lost. Non-erased builds re-apply them per render. Affects the `Link`
+  atom when `is_disabled` changes (documented there); worth reporting upstream with a minimal reproduction (a
+  component returning `move || if flag.get() { Either::Left(view!{<span/>}) } else { Either::Right(view!{<b/>}) }`
+  with `attr:id`). Also: hooks called inside such a reactive branch are disposed while the old element's attribute
+  effects still run once (panic "already been disposed"): create them outside the branch and clone their attrs
+  (hooks-implementation.md, "Props are Single-Use").
+- Breadcrumbs' current item (2026-10-06): "the last item to register" is not hydration-safe (`For` hydrates each
+  row before the next registers, the server registers all first), so `Breadcrumb` takes `is_current`. Test
+  harness: `goto_path` now reports the page's caught errors when hydration fails; `by_role_and_text` knows the
+  implicit roles of `<a href>` and `<button>`.
 
 - Long-press descriptions (2026-10-05): `use_press` rendered a long-press `aria-describedby` only on the client
   (static attribute; the SSR branch had none, and `use_description`'s ids come from a client counter), so hydrated

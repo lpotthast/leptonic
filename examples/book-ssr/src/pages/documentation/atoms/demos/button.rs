@@ -7,12 +7,17 @@ pub fn ButtonDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     view! {
-        <div class="demo-flex-center-row">
-            <atoms::Button classes="demo-btn" is_disabled=disabled on_press=move |_| presses.update(|p| *p += 1)>
-                "Press me"
-            </atoms::Button>
-            <Checkbox state=disabled>"Disabled"</Checkbox>
+        <atoms::Button classes="demo-atom-button" is_disabled=disabled on_press=move |_| presses.update(|n| *n += 1)>
+            "Press me"
+        </atoms::Button>
+        <p class="demo-status">
+            {move || match presses.get() {
+                1 => "Pressed 1 time.".to_owned(),
+                n => format!("Pressed {n} times."),
+            }}
+        </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
-        <p>{move || format!("Pressed {} times.", presses.get())}</p>
     }
 }

@@ -145,6 +145,21 @@ Many concepts, e.g. "sliders" with their respective `use_slider_*` hooks, need t
 Instead of adding the same fields to each hook's *Input type, create a `use_{concept_name}_state` hook returning
 a shared state struct. This can then be passed explicitly to dependent hooks.
 
+### Global State and SSR
+
+Page-wide state (the visible overlays stack, the focus scope tree, description elements, the prevent-scroll count,
+...) lives in `thread_local!`s. That is only sound in the browser, where one page runs on one thread. On the server,
+axum's work-stealing runtime interleaves many requests on one thread and moves a request's render between threads at
+every `.await` (Suspense, streaming), so a thread-local reached while rendering mixes requests and loses state.
+
+- Touch thread-locals (and `static` atomics or locks) only from client-only code: `Effect`s, event handlers,
+  `request_animation_frame`/timeouts, or code behind `#[cfg(not(feature = "ssr"))]`. Component and hook bodies
+  and `on_cleanup` run on the server: from there, only release what an effect acquired (track it in a
+  `StoredValue`, which stays empty on the server).
+- Per-request state goes into the reactive owner: `provide_context` at a root, or Leptos' shared context (as
+  `use_id` does for ids).
+- Immutable caches whose content doesn't depend on the request (syntax sets, ICU data) may be global.
+
 ## EventHandler Abstraction
 
 `EventHandler<E>` is a chainable and clonable wrapper for event handler functions.
@@ -728,6 +743,16 @@ uncaught page errors, so the nested-dispatch error is caught by any test that tr
 
 **Reference**: `use_selectable_collection` (`on_focusin`), `FocusScope` (focus containment)
 
+### Blur After Disposal
+
+Removing a focused element (a dismiss button removing its chip, a clear button hiding itself) makes the browser
+fire `blur`/`focusout` on it while Leptos unmounts it, after its owner and the callbacks and signals it owned were
+disposed. Blur and focus-out paths therefore run callbacks with `try_run` and read signals with `try_get_untracked`:
+nothing is left to notify then. (Other events can't reach a removed element, so they keep `run`.)
+
+**Reference**: `use_focus`, `use_focus_within`, `use_focus_ring`; browser test `select_components_tests`
+(dismissing a focused chip).
+
 ## Hook-Owned State (React Aria Deviation)
 
 React Aria's state hooks (e.g., `useOverlayTriggerState`) use `useControlledState` to support both
@@ -739,14 +764,20 @@ In Leptos, `Signal<T>` is `Copy` and inherently shared. However, accepting a wri
 hook's mutation path. This breaks invariants and prevents the hook from intercepting changes
 (e.g., firing `on_open_change`, resetting related state).
 
-**Convention:** Hooks always create and own their internal `WriteSignal`. They expose:
+**Convention:** Hooks own their state's mutation path. They expose:
 
 - A read-only `Signal<T>` for observation
-- Semantic mutation callbacks (`open`, `close`, `toggle`, `set_open`, etc.)
+- Semantic mutation methods (`open`, `close`, `toggle`, `set_open`, etc.)
 - An `on_X_change` callback that fires on every mutation
 
-The caller sets the initial value via `default_X: T` in the input struct. They cannot pass an
-external signal to control the state.
+The caller sets the initial value via `default_X: T` in the input struct, or binds the state to app state with a
+`ValueBinding<T>` (a read signal plus a setter): every change still goes through the hook, which calls the setter.
+
+**Atoms and components** (the user's rule, 2026-10-06) take controlled state as two props, never as one binding:
+a readable `<x>` (`#[prop(into)] Signal<T>` or `MaybeProp<T>`: a plain value, any signal, a closure) and a writable
+`set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`). This keeps every usage
+pattern open instead of forcing an `RwSignal`. Uncontrolled: `default_<x>`, plus `on_<x>_change` to observe. The
+component builds the hook's `ValueBinding` from the two props.
 
 When porting a React Aria hook that accepts both `isOpen` and `defaultOpen` via `useControlledState`,
 we automatically deviate by only supporting `default_open` and hook-owned state. This is a
@@ -920,21 +951,21 @@ how to register a page (route in `src/routes.rs`, entry in `src/nav.rs`) are des
 
 ## Reference Implementations
 
-| Pattern                           | File                                                        |
-|-----------------------------------|-------------------------------------------------------------|
+| Pattern                           | File                                                                                                         |
+|-----------------------------------|--------------------------------------------------------------------------------------------------------------|
 | API conventions (state, input)    | `leptonic/src/hooks/tabs/use_tab_list_state.rs`, `leptonic/src/hooks/table/use_table_column_resize_state.rs` |
-| Hook composition, attrs           | `leptonic/src/hooks/button/use_button.rs`                   |
-| Props pattern, mergeable handlers | `leptonic/src/hooks/interactions/use_press.rs`              |
-| Props merging (`MergeWith`)       | `leptonic/src/hooks/merged/mod.rs`                          |
-| CustomAttr                        | `leptonic/src/hooks/focus/use_focus_ring.rs`                |
-| Element reference                 | `leptonic/src/hooks/overlay/use_overlay_position.rs`        |
-| Element capture                   | `leptonic/src/hooks/menu/use_menu_item.rs`                  |
-| Dynamic listeners, drag           | `leptonic/src/hooks/interactions/use_press.rs`              |
-| Slider drag                       | `leptonic/src/hooks/slider/use_slider.rs`                   |
-| Animation lifecycle (enter)       | `leptonic/src/hooks/animation/use_enter_animation.rs`       |
-| Animation lifecycle (exit)        | `leptonic/src/hooks/animation/use_exit_animation.rs`        |
-| Form validation state             | `leptonic/src/hooks/form/use_form_validation_state.rs`      |
-| DOM validation binding            | `leptonic/src/hooks/form/use_form_validation.rs`            |
-| Form reset detection              | `leptonic/src/hooks/form/use_form_reset.rs`                 |
-| Event propagation control         | `leptonic/src/hooks/interactions/use_press.rs` (PressEvent) |
-| Keyboard DnD                      | `leptonic/src/hooks/dnd/drag_manager.rs`                    |
+| Hook composition, attrs           | `leptonic/src/hooks/button/use_button.rs`                                                                    |
+| Props pattern, mergeable handlers | `leptonic/src/hooks/interactions/use_press.rs`                                                               |
+| Props merging (`MergeWith`)       | `leptonic/src/hooks/merged/mod.rs`                                                                           |
+| CustomAttr                        | `leptonic/src/hooks/focus/use_focus_ring.rs`                                                                 |
+| Element reference                 | `leptonic/src/hooks/overlay/use_overlay_position.rs`                                                         |
+| Element capture                   | `leptonic/src/hooks/menu/use_menu_item.rs`                                                                   |
+| Dynamic listeners, drag           | `leptonic/src/hooks/interactions/use_press.rs`                                                               |
+| Slider drag                       | `leptonic/src/hooks/slider/use_slider.rs`                                                                    |
+| Animation lifecycle (enter)       | `leptonic/src/hooks/animation/use_enter_animation.rs`                                                        |
+| Animation lifecycle (exit)        | `leptonic/src/hooks/animation/use_exit_animation.rs`                                                         |
+| Form validation state             | `leptonic/src/hooks/form/use_form_validation_state.rs`                                                       |
+| DOM validation binding            | `leptonic/src/hooks/form/use_form_validation.rs`                                                             |
+| Form reset detection              | `leptonic/src/hooks/form/use_form_reset.rs`                                                                  |
+| Event propagation control         | `leptonic/src/hooks/interactions/use_press.rs` (PressEvent)                                                  |
+| Keyboard DnD                      | `leptonic/src/hooks/dnd/drag_manager.rs`                                                                     |

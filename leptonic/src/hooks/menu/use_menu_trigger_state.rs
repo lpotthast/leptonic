@@ -106,6 +106,8 @@ pub trait MenuTriggerStateApi: OverlayState {
     fn focus_strategy(&self) -> Option<FocusStrategy>;
     fn open(&self, focus_strategy: Option<FocusStrategy>);
     fn toggle(&self, focus_strategy: Option<FocusStrategy>);
+    /// Sets where a context menu opened (viewport coordinates).
+    fn set_point(&self, point: Option<crate::utils::Point>);
 }
 
 impl OverlayState for MenuTriggerState {
@@ -115,6 +117,10 @@ impl OverlayState for MenuTriggerState {
 
     fn close(&self) {
         MenuTriggerState::close(self);
+    }
+
+    fn point(&self) -> Signal<Option<crate::utils::Point>> {
+        self.overlay.point
     }
 }
 
@@ -129,6 +135,10 @@ impl MenuTriggerStateApi for MenuTriggerState {
 
     fn toggle(&self, focus_strategy: Option<FocusStrategy>) {
         MenuTriggerState::toggle(self, focus_strategy);
+    }
+
+    fn set_point(&self, point: Option<crate::utils::Point>) {
+        self.overlay.set_point(point);
     }
 }
 

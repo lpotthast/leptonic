@@ -10,6 +10,39 @@
         outline: none;
     }
 
+    .leptonic-select-control {
+        // The trigger and the buttons next to it (clear, chips' dismiss): siblings, as buttons
+        // can't contain buttons.
+        position: relative;
+
+        .leptonic-select-deselect-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            top: 50%;
+            right: 2.2em;
+            transform: translateY(-50%);
+            z-index: 3;
+            padding: 0;
+            border: none;
+            color: #878787;
+            background-color: #353535;
+            border-radius: 1em;
+            font-size: 1.2em;
+            cursor: pointer;
+
+            &[data-hovered] {
+                color: var(--input-color);
+            }
+
+            &[data-focus-visible] {
+                outline: 2px solid var(--select-focused-border-color);
+                outline-offset: 1px;
+            }
+        }
+    }
+
     .leptonic-select-selected {
         display: flex;
         flex-direction: row;
@@ -34,22 +67,6 @@
             border-color: var(--select-focused-border-color);
         }
 
-        .leptonic-select-deselect-trigger {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: absolute;
-            right: 2.2em;
-            color: #878787;
-            background-color: #353535;
-            border-radius: 1em;
-            font-size: 1.2em;
-
-            &:hover {
-                color: var(--input-color);
-            }
-        }
-
         .leptonic-select-show-trigger {
             display: flex;
             justify-content: center;
@@ -70,11 +87,30 @@
 
 .leptonic-select.leptonic-multiselect {
     .leptonic-select-selected {
-        .leptonic-select-option {
-            .leptonic-chip {
-                margin: 0.1em 0.4em 0.1em 0;
-                border-radius: 0.8em;
-            }
+        // The box: the chips, then the trigger filling the rest of the row.
+        padding-right: 2.5em;
+
+        &:has(> .leptonic-multiselect-trigger[data-open]) {
+            border-color: var(--select-focused-border-color);
+        }
+
+        .leptonic-chip.leptonic-select-option {
+            margin: 0.1em 0.4em 0.1em 0;
+            border-radius: 0.8em;
+        }
+
+        .leptonic-multiselect-trigger {
+            flex: 1;
+            align-self: stretch;
+            min-width: 2em;
+            min-height: 1.5em;
+            padding: 0;
+            border: none;
+            background: none;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+            outline: none;
         }
     }
 }

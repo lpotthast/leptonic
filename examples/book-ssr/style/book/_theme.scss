@@ -1,6 +1,24 @@
 // Design tokens of the book (see `STYLE_GUIDE.md`). Leptonic's theme variables (`--brand-color`, `--danger-color`,
 // `--typography-*`, ...) are used where they fit; the `--book-*` variables cover what is specific to the documentation.
 // Colors are defined per theme, everything else once in `:root`.
+//
+// Text colors meet WCAG AA in both themes (4.5:1, 3:1 for large text). The ratios are listed next to the colors and
+// checked by the browser tests (`tests/ui_tests/test_contrast.rs`).
+
+// Breakpoints. `$small` is coupled with `SMALL_SCREEN_MAX_WIDTH` in `src/app.rs`, which switches the app bar and the
+// navigation menu at the same width: change both together.
+$small: 800px; // Up to this width: the sidebar becomes a menu, tables stack into cards.
+$medium: 1200px; // Up to this width: the table of contents is hidden.
+
+// Overrides of leptonic's theme, the same in both themes.
+[data-theme] {
+  --font-family: 'Roboto', sans-serif;
+  --typography-code-font-family: 'JetBrains Mono', monospace;
+
+  // The book's text-safe brand color for links: leptonic's light-theme link color reaches 4.7:1 on the book's
+  // background, but only 4.1:1 on hovered table rows and list items.
+  --link-color: var(--book-brand-text-color);
+}
 
 [data-theme="light"] {
   color-scheme: light;
@@ -8,29 +26,19 @@
   --main-color: var(--std-text-dark);
   --main-background-color: #efebe8;
 
-  --brand-color: #e66956;
   --brand-color-subtle: rgba(230, 105, 86, 0.12);
-
-  --font-family: 'Roboto', sans-serif;
-  --typography-code-font-family: 'JetBrains Mono', monospace;
-
-  --drawer-background-color: none;
-  --drawer-box-shadow: none;
-
-  --book-menu-background-color: var(--box-background-color);
-  --book-menu-header-color: #3e3434;
-  --book-menu-item-color: #3e3434;
-  --book-menu-item-active-color: var(--std-text-bright);
+  // 5.5:1 on the background, 6.5:1 on surfaces, 4.8:1 on hovered rows.
+  --book-brand-text-color: #a8352a;
 
   --book-border-color: #d3d3d3;
   --book-hover-background-color: #e2dcd8;
-  --book-muted-color: #6b6262;
+  // 5.7:1 on the background, 4.9:1 on hovered rows.
+  --book-muted-color: #625a5a;
   --book-surface-color: #ffffff;
   --book-surface-color-raised: #f7f5f3;
   --book-shadow-s: 0 1px 3px rgba(0, 0, 0, 0.25);
   --book-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   --book-focus-color: #0066cc;
-  --book-on-brand-color: #ffffff;
   --book-backdrop-color: rgba(0, 0, 0, 0.5);
 
   // Distinguishing series in demos.
@@ -39,10 +47,8 @@
   --book-categorical-3: #9b59b6;
   --book-categorical-4: #e67e22;
 
-  // Layer badges in the sidebar.
-  --book-badge-hook-color: #2563eb;
-  --book-badge-atom-color: #7c3aed;
-  --book-badge-comp-color: #16a34a;
+  // The slogan of the welcome page: at least 4.5:1 on the background along the whole gradient.
+  --book-brand-gradient: linear-gradient(90deg, #b3326a 0%, #9a5b00 100%);
 }
 
 [data-theme="dark"] {
@@ -51,34 +57,22 @@
   --main-color: var(--std-text-bright);
   --main-background-color: #141414;
 
-  --brand-color: #e66956;
-  --brand-color-subtle: rgba(230, 105, 86, 0.16);
-
-  --font-family: 'Roboto', sans-serif;
-  --typography-code-font-family: 'JetBrains Mono', monospace;
-
   --app-bar-background-color: #141414;
   --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
 
-  --box-background-color: #141414;
-
-  --drawer-background-color: none;
-  --drawer-box-shadow: none;
-
-  --book-menu-background-color: var(--box-background-color);
-  --book-menu-header-color: var(--std-text-bright);
-  --book-menu-item-color: var(--std-text-bright);
-  --book-menu-item-active-color: var(--std-text-bright);
+  --brand-color-subtle: rgba(230, 105, 86, 0.16);
+  // 7.6:1 on the background, 6.2:1 on raised surfaces.
+  --book-brand-text-color: #f08a7a;
 
   --book-border-color: #2a2a2a;
   --book-hover-background-color: #222222;
+  // 6.7:1 on the background.
   --book-muted-color: #a19a9a;
   --book-surface-color: #1e1e1e;
   --book-surface-color-raised: #262626;
   --book-shadow-s: 0 1px 3px rgba(0, 0, 0, 0.6);
   --book-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   --book-focus-color: #5aa2ff;
-  --book-on-brand-color: #ffffff;
   --book-backdrop-color: rgba(0, 0, 0, 0.65);
 
   --book-categorical-1: #5b9ee6;
@@ -86,12 +80,20 @@
   --book-categorical-3: #a66bbe;
   --book-categorical-4: #f39c4b;
 
-  --book-badge-hook-color: #3b82f6;
-  --book-badge-atom-color: #8b5cf6;
-  --book-badge-comp-color: #22c55e;
+  // 4.0:1 and 8.9:1 on the background.
+  --book-brand-gradient: linear-gradient(90deg, #d53369 0%, #daae51 100%);
 }
 
 :root {
+  // Text on `--brand-color` (5.2:1) or on a badge color (at least 6.2:1), in both themes.
+  --book-on-brand-color: #1d1d1d;
+
+  // Layer badges and layer markers in the sidebar, behind `--book-on-brand-color`.
+  --book-badge-hook-color: #60a5fa;
+  --book-badge-atom-color: #a78bfa;
+  --book-badge-comp-color: #4ade80;
+  --book-badge-util-color: #fbbf24;
+
   // Spacing, relative to the font size of the element using it.
   --book-space-xs: 0.25em;
   --book-space-s: 0.5em;
@@ -115,14 +117,22 @@
 
   --book-transition: 0.15s ease;
 
-  // The slogan on the welcome page.
-  --book-brand-gradient: linear-gradient(90deg, #d53369 0%, #daae51 100%);
-
   --book-z-sticky: 10;
+  // Backdrops (and panels positioned like them) of demo overlays. Leptonic layers popovers and tooltips itself, but
+  // not backdrops; they must cover the app bar, which leptonic's theme layers at 1000.
+  --book-z-backdrop: 1000;
 
-  // Height of the fixed app bar, and the offset anchored headings need to not end up underneath it.
-  --book-app-bar-height: 3.5em;
-  --book-scroll-offset: calc(var(--book-app-bar-height) + 1em);
-  --book-drawer-width: 16em;
-  --book-toc-width: 12em;
+  // Layout sizes, in rem: they are used by elements of different font sizes (headings, the sidebar) and must
+  // resolve to the same length everywhere.
+  --book-app-bar-height: 3.5rem;
+  // Height of the concept tabs, sticky below the app bar.
+  --book-concept-tabs-height: 3rem;
+  // How far anchored headings stay below the top of the screen: below the app bar (and the concept tabs, see
+  // `.doc-main`).
+  --book-scroll-offset: calc(var(--book-app-bar-height) + 1rem);
+  --book-sidebar-width: 16rem;
+  --book-toc-width: 12rem;
+  // Width of a documentation page's `<article>`, including its inline padding.
+  --book-article-max-width: 75rem;
+  --book-article-padding: 1.5rem;
 }

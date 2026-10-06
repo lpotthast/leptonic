@@ -1,12 +1,12 @@
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkConceptDemo() -> impl IntoView {
     view! {
-        // `Link` is for pages of your app, `LinkExt` for other sites.
-        <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
+        // A link to another site, opening in a new tab.
+        <Link href="https://github.com/lpotthast/leptonic" target=LinkTarget::Blank>
             "Leptonic on GitHub"
-        </LinkExt>
+        </Link>
     }
 }

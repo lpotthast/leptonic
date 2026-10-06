@@ -1,7 +1,9 @@
-use leptonic::atoms::field::{Description, FieldError, Label};
 use leptonic::{
-    atoms::checkbox::{Checkbox, CheckboxGroup},
-    hooks::{ToggleState, ValidationBehavior, collections::Key},
+    atoms::{
+        checkbox::{Checkbox, CheckboxGroup},
+        field::{Description, FieldError, Label},
+    },
+    hooks::{ValidationBehavior, collections::Key},
 };
 use leptos::prelude::*;
 
@@ -57,12 +59,13 @@ pub fn PageAtomCheckbox() -> impl IntoView {
         <TestCheckbox name="invalid" label="Invalid" is_invalid=true />
 
         // Bound to a signal, which a button changes from outside.
-        <Checkbox state=ToggleState::from(bound)>"Bound"</Checkbox>
+        <Checkbox is_selected=bound set_selected=bound>"Bound"</Checkbox>
         <button id="test-cb-bound-flip" on:click=move |_| bound.update(|b| *b = !*b)>"Flip"</button>
         // Bound and read-only; `on_change` reports changes of a bound state too.
-        <Checkbox state=ToggleState::from(bound_read_only) is_read_only=true>"Bound read only"</Checkbox>
+        <Checkbox is_selected=bound_read_only set_selected=bound_read_only is_read_only=true>"Bound read only"</Checkbox>
         <Checkbox
-            state=ToggleState::from(bound_reported)
+            is_selected=bound_reported
+            set_selected=bound_reported
             on_change=move |selected: bool| reported.set(selected.to_string())
         >
             "Bound reported"

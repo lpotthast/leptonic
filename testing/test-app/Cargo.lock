@@ -1047,9 +1047,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.17.0"
+version = "0.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f467dd6dccf739c208452f8014c75c18bb8301b050ad1cfb27153803edb0f51"
+checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "heck"
@@ -1752,7 +1752,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
- "hashbrown 0.17.0",
+ "hashbrown 0.17.1",
  "serde",
  "serde_core",
 ]
@@ -1870,6 +1870,7 @@ dependencies = [
  "icu_locale",
  "icu_normalizer",
  "icu_plurals",
+ "icu_provider",
  "icu_time",
  "indoc",
  "itertools",
@@ -1880,7 +1881,6 @@ dependencies = [
  "leptos-element-capture",
  "leptos-styles",
  "leptos-tiptap",
- "leptos-tiptap-build",
  "leptos-use",
  "leptos_meta",
  "leptos_reactive",
@@ -2018,24 +2018,22 @@ dependencies = [
 
 [[package]]
 name = "leptos-tiptap"
-version = "0.9.0"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad6e354a8146be780f02f6b421becfe86b78bad09939ba35ef3c7f017f41484a"
+checksum = "3e2a6479f332386ef29a9ff98f9aeee543583bcfcc1042cc178e183f6f8f8c54"
 dependencies = [
  "cfg-if",
  "leptos",
+ "leptos-element-capture",
+ "rootcause",
  "send_wrapper",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
+ "thiserror 2.0.18",
  "tracing",
  "wasm-bindgen",
 ]
-
-[[package]]
-name = "leptos-tiptap-build"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "50cb656c88beb5243d5bfd3dde3a433596bed7cbab6828148687a1ae6ffa0bda"
 
 [[package]]
 name = "leptos-use"
@@ -3009,6 +3007,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
+name = "rootcause"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b660d9968fae12f4e691f2b2be5d9a3a6de875300c682e8d2cb89a618dd60875"
+dependencies = [
+ "hashbrown 0.17.1",
+ "indexmap",
+ "rootcause-internals",
+ "rustc-hash 2.1.2",
+ "triomphe",
+]
+
+[[package]]
+name = "rootcause-internals"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0184f6fcff3b58b7c963aee6e3cc915c04331aa6eef974f79d7d44d21e246c24"
+dependencies = [
+ "triomphe",
+]
+
+[[package]]
 name = "rstml"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3863,6 +3883,12 @@ dependencies = [
  "tracing-subscriber",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "triomphe"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b40688ea6389c8171614b25491f71d4a27946e0c7ce2da1c6de27e25abf1a0ae"
 
 [[package]]
 name = "tungstenite"

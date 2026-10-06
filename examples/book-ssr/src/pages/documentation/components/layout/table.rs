@@ -7,21 +7,21 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageTable() -> impl IntoView {
     view! {
-        <DocPage title="Table component">
+        <DocPage title="Table Components">
             <p>
                 "The themed table components render a native HTML "<Code inline=true>"<table>"</Code>
                 " from "<Code inline=true>"Table"</Code>", "<Code inline=true>"TableHeader"</Code>", "
                 <Code inline=true>"TableBody"</Code>", "<Code inline=true>"TableRow"</Code>" and cell components. "
-                "They style static tabular data; they add no keyboard navigation or selection. See the "
+                "They style tabular data and can have pressable column headers for sorting. See the "
                 <Link href=routes::doc::Table.materialize()>"Table overview"</Link>" for concept guidance."
             </p>
 
-            <Demo description="Bordered, hoverable table rendered from a list of rows" source=include_str!("demos/table.rs")>
+            <Demo description="Bordered, hoverable table sorted by its Name column" source=include_str!("demos/table.rs")>
                 <TableDemo/>
             </Demo>
 
-            <Section title="Props">
-                <Section title="Table">
+            <Section title="Table">
+                <Section title="Props" id="table-props">
                     <ApiTable kind=ApiKind::Props of="components::table::Table">
                         <ApiRow name="bordered" ty="Option<bool>" default="None">
                             "Collapses the cell borders and draws a line below the header cells. "
@@ -40,8 +40,10 @@ pub fn PageTable() -> impl IntoView {
                         </ApiRow>
                     </ApiTable>
                 </Section>
+            </Section>
 
-                <Section title="TableHeaderCell">
+            <Section title="TableHeaderCell">
+                <Section title="Props" id="tableheadercell-props">
                     <ApiTable kind=ApiKind::Props of="TableHeaderCell">
                         <ApiRow name="min_width" ty="Option<bool>" default="None">
                             "Shrinks the column to the width of its content. "<Code inline=true>"None"</Code>
@@ -49,7 +51,12 @@ pub fn PageTable() -> impl IntoView {
                             " to let the column grow."
                         </ApiRow>
                         <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">
-                            "Called when the header cell is pressed, for example to sort by this column."
+                            "Makes the header cell pressable, for example to sort by its column: it becomes focusable "
+                            "and reacts to "<Keys keys="Enter / Space"/>" too."
+                        </ApiRow>
+                        <ApiRow name="aria_sort" ty="MaybeProp<AriaSort>" default="None">
+                            "The column\u{2019}s sort order ("<Code inline=true>"aria-sort"</Code>"), so that screen "
+                            "readers announce how the table is sorted. Set it on sortable columns."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Additional classes and styles of the "<Code inline=true>"<th>"</Code>"."
@@ -57,18 +64,27 @@ pub fn PageTable() -> impl IntoView {
                         <ApiRow name="children" ty="Children">"The cell content."</ApiRow>
                     </ApiTable>
                 </Section>
+            </Section>
 
-                <Section title="TableContainer, TableHeader, TableBody, TableFooter, TableRow, TableCell">
-                    <p>
-                        "These components take "<Code inline=true>"classes"</Code>", "<Code inline=true>"styles"</Code>
-                        " and children, and render a "<Code inline=true>"<div>"</Code>" wrapper, "
-                        <Code inline=true>"<thead>"</Code>", "<Code inline=true>"<tbody>"</Code>", "
-                        <Code inline=true>"<tfoot>"</Code>", "<Code inline=true>"<tr>"</Code>" and "
-                        <Code inline=true>"<td>"</Code>" respectively. Wrap a table in a "
-                        <Code inline=true>"TableContainer"</Code>" to give it the theme\u{2019}s rounded frame and shadow, "
-                        "and to let it scroll horizontally when it doesn\u{2019}t fit."
-                    </p>
-                </Section>
+            <Section title="TableContainer, TableHeader, TableBody, TableFooter, TableRow, TableCell">
+                <p>
+                    "These components take "<Code inline=true>"classes"</Code>", "<Code inline=true>"styles"</Code>
+                    " and children, and render a "<Code inline=true>"<div>"</Code>" wrapper, "
+                    <Code inline=true>"<thead>"</Code>", "<Code inline=true>"<tbody>"</Code>", "
+                    <Code inline=true>"<tfoot>"</Code>", "<Code inline=true>"<tr>"</Code>" and "
+                    <Code inline=true>"<td>"</Code>" respectively. Wrap a table in a "
+                    <Code inline=true>"TableContainer"</Code>" to give it the theme\u{2019}s rounded frame and shadow, "
+                    "and to let it scroll horizontally when it doesn\u{2019}t fit."
+                </p>
+            </Section>
+
+            <Section title="Accessibility">
+                <p>
+                    "The components render a plain HTML table: users tab from one sortable header to the next, but "
+                    "can\u{2019}t move between cells with the arrow keys or select rows. For that, use the "
+                    <Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link>" or the "
+                    <Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link>"."
+                </p>
             </Section>
 
             <Section title="Styling">
@@ -78,7 +94,8 @@ pub fn PageTable() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Table.materialize()>"Table overview"</Link></li>
-                <li><Link href=routes::doc::table::Hook.materialize()>"use_table"</Link></li>
+                <li><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></li>
+                <li><Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }

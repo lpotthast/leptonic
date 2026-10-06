@@ -1,51 +1,39 @@
 use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
-use leptos_classes::Classes;
+
+fn times(count: u32) -> String {
+    if count == 1 { "1 time".to_string() } else { format!("{count} times") }
+}
 
 #[component]
 pub fn FocusRingKeyboardDemo() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
-    let (focus_count, set_focus_count) = signal(0);
-    let (blur_count, set_blur_count) = signal(0);
+    let disabled = RwSignal::new(false);
+    let (focus_count, set_focus_count) = signal(0_u32);
 
-    let focus_ring = use_focus_ring(UseFocusRingInput::default());
-
-    let focus_ring_custom = use_focus_ring(UseFocusRingInput {
+    let UseFocusRingReturn {
+        props,
+        is_focused,
+        is_focus_visible,
+    } = use_focus_ring(UseFocusRingInput {
         is_disabled: disabled.into(),
-        on_focus: Some(Callback::new(move |_| {
-            set_focus_count.update(|c| *c += 1);
-        })),
-        on_blur: Some(Callback::new(move |_| {
-            set_blur_count.update(|c| *c += 1);
-        })),
+        on_focus: Some(Callback::new(move |_| set_focus_count.update(|c| *c += 1))),
         ..Default::default()
     });
 
     view! {
-        <button
-            {..focus_ring.props.into_attrs()}
-            class=Classes::from(["demo-focus-item", "demo-focus-ring"])
-        >
-            "Tab to me (keyboard) or click me (mouse)"
+        // The CSS draws the ring on `[data-focus-visible]`, which the hook sets.
+        <button type="button" class="demo-focus-ring" {..props.into_attrs()}>
+            "Click me, then tab away and back"
         </button>
 
-        <p class=Classes::from("demo-mt-1")>
-            "Is focused: " <strong>{ move || focus_ring.is_focused.get().to_string() }</strong>
-            " | Focus ring visible: " <strong>{ move || focus_ring.is_focus_visible.get().to_string() }</strong>
+        <p class="demo-status">
+            {move || if is_focused.get() { "Focused" } else { "Not focused" }}
+            {move || if is_focus_visible.get() { ", ring visible" } else { ", no ring" }}
+            ". Focused " {move || times(focus_count.get())} "."
         </p>
 
-        <button
-            {..focus_ring_custom.props.into_attrs()}
-            class=Classes::from(["demo-focus-item", "demo-focus-ring"])
-        >
-            "Focus ring with callbacks"
-        </button>
-
-        <div class=Classes::from("demo-flex-gap")>
-            <p>"Focus count: " <strong>{ move || focus_count.get() }</strong></p>
-            <p>"Blur count: " <strong>{ move || blur_count.get() }</strong></p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
-
-        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
     }
 }

@@ -121,6 +121,18 @@ async fn escape_closes_and_restores_focus(page: &Page<'_>) -> Result<(), Report>
     page.wait_for_text("test-sel-bound-value", "25").await?;
     page.wait_for_focus_on(&bound, "bound select trigger after selecting")
         .await?;
+    page.wait_for_text("test-sel-bound-changes", "1").await?;
+
+    // After the app changed the value, picking the previous value again is a change.
+    page.element("test-sel-bound-reset").await?.click().await?;
+    page.wait_for_text("test-sel-bound-value", "10").await?;
+    bound.click().await?;
+    page.wait_for_selector("[role=option][aria-selected=true]:focus")
+        .await?;
+    page.send_keys_to_active(Key::Down).await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_text("test-sel-bound-value", "25").await?;
+    page.wait_for_text("test-sel-bound-changes", "2").await?;
     Ok(())
 }
 

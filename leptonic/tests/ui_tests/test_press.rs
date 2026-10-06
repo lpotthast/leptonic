@@ -28,6 +28,8 @@ impl BrowserTest<str> for PressTests {
         disabled_element_ignores_presses(&page).await?;
         becoming_disabled_cancels_active_press(&page).await?;
         enter_on_checkbox_submits_form(&page).await?;
+        nested_press_stops_by_default(&page).await?;
+        nested_press_propagates_when_continued(&page).await?;
 
         Ok(())
     }
@@ -150,5 +152,37 @@ async fn enter_on_checkbox_submits_form(page: &Page<'_>) -> Result<(), Report> {
         .send_keys(Key::Enter)
         .await?;
     page.wait_for_text("test-press-submits", "1").await?;
+    Ok(())
+}
+
+/// "event bubbling: should stop propagation by default": the outer pressable sees nothing of a
+/// press on the inner one.
+async fn nested_press_stops_by_default(page: &Page<'_>) -> Result<(), Report> {
+    let id = "test-press-nested-stop";
+    page.click_element_with_id(&format!("{id}-inner")).await?;
+    page.wait_for_text(&format!("{id}-inner-log"), "start,up,end,press")
+        .await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_text(
+        &format!("{id}-inner-log"),
+        "start,up,end,press,start,up,end,press",
+    )
+    .await?;
+    assert_that!(page.read_text_of(&format!("{id}-outer-log")).await?).is_equal_to(String::new());
+    Ok(())
+}
+
+/// "event bubbling: should allow propagation if continuePropagation is called": the outer
+/// pressable is pressed along with the inner one.
+async fn nested_press_propagates_when_continued(page: &Page<'_>) -> Result<(), Report> {
+    let id = "test-press-nested-continue";
+    page.click_element_with_id(&format!("{id}-inner")).await?;
+    page.wait_for_text(&format!("{id}-inner-log"), "start,up,end,press")
+        .await?;
+    page.wait_for_text(
+        &format!("{id}-outer-log"),
+        "start:mouse,up:mouse,end:mouse,press:mouse",
+    )
+    .await?;
     Ok(())
 }

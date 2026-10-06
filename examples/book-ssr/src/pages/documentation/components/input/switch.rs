@@ -11,13 +11,13 @@ use crate::{kit::*, routes};
 #[component]
 pub fn PageSwitch() -> impl IntoView {
     view! {
-        <DocPage title="Switch component">
+        <DocPage title="Switch Component">
             <p>
-                "The themed "<Code inline=true>"Switch"</Code>", an on/off control with its label as children. See the "
+                "The themed "<Code inline=true>"Switch"</Code>" component, an on/off control with its label as children. See the "
                 <Link href=routes::doc::Switch.materialize()>"Switch overview"</Link>" for concept guidance."
             </p>
 
-            <Demo description="Airplane mode switch bound to a signal, showing its state" source=include_str!("demos/switch_basic.rs")>
+            <Demo description="Airplane mode switch controlled by a signal, showing its state" source=include_str!("demos/switch_basic.rs")>
                 <SwitchBasicDemo/>
             </Demo>
 
@@ -25,13 +25,14 @@ pub fn PageSwitch() -> impl IntoView {
                 <ApiTable kind=ApiKind::Props of="components::switch::Switch">
                     <ApiRow name="default_selected" ty="bool" default="false">"Whether the switch starts on."</ApiRow>
                     <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">
-                        "Called when the switch is turned on or off. Also called when "<Code inline=true>"state"</Code>
-                        " is given."
+                        "Called when the switch is turned on or off, also while "<Code inline=true>"is_selected"</Code>
+                        " controls the selection."
                     </ApiRow>
-                    <ApiRow name="state" ty="Option<ToggleState>" default="None">
-                        "Binds the switch to your state: an "<Code inline=true>"RwSignal<bool>"</Code>", a "
-                        <Code inline=true>"(ReadSignal, WriteSignal)"</Code>" pair or a "<Code inline=true>"ToggleState"</Code>
-                        ". Replaces "<Code inline=true>"default_selected"</Code>"."
+                    <ApiRow name="is_selected" ty="Option<Signal<bool>>" default="None">
+                        "The selection (controlled): a value or any signal."
+                    </ApiRow>
+                    <ApiRow name="set_selected" ty="Option<Out<bool>>" default="None">
+                        "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                     </ApiRow>
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the switch."</ApiRow>
                     <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Shows the state without allowing changes."</ApiRow>
@@ -42,13 +43,13 @@ pub fn PageSwitch() -> impl IntoView {
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a switch without children."</ApiRow>
                     <ApiRow name="size" ty="SwitchSize" default="Normal">
                         <Code inline=true>"Small"</Code>", "<Code inline=true>"Normal"</Code>" or "<Code inline=true>"Big"</Code>
-                        ", see "<a href="#sizes">"Sizes"</a>"."
+                        ", see "<AnchorLink href="#sizes">"Sizes"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="variant" ty="SwitchVariant" default="Sliding">
-                        <Code inline=true>"Sliding"</Code>" or "<Code inline=true>"Stationary"</Code>", see "<a href="#variants">"Variants"</a>"."
+                        <Code inline=true>"Sliding"</Code>" or "<Code inline=true>"Stationary"</Code>", see "<AnchorLink href="#variants">"Variants"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="icons" ty="Option<SwitchIcons>" default="None">
-                        "Icons shown in the knob while off and on, see "<a href="#icons">"Icons"</a>"."
+                        "Icons shown in the knob while off and on, see "<AnchorLink href="#icons">"Icons"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
                     <ApiRow name="children" ty="Option<Children>" default="None">"The label text."</ApiRow>
@@ -58,9 +59,10 @@ pub fn PageSwitch() -> impl IntoView {
             <Section title="State">
                 <p>
                     "A switch either keeps its own state, starting at "<Code inline=true>"default_selected"</Code>
-                    " and reporting changes through "<Code inline=true>"on_change"</Code>", or works on your state, given as "
-                    <Code inline=true>"state"</Code>". The demo above binds a signal pair: "
-                    <Code inline=true>"state=(airplane_mode, set_airplane_mode)"</Code>". The children are the label: always "
+                    " and reporting changes through "<Code inline=true>"on_change"</Code>", or shows your state, given as "
+                    <Code inline=true>"is_selected"</Code>", and hands changes to "<Code inline=true>"set_selected"</Code>
+                    ". The demo above passes one "<Code inline=true>"RwSignal"</Code>" as both: "
+                    <Code inline=true>"is_selected=airplane_mode set_selected=airplane_mode"</Code>". The children are the label: always "
                     "give a switch one (or an "<Code inline=true>"aria_label"</Code>"), so screen readers can name it."
                 </p>
             </Section>
@@ -86,6 +88,11 @@ pub fn PageSwitch() -> impl IntoView {
             </Section>
 
             <Section title="Sizes">
+                <p>
+                    <Code inline=true>"SwitchSize::Small"</Code>", "<Code inline=true>"Normal"</Code>" (the default) and "
+                    <Code inline=true>"Big"</Code>" scale the track and the knob; the label keeps the surrounding font size. "
+                    "Pick the size that matches the text and controls next to the switch."
+                </p>
                 <Demo description="Small, normal and big switches" source=include_str!("demos/switch_sizes.rs")>
                     <SwitchSizesDemo/>
                 </Demo>
@@ -108,10 +115,10 @@ pub fn PageSwitch() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch overview"</Link></li>
-                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch atom"</Link></li>
-                <li><Link href=routes::doc::switch::Hook.materialize()>"Switch hooks"</Link></li>
+                <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
+                <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
                 <li><Link href=routes::doc::Themes.materialize()>"Themes"</Link>" (the "<Code inline=true>"ThemeToggle"</Code>" switch)"</li>
-                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox component"</Link></li>
+                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
             </SeeAlso>
         </DocPage>
     }

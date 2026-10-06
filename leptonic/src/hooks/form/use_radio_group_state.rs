@@ -14,7 +14,8 @@ use crate::{hooks::collections::Key, utils::id::use_id};
 // ## API DIFFERENCES
 // - Values are `Key`s (strings or integers), not strings: what collections and toggle button
 //   groups use; they render as the radios' form values.
-// - Hook-owned state (project-wide convention): no controlled `value`.
+// - State (C4): `default_value` + `on_change`, or `value` bound to app state (a `ValueBinding`,
+//   the atoms' `value` + `set_value`).
 // - The validation behavior is set here (react-aria: on `useRadioGroup`), so the state and its
 //   radios read it from one place.
 // - The generated group name comes from `use_id` (hydration-stable). React-aria: a random
@@ -25,8 +26,10 @@ use crate::{hooks::collections::Key, utils::id::use_id};
 /// Input of [`use_radio_group_state`].
 #[derive(Clone)]
 pub struct UseRadioGroupStateInput {
-    /// The initially selected value.
+    /// The initially selected value. Ignored when `value` is bound.
     pub default_value: Option<Key>,
+    /// The selected value as app state, replacing `default_value`.
+    pub value: Option<crate::utils::ValueBinding<Option<Key>>>,
     /// Called with the selected value when it changes.
     pub on_change: Option<Callback<Option<Key>>>,
     /// The radios' `name` (for form submission). Generated when `None`.
@@ -43,6 +46,7 @@ impl Default for UseRadioGroupStateInput {
     fn default() -> Self {
         Self {
             default_value: None,
+            value: None,
             on_change: None,
             name: None,
             is_disabled: Signal::stored(false),
@@ -80,7 +84,7 @@ pub struct RadioGroupState {
     pub validation_behavior: ValidationBehavior,
     name: StoredValue<String>,
     default_selected_value: StoredValue<Option<Key>>,
-    set_selected: WriteSignal<Option<Key>>,
+    set_selected: crate::utils::ValueBinding<Option<Key>>,
     set_last_focused: WriteSignal<Option<Key>>,
     on_change: Option<Callback<Option<Key>>>,
 }
@@ -128,6 +132,7 @@ impl RadioGroupState {
 pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState {
     let UseRadioGroupStateInput {
         default_value,
+        value,
         on_change,
         name,
         is_disabled,
@@ -138,17 +143,20 @@ pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState 
         validation_behavior,
     } = input;
     let name = name.unwrap_or_else(|| use_id("radio-group"));
-    let (selected_value, set_selected) = signal(default_value.clone());
+    let set_selected =
+        value.unwrap_or_else(|| crate::utils::ValueBinding::from(RwSignal::new(default_value)));
+    let selected_value = set_selected.value;
+    let default_value = selected_value.get_untracked();
     let (last_focused_value, set_last_focused) = signal(None);
     let validation = use_form_validation_state(UseFormValidationStateInput {
         is_invalid,
-        value: selected_value.into(),
+        value: selected_value,
         validate,
         validation_behavior,
         name: Some(name.clone()),
     });
     RadioGroupState {
-        selected_value: selected_value.into(),
+        selected_value,
         last_focused_value: last_focused_value.into(),
         is_disabled,
         is_read_only,
@@ -169,6 +177,22 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+
+    #[test]
+    fn a_bound_value_is_read_and_written() {
+        Owner::new().with(|| {
+            let app = RwSignal::new(Some(Key::from("a")));
+            let state = use_radio_group_state(UseRadioGroupStateInput {
+                value: Some(crate::utils::ValueBinding::from(app)),
+                ..UseRadioGroupStateInput::default()
+            });
+            assert_that!(state.default_selected_value()).is_equal_to(Some(Key::from("a")));
+            state.set_selected_value(Some(Key::from("b")));
+            assert_that!(app.get_untracked()).is_equal_to(Some(Key::from("b")));
+            app.set(Some(Key::from("c")));
+            assert_that!(state.selected_value.get_untracked()).is_equal_to(Some(Key::from("c")));
+        });
+    }
 
     #[test]
     fn selects_values_unless_read_only_or_disabled() {

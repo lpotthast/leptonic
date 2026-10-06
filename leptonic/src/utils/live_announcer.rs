@@ -54,9 +54,9 @@ impl Assertiveness {
 pub enum Announcement {
     /// A plain text message.
     Text(String),
-    /// The accessible name of existing elements, given by their ids (like `aria-labelledby`).
-    /// Useful to announce rich content that is already in the page.
-    LabelledBy(String),
+    /// The accessible name of existing elements, given by their ids (like `aria-labelledby`, in
+    /// order). Useful to announce rich content that is already in the page.
+    LabelledBy(Vec<String>),
 }
 
 impl From<String> for Announcement {
@@ -207,7 +207,7 @@ impl LiveAnnouncer {
             Announcement::LabelledBy(ids) => {
                 // To read an aria-labelledby, the element needs a role that supports naming.
                 let _ = entry.set_attribute("role", "img");
-                let _ = entry.set_attribute("aria-labelledby", ids);
+                let _ = entry.set_attribute("aria-labelledby", &ids.join(" "));
                 false
             }
         };

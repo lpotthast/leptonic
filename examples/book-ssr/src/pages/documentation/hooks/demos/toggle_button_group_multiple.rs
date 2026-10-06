@@ -1,18 +1,24 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::Checkbox,
+    hooks::{collections::Key, *},
+};
 use leptos::prelude::*;
 
 const FORMATS: [&str; 3] = ["Bold", "Italic", "Underline"];
 
 #[component]
 pub fn ToggleButtonGroupMultipleDemo() -> impl IntoView {
-    let (formats, set_formats) = signal(HashSet::new());
+    let formats = RwSignal::new(HashSet::<Key>::new());
+    let disabled = RwSignal::new(false);
 
-    // Multiple selection: the group is a toolbar, its buttons have `aria-pressed`.
+    // Multiple selection: the group is a toolbar, its buttons have `aria-pressed`. The selection is bound to
+    // `formats`, app state the rest of the page can read and set.
     let state = use_toggle_group_state(UseToggleGroupStateInput {
         selection_mode: ToggleGroupSelectionMode::Multiple,
-        on_selection_change: Some(Callback::new(move |keys| set_formats.set(keys))),
+        selected_keys: Some(formats.into()),
+        is_disabled: disabled.into(),
         ..UseToggleGroupStateInput::default()
     });
     let group = use_toggle_button_group(UseToggleButtonGroupInput {
@@ -29,11 +35,16 @@ pub fn ToggleButtonGroupMultipleDemo() -> impl IntoView {
         </div>
         <p class="demo-status">
             {move || {
-                let mut selected = formats.get().iter().map(ToString::to_string).collect::<Vec<_>>();
-                selected.sort_unstable();
-                if selected.is_empty() { "Plain text".to_owned() } else { selected.join(", ") }
+                let selected: Vec<&str> = FORMATS
+                    .into_iter()
+                    .filter(|format| formats.with(|keys| keys.contains(&Key::from(*format))))
+                    .collect();
+                if selected.is_empty() { "Plain text.".to_owned() } else { format!("{}.", selected.join(", ")) }
             }}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }
 
@@ -43,5 +54,6 @@ fn FormatButton(group: ToggleGroupState, format: &'static str) -> impl IntoView 
         UseToggleButtonGroupItemInput::new(group, format),
     ));
     let (attrs, styles) = button.props.into_parts();
+    // Styled through `aria-pressed`.
     view! { <button {..attrs} style=styles class="demo-toggle-button">{format}</button> }
 }

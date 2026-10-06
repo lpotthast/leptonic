@@ -11,36 +11,75 @@ pub fn PageAtomForm() -> impl IntoView {
     view! {
         <DocPage title="Form Atom">
             <p>
-                <Code inline=true>"Form"</Code>" renders a "<Code inline=true>"<form>"</Code>" whose field atoms share one "
-                "validation behavior and show the validation errors your server returns. It is unstyled. See "
-                <Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link>" for how fields validate."
+                <Code inline=true>"Form"</Code>" renders an unstyled "<Code inline=true>"<form>"</Code>" whose fields share "
+                "one validation behavior and show the validation errors your server returns. See the "
+                <Link href=routes::doc::Form.materialize()>"Form overview"</Link>"."
             </p>
 
             <Section title="Hooks Used">
                 <p>
-                    <Code inline=true>"Form"</Code>" provides a "<Code inline=true>"FormValidationContext"</Code>" with the "
-                    "server errors, which the field hooks read (see "
-                    <Link href=format!("{}#server-errors", routes::doc::Forms.materialize())>"Server errors"</Link>
-                    "), and a "<Code inline=true>"FormContext"</Code>" with the validation behavior, which the field atoms read."
+                    <Code inline=true>"Form"</Code>" calls no hook of its own. It provides the contexts its fields read:"
+                </p>
+                <ul>
+                    <li>
+                        "a "<Link href=format!("{}#formvalidationcontext", routes::doc::form::Hook.materialize())>
+                            <Code inline=true>"FormValidationContext"</Code>
+                        </Link>" with its "<Code inline=true>"validation_errors"</Code>", read by "
+                        <Link href=format!("{}#use-form-validation-state", routes::doc::form::Hook.materialize())>
+                            "use_form_validation_state"
+                        </Link>" in every field hook,"
+                    </li>
+                    <li>
+                        "a "<AnchorLink href="#formcontext">"FormContext"</AnchorLink>" with its "
+                        <Code inline=true>"validation_behavior"</Code>", read by the field atoms."
+                    </li>
+                </ul>
+            </Section>
+
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="atoms::form::Form">
+                    <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Native">
+                        "When the fields inside show their errors (see "
+                        <AnchorLink href="#validation-behavior">"Validation Behavior"</AnchorLink>"). A field\u{2019}s own "
+                        <Code inline=true>"validation_behavior"</Code>" takes precedence."
+                    </ApiRow>
+                    <ApiRow name="validation_errors" ty="Option<Signal<HashMap<String, Vec<String>>>>" default="None">
+                        "Errors from the server, by field "<Code inline=true>"name"</Code>". A field shows its errors until the "
+                        "user commits a changed value."
+                    </ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">
+                        "The form\u{2019}s id, for fields outside of it (their "<Code inline=true>"form"</Code>" prop)."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<form>"</Code>"."</ApiRow>
+                    <ApiRow name="children" ty="Children">"The fields, buttons and any other content. Required."</ApiRow>
+                </ApiTable>
+                <p>
+                    "Listeners and attributes you set on the atom ("<Code inline=true>"on:submit"</Code>", "
+                    <Code inline=true>"attr:action"</Code>", "<Code inline=true>"attr:aria-label"</Code>", \u{2026}) land on the "
+                    <Code inline=true>"<form>"</Code>"."
                 </p>
             </Section>
 
             <Section title="Example">
-                <p>
-                    "Attach listeners and attributes to the component; they land on the "<Code inline=true>"<form>"</Code>":"
-                </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::{
-                            button::Button,
-                            field::{FieldError, Label},
-                            form::Form,
-                            input::Input,
-                            text_field::TextField,
+                        use leptonic::{
+                            atoms::{
+                                button::Button,
+                                field::{FieldError, Label},
+                                form::Form,
+                                input::Input,
+                                text_field::TextField,
+                            },
+                            hooks::{ButtonType, InputType},
                         };
+                        use leptos::{ev::SubmitEvent, prelude::*};
 
                         view! {
-                            <Form on:submit=move |e: SubmitEvent| { e.prevent_default(); save(); }>
+                            <Form on:submit=move |e: SubmitEvent| {
+                                e.prevent_default();
+                                // Send the form data.
+                            }>
                                 <TextField name="email" input_type=InputType::Email is_required=true>
                                     <Label>"Email"</Label>
                                     <Input/>
@@ -58,7 +97,7 @@ pub fn PageAtomForm() -> impl IntoView {
                     "Submit the empty form, or an invalid address: the browser blocks the submission, the error appears below "
                     "the field and focus moves to it. Once you commit a corrected value (leave the field), the error clears. "
                     "\u{201c}Simulate server error\u{201d} reports an error for the "<Code inline=true>"email"</Code>
-                    " field; it disappears when you edit the value."
+                    " field; it disappears once you change the value and leave the field."
                 </p>
                 <Demo
                     description="Newsletter form with a required email text field, a description, an error message, submit, reset and a simulated server error"
@@ -66,24 +105,6 @@ pub fn PageAtomForm() -> impl IntoView {
                 >
                     <FormAtomDemo/>
                 </Demo>
-            </Section>
-
-            <Section title="Props">
-                <ApiTable kind=ApiKind::Props of="atoms::form::Form">
-                    <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Native">
-                        "When the fields inside show their errors. A field\u{2019}s own "<Code inline=true>"validation_behavior"</Code>
-                        " takes precedence."
-                    </ApiRow>
-                    <ApiRow name="validation_errors" ty="Option<Signal<HashMap<String, Vec<String>>>>" default="None">
-                        "Errors from the server, by field "<Code inline=true>"name"</Code>". A field shows its errors until its "
-                        "value changes."
-                    </ApiRow>
-                    <ApiRow name="id" ty="Option<String>" default="None">
-                        "The form\u{2019}s id, for fields outside of it (their "<Code inline=true>"form"</Code>" prop)."
-                    </ApiRow>
-                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<form>"</Code>"."</ApiRow>
-                    <ApiRow name="children" ty="Children">"The fields, buttons and any other content."</ApiRow>
-                </ApiTable>
             </Section>
 
             <Section title="Validation Behavior">
@@ -110,20 +131,37 @@ pub fn PageAtomForm() -> impl IntoView {
                 </p>
             </Section>
 
-            <Section title="FormContext">
+            <Section title="Styling">
                 <p>
-                    "The context the field atoms read their default validation behavior from. Read it in your own fields with "
-                    <Code inline=true>"use_context::<FormContext>()"</Code>"."
+                    "The form renders no data attributes. Give it classes, and style its fields through their own "
+                    "attributes (see "<Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>")."
                 </p>
-                <ApiTable kind=ApiKind::Fields of="FormContext">
-                    <ApiRow name="validation_behavior" ty="ValidationBehavior">"The form\u{2019}s validation behavior."</ApiRow>
-                </ApiTable>
+            </Section>
+
+            <Section title="Composition">
+                <p>
+                    "Fields you build from hooks take part in the form like the field atoms: their "
+                    <Link href=routes::doc::form::Hook.materialize()>"Form Hooks"</Link>" read the server errors, and they "
+                    "can follow the form\u{2019}s validation behavior by reading its "<Code inline=true>"FormContext"</Code>"."
+                </p>
+
+                <Section title="FormContext">
+                    <p>
+                        "Read it in your own fields with "<Code inline=true>"use_context::<FormContext>()"</Code>
+                        " (from "<Code inline=true>"leptonic::atoms::form"</Code>")."
+                    </p>
+                    <ApiTable kind=ApiKind::Fields of="FormContext">
+                        <ApiRow name="validation_behavior" ty="ValidationBehavior">"The form\u{2019}s validation behavior."</ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <SeeAlso>
+                <li><Link href=routes::doc::Form.materialize()>"Form overview"</Link></li>
+                <li><Link href=routes::doc::form::Hook.materialize()>"Form Hooks"</Link></li>
+                <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
+                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
-                <li><Link href=routes::doc::text_field::Atom.materialize()>"Text field atoms"</Link></li>
-                <li><Link href=routes::doc::atoms::Field.materialize()>"Field atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }

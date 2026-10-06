@@ -1,26 +1,21 @@
 use leptonic::{
     components::prelude::*,
-    hooks::{Orientation, collections::Key},
+    hooks::{Key, Orientation},
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn RadioGroupDemo() -> impl IntoView {
-    let (selected, set_selected) = signal(Some(Key::from("Small")));
+    let size = RwSignal::new(Some(Key::from("Small")));
 
     view! {
-        <RadioGroup
-            label="Size"
-            orientation=Orientation::Horizontal
-            default_value="Small"
-            on_change=move |value| set_selected.set(value)
-        >
+        <RadioGroup label="Size" orientation=Orientation::Horizontal value=size set_value=size>
             <Radio value="Small">"Small"</Radio>
             <Radio value="Medium">"Medium"</Radio>
             <Radio value="Large">"Large"</Radio>
         </RadioGroup>
         <p class="demo-status">
-            "Selected size: "{move || selected.get().map_or_else(|| "None".to_owned(), |v| v.to_string())}
+            {move || size.get().map_or_else(|| "No size selected.".to_owned(), |size| format!("Size: {size}."))}
         </p>
     }
 }

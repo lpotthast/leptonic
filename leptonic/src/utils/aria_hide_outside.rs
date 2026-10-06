@@ -167,7 +167,8 @@ enum WalkAction {
     Reject,
     /// Skip this node but process its children.
     Skip,
-    /// Hide this node (and implicitly its subtree: `inert` and `aria-hidden` are recursive).
+    /// Hide this node, then visit its children: they are rejected below a node this call hid
+    /// (hiding is recursive), except below a `role="row"` and below a node hidden by its author.
     Accept,
 }
 
@@ -225,7 +226,7 @@ fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<we
     }
 }
 
-/// Classify a single element then hide it or recurse into its children.
+/// Classify a single element, hide it and/or recurse into its children.
 #[cfg(not(feature = "ssr"))]
 fn walk(
     element: &web_sys::Element,
@@ -242,7 +243,11 @@ fn walk(
     match action {
         WalkAction::Reject => {}
         WalkAction::Skip => walk_children(element, mode, visible_nodes, hidden_nodes),
-        WalkAction::Accept => hide_element(element, mode, hidden_nodes),
+        // As upstream's TreeWalker, which descends into accepted nodes.
+        WalkAction::Accept => {
+            hide_element(element, mode, hidden_nodes);
+            walk_children(element, mode, visible_nodes, hidden_nodes);
+        }
     }
 }
 
@@ -439,7 +444,8 @@ pub fn aria_hide_outside(
     });
 
     // Walk the DOM and hide elements outside targets.
-    walk_children(&root, mode, &visible_nodes, &hidden_nodes);
+    // The root itself is classified too (hidden when no target is inside it).
+    walk(&root, mode, &visible_nodes, &hidden_nodes);
 
     // Set up MutationObserver for dynamically added elements.
     let Some((observer, callback)) =

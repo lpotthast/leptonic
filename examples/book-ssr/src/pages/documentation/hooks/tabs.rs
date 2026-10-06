@@ -11,10 +11,11 @@ pub fn PageUseTabsHook() -> impl IntoView {
     view! {
         <DocPage title="Tabs Hooks">
             <p>
-                "The tab hooks build accessible tabs from your own markup: "<Code inline=true>"use_tab_list_state"</Code>
-                " holds the tabs and the selected tab, "<Code inline=true>"use_tab_list"</Code>" turns an element into the "
-                "tab list, "<Code inline=true>"use_tab"</Code>" renders each tab and "<Code inline=true>"use_tab_panel"</Code>
-                " the content of the selected tab. See the "<Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link>
+                "The tab hooks build accessible tabs from your own markup: "
+                <AnchorLink href="#use-tab-list-state">"use_tab_list_state"</AnchorLink>" holds the tabs and the selected tab, "
+                <AnchorLink href="#use-tab-list">"use_tab_list"</AnchorLink>" turns an element into the tab list, "
+                <AnchorLink href="#use-tab">"use_tab"</AnchorLink>" renders each tab and "
+                <AnchorLink href="#use-tab-panel">"use_tab_panel"</AnchorLink>" the content of the selected tab. See the "<Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link>
                 " for concept guidance."
             </p>
 
@@ -24,10 +25,11 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <p>
                     "Tabs built from the hooks. Click a tab, or tab into the tab list and use the arrow keys: they select "
                     "the tab they move to and skip the disabled \u{201c}Reviews\u{201d} tab. "<Keys keys="Tab"/>" moves on to the "
-                    "panel, or to the checkbox in the \u{201c}Shipping\u{201d} panel."
+                    "panel, or to the checkbox in the \u{201c}Shipping\u{201d} panel. The tabs are styled through the "
+                    <Code inline=true>"aria-selected"</Code>" and "<Code inline=true>"aria-disabled"</Code>" the hooks set."
                 </p>
                 <Demo
-                    description="Horizontal tabs with a disabled tab, one panel showing the selected tab, and a toggle disabling all tabs"
+                    description="Horizontal tabs with a disabled tab, one panel showing the selected tab, and a Disabled checkbox"
                     source=include_str!("demos/tabs.rs")
                 >
                     <TabsDemo/>
@@ -36,7 +38,9 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Section title="Collections">
                 <p>
-                    "The tabs are a "<Link href=routes::doc::Collections.materialize()>"collection"</Link>": every tab has a "
+                    "The tabs are a "<Link href=routes::doc::CollectionState.materialize()>"collection"</Link>" from "
+                    <Link href=format!("{}#use-collection", routes::doc::CollectionState.materialize())>"use_collection"</Link>
+                    ": every tab has a "
                     <Code inline=true>"Key"</Code>" and a text. The keyboard navigation and the selection work on the "
                     "collection, not on what you render, so render one tab per collection item, in collection order. A tab "
                     "disabled in the collection ("<Code inline=true>"ItemBuilder::disabled"</Code>") or through "
@@ -44,6 +48,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::use_collection;
+
                         let collection = use_collection(|b| {
                             b.item("details", "Details");
                             b.item("reviews", "Reviews").disabled(true);
@@ -57,8 +63,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <p>
                     "Creates the state: the tabs, the selected tab and keyboard focus. One tab is always selected \u{2014} the "
                     "default, or the first enabled tab. If the selected tab disappears from the collection, the first enabled "
-                    "tab is selected. The hook owns the selection: you get notified of changes and can select a tab through "
-                    "the state, but you don\u{2019}t pass in a selected key."
+                    "tab is selected. Keep the selected tab in your app state with "<Code inline=true>"selected_key"</Code>
+                    ", or let the state hold it: you get notified of changes and can select a tab through the state."
                 </p>
 
                 <Section title="Input" id="use-tab-list-state-input">
@@ -105,6 +111,9 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-list-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
+                            use leptonic::hooks::{Key, UseTabListStateInput, use_tab_list_state};
+                            use leptos::logging::log;
+
                             let state = use_tab_list_state(UseTabListStateInput {
                                 default_selected_key: Some(Key::from("shipping")),
                                 on_selection_change: Some(Callback::new(|key: Key| log!("selected {key}"))),
@@ -122,7 +131,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <p>
                     "Turns an element into the tab list. The tab list itself is not a tab stop: the selected tab is (more "
                     "precisely, the focused one, which follows the selection while the tab list doesn\u{2019}t have focus). "
-                    "The arrow keys move between the tabs, see "<a href="#keyboard">"Keyboard"</a>"."
+                    "The arrow keys move between the tabs, see the "
+                    <Link href=format!("{}#accessibility", routes::doc::Tabs.materialize())>"keyboard interaction"</Link>"."
                 </p>
                 <p>
                     "Tabs and panels learn about their tab list through a "<Code inline=true>"TabListData"</Code>
@@ -142,12 +152,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         <ApiRow name="tabs" ty="TabListData">"The tab list, from "<Code inline=true>"TabListData::new(state)"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The tab list element; the hook\u{2019}s props capture it. Required."</ApiRow>
                         <ApiRow name="orientation" ty="Orientation" default="Horizontal">
-                            "Which arrow keys move between the tabs, see "<a href="#orientation">"Orientation"</a>
+                            "Which arrow keys move between the tabs, see "<AnchorLink href="#orientation">"Orientation"</AnchorLink>
                             "; set as "<Code inline=true>"aria-orientation"</Code>"."
                         </ApiRow>
                         <ApiRow name="keyboard_activation" ty="KeyboardActivation" default="Automatic">
                             "Whether moving focus with the keyboard selects the tab, see "
-                            <a href="#keyboard-activation">"Keyboard Activation"</a>"."
+                            <AnchorLink href="#keyboard-activation">"Keyboard Activation"</AnchorLink>"."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"An accessible name for the tab list."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id of a visible label."</ApiRow>
@@ -169,6 +179,11 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-list-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
+                            use leptonic::{
+                                hooks::{IntoAttrs, TabListData, UseTabListInput, UseTabListReturn, use_tab_list},
+                                utils::CapturedElement,
+                            };
+
                             let tabs = TabListData::new(state);
                             let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
                                 aria_label: "Product".into(),
@@ -234,16 +249,16 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Example" id="use-tab-example">
                     <Code language=Language::Rust>
-                        {indoc!(r"
+                        {indoc!(r#"
+                            use leptonic::hooks::{Key, TabListItemData, UseTabInput, use_tab};
+
                             #[component]
                             fn MyTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-                                let UseTabReturn { tab_props, is_selected, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
-                                let (attrs, styles) = tab_props.into_parts();
-                                view! {
-                                    <div {..attrs} style=styles class:selected=is_selected>{label}</div>
-                                }
+                                let (attrs, styles) = use_tab(UseTabInput::new(list, Key::from(key))).tab_props.into_parts();
+                                // Style the state through `[aria-selected="true"]` and `[aria-disabled="true"]`.
+                                view! { <div {..attrs} style=styles class="my-tab">{label}</div> }
                             }
-                        ")}
+                        "#)}
                     </Code>
                 </Section>
             </Section>
@@ -254,7 +269,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     "its content right after the tab list \u{2014} unless it contains tabbable elements, which then take "
                     "focus instead. Render either one panel for whatever tab is selected ("<Code inline=true>"key: None"</Code>
                     ", as in the demo above) or one panel per tab ("<Code inline=true>"key: Some(..)"</Code>
-                    "), rendered only while its tab is selected (as in the "<a href="#orientation">"vertical demo"</a>")."
+                    "), rendered only while its tab is selected (as in the "<AnchorLink href="#orientation">"vertical demo"</AnchorLink>")."
                 </p>
 
                 <Section title="Input" id="use-tab-panel-input">
@@ -281,6 +296,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-panel-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
+                            use leptonic::hooks::{IntoAttrs, UseTabPanelInput, use_tab_panel};
+
                             let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
                             let text = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
                                 Some("shipping") => "Ships within two days.",
@@ -317,37 +334,19 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     " keep working. Lay the tab list out as a column yourself. This demo also renders one panel per tab."
                 </p>
                 <Demo
-                    description="Vertical tabs with one panel per tab"
+                    description="Vertical tabs with one panel per tab, showing the selected tab"
                     source=include_str!("demos/tabs_vertical.rs")
                 >
                     <TabsVerticalDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <p>
-                    "The tab list is a single tab stop: "<Keys keys="Tab"/>" moves focus to the selected tab (with manual activation: "
-                    "the tab focused last), and on to the panel. "
-                    "Disabled tabs are skipped, and navigation wraps around at the ends."
-                </p>
-                <KeyboardTable>
-                    <KeyRow keys="ArrowRight / ArrowLeft">
-                        "Move focus to the next or previous tab. In right-to-left locales, "<Keys keys="ArrowLeft"/>
-                        " moves to the next tab. Works in both orientations."
-                    </KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowUp">"Move focus to the next or previous tab (vertical tab lists only)."</KeyRow>
-                    <KeyRow keys="Home / End">"Move focus to the first or last enabled tab."</KeyRow>
-                    <KeyRow keys="Enter / Space">"Select the focused tab (manual activation)."</KeyRow>
-                    <KeyRow keys="Tab">"Move focus from the tab list into the panel, or to the panel\u{2019}s first tabbable element."</KeyRow>
-                </KeyboardTable>
-                <p>"With automatic activation, every move also selects the tab."</p>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
-                <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs atoms"</Link></li>
-                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
-                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox hooks"</Link></li>
+                <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></li>
+                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
             </SeeAlso>
         </DocPage>
     }

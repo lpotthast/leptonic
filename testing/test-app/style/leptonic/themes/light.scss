@@ -63,6 +63,9 @@
   --button-border-size: 0.125em;
   --button-border-radius: 0.25em;
   --button-box-shadow-opacity: 0.3;
+  --button-disabled-background-color: #e2e2e2;
+  --button-disabled-border-color: #e2e2e2;
+  --button-disabled-text-color: #9a9a9a;
 
   --button-flat-primary-text-color: var(--std-text-dark);
   --button-flat-primary-text-color-hover: var(--std-text-dark);
@@ -303,7 +306,8 @@
   --label-color: #636363;
 
   // Link
-  --link-color: var(--brand-color);
+  // A darker brand red: the brand color itself has only 3.2:1 contrast on white (WCAG: 4.5:1).
+  --link-color: #b83f2b;
 
   // Modal
   --modal-color: var(--std-text-dark);
@@ -321,6 +325,14 @@
   --popover-border-radius: 0.25em;
   --popover-color: var(--std-text-dark);
   --popover-background-color: rgba(187, 187, 187, 0.51);
+
+  // Meter
+  --meter-height: 0.75em;
+  --meter-border-radius: 0.375em;
+  --meter-background-color: var(--progress-bar-background-color);
+  --meter-background-box-shadow: var(--progress-bar-background-box-shadow);
+  --meter-fill-background-color: var(--brand-color);
+  --meter-fill-transition: width 0.1s linear;
 
   // Progress bar
   --progress-bar-height: 1.25em;
@@ -427,6 +439,11 @@
   --table-background-color-of-striped-rows: #ffffeb;
   --table-header-background-color: #fafafa;
   --table-border-color: color-mix(in srgb, white 80%, var(--std-text-dark));
+
+  --separator-color: var(--table-border-color);
+  --separator-thickness: 1px;
+  --separator-margin: 0.5em 0;
+  --separator-vertical-margin: 0 0.5em;
   --table-cell-box-shadow-on-hover: 2px 2px 10px -3px rgb(50, 50, 50);
   --table-column-background-if-ordered: #dddddd;
   --table-header-cell-padding: 0.75em 1em;

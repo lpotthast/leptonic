@@ -11,20 +11,23 @@ pub fn PageUseSpinButton() -> impl IntoView {
         <DocPage title="use_spin_button">
             <p>
                 "A spin button is a control for picking a number from a range of discrete values, one step at a time: "
-                "the arrow keys step up and down, Page Up and Page Down take bigger steps, Home and End jump to the limits, "
-                "and a pair of increment and decrement buttons let pointer users do the same. Think of the hour and minute "
-                "fields of a time picker, or a quantity picker in a shop."
+                <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" step up and down, "<Keys keys="PageUp"/>" and "
+                <Keys keys="PageDown"/>" take bigger steps, "<Keys keys="Home"/>" and "<Keys keys="End"/>" jump to the "
+                "limits, and a pair of increment and decrement buttons let pointer users do the same. Think of the hour and "
+                "minute fields of a time picker, or a quantity picker in a shop. It is a building block of the "
+                <Link href=routes::doc::NumberField.materialize()>"Number Field"</Link>" and of date and time segments."
             </p>
 
             <p>
                 "The "<Code inline=true>"use_spin_button"</Code>" hook implements this "
-                <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/" target=LinkTarget::_Blank>
+                <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/spinbutton/" target=LinkTarget::Blank>
                     "WAI-ARIA pattern"
-                </LinkExt>
+                </Link>
                 " for an element of your choice. It doesn\u{2019}t own the value: you keep it in your own signal and change it "
                 "in the callbacks the hook calls. If you need a text input that people can also type numbers into, use "
-                <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
-                ", which builds on this hook and adds parsing, formatting and validation."
+                <Code inline=true>"use_number_field"</Code>" (see "
+                <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>
+                "), which builds on this hook and adds parsing, formatting and validation."
             </p>
 
             <ReactAriaSource path="spinbutton/useSpinButton.ts"/>
@@ -43,7 +46,8 @@ pub fn PageUseSpinButton() -> impl IntoView {
                     <ApiRow name="text_value" ty="Signal<Option<String>>" default="None">
                         "A readable form of the value, like \u{201c}2 cups\u{201d} or \u{201c}9 AM\u{201d}, exposed as "
                         <Code inline=true>"aria-valuetext"</Code>" and announced on change. "<Code inline=true>"None"</Code>
-                        " uses "<Code inline=true>"value"</Code>"; an empty string is announced as \u{201c}Empty\u{201d}."
+                        " uses "<Code inline=true>"value"</Code>". An empty string, or no "<Code inline=true>"value"</Code>" either, is "
+                        "announced as \u{201c}Empty\u{201d}."
                     </ApiRow>
                     <ApiRow name="min_value, max_value" ty="Signal<Option<f64>>" default="None">
                         "The limits, exposed as "<Code inline=true>"aria-valuemin"</Code>" / "<Code inline=true>"aria-valuemax"</Code>
@@ -51,7 +55,7 @@ pub fn PageUseSpinButton() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="is_disabled, is_read_only, is_required" ty="Signal<bool>" default="false">
                         "Set the matching "<Code inline=true>"aria-*"</Code>" attributes. Disabled and read-only spin buttons "
-                        "ignore the keyboard."
+                        "ignore the keyboard, and their stepper buttons are disabled."
                     </ApiRow>
                     <ApiRow name="on_increment, on_decrement" ty="Option<Callback<()>>" default="None">
                         "Step up or down by one step. Called for the arrow keys and the stepper buttons."
@@ -75,7 +79,8 @@ pub fn PageUseSpinButton() -> impl IntoView {
                         " and an accessible name yourself."
                     </ApiRow>
                     <ApiRow name="increment_button" ty="UseButtonInput">
-                        "Configuration for the increment button. Pass it to "
+                        "Configuration for the increment button, with the hold-to-spin behavior, disabled while the spin "
+                        "button is disabled or read-only. Pass it to "
                         <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
                     </ApiRow>
                     <ApiRow name="decrement_button" ty="UseButtonInput">
@@ -87,12 +92,15 @@ pub fn PageUseSpinButton() -> impl IntoView {
             <Section title="Example">
                 <p>
                     "The stepper buttons come as "<Code inline=true>"UseButtonInput"</Code>"s with the hold-to-spin behavior "
-                    "already set up. Everything else about them is up to you, so add a label and, if you like, a disabled state "
-                    "with struct update syntax before rendering them with "<Code inline=true>"use_button"</Code>":"
+                    "already set up, and disabled with the spin button. Add a label with struct update syntax, and combine "
+                    "their "<Code inline=true>"is_disabled"</Code>" with your own condition (here: the limit is reached) "
+                    "before rendering them with "<Code inline=true>"use_button"</Code>":"
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+
                         let (cups, set_cups) = signal(2.0_f64);
                         let step = move |delta: f64| set_cups.update(|v| *v = (*v + delta).clamp(0.0, 10.0));
 
@@ -105,9 +113,10 @@ pub fn PageUseSpinButton() -> impl IntoView {
                             ..Default::default()
                         });
 
+                        let spin_disabled = spin.increment_button.is_disabled;
                         let (inc_attrs, inc_styles) = use_button(UseButtonInput {
-                            aria_label: Some("More cups".into()),
-                            is_disabled: Signal::derive(move || cups.get() >= 10.0),
+                            aria_label: "More cups".into(),
+                            is_disabled: Signal::derive(move || spin_disabled.get() || cups.get() >= 10.0),
                             allow_focus_when_disabled: true,
                             ..spin.increment_button
                         })
@@ -126,8 +135,13 @@ pub fn PageUseSpinButton() -> impl IntoView {
             </Section>
 
             <Section title="Demo">
+                <p>
+                    "Focus the number and use "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>", "<Keys keys="PageUp"/>
+                    " / "<Keys keys="PageDown"/>" (five cups at a time), "<Keys keys="Home"/>" and "<Keys keys="End"/>
+                    ", or hold one of the buttons."
+                </p>
                 <Demo
-                    description="Custom spin button with a value from 0 to 10 and two stepper buttons"
+                    description="Custom spin button with a value from 0 to 10, two stepper buttons and a Disabled switch"
                     source=include_str!("demos/spin_button.rs")
                 >
                     <SpinButtonDemo/>
@@ -164,7 +178,7 @@ pub fn PageUseSpinButton() -> impl IntoView {
 
             <SeeAlso>
                 <li>
-                    <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                    <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>
                     " \u{2014} a text input for numbers, built on this hook"
                 </li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" \u{2014} renders the stepper buttons"</li>

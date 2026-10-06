@@ -10,10 +10,12 @@ pub fn PageUseTag() -> impl IntoView {
     view! {
         <DocPage title="Tag Group Hooks">
             <p>
-                <Code inline=true>"use_tag_group"</Code>" and "<Code inline=true>"use_tag"</Code>
-                " build a group of tags (keywords, filters, recipients) that can be navigated with the arrow keys, selected and "
-                "removed. A tag group is a horizontal "<Link href=routes::doc::grid::Hook.materialize()>"grid list"</Link>
-                ". See the "<Link href=routes::doc::Chip.materialize()>"Chip overview"</Link>" for concept guidance."
+                "A tag group is a set of tags, such as keywords, active filters or the recipients of a message, that "
+                "users navigate with the arrow keys and can select and remove. "<Code inline=true>"use_tag_group"</Code>
+                " and "<Code inline=true>"use_tag"</Code>" build one from a list state; you render the tags and their "
+                "remove buttons. A tag group is a horizontal "<Link href=routes::doc::GridList.materialize()>"grid list"</Link>
+                ". For a single label that only shows a status or an attribute, use a "
+                <Link href=routes::doc::Chip.materialize()>"Chip"</Link>"."
             </p>
 
             <ReactAria hook="useTagGroup"/>
@@ -26,37 +28,23 @@ pub fn PageUseTag() -> impl IntoView {
 
             <Section title="use_tag_group">
                 <p>
-                    "Takes a list state (see "<Link href=routes::doc::Collections.materialize()>"Collections"</Link>
+                    "Takes a list state (see "<Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link>
                     ") with the tags. Tags can only be removed if you pass "<Code inline=true>"on_remove"</Code>
                     ", which receives the keys to remove: drop them from your data."
                 </p>
 
-                <Code language=Language::Rust>
-                    {indoc!(r"
-                        let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
-                        let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
-
-                        let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {
-                            has_label: true,
-                            on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
-                                tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
-                            })),
-                            ..UseTagGroupInput::new(state, CapturedElement::new())
-                        });
-                    ")}
-                </Code>
-
                 <Section title="Input" id="use-tag-group-input">
                     <p>"Create the input with "<Code inline=true>"UseTagGroupInput::new(state, element)"</Code>"."</p>
                     <ApiTable kind=ApiKind::Input of="UseTagGroupInput">
-                        <ApiRow name="state" ty="ListState">"The tags and their selection."</ApiRow>
-                        <ApiRow name="element" ty="CapturedElement">"The group element. The props capture it."</ApiRow>
+                        <ApiRow name="state" ty="ListState">"The tags and their selection. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The group element; the props capture it. Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the tag group without a visible label."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling and describing elements."</ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
-                            "Replaces the horizontal list keyboard navigation."
+                            "Replaces the horizontal "
+                            <Link href=format!("{}#use-list-keyboard-delegate", routes::doc::CollectionState.materialize())>"list keyboard delegate"</Link>"."
                         </ApiRow>
                         <ApiRow name="on_remove" ty="Option<Callback<HashSet<Key>>>" default="None">
                             "Called with the keys of tags to remove. Without it, tags can\u{2019}t be removed."
@@ -78,13 +66,40 @@ pub fn PageUseTag() -> impl IntoView {
                         <ApiRow name="data" ty="TagGroupData">"Hand this to "<Code inline=true>"use_tag"</Code>" for every tag."</ApiRow>
                     </ApiTable>
                 </Section>
+
+                <Section title="Example" id="use-tag-group-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use std::collections::HashSet;
+
+                            use leptonic::{
+                                hooks::{*, collections::{SelectionOptions, UseListStateInput}},
+                                utils::CapturedElement,
+                            };
+                            use leptos::prelude::*;
+
+                            let tags = RwSignal::new(vec!["Rust", "Leptos"]);
+                            let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+                            let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
+
+                            let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {
+                                has_label: true.into(),
+                                on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
+                                    tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
+                                })),
+                                ..UseTagGroupInput::new(state, CapturedElement::new())
+                            });
+                        "#)}
+                    </Code>
+                </Section>
             </Section>
 
             <Section title="use_tag">
+                <p>"One tag: a row with a single cell, selected by press and removed with its button or the keyboard."</p>
                 <Section title="Input" id="use-tag-input">
                     <ApiTable kind=ApiKind::Input of="UseTagInput">
-                        <ApiRow name="group" ty="TagGroupData">"The group, from "<Code inline=true>"use_tag_group"</Code>"."</ApiRow>
-                        <ApiRow name="key" ty="Key">"The tag\u{2019}s key in the collection."</ApiRow>
+                        <ApiRow name="group" ty="TagGroupData">"The group, from "<Code inline=true>"use_tag_group"</Code>". Required."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The tag\u{2019}s key in the collection. Required."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -92,7 +107,8 @@ pub fn PageUseTag() -> impl IntoView {
                     <ApiTable kind=ApiKind::Return of="UseTagReturn">
                         <ApiRow name="row_props" ty="PropsWithStyles<UseTagRowProps>">
                             "For the tag: "<Code inline=true>"role=\"row\""</Code>", selection and disabled state, press handling, "
-                            "and Delete/Backspace removal. Removable tags are described as \u{201c}Press Delete or Backspace to remove.\u{201d}"
+                            "and removal with "<Keys keys="Delete"/>" or "<Keys keys="Backspace"/>". Removable tags are described as "
+                            "\u{201c}Press Delete or Backspace to remove.\u{201d}"
                         </ApiRow>
                         <ApiRow name="grid_cell_props" ty="UseGridListItemCellProps">"For the tag\u{2019}s content: "<Code inline=true>"role=\"gridcell\""</Code>"."</ApiRow>
                         <ApiRow name="remove_button" ty="Option<UseButtonInput>">
@@ -107,10 +123,20 @@ pub fn PageUseTag() -> impl IntoView {
             </Section>
 
             <Section title="Keyboard">
+                <p>
+                    "A tag group follows the WAI-ARIA "
+                    <Link href="https://www.w3.org/WAI/ARIA/apg/patterns/grid/" target=LinkTarget::Blank>"grid pattern"</Link>
+                    ": the group is a "<Code inline=true>"grid"</Code>", each tag a "<Code inline=true>"row"</Code>" with a "
+                    <Code inline=true>"gridcell"</Code>", selectable tags carry "<Code inline=true>"aria-selected"</Code>
+                    ", and removable tags are described as removable. The group is a single tab stop."
+                </p>
+
                 <KeyboardTable>
                     <KeyRow keys="ArrowLeft / ArrowRight">"Focus the previous or next tag, wrapping around."</KeyRow>
                     <KeyRow keys="Home / End">"Focus the first or last tag."</KeyRow>
-                    <KeyRow keys="Space">"Toggle the selection of the focused tag (when selection is enabled)."</KeyRow>
+                    <KeyRow keys="Space">"Select or deselect the focused tag (when selection is enabled)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all tags (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Delete / Backspace">
                         "Remove the focused tag, or all selected tags if it is selected. Focus moves to a neighbor, or stays in the "
                         "empty group."
@@ -119,9 +145,10 @@ pub fn PageUseTag() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Chip.materialize()>"Chip overview"</Link></li>
-                <li><Link href=routes::doc::chip::Component.materialize()>"Chip component"</Link></li>
-                <li><Link href=routes::doc::grid::Hook.materialize()>"Grid list hooks"</Link></li>
+                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+                <li><Link href=routes::doc::grid_list::Hook.materialize()>"Grid List Hooks"</Link></li>
+                <li><Link href=routes::doc::Chip.materialize()>"Chip"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>
     }

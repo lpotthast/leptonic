@@ -14,8 +14,8 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
         <DocPage title="use_separator">
             <p>
                 "The "<Code inline=true>"use_separator"</Code>" hook gives an element the semantics of a separator, so "
-                "assistive technology announces it as a boundary between two groups of content. "
-                "See the "<Link href=routes::doc::Separator.materialize()>"Separator overview"</Link>" for concept guidance."
+                "screen readers announce it as a boundary between two groups of content. See the "
+                <Link href=routes::doc::Separator.materialize()>"Separator overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useSeparator"/>
@@ -34,16 +34,20 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                     <ApiRow name="element_type" ty="SeparatorElementType" default="Hr">
                         "The element you render: "<Code inline=true>"Hr"</Code>", "<Code inline=true>"Div"</Code>" or "
                         <Code inline=true>"Span"</Code>". Decides which attributes are set, see "
-                        <a href="#element-types">"Element types"</a>"."
+                        <AnchorLink href="#element-types">"Element Types"</AnchorLink>"."
+                    </ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id."</ApiRow>
+                    <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
+                        "Names the separator, e.g. when it separates groups of controls in a toolbar."
                     </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UseSeparatorReturn">
-                    <ApiRow name="separator_props" ty="UseSeparatorProps">
-                        "The "<Code inline=true>"role"</Code>" and "<Code inline=true>"aria-orientation"</Code>
-                        " for the separator element. Spread them with "<Code inline=true>"{..separator_props.into_attrs()}"</Code>"."
+                    <ApiRow name="props" ty="UseSeparatorProps">
+                        "The "<Code inline=true>"role"</Code>", "<Code inline=true>"aria-orientation"</Code>", id and label "
+                        "for the separator element. Spread them with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -51,21 +55,21 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::hooks::*;
+
                         // Using an <hr> element (no role needed)
-                        let hr_sep = use_separator(UseSeparatorInput {
-                            orientation: Orientation::Horizontal,
-                            element_type: SeparatorElementType::Hr,
-                        });
+                        let hr_sep = use_separator(UseSeparatorInput::default());
 
                         // Using a <div> element (role="separator" is added)
                         let div_sep = use_separator(UseSeparatorInput {
                             orientation: Orientation::Vertical,
                             element_type: SeparatorElementType::Div,
+                            ..UseSeparatorInput::default()
                         });
 
                         view! {
-                            <hr {..hr_sep.separator_props.into_attrs()} />
-                            <div {..div_sep.separator_props.into_attrs()}></div>
+                            <hr {..hr_sep.props.into_attrs()} />
+                            <div {..div_sep.props.into_attrs()}></div>
                         }
                     "#)}
                 </Code>
@@ -88,7 +92,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Element types">
+            <Section title="Element Types">
                 <p>
                     "A native "<Code inline=true>"<hr>"</Code>" already is a horizontal separator, so the hook adds nothing to it. "
                     "Other elements need ARIA to say what they are:"
@@ -102,8 +106,8 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"Div"</Code>", "<Code inline=true>"Span"</Code></TableCell>
                         <TableCell>
-                            <Code inline=true>"role=\"separator\""</Code>" and "<Code inline=true>"aria-orientation"</Code>" ("
-                            <Code inline=true>"horizontal"</Code>" or "<Code inline=true>"vertical"</Code>")."
+                            <Code inline=true>"role=\"separator\""</Code>", and "<Code inline=true>"aria-orientation=\"vertical\""</Code>
+                            " when vertical (horizontal is the default orientation)."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -116,8 +120,9 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Separator.materialize()>"Separator overview"</Link></li>
-                <li><Link href=routes::doc::separator::Component.materialize()>"Separator component"</Link></li>
-                <li><Link href=routes::doc::LayoutCategory.materialize()>"Layout"</Link></li>
+                <li><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></li>
+                <li><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></li>
+                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
             </SeeAlso>
         </DocPage>
     }

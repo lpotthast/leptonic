@@ -9,13 +9,9 @@ use crate::{kit::*, routes};
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomListBox() -> impl IntoView {
     view! {
-        <DocPage title="ListBox Atoms">
+        <DocPage title="Listbox Atoms">
             <p>
-                "The listbox atoms render an unstyled, accessible listbox with the behavior of the "
-                <Link href=routes::doc::listbox::Hook.materialize()>"listbox hooks"</Link>": "
-                <Code inline=true>"ListBox"</Code>" holds the list state, and you render a "
-                <Code inline=true>"ListBoxItem"</Code>" per option, optionally grouped in "
-                <Code inline=true>"ListBoxSection"</Code>"s. See the "
+                "The listbox atoms render an unstyled listbox with its options and sections. See the "
                 <Link href=routes::doc::Listbox.materialize()>"Listbox overview"</Link>" for concept guidance."
             </p>
 
@@ -24,8 +20,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"ListBox"</Code></TableCell>
                         <TableCell>
-                            <Link href=format!("{}#use-list-state", routes::doc::Collections.materialize())>"use_list_state"</Link>
-                            " (unless you pass a "<Code inline=true>"state"</Code>"), "
+                            <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"use_list_state"</Link>
+                            " (unless you pass a "<Code inline=true>"ListState"</Code>" as "<Code inline=true>"state"</Code>"), "
                             <Link href=hook_section("use-listbox")>"use_listbox"</Link>
                         </TableCell>
                     </TableRow>
@@ -56,8 +52,9 @@ pub fn PageAtomListBox() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::listbox::{ListBox, ListBoxItem},
-                            hooks::{SelectionMode, collections::{Key, Selection, use_list_collection}},
+                            hooks::{Key, SelectionMode, collections::Selection, use_list_collection},
                         };
+                        use leptos::{logging::log, prelude::*};
 
                         let fruits = use_list_collection(
                             Signal::stored(vec!["Apple", "Banana", "Cherry"]),
@@ -97,12 +94,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     "(its price). Tab into the list and use the arrow keys, "<Keys keys="Space"/>" to toggle an option, "
                     <Keys keys="Shift"/>" + arrow keys to extend the selection, or type a letter to jump to a topping. "
                     "The anchovies are sold out: disabled in the collection, so they can\u{2019}t be focused or selected. "
-                    "The demo is styled through the data attributes listed below. The selection lives in an "
-                    <Code inline=true>"RwSignal<Selection>"</Code>" of the demo, bound with "<Code inline=true>"selection"</Code>
-                    ": the list shows it, selecting writes it, and \u{201c}Clear\u{201d} empties it. "
-                    <Code inline=true>"Selection::default()"</Code>" selects nothing, "<Code inline=true>"Selection::All"</Code>
-                    " every selectable option. ""A signal pair "<Code inline=true>"(read, write)"</Code>" works as well, and "
-                    <Code inline=true>"ValueBinding::new(signal, callback)"</Code>" binds any other storage."
+                    "The selection lives in app state, passed as "<Code inline=true>"selection"</Code>" and "
+                    <Code inline=true>"set_selection"</Code>": \u{201c}Clear\u{201d} empties it."
                 </p>
                 <Demo
                     description="Pizza topping listbox with sections, multiple selection, option descriptions and a disabled option"
@@ -143,11 +136,14 @@ pub fn PageAtomListBox() -> impl IntoView {
                             <Code inline=true>"Replace"</Code>" the selection with it."
                         </ApiRow>
                         <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">"The initially selected options."</ApiRow>
-                        <ApiRow name="selection" ty="Option<ValueBinding<Selection>>" default="None">
-                            "The selection as app state (e.g. an "<Code inline=true>"RwSignal<Selection>"</Code>"), replacing "<Code inline=true>"default_selected_keys"</Code>"."
+                        <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
+                            "The selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">
-                            "Called with the new selection. Selecting all ("<Keys keys="Control + A"/>") reports "
+                            "Called with the new selection. Selecting all ("<Keys keys="Control + A"/>", "<Keys keys="Command + A"/>" on macOS) reports "
                             <Code inline=true>"Selection::All"</Code>"."
                         </ApiRow>
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
@@ -347,8 +343,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-option[data-focus-visible] { outline: 2px solid royalblue; outline-offset: -2px; }
-                        .my-option[data-selected] { background: #eef; font-weight: bold; }
+                        .my-option[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .my-option[data-selected] { background: var(--surface); font-weight: bold; }
                         .my-option[data-disabled] { opacity: 0.5; }
                     ")}
                 </Code>
@@ -356,10 +352,15 @@ pub fn PageAtomListBox() -> impl IntoView {
 
             <Section title="Composition">
                 <p>
+                    "A picker of your own that shows its options in a "<Code inline=true>"ListBox"</Code>" (like the select\u{2019}s "
+                    "and the combobox\u{2019}s popovers) provides "<Code inline=true>"ListBoxParent { input }"</Code>
+                    " as context: the listbox then uses that configuration instead of its own props."
+                </p>
+                <p>
                     <Code inline=true>"ListBoxItem"</Code>" provides its state as "<Code inline=true>"ListBoxItemCtx"</Code>
                     " context ("<Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_focused"</Code>", "
                     <Code inline=true>"is_focus_visible"</Code>", "<Code inline=true>"is_disabled"</Code>", "
-                    <Code inline=true>"is_pressed"</Code>"). Components inside an option can read it, e.g. a check mark:"
+                    <Code inline=true>"is_pressed"</Code>"). Leptos components inside an option can read it, e.g. a check mark:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -373,17 +374,17 @@ pub fn PageAtomListBox() -> impl IntoView {
                 <p>
                     <Code inline=true>"ListBox"</Code>" provides "<Code inline=true>"ListBoxData"</Code>", whose "
                     <Code inline=true>"state"</Code>" is the "<Code inline=true>"ListState"</Code>" documented under "
-                    <Link href=format!("{}#liststate", routes::doc::Collections.materialize())>"Collections"</Link>
+                    <Link href=format!("{}#liststate", routes::doc::CollectionState.materialize())>"Collection State"</Link>
                     ". Your own options can call "<Link href=hook_section("use-option")>"use_option"</Link>" with it."
                 </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Listbox.materialize()>"Listbox overview"</Link></li>
-                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox hooks"</Link></li>
-                <li><Link href=routes::doc::select::Atom.materialize()>"Select atoms"</Link></li>
-                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></li>
-                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
+                <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
+                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox Atoms"</Link></li>
+                <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>
     }

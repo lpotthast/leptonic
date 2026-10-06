@@ -9,60 +9,82 @@ use super::demos::{
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUsePopoverHook() -> impl IntoView {
     view! {
         <DocPage title="use_popover">
             <p>
-                "The "<Code inline=true>"use_popover"</Code>" hook provides the behavior of an overlay positioned next to a "
-                "trigger: placement, dismissal, scroll prevention and hiding the rest of the page from assistive technology. "
-                "See the "<Link href=routes::doc::Popover.materialize()>"Popover overview"</Link>" for concept guidance."
+                "The "<Code inline=true>"use_popover"</Code>" hook gives an overlay you render yourself the behavior of a "
+                "popover: placement next to its trigger, dismissal and, while modal, a locked page. See the "
+                <Link href=routes::doc::Popover.materialize()>"Popover overview"</Link>" for when to use a popover."
             </p>
 
             <ReactAria hook="usePopover"/>
 
             <Section title="Input">
                 <p>
-                    <Code inline=true>"UsePopoverInput::new(state)"</Code>" sets the defaults (below the trigger, centered, flipping, "
-                    "modal); change single fields with struct update syntax."
+                    <Code inline=true>"UsePopoverInput::new(state)"</Code>" sets the defaults below (modal, below the "
+                    "trigger and centered on it); change single fields with struct update syntax."
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UsePopoverInput">
-                    <ApiRow name="state" ty="OverlayTriggerState">
-                        "Whether the popover is open ("<Code inline=true>"use_overlay_trigger_state"</Code>", or "<Code inline=true>"(read, write).into()"</Code>
-                        "). Escape, outside interaction and blur close it; a non-modal popover also closes when the page scrolls."
+                    <ApiRow name="state" ty="S: OverlayState">
+                        "Whether the popover is open, and how to close it. Required. "<Code inline=true>"S"</Code>
+                        " defaults to "<Code inline=true>"OverlayTriggerState"</Code>". Usually an "
+                        <Code inline=true>"OverlayTriggerState"</Code>" ("<Link href=routes::doc::overlay_behavior::UseOverlayTriggerState.materialize()>"use_overlay_trigger_state"</Link>
+                        ", or "<Code inline=true>"OverlayTriggerState::from(rw_signal)"</Code>"); the menu, select and combo box "
+                        "states work too."
                     </ApiRow>
-                    <ApiRow name="trigger" ty="CapturedElement">
-                        "The trigger the popover is positioned at. Spread "<Code inline=true>"trigger_props"</Code>" onto it, or pass an "
-                        "element you capture already."
+                    <ApiRow name="trigger" ty="CapturedElement" default="a new capture">
+                        "The trigger the popover is positioned at. Spread "<Code inline=true>"trigger_props"</Code>
+                        " onto it, or pass an element you capture already."
                     </ApiRow>
-                    <ApiRow name="placement_x" ty="Signal<PlacementX>">"Horizontal placement relative to the trigger."</ApiRow>
-                    <ApiRow name="placement_y" ty="Signal<PlacementY>">"Vertical placement relative to the trigger."</ApiRow>
-                    <ApiRow name="offset" ty="Signal<f64>">
-                        "Extra distance from the trigger along the main axis, in pixels. Usually "<Code inline=true>"0.0"</Code>"."
+                    <ApiRow name="placement" ty="Signal<Placement>" default="Bottom">
+                        "Where the popover goes relative to the trigger, see "<Link href=format!("{}#placements", routes::doc::overlay_behavior::UseOverlayPosition.materialize())>"Placements"</Link>"."
                     </ApiRow>
-                    <ApiRow name="cross_offset" ty="Signal<f64>">
-                        "Shift along the cross axis, in pixels. Usually "<Code inline=true>"0.0"</Code>"."
+                    <ApiRow name="offset" ty="Signal<f64>" default="0.0">"Distance from the trigger along the main axis, in pixels."</ApiRow>
+                    <ApiRow name="cross_offset" ty="Signal<f64>" default="0.0">"Shift along the cross axis, in pixels."</ApiRow>
+                    <ApiRow name="container_padding" ty="Signal<f64>" default="12.0">"Minimum distance from the viewport edges, in pixels."</ApiRow>
+                    <ApiRow name="should_flip" ty="Signal<bool>" default="true">"Flip to the opposite side when there is not enough room."</ApiRow>
+                    <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">"A maximum height; the room available limits it further."</ApiRow>
+                    <ApiRow name="arrow_size" ty="Signal<Option<f64>>" default="None">
+                        "The arrow\u{2019}s size across the main axis. "<Code inline=true>"None"</Code>
+                        " measures the element captured by "<Code inline=true>"arrow_props"</Code>"."
                     </ApiRow>
-                    <ApiRow name="container_padding" ty="Signal<f64>">
-                        "Minimum distance to the viewport edge, in pixels. Usually "<Code inline=true>"12.0"</Code>"."
+                    <ApiRow name="arrow_boundary_offset" ty="Signal<f64>" default="0.0">
+                        "The minimum distance between the arrow and the popover\u{2019}s edges."
                     </ApiRow>
-                    <ApiRow name="should_flip" ty="Signal<bool>">
-                        "Flip to the opposite side when there is not enough space. Usually "<Code inline=true>"true"</Code>"."
+                    <ApiRow name="boundary" ty="Option<CapturedElement>" default="None">
+                        "The element the popover must stay within. "<Code inline=true>"None"</Code>": the document body."
                     </ApiRow>
-                    <ApiRow name="modality" ty="PopoverModality">
-                        <Code inline=true>"NonModal"</Code>" keeps the page interactive while the popover is open."
+                    <ApiRow name="target_rect" ty="Signal<Option<Rect>>" default="None">
+                        "Replaces the trigger\u{2019}s rectangle (viewport coordinates). "<Code inline=true>"None"</Code>
+                        ": the state\u{2019}s "<Code inline=true>"point"</Code>" (where a context menu opened), else the trigger."
                     </ApiRow>
-                    <ApiRow name="is_keyboard_dismiss_disabled" ty="bool">"Ignore Escape."</ApiRow>
-                    <ApiRow name="should_close_on_interact_outside" ty="Option<Callback<web_sys::Element, bool>>">
-                        "Decides per outside element whether interacting with it closes the popover. "
-                        <Code inline=true>"None"</Code>" closes on every outside interaction."
+                    <ApiRow name="modality" ty="PopoverModality" default="Modal">
+                        "Whether the popover takes over the page, see "
+                        <AnchorLink href="#modal-and-non-modal">"Modal and Non-Modal"</AnchorLink>"."
+                    </ApiRow>
+                    <ApiRow name="is_keyboard_dismiss_disabled" ty="Signal<bool>" default="false">
+                        "Whether "<Keys keys="Escape"/>" no longer closes the popover."
+                    </ApiRow>
+                    <ApiRow name="should_close_on_interact_outside" ty="Option<InteractOutsideFilter>" default="None">
+                        "Decides per element outside whether pressing it (in a modal popover) or moving focus to it closes "
+                        "the popover. "<Code inline=true>"None"</Code>" closes for every element."
+                    </ApiRow>
+                    <ApiRow name="group" ty="Option<CapturedElement>" default="None">
+                        "The group the popover belongs to: a root popover\u{2019}s container, which also holds the popovers of "
+                        "its submenus. The overlay stack, outside interactions and hiding the rest of the page work on the "
+                        "group. "<Code inline=true>"None"</Code>": the popover alone."
+                    </ApiRow>
+                    <ApiRow name="is_submenu" ty="bool" default="false">
+                        "Whether this is a submenu\u{2019}s popover: closed by outside presses although non-modal."
                     </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Return">
                 <ApiTable kind=ApiKind::Return of="UsePopoverReturn">
-                    <ApiRow name="popover_element" ty="CapturedElement">"The popover element, once rendered."</ApiRow>
                     <ApiRow name="props" ty="PropsWithStyles<UsePopoverProps>">
                         "Attributes, event handlers and position styles for the popover element. Call "
                         <Code inline=true>"props.into_parts()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
@@ -73,26 +95,47 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         " onto the trigger, so the hook can position the popover next to it."
                     </ApiRow>
                     <ApiRow name="id" ty="Oco<'static, str>">
-                        "The id of the popover element. Pass it to "<Code inline=true>"use_overlay_trigger"</Code>" as "
-                        <Code inline=true>"overlay_id"</Code>"."
+                        "The id of the popover element. Pass it to "
+                        <Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>" as "<Code inline=true>"overlay_id"</Code>"."
                     </ApiRow>
-                    <ApiRow name="resolved_placement_x" ty="Memo<PhysicalPlacementX>">
-                        "The horizontal placement after flipping, with logical placements resolved to left or right."
+                    <ApiRow name="popover_element" ty="CapturedElement">"The popover element, once rendered."</ApiRow>
+                    <ApiRow name="arrow_props" ty="PropsWithStyles<UseOverlayArrowProps>">
+                        "For an arrow element inside the popover: hidden from assistive technology and placed along the edge "
+                        "facing the trigger."
                     </ApiRow>
-                    <ApiRow name="resolved_placement_y" ty="Memo<PlacementY>">"The vertical placement after flipping."</ApiRow>
+                    <ApiRow name="placement" ty="Signal<Option<PlacementAxis>>">
+                        "The side of the trigger the popover opened on, after flipping; "<Code inline=true>"None"</Code>
+                        " until positioned."
+                    </ApiRow>
+                    <ApiRow name="trigger_anchor_point" ty="Signal<Option<Point>>">
+                        "The point of the popover closest to the trigger, in its own coordinates, e.g. as "
+                        <Code inline=true>"transform-origin"</Code>"."
+                    </ApiRow>
                 </ApiTable>
             </Section>
 
             <Section title="Example">
                 <p>
-                    "A modal popover below a button. The popover renders into a "<Code inline=true>"Portal"</Code>
-                    ", so it is not clipped by the page layout. Press Escape or click outside to close it. The trigger "
-                    "combines three hooks: "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
-                    " toggles the popover on press, "<Code inline=true>"use_overlay_trigger"</Code>" provides its "
-                    <Code inline=true>"aria-expanded"</Code>" and "<Code inline=true>"aria-controls"</Code>
-                    ", which go into "<Code inline=true>"UseButtonInput"</Code>", and "<Code inline=true>"trigger_props"</Code>
-                    " capture the button for positioning."
+                    "A modal popover below a button. "<Code inline=true>"use_popover"</Code>" positions and dismisses it; the "
+                    "rest is wiring you do yourself:"
                 </p>
+                <ul>
+                    <li>
+                        "The trigger is a button built with "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
+                        " that toggles the state. "<Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>
+                        " gives it "<Code inline=true>"aria-expanded"</Code>" and "<Code inline=true>"aria-controls"</Code>
+                        ", and "<Code inline=true>"trigger_props"</Code>" capture it for positioning."
+                    </li>
+                    <li>
+                        "The popover renders into a "<Code inline=true>"Portal"</Code>", so the page layout doesn\u{2019}t clip "
+                        "it, behind an "<AnchorLink href="#underlay">"underlay"</AnchorLink>"."
+                    </li>
+                    <li>
+                        "A "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>" moves focus into the "
+                        "popover (the hook\u{2019}s "<Keys keys="Escape"/>" handler sits on it), keeps it inside and returns it "
+                        "to the button. The popover is a dialog named by its heading."
+                    </li>
+                </ul>
 
                 <Demo description="Modal popover opened by a button" source=include_str!("demos/popover_basic.rs") source_open=true>
                     <BasicPopoverDemo/>
@@ -100,110 +143,88 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             </Section>
 
             <Section title="Positioning">
-                <p>"The placement is set on two independent axes:"</p>
-
-                <DocTable headers=&["Axis", "Values"]>
-                    <TableRow>
-                        <TableCell><Code inline=true>"PlacementX"</Code></TableCell>
-                        <TableCell>
-                            <Code inline=true>"OuterLeft"</Code>", "<Code inline=true>"OuterStart"</Code>", "
-                            <Code inline=true>"Start"</Code>", "<Code inline=true>"Left"</Code>", "
-                            <Code inline=true>"Center"</Code>", "<Code inline=true>"Right"</Code>", "
-                            <Code inline=true>"End"</Code>", "<Code inline=true>"OuterEnd"</Code>", "
-                            <Code inline=true>"OuterRight"</Code>
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Code inline=true>"PlacementY"</Code></TableCell>
-                        <TableCell>
-                            <Code inline=true>"Above"</Code>", "<Code inline=true>"Top"</Code>", "
-                            <Code inline=true>"Center"</Code>", "<Code inline=true>"Bottom"</Code>", "
-                            <Code inline=true>"Below"</Code>
-                        </TableCell>
-                    </TableRow>
-                </DocTable>
-
                 <p>
-                    "The "<Code inline=true>"Outer"</Code>" values and "<Code inline=true>"Above"</Code>" / "
-                    <Code inline=true>"Below"</Code>" place the popover next to the trigger; the others align it with an edge "
-                    "or the center of the trigger. "<Code inline=true>"Start"</Code>" and "<Code inline=true>"End"</Code>
-                    " follow the writing direction of the enclosing "<Code inline=true>"I18nProvider"</Code>
-                    "\u{2019}s locale: in a left-to-right layout (also without a provider), "
-                    <Code inline=true>"Start"</Code>" means "<Code inline=true>"Left"</Code>", in a right-to-left layout "
-                    <Code inline=true>"Right"</Code>"."
+                    <Code inline=true>"placement"</Code>" names the side of the trigger and the alignment along it, e.g. "
+                    <Code inline=true>"Placement::BottomStart"</Code>" (below, start edges aligned) or "
+                    <Code inline=true>"Placement::Right"</Code>" (right of it, vertically centered). See "
+                    <Link href=format!("{}#placements", routes::doc::overlay_behavior::UseOverlayPosition.materialize())>"Placements"</Link>" for all of them. "<Code inline=true>"Start"</Code>" and "
+                    <Code inline=true>"End"</Code>" follow the writing direction of the enclosing "
+                    <Code inline=true>"I18nProvider"</Code>". Positioning comes from "
+                    <Link href=routes::doc::overlay_behavior::UseOverlayPosition.materialize()>"use_overlay_position"</Link>"."
+                </p>
+                <p>
+                    "When "<Code inline=true>"should_flip"</Code>" is set and the popover doesn\u{2019}t fit, it moves to the "
+                    "opposite side. The returned "<Code inline=true>"placement"</Code>" tells where it ended up, e.g. to "
+                    "point an arrow at the trigger ("<Code inline=true>"arrow_props"</Code>" positions one)."
                 </p>
 
-                <p>
-                    "When "<Code inline=true>"should_flip"</Code>" is set and the popover does not fit, it moves to the "
-                    "opposite side. "<Code inline=true>"resolved_placement_x"</Code>" and "
-                    <Code inline=true>"resolved_placement_y"</Code>" tell you where it ended up, for example to point an "
-                    "arrow at the trigger."
-                </p>
-
-                <Section title="Placement Demo">
-                    <p>
-                        "Pick a placement and open the popover. The logical values ("<Code inline=true>"Start"</Code>", "
-                        <Code inline=true>"End"</Code>", \u{2026}) work the same and are left out here."
-                    </p>
-
-                    <Demo description="Popover placement chosen with radio buttons" source=include_str!("demos/popover_placement.rs")>
-                        <PlacementPopoverDemo/>
-                    </Demo>
-                </Section>
+                <Demo description="Popover placement chosen with radio buttons" source=include_str!("demos/popover_placement.rs")>
+                    <PlacementPopoverDemo/>
+                </Demo>
             </Section>
 
             <Section title="Dismiss Behavior">
                 <p>
-                    "Dismissal is handled by "<Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>
-                    ", which keeps a stack of open overlays. Only the topmost one reacts:"
+                    "Dismissal comes from "<Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>", which keeps a stack of "
+                    "open overlays:"
                 </p>
 
                 <ul>
                     <li>
-                        <b>"Escape"</b>" closes the popover, unless an IME composition is in progress or "
-                        <Code inline=true>"is_keyboard_dismiss_disabled"</Code>" is set."
+                        <Keys keys="Escape"/>" closes the topmost popover while focus is inside it, unless an IME composition "
+                        "is in progress or "<Code inline=true>"is_keyboard_dismiss_disabled"</Code>" is set."
                     </li>
                     <li>
-                        <b>"Outside interaction"</b>" (pointer down followed by a click outside the popover) closes a modal "
-                        "popover. Use "<Code inline=true>"should_close_on_interact_outside"</Code>
-                        " to exempt elements, such as a toolbar that should keep the popover open."
+                        "A press outside closes a modal popover if it is the topmost overlay. Use "
+                        <Code inline=true>"should_close_on_interact_outside"</Code>" to exempt elements, such as a toolbar "
+                        "that should keep the popover open."
                     </li>
-                    <li><b>"Blur"</b>": the popover closes when focus moves out of it. This is always on."</li>
+                    <li>
+                        "Moving focus out of the popover closes it, modal or not. Focus moving into a nested overlay, or "
+                        "lost to the page body, doesn\u{2019}t."
+                    </li>
+                    <li>"A non-modal popover also closes when a scrollable ancestor of its trigger scrolls."</li>
                 </ul>
             </Section>
 
-            <Section title="Modal vs Non-Modal">
+            <Section title="Modal and Non-Modal">
                 <p><Code inline=true>"modality"</Code>" decides how much the popover takes over the page:"</p>
 
                 <DocTable headers=&["Behavior", "Modal", "NonModal"]>
                     <TableRow><TableCell>"Page scrolling"</TableCell><TableCell>"Prevented"</TableCell><TableCell>"Allowed; closes the popover"</TableCell></TableRow>
-                    <TableRow><TableCell>"Outside interaction closes"</TableCell><TableCell>"Yes"</TableCell><TableCell>"No"</TableCell></TableRow>
-                    <TableRow><TableCell>"Blur closes"</TableCell><TableCell>"Yes"</TableCell><TableCell>"Yes"</TableCell></TableRow>
+                    <TableRow><TableCell>"A press outside closes it"</TableCell><TableCell>"Yes"</TableCell><TableCell>"No"</TableCell></TableRow>
+                    <TableRow><TableCell>"Focus leaving closes it"</TableCell><TableCell>"Yes"</TableCell><TableCell>"Yes"</TableCell></TableRow>
                     <TableRow>
-                        <TableCell>"Rest of the page for assistive technology"</TableCell>
-                        <TableCell>"Hidden"</TableCell>
-                        <TableCell>"Visible (kept visible even when another modal overlay hides the page)"</TableCell>
+                        <TableCell>"The rest of the page"</TableCell>
+                        <TableCell>"Inert: hidden from assistive technology and not interactive"</TableCell>
+                        <TableCell>"Usable; kept visible even when another modal overlay hides the page"</TableCell>
                     </TableRow>
-                    <TableRow><TableCell>"Underlay element"</TableCell><TableCell>"Recommended"</TableCell><TableCell>"Not needed"</TableCell></TableRow>
+                    <TableRow><TableCell>"Underlay element"</TableCell><TableCell>"Recommended"</TableCell><TableCell>"None"</TableCell></TableRow>
                 </DocTable>
+
+                <p>
+                    "The hook doesn\u{2019}t move or contain focus in either case: wrap the content in a "
+                    <Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>" ("
+                    <Code inline=true>"contain"</Code>" for a modal popover)."
+                </p>
 
                 <Section title="Non-Modal Demo">
                     <p>
-                        "While the non-modal popover is open, you can still use the counter. Scrolling the page closes the "
-                        "popover, so that it doesn\u{2019}t drift away from its trigger."
+                        "A press on \u{201c}Add item\u{201d} reaches the page while the popover is open: it counts, and as it "
+                        "moves focus out of the popover, closes it."
                     </p>
 
-                    <Demo description="Non-modal popover next to a counter button" source=include_str!("demos/popover_non_modal.rs")>
+                    <Demo description="Non-modal popover next to a button that keeps working" source=include_str!("demos/popover_non_modal.rs")>
                         <NonModalPopoverDemo/>
                     </Demo>
                 </Section>
             </Section>
 
-            <Section title="Underlay Element">
+            <Section title="Underlay">
                 <p>
-                    "A modal popover usually gets an underlay: a "<Code inline=true>"position: fixed; inset: 0"</Code>
-                    " element behind the popover that catches clicks on the page, so they close the popover instead of "
-                    "reaching what\u{2019}s below. It needs no props. Non-modal popovers don\u{2019}t use one."
+                    "A modal popover gets an underlay: a "<Code inline=true>"position: fixed; inset: 0"</Code>
+                    " element behind the popover that catches presses on the page, so they close the popover instead of "
+                    "reaching what\u{2019}s below. It needs no props. A non-modal popover has none."
                 </p>
 
                 <Code language=Language::Rust>
@@ -218,75 +239,42 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 </Code>
             </Section>
 
-            <Section title="Hook Composition">
+            <Section title="Composition">
                 <p><Code inline=true>"use_popover"</Code>" combines lower-level hooks:"</p>
-
                 <ul>
+                    <li><Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>" for dismissal and the overlay stack."</li>
+                    <li><Link href=routes::doc::overlay_behavior::UseOverlayPosition.materialize()>"use_overlay_position"</Link>" for placing the popover next to the trigger."</li>
                     <li>
-                        <Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>
-                        " for dismissal and the overlay stack."
-                    </li>
-                    <li><Code inline=true>"use_overlay_position"</Code>" for placing the popover next to the trigger."</li>
-                    <li>
-                        <Link href=routes::doc::interactions::UsePreventScroll.materialize()>"use_prevent_scroll"</Link>
+                        <Link href=routes::doc::overlay_behavior::UsePreventScroll.materialize()>"use_prevent_scroll"</Link>
                         " to stop page scrolling while a modal popover is open."
                     </li>
+                    <li>
+                        <Link href=routes::doc::overlay_behavior::AriaHideOutside.materialize()>"aria_hide_outside"</Link>
+                        " to make the rest of the page inert while a modal popover is open; a non-modal popover stays "
+                        "visible ("<Code inline=true>"keep_visible"</Code>") even when another modal overlay hid the page."
+                    </li>
                 </ul>
-
                 <p>
-                    "It does not render or manage the trigger. Pair it with "<Code inline=true>"use_overlay_trigger"</Code>
-                    " for the trigger\u{2019}s ARIA attributes. For menus, selects and comboboxes, use their dedicated hooks: "
-                    "they add keyboard navigation and the matching roles."
+                    "It renders nothing and leaves the trigger to you. The "<Link href=routes::doc::menu::Hook.materialize()>"menu"</Link>", "
+                    <Link href=routes::doc::select::Hook.materialize()>"select"</Link>" and "
+                    <Link href=routes::doc::combobox::Hook.materialize()>"combo box"</Link>" hooks pair it with their own "
+                    "states, triggers and keyboard navigation."
                 </p>
-
-                <DocTable headers=&["Use case", "Hooks"]>
-                    <TableRow><TableCell>"Info popover, profile card, small form"</TableCell><TableCell><Code inline=true>"use_popover"</Code></TableCell></TableRow>
-                    <TableRow>
-                        <TableCell>"Menu with keyboard navigation"</TableCell>
-                        <TableCell>
-                            <Link href=routes::doc::menu::Hook.materialize()>"use_menu_trigger"</Link>", "
-                            <Code inline=true>"use_menu"</Code>", "<Code inline=true>"use_menu_item"</Code>
-                        </TableCell>
-                    </TableRow>
-                    <TableRow><TableCell>"Pick a value from a dropdown"</TableCell><TableCell><Link href=routes::doc::select::Hook.materialize()>"use_select"</Link></TableCell></TableRow>
-                    <TableRow><TableCell>"Autocomplete"</TableCell><TableCell><Code inline=true>"use_combobox"</Code></TableCell></TableRow>
-                    <TableRow>
-                        <TableCell>"Modal dialog"</TableCell>
-                        <TableCell><Link href=routes::doc::modal::Hook.materialize()>"use_modal_backdrop, use_modal, use_dialog"</Link></TableCell>
-                    </TableRow>
-                </DocTable>
             </Section>
 
-            <Section title="Accessibility">
-                <ul>
-                    <li>
-                        "Pass the returned "<Code inline=true>"id"</Code>" to "<Code inline=true>"use_overlay_trigger"</Code>
-                        ". It sets "<Code inline=true>"aria-expanded"</Code>" and "<Code inline=true>"aria-controls"</Code>
-                        " on the trigger ("<Code inline=true>"aria-haspopup"</Code>" only for menu and listbox popups)."
-                    </li>
-                    <li>
-                        "A modal popover hides the rest of the page from assistive technology while it is open. Wrap its content "
-                        "in a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>" with "
-                        <Code inline=true>"contain=true"</Code>" to keep keyboard focus inside."
-                    </li>
-                    <li>
-                        "Popovers don\u{2019}t set "<Code inline=true>"aria-modal"</Code>". For a modal dialog, use the "
-                        <Link href=routes::doc::modal::Hook.materialize()>"modal hooks"</Link>"."
-                    </li>
-                </ul>
-
+            <Section title="Keyboard">
                 <KeyboardTable>
-                    <KeyRow keys="Escape">"Close the popover."</KeyRow>
-                    <KeyRow keys="Tab">"Move focus. Leaving the popover closes it."</KeyRow>
+                    <KeyRow keys="Escape">"Closes the popover."</KeyRow>
+                    <KeyRow keys="Tab">"Moves focus; leaving the popover closes it. Contain focus with a FocusScope."</KeyRow>
                 </KeyboardTable>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
-                <li><Link href=routes::doc::popover::Atom.materialize()>"Popover atom"</Link></li>
-                <li><Link href=routes::doc::popover::Component.materialize()>"Popover component"</Link></li>
-                <li><Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
-                <li><Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link></li>
+                <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
+                <li><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></li>
+                <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>
+                <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -14,8 +14,8 @@ pub fn PageCalendarHooks() -> impl IntoView {
         <DocPage title="Calendar Hooks">
             <p>
                 "The calendar hooks build month calendars for picking a single date or a date range, with a keyboard "
-                "accessible grid of days. See the "<Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link>
-                " for how they relate to the date fields and date pickers."
+                "accessible grid of days. See the "<Link href=routes::doc::Calendar.materialize()>"Calendar overview"</Link>
+                " for concept guidance."
             </p>
 
             <ReactAria hook="useRangeCalendar"/>
@@ -25,29 +25,29 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <DocTable headers=&["Hook", "Responsibility"]>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_calendar_state"</Code></TableCell>
+                        <TableCell><AnchorLink href="#use-calendar-state"><Code inline=true>"use_calendar_state"</Code></AnchorLink></TableCell>
                         <TableCell>
                             "Owns the selected date and the focused date (the keyboard cursor), computes the weeks of "
                             "the focused month and provides all navigation and query callbacks."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_range_calendar_state"</Code></TableCell>
+                        <TableCell><AnchorLink href="#use-range-calendar-state"><Code inline=true>"use_range_calendar_state"</Code></AnchorLink></TableCell>
                         <TableCell>
                             "Wraps "<Code inline=true>"use_calendar_state"</Code>" and adds range selection: the anchor "
                             "date, the highlighted range and the rules for unavailable dates."
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_range_calendar"</Code></TableCell>
+                        <TableCell><AnchorLink href="#use-range-calendar"><Code inline=true>"use_range_calendar"</Code></AnchorLink></TableCell>
                         <TableCell>"Creates the range state and the attributes of the calendar container."</TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_calendar_grid"</Code></TableCell>
-                        <TableCell>"The grid of days: ARIA attributes, weekday labels and all keyboard handling."</TableCell>
+                        <TableCell><AnchorLink href="#use-calendar-grid"><Code inline=true>"use_calendar_grid"</Code></AnchorLink></TableCell>
+                        <TableCell>"The grid of days: ARIA attributes, weekday labels and the keyboard handling."</TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"use_calendar_cell"</Code></TableCell>
+                        <TableCell><AnchorLink href="#use-calendar-cell"><Code inline=true>"use_calendar_cell"</Code></AnchorLink></TableCell>
                         <TableCell>"One day: the grid cell, the button inside it, its label, roving tabindex and click selection."</TableCell>
                     </TableRow>
                 </DocTable>
@@ -61,7 +61,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
                 <p>
                     "Dates are "<Code inline=true>"time::OffsetDateTime"</Code>" values from the "
-                    <LinkExt href="https://docs.rs/time" target=LinkTarget::_Blank>"time"</LinkExt>" crate. The grid data uses "
+                    <Link href="https://docs.rs/time" target=LinkTarget::Blank>"time"</Link>" crate. The grid data uses "
                     <Code inline=true>"Week"</Code>", "<Code inline=true>"Day"</Code>" and "<Code inline=true>"InMonth"</Code>
                     " from "<Code inline=true>"leptonic::utils::time"</Code>"; ranges are "
                     <Code inline=true>"DateRange"</Code>" values."
@@ -71,6 +71,9 @@ pub fn PageCalendarHooks() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{hooks::*, utils::time::{Day, InMonth}};
+                        use leptos::prelude::*;
+
                         let state = use_calendar_state(UseCalendarStateInput {
                             on_change: Some(Callback::new(|date| leptos::logging::log!("{date:?}"))),
                             ..Default::default()
@@ -90,7 +93,12 @@ pub fn PageCalendarHooks() -> impl IntoView {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <For each=move || state.weeks.get() key=|week| (week.days[0].date_time.date(), week.days[0].in_month as u8) let(week)>
+                                    // A date can appear twice in the grid: key the weeks by their first day and its month.
+                                    <For
+                                        each=move || state.weeks.get()
+                                        key=|week| week.days.first().map(|day| (day.date_time.date(), day.in_month as u8))
+                                        let(week)
+                                    >
                                         <tr>{week.days.into_iter().map(|day| view! { <DayCell state day/> }).collect_view()}</tr>
                                     </For>
                                 </tbody>
@@ -106,7 +114,12 @@ pub fn PageCalendarHooks() -> impl IntoView {
                                 is_selected: Signal::derive(move || state.is_selected.run(date)),
                                 is_disabled: state.is_disabled,
                                 on_select: Some(Callback::new(move |day: Day| state.select_date.run(day.date_time))),
-                                on_focus: Some(Callback::new(move |day: Day| state.set_focused_date.run(day.date_time))),
+                                // Days of the neighboring months are focused by `select_date` instead (see Focus Management).
+                                on_focus: Some(Callback::new(move |day: Day| {
+                                    if day.in_month == InMonth::Current {
+                                        state.set_focused_date.run(day.date_time);
+                                    }
+                                })),
                             });
                             view! {
                                 <td {..cell.cell_props.into_attrs()}>
@@ -121,7 +134,8 @@ pub fn PageCalendarHooks() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A single-date calendar. Click a day or move with the arrow keys and press "<Keys keys="Enter"/>
-                    ". Days of the neighboring months are dimmed but selectable."
+                    ". Days of the neighboring months are dimmed but selectable. Like every demo on this page, it "
+                    "moves the browser focus with the helper shown under "<AnchorLink href="#focus-management">"Focus Management"</AnchorLink>"."
                 </p>
 
                 <Demo description="Single-date calendar built from use_calendar_state, use_calendar_grid and use_calendar_cell" source=include_str!("demos/calendar_single.rs")>
@@ -167,7 +181,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                 <Section title="Return" id="use-calendar-state-return">
                     <p>
                         <Code inline=true>"UseCalendarStateReturn"</Code>" is "<Code inline=true>"Copy"</Code>
-                        "; pass it to your cell components."
+                        "; pass it to the Leptos components rendering your cells."
                     </p>
 
                     <ApiTable kind=ApiKind::Return of="UseCalendarStateReturn">
@@ -230,8 +244,10 @@ pub fn PageCalendarHooks() -> impl IntoView {
                             "Grids for month and year pickers: the twelve months of the focused year and a page of twelve "
                             "years, with a label such as \u{201c}2022 - 2033\u{201d}."
                         </ApiRow>
-                        <ApiRow name="focus_month, focus_year, navigate_years_backward, navigate_years_forward" ty="Callback<..>">
-                            "Pick a month (1\u{2013}12) or year for the cursor, and page through the years grid."
+                        <ApiRow name="focus_month" ty="Callback<time::Month>">"Moves the cursor to a month of its year."</ApiRow>
+                        <ApiRow name="focus_year" ty="Callback<i32>">"Moves the cursor to a year."</ApiRow>
+                        <ApiRow name="navigate_years_backward, navigate_years_forward" ty="Callback<()>">
+                            "Page through the years grid by twelve years."
                         </ApiRow>
                     </ApiTable>
 
@@ -359,7 +375,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                 <Section title="Input" id="use-range-calendar-input">
                     <p>
                         <Code inline=true>"UseRangeCalendarInput"</Code>" has exactly the fields of "
-                        <a href="#use-range-calendar-state-input"><Code inline=true>"UseRangeCalendarStateInput"</Code></a>
+                        <AnchorLink href="#use-range-calendar-state-input"><Code inline=true>"UseRangeCalendarStateInput"</Code></AnchorLink>
                         " and implements "<Code inline=true>"Default"</Code>"."
                     </p>
                 </Section>
@@ -380,7 +396,8 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
             <Section title="use_calendar_grid">
                 <p>
-                    "All keyboard handling lives on the grid: it listens for "<Code inline=true>"keydown"</Code>
+                    "The keyboard handling lives on the grid (the keys are listed on the "
+                    <Link href=routes::doc::Calendar.materialize()>"Calendar"</Link>" overview): it listens for "<Code inline=true>"keydown"</Code>
                     " events bubbling up from the day buttons and calls the navigation callbacks you pass. "
                     <Code inline=true>"UseCalendarGridInput::from_calendar_state(state)"</Code>" and "
                     <Code inline=true>"from_range_calendar_state(state)"</Code>" wire all of them; override single "
@@ -494,11 +511,15 @@ pub fn PageCalendarHooks() -> impl IntoView {
                 <p>
                     "Keyboard navigation changes the state\u{2019}s "<Code inline=true>"focused_date"</Code>
                     ", and the cells move their "<Code inline=true>"tabindex"</Code>" accordingly. The cells don\u{2019}t "
-                    "move DOM focus, though: focus the button with "<Code inline=true>"tabindex=\"0\""</Code>
-                    " yourself after each change, as the demos do in "<Code inline=true>"follow_focused_date"</Code>
-                    ". Skip it when focus has moved elsewhere, e.g. to the month buttons, so that paging with a mouse "
-                    "doesn\u{2019}t pull focus into the grid."
+                    "move the browser focus yet, so the demos focus the button with "<Code inline=true>"tabindex=\"0\""</Code>
+                    " after each change with this helper. It skips the change when focus has moved elsewhere, e.g. to the "
+                    "month buttons, so that paging with a mouse doesn\u{2019}t pull focus into the grid, and it keys the "
+                    "weeks so that the focused button survives moving within a month. It is a stopgap: drop it once the "
+                    "cells move the focus themselves."
                 </p>
+
+                <Code language=Language::Rust>{include_str!("demos/calendar_focus.rs")}</Code>
+
                 <p>
                     "Wire "<Code inline=true>"on_focus"</Code>" of each cell to "<Code inline=true>"set_focused_date"</Code>
                     ", so that clicking or tabbing to a day moves the cursor there. Skip days of the neighboring "
@@ -555,7 +576,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                 </p>
                 <p>
                     "Selecting an unavailable date, by click, "<Code inline=true>"select_date"</Code>" or "<Keys keys="Enter"/>
-                    ", selects the closest earlier available date instead. To ignore such attempts, as this demo does, "
+                    ", currently selects the closest earlier available date instead. To ignore such attempts, as this demo does, "
                     "call "<Code inline=true>"select_date"</Code>" only for available days and replace the grid\u{2019}s "
                     <Code inline=true>"on_select_focused_date"</Code>" with a callback that skips unavailable dates. While "
                     "a range selection is in progress, the cursor can still move past the next unavailable day; the "
@@ -571,24 +592,11 @@ pub fn PageCalendarHooks() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus into the grid, to the focused date, and out again."</KeyRow>
-                    <KeyRow keys="ArrowLeft / ArrowRight">"Previous / next day, across month boundaries."</KeyRow>
-                    <KeyRow keys="ArrowUp / ArrowDown">"Same weekday in the previous / next week."</KeyRow>
-                    <KeyRow keys="PageUp / PageDown">"First day of the previous / next month."</KeyRow>
-                    <KeyRow keys="Shift + PageUp / Shift + PageDown">"Same day in the previous / next year."</KeyRow>
-                    <KeyRow keys="Home / End">"First / last day of the month."</KeyRow>
-                    <KeyRow keys="Enter / Space">
-                        "Selects the focused date. In a range calendar, the first press sets the anchor and the second completes the range."
-                    </KeyRow>
-                    <KeyRow keys="Escape">"Range calendars: cancels the selection in progress."</KeyRow>
-                </KeyboardTable>
-
+            <Section title="Announcements">
                 <p>
-                    "Focus never leaves "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>
-                    ". The state announces the new month and year through the live announcer when the cursor enters "
-                    "another month."
+                    "The state announces the new month and year through the live announcer when the focused date "
+                    "enters another month. The focused date never leaves "<Code inline=true>"min"</Code>" / "
+                    <Code inline=true>"max"</Code>"."
                 </p>
             </Section>
 
@@ -615,10 +623,11 @@ pub fn PageCalendarHooks() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::DateTime.materialize()>"Date & Time overview"</Link></li>
-                <li><Link href=routes::doc::date_time::DatePickerHooks.materialize()>"Date picker hooks"</Link></li>
-                <li><Link href=routes::doc::date_time::DateFieldHooks.materialize()>"Date field hooks"</Link></li>
-                <li><Link href=routes::doc::date_time::Component.materialize()>"Date & Time component"</Link></li>
+                <li><Link href=routes::doc::Calendar.materialize()>"Calendar"</Link></li>
+                <li><Link href=routes::doc::calendar::Component.materialize()>"Calendar Component"</Link></li>
+                <li><Link href=routes::doc::date_picker::Hook.materialize()>"Date Picker Hooks"</Link></li>
+                <li><Link href=routes::doc::DateField.materialize()>"Date Field Hooks"</Link></li>
+                <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link></li>
             </SeeAlso>
         </DocPage>
     }

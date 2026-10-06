@@ -6,32 +6,56 @@ tracked in the root `PLAN.md` (section "Book").
 
 ## Goals
 
-1. **Concept-first navigation.** Users think "I need a button", not "I need the `use_button` hook". Pages are
-   organized around concepts, not implementation layers.
+1. **Concept-first navigation.** Users think "I need a button", not "I need the `use_button` hook". The sidebar lists
+   concepts; their layers are tabs of the concept. Behavior shared by many concepts is listed apart, as building
+   blocks.
 2. **Progressive disclosure.** A concept overview is enough to get started. Layer pages give full detail. Nobody has
    to read every layer page.
-3. **Every fact in one place.** Conceptual explanations (what a button is, its accessibility semantics) live on the
-   concept page. Other pages link to it instead of repeating it.
+3. **Every fact in one place.** Explanations (what a button is, its accessibility semantics) live on the concept
+   overview. Other pages link to it instead of repeating it.
 4. **Self-contained pages.** A reader landing on `/doc/button/hook` from a search engine must not feel lost: the
    first paragraph says what the page is about and links to the concept overview.
 5. **Living examples.** Every interactive capability gets a working demo.
 6. **Accurate.** Pages document the current API. Props tables, types and defaults are checked against the source.
+7. **A reason for every place.** Where a page lives, what its entry is called and which marker it carries follow
+   from the rules under "Navigation", and `nav.rs` enforces them. Nothing is placed by taste.
+
+## Terminology
+
+"Component" has several meanings around leptonic. The book gives each meaning its own word and uses it consistently,
+in prose, page titles, the sidebar and the code of the book (`nav.rs`, the kit).
+
+- **Concept**: a UI element an app places on the page (Button, Table, Toolbar, Stack), documented on one set of pages
+  across its layers. The sidebar part "Concepts" lists them. Never "component" or "widget".
+- **Layer**: hook, atom or component, i.e. how much of a concept leptonic implements for you.
+- **Component**: only the third layer, the styled and themed pieces in `leptonic::components`. Write "styled
+  component" where the bare word could be misread.
+- **Leptos component**: a `#[component]` function. Atoms and components are both Leptos components; say so only
+  where that is the point ("an atom is a Leptos component rendering one element"), never with the bare word.
+- **ARIA pattern**: the WAI-ARIA Authoring Practices pattern a concept implements (listbox, menu button,
+  disclosure). Never "ARIA component".
+- **Building block**: a hook, atom or utility that gives an element one behavior that many concepts share (`use_press`,
+  `FocusScope`). The sidebar part "Building blocks" lists them, grouped into areas (Interactions, Focus, ...).
 
 ## Page Types
 
-| Type                | Example URL                      | Kind (`nav::PageKind`) |
-|---------------------|----------------------------------|------------------------|
-| Guide               | `/doc/installation`              | `Guide`                |
-| Domain / category   | `/doc/interactions`, `/doc/input`| `Domain`               |
-| Concept overview    | `/doc/button`                    | `Concept`              |
-| Hook page           | `/doc/button/hook`               | `Hook`                 |
-| Atom page           | `/doc/button/atom`               | `Atom`                 |
-| Component page      | `/doc/button/component`          | `Component`            |
+| Type                    | Example URL                                     | Kind (`nav::PageKind`)      |
+|-------------------------|-------------------------------------------------|-----------------------------|
+| Guide                   | `/doc/installation`, `/doc/event-propagation`   | `Guide`                     |
+| Group overview          | `/doc/fields`, `/doc/interactions`              | `Overview`                  |
+| Concept overview        | `/doc/button`                                   | `Concept`                   |
+| Layer page of a concept | `/doc/button/hook` (also `/atom`, `/component`) | `Hook`, `Atom`, `Component` |
+| Single-layer concept    | `/doc/stack`                                    | its layer's kind            |
+| Building block          | `/doc/interactions/use-press`                   | `Hook`, `Atom`, `Utility`   |
+
+Layer pages are titled like their tab: "Checkbox Hooks", "Checkbox Atoms", "Checkbox Component". So is the single
+page of a single-layer concept ("Tree Hooks", "Stack Component"). A hook page documenting a single hook is titled with
+the hook's name ("use_button"), so that search finds it. Building-block pages are titled with their identifier.
 
 Sections listed below appear in this order. Leave out sections that don't apply. Section ids are the slug of the
 title (`"Hooks Used"` → `#hooks-used`).
 
-**Concept overview** — a concept implemented at two or more layers, or a family of related hooks.
+**Concept overview** — a concept implemented at two or more layers. Its layer pages are its tabs.
 
 - Introduction (1–2 paragraphs, no code)
 - When to Use — comparison with similar concepts (`DocTable`)
@@ -41,18 +65,18 @@ title (`"Hooks Used"` → `#hooks-used`).
 
 Not here: full API reference, CSS variables, hook internals.
 
-**Domain overview** — a group of hooks users discover together without a shared atom or component (Interactions,
-Focus, Overlays); **category overview** — a sidebar group (Input, Layout, ...).
+**Group overview** — a concept group (Buttons, Fields, ...) or a building-block area (Interactions, Focus, ...).
 
-- Introduction — what the domain covers and why its members belong together
-- Pages — `<SectionMembers overview=../>`, generated from the section's entries in `nav.rs` (never a hand-written
+- Introduction — what the group covers and why its members belong together
+- Pages — `<SectionMembers overview=../>`, generated from the group's entries in `nav.rs` (never a hand-written
   member list)
 - Relationships / Decision Guide — how the members compose, or how to choose between similar ones
-- Quick Start — the most common member (domains only)
+- Quick Start — the most common member (building-block areas, and concept groups whose members are usually
+  combined, like Color and Date & Time)
 
 **Hook page**
 
-- Introduction — one sentence, link to the concept or domain overview; then `<ReactAria hook="useX"/>`
+- Introduction — one sentence, link to the concept overview or building-block area; then `<ReactAria hook="useX"/>`
 - Input — `ApiTable kind=ApiKind::Input`
 - Return — `ApiTable kind=ApiKind::Return`
 - Example — minimal setup and attribute spreading
@@ -84,9 +108,21 @@ Keyboard and See Also sections follow. Give the repeated subsections ids prefixe
 - Styling — `<CssVariables prefix="--x-" scss=theme_scss!("x")/>`
 - Recipes, See Also
 
-**Standalone pages** (`/doc/hooks/use-label`, `/doc/components/toast`) exist at one layer only. They follow the
-structure of their layer, but their introduction explains the concept, as there is no overview to link to. A
-standalone item becomes a concept once it gains a second layer, or once three related standalone hooks exist.
+**Pages documenting several hooks, atoms or components** (layer pages with a plural tab) keep the order of their
+layer's outline, with the per-item reference in the middle: Introduction, Hooks Used (atoms), Example, Demo, then
+one section per item titled with its identifier and holding its Props (or Input and Return) as subsections with
+prefixed ids (`<Section title="Props" id="slider-thumb-props">`), then Data Attributes, Styling, Composition and
+See Also. Keyboard and Accessibility sections belong on the concept overview, not on layer pages; a component page
+gets an Accessibility section only to say what its styled component lacks compared with the lower layers, linking
+the layer that has it.
+
+**Single-layer concepts** (`/doc/stack`, `/doc/toast`) have one page and no tabs. It follows the structure of its
+layer, but its introduction explains the concept, as there is no overview to link to. A concept gets an overview and
+tabs once it gains a second layer.
+
+**Building-block pages** follow the structure of their layer; their introduction explains the behavior and links
+the area overview. Closely related hooks share one page (`use_enter_animation` and `use_exit_animation`), each with
+its own section.
 
 ## Writing Pages
 
@@ -130,25 +166,39 @@ pub fn PageUseButton() -> impl IntoView {
 }
 ```
 
-| Component                         | Purpose                                                                                     |
-|-----------------------------------|---------------------------------------------------------------------------------------------|
-| `DocPage title`                   | The page: `<h1>`, the `<article>` exported as Markdown, the generated table of contents.   |
-| `Section title [id]`              | A titled section. Nesting gives `<h2>`, `<h3>`, ... All headings land in the TOC.          |
-| `ApiTable kind` + `ApiRow`        | Input, Return, Fields, Props, Data Attributes, CSS variable tables. `name` may list several. |
-| `ApiTable of`                     | The documented struct (Input/Return/Fields) or component (Props). A test checks the rows.  |
-| `KeyboardTable` + `KeyRow keys`   | Keyboard interaction. `keys="Shift + Tab"`, alternatives as `"Enter / Space"`.             |
-| `DocTable headers`                | Any other table; rows are plain `<tr><td>`.                                                 |
-| `Demo description source`         | Frame for an interactive demo with collapsible source. `source_open` expands it.           |
-| `ReactAria hook`                  | "Based on react-aria's useX." with a link.                                                  |
-| `ReactAriaSource path`            | The same for parts without a react-aria docs page, linking the source file.                 |
-| `SectionMembers overview`         | Table of a navigation section's pages (name, layers, summary), generated from `nav.rs`.    |
-| `SeeAlso`                         | The closing "See Also" section; children are `<li>` links.                                 |
-| `CssVariables prefix scss`        | CSS variables of a theme stylesheet, generated from `theme_scss!("<component>")`.          |
+| Component                       | Purpose                                                                                      |
+|---------------------------------|----------------------------------------------------------------------------------------------|
+| `DocPage title`                 | The page: `<h1>`, the `<article>` exported as Markdown, the generated table of contents.     |
+| `Section title [id]`            | A titled section. Nesting gives `<h2>`, `<h3>`, ... All headings land in the TOC.            |
+| `ApiTable kind` + `ApiRow`      | Input, Return, Fields, Props, Data Attributes, CSS variable tables. `name` may list several. |
+| `ApiTable of`                   | The documented struct (Input/Return/Fields) or component (Props). A test checks the rows.    |
+| `KeyboardTable` + `KeyRow keys` | Keyboard interaction. `keys="Shift + Tab"`, alternatives as `"Enter / Space"`.               |
+| `DocTable headers`              | Any other table; rows are plain `<tr><td>`.                                                  |
+| `Demo description source`       | Frame for an interactive demo with collapsible source. `source_open` expands it.             |
+| `ReactAria hook`                | "Based on react-aria's useX." with a link.                                                   |
+| `ReactAriaSource path`          | The same for parts without a react-aria docs page, linking the source file.                  |
+| `SectionMembers overview`       | Table of a navigation section's pages (name, layers, summary), generated from `nav.rs`.      |
+| `SeeAlso`                       | The closing "See Also" section; children are `<li>` links.                                   |
+| `CssVariables prefix scss`      | CSS variables of a theme stylesheet, generated from `theme_scss!("<component>")`.            |
 
 ### Prose
 
+- Every page except group overviews and guides ends with `SeeAlso`: the concept overview, the sibling layers, and
+  closely related concepts or building blocks.
+- Link texts of layer pages are their titles ("Slider Hooks", "Slider Atoms", "Slider Component"), in layer tables,
+  See Also and prose alike.
+- In-page links use leptonic's `AnchorLink` (`<AnchorLink href="#marks">"Marks"</AnchorLink>`), never a raw `<a>`.
+- Keys are always `Keys`/`KeyRow`. A shortcut with the platform's primary modifier names both:
+  `<Keys keys="Control + A"/>" (" <Keys keys="Meta + A"/>" on macOS)"` — leptonic matches `Command` on Apple devices.
+- Code examples compile against the current API: include imports that aren't in the preludes, and never use book
+  helpers in them.
+- Input and Props tables fill the Default column from the `Default` implementation (or the constructor that sets
+  defaults) and mark required fields with "Required." in the description.
+- A library gap is never described as intended behavior. Say it in one sentence where it affects the reader ("The
+  arrow keys currently move the thumb by one pixel."), and record it in `PLAN.md`.
+
 - Write plain, natural sentences in the present tense, addressing the reader as "you". Explain why, not only what.
-- Keep introductions to one or two sentences on layer pages; the concept page holds the explanation.
+- Keep introductions to one or two sentences on layer pages; the concept overview holds the explanation.
 - Identifiers are inline code: `<Code inline=true>"use_button"</Code>`. Link a hook, atom or component the first time
   a section mentions it.
 - Link with the generated routes (`routes::doc::button::Hook.materialize()`), never with string paths.
@@ -185,26 +235,82 @@ pub fn PageUseButton() -> impl IntoView {
 
 ## Navigation
 
-`src/nav.rs` defines all pages: the sidebar sections, their entries, the tabs of concept pages, and pages reached only
-through other pages. It drives the sidebar, the concept tabs (`ConceptLayout`) and the page kinds of the Markdown
-export. Adding a page means adding its route in `src/routes.rs` and its entry in `src/nav.rs`; a page missing from the
-navigation is logged as a warning at startup. Every entry has a one-line `summary` (no trailing period), shown in
-the `SectionMembers` table of its section's overview page; a unit test enforces it.
+`src/nav.rs` defines all pages: the sidebar parts, their groups and entries, and the tabs of concepts. It drives the
+sidebar, the concept tabs, the member tables of group overviews and the page kinds of the Markdown export. Adding a
+page means adding its route in `src/routes.rs` and its entry in `src/nav.rs`; a page missing from the navigation is
+logged as a warning at startup. Every entry has a one-line `summary` (no trailing period), shown in the
+`SectionMembers` table of its group's overview page; a unit test enforces it.
 
-Sidebar conventions: domain sections list their member hooks and atoms. Category sections list concepts first, then
-standalone pages with a layer badge, each group alphabetically.
+### Sidebar parts
+
+A reader arrives with one of two questions: "which UI element do I need?" or "how do I give my own element a
+behavior?". The sidebar answers each in its own part, framed by the guides:
+
+1. **Getting started**: what leptonic is, installing it, the changelog.
+2. **Guides**: topics every page builds on (the layers, event propagation, classes and styles,
+   themes, forms and validation, SSR, accessibility).
+3. **Concepts**: every concept, in groups by purpose: Buttons, Fields, Pickers, Collections, Date & Time, Color,
+   Overlays, Navigation, Status, Content & Layout. The groups follow react-aria-components' catalog, so readers
+   who know it find things where they expect them.
+4. **Building blocks**: hooks, atoms and utilities shared by many concepts, in areas by behavior: Interactions,
+   Focus, Overlay Behavior, Collection State, Drag & Drop, Animation, Screen Readers, Utilities.
+
+### Placement rule
+
+An element the app uses directly as a UI element (usually with an ARIA pattern of its own) is a **concept**. A hook or
+atom that other concepts are built from is a **building block**. `use_spin_button` has an ARIA role but is a part of
+Number Field and date segments, so it is a building block.
+
+A concept with many hooks is one of two cases:
+
+- The hooks render **parts of one concept** (`use_table`, `use_table_row`, `use_table_cell`, ...): they are sections
+  of the concept's Hooks tab, never sidebar entries. Each section is titled with the exact hook name, so search, the
+  table of contents and the Markdown index find every hook.
+- The hooks render **separate concepts of one family** (color area, color slider, color wheel, ...): each is its own
+  concept, and the family is a concept group (Color).
+
+### Entries and markers
+
+- Concept entries are named by the concept ("Toolbar", "Text Field"), never by an identifier. Each shows the layers it
+  has as markers (`H A C`, absent layers dimmed).
+- Building-block entries are named by their identifier (`use_press`, `FocusScope`) and carry the badge of their
+  kind (hook, atom, component, utility). Every entry has a marker or a badge; whether it does never depends on its
+  section.
+- Entries of concept groups are sorted alphabetically. Guides are in reading order. In building-block areas the most
+  used member comes first and related members follow each other (`use_press`, `PressResponder`, `use_hover`,
+  `Hoverable`).
+- Groups with entries are collapsible; the guides and the group of the current page are expanded.
+- An area whose hooks are only used together documents them on its overview page (Collection State, Drag & Drop,
+  Animation); its entries are the members with pages of their own.
+
+### Concept tabs
+
+A concept with two or more layers has the tabs **Overview · Hook(s) · Atom(s) · Component**, in this order, only for
+layers that exist. The labels follow from the page kind and the number of documented items (`Hook` / `Hooks`), never
+from free text. Several hooks of one concept are sections of the one Hooks tab, not tabs of their own.
+
+### Enforced by `nav.rs`
+
+The rules above are checked, not just written down:
+
+- Tab labels derive from `PageKind`; a sidebar part decides whether its entries show layer markers or badges.
+- Unit tests fail when a concept group contains a building block or the other way around, when a hook and an atom of
+  the same name are separate entries instead of one concept, and when entries are out of order.
 
 ### URL structure
 
 ```
 /doc/button                    concept overview
-/doc/button/hook               hook page (also /atom, /component)
-/doc/interactions              domain overview
-/doc/interactions/use-press    member of a domain
-/doc/hooks/use-label           standalone hook (also /doc/components/...)
+/doc/button/hook               layer page (also /atom, /component)
+/doc/stack                     single-layer concept
+/doc/fields                    concept group overview
+/doc/interactions              building-block area overview
+/doc/interactions/use-press    building block
+/doc/event-propagation         guide
 ```
 
-When a page moves, add a `<Redirect>` route for its old URL.
+URLs are flat slugs, so group, area, concept and guide names must not collide (the concept group is "Fields" because
+the guide "Forms & Validation" is `/doc/forms`). When a page moves, add a `<Redirect>` route for its old URL.
 
 ## Verification
 
@@ -218,12 +324,15 @@ When a page moves, add a `<Redirect>` route for its old URL.
 ## Markdown Export (LLM-native docs)
 
 Every `/doc/...` page is also served as Markdown at `/doc/....md`, and `/doc/llm-index.md` lists all pages with
-their sections. Content is defined once, in the Leptos page; the Markdown is derived from it (`src/markdown/`):
+their sections, in the order of the sidebar (generated from `nav.rs`): Getting started, Guides, the concepts by group
+and the building blocks by area. Content is defined once, in the Leptos page; the Markdown is derived from it
+(`src/markdown/`):
 
 - The middleware renders the page through SSR, converts its `<article>` with `htmd` and caches the result. All pages
-  are converted at startup, which also feeds the book's search.
-- Frontmatter: title (`<h1>`), layer (page kind from `nav.rs`), path, description (first paragraph) and related pages
-  (the See Also links).
+  are converted at startup, which also feeds the book's search (which matches the plain text of the article, without
+  frontmatter and demos).
+- Frontmatter: title (`<h1>`), kind (page kind from `nav.rs`: `guide`, `overview`, `concept`, `hook`, `atom`,
+  `component` or `utility`), path, description (first paragraph) and related pages (the See Also links).
 - Demos become `*[Interactive Demo: <description>]*` followed by their Rust source.
 - Links to other pages point to their Markdown export.
 - Every hook, atom or component documented on a page must appear by name in a section title, or it is invisible to

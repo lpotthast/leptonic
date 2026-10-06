@@ -12,7 +12,7 @@ pub fn NumberFieldFractionalDemo() -> impl IntoView {
     });
 
     let field = use_number_field(UseNumberFieldInput {
-        has_label: true,
+        has_label: true.into(),
         ..UseNumberFieldInput::new(state)
     });
 
@@ -20,17 +20,22 @@ pub fn NumberFieldFractionalDemo() -> impl IntoView {
     let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
 
     view! {
-        <div class="demo-field" {..field.group_props.into_attrs()}>
+        <div class="demo-field">
             <label class="demo-field-label" {..field.label_props.into_attrs()}>"Opacity (0.0\u{2013}1.0, step 0.1)"</label>
-            <div class="demo-inline-controls demo-no-margin">
-                <button class="demo-stepper-btn" {..decrement_attrs} style=decrement_styles>"\u{2212}"</button>
+            <div class="demo-input-row" {..field.group_props.into_attrs()}>
+                <button class="demo-btn" {..decrement_attrs} style=decrement_styles>
+                    <span aria-hidden="true">"\u{2212}"</span>
+                </button>
                 <input class="demo-input demo-text-input demo-number-input" {..field.input_props.into_attrs()}/>
-                <button class="demo-stepper-btn" {..increment_attrs} style=increment_styles>"+"</button>
+                <button class="demo-btn" {..increment_attrs} style=increment_styles>
+                    <span aria-hidden="true">"+"</span>
+                </button>
             </div>
         </div>
-        <p>
-            "Value: "
-            {move || state.value().get().map_or_else(|| "(empty)".to_owned(), |value| value.to_string())}
+
+        // The value is exact: 0.1 + 0.1 + 0.1 is 0.3.
+        <p class="demo-status">
+            {move || state.value().get().map_or_else(|| "No opacity.".to_owned(), |value| format!("Opacity: {value}"))}
         </p>
     }
 }

@@ -11,7 +11,8 @@ pub fn CheckboxAtomDemo() -> impl IntoView {
     view! {
         // The atom renders a `<label>` around a visually hidden input; the children draw the box.
         <checkbox::Checkbox
-            state=subscribed
+            is_selected=subscribed
+            set_selected=subscribed
             is_indeterminate=indeterminate
             is_disabled=disabled
             is_read_only=read_only
@@ -21,12 +22,12 @@ pub fn CheckboxAtomDemo() -> impl IntoView {
             "Subscribe to the newsletter"
         </checkbox::Checkbox>
 
-        <p class="demo-status">{move || if subscribed.get() { "Subscribed" } else { "Not subscribed" }}</p>
+        <p class="demo-status">{move || if subscribed.get() { "Subscribed." } else { "Not subscribed." }}</p>
 
-        <div class="demo-toggle-settings">
-            <Checkbox state=indeterminate>"Indeterminate"</Checkbox>
-            <Checkbox state=disabled>"Disabled"</Checkbox>
-            <Checkbox state=read_only>"Read-only"</Checkbox>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+            <Checkbox is_selected=indeterminate set_selected=indeterminate>"Indeterminate"</Checkbox>
         </div>
     }
 }

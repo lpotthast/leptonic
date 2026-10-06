@@ -1,97 +1,34 @@
-// Utility classes used by demos of several sections (buttons, inputs, spacing, state displays).
+// Shared: classes used by demos of several groups (status line, control rows, buttons, fields, overlays).
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
-/* Buttons */
-.demo-btn           { padding: var(--book-space-s) var(--book-space-m); border-radius: var(--book-radius-s); border: 1px solid var(--book-border-color); cursor: pointer; }
+// -- Status and captions --
 
-.demo-btn-primary   { padding: var(--book-space-s) var(--book-space-l); border-radius: var(--book-radius-m); cursor: pointer; background: var(--brand-color); color: var(--book-on-brand-color); border: none; font-size: var(--book-font-size-m); }
+// The current value or the last event, below the demo.
+.demo-status {
+    margin: var(--book-space-s) 0 0;
+    color: var(--book-muted-color);
+    font-style: italic;
 
-/* Inputs */
-.demo-input         { padding: var(--book-space-s); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-s); }
-
-/* Layout */
-.demo-form-row        { flex-direction: row; align-items: center; gap: var(--book-space-s); }
-
-.demo-flex-gap        { display: flex; gap: var(--book-space-xl); flex-wrap: wrap; margin-top: var(--book-space-s); }
-
-.demo-flex-center-row { display: flex; gap: var(--book-space-m); align-items: center; }
-
-.demo-inline-controls { display: flex; align-items: center; gap: var(--book-space-s); margin-top: var(--book-space-s); }
-
-.demo-mt-half         { margin-top: var(--book-space-s); }
-
-.demo-mt-1            { margin-top: var(--book-space-m); }
-
-.demo-mb-1            { margin-bottom: var(--book-space-m); }
-
-/* Text */
-.demo-caption    { font-size: var(--book-font-size-s); color: var(--book-muted-color); margin-top: var(--book-space-s); }
-
-/* Checkbox label (native input) */
-.demo-checkbox-label { display: flex; align-items: center; gap: var(--book-space-s); cursor: pointer; margin-top: var(--book-space-s); }
-
-/* State indicators */
-.demo-state-active   { color: var(--success-color); }
-
-.demo-state-inactive { color: var(--book-muted-color); }
-
-.demo-container-title    { margin: 0 0 var(--book-space-m) 0; font-weight: bold; }
-
-/* Slider
- *
- * `--demo-slider-accent` colors the fill and thumbs; the color modifiers below override it.
- * Positioning (left/bottom/width/height of fill and thumbs) is computed by the slider itself.
- */
-.demo-slider          { --demo-slider-accent: var(--brand-color); display: flex; align-items: center; gap: var(--book-space-m); }
-
-.demo-slider-track    { display: flex; flex: 1; width: 100%; height: 8px; position: relative; background: var(--book-border-color); border-radius: var(--book-radius-s); cursor: pointer; }
-
-.demo-slider-fill     { background-color: var(--demo-slider-accent); border-radius: var(--book-radius-s); }
-
-.demo-slider-thumb    { width: 20px; height: 20px; background-color: var(--demo-slider-accent); border: 2px solid var(--book-on-brand-color); border-radius: 50%; box-shadow: var(--book-shadow-s); cursor: grab; }
-
-.demo-slider-output   { min-width: 50px; text-align: right; }
-
-/* Overlay positioning */
-.demo-option-group       { border: 0.1em solid var(--book-border-color); border-radius: var(--book-radius-s); padding: var(--book-space-s); }
-
-.demo-radio-list         { display: flex; flex-direction: column; gap: var(--book-space-xs); width: 100%; margin-top: var(--book-space-s); }
-
-.demo-state-display  { margin-top: var(--book-space-m); padding: var(--book-space-s) var(--book-space-m); background: var(--book-surface-color-raised); border-radius: var(--book-radius-m); font-size: var(--book-font-size-s); font-family: monospace; }
-
-/* Event log */
-.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }
-
-// Focus ring of slider thumbs; `data-focus-visible` is set by `use_slider_thumb`.
-.demo-slider-thumb[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
-
-// Text, search and number fields built with the field hooks.
-.demo-field             { display: flex; flex-direction: column; gap: var(--book-space-xs); }
-
-.demo-field-label       { font-weight: 500; }
-
-.demo-field-error       { margin: 0; font-size: var(--book-font-size-s); color: var(--danger-color); }
-
-.demo-field-error:empty { display: none; }
-
-.demo-text-input {
-    width: 250px;
-    max-width: 100%;
-    border-color: var(--book-border-color);
-    background: var(--book-surface-color);
-    color: var(--main-color);
-
-    &[aria-invalid="true"] { border-color: var(--danger-color); }
-    &:disabled { opacity: 0.5; cursor: not-allowed; }
+    // In a row of controls, the row spaces its items.
+    .demo-controls > &,
+    .demo-control-row > & {
+        margin: 0;
+    }
 }
 
-.demo-text-input[contenteditable] { min-height: 1.5em; }
+// A hint on how to use the demo.
+.demo-caption { margin-top: var(--book-space-s); font-size: var(--book-font-size-s); color: var(--book-muted-color); }
 
-.demo-overlays-caption {
-    margin: var(--book-space-s) 0 0 0;
-    font-size: var(--book-font-size-s);
-    color: var(--book-muted-color);
+// -- Rows and spacing --
+
+// Switches of a demo ("Disabled", "Read-only", ...), below the demo.
+.demo-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-s) var(--book-space-l);
+    margin-top: var(--book-space-m);
 }
 
 // A row of controls with their labels or status, vertically centered.
@@ -110,6 +47,253 @@
     gap: var(--book-space-m);
 }
 
-.demo-control-row > .demo-status {
-    margin: 0;
+.demo-flex-center-row { display: flex; gap: var(--book-space-m); align-items: center; }
+
+.demo-inline-controls { display: flex; align-items: center; gap: var(--book-space-s); margin-top: var(--book-space-s); }
+
+.demo-mt-half         { margin-top: var(--book-space-s); }
+
+.demo-mt-1            { margin-top: var(--book-space-m); }
+
+.demo-mb-1            { margin-bottom: var(--book-space-m); }
+
+// -- Buttons --
+
+// A neutral button. Atoms render `data-hovered`, `data-pressed` and `data-focus-visible`; plain buttons get the
+// focus ring through `:focus-visible`.
+.demo-btn {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-pressed] { background: var(--book-hover-background-color); }
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &:disabled, &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
 }
+
+// The primary and the destructive action of a demo.
+.demo-btn-primary,
+.demo-btn-danger {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid transparent;
+    border-radius: var(--book-radius-m);
+    color: var(--book-on-brand-color);
+    font: inherit;
+    cursor: pointer;
+
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &:disabled, &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-btn-primary { background: var(--brand-color); }
+
+.demo-btn-danger { background: var(--danger-color); }
+
+// A toggle button. Atoms render `data-selected`; buttons built with the hooks are styled through `aria-pressed`
+// (or `aria-checked` in a single-selection group).
+.demo-toggle-button {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--book-transition), color var(--book-transition);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-selected],
+    &[aria-pressed="true"],
+    &[aria-checked="true"] { background: var(--brand-color); border-color: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &:disabled, &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+// A row (or column) of toggle buttons.
+.demo-toggle-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-xs);
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+
+    &[data-orientation="vertical"] { flex-direction: column; }
+}
+
+// -- Forms and fields --
+
+// Fields stacked above the buttons.
+.demo-form { display: flex; flex-direction: column; gap: var(--book-space-m); max-width: 24em; }
+
+// Text, search and number fields built with the field hooks or atoms.
+.demo-field             { display: flex; flex-direction: column; gap: var(--book-space-xs); }
+
+.demo-field-label       { font-weight: 600; }
+
+.demo-field-error       { margin: 0; font-size: var(--book-font-size-s); color: var(--danger-color); }
+
+.demo-field-error:empty { display: none; }
+
+.demo-input {
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
+.demo-text-input {
+    width: 250px;
+    max-width: 100%;
+    border-color: var(--book-border-color);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+
+    &[aria-invalid="true"] { border-color: var(--danger-color); }
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-text-input[contenteditable] { min-height: 1.5em; }
+
+// Input and TextArea atoms, styled through their data attributes only (complete on its own: atom demos use no
+// other input class).
+.demo-atom-input {
+    width: 250px;
+    max-width: 100%;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-invalid] { border-color: var(--danger-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
+
+// The range input of hook-built sliders, color areas and wheels: invisible over the control, but focusable.
+.demo-visually-hidden-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.0001; pointer-events: none; }
+
+// -- Event logs and states --
+
+// Event log of interaction and focus demos.
+.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }
+
+.demo-container-title { margin: 0 0 var(--book-space-m) 0; font-weight: 700; }
+
+// Container whose focus is trapped or managed.
+.demo-focus-scope {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-m);
+    padding: var(--book-space-l);
+    border: 2px solid var(--book-focus-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    // Every focus of the container itself, also when a focus manager moves it there.
+    &:focus { outline: 3px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+
+.demo-focus-hint { margin: 0; font-size: var(--book-font-size-s); color: var(--book-muted-color); }
+
+// The area a context menu opens on.
+.demo-context-target {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 24em;
+    height: 6em;
+    border: 1px dashed var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: context-menu;
+
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// -- Overlays --
+
+// Covers the page behind a modal overlay. Leptonic positions popovers and tooltips above everything, but not
+// backdrops: this one has to cover the page's app bar (`--book-z-backdrop`).
+.demo-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--book-z-backdrop);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--book-space-m);
+    background: var(--book-backdrop-color);
+
+    // The modal atoms keep the backdrop rendered while `data-exiting` until its animation ended.
+    &[data-entering] { animation: demo-backdrop-fade var(--book-transition); }
+    &[data-exiting] { animation: demo-backdrop-fade var(--book-transition) reverse forwards; }
+}
+
+@keyframes demo-backdrop-fade {
+    from { opacity: 0; }
+}
+
+// An invisible layer behind a modal popover; presses on it count as "outside". Like `.demo-backdrop`, it has to
+// cover the app bar.
+.demo-popover-underlay { position: fixed; inset: 0; z-index: var(--book-z-backdrop); }
+
+// Popover panels. Positioning styles (and the layer) come from the hooks and atoms.
+.demo-popover {
+    max-width: 300px;
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-overlay-title { margin: 0 0 var(--book-space-s) 0; font-size: var(--book-font-size-m); }
+
+.demo-overlay-text {
+    margin: 0;
+    color: var(--book-muted-color);
+
+    &:not(:last-child) { margin-bottom: var(--book-space-m); }
+}
+
+// Tooltips: inverted colors, so they stand out in both themes.
+.demo-tooltip {
+    padding: var(--book-space-s) var(--book-space-m);
+    border-radius: var(--book-radius-s);
+    background: var(--main-color);
+    color: var(--book-surface-color);
+    font-size: var(--book-font-size-s);
+    white-space: nowrap;
+    box-shadow: var(--book-shadow);
+}
+
+// Centered row with room above and below for tooltips.
+.demo-tooltip-stage {
+    display: flex;
+    justify-content: center;
+    gap: var(--book-space-xxl);
+    margin: var(--book-space-xxl) 0;
+}
+
+// Placement options of the positioning demos.
+.demo-option-group { padding: var(--book-space-s); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-s); }
+
+.demo-radio-list   { display: flex; flex-direction: column; gap: var(--book-space-xs); width: 100%; margin-top: var(--book-space-s); }

@@ -63,6 +63,9 @@
   --button-border-size: 0.125em;
   --button-border-radius: 0.25em;
   --button-box-shadow-opacity: 0.3;
+  --button-disabled-background-color: var(--grey-5);
+  --button-disabled-border-color: var(--grey-5);
+  --button-disabled-text-color: var(--grey-3);
 
   --button-flat-primary-text-color: var(--std-text-bright);
   --button-flat-primary-text-color-hover: var(--std-text-bright);
@@ -322,6 +325,14 @@
   --popover-color: var(--std-text-bright);
   --popover-background-color: rgba(59, 59, 59, 0.51);
 
+  // Meter
+  --meter-height: 0.75em;
+  --meter-border-radius: 0.375em;
+  --meter-background-color: var(--progress-bar-background-color);
+  --meter-background-box-shadow: var(--progress-bar-background-box-shadow);
+  --meter-fill-background-color: var(--brand-color);
+  --meter-fill-transition: width 0.1s linear;
+
   // Progress bar
   --progress-bar-height: 1.25em;
   --progress-bar-border-radius: 0.15em;
@@ -427,6 +438,11 @@
   --table-background-color-of-striped-rows: #3c3c3c;
   --table-header-background-color: #272727;
   --table-border-color: #4c4c4c;
+
+  --separator-color: var(--table-border-color);
+  --separator-thickness: 1px;
+  --separator-margin: 0.5em 0;
+  --separator-vertical-margin: 0 0.5em;
   --table-cell-box-shadow-on-hover: 2px 2px 10px -3px rgb(50, 50, 50);
   --table-column-background-if-ordered: #4c4c4c;
   --table-header-cell-padding: 0.75em 1em;

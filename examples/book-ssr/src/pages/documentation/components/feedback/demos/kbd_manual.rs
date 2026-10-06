@@ -4,10 +4,15 @@ use leptos::prelude::*;
 #[component]
 pub fn KbdManualDemo() -> impl IntoView {
     view! {
-        <KbdShortcutRoot>
-            <KbdKey key=KeyboardKey::Command/>
-            <KbdConcatenate with="+"/>
-            <KbdKey key=KeyboardKey::Enter/>
-        </KbdShortcutRoot>
+        // The same as `KbdShortcut`, built from its parts.
+        <p>
+            "Send the message with "
+            <KbdShortcutRoot>
+                <KbdKey key=KeyboardKey::Control/>
+                <KbdConcatenate/>
+                <KbdKey key=KeyboardKey::Enter/>
+            </KbdShortcutRoot>
+            "."
+        </p>
     }
 }

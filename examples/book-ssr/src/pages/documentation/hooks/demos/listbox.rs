@@ -10,7 +10,7 @@ use leptonic::{
         },
         use_listbox, use_option,
     },
-    utils::{CapturedElement, classes::Classes},
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -22,13 +22,13 @@ const FRUITS: [(&str, &str); 5] = [
     ("elderberry", "Elderberry"),
 ];
 
-/// One option, rendered with `use_option`.
+/// One option, rendered with `use_option`. The hook sets `aria-selected` and `aria-disabled`; keyboard focus is shown
+/// through `data-focus-visible`, rendered from the hook's `is_focus_visible`.
 #[component]
 fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
         props,
         is_selected,
-        is_disabled,
         is_focus_visible,
         ..
     } = use_option(UseOptionInput {
@@ -40,13 +40,11 @@ fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> i
     view! {
         <div
             {..attrs}
-            class=Classes::from("demo-listbox-option")
-                .add_reactive("disabled", is_disabled)
-                .add_reactive("selected", is_selected)
-                .add_reactive("focus-visible", is_focus_visible)
+            data-focus-visible=move || is_focus_visible.get().then_some("")
+            class="demo-listbox-option"
             style=styles
         >
-            <span class="demo-listbox-checkbox">
+            <span class="demo-listbox-checkbox" aria-hidden="true">
                 <Show when=move || is_selected.get()>"\u{2713}"</Show>
             </span>
             {label}
@@ -89,7 +87,7 @@ pub fn ListboxDemo() -> impl IntoView {
             .map(ToString::to_string)
             .collect();
         keys.sort();
-        keys.join(", ")
+        if keys.is_empty() { "Nothing selected.".to_owned() } else { format!("Selected: {}.", keys.join(", ")) }
     };
 
     view! {
@@ -101,6 +99,7 @@ pub fn ListboxDemo() -> impl IntoView {
                 .collect_view()}
         </div>
 
-        <p>"Selected: " {selected}</p>
+        <p class="demo-status">{selected}</p>
+
     }
 }

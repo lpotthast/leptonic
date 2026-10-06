@@ -12,26 +12,73 @@ pub fn PageUseRadioHook() -> impl IntoView {
         <DocPage title="Radio Hooks">
             <p>
                 "The radio hooks build a radio group from native "<Code inline=true>"<input type=\"radio\">"</Code>
-                " elements: "<Code inline=true>"use_radio_group_state"</Code>" holds the selected value, "
-                <Code inline=true>"use_radio_group"</Code>" renders the group with its label and arrow-key navigation, and "
-                <Code inline=true>"use_radio"</Code>" wires up each radio. See the "
+                " elements: "<AnchorLink href="#use-radio-group-state">"use_radio_group_state"</AnchorLink>
+                " holds the selected value, "<AnchorLink href="#use-radio-group">"use_radio_group"</AnchorLink>
+                " renders the group with its label and arrow-key navigation, and "
+                <AnchorLink href="#use-radio">"use_radio"</AnchorLink>" wires up each radio. See the "
                 <Link href=routes::doc::Radio.materialize()>"Radio overview"</Link>" for concept guidance."
             </p>
             <ReactAria hook="useRadioGroup"/>
 
-            <Section title="Values">
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::hooks::*;
+                        use leptos::prelude::*;
+
+                        let state = use_radio_group_state(UseRadioGroupStateInput {
+                            default_value: Some(Key::from("m")),
+                            ..UseRadioGroupStateInput::default()
+                        });
+                        let group = use_radio_group(UseRadioGroupInput {
+                            has_label: true.into(),
+                            ..UseRadioGroupInput::new(state)
+                        });
+                        let small = use_radio(UseRadioInput::new(group.data, "s"));
+                        let (label_attrs, label_styles) = small.label_props.into_parts();
+                        let (input_attrs, input_styles) = small.input_props.into_parts();
+
+                        view! {
+                            <div {..group.props.into_attrs()}>
+                                <span {..group.label_props.into_attrs()}>"Size"</span>
+                                <label {..label_attrs} style=label_styles>
+                                    <input {..input_attrs} style=input_styles/>
+                                    "Small"
+                                </label>
+                                // ... one `use_radio` per option
+                            </div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
+
+            <Section title="Demo">
                 <p>
-                    "Radios select "<Code inline=true>"Key"</Code>"s, the identifiers leptonic\u{2019}s collections use: "
-                    "strings or integers ("<Code inline=true>"Key::from(\"m\")"</Code>", "<Code inline=true>"Key::from(3)"</Code>
-                    "). A radio submits its key, formatted as text, as its form value."
+                    "Each option is a small Leptos component calling "<Code inline=true>"use_radio"</Code>
+                    ". Tab into the group and use the arrow keys."
                 </p>
+                <Demo
+                    description="Radio group of sizes with the selected value, a disabled toggle and a read-only toggle"
+                    source=include_str!("demos/radio.rs")
+                >
+                    <RadioDemo/>
+                </Demo>
             </Section>
 
             <Section title="use_radio_group_state">
+                <p>
+                    "Creates the state of a radio group: the selected value, a "<Code inline=true>"Key"</Code>
+                    " (a string or an integer: "<Code inline=true>"Key::from(\"m\")"</Code>", "<Code inline=true>"Key::from(3)"</Code>
+                    "). Each radio submits its key, formatted as text, as its form value."
+                </p>
+
                 <Section title="Input" id="use-radio-group-state-input">
                     <ApiTable kind=ApiKind::Input of="UseRadioGroupStateInput">
                         <ApiRow name="default_value" ty="Option<Key>" default="None">
                             "The initially selected value, restored on form reset."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<Option<Key>>>" default="None">
+                            "The selected value as app state, replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<Key>>>" default="None">
                             "Called with the selected value when it changes."
@@ -56,8 +103,12 @@ pub fn PageUseRadioHook() -> impl IntoView {
                     </ApiTable>
                 </Section>
 
-                <Section title="RadioGroupState">
-                    <ApiTable kind=ApiKind::Fields of="RadioGroupState">
+                <Section title="Return" id="use-radio-group-state-return">
+                    <p>
+                        <Code inline=true>"use_radio_group_state"</Code>" returns a "<Code inline=true>"RadioGroupState"</Code>
+                        ", which is "<Code inline=true>"Copy"</Code>"."
+                    </p>
+                    <ApiTable kind=ApiKind::Return of="RadioGroupState">
                         <ApiRow name="selected_value" ty="Signal<Option<Key>>">"The selected value."</ApiRow>
                         <ApiRow name="last_focused_value" ty="Signal<Option<Key>>">
                             "The radio focused last. While nothing is selected, it is the group\u{2019}s tab stop."
@@ -89,9 +140,9 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 <Section title="Input" id="use-radio-group-input">
                     <p>"Create it with "<Code inline=true>"UseRadioGroupInput::new(state)"</Code>"."</p>
                     <ApiTable kind=ApiKind::Input of="UseRadioGroupInput">
-                        <ApiRow name="state" ty="RadioGroupState">"From "<Code inline=true>"use_radio_group_state"</Code>"."</ApiRow>
+                        <ApiRow name="state" ty="RadioGroupState">"From "<Code inline=true>"use_radio_group_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
-                        <ApiRow name="has_label" ty="bool" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the group without a visible label."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby, aria_errormessage" ty="Option<String>" default="None">
                             "Further labelling, describing or error elements."
@@ -140,8 +191,8 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 <Section title="Input" id="use-radio-input">
                     <p>"Create it with "<Code inline=true>"UseRadioInput::new(group.data, value)"</Code>"."</p>
                     <ApiTable kind=ApiKind::Input of="UseRadioInput">
-                        <ApiRow name="group" ty="RadioGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_radio_group"</Code>"."</ApiRow>
-                        <ApiRow name="value" ty="Key">"The value the radio selects."</ApiRow>
+                        <ApiRow name="group" ty="RadioGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_radio_group"</Code>". Required."</ApiRow>
+                        <ApiRow name="value" ty="Key">"The value the radio selects. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without visible label text."</ApiRow>
@@ -176,68 +227,12 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="Example">
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        let state = use_radio_group_state(UseRadioGroupStateInput {
-                            default_value: Some(Key::from("m")),
-                            ..UseRadioGroupStateInput::default()
-                        });
-                        let group = use_radio_group(UseRadioGroupInput {
-                            has_label: true,
-                            ..UseRadioGroupInput::new(state)
-                        });
-                        let small = use_radio(UseRadioInput::new(group.data, "s"));
-                        let (label_attrs, label_styles) = small.label_props.into_parts();
-                        let (input_attrs, input_styles) = small.input_props.into_parts();
-
-                        view! {
-                            <div {..group.props.into_attrs()}>
-                                <span {..group.label_props.into_attrs()}>"Size"</span>
-                                <label {..label_attrs} style=label_styles>
-                                    <input {..input_attrs} style=input_styles/>
-                                    "Small"
-                                </label>
-                                // ... one `use_radio` per option
-                            </div>
-                        }
-                    "#)}
-                </Code>
-            </Section>
-
-            <Section title="Demo">
-                <p>
-                    "Each option is a small component calling "<Code inline=true>"use_radio"</Code>
-                    ". Tab into the group and use the arrow keys."
-                </p>
-                <Demo
-                    description="Radio group of sizes with the selected value, a disabled toggle and a read-only toggle"
-                    source=include_str!("demos/radio.rs")
-                >
-                    <RadioDemo/>
-                </Demo>
-            </Section>
-
-            <Section title="Keyboard">
-                <KeyboardTable>
-                    <KeyRow keys="Tab">"Moves focus into the group (to the selected radio) and out of it."</KeyRow>
-                    <KeyRow keys="ArrowDown / ArrowRight">
-                        "Focuses and selects the next radio, wrapping around at the end. Disabled radios are skipped."
-                    </KeyRow>
-                    <KeyRow keys="ArrowUp / ArrowLeft">"Focuses and selects the previous radio, wrapping around at the start."</KeyRow>
-                    <KeyRow keys="Space">"Selects the focused radio."</KeyRow>
-                </KeyboardTable>
-                <p>
-                    "Both arrow key pairs work in either orientation. In right-to-left locales, "<Keys keys="ArrowRight"/>
-                    " moves backwards in horizontal groups."
-                </p>
-            </Section>
-
             <SeeAlso>
                 <li><Link href=routes::doc::Radio.materialize()>"Radio overview"</Link></li>
-                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio atoms"</Link></li>
-                <li><Link href=routes::doc::radio::Component.materialize()>"Radio component"</Link></li>
-                <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox hooks"</Link></li>
+                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></li>
+                <li><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></li>
+                <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
+                <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

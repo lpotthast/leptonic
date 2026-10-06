@@ -13,8 +13,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 use super::{
     use_field::{UseFieldInput, UseFieldReturn, use_field},
     use_form_validation_state::ValidityStateSnapshot,
-    use_label::LabelElementType,
-    use_label::UseLabelProps,
+    use_label::{LabelElementType, UseLabelProps},
     use_radio_group_state::RadioGroupState,
 };
 use crate::{
@@ -50,7 +49,7 @@ pub struct UseRadioGroupInput {
     /// The group element's id. Generated when `None`.
     pub id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -69,7 +68,7 @@ impl UseRadioGroupInput {
         Self {
             state,
             id: None,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -121,7 +120,7 @@ pub struct UseRadioGroupProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_orientation: AriaOrientation,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -139,7 +138,7 @@ pub type UseRadioGroupAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -210,7 +209,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
             if let Some(on_blur) = on_blur {
-                on_blur.run(e.event);
+                on_blur.try_run(e.event);
             }
             if state.selected_value.get_untracked().is_none() {
                 state.set_last_focused_value(None);

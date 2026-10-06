@@ -1,4 +1,8 @@
-use std::{fmt, hash::Hash};
+use crate::utils::{
+    locale::WritingDirection,
+    number_formatter::{NumberFormatOptions, NumberStyle, UnitDisplay},
+};
+use std::{fmt, hash::Hash, str::FromStr};
 
 // REACT-ARIA DEVIATIONS (color types)
 //
@@ -14,10 +18,8 @@ use std::{fmt, hash::Hash};
 // page_size=10). Display formatting multiplies by 100 for user-facing values.
 //
 // ## Color Naming
-// `get_hue_name()` provides 12 basic hue names in 30-degree segments.
-// React-aria uses OKLCH conversion for perceptually-uniform descriptive names
-// (e.g., "dark vibrant blue"). This can be added when OKLCH support is
-// implemented.
+// `color_name()`/`hue_name()` port react-aria's OKLCH-based names (e.g. "dark vibrant blue"),
+// in English until leptonic has localized strings.
 //
 // ## Channel Name Localization
 // `get_channel_name()` returns hardcoded English strings. React-aria uses
@@ -65,14 +67,37 @@ pub struct ColorChannelRange {
     pub gradient_stops: Option<&'static [f64]>,
 }
 
+/// A channel of a color space. It names its color type, so components taking a channel infer
+/// the color type from it (`<ColorSlider channel=HsvChannel::Hue>` is an HSV slider).
+pub trait ColorChannel:
+    fmt::Debug + Clone + Copy + PartialEq + Eq + Hash + Send + Sync + 'static
+{
+    /// The color type whose channel this is.
+    type Color: ColorValue<Channel = Self>;
+}
+
+impl ColorChannel for HsvChannel {
+    type Color = HSV;
+}
+
+impl ColorChannel for HslChannel {
+    type Color = HSL;
+}
+
+impl ColorChannel for RgbChannel {
+    type Color = RGB8;
+}
+
 /// A color value with typed, color-space-specific channels.
 ///
 /// Each implementor defines its own `Channel` enum so that hooks can be generic
 /// over the color type while remaining type-safe (e.g., you cannot request the
 /// `Hue` channel from an `RGB8` value).
-pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'static {
+pub trait ColorValue:
+    Clone + Copy + PartialEq + fmt::Debug + Send + Sync + From<Color> + Into<Color> + 'static
+{
     /// The channel enum for this color space.
-    type Channel: fmt::Debug + Clone + Copy + PartialEq + Eq + Hash + Send + Sync + 'static;
+    type Channel: ColorChannel<Color = Self>;
 
     /// Returns the numeric value of the given channel.
     fn get_channel_value(&self, channel: Self::Channel) -> f64;
@@ -105,6 +130,12 @@ pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'sta
     /// Returns the human-readable name of a channel (e.g. `"Hue"`, `"Red"`).
     fn get_channel_name(channel: Self::Channel) -> &'static str;
 
+    /// How a channel's value is formatted in a number field (react-aria's
+    /// `getChannelFormatOptions`). Default: decimal.
+    fn get_channel_format_options(_channel: Self::Channel) -> NumberFormatOptions {
+        NumberFormatOptions::default()
+    }
+
     /// Returns the color to display for gradient rendering of the given channel.
     ///
     /// For hue channels, this returns a fully saturated/bright version so the
@@ -114,11 +145,23 @@ pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'sta
     #[must_use]
     fn get_display_color(&self, channel: Self::Channel) -> Self;
 
-    /// Returns the hue name if this channel represents a hue (for ARIA valuetext enrichment).
-    ///
-    /// Override this for color spaces that have a hue channel.
-    fn get_hue_name_for_channel(&self, _channel: Self::Channel) -> Option<&'static str> {
+    /// The color in RGB (for its name and contrast).
+    fn to_rgb8(&self) -> RGB8;
+
+    /// The color space's hue channel, if it has one.
+    fn hue_channel() -> Option<Self::Channel> {
         None
+    }
+
+    /// The color's name in English, e.g. "vibrant red" or "very dark grayish blue" (react-aria's
+    /// `getColorName`).
+    fn color_name(&self) -> String {
+        naming::color_name(self.to_rgb8())
+    }
+
+    /// The name of the color's hue in English, e.g. "red orange" (react-aria's `getHueName`).
+    fn hue_name(&self) -> String {
+        naming::hue_name(self.to_rgb8())
     }
 
     /// Returns a CSS background for a 2D color area displaying `x_channel` × `y_channel`.
@@ -131,7 +174,13 @@ pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'sta
         &self,
         x_channel: Self::Channel,
         y_channel: Self::Channel,
+        direction: WritingDirection,
     ) -> AreaGradient {
+        // The x axis runs towards the end of the line (react-aria: `to left` in right-to-left).
+        let end = match direction {
+            WritingDirection::Ltr => "right",
+            WritingDirection::Rtl => "left",
+        };
         let x_range = Self::get_channel_range(x_channel);
         let y_range = Self::get_channel_range(y_channel);
 
@@ -149,7 +198,7 @@ pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'sta
         AreaGradient {
             background: format!(
                 "linear-gradient(to top, {} 0%, transparent 100%), \
-                 linear-gradient(to right, {} 0%, {} 100%)",
+                 linear-gradient(to {end}, {} 0%, {} 100%)",
                 bottom.to_css_string(),
                 top_left.to_css_string(),
                 top_right.to_css_string(),
@@ -160,22 +209,245 @@ pub trait ColorValue: Clone + Copy + PartialEq + fmt::Debug + Send + Sync + 'sta
 }
 
 /// CSS background description for a 2D color area.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AreaGradient {
     /// CSS `background` property value (may contain multiple layers).
     pub background: String,
-    /// CSS `background-blend-mode` value, if needed (e.g., `"screen"` for RGB).
-    pub blend_mode: Option<&'static str>,
+    /// How the background's layers blend, if they do (RGB areas: [`BlendMode::Screen`]).
+    pub blend_mode: Option<BlendMode>,
 }
 
-// TODO: Add CMYK, ...
+/// A CSS `background-blend-mode` an area gradient needs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BlendMode {
+    /// Lightens: the layers' colors add up (an RGB area's red, green and blue layers).
+    Screen,
+}
+
+impl BlendMode {
+    /// The CSS keyword.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Screen => "screen",
+        }
+    }
+}
+
+/// A color in any of leptonic's color spaces, kept in the space it was set in (react-aria's
+/// `Color`): a gray set as HSV keeps its hue, which RGB would lose. Components of different
+/// spaces share one (e.g. a `ColorPicker`'s); read it in a space with [`Color::to`].
+///
+/// Parses from CSS-like text as react-aria's `parseColor`: `#rgb`, `#rrggbb`, `rgb(r, g, b)`,
+/// `hsb(h, s%, b%)` and `hsl(h, s%, l%)`. Displays as a CSS color.
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[allow(variant_size_differences)]
-pub enum ColorSpace {
-    HSV(HSV),
-    HSL(HSL),
-    RGB8(RGB8),
-    RGBA8(RGBA8),
+pub enum Color {
+    Rgb(RGB8),
+    Hsv(HSV),
+    Hsl(HSL),
+}
+
+impl Color {
+    /// The color in the space `C`.
+    #[must_use]
+    pub fn to<C: ColorValue>(self) -> C {
+        C::from(self)
+    }
+}
+
+/// Black (react-aria's default color).
+impl Default for Color {
+    fn default() -> Self {
+        Self::Rgb(RGB8::new())
+    }
+}
+
+impl From<RGB8> for Color {
+    fn from(color: RGB8) -> Self {
+        Self::Rgb(color)
+    }
+}
+
+impl From<HSV> for Color {
+    fn from(color: HSV) -> Self {
+        Self::Hsv(color)
+    }
+}
+
+impl From<HSL> for Color {
+    fn from(color: HSL) -> Self {
+        Self::Hsl(color)
+    }
+}
+
+impl From<Color> for RGB8 {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Rgb(rgb) => rgb,
+            Color::Hsv(hsv) => hsv.into(),
+            Color::Hsl(hsl) => hsl.into(),
+        }
+    }
+}
+
+impl From<Color> for HSV {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Rgb(rgb) => rgb.into(),
+            Color::Hsv(hsv) => hsv,
+            Color::Hsl(hsl) => hsl.into(),
+        }
+    }
+}
+
+impl From<Color> for HSL {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Rgb(rgb) => rgb.into(),
+            Color::Hsv(hsv) => hsv.into(),
+            Color::Hsl(hsl) => hsl,
+        }
+    }
+}
+
+impl Color {
+    /// The color as a CSS color.
+    #[must_use]
+    pub fn to_css_string(self) -> String {
+        match self {
+            Self::Rgb(rgb) => rgb.to_css_string(),
+            Self::Hsv(hsv) => hsv.to_css_string(),
+            Self::Hsl(hsl) => hsl.to_css_string(),
+        }
+    }
+
+    /// The color's name, e.g. "dark vibrant blue".
+    #[must_use]
+    pub fn color_name(self) -> String {
+        self.to::<RGB8>().color_name()
+    }
+}
+
+/// A color shown by a component (e.g. a `ColorSwatch`): any color value or signal of one
+/// (`RGB8`, `HSV`, `Color`, `Signal<HSL>`, `RwSignal<RGB8>`, `Memo<Color>`, ...).
+#[derive(Debug, Clone, Copy)]
+pub struct ColorProp(pub leptos::prelude::Signal<Color>);
+
+impl From<Color> for ColorProp {
+    fn from(color: Color) -> Self {
+        Self(leptos::prelude::Signal::stored(color))
+    }
+}
+
+impl<C: ColorValue> From<C> for ColorProp {
+    fn from(color: C) -> Self {
+        Self(leptos::prelude::Signal::stored(color.into()))
+    }
+}
+
+impl From<leptos::prelude::Signal<Color>> for ColorProp {
+    fn from(color: leptos::prelude::Signal<Color>) -> Self {
+        Self(color)
+    }
+}
+
+macro_rules! color_prop_from_signals {
+    ($($signal:ident),*) => {$(
+        impl<C: ColorValue> From<leptos::prelude::$signal<C>> for ColorProp {
+            fn from(color: leptos::prelude::$signal<C>) -> Self {
+                use leptos::prelude::Get;
+                Self(leptos::prelude::Signal::derive(move || color.get().into()))
+            }
+        }
+    )*};
+}
+color_prop_from_signals!(Signal, ReadSignal, RwSignal, Memo);
+
+impl From<leptos::prelude::RwSignal<Color>> for ColorProp {
+    fn from(color: leptos::prelude::RwSignal<Color>) -> Self {
+        Self(color.into())
+    }
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.to_css_string())
+    }
+}
+
+/// Text that is no color [`Color`] can parse.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParseColorError(String);
+
+impl fmt::Display for ParseColorError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "invalid color: {:?}", self.0)
+    }
+}
+
+impl std::error::Error for ParseColorError {}
+
+impl FromStr for Color {
+    type Err = ParseColorError;
+
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        parse_color(text.trim()).ok_or_else(|| ParseColorError(text.to_owned()))
+    }
+}
+
+/// The comma-separated arguments of `name(...)`.
+fn css_arguments<'a>(text: &'a str, name: &str) -> Option<Vec<&'a str>> {
+    let inner = text
+        .strip_prefix(name)?
+        .strip_prefix('(')?
+        .strip_suffix(')')?;
+    let arguments: Vec<&str> = inner.split(',').map(str::trim).collect();
+    (arguments.len() == 3).then_some(arguments)
+}
+
+/// react-aria's `parseColor` (without alpha): RGB (hex or `rgb()`), then HSB, then HSL.
+fn parse_color(text: &str) -> Option<Color> {
+    if text.starts_with('#') {
+        return RGB8::from_hex(text).map(Color::Rgb);
+    }
+    let number = |text: &str| text.parse::<f64>().ok().filter(|n| n.is_finite());
+    let percent = |text: &str| {
+        text.strip_suffix('%')
+            .and_then(number)
+            .map(|n| n.clamp(0.0, 100.0) / 100.0)
+    };
+    let hue = |text: &str| {
+        number(text).map(|hue| {
+            #[allow(clippy::float_cmp)]
+            if hue == 360.0 {
+                hue
+            } else {
+                hue.rem_euclid(360.0)
+            }
+        })
+    };
+    if let Some(arguments) = css_arguments(text, "rgb") {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let channel = |text: &str| number(text).map(|n| n.clamp(0.0, 255.0).round() as u8);
+        return Some(Color::Rgb(RGB8 {
+            r: channel(arguments[0])?,
+            g: channel(arguments[1])?,
+            b: channel(arguments[2])?,
+        }));
+    }
+    if let Some(arguments) = css_arguments(text, "hsb") {
+        return Some(Color::Hsv(HSV {
+            hue: hue(arguments[0])?,
+            saturation: percent(arguments[1])?,
+            value: percent(arguments[2])?,
+        }));
+    }
+    let arguments = css_arguments(text, "hsl")?;
+    Some(Color::Hsl(HSL {
+        hue: hue(arguments[0])?,
+        saturation: percent(arguments[1])?,
+        lightness: percent(arguments[2])?,
+    }))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -233,31 +505,6 @@ impl HSV {
         }
     }
 
-    /// Returns a human-readable name for a hue angle.
-    ///
-    /// Based on standard 30-degree segments of the hue wheel.
-    #[must_use]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn get_hue_name(hue: f64) -> &'static str {
-        let h = ((hue % 360.0) + 360.0) % 360.0;
-        // The hue is always in [0, 360) so the cast to u32 is safe.
-        // The 360..=u32::MAX arm covers the theoretical case where h rounds to 360.
-        match h as u32 {
-            0..30 => "red",
-            30..60 => "orange",
-            60..90 => "yellow",
-            90..120 => "chartreuse",
-            120..150 => "green",
-            150..180 => "spring green",
-            180..210 => "cyan",
-            210..240 => "azure",
-            240..270 => "blue",
-            270..300 => "violet",
-            300..330 => "magenta",
-            330..=u32::MAX => "rose",
-        }
-    }
-
     pub fn into_rgb8(self) -> RGB8 {
         RGB8::from(self)
     }
@@ -270,6 +517,14 @@ impl Default for HSV {
 }
 
 impl ColorValue for HSV {
+    fn hue_channel() -> Option<HsvChannel> {
+        Some(HsvChannel::Hue)
+    }
+
+    fn to_rgb8(&self) -> RGB8 {
+        RGB8::from(*self)
+    }
+
     type Channel = HsvChannel;
 
     fn get_channel_value(&self, channel: HsvChannel) -> f64 {
@@ -359,6 +614,21 @@ impl ColorValue for HSV {
         }
     }
 
+    fn get_channel_format_options(channel: HsvChannel) -> NumberFormatOptions {
+        match channel {
+            HsvChannel::Hue => NumberFormatOptions {
+                style: NumberStyle::Unit,
+                unit: Some("°".to_owned()),
+                unit_display: UnitDisplay::Narrow,
+                ..NumberFormatOptions::default()
+            },
+            HsvChannel::Saturation | HsvChannel::Brightness => NumberFormatOptions {
+                style: NumberStyle::Percent,
+                ..NumberFormatOptions::default()
+            },
+        }
+    }
+
     fn get_channel_name(channel: HsvChannel) -> &'static str {
         match channel {
             HsvChannel::Hue => "Hue",
@@ -378,18 +648,17 @@ impl ColorValue for HSV {
         }
     }
 
-    fn get_hue_name_for_channel(&self, channel: HsvChannel) -> Option<&'static str> {
-        match channel {
-            HsvChannel::Hue => Some(Self::get_hue_name(self.hue)),
-            HsvChannel::Saturation | HsvChannel::Brightness => None,
-        }
-    }
-
     fn get_area_gradient(
         &self,
         x_channel: Self::Channel,
         y_channel: Self::Channel,
+        direction: WritingDirection,
     ) -> AreaGradient {
+        // The x axis runs towards the end of the line (react-aria: `to left` in right-to-left).
+        let end = match direction {
+            WritingDirection::Ltr => "right",
+            WritingDirection::Rtl => "left",
+        };
         let (_, _, z_channel) = Self::get_color_space_axes(Some(x_channel), Some(y_channel));
         let z_value = self.get_channel_value(z_channel);
 
@@ -420,7 +689,7 @@ impl ColorValue for HSV {
             }
         };
 
-        let x_gradient = format!("linear-gradient(to right, {})", channel_gradient(x_channel));
+        let x_gradient = format!("linear-gradient(to {end}, {})", channel_gradient(x_channel));
         let y_gradient = format!("linear-gradient(to top, {})", channel_gradient(y_channel));
 
         // Reversed order: y on top of x (y gradient renders above x gradient).
@@ -454,19 +723,31 @@ impl RGB8 {
         HSV::from(self)
     }
 
-    /// Parses a hex color string (with or without leading `#`).
-    ///
-    /// Accepts 6-character hex strings like `"FF00AA"` or `"#ff00aa"`.
+    /// Parses a hex color string (with or without leading `#`): six digits (`"FF00AA"`) or the
+    /// three-digit shorthand (`"#f0a"`), as CSS.
     #[must_use]
     pub fn from_hex(s: &str) -> Option<Self> {
         let s = s.strip_prefix('#').unwrap_or(s);
-        if s.len() != 6 {
+        if !s.chars().all(|c| c.is_ascii_hexdigit()) {
             return None;
         }
-        let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-        let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-        let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-        Some(Self { r, g, b })
+        let channel = |digits: &str| u8::from_str_radix(digits, 16).ok();
+        match s.len() {
+            6 => Some(Self {
+                r: channel(&s[0..2])?,
+                g: channel(&s[2..4])?,
+                b: channel(&s[4..6])?,
+            }),
+            3 => {
+                let doubled = |i: usize| channel(&s[i..=i].repeat(2));
+                Some(Self {
+                    r: doubled(0)?,
+                    g: doubled(1)?,
+                    b: doubled(2)?,
+                })
+            }
+            _ => None,
+        }
     }
 
     /// Converts the color to a 24-bit integer (0x000000–0xFFFFFF).
@@ -518,6 +799,10 @@ impl From<(u8, u8, u8)> for RGB8 {
 }
 
 impl ColorValue for RGB8 {
+    fn to_rgb8(&self) -> RGB8 {
+        *self
+    }
+
     type Channel = RgbChannel;
 
     fn get_channel_value(&self, channel: RgbChannel) -> f64 {
@@ -613,30 +898,35 @@ impl ColorValue for RGB8 {
         &self,
         x_channel: Self::Channel,
         y_channel: Self::Channel,
+        direction: WritingDirection,
     ) -> AreaGradient {
+        // The x axis runs towards the end of the line (react-aria: `to left` in right-to-left).
+        let end = match direction {
+            WritingDirection::Ltr => "right",
+            WritingDirection::Rtl => "left",
+        };
         let (_, _, z_channel) = Self::get_color_space_axes(Some(x_channel), Some(y_channel));
         let z_val = self.get_channel_value(z_channel);
 
-        // Build a color with only the z-channel value set (others at 0).
-        let base = Self { r: 0, g: 0, b: 0 }.with_channel_value(z_channel, z_val);
-
-        // X-channel gradient: base → base + max X.
-        let x_max = base.with_channel_value(x_channel, 255.0);
-        // Y-channel gradient: base → base + max Y.
-        let y_max = base.with_channel_value(y_channel, 255.0);
+        // The screen blend mode combines the layers channel by channel (1 - (1 - a) * (1 - b)):
+        // one layer per channel, the others 0 (react-aria).
+        let black = Self { r: 0, g: 0, b: 0 };
+        let z_only = black.with_channel_value(z_channel, z_val);
+        let x_max = black.with_channel_value(x_channel, 255.0);
+        let y_max = black.with_channel_value(y_channel, 255.0);
 
         AreaGradient {
             background: format!(
-                "linear-gradient(to right, {} 0%, {} 100%), \
+                "linear-gradient(to {end}, {} 0%, {} 100%), \
                  linear-gradient(to top, {} 0%, {} 100%), \
                  {}",
-                base.to_css_string(),
+                black.to_css_string(),
                 x_max.to_css_string(),
-                base.to_css_string(),
+                black.to_css_string(),
                 y_max.to_css_string(),
-                base.to_css_string(),
+                z_only.to_css_string(),
             ),
-            blend_mode: Some("screen"),
+            blend_mode: Some(BlendMode::Screen),
         }
     }
 }
@@ -711,6 +1001,14 @@ impl Default for HSL {
 }
 
 impl ColorValue for HSL {
+    fn hue_channel() -> Option<HslChannel> {
+        Some(HslChannel::Hue)
+    }
+
+    fn to_rgb8(&self) -> RGB8 {
+        RGB8::from(*self)
+    }
+
     type Channel = HslChannel;
 
     fn get_channel_value(&self, channel: HslChannel) -> f64 {
@@ -805,6 +1103,21 @@ impl ColorValue for HSL {
         }
     }
 
+    fn get_channel_format_options(channel: HslChannel) -> NumberFormatOptions {
+        match channel {
+            HslChannel::Hue => NumberFormatOptions {
+                style: NumberStyle::Unit,
+                unit: Some("°".to_owned()),
+                unit_display: UnitDisplay::Narrow,
+                ..NumberFormatOptions::default()
+            },
+            HslChannel::Saturation | HslChannel::Lightness => NumberFormatOptions {
+                style: NumberStyle::Percent,
+                ..NumberFormatOptions::default()
+            },
+        }
+    }
+
     fn get_channel_name(channel: HslChannel) -> &'static str {
         match channel {
             HslChannel::Hue => "Hue",
@@ -824,18 +1137,17 @@ impl ColorValue for HSL {
         }
     }
 
-    fn get_hue_name_for_channel(&self, channel: HslChannel) -> Option<&'static str> {
-        match channel {
-            HslChannel::Hue => Some(HSV::get_hue_name(self.hue)),
-            HslChannel::Saturation | HslChannel::Lightness => None,
-        }
-    }
-
     fn get_area_gradient(
         &self,
         x_channel: Self::Channel,
         y_channel: Self::Channel,
+        direction: WritingDirection,
     ) -> AreaGradient {
+        // The x axis runs towards the end of the line (react-aria: `to left` in right-to-left).
+        let end = match direction {
+            WritingDirection::Ltr => "right",
+            WritingDirection::Rtl => "left",
+        };
         let (_, _, z_channel) = Self::get_color_space_axes(Some(x_channel), Some(y_channel));
         let z_value = self.get_channel_value(z_channel);
 
@@ -866,7 +1178,7 @@ impl ColorValue for HSL {
             }
         };
 
-        let x_gradient = format!("linear-gradient(to right, {})", channel_gradient(x_channel));
+        let x_gradient = format!("linear-gradient(to {end}, {})", channel_gradient(x_channel));
         let y_gradient = format!("linear-gradient(to top, {})", channel_gradient(y_channel));
 
         // Reversed order: y on top of x (y gradient renders above x gradient).
@@ -915,9 +1227,9 @@ impl From<HSV> for RGB8 {
         };
 
         let (r, g, b) = (
-            ((r + m) * 255.0) as u8,
-            ((g + m) * 255.0) as u8,
-            ((b + m) * 255.0) as u8,
+            ((r + m) * 255.0).round() as u8,
+            ((g + m) * 255.0).round() as u8,
+            ((b + m) * 255.0).round() as u8,
         );
 
         Self { r, g, b }
@@ -942,7 +1254,7 @@ impl From<RGB8> for HSV {
         let hue = if delta == 0.0 {
             0.0
         } else if c_max == r {
-            60.0 * (((g - b) / delta) % 6.0)
+            60.0 * ((g - b) / delta).rem_euclid(6.0)
         } else if c_max == g {
             60.0 * (((b - r) / delta) + 2.0)
         } else if c_max == b {
@@ -1022,7 +1334,7 @@ impl From<RGB8> for HSL {
         let hue = if delta == 0.0 {
             0.0
         } else if c_max == r {
-            60.0 * (((g - b) / delta) % 6.0)
+            60.0 * ((g - b) / delta).rem_euclid(6.0)
         } else if c_max == g {
             60.0 * (((b - r) / delta) + 2.0)
         } else if c_max == b {
@@ -1082,6 +1394,214 @@ impl From<HSV> for HSL {
             hue,
             saturation: sl,
             lightness: l,
+        }
+    }
+}
+
+/// Color names (react-aria's `getColorName`/`getHueName`, in English).
+mod naming {
+    use super::RGB8;
+
+    /// Lightness between orange and brown.
+    const ORANGE_LIGHTNESS_THRESHOLD: f64 = 0.68;
+    /// Lightness between pure yellow and "yellow green".
+    const YELLOW_GREEN_LIGHTNESS_THRESHOLD: f64 = 0.85;
+    /// The maximum lightness considered dark.
+    const MAX_DARK_LIGHTNESS: f64 = 0.55;
+    /// Chroma between gray and a color.
+    const GRAY_THRESHOLD: f64 = 0.001;
+    /// Where the hues start, in OKLCH degrees.
+    const OKLCH_HUES: [(f64, &str); 10] = [
+        (0.0, "pink"),
+        (15.0, "red"),
+        (48.0, "orange"),
+        (94.0, "yellow"),
+        (135.0, "green"),
+        (175.0, "cyan"),
+        (264.0, "blue"),
+        (284.0, "purple"),
+        (320.0, "magenta"),
+        (349.0, "pink"),
+    ];
+
+    /// The color's name, e.g. "very dark grayish blue".
+    pub(super) fn color_name(color: RGB8) -> String {
+        let (l, c, h) = to_oklch(color);
+        if l > 0.999 {
+            return "white".to_owned();
+        }
+        if l < 0.001 {
+            return "black".to_owned();
+        }
+        let (hue, l) = oklch_hue(l, c, h);
+        let chroma = if (GRAY_THRESHOLD..=0.1).contains(&c) {
+            if l >= 0.7 { "pale" } else { "grayish" }
+        } else if c >= 0.15 {
+            "vibrant"
+        } else {
+            ""
+        };
+        let lightness = if l < 0.3 {
+            "very dark"
+        } else if l < MAX_DARK_LIGHTNESS {
+            "dark"
+        } else if l < 0.7 {
+            ""
+        } else if l < 0.85 {
+            "light"
+        } else {
+            "very light"
+        };
+        [lightness, chroma, &hue]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
+    /// The name of the color's hue, e.g. "red orange".
+    pub(super) fn hue_name(color: RGB8) -> String {
+        let (l, c, h) = to_oklch(color);
+        oklch_hue(l, c, h).0
+    }
+
+    /// The hue's name, and the lightness adjusted for it.
+    fn oklch_hue(l: f64, c: f64, h: f64) -> (String, f64) {
+        if c < GRAY_THRESHOLD {
+            return ("gray".to_owned(), l);
+        }
+        let mut l = l;
+        for (i, &(hue, name)) in OKLCH_HUES.iter().enumerate() {
+            let (next_hue, next_name) = OKLCH_HUES.get(i + 1).copied().unwrap_or((360.0, "pink"));
+            if h >= hue && h < next_hue {
+                let mut name = name.to_owned();
+                // Orange splits into brown and orange by lightness.
+                if name == "orange" {
+                    if l < ORANGE_LIGHTNESS_THRESHOLD {
+                        "brown".clone_into(&mut name);
+                    } else {
+                        l = l - ORANGE_LIGHTNESS_THRESHOLD + MAX_DARK_LIGHTNESS;
+                    }
+                }
+                // At least halfway to the next hue: both names.
+                if h > hue + (next_hue - hue) / 2.0 && name != next_name {
+                    name = format!("{name} {next_name}");
+                } else if name == "yellow" && l < YELLOW_GREEN_LIGHTNESS_THRESHOLD {
+                    // Yellow shifts toward green at lower lightnesses.
+                    "yellow green".clone_into(&mut name);
+                }
+                return (name, l);
+            }
+        }
+        ("pink".to_owned(), l)
+    }
+
+    /// The color in OKLCH: lightness, chroma, hue in degrees (CSS Color 4's conversion code,
+    /// with its constants).
+    #[allow(clippy::many_single_char_names, clippy::excessive_precision)]
+    fn to_oklch(color: RGB8) -> (f64, f64, f64) {
+        let linear = |channel: u8| {
+            let v = f64::from(channel) / 255.0;
+            if v <= 0.04045 {
+                v / 12.92
+            } else {
+                ((v + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        let (r, g, b) = (linear(color.r), linear(color.g), linear(color.b));
+        let xyz = multiply(
+            [
+                506_752.0 / 1_228_815.0,
+                87_881.0 / 245_763.0,
+                12_673.0 / 70_218.0,
+                87_098.0 / 409_605.0,
+                175_762.0 / 245_763.0,
+                12_673.0 / 175_545.0,
+                7_918.0 / 409_605.0,
+                87_881.0 / 737_289.0,
+                1_001_167.0 / 1_053_270.0,
+            ],
+            (r, g, b),
+        );
+        let lms = multiply(
+            [
+                0.819_022_437_996_703,
+                0.361_906_260_052_890_4,
+                -0.128_873_781_520_987_9,
+                0.032_983_653_932_388_5,
+                0.929_286_861_586_343_4,
+                0.036_144_666_350_642_4,
+                0.048_177_189_359_624_2,
+                0.264_239_531_752_730_8,
+                0.633_547_828_469_430_9,
+            ],
+            xyz,
+        );
+        let (l, a, b) = multiply(
+            [
+                0.210_454_268_309_314,
+                0.793_617_774_702_305_4,
+                -0.004_072_043_011_619_3,
+                1.977_998_532_431_168_4,
+                -2.428_592_242_048_579_9,
+                0.450_593_709_617_411,
+                0.025_904_042_465_547_8,
+                0.782_771_712_457_529_6,
+                -0.808_675_754_923_077_4,
+            ],
+            (lms.0.cbrt(), lms.1.cbrt(), lms.2.cbrt()),
+        );
+        let hue = b.atan2(a).to_degrees();
+        (l, a.hypot(b), if hue >= 0.0 { hue } else { hue + 360.0 })
+    }
+
+    fn multiply(m: [f64; 9], (x, y, z): (f64, f64, f64)) -> (f64, f64, f64) {
+        (
+            m[0] * x + m[1] * y + m[2] * z,
+            m[3] * x + m[4] * y + m[5] * z,
+            m[6] * x + m[7] * y + m[8] * z,
+        )
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use assertr::prelude::*;
+
+        use super::*;
+
+        /// From react-stately's `Color.test.tsx` ("should return localized color name").
+        #[test]
+        fn names_colors_as_react_aria() {
+            for (hex, name) in [
+                ("#FFFFFF", "white"),
+                ("#000000", "black"),
+                ("#FFFF00", "very light vibrant yellow"),
+                ("#800080", "dark vibrant magenta"),
+                ("#FF0000", "vibrant red"),
+                ("#800000", "dark vibrant red"),
+                ("#FF00FF", "light vibrant magenta"),
+                ("#008000", "dark vibrant green"),
+                ("#808000", "yellow green"),
+                ("#000080", "very dark vibrant blue"),
+                ("#0000FF", "dark vibrant blue"),
+                ("#008080", "dark grayish cyan"),
+                ("#faebd7", "light pale orange yellow"),
+                ("#7fffd4", "very light green cyan"),
+                ("#d2691e", "vibrant brown"),
+                ("#ff7f50", "light vibrant red orange"),
+                ("#6495ed", "cyan blue"),
+                ("#b8860b", "brown yellow"),
+                ("#a9a9a9", "light gray"),
+                ("#9932cc", "dark vibrant purple magenta"),
+                ("#808080", "gray"),
+            ] {
+                let color = RGB8::from_hex(hex).expect("a hex color");
+                assert_that!(color_name(color))
+                    .with_detail_message(hex)
+                    .is_equal_to(name.to_owned());
+            }
+            assert_that!(hue_name(RGB8::from_hex("#d2691e").expect("a hex color")))
+                .is_equal_to("brown".to_owned());
         }
     }
 }
@@ -1146,7 +1666,17 @@ mod tests {
 
     #[test]
     fn rgb8_from_hex_invalid_length() {
-        assert_that!(RGB8::from_hex("FFF")).is_none();
+        assert_that!(RGB8::from_hex("FFFF")).is_none();
+        assert_that!(RGB8::from_hex("FFFFF")).is_none();
+    }
+
+    #[test]
+    fn rgb8_from_hex_shorthand() {
+        assert_that!(RGB8::from_hex("#f0a")).is_equal_to(Some(RGB8 {
+            r: 0xFF,
+            g: 0x00,
+            b: 0xAA,
+        }));
     }
 
     #[test]
@@ -1247,14 +1777,6 @@ mod tests {
         assert_that!(HSV::get_channel_name(HsvChannel::Hue)).is_equal_to("Hue");
         assert_that!(HSV::get_channel_name(HsvChannel::Saturation)).is_equal_to("Saturation");
         assert_that!(HSV::get_channel_name(HsvChannel::Brightness)).is_equal_to("Brightness");
-    }
-
-    #[test]
-    fn hsv_get_hue_name() {
-        assert_that!(HSV::get_hue_name(0.0)).is_equal_to("red");
-        assert_that!(HSV::get_hue_name(120.0)).is_equal_to("green");
-        assert_that!(HSV::get_hue_name(240.0)).is_equal_to("blue");
-        assert_that!(HSV::get_hue_name(60.0)).is_equal_to("yellow");
     }
 
     // --- RGB8 ColorValue trait tests ---
@@ -1384,17 +1906,6 @@ mod tests {
         assert_that!(display.hue).is_close_to(120.0, 0.001);
         assert_that!(display.saturation).is_close_to(1.0, 0.001);
         assert_that!(display.lightness).is_close_to(0.5, 0.001);
-    }
-
-    #[test]
-    fn hsl_hue_name() {
-        let hsl = HSL {
-            hue: 120.0,
-            saturation: 1.0,
-            lightness: 0.5,
-        };
-        assert_that!(hsl.get_hue_name_for_channel(HslChannel::Hue)).is_equal_to(Some("green"));
-        assert_that!(hsl.get_hue_name_for_channel(HslChannel::Saturation)).is_equal_to(None);
     }
 
     // --- HSL conversion tests ---
@@ -1533,5 +2044,60 @@ mod tests {
         };
         let hsv = HSV::from(hsl);
         assert_that!(hsv.saturation).is_close_to(0.0, 0.001);
+    }
+
+    #[test]
+    fn parses_colors_as_react_aria() {
+        let parse = |text: &str| text.parse::<Color>().ok();
+        assert_that!(parse("#f0a")).is_equal_to(Some(Color::Rgb(RGB8 {
+            r: 255,
+            g: 0,
+            b: 170,
+        })));
+        assert_that!(parse("rgb(10, 300, -5)")).is_equal_to(Some(Color::Rgb(RGB8 {
+            r: 10,
+            g: 255,
+            b: 0,
+        })));
+        assert_that!(parse("hsb(-30, 50%, 100%)")).is_equal_to(Some(Color::Hsv(HSV {
+            hue: 330.0,
+            saturation: 0.5,
+            value: 1.0,
+        })));
+        assert_that!(parse("hsl(360, 100%, 50%)")).is_equal_to(Some(Color::Hsl(HSL {
+            hue: 360.0,
+            saturation: 1.0,
+            lightness: 0.5,
+        })));
+        assert_that!(parse("rgb(1, , 3)")).is_none();
+        assert_that!(parse("hsl(0, 50, 50%)")).is_none();
+        assert_that!(parse("red")).is_none();
+    }
+
+    #[test]
+    fn keeps_the_space_it_was_set_in() {
+        let gray = Color::from(HSV {
+            hue: 120.0,
+            saturation: 0.0,
+            value: 0.5,
+        });
+        assert_that!(gray.to::<HSV>().hue).is_equal_to(120.0);
+        assert_that!(gray.to::<HSL>().hue).is_equal_to(120.0);
+        assert_that!(gray.to::<RGB8>()).is_equal_to(RGB8 {
+            r: 128,
+            g: 128,
+            b: 128,
+        });
+    }
+
+    #[test]
+    fn hue_of_magenta_is_positive() {
+        let magenta = RGB8 {
+            r: 255,
+            g: 0,
+            b: 255,
+        };
+        assert_that!(HSV::from(magenta).hue).is_equal_to(300.0);
+        assert_that!(HSL::from(magenta).hue).is_equal_to(300.0);
     }
 }

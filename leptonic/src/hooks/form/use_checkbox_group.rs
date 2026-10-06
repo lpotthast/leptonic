@@ -18,8 +18,7 @@ use super::{
         ValidateFn, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
         use_form_validation_state,
     },
-    use_label::LabelElementType,
-    use_label::UseLabelProps,
+    use_label::{LabelElementType, UseLabelProps},
     use_toggle::ToggleOptions,
     use_toggle_state::ToggleState,
 };
@@ -51,7 +50,7 @@ pub struct UseCheckboxGroupInput {
     /// The group element's id. Generated when `None`.
     pub id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
-    pub has_label: bool,
+    pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
@@ -67,7 +66,7 @@ impl UseCheckboxGroupInput {
         Self {
             state,
             id: None,
-            has_label: false,
+            has_label: Signal::stored(false),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
             aria_describedby: None,
@@ -110,7 +109,7 @@ pub struct UseCheckboxGroupProps {
     pub id: String,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_label: MaybeProp<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
@@ -121,7 +120,7 @@ pub type UseCheckboxGroupAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,

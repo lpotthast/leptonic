@@ -10,23 +10,23 @@ pub fn PageClassesAndStyles() -> impl IntoView {
     view! {
         <DocPage title="Classes & Styles">
             <p>
-                "Every Leptonic atom and component takes a " <Code inline=true>"classes"</Code>
+                "Leptonic\u{2019}s atoms and components take a " <Code inline=true>"classes"</Code>
                 " and a " <Code inline=true>"styles"</Code>
-                " prop. Their types come from two small companion crates, "
-                <LinkExt
+                " prop for the element they render. Their types come from two small companion crates, "
+                <Link
                     href="https://github.com/lpotthast/leptos-classes"
-                    target=LinkTarget::_Blank
+                    target=LinkTarget::Blank
                 >
                     "leptos-classes"
-                </LinkExt> " and "
-                <LinkExt
+                </Link> " and "
+                <Link
                     href="https://github.com/lpotthast/leptos-styles"
-                    target=LinkTarget::_Blank
+                    target=LinkTarget::Blank
                 >
                     "leptos-styles"
-                </LinkExt> ". " <Code inline=true>"Classes"</Code>
+                </Link> ". " <Code inline=true>"Classes"</Code>
                 " holds a list of class names and " <Code inline=true>"Styles"</Code>
-                " holds inline style declarations. You can hand either one from component to component, add to it along the way, "
+                " holds inline style declarations. You can hand either one from one Leptos component to the next, add to it along the way, "
                 "and both stay reactive until they are finally rendered."
             </p>
 
@@ -47,11 +47,11 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <Code inline=true>"style=\"...\""</Code> " and "
                     <Code inline=true>"style:property=value"</Code>
                     " for styles. These are attributes on one element, though. "
-                    "You can't bundle them into a single value and pass that value through several components."
+                    "You can\u{2019}t bundle them into a single value and pass that value through several Leptos components."
                 </p>
 
                 <p>
-                    "In a component library, that's exactly what you need to do. Each layer wants to add a little of its own "
+                    "In a UI library, that\u{2019}s exactly what you need to do. Each layer wants to add a little of its own "
                     "while keeping what the caller passed in. With plain strings, you end up concatenating by hand:"
                 </p>
 
@@ -87,7 +87,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
 
                 <Section title="Construction">
                     <p>
-                        "Most of the time you'll start from a string, or let the "
+                        "Most of the time you\u{2019}ll start from a string, or let the "
                         <Code inline=true>"#[prop(into)]"</Code>
                         " conversion do it for you. From there, you chain "
                         <Code inline=true>".add()"</Code>
@@ -117,7 +117,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
 
                     <p>
                         "Each class name is a single token. An empty name or one containing whitespace panics. "
-                        "That's an easy one to trip over in props: " <Code inline=true>"classes=\"card elevated\""</Code>
+                        "That\u{2019}s an easy one to trip over in props: " <Code inline=true>"classes=\"card elevated\""</Code>
                         " panics, so write " <Code inline=true>"classes=[\"card\", \"elevated\"]"</Code>
                         " instead. Adding the same name twice to one " <Code inline=true>"Classes"</Code>
                         " value panics as well. If a class should depend on several things, combine them into one condition "
@@ -157,7 +157,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <p>
                         "This is what the type is really for. Every layer receives a "
                         <Code inline=true>"Classes"</Code>
-                        ", adds what it needs, and passes it on. Only the innermost component renders it with "
+                        ", adds what it needs, and passes it on. Only the innermost Leptos component renders it with "
                         <Code inline=true>"class=classes"</Code> ":"
                     </p>
 
@@ -167,7 +167,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                             use leptonic::utils::classes::Classes;
                             use leptos::prelude::*;
 
-                            /// The innermost component renders the accumulated classes.
+                            /// The innermost Leptos component renders the accumulated classes.
                             #[component]
                             fn Inner(#[prop(into, optional)] classes: Classes) -> impl IntoView {
                                 view! { <div class=classes>"Content"</div> }
@@ -194,7 +194,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     </Code>
 
                     <p>
-                        "When you're handed two " <Code inline=true>"Classes"</Code>
+                        "When you\u{2019}re handed two " <Code inline=true>"Classes"</Code>
                         " values that were built independently, for example a prop and the result of a helper function, combine them with "
                         <Code inline=true>".merge(other, MergeStrategy::default())"</Code>
                         ". The default strategy keeps a class that appears in both if " <em>"either"</em>
@@ -206,11 +206,11 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 <Section title="One Owner per Attribute">
                     <p>
                         <Code inline=true>"class=classes"</Code>
-                        " takes over the element's entire "
+                        " takes over the element\u{2019}s entire "
                         <Code inline=true>"class"</Code>
                         " attribute and rewrites all of it whenever something changes. A "
                         <Code inline=true>"class:foo=..."</Code>
-                        " directive on the same element would be overwritten on the next update, so don't mix the two. "
+                        " directive on the same element would be overwritten on the next update, so don\u{2019}t mix the two. "
                         "Move the condition into the "
                         <Code inline=true>"Classes"</Code>
                         " value instead:"
@@ -236,8 +236,8 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     " value is a list of CSS declarations. Each one can be static, "
                     "reactive, or only present some of the time. Declarations are typed: you pick a property through a "
                     <em>"property selector"</em>
-                    " and pass it a value of the matching type. A padding can't end up with a color, "
-                    "a typo in a property name doesn't compile, and you never have to format a CSS string yourself."
+                    " and pass it a value of the matching type. A padding can\u{2019}t end up with a color, "
+                    "a typo in a property name doesn\u{2019}t compile, and you never have to format a CSS string yourself."
                 </p>
 
                 <Section title="Typed Declarations">
@@ -289,7 +289,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                         " with a closure that builds the whole declaration. If the declaration should sometimes be left out entirely, use "
                         <Code inline=true>".add_optional()"</Code> " and return an "
                         <Code inline=true>"Option"</Code> ". While it returns "
-                        <Code inline=true>"None"</Code> ", the property doesn't show up in the "
+                        <Code inline=true>"None"</Code> ", the property doesn\u{2019}t show up in the "
                         <Code inline=true>"style"</Code> " attribute at all:"
                     </p>
 
@@ -297,7 +297,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                         {indoc!(
                             r"
                             use leptonic::utils::{
-                                css::{CssDimension, NonNegativeLengthPercentage, Size, rgb, try_pct},
+                                css::{computed_pct, computed_size, rgb},
                                 style::{BackgroundColorProperty, WidthProperty},
                                 styles::Styles,
                             };
@@ -306,34 +306,46 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                             let (highlight, _) = signal(false);
 
                             let styles = Styles::new()
-                                .add_reactive(move || WidthProperty.declare(size_pct(progress.get())))
+                                .add_reactive(move || WidthProperty.declare(computed_size(computed_pct(progress.get()))))
                                 .add_optional(move || {
                                     highlight
                                         .get()
                                         .then(|| BackgroundColorProperty.declare(rgb(255, 240, 200)))
                                 });
-
-                            /// `width` takes a non-negative `Size`. Computed numbers can be NaN or negative,
-                            /// so convert them fallibly and fall back to zero.
-                            fn size_pct(value: f64) -> Size {
-                                try_pct(value)
-                                    .ok()
-                                    .and_then(|dim| NonNegativeLengthPercentage::try_from(dim).ok())
-                                    .unwrap_or_else(|| NonNegativeLengthPercentage::new(CssDimension::Zero))
-                                    .into()
-                            }
                         "
                         )}
                     </Code>
 
                     <p>
-                        "That helper isn't just ceremony. Functions like " <Code inline=true>"pct()"</Code>
-                        " and " <Code inline=true>"px()"</Code> " panic on non-finite numbers, and "
-                        <Code inline=true>"NonNegativeLengthPercentage::new"</Code>
-                        " panics on negative ones. For literals and values you know are in range, that's fine. "
-                        "For anything computed at runtime, like a slider position when "
-                        <Code inline=true>"min == max"</Code> ", use the " <Code inline=true>"try_"</Code>
-                        " variants and decide on a fallback."
+                        "Functions like " <Code inline=true>"pct()"</Code> " and " <Code inline=true>"px()"</Code>
+                        " panic on non-finite numbers, and " <Code inline=true>"NonNegativeLengthPercentage::new"</Code>
+                        " panics on negative ones. For literals and values you know are in range, that\u{2019}s fine. "
+                        "For anything computed at runtime, like a slider position when " <Code inline=true>"min == max"</Code>
+                        ", use the helpers in " <Code inline=true>"leptonic::utils::css"</Code> ", which never panic:"
+                    </p>
+
+                    <DocTable headers=&["Helper", "Returns"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"computed_pct(f64)"</Code></TableCell>
+                            <TableCell>"A percentage; "<Code inline=true>"0px"</Code>" for NaN and infinite numbers."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"computed_px(f64)"</Code></TableCell>
+                            <TableCell>"A pixel length; "<Code inline=true>"0px"</Code>" for NaN and infinite numbers."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"computed_size(CssDimension)"</Code></TableCell>
+                            <TableCell>
+                                "A "<Code inline=true>"Size"</Code>" for "<Code inline=true>"width"</Code>", "
+                                <Code inline=true>"height"</Code>" & co.; negative values become "<Code inline=true>"0px"</Code>"."
+                            </TableCell>
+                        </TableRow>
+                    </DocTable>
+
+                    <p>
+                        "For other fallbacks, use the " <Code inline=true>"try_"</Code>
+                        " variants ("<Code inline=true>"try_pct"</Code>", "<Code inline=true>"try_px"</Code>", \u{2026}) "
+                        "and decide yourself."
                     </p>
 
                 </Section>
@@ -342,7 +354,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                         "CSS custom properties (variables) are typed too. Declare one once with "
                         <Code inline=true>"css_custom_property!"</Code>
                         ", and it will only accept values of the type you gave it. This is a nice way to hand a live value to a stylesheet "
-                        "while the stylesheet stays in charge of how it's used:"
+                        "while the stylesheet stays in charge of how it\u{2019}s used:"
                     </p>
 
                     <Code language=Language::Rust>
@@ -369,10 +381,10 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </Section>
                 <Section title="The Unchecked Escape Hatch">
                     <p>
-                        "The set of typed properties is intentionally growing step by step and doesn't cover all of CSS yet. "
+                        "The set of typed properties is intentionally growing step by step and doesn\u{2019}t cover all of CSS yet. "
                         <Code inline=true>"position"</Code> ", " <Code inline=true>"display"</Code> ", "
                         <Code inline=true>"transform"</Code> ", " <Code inline=true>"background"</Code>
-                        " gradients and many others aren't modeled. For those, there are explicitly "
+                        " gradients and many others aren\u{2019}t modeled. For those, there are explicitly "
                         "named " <Code inline=true>"_unchecked"</Code>
                         " methods that take the property name and value as plain strings. The long name is on purpose: "
                         "it makes the spots that skip the type checks easy to find."
@@ -443,7 +455,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     <p>
                         "Just like " <Code inline=true>"class=classes"</Code> ", "
                         <Code inline=true>"style=styles"</Code> " owns the whole "
-                        <Code inline=true>"style"</Code> " attribute. Don't combine it with "
+                        <Code inline=true>"style"</Code> " attribute. Don\u{2019}t combine it with "
                         <Code inline=true>"style:foo=..."</Code>
                         " directives on the same element. Add the declaration to the "
                         <Code inline=true>"Styles"</Code> " value instead."
@@ -461,9 +473,9 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     " acting as a lower-priority fallback layer. Conflicts are resolved per property: "
                     "when "
                     <Code inline=true>"a"</Code>
-                    " currently has a declaration for a property, it wins. When it doesn't, "
+                    " currently has a declaration for a property, it wins. When it doesn\u{2019}t, "
                     <Code inline=true>"b"</Code>
-                    "'s declaration shows through. This is evaluated on every update, so a fallback "
+                    "\u{2019}s declaration shows through. This is evaluated on every update, so a fallback "
                     "reappears as soon as an optional declaration in "
                     <Code inline=true>"a"</Code>
                     " turns into "
@@ -487,16 +499,16 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </Code>
 
                 <p>
-                    "Leptonic's atoms use this to protect styles that hooks rely on. A hook may, for example, set "
+                    "Leptonic\u{2019}s atoms use this to protect styles that hooks rely on. A hook may, for example, set "
                     <Code inline=true>"touch-action: none"</Code>
-                    " to get pointer handling right. The atom puts the hook's styles first, so your own styles fill in "
-                    "everything else but can't accidentally override them:"
+                    " to get pointer handling right. The atom puts the hook\u{2019}s styles first, so your own styles fill in "
+                    "everything else but can\u{2019}t accidentally override them:"
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(
                         r"
-                        // Inside an atom component (e.g., atoms/button.rs)
+                        // Inside an atom (e.g., atoms/button.rs)
                         let (button_attrs, button_styles) = button_props.into_parts();
 
                         // Hook styles take precedence; user styles are the fallback layer.
@@ -512,7 +524,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </Code>
 
                 <p>
-                    "If you build your own components on top of Leptonic atoms, you usually won't need "
+                    "If you build your own Leptos components on top of leptonic atoms, you usually won\u{2019}t need "
                     <Code inline=true>".merge()"</Code> " yourself. Pass "
                     <Code inline=true>"styles"</Code> " down and let the atom do the merging."
                 </p>
@@ -520,21 +532,22 @@ pub fn PageClassesAndStyles() -> impl IntoView {
             </Section>
             <Section title="Live Example">
                 <p>
-                    "Here's everything together. The meter's look is defined by CSS classes, and the "
-                    <Code inline=true>"complete"</Code>
-                    " class is toggled reactively. The only inline styles are the two values that really are dynamic: "
-                    "a typed " <Code inline=true>"width"</Code>
-                    " and a typed custom property for the fill color."
+                    "Here\u{2019}s everything together, on a "<Link href=routes::doc::meter::Atom.materialize()>"Meter"</Link>
+                    " atom. Its look is defined by CSS classes; a reactive class adds stripes when the storage is almost "
+                    "full. The only inline style is the one value that really is dynamic: the fill color, a typed "
+                    <Code inline=true>"background-color"</Code>" that references the theme\u{2019}s status colors through "
+                    "typed custom properties. The fill\u{2019}s width comes from the atom, which merges it in front of these "
+                    "styles."
                 </p>
 
-                <Demo description="Meter with typed reactive classes and styles" source=include_str!("demos/classes_and_styles_meter.rs")>
+                <Demo description="Storage meter with a reactive class and a typed reactive fill color" source=include_str!("demos/classes_and_styles_meter.rs")>
                     <ClassesAndStylesMeterDemo />
                 </Demo>
 
             </Section>
             <Section title="CSS Value Types">
                 <p>
-                    "The value types follow the CSS grammar of the property they belong to, so you'll come across a handful of them. "
+                    "The value types follow the CSS grammar of the property they belong to, so you\u{2019}ll come across a handful of them. "
                     "Most of them start from a " <Code inline=true>"CssDimension"</Code> ":"
                 </p>
 
@@ -563,9 +576,16 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </Code>
 
                 <p>
+                    <Code inline=true>"leptonic::prelude"</Code>" re-exports the types leptonic\u{2019}s own props use: "
+                    <Code inline=true>"Width"</Code>" and "<Code inline=true>"Height"</Code>" (both "
+                    <Code inline=true>"CssDimension"</Code>"), "<Code inline=true>"Margin"</Code>", "
+                    <Code inline=true>"Padding"</Code>" and "<Code inline=true>"FontWeight"</Code>"."
+                </p>
+
+                <p>
                     "Colors are built with " <Code inline=true>"rgb()"</Code> ", "
                     <Code inline=true>"rgba()"</Code> ", " <Code inline=true>"hsl()"</Code> " or "
-                    <Code inline=true>"CssColor::Named(..)"</Code> ". Leptonic's own color types ("
+                    <Code inline=true>"CssColor::Named(..)"</Code> ". Leptonic\u{2019}s own color types ("
                     <Code inline=true>"RGB8"</Code> ", " <Code inline=true>"HSL"</Code>
                     ") convert into " <Code inline=true>"CssColor"</Code> " with "
                     <Code inline=true>".into()"</Code> "."
@@ -574,24 +594,27 @@ pub fn PageClassesAndStyles() -> impl IntoView {
             </Section>
             <Section title="How Leptonic Uses These Types">
                 <p>
-                    "Every Leptonic atom and component declares "
+                    "Atoms and components declare "
                     <Code inline=true>"#[prop(into, optional)] classes: Classes"</Code> " and "
                     <Code inline=true>"#[prop(into, optional)] styles: Styles"</Code> ". Thanks to "
                     <Code inline=true>"into"</Code> ", you can pass a plain "
                     <Code inline=true>"\"class-name\""</Code>
-                    ", an array of names, a single typed declaration, or a fully built value, whichever is handiest."
+                    ", an array of names, a single typed declaration, or a fully built value, whichever is handiest. "
+                    "Those that render no element of their own don\u{2019}t take them: atoms that give their child "
+                    "behavior ("<Code inline=true>"Pressable"</Code>", "<Code inline=true>"Hoverable"</Code>", "
+                    <Code inline=true>"Focusable"</Code>", "<Code inline=true>"PressResponder"</Code>", the "
+                    <Code inline=true>"*Trigger"</Code>" atoms), providers ("<Code inline=true>"Root"</Code>", "
+                    <Code inline=true>"ThemeProvider"</Code>", "<Code inline=true>"ToastRoot"</Code>"), and "
+                    <Code inline=true>"Toast"</Code>" and "<Code inline=true>"AlertIcon"</Code>"."
                 </p>
 
                 <p>
-                    "As described on the "
-                    <Link href=routes::doc::Architecture
-                        .materialize()>"Hooks, Atoms & Components"</Link>
-                    " page, Leptonic is built in three layers. Each of them has its own part in this. "
-                    "Hooks return the attributes and styles they manage, such as ARIA attributes or "
+                    "Each of the "<Link href=routes::doc::Architecture.materialize()>"three layers"</Link>" has its own "
+                    "part in this. Hooks return the attributes and styles they manage, such as ARIA attributes or "
                     <Code inline=true>"touch-action"</Code> ". Atoms accept your "
                     <Code inline=true>"classes"</Code> " and " <Code inline=true>"styles"</Code>
-                    ", merge the hook styles in front of yours, and render the element. "
-                    "Components add their theme class, for example "
+                    ", merge the hook styles in front of yours (see "<AnchorLink href="#merge-priority">"Merge Priority"</AnchorLink>
+                    "), and render the element. Components add their theme class, for example "
                     <Code inline=true>"\"leptonic-btn\""</Code>
                     ", and pass everything down to the atom:"
                 </p>
@@ -604,16 +627,6 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                             classes=classes.add("leptonic-btn")
                             styles=styles
                         />
-
-                        // Atom layer: hook styles first, then renders the element.
-                        let (button_attrs, button_styles) = button_props.into_parts();
-                        let styles = button_styles.merge(styles);
-
-                        view! {
-                            <button {..button_attrs} class=classes style=styles>
-                                {children()}
-                            </button>
-                        }
                     "#
                     )}
                 </Code>
@@ -701,11 +714,11 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                 </DocTable>
 
                 <p>
-                    "When you're styling one element and nothing is passed between components, the native "
+                    "When you\u{2019}re styling one element and nothing is passed between Leptos components, the native "
                     <Code inline=true>"class=\"foo\""</Code> " and "
                     <Code inline=true>"style:color=\"red\""</Code> " are perfectly fine. Use "
                     <Code inline=true>"Classes"</Code> " and " <Code inline=true>"Styles"</Code>
-                    " where classes and styles need to travel through component boundaries and pick things up on the way. "
+                    " where classes and styles need to travel through Leptos component boundaries and pick things up on the way. "
                     "And for purely decorative styling, a CSS class in your stylesheet is usually still the best choice."
                 </p>
             </Section>

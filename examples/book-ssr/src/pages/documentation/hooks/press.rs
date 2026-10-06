@@ -16,7 +16,7 @@ pub fn PageUsePress() -> impl IntoView {
                 "The "<Code inline=true>"use_press"</Code>" hook handles press interactions consistently across mouse, touch, "
                 "keyboard and screen readers. It reports when a press starts, ends and completes, which pointer type caused it, "
                 "and whether the element is currently pressed. See the "
-                <Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                <Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" to compare it with the other interaction building blocks."
             </p>
 
             <ReactAria hook="usePress"/>
@@ -31,7 +31,7 @@ pub fn PageUsePress() -> impl IntoView {
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                         "Whether the element is disabled. A disabled element ignores all press interactions."
                     </ApiRow>
-                    <ApiRow name="on_press" ty="Callback<PressEvent>" default="no-op">
+                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">
                         "Called when a press completes: the pointer or key is released over the element."
                     </ApiRow>
                     <ApiRow name="on_press_start" ty="Option<Callback<PressEvent>>" default="None">
@@ -53,12 +53,12 @@ pub fn PageUsePress() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="on_long_press_start, on_long_press, on_long_press_end" ty="Option<Callback<LongPressEvent>>" default="None">
                         "Long press callbacks. Setting any of them enables long press detection, see "
-                        <a href="#long-press">"Long press"</a>"."
+                        <AnchorLink href="#long-press">"Long Press"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="long_press_threshold" ty="Option<Signal<Duration>>" default="None (500 ms)">
                         "How long the element has to be held before "<Code inline=true>"on_long_press"</Code>" fires."
                     </ApiRow>
-                    <ApiRow name="long_press_accessibility_description" ty="Option<Oco<'static, str>>" default="None">
+                    <ApiRow name="long_press_accessibility_description" ty="MaybeProp<String>" default="None">
                         "Describes the long press action to assistive technology, e.g. \u{201c}Long press to open menu\u{201d}. "
                         "Only applied when "<Code inline=true>"on_long_press"</Code>" is set."
                     </ApiRow>
@@ -66,28 +66,23 @@ pub fn PageUsePress() -> impl IntoView {
                         "Turns long press detection off while "<Code inline=true>"true"</Code>
                         ", so presses aren\u{2019}t cancelled after the threshold."
                     </ApiRow>
-                    <ApiRow name="prevent_focus_on_press" ty="bool" default="false">
+                    <ApiRow name="prevent_focus_on_press" ty="Signal<bool>" default="false">
                         "Don\u{2019}t move focus to the element when it is pressed, e.g. for toolbar buttons next to a text editor."
                     </ApiRow>
-                    <ApiRow name="should_cancel_on_pointer_exit" ty="bool" default="false">
+                    <ApiRow name="should_cancel_on_pointer_exit" ty="Signal<bool>" default="false">
                         "Cancel the press when the pointer leaves the element. By default, you can drag out and back in and "
                         "still complete the press."
                     </ApiRow>
-                    <ApiRow name="allow_text_selection_on_press" ty="bool" default="false">
+                    <ApiRow name="allow_text_selection_on_press" ty="Signal<bool>" default="false">
                         "Allow selecting text inside the element during a press. By default, text selection is disabled "
                         "while pressing."
                     </ApiRow>
-                    <ApiRow name="force_prevent_default" ty="bool" default="false">
-                        "Call "<Code inline=true>"prevent_default()"</Code>" on all pointer and keyboard events, so no "
-                        "browser-specific behavior happens on interaction."
-                    </ApiRow>
-                    <ApiRow name="force_propagation" ty="bool" default="false">
-                        "Always let events propagate. By default, propagation is stopped unless a callback calls "
-                        <Code inline=true>"continue_propagation()"</Code>" on its event."
+                    <ApiRow name="propagation" ty="PressPropagation" default="Stop">
+                        "Whether the press events propagate. Default: stopped, unless a callback calls "<Code inline=true>"continue_propagation()"</Code>"."
                     </ApiRow>
                     <ApiRow name="force_is_pressed" ty="Option<Signal<bool>>" default="None">
                         "Forces the pressed state: "<Code inline=true>"is_pressed"</Code>" is "<Code inline=true>"true"</Code>
-                        " while this signal is. Parent components use it to keep a trigger looking pressed."
+                        " while this signal is, e.g. to keep a trigger looking pressed while its menu is open."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -131,15 +126,21 @@ pub fn PageUsePress() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use leptonic::{hooks::*, utils::data_attributes::flag};
+                        use leptos::{logging::log, prelude::*};
+
+                        let disabled = RwSignal::new(false);
+
                         let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
                             is_disabled: disabled.into(),
-                            on_press: Callback::new(move |e: PressEvent| log!("pressed with {:?}", e.pointer_type)),
+                            on_press: Some(Callback::new(move |e: PressEvent| log!("pressed with {:?}", e.pointer_type))),
                             ..Default::default()
                         });
+                        // `props` carries styles too (`touch-action`), which go on the element's `style`.
                         let (attrs, styles) = props.into_parts();
 
                         view! {
-                            <button {..attrs} style=styles>"Press me"</button>
+                            <button {..attrs} style=styles data-pressed=flag(is_pressed)>"Press me"</button>
                         }
                     "#)}
                 </Code>
@@ -147,8 +148,8 @@ pub fn PageUsePress() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "The event log shows every callback with the pointer type that caused it. Tab to the button and press "
-                    "Enter or Space to see keyboard presses."
+                    "The event log shows every callback with the pointer type that caused it. Move focus to the button with "
+                    <Keys keys="Tab"/>" and press "<Keys keys="Enter"/>" or "<Keys keys="Space"/>" to see keyboard presses."
                 </p>
 
                 <Demo description="Press, press start/end/up and double press events with an event log" source=include_str!("demos/press_basic.rs")>
@@ -159,8 +160,8 @@ pub fn PageUsePress() -> impl IntoView {
                     "Besides "<Code inline=true>"is_pressed"</Code>", the hook normalizes a lot of browser behavior for you: "
                     "presses that leave the element and come back still complete, screen reader clicks are detected as "
                     <Code inline=true>"Virtual"</Code>" presses, text selection is suppressed while pressing, and browser "
-                    "quirks (Safari not cancelling presses on drag, iOS pointer capture, stuck keys after Meta shortcuts on "
-                    "macOS) are handled."
+                    "quirks (Safari not cancelling presses on drag, iOS pointer capture, keys stuck after "<Keys keys="Meta"/>
+                    " shortcuts on macOS) are handled."
                 </p>
             </Section>
 
@@ -174,14 +175,14 @@ pub fn PageUsePress() -> impl IntoView {
                     <PressCancelDemo/>
                 </Demo>
 
-                <p>"With "<Code inline=true>"prevent_focus_on_press"</Code>", the button keeps focus where it was."</p>
+                <p>"With "<Code inline=true>"prevent_focus_on_press"</Code>", pressing the button leaves the focus where it was."</p>
 
                 <Demo description="A button that does not take focus when pressed" source=include_str!("demos/press_no_focus.rs")>
                     <PressNoFocusDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Long press">
+            <Section title="Long Press">
                 <p>
                     "Long press detection is part of "<Code inline=true>"use_press"</Code>". Set any of "
                     <Code inline=true>"on_long_press_start"</Code>", "<Code inline=true>"on_long_press"</Code>" or "
@@ -191,12 +192,17 @@ pub fn PageUsePress() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let (threshold, set_threshold) = signal(Duration::from_millis(500));
+                        use std::time::Duration;
+
+                        use leptonic::hooks::*;
+                        use leptos::prelude::*;
+
+                        let threshold = RwSignal::new(Duration::from_millis(800));
 
                         let UsePressReturn { props, .. } = use_press(UsePressInput {
-                            on_long_press: Some(Callback::new(|e: LongPressEvent| { /* ... */ })),
+                            on_long_press: Some(Callback::new(move |_: LongPressEvent| open_menu())),
                             long_press_threshold: Some(threshold.into()),
-                            long_press_accessibility_description: Some("Long press to open menu".into()),
+                            long_press_accessibility_description: "Long press to open the menu".into(),
                             ..Default::default()
                         });
                     "#)}

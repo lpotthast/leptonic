@@ -3,14 +3,16 @@ use std::collections::HashSet;
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
+    Out,
     hooks::{
         IntoAttrs, KeyboardActivation, Orientation, TabListData, TabListItemData, UseTabInput,
         UseTabListInput, UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn,
         collections::{CollectionMemo, Key},
         use_tab, use_tab_list, use_tab_list_state, use_tab_panel,
     },
-    utils::data_attributes::flag,
-    utils::{CapturedElement, ValueBinding, classes::Classes, styles::Styles},
+    utils::{
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+    },
 };
 
 /// The settings of a [`Tabs`] for its [`TabList`].
@@ -35,9 +37,12 @@ pub fn Tabs(
     /// is bound.
     #[prop(into, optional)]
     default_selected_key: Option<Key>,
-    /// The selected tab as app state (e.g. an `RwSignal<Key>`), replacing `default_selected_key`.
+    /// The selected tab (controlled): a value or any signal.
     #[prop(into, optional)]
-    selected_key: Option<ValueBinding<Key>>,
+    selected_key: Option<Signal<Key>>,
+    /// Receives the new state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected_key: Option<Out<Key>>,
     /// Called with the key of the tab the user selects.
     #[prop(into, optional)]
     on_selection_change: Option<Callback<Key>>,
@@ -53,6 +58,8 @@ pub fn Tabs(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let (selected_key, on_selection_change) =
+        ValueBinding::from_state_props(selected_key, set_selected_key, on_selection_change);
     let state = use_tab_list_state(UseTabListStateInput {
         default_selected_key,
         selected_key,

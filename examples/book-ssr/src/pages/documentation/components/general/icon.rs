@@ -2,19 +2,20 @@ use leptonic::{components::prelude::*, hooks::LinkTarget};
 use leptos::prelude::*;
 
 use super::demos::icon::IconDemo;
-use crate::kit::*;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageIcon() -> impl IntoView {
     view! {
-        <DocPage title="Icon">
+        <DocPage title="Icon Component">
             <p>
-                "The "<Code inline=true>"Icon"</Code>" component renders an SVG icon from the "
-                <LinkExt target=LinkTarget::_Blank href="https://crates.io/crates/icondata">"icondata"</LinkExt>
+                "Icons label actions and states with a small picture, e.g. in buttons, alerts and menus. The "
+                <Code inline=true>"Icon"</Code>" component renders an SVG icon from the "
+                <Link target=LinkTarget::Blank href="https://crates.io/crates/icondata">"icondata"</Link>
                 " crate. Its readme lists the available icon packages. You can browse all icons at "
-                <LinkExt target=LinkTarget::_Blank href="https://carlosted.github.io/icondata/">
+                <Link target=LinkTarget::Blank href="https://carlosted.github.io/icondata/">
                     "carlosted.github.io/icondata"
-                </LinkExt>"."
+                </Link>"."
             </p>
 
             <p>
@@ -22,7 +23,7 @@ pub fn PageIcon() -> impl IntoView {
                 ". The SVG data of every icon you use is embedded into your binary."
             </p>
 
-            <Demo description="Two folder icons" source=include_str!("demos/icon.rs")>
+            <Demo description="A decorative folder icon next to text and a labelled cloud icon" source=include_str!("demos/icon.rs")>
                 <IconDemo/>
             </Demo>
 
@@ -37,7 +38,11 @@ pub fn PageIcon() -> impl IntoView {
                     <ApiRow name="margin" ty="Option<Margin>" default="None">
                         "The margin around the icon, set as the "<Code inline=true>"--margin"</Code>" variable."
                     </ApiRow>
-                    <ApiRow name="aria_label" ty="Option<Oco<'static, str>>" default="None">"A label for the icon."</ApiRow>
+                    <ApiRow name="aria_label" ty="Option<Oco<'static, str>>" default="None">
+                        "Names the icon and makes it an image ("<Code inline=true>"role=\"img\""</Code>"). Without it, the "
+                        "icon is decorative and hidden from screen readers ("<Code inline=true>"aria-hidden"</Code>"), as "
+                        "it should be next to text or inside a button that has a name."
+                    </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Additional classes and styles."
                     </ApiRow>
@@ -47,7 +52,8 @@ pub fn PageIcon() -> impl IntoView {
             <Section title="Styling">
                 <p>
                     "The icon renders as a "<Code inline=true>"<span class=\"leptonic-icon\">"</Code>" containing the "
-                    <Code inline=true>"<svg>"</Code>". The default theme makes it 1rem wide and high."
+                    <Code inline=true>"<svg>"</Code>". The default theme makes it 1rem wide and high, and stretches the "
+                    <Code inline=true>"<svg>"</Code>" to that size."
                 </p>
                 <ul>
                     <li>
@@ -65,7 +71,9 @@ pub fn PageIcon() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><LinkExt target=LinkTarget::_Blank href="https://docs.rs/icondata">"icondata documentation"</LinkExt></li>
+                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
+                <li><Link href=routes::doc::Button.materialize()>"Button"</Link>" (icon-only buttons)"</li>
+                <li><Link target=LinkTarget::Blank href="https://docs.rs/icondata">"icondata documentation"</Link></li>
             </SeeAlso>
         </DocPage>
     }

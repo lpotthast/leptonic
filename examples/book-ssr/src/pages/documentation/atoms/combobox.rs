@@ -9,26 +9,50 @@ use crate::{kit::*, routes};
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomComboBox() -> impl IntoView {
     view! {
-        <DocPage title="Combobox atoms">
+        <DocPage title="Combobox Atoms">
             <p>
-                "The combobox atoms render an unstyled combobox with the behavior of the "
-                <Link href=routes::doc::combobox::Hook.materialize()>"combobox hooks"</Link>": "
-                <Code inline=true>"ComboBox"</Code>" holds the state, and you place its parts \u{2014} label, input, "
-                "button and popover \u{2014} where your design needs them. See the "
-                <Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link>" for concept guidance."
+                "The combobox atoms render an unstyled combobox whose parts you place where your design needs them. "
+                "See the "<Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link>" for concept guidance."
             </p>
 
             <Section title="Hooks Used">
-                <p>
-                    <Code inline=true>"ComboBox"</Code>" calls "
-                    <Link href=routes::doc::combobox::Hook.materialize()><Code inline=true>"use_combobox_state"</Code>" and "
-                    <Code inline=true>"use_combobox"</Code></Link>". The parts use "
-                    <Link href=routes::doc::text_field::Hook.materialize()>"use_text_field"</Link>" (the "<Code inline=true>"Input"</Code>"), "
-                    <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" (button), "
-                    <Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>" and "
-                    <Code inline=true>"use_overlay_position"</Code>" (popover), and the "
-                    <Link href=routes::doc::listbox::Hook.materialize()>"listbox hooks"</Link>" (options)."
-                </p>
+                <DocTable headers=&["Atom", "Hooks"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"ComboBox"</Code></TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-combobox-state", routes::doc::combobox::Hook.materialize())>"use_combobox_state"</Link>", "
+                            <Link href=format!("{}#use-combobox", routes::doc::combobox::Hook.materialize())>"use_combobox"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Input"</Code></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::text_field::Hook.materialize()>"use_text_field"</Link>", configured by "
+                            <Code inline=true>"use_combobox"</Code>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"ComboBoxButton"</Code></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>", configured by "
+                            <Code inline=true>"use_combobox"</Code>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"ComboBoxPopover"</Code></TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>", non-modal"
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"ListBox"</Code>" in the popover"</TableCell>
+                        <TableCell>
+                            <Link href=format!("{}#use-listbox", routes::doc::listbox::Hook.materialize())>"use_listbox"</Link>
+                            ", configured by "<Code inline=true>"use_combobox"</Code>"; its items use "
+                            <Link href=format!("{}#use-option", routes::doc::listbox::Hook.materialize())>"use_option"</Link>
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
             </Section>
 
             <Section title="Example">
@@ -41,8 +65,9 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::{combobox::*, field::Label, input::Input, listbox::{ListBox, ListBoxItems}},
-                            hooks::{collections::use_list_collection, use_contains_filter},
+                            hooks::{Key, use_contains_filter, use_list_collection},
                         };
+                        use leptos::prelude::*;
 
                         let fruits = use_list_collection(
                             Signal::stored(vec!["Apple", "Banana", "Cherry"]),
@@ -54,7 +79,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                             <ComboBox collection=fruits filter=use_contains_filter()>
                                 <Label>"Fruit"</Label>
                                 <Input/>
-                                <ComboBoxButton>"\u{25bc}"</ComboBoxButton>
+                                <ComboBoxButton><span aria-hidden="true">"▼"</span></ComboBoxButton>
                                 <ComboBoxPopover>
                                     <ListBox>
                                         <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
@@ -72,16 +97,13 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     ". Finland is disabled. The demo is styled through the data attributes listed below."
                 </p>
                 <p>
-                    "The selected country and the input text live in signals of the demo, bound with "
-                    <Code inline=true>"value"</Code>" ("<Code inline=true>"RwSignal<Vec<Key>>"</Code>") and "
-                    <Code inline=true>"input_value"</Code>" ("<Code inline=true>"RwSignal<String>"</Code>"): the combo box "
-                    "shows them, and typing and choosing write them. \u{201c}Ship to Sweden\u{201d} sets the value from the "
-                    "app, and the input follows with the country\u{2019}s name. Bind only "<Code inline=true>"value"</Code>
-                    " if you don\u{2019}t need the text. ""A signal pair "<Code inline=true>"(read, write)"</Code>" works as well, and "
-                    <Code inline=true>"ValueBinding::new(signal, callback)"</Code>" binds any other storage."
+                    "The selected country and the input text live in app state, passed as "<Code inline=true>"value"</Code>
+                    " / "<Code inline=true>"set_value"</Code>" and "<Code inline=true>"input_value"</Code>" / "
+                    <Code inline=true>"set_input_value"</Code>". \u{201c}Ship to Sweden\u{201d} sets the value from the app, "
+                    "and the input follows with the country\u{2019}s name."
                 </p>
                 <Demo
-                    description="Country combobox built from the atoms, styled through data attributes, with its value and input text bound to app state and a disabled toggle"
+                    description="Country combobox built from the atoms, styled through data attributes, with its value and input text controlled by app state and a disabled toggle"
                     source=include_str!("demos/combobox.rs")
                 >
                     <ComboBoxAtomDemo/>
@@ -94,12 +116,12 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     "which may contain any markup besides the parts."
                 </p>
                 <p>
-                    "Label it with a "<Link href=routes::doc::atoms::Field.materialize()>"Label"</Link>": a "
+                    "Label it with a "<Link href=routes::doc::field::Atom.materialize()>"Label"</Link>": a "
                     <Code inline=true>"<label>"</Code>" for the input, which also labels the button and the listbox. A "
                     <Code inline=true>"Description"</Code>" describes the input while it is rendered, and a "
                     <Code inline=true>"FieldError"</Code>" shows the validation errors while the combobox is invalid."
                 </p>
-                <Section title="Props">
+                <Section title="Props" id="combobox-props">
                     <ApiTable kind=ApiKind::Props of="ComboBox">
                         <ApiRow name="collection" ty="CollectionMemo">
                             "All options, from "<Code inline=true>"use_collection"</Code>" or "<Code inline=true>"use_list_collection"</Code>"."
@@ -110,8 +132,11 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="selection_mode" ty="SelectMode" default="Single">"One option or several."</ApiRow>
                         <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">"The initially selected keys."</ApiRow>
-                        <ApiRow name="value" ty="Option<ValueBinding<Vec<Key>>>" default="None">
-                            "The selected keys as app state (e.g. an "<Code inline=true>"RwSignal<Vec<Key>>"</Code>"), replacing "<Code inline=true>"default_value"</Code>"."
+                        <ApiRow name="value" ty="Option<Signal<Vec<Key>>>" default="None">
+                            "The selected keys (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
                             "Called with the selected keys when they change."
@@ -119,8 +144,11 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         <ApiRow name="default_input_value" ty="Option<String>" default="None">
                             "The initial input text. By default, the selected option\u{2019}s text."
                         </ApiRow>
-                        <ApiRow name="input_value" ty="Option<ValueBinding<String>>" default="None">
-                            "The input text as app state (e.g. an "<Code inline=true>"RwSignal<String>"</Code>"), replacing "<Code inline=true>"default_input_value"</Code>"."
+                        <ApiRow name="input_value" ty="Option<Signal<String>>" default="None">
+                            "The input text (controlled), replacing "<Code inline=true>"default_input_value"</Code>": a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_input_value" ty="Option<Out<String>>" default="None">
+                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_input_change" ty="Option<Callback<String>>" default="None">
                             "Called when the input text changes."
@@ -159,7 +187,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
-                            <Link href=routes::doc::atoms::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
+                            <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the wrapping "<Code inline=true>"<div>"</Code>"."
@@ -189,7 +217,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
                     "The button that opens and closes the popover. It is not in the tab order and doesn\u{2019}t take focus: "
                     "keyboard users open the popover with "<Keys keys="ArrowDown"/>" in the input."
                 </p>
-                <Section title="Props">
+                <Section title="Props" id="combobox-button-props">
                     <ApiTable kind=ApiKind::Props of="ComboBoxButton">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the "<Code inline=true>"<button>"</Code>"."
@@ -204,12 +232,13 @@ pub fn PageAtomComboBox() -> impl IntoView {
             <Section title="ComboBoxPopover">
                 <p>
                     "The popover with the options. It is rendered into the document body while open, positioned at the input "
-                    "and flipped when there is no room. It is non-modal: focus stays in the input. A click outside closes it."
+                    "and flipped when there is no room. It is non-modal: focus stays in the input, and the page stays "
+                    "usable. Focus leaving the combobox and scrolling the page close it."
                 </p>
-                <Section title="Props">
+                <Section title="Props" id="combobox-popover-props">
                     <ApiTable kind=ApiKind::Props of="ComboBoxPopover">
-                        <ApiRow name="placement_x" ty="Signal<PlacementX>" default="Left">"Horizontal placement relative to the input."</ApiRow>
-                        <ApiRow name="placement_y" ty="Signal<PlacementY>" default="Below">"Vertical placement relative to the input."</ApiRow>
+                        <ApiRow name="placement" ty="Signal<Placement>" default="BottomStart">"Where the popover goes relative to the input, see "<Link href=format!("{}#placements", routes::doc::overlay_behavior::UseOverlayPosition.materialize())>"Placements"</Link>"."</ApiRow>
+                        <ApiRow name="max_height" ty="Signal<Option<f64>>" default="None">"A maximum height; the room available limits it further."</ApiRow>
                         <ApiRow name="offset, cross_offset" ty="Signal<f64>" default="0.0">
                             "Distance from the input and shift along its edge, in pixels."
                         </ApiRow>
@@ -223,29 +252,15 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="ListBoxItems">
+            <Section title="Options">
                 <p>
-                    "Inside a "<Code inline=true>"ComboBoxPopover"</Code>", the "<Code inline=true>"ListBox"</Code>
-                    " atom takes its options and settings from the combobox; its own props are ignored apart from "
-                    <Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>". "
-                    <Code inline=true>"ListBoxItems"</Code>" renders one "<Code inline=true>"ListBoxItem"</Code>" per item of "
-                    "the listbox\u{2019}s collection as it currently is \u{2014} for a combobox, the options matching the input. "
-                    "Its children render the content of an item from its collection "<Code inline=true>"Node"</Code>" ("
-                    <Code inline=true>"let:node"</Code>")."
-                </p>
-                <Section title="Props">
-                    <ApiTable kind=ApiKind::Props of="ListBoxItems">
-                        <ApiRow name="children" ty="Fn(Node) -> impl IntoView">
-                            "Renders an item\u{2019}s content. The node has the item\u{2019}s "<Code inline=true>"key"</Code>" and "
-                            <Code inline=true>"text_value"</Code>"; look up richer data by the key."
-                        </ApiRow>
-                        <ApiRow name="classes" ty="Classes" default="empty">"Classes of each item."</ApiRow>
-                    </ApiTable>
-                </Section>
-                <p>
-                    "The content can use "<Code inline=true>"ListBoxItemLabel"</Code>" and "
-                    <Code inline=true>"ListBoxItemDescription"</Code>" for a label and a description that label and describe "
-                    "the option."
+                    "Inside a "<Code inline=true>"ComboBoxPopover"</Code>", the "
+                    <Link href=routes::doc::listbox::Atom.materialize()>"ListBox"</Link>" atom takes its options and settings "
+                    "from the combobox; its own props are ignored apart from "<Code inline=true>"classes"</Code>" and "
+                    <Code inline=true>"styles"</Code>". Render the options with "
+                    <Link href=format!("{}#listboxitems", routes::doc::listbox::Atom.materialize())>"ListBoxItems"</Link>
+                    ": it renders one "<Code inline=true>"ListBoxItem"</Code>" per item of the listbox\u{2019}s collection as "
+                    "it currently is \u{2014} for a combobox, the options matching the input."
                 </p>
             </Section>
 
@@ -282,8 +297,8 @@ pub fn PageAtomComboBox() -> impl IntoView {
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-input[data-focus-visible] { outline: 2px solid royalblue; }
-                        .my-option[data-focused] { background: #eef; }
+                        .my-input[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .my-option[data-focused] { background: var(--surface); }
                         .my-option[data-selected] { font-weight: bold; }
                         .my-option[data-disabled] { opacity: 0.5; }
                     ")}
@@ -297,7 +312,7 @@ pub fn PageAtomComboBox() -> impl IntoView {
             <Section title="Composition">
                 <p>
                     "The parts find the combobox through the "<Code inline=true>"ComboBoxCtx"</Code>" context. Your own "
-                    "components inside "<Code inline=true>"ComboBox"</Code>" can read it too, e.g. to show a hint while "
+                    "Leptos components inside "<Code inline=true>"ComboBox"</Code>" can read it too, e.g. to show a hint while "
                     "the text matches no selection:"
                 </p>
                 <Code language=Language::Rust>
@@ -322,9 +337,9 @@ pub fn PageAtomComboBox() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
-                <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox hooks"</Link></li>
-                <li><Link href=routes::doc::Listbox.materialize()>"Listbox concept"</Link></li>
-                <li><Link href=routes::doc::atoms::Field.materialize()>"Field atoms"</Link></li>
+                <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></li>
+                <li><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></li>
+                <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>
         </DocPage>
     }
