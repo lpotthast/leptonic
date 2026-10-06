@@ -7,8 +7,9 @@ use super::locale::WritingDirection;
 
 /// Locale information for internationalization.
 ///
-/// Wraps an `icu_locale::Locale` internally for proper locale-aware operations
-/// while maintaining a simple string-based public API.
+/// Wraps an `icu_locale::Locale`. Create one from a literal checked at compile time
+/// (`Locale::from(locale!("de-DE"))`, with the re-exported [`locale!`] macro) or parse a runtime
+/// string (`"de-DE".parse::<Locale>()?`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Locale {
     /// The parsed ICU locale.
@@ -27,33 +28,43 @@ impl Default for Locale {
     }
 }
 
-impl Locale {
-    /// Creates a new Locale with the given locale string.
-    /// Automatically determines the writing direction based on the locale.
-    /// Falls back to en-US if the locale string cannot be parsed.
-    #[must_use]
-    pub fn new(locale: impl AsRef<str>) -> Self {
-        let locale_str = locale.as_ref();
-        let inner = locale_str
-            .parse::<icu_locale::Locale>()
-            .unwrap_or(icu_locale::locale!("en-US"));
+/// ICU's `locale!` macro: a [`Locale`] literal checked at compile time.
+pub use icu_locale::locale;
+
+impl From<icu_locale::Locale> for Locale {
+    fn from(inner: icu_locale::Locale) -> Self {
         let direction = Self::direction_for_icu_locale(&inner);
         Self { inner, direction }
     }
+}
 
+/// A string that isn't a valid BCP 47 locale.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InvalidLocale(pub String);
+
+impl std::fmt::Display for InvalidLocale {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "invalid locale: {:?}", self.0)
+    }
+}
+
+impl std::error::Error for InvalidLocale {}
+
+impl std::str::FromStr for Locale {
+    type Err = InvalidLocale;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse::<icu_locale::Locale>()
+            .map(Self::from)
+            .map_err(|_| InvalidLocale(s.to_owned()))
+    }
+}
+
+impl Locale {
     /// Returns the BCP 47 locale string (e.g., "en-US", "de-DE").
     #[must_use]
     pub fn locale_str(&self) -> String {
         self.inner.to_string()
-    }
-
-    /// Determines the writing direction for a locale string.
-    #[must_use]
-    pub fn direction_for_locale(locale: &str) -> WritingDirection {
-        match locale.parse::<icu_locale::Locale>() {
-            Ok(parsed) => Self::direction_for_icu_locale(&parsed),
-            Err(_) => WritingDirection::Ltr,
-        }
     }
 
     /// Determines the writing direction from a parsed ICU locale.
@@ -142,7 +153,7 @@ impl I18nContext {
 ///
 /// ```ignore
 /// view! {
-///     <I18nProvider locale=Locale::new("de-DE")>
+///     <I18nProvider locale=Locale::from(locale!("de-DE"))>
 ///         // Components can use use_locale() to access locale info
 ///     </I18nProvider>
 /// }
@@ -170,28 +181,23 @@ pub fn I18nProvider(
     children()
 }
 
-/// Returns the current I18n context.
-///
-/// # Panics
-///
-/// Panics if called outside of an `I18nProvider`.
+/// The I18n context (to read or change the locale), if within an `I18nProvider`.
 #[must_use]
-pub fn use_locale() -> I18nContext {
-    use_context::<I18nContext>().expect("use_locale must be used within an I18nProvider")
-}
-
-/// Returns the current I18n context, or `None` if not within a provider.
-#[must_use]
-pub fn try_use_locale() -> Option<I18nContext> {
+pub fn use_i18n() -> Option<I18nContext> {
     use_context::<I18nContext>()
 }
 
-/// Returns the current locale, with a fallback to default if not in a provider.
+/// The current locale (reactive); the default locale outside of an `I18nProvider`.
 #[must_use]
-pub fn use_locale_or_default() -> Locale {
-    try_use_locale()
-        .map(|ctx| ctx.get_locale())
-        .unwrap_or_default()
+pub fn use_locale() -> Signal<Locale> {
+    use_i18n().map_or_else(|| Signal::stored(Locale::default()), |ctx| ctx.locale)
+}
+
+/// The current writing direction as a signal (left-to-right outside of an `I18nProvider`).
+#[must_use]
+pub fn use_direction() -> Signal<WritingDirection> {
+    let locale = use_locale();
+    Signal::derive(move || locale.with(|l| l.direction))
 }
 
 #[cfg(test)]
@@ -209,21 +215,21 @@ mod tests {
 
     #[test]
     fn test_locale_new() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         assert_that!(locale.locale_str()).is_equal_to("de-DE".to_string());
         assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_rtl() {
-        let locale = Locale::new("ar-SA");
+        let locale = Locale::from(locale!("ar-SA"));
         assert_that!(locale.direction).is_equal_to(WritingDirection::Rtl);
         assert_that!(locale.is_rtl()).is_true();
     }
 
     #[test]
     fn test_locale_language() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         assert_that!(locale.language()).is_equal_to("en".to_string());
         assert_that!(locale.region())
             .get_some()
@@ -231,41 +237,34 @@ mod tests {
     }
 
     #[test]
-    fn test_direction_for_locale() {
-        assert_that!(Locale::direction_for_locale("ar")).is_equal_to(WritingDirection::Rtl);
-        assert_that!(Locale::direction_for_locale("he-IL")).is_equal_to(WritingDirection::Rtl);
-        assert_that!(Locale::direction_for_locale("en")).is_equal_to(WritingDirection::Ltr);
-        assert_that!(Locale::direction_for_locale("ja-JP")).is_equal_to(WritingDirection::Ltr);
-    }
-
-    #[test]
     fn test_locale_rtl_via_script_detection() {
         // These should all be detected as RTL via script-based detection
-        assert_that!(Locale::new("fa").is_rtl()).is_true(); // Persian/Farsi (Arab script)
-        assert_that!(Locale::new("ur").is_rtl()).is_true(); // Urdu (Arab script)
-        assert_that!(Locale::new("he").is_rtl()).is_true(); // Hebrew (Hebr script)
-        assert_that!(Locale::new("ps").is_rtl()).is_true(); // Pashto (Arab script)
-        assert_that!(Locale::new("yi").is_rtl()).is_true(); // Yiddish (Hebr script)
+        assert_that!(Locale::from(locale!("fa")).is_rtl()).is_true(); // Persian/Farsi (Arab script)
+        assert_that!(Locale::from(locale!("ur")).is_rtl()).is_true(); // Urdu (Arab script)
+        assert_that!(Locale::from(locale!("he")).is_rtl()).is_true(); // Hebrew (Hebr script)
+        assert_that!(Locale::from(locale!("ps")).is_rtl()).is_true(); // Pashto (Arab script)
+        assert_that!(Locale::from(locale!("yi")).is_rtl()).is_true(); // Yiddish (Hebr script)
     }
 
     #[test]
     fn test_locale_ltr_scripts() {
-        assert_that!(Locale::new("zh-CN").is_rtl()).is_false(); // Chinese
-        assert_that!(Locale::new("ko-KR").is_rtl()).is_false(); // Korean
-        assert_that!(Locale::new("hi-IN").is_rtl()).is_false(); // Hindi (Devanagari)
-        assert_that!(Locale::new("th").is_rtl()).is_false(); // Thai
+        assert_that!(Locale::from(locale!("zh-CN")).is_rtl()).is_false(); // Chinese
+        assert_that!(Locale::from(locale!("ko-KR")).is_rtl()).is_false(); // Korean
+        assert_that!(Locale::from(locale!("hi-IN")).is_rtl()).is_false(); // Hindi (Devanagari)
+        assert_that!(Locale::from(locale!("th")).is_rtl()).is_false(); // Thai
     }
 
     #[test]
-    fn test_invalid_locale_falls_back() {
-        let locale = Locale::new("not-a-real-locale");
-        // Should fall back to en-US
-        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
+    fn test_invalid_locale() {
+        assert_that!("".parse::<Locale>().is_err()).is_true();
+        assert_that!("-".parse::<Locale>().is_err()).is_true();
+        assert_that!("de-DE".parse::<Locale>().map(|l| l.locale_str()))
+            .is_equal_to(Ok("de-DE".to_owned()));
     }
 
     #[test]
     fn test_icu_locale_accessor() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         let icu = locale.icu_locale();
         assert_that!(icu.to_string()).is_equal_to("de-DE".to_string());
     }

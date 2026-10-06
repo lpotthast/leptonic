@@ -1,5 +1,4 @@
-// Upstream: react-aria/src/dialog/useDialog.ts @ 6f664fe911
-use crate::utils::id::use_id;
+// Upstream: react-aria/src/dialog/useDialog.ts @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -15,72 +14,30 @@ use crate::{
         EventHandler,
         aria::AriaRole,
         element_capture::{CapturedElement, ElementCaptureAttr},
+        id::use_id,
+        slot_id::{SlotProps, use_slot},
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dialog/useDialog.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The title and content elements are slots (`SlotProps`, spread onto the elements): the dialog
+//   references them only while they are rendered (react-aria: `useSlotId`).
+// - The dialog element is captured from `dialog_props` instead of passing a ref.
+// - `is_entering` is a signal: focusing waits until it is `false`.
+// - `fallback_aria_labelledby` names a dialog without title or label: react-aria-components labels
+//   a `DialogTrigger`'s dialog by the trigger in the component, which our hook can't tell apart
+//   from the `aria_labelledby` prop (which wins over the title).
 //
 // ## DIFFERENT BEHAVIOR
+// - `useOverlayFocusContain`: focus containment is the `FocusScope` (atom `ModalContent`) the
+//   consumer renders around the dialog.
+// - The missing-title warning runs once after mount (`dev_warn!`), when the slots are known.
 //
-// - aria-modal
-//   React-aria does NOT set `aria-modal` on the dialog element due to a Safari
-//   iframe bug (https://bugs.webkit.org/show_bug.cgi?id=211934). Instead, it
-//   relies on `useModal` setting `aria-hidden` on all elements outside the dialog.
-//   In Leptonic, `aria-modal` is set by `use_modal` rather than `use_dialog`,
-//   and we use `aria-modal` directly rather than the `aria-hidden` approach.
-//
-// - Escape key / dismiss handling
-//   React-aria's `useDialog` does NOT handle Escape key or any dismiss behavior.
-//   Dismissal is handled by `useOverlay` / `useModalOverlay`. In Leptonic,
-//   this is handled by `use_modal_backdrop` (which delegates to `use_overlay`).
-//
-// - useOverlayFocusContain
-//   React-aria calls `useOverlayFocusContain()` to signal to the parent `Overlay`
-//   component that focus should be contained. In Leptonic, focus containment is
-//   handled by the `FocusScope` atom which is applied by the consumer.
-//
-// - description_props
-//   React-aria does not return separate description props. `aria-describedby` is
-//   passed through via `filterDOMProps`. We return `description_props` for
-//   convenience, making it easier to wire up the description element's ID.
-//
-// - Element capture
-//   React-aria takes a `RefObject` for the dialog element. We use the
-//   `CapturedElement` / `ElementCaptureAttr` pattern instead, which captures
-//   the element automatically when `dialog_props` are spread onto the element.
-//
-
-/// Input parameters for the `use_dialog` hook.
-///
-/// This hook handles ARIA semantics (role, labeling) and focus management.
-/// For dismiss behavior (Escape key, outside click), use `use_modal_backdrop`.
-/// For `aria-modal`, use `use_modal`. Compose all three for a fully accessible
-/// modal dialog.
-#[derive(Debug, Clone)]
-pub struct UseDialogInput {
-    /// The title of the dialog (for `aria-labelledby`).
-    ///
-    /// When set, a unique ID is generated and returned in `title_props.id`.
-    /// Use this ID on the title element to create the ARIA association.
-    pub title: Option<String>,
-
-    /// A description of the dialog (for `aria-describedby`).
-    ///
-    /// When set, a unique ID is generated and returned in `description_props.id`.
-    /// Use this ID on the description element to create the ARIA association.
-    pub description: Option<String>,
-
-    /// An accessible label for the dialog.
-    ///
-    /// When set, `aria-labelledby` is suppressed (the caller should set
-    /// `aria-label` on the element directly). This is useful when the dialog
-    /// has no visible title element.
-    pub aria_label: Option<String>,
-
-    /// The role of the dialog.
-    pub role: DialogRole,
-}
+// =============================================================================
 
 /// The role of a dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -92,36 +49,45 @@ pub enum DialogRole {
     AlertDialog,
 }
 
-/// The return value of the `use_dialog` hook.
-pub struct UseDialogReturn {
-    /// Props for the dialog container element.
-    ///
-    /// Call `.into_attrs()` to get spreadable attributes.
-    /// The element is automatically captured for focus-on-mount behavior
-    /// via an included [`ElementCaptureAttr`].
-    pub dialog_props: UseDialogProps,
-
-    /// Props for the title element.
-    pub title_props: UseDialogTitleProps,
-
-    /// Props for the description element.
-    pub description_props: UseDialogDescriptionProps,
-
-    /// The ID of the dialog.
-    pub dialog_id: String,
+/// Input of [`use_dialog`].
+#[derive(Debug, Clone, Default)]
+pub struct UseDialogInput {
+    pub role: DialogRole,
+    /// Names the dialog when it has no title element. Replaces the title as its name.
+    pub aria_label: MaybeProp<String>,
+    /// The ids of the elements naming the dialog, instead of its title element.
+    pub aria_labelledby: Option<String>,
+    /// The ids of the elements describing the dialog. Default for alert dialogs: their content
+    /// element.
+    pub aria_describedby: Option<String>,
+    /// Whether the dialog is still animating in; it is focused once this is `false`.
+    pub is_entering: Signal<bool>,
+    /// The ids of the elements naming the dialog when it has neither a title element, nor
+    /// `aria_label` or `aria_labelledby` (the trigger that opened it).
+    pub fallback_aria_labelledby: Signal<Option<String>>,
 }
 
-/// Props from `use_dialog` that can be extracted and merged programmatically.
-///
-/// Call `.into_attrs()` to produce spreadable [`UseDialogAttrs`].
+/// The return value of [`use_dialog`].
+pub struct UseDialogReturn {
+    /// Props for the dialog element (captures it for focusing on mount).
+    pub dialog_props: UseDialogProps,
+    /// Props for the title element (a heading), which names the dialog while it is rendered.
+    pub title_props: SlotProps,
+    /// Props for the content element, which describes an alert dialog while it is rendered.
+    pub content_props: SlotProps,
+}
+
+/// Props for the dialog element.
 #[derive(Debug)]
 pub struct UseDialogProps {
     pub id: String,
     pub role: AriaRole,
-    pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
     pub tabindex: &'static str,
-    pub on_blur: EventHandler<FocusEvent>,
+    /// Stops focus leaving during the iOS refocus workaround from reaching parent overlays.
+    pub on_focusout: EventHandler<FocusEvent>,
     pub element_capture: ElementCaptureAttr,
 }
 
@@ -132,134 +98,86 @@ impl IntoAttrs for UseDialogProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::Tabindex, self.tabindex),
-            self.on_blur.into_on(ev::blur),
+            self.on_focusout.into_on(ev::focusout),
             self.element_capture,
         )
     }
 }
 
-/// Attributes for the dialog container element.
-///
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+/// Attributes for the dialog element.
 pub type UseDialogAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::Tabindex, &'static str>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     ElementCaptureAttr,
 );
 
-/// Props for the dialog title element.
-#[derive(Debug)]
-pub struct UseDialogTitleProps {
-    /// The id of the title element.
-    pub id: String,
-}
-
-impl IntoAttrs for UseDialogTitleProps {
-    type Attrs = UseDialogTitleAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id),)
-    }
-}
-
-/// Attributes for the dialog title element.
+/// Provides the behavior and accessibility implementation for a dialog: its role, its name (the
+/// title element, or `aria_label`), its description (an alert dialog's content), and focusing it
+/// on mount.
 ///
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UseDialogTitleAttrs = (Attr<attr::Id, String>,);
-
-/// Props for the dialog description element.
-#[derive(Debug)]
-pub struct UseDialogDescriptionProps {
-    /// The id of the description element.
-    pub id: String,
-}
-
-impl IntoAttrs for UseDialogDescriptionProps {
-    type Attrs = UseDialogDescriptionAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id),)
-    }
-}
-
-/// Attributes for the dialog description element.
-///
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UseDialogDescriptionAttrs = (Attr<attr::Id, String>,);
-
-/// Provides the behavior and accessibility implementation for a dialog.
-///
-/// A dialog is a window overlaid on either the primary window or another dialog.
-/// Content outside the dialog is inert, meaning users cannot interact with it.
-///
-/// This hook handles:
-/// - ARIA role (`dialog` or `alertdialog`)
-/// - ARIA labeling (`aria-labelledby`, `aria-describedby`)
-/// - Focus on mount (focuses the dialog unless a child already has focus)
-/// - iOS Safari `VoiceOver` workaround (blur/refocus after 500ms)
-///
-/// The dialog element is captured automatically when `dialog_props` are spread
-/// onto it — no manual `NodeRef` wiring required.
-///
-/// For dismiss behavior (Escape key, outside click), use `use_modal_backdrop`.
-/// For `aria-modal`, use `use_modal`. Compose all three for a fully accessible
-/// modal dialog.
-///
-/// # Example
+/// Dismissing (Escape, outside clicks) is `use_modal_backdrop`'s job, containing focus the
+/// `FocusScope`'s.
 ///
 /// ```ignore
 /// let dialog = use_dialog(UseDialogInput {
-///     title: Some("Confirm Action".to_string()),
-///     description: Some("Are you sure you want to proceed?".to_string()),
-///     aria_label: None,
-///     role: DialogRole::Dialog,
+///     role: DialogRole::AlertDialog,
+///     ..UseDialogInput::default()
 /// });
 ///
 /// view! {
-///     <div {..dialog.dialog_props.into_attrs()}>
-///         <h2 id=dialog.title_props.id>"Confirm Action"</h2>
-///         <p id=dialog.description_props.id>"Are you sure you want to proceed?"</p>
-///         <button>"Cancel"</button>
-///         <button>"Confirm"</button>
-///     </div>
+///     <section {..dialog.dialog_props.into_attrs()}>
+///         <h2 {..dialog.title_props.into_attrs()}>"Delete file?"</h2>
+///         <p {..dialog.content_props.into_attrs()}>"It is deleted permanently."</p>
+///         <button>"Delete"</button>
+///     </section>
 /// }
 /// ```
-#[allow(clippy::needless_pass_by_value)]
 pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     let UseDialogInput {
-        title,
-        description,
-        aria_label,
         role: dialog_role,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        is_entering,
+        fallback_aria_labelledby,
     } = input;
 
-    let base_id = use_id("dialog");
-    let dialog_id = format!("dialog-{base_id}");
-    let title_id = format!("dialog-title-{base_id}");
-    let description_id = format!("dialog-description-{base_id}");
+    let dialog_id = use_id("dialog");
+    let title = use_slot("dialog-title");
+    let content = use_slot("dialog-content");
 
-    // If aria-label is provided, suppress aria-labelledby (the caller sets
-    // aria-label on the element directly). Otherwise, link to the title element.
-    let aria_labelledby = if aria_label.is_some() {
-        None
-    } else if title.is_some() {
-        Some(title_id.clone())
-    } else {
-        None
-    };
+    // The title names the dialog, unless `aria_label` does.
+    let title_id = title.referenced_id;
+    let aria_labelledby = Signal::derive(move || {
+        aria_labelledby.clone().or_else(|| {
+            aria_label
+                .read()
+                .is_none()
+                .then(|| title_id.get().or_else(|| fallback_aria_labelledby.get()))
+                .flatten()
+        })
+    });
+    // An alert dialog is described by its content.
+    let content_id = content.referenced_id;
+    let aria_describedby = Signal::derive(move || {
+        aria_describedby.clone().or_else(|| {
+            (dialog_role == DialogRole::AlertDialog)
+                .then(|| content_id.get())
+                .flatten()
+        })
+    });
 
-    let aria_describedby = if description.is_some() {
-        Some(description_id.clone())
-    } else {
-        None
-    };
+    #[cfg(feature = "ssr")]
+    let _ = is_entering;
 
     let role = match dialog_role {
         DialogRole::Dialog => AriaRole::Dialog,
@@ -274,20 +192,24 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     // Capture the dialog element for focus-on-mount behavior.
     let element = CapturedElement::new();
 
-    // Focus the dialog on mount, unless a child element is already focused.
-    // This mirrors react-aria's useEffect in useDialog.
+    // Focus the dialog on mount (or once it has entered), unless a child element is already
+    // focused. This mirrors react-aria's useEffect in useDialog.
     Effect::new(move |_| {
         #[cfg(not(feature = "ssr"))]
-        if let Some(el) = element.get() {
+        if !is_entering.get()
+            && let Some(el) = element.get()
+        {
             use crate::utils::focus::focus_safely;
 
             let el: &web_sys::Element = &el;
 
             // Check if the dialog already contains the active element.
-            let already_focused = web_sys::window()
-                .and_then(|w| w.document())
-                .and_then(|d| d.active_element())
-                .is_some_and(|active| el.contains(Some(&active)));
+            let active_element = || {
+                leptos_use::use_document()
+                    .as_ref()
+                    .and_then(web_sys::Document::active_element)
+            };
+            let already_focused = active_element().is_some_and(|active| el.contains(Some(&active)));
 
             if !already_focused {
                 focus_safely(el);
@@ -296,20 +218,15 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
                 // or announce that it has opened until it has rendered. A workaround
                 // is to wait for half a second, then blur and re-focus the dialog.
                 let el_clone = el.clone();
-                set_timeout(
+                let timeout = set_timeout_with_handle(
                     move || {
                         // Check that the dialog is still focused, or focus was lost to body.
-                        let current_active = web_sys::window()
-                            .and_then(|w| w.document())
-                            .and_then(|d| d.active_element());
-                        let body = web_sys::window()
-                            .and_then(|w| w.document())
-                            .and_then(|d| d.body())
-                            .map(web_sys::Element::from);
-
-                        let is_still_focused = current_active
+                        let body = leptos_use::use_document()
                             .as_ref()
-                            .is_some_and(|a| *a == el_clone || body.as_ref() == Some(a));
+                            .and_then(web_sys::Document::body)
+                            .map(web_sys::Element::from);
+                        let is_still_focused = active_element()
+                            .is_some_and(|a| a == el_clone || body.as_ref() == Some(&a));
 
                         if is_still_focused {
                             is_refocusing.set_value(true);
@@ -324,6 +241,10 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
                     },
                     std::time::Duration::from_millis(500),
                 );
+                // As react-aria's effect cleanup: a closed dialog must not be refocused.
+                if let Ok(timeout) = timeout {
+                    on_cleanup(move || timeout.clear());
+                }
             }
         }
     });
@@ -331,23 +252,47 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     // Prevent blur events from reaching parent overlays (e.g., useOverlay)
     // during the iOS Safari VoiceOver refocus workaround.
     let handle_blur = move |e: FocusEvent| {
-        if is_refocusing.get_value() {
+        // Removing the focused dialog fires a blur after its owner was disposed; a disposed
+        // dialog isn't refocusing.
+        if is_refocusing.try_get_value().unwrap_or(false) {
             e.stop_propagation();
         }
     };
 
+    // A dialog needs a name. Checked once after mount, when the title slot is known.
+    #[cfg(debug_assertions)]
+    Effect::new(move |warned: Option<bool>| {
+        if warned == Some(true) {
+            return true;
+        }
+        let Some(el) = element.get() else {
+            return false;
+        };
+        let named = el.has_attribute("aria-label") || el.has_attribute("aria-labelledby");
+        if !named
+            && aria_label.get_untracked().is_none()
+            && aria_labelledby.get_untracked().is_none()
+        {
+            crate::utils::dev_warn!(
+                "A dialog must have a title for accessibility: render a title element with \
+                 `title_props` (the `DialogTitle` atom), or set `aria_label` or `aria_labelledby`."
+            );
+        }
+        true
+    });
+
     UseDialogReturn {
         dialog_props: UseDialogProps {
-            id: dialog_id.clone(),
+            id: dialog_id,
             role,
+            aria_label,
             aria_labelledby,
             aria_describedby,
             tabindex: "-1",
-            on_blur: EventHandler::new(handle_blur),
+            on_focusout: EventHandler::new(handle_blur),
             element_capture: element.attr(),
         },
-        title_props: UseDialogTitleProps { id: title_id },
-        description_props: UseDialogDescriptionProps { id: description_id },
-        dialog_id,
+        title_props: title.props,
+        content_props: content.props,
     }
 }

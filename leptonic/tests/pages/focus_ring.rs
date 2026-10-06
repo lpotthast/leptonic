@@ -1,4 +1,4 @@
-use browser_test::thirtyfour::{TypingData, WebDriver, prelude::*};
+use browser_test::thirtyfour::{WebDriver, prelude::*};
 use rootcause::Report;
 
 use crate::pages::BaseActions;
@@ -92,12 +92,6 @@ impl FocusRingPage<'_> {
     pub async fn read_within_is_focused(&self) -> Result<bool, Report> {
         let text = self.read_text_of("test-fr-within-is-focused").await?;
         Ok(text.trim() == "true")
-    }
-
-    pub async fn send_key_to_active(&self, key: impl Into<TypingData>) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(key).await?;
-        Ok(())
     }
 
     // ---- Disabled section ----

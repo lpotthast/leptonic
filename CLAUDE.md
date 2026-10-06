@@ -9,6 +9,12 @@ components with theming capabilities, built on a layered architecture of hooks, 
 
 ## Code Quality Principles
 
+- **Rust-native APIs**: Port react-aria's behavior faithfully, but never copy API shapes that are alien to Rust
+  (stringly-typed values, `string | number` unions, runtime-parsed specs, controlled/uncontrolled prop pairs, props
+  objects merged at runtime). Adapt them to idiomatic Rust/Leptos APIs (enums, newtypes, traits, typed builders,
+  `Default` + struct update syntax, signals) and document the adaptation as an `API DIFFERENCES` deviation. Use
+  generics (or trait objects) wherever they make an API more capable or better typed (e.g. a number field generic over
+  its value type instead of JS's `number`).
 - **No workarounds**: Do not use temporary workarounds instead of fixing real underlying issues. Always address the root
   cause.
 - **Long-term solutions**: Prefer maintainable, long-term solutions over quick fixes that accumulate technical debt.
@@ -24,6 +30,34 @@ components with theming capabilities, built on a layered architecture of hooks, 
 - **Event propagation**: Leptonic events stop propagation by default. User handlers call `continue_propagation()` to
   opt in to bubbling. Implemented via the sealed `Propagation` trait and `PropagationControl` from
   `utils/propagation_control.rs`. All user-facing event types must implement `Propagation`.
+
+## Working in Parallel
+
+Several agent sessions work in this repository at the same time, each owning one area:
+
+- **Library** (`leptonic/`, `leptonic-theme/`, `testing/`): roadmap and API conventions in `PLAN.md`; conventions
+  also in `documentation/hooks-implementation.md` ("API Conventions").
+- **Book** (`examples/book-ssr/`): todos in `PLAN.md` (section "Book"); page structure, kit and writing rules in
+  `documentation/documentation-strategy.md`; look, design tokens and which leptonic piece to use in
+  `examples/book-ssr/STYLE_GUIDE.md`.
+
+Rules for every agent:
+
+- **Central todos.** Open work lives only in the root `PLAN.md`, never in scratch files, private notes or other plan
+  files. A finding about another area goes into that area's part of `PLAN.md` (or to its owner, who records it
+  there).
+- **Stay in your area.** When a library change breaks the book build, make only minimal compile fixes in book files
+  and leave page texts to the book session (and tell it what changed).
+- **The tree always compiles.** The user runs `just serve` on the shared working tree. Write files completely, wire
+  them in only once they compile, and fix errors immediately.
+- **Hands off the git index.** Don't run `git add`, `git mv`, `git rm`, `git reset` or `git restore --staged` unless
+  the user asks for a commit; rename and delete files with plain `mv`/`rm`. The index is shared state.
+- **Build against the live sources, in the shared agent target dirs.** Never build against a frozen copy of the
+  library. Don't use the user's target dirs (contention) and don't create your own: all agents share one per project,
+  `CARGO_TARGET_DIR=<repo>/target/agents` (leptonic, leptonic-theme), `<repo>/examples/book-ssr/target/agents` and
+  `<repo>/testing/test-app/target/agents` (absolute paths; inside the app, so leptonic's build script finds it). Builds
+  of a whole dependency tree cost gigabytes per directory. Prefer `cargo check` where you don't need a build. All
+  builds use the same rustflags (repository `.cargo/config.toml`), so artifacts are shared; don't set `RUSTFLAGS`.
 
 ## Build Commands
 
@@ -143,6 +177,14 @@ The `examples/book-ssr/` directory contains the primary documentation site for l
 manual testing during development. It is named "book" following Rust ecosystem convention (like "The Rust Book").
 
 - **Running**: `just serve` (or `cd examples/book-ssr && cargo leptos serve`). Available at `https://127.0.0.1:4100`.
+  `just book-serve-isolated [port]` serves a second instance (default port 4300) with its own target directory.
+- **Tests**: unit tests (`cargo test --features ssr --lib`, including `kit::api_check`, which compares every API table
+  with the library source) and browser tests (`just book-browser-test`, `examples/book-ssr/tests/`): every page loads
+  without errors, demos are readable in the dark theme, internal links and anchors resolve, pages fit a 390px screen,
+  and the Markdown export lists every page. `BOOK_TEST_PAGES=<text>` limits them to matching pages.
+- **Built with leptonic**: the book uses leptonic for everything leptonic provides (buttons, links, dialogs,
+  disclosures, toggles, tables, keys, ...); its own widgets are compositions of leptonic hooks and atoms. Library
+  gaps are fixed in the library, never worked around in the book. See `examples/book-ssr/STYLE_GUIDE.md`.
 - **Quality bar**: Must always compile and have zero clippy lints (checked with `clippy::all` and `clippy::pedantic` via
   `[lints.clippy]` in its `Cargo.toml`).
 - **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
@@ -150,7 +192,8 @@ manual testing during development. It is named "book" following Rust ecosystem c
 - **Page structure**: Pages live in `src/pages/documentation/`, organized by layer (`hooks/`, `atoms/`, `components/`)
   and by concept (`concepts/`, `domains/`). The concept-based organization groups related hooks/atoms/components under
   a single concept page (e.g., Button, Slider) while domain pages group behavioral hook families (e.g., Interactions,
-  Focus). See `documentation/documentation-strategy.md` for the full page type taxonomy.
+  Focus). Pages are written with the page kit in `src/kit/`; `src/nav.rs` defines the navigation. See
+  `documentation/documentation-strategy.md` for page types, the kit and writing guidelines.
 - **When adding or modifying hooks, atoms, or components**: The corresponding book-ssr documentation page should be
   updated or created to demonstrate the change.
 
@@ -161,7 +204,7 @@ Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `componen
 - `hooks` - Low-level interaction hooks
 - `atoms` - Headless base components (requires hooks)
 - `components` - Full pre-built components (requires atoms)
-- `clipboard` - Clipboard support (requires `web_sys_unstable_apis` rustflag)
+- `clipboard` - Clipboard support
 - `tiptap` - Rich text editor integration (build script copies tiptap JS into the consuming app)
 - `syntax-highlight` (syntect) / `sanitize` (ammonia) - Optional component extras
 - `ssr` / `hydrate` - Server-side rendering support
@@ -184,7 +227,8 @@ Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `componen
 rustflags = ["--cfg=web_sys_unstable_apis"]
 ```
 
-This is required for leptos-use functions.
+Leptonic is written against web-sys' unstable signatures (e.g. `Element::scroll_top()` returning `f64`), so this flag
+is required to build it, not only for leptos-use functions.
 
 **Build script metadata** (in consuming app's Cargo.toml):
 
@@ -193,6 +237,10 @@ This is required for leptos-use functions.
 style-dir = "style/leptonic"   # Where to output generated SCSS
 js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 ```
+
+The build script finds that `Cargo.toml` by walking up from `OUT_DIR`. A `CARGO_TARGET_DIR` inside the app (e.g.
+`examples/book-ssr/target/<name>`) works as is; one elsewhere needs `LEPTONIC_APP_DIR=<app dir>`, otherwise the
+theme is silently not regenerated.
 
 ## Workspace Structure
 
@@ -214,7 +262,8 @@ When generating tests, use the `assertr` library for assertions instead of stand
 
 Browser tests live in `leptonic/tests/` and drive the test-app in `testing/test-app/`. They use `leptos-browser-test`
 (starts `cargo leptos serve` on a random port) and `browser-test` (Chrome for Testing + chromedriver, one fresh
-WebDriver session per test, `thirtyfour` re-exported as `browser_test::thirtyfour`).
+WebDriver session per test, 4 tests in parallel by default, `thirtyfour` re-exported as `browser_test::thirtyfour`).
+Tests must not depend on each other or on shared server state; checks of the whole run go into `ui_tests::after_all()`.
 
 - **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks,components}/`
   and is registered in `FIXTURES` (`testing/test-app/src/pages/mod.rs`). It is served at `/{group}/{name}`.
@@ -229,6 +278,9 @@ WebDriver session per test, `thirtyfour` re-exported as `browser_test::thirtyfou
   `wait_for_active_text`) instead of fixed sleeps; focus and state often change in effects after the event.
 - **Find elements as users do**: by role and text (`by_role_and_text`, `css("[role=listbox]")`). Atoms generate
   their own ids.
+- **Derive tests from react-aria**: react-aria's own tests (`../react-spectrum/packages/react-aria/test/`,
+  `react-aria-components/test/`) specify expected behavior. Base our tests on them and name the mirrored upstream test
+  file in an `// Upstream:` header of the test file, so `scripts/upstream-drift.sh` reports upstream test changes.
 - **Known issues**: behavior known to be broken lives in `*KnownIssues` tests that only run with
   `BROWSER_TEST_KNOWN_ISSUES=1` (see `ui_tests::all()`). Move a check into the regular test once it's fixed.
 - **Hydration**: `test_hydration_ids.rs` compares server-rendered ids with the hydrated DOM and checks id
@@ -236,6 +288,10 @@ WebDriver session per test, `thirtyfour` re-exported as `browser_test::thirtyfou
   the server panicked.
 - **Running**: `just browser-test`. `BROWSER_TEST_VISIBLE=1` shows the browser, `BROWSER_TEST_PAUSE=1` pauses before
   each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
+  `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid_tests`).
+  `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). The run summary lists the
+  slowest tests and steps; `BROWSER_TEST_LOG_STEPS=1` logs every step. Never run two suites of one app at the same
+  time: they share the app's build directory.
 - **Toolchain**: the installed `wasm-bindgen` CLI version must match the `wasm-bindgen` version in the test-app's
   `Cargo.lock`; otherwise `cargo leptos serve` fails. Update the lockfile (`cargo update -p wasm-bindgen -p js-sys
   -p web-sys -p wasm-bindgen-futures`) or the CLI.

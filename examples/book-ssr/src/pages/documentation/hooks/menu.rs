@@ -2,519 +2,404 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::menu::MenuDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseMenuHook() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="menu" class="anchor">
-                "Menu Hooks"
-                <AnchorLink href="#menu" description="Direct link to article header" />
-            </h1>
-
+        <DocPage title="Menu Hooks">
             <p>
                 "Hooks for creating accessible dropdown menus with full keyboard navigation, type-ahead selection, and ARIA support. "
-                "See the "<Link href=crate::routes::doc::Menu.materialize()>"Menu overview"</Link>" for concept guidance."
+                "See the "<Link href=routes::doc::Menu.materialize()>"Menu overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useMenu.html" target=LinkTarget::_Blank>
-                    "useMenu"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useMenu"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo" />
-            </h2>
+            <Section title="Demo">
+                <p>
+                    "Two menus in popovers: an action menu with a disabled item, and a menu with sections whose items can be "
+                    "checked. Open them with a click or from the keyboard, move with the arrow keys, activate with Enter or "
+                    "Space, close with Escape, and type a letter (e.g. "<Keys keys="D"/>") to jump to a matching item."
+                </p>
 
-            <p>"This demo uses all four menu hooks. Try:"</p>
-            <ul>
-                <li>"Click the button to open the menu"</li>
-                <li>"Use " <kbd>"↑"</kbd> " / " <kbd>"↓"</kbd> " to navigate"</li>
-                <li>"Press " <kbd>"Enter"</kbd> " or " <kbd>"Space"</kbd> " to select"</li>
-                <li>"Press " <kbd>"Escape"</kbd> " to close"</li>
-                <li>"Type a letter (e.g., " <kbd>"D"</kbd> ") to jump to matching items"</li>
-            </ul>
+                <Demo description="An action menu and a menu with sections and multiple selection" source=include_str!("demos/menu.rs")>
+                    <MenuDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/menu.rs")>
-                <MenuDemo />
-            </DemoShell>
+            <Section title="use_menu_trigger">
+                <p>
+                    "Provides the behavior of the button that opens a menu: when to open it, which item gets focus first, "
+                    "and the ARIA attributes linking the button and the menu. It doesn\u{2019}t render the button itself. "
+                    "Instead, it returns a "<Code inline=true>"UseButtonInput"</Code>" that you pass to "
+                    <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
+                </p>
 
-            <h2 id="use_menu_trigger" class="anchor">
-                "use_menu_trigger"
-                <AnchorLink
-                    href="#use_menu_trigger"
-                    description="Direct link to use_menu_trigger"
-                />
-            </h2>
+                <Code language=Language::Rust>
+                    {indoc!(
+                        r#"
+                        let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
 
-            <p>
-                "Provides the behavior of the button that opens a menu: when to open it, which item gets focus first, "
-                "and the ARIA attributes linking the button and the menu. It doesn\u{2019}t render the button itself. "
-                "Instead, it returns a "<code>"UseButtonInput"</code>" that you pass to "
-                <Link href=crate::routes::doc::button::Hook.materialize()>"use_button"</Link>"."
-            </p>
+                        let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
+                            menu_type: OverlayTriggerType::Menu,
+                            is_disabled: false.into(),
+                            trigger: MenuTriggerType::Press,
+                            state,
+                        });
 
-            <Code language=Language::Rust>
-                {indoc!(
-                    r#"
-                    let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
+                        let button = use_button(menu_trigger.button);
+                        let (attrs, styles) = button.props.into_parts();
 
-                    let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
-                        menu_type: OverlayTriggerType::Menu,
-                        disabled: false.into(),
-                        trigger: MenuTriggerType::Press,
-                        state,
-                    });
+                        view! {
+                            <button {..attrs} style=styles>"Actions"</button>
+                        }
+                    "#
+                    )}
+                </Code>
 
-                    let button = use_button(menu_trigger.button);
-                    let (attrs, styles) = button.props.into_parts();
+                <p>
+                    "Render the menu in a "<Link href=routes::doc::popover::Hook.materialize()>"popover"</Link>
+                    ", which positions it and closes it on Escape and outside clicks. The demo above shows the complete setup."
+                </p>
 
-                    view! {
-                        <button {..attrs} style=styles>"Actions"</button>
-                    }
-                "#
-                )}
-            </Code>
+                <Section title="Return" id="use-menu-trigger-return">
+                    <ApiTable kind=ApiKind::Return of="UseMenuTriggerReturn">
+                        <ApiRow name="button" ty="UseButtonInput">
+                            "The trigger button\u{2019}s configuration (id, "<Code inline=true>"aria-haspopup"</Code>", "
+                            <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-controls"</Code>
+                            ", press callbacks, keyboard shortcuts). Pass it to "<Code inline=true>"use_button"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="menu_props" ty="UseMenuTriggerMenuProps">
+                            "For the menu: "<Code inline=true>"id"</Code>", "<Code inline=true>"aria_labelledby"</Code>
+                            ", "<Code inline=true>"auto_focus"</Code>" (first or last item when opened by keyboard, else the "
+                            "menu itself) and "<Code inline=true>"on_close"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>
-                "Menus require overlay integration via " <code>"use_popover"</code>
-                " for proper dismiss behavior (click-outside, Escape key, re-clicking the trigger). "
-                "See the interactive demo above for a complete example."
-            </p>
+                <Section title="Opening the menu">
+                    <p>
+                        "With "<Code inline=true>"MenuTriggerType::Press"</Code>", a mouse opens the menu as soon as the button goes down, "
+                        "just like native menus. Touch opens it when the finger "
+                        "is lifted, so scrolling past the button doesn\u{2019}t open anything. The trigger doesn\u{2019}t take "
+                        "focus on press. Screen reader users get the first item focused, mouse users get the menu itself."
+                    </p>
 
-            <p>"The hook returns:"</p>
-            <ul>
-                <li>
-                    <strong>"button"</strong>
-                    " - A "<code>"UseButtonInput"</code>" for the trigger: id, "<code>"aria-haspopup"</code>", "
-                    <code>"aria-expanded"</code>", "<code>"aria-controls"</code>", press callbacks and keyboard shortcuts"
-                </li>
-                <li>
-                    <strong>"menu_props"</strong>
-                    " - Props to pass to the menu (id, aria_labelledby, auto_focus signal, on_close)"
-                </li>
-            </ul>
+                    <p>
+                        "From the keyboard, "<Keys keys="Enter"/>", "<Keys keys="Space"/>" and "<Keys keys="ArrowDown"/>
+                        " open the menu with the first item focused, "<Keys keys="ArrowUp"/>" opens it with the last one. "
+                        "With "<Code inline=true>"MenuTriggerType::LongPress"</Code>", a plain press stays free for the button\u{2019}s own action. "
+                        "The menu opens on a long press, or from the keyboard with "<Keys keys="Alt + ArrowDown"/>
+                        " / "<Keys keys="ArrowUp"/>" ("<Keys keys="Alt + Enter"/>" and "<Keys keys="Alt + Space"/>
+                        " work too). The long press is announced to screen readers as \u{201c}Long press to open menu\u{201d}."
+                    </p>
+                </Section>
 
-            <p>"The state hook provides:"</p>
-            <ul>
-                <li>
-                    <strong>"is_open"</strong>
-                    " - Signal indicating if the menu is open"
-                </li>
-                <li>
-                    <strong>"focus_strategy"</strong>
-                    " - Signal with the focus strategy (First/Last) when menu opens"
-                </li>
-                <li>
-                    <strong>"open/close/toggle"</strong>
-                    " - Callbacks to control the menu"
-                </li>
-                <li>
-                    <strong>"set_open"</strong>
-                    " - Callback to set the open state directly"
-                </li>
-            </ul>
+                <Section title="Combining with your own button settings">
+                    <p>
+                        "Because "<Code inline=true>"menu_trigger.button"</Code>" is just a "<Code inline=true>"UseButtonInput"</Code>
+                        ", you can add or override settings with struct update syntax before handing it to "<Code inline=true>"use_button"</Code>":"
+                    </p>
 
-            <p>"The state hook accepts an optional " <code>"on_open_change"</code> " callback that fires whenever the open state changes."</p>
+                    <Code language=Language::Rust>
+                        {indoc!(
+                            r#"
+                            let button = use_button(UseButtonInput {
+                                aria_label: "More actions".into(),
+                                on_hover_start: Some(Callback::new(|_| log!("hovered"))),
+                                ..menu_trigger.button
+                            });
+                            let (attrs, styles) = button.props.into_parts();
 
-            <h3 id="trigger-behavior" class="anchor">
-                "Opening the menu"
-                <AnchorLink href="#trigger-behavior" description="Direct link to opening the menu"/>
-            </h3>
+                            view! {
+                                <button {..attrs} style=styles>"\u{22ee}"</button>
+                            }
+                        "#
+                        )}
+                    </Code>
 
-            <p>
-                "With "<code>"MenuTriggerType::Press"</code>", a mouse opens the menu as soon as the button goes down, "
-                "just like native menus. Touch opens it when the finger "
-                "is lifted, so scrolling past the button doesn\u{2019}t open anything. The trigger doesn\u{2019}t take "
-                "focus on press. Screen reader users get the first item focused, mouse users get the menu itself."
-            </p>
+                    <p>
+                        "The trigger then has a single press handler that does both: open the menu and run your callbacks. "
+                        "You also get "<Code inline=true>"is_pressed"</Code>", "<Code inline=true>"is_hovered"</Code>", "<Code inline=true>"is_focus_visible"</Code>
+                        " and a "<Code inline=true>"focus_handle"</Code>" from "<Code inline=true>"use_button"</Code>" for styling. Be careful not to replace the "
+                        "press callbacks or "<Code inline=true>"shortcuts"</Code>" the trigger sets, since they are what opens the menu. If you need "
+                        "your own callback on one of them, chain both with "<Code inline=true>"chain_optional_callbacks"</Code>". See "
+                        <Link href=format!("{}#composing-hooks", routes::doc::Architecture.materialize())>"Composing hooks"</Link>
+                        " for why leptonic composes inputs instead of merging DOM props."
+                    </p>
+                </Section>
+            </Section>
 
-            <p>
-                "From the keyboard, "<kbd>"Enter"</kbd>", "<kbd>"Space"</kbd>" and "<kbd>"\u{2193}"</kbd>
-                " open the menu with the first item focused, "<kbd>"\u{2191}"</kbd>" opens it with the last one. "
-                "With "<code>"MenuTriggerType::LongPress"</code>", a plain press stays free for the button\u{2019}s own action. "
-                "The menu opens on a long press, or from the keyboard with "<kbd>"Alt"</kbd>" + "<kbd>"\u{2193}"</kbd>
-                " / "<kbd>"\u{2191}"</kbd>" ("<kbd>"Alt"</kbd>" + "<kbd>"Enter"</kbd>" and "<kbd>"Alt"</kbd>" + "<kbd>"Space"</kbd>
-                " work too). The long press is announced to screen readers as \u{201c}Long press to open menu\u{201d}."
-            </p>
+            <Section title="use_menu_trigger_state">
+                <p>
+                    "Holds whether the menu is open (an "
+                    <Link href=routes::doc::modal::Hook.materialize()>"overlay trigger state"</Link>
+                    "), where focus goes when it opens, and which submenus are open. Takes "
+                    <Code inline=true>"default_open"</Code>", a "<Code inline=true>"value"</Code>
+                    " bound to app state and an "<Code inline=true>"on_open_change"</Code>" callback. "
+                    <Code inline=true>"use_menu_trigger"</Code>" also accepts the states of a select or a combo box, "
+                    "which add their own rules for opening (any type implementing "<Code inline=true>"MenuTriggerStateApi"</Code>")."
+                </p>
+                <ApiTable kind=ApiKind::Fields of="MenuTriggerState">
+                    <ApiRow name="overlay" ty="OverlayTriggerState">"The open state."</ApiRow>
+                    <ApiRow name="focus_strategy" ty="Signal<Option<FocusStrategy>>">
+                        "Which item to focus when the menu opens, set by "<Code inline=true>"open"</Code>" and "
+                        <Code inline=true>"toggle"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="expanded_keys_stack" ty="Signal<Vec<Key>>">"The items whose submenus are open, by level."</ApiRow>
+                </ApiTable>
+                <DocTable headers=&["Method", "Purpose"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"is_open()"</Code></TableCell>
+                        <TableCell>"Whether the menu is open (tracked)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"open(focus_strategy), toggle(focus_strategy)"</Code></TableCell>
+                        <TableCell>"Open or toggle the menu, focusing its first or last item, or the menu itself ("<Code inline=true>"None"</Code>")."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"close()"</Code></TableCell>
+                        <TableCell>"Close the menu and its submenus."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"open_submenu(key, level), close_submenu(&key, level)"</Code></TableCell>
+                        <TableCell>"Open or close the submenu of an item."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h3 id="composition" class="anchor">
-                "Combining with your own button settings"
-                <AnchorLink
-                    href="#composition"
-                    description="Direct link to combining with your own button settings"
-                />
-            </h3>
+            <Section title="use_menu">
+                <p>
+                    "Provides the behavior of the menu element: keyboard navigation, type-ahead and focus management. "
+                    "A menu shows the items of a collection, like a "<Link href=routes::doc::Listbox.materialize()>"listbox"</Link>
+                    ". Build the collection with "<Code inline=true>"use_collection"</Code>", hold its selection with "
+                    <Code inline=true>"use_list_state"</Code>" and pass that state to "<Code inline=true>"use_menu"</Code>
+                    ". Leave the selection mode at "<Code inline=true>"SelectionMode::None"</Code>" for an action menu."
+                </p>
 
-            <p>
-                "Because "<code>"menu_trigger.button"</code>" is just a "<code>"UseButtonInput"</code>
-                ", you can add or override settings with struct update syntax before handing it to "<code>"use_button"</code>":"
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let collection = use_collection(|b| {
+                            b.item("edit", "Edit");
+                            b.item("archive", "Archive").disabled(true);
+                            b.section("danger", |s| {
+                                s.header("danger-header", "Danger zone");
+                                s.item("delete", "Delete");
+                            });
+                        });
+                        let state = use_list_state(UseListStateInput {
+                            collection,
+                            selection: SelectionOptions::default(),
+                        });
 
-            <Code language=Language::Rust>
-                {indoc!(
-                    r#"
-                    let button = use_button(UseButtonInput {
-                        aria_label: Some("More actions".into()),
-                        on_hover_start: Some(Callback::new(|_| log!("hovered"))),
-                        ..menu_trigger.button
-                    });
-                    let (attrs, styles) = button.props.into_parts();
+                        let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+                            // From `use_menu_trigger`, when the menu opens from a button.
+                            id: Some(menu_props.id.get_untracked()),
+                            aria_labelledby: menu_props.aria_labelledby.into(),
+                            options: CollectionOptions {
+                                auto_focus: menu_props.auto_focus,
+                                should_focus_wrap: true,
+                                ..CollectionOptions::default()
+                            },
+                            on_action: Some(Callback::new(|key: Key| log!("{key}"))),
+                            on_close: Some(menu_props.on_close),
+                            ..UseMenuInput::new(state, CapturedElement::new())
+                        });
 
-                    view! {
-                        <button {..attrs} style=styles>"\u{22ee}"</button>
-                    }
-                "#
-                )}
-            </Code>
+                        view! { <ul {..props.into_attrs()}>/* items and sections, see below */</ul> }
+                    "#)}
+                </Code>
 
-            <p>
-                "The trigger then has a single press handler that does both: open the menu and run your callbacks. "
-                "You also get "<code>"is_pressed"</code>", "<code>"is_hovered"</code>", "<code>"is_focus_visible"</code>
-                " and a "<code>"focus_handle"</code>" from "<code>"use_button"</code>" for styling. Be careful not to replace the "
-                "press callbacks or "<code>"shortcuts"</code>" the trigger sets, since they are what opens the menu. If you need "
-                "your own callback on one of them, chain both with "<code>"chain_optional_callbacks"</code>". See "
-                <Link href=format!("{}#composing-hooks", crate::routes::doc::Architecture.materialize())>"Composing hooks"</Link>
-                " for why leptonic composes inputs instead of merging DOM props."
-            </p>
+                <Section title="Input" id="use-menu-input">
+                    <p>
+                        "Create the input with "<Code inline=true>"UseMenuInput::new(state, element)"</Code>
+                        " and set further fields with struct update syntax."
+                    </p>
+                    <ApiTable kind=ApiKind::Input of="UseMenuInput">
+                        <ApiRow name="state" ty="ListState">
+                            "The items and their selection, from "<Code inline=true>"use_list_state"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The menu element. The props capture it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">
+                            "The element id, generated when "<Code inline=true>"None"</Code>". Use "
+                            <Code inline=true>"menu_props.id"</Code>" of the menu trigger, which its "
+                            <Code inline=true>"aria-controls"</Code>" points to."
+                        </ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>" default="None">
+                            "Names the menu. A menu trigger provides "<Code inline=true>"menu_props.aria_labelledby"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="options" ty="CollectionOptions" default="wrapping arrow keys">
+                            "Keyboard and focus behavior: "<Code inline=true>"auto_focus"</Code>" (where focus goes when the menu "
+                            "mounts), "<Code inline=true>"should_focus_wrap"</Code>", type-ahead, select all, Tab navigation."
+                        </ApiRow>
+                        <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
+                            "Replaces the list keyboard navigation."
+                        </ApiRow>
+                        <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">
+                            "Called with the key of an activated item."
+                        </ApiRow>
+                        <ApiRow name="on_close" ty="Option<Callback<()>>" default="None">
+                            "Called when an item closes the menu after its action."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="use_menu" class="anchor">
-                "use_menu"
-                <AnchorLink href="#use_menu" description="Direct link to use_menu" />
-            </h2>
+                <Section title="Return" id="use-menu-return">
+                    <ApiTable kind=ApiKind::Return of="UseMenuReturn">
+                        <ApiRow name="props" ty="UseMenuProps">
+                            "For the menu element: "<Code inline=true>"role=\"menu\""</Code>", id, label and the "
+                            "collection\u{2019}s keyboard and focus handlers. Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="data" ty="MenuData">
+                            "Hand this to "<Code inline=true>"use_menu_item"</Code>" and "<Code inline=true>"use_menu_section"</Code>
+                            " for every item and section."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <p>
-                "Provides behavior for the menu container. Manages keyboard navigation, type-ahead, and selection."
-            </p>
+            <Section title="use_menu_item">
+                <p>
+                    "Provides the behavior of one menu item: its role, press and hover handling, and activation. "
+                    "Hovering an item with a pointer focuses it."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(
-                    r#"
-                    let items = vec!["Edit", "Duplicate", "Archive", "Delete"];
-                    let items_signal = Signal::derive(move || items.iter().map(|s| s.to_string()).collect());
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let UseMenuItemReturn { props, label_props, is_focused, .. } = use_menu_item(UseMenuItemInput {
+                            menu: data.clone(),
+                            key,
+                            should_close_on_select: None,
+                        });
+                        let (attrs, styles) = props.into_parts();
 
-                    let menu = use_menu(UseMenuInput {
-                        aria_label: Some("Actions".to_string()),
-                        all_keys: items_signal,
-                        disabled_keys: Signal::derive(HashSet::new),
-                        get_key_label: Callback::new(|k: String| k.clone()),
-                        on_action: Some(Callback::new(|key: String| {
-                            // Handle item selection
-                        })),
-                        on_close: Some(Callback::new(|_| {
-                            // Close the menu
-                        })),
-                        // selection_mode: SelectionMode::None (default, action-only menu)
-                        // Use SelectionMode::Single for radio items,
-                        // or SelectionMode::Multiple for checkbox items.
-                        ..Default::default()
-                    });
+                        view! {
+                            <li {..attrs} style=styles>
+                                <span {..label_props.into_attrs()}>{text}</span>
+                            </li>
+                        }
+                    ")}
+                </Code>
 
-                    view! {
-                        <ul {..menu.menu_props.into_attrs()}>
-                            // Menu items here
-                        </ul>
-                    }
-                "#
-                )}
-            </Code>
+                <Section title="Input" id="use-menu-item-input">
+                    <ApiTable kind=ApiKind::Input of="UseMenuItemInput">
+                        <ApiRow name="menu" ty="MenuData">"The menu, from "<Code inline=true>"use_menu"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The item\u{2019}s key in the menu\u{2019}s collection."</ApiRow>
+                        <ApiRow name="should_close_on_select" ty="Option<bool>" default="None">
+                            "Whether activating the item closes the menu, see "<a href="#close-behavior">"Close behavior"</a>"."
+                        </ApiRow>
+                    </ApiTable>
+                    <p>
+                        "Whether an item is disabled, and its text for type-ahead, come from the collection ("
+                        <Code inline=true>"b.item(key, text).disabled(true)"</Code>")."
+                    </p>
+                </Section>
 
-            <p>"The hook provides:"</p>
-            <ul>
-                <li>
-                    <strong>"menu_props"</strong>
-                    " - ARIA role, label, tabindex, and keydown handler"
-                </li>
-                <li>
-                    <strong>"list"</strong>
-                    " - Selection and focus state from use_selectable_list"
-                </li>
-                <li>
-                    <strong>"type_select"</strong>
-                    " - Type-ahead search functionality"
-                </li>
-                <li>
-                    <strong>"selection_mode"</strong>
-                    " - The selection mode, to pass through to menu items"
-                </li>
-            </ul>
+                <Section title="Return" id="use-menu-item-return">
+                    <ApiTable kind=ApiKind::Return of="UseMenuItemReturn">
+                        <ApiRow name="props" ty="PropsWithStyles<UseMenuItemProps>">
+                            "For the item element: role, "<Code inline=true>"aria-disabled"</Code>", "
+                            <Code inline=true>"aria-checked"</Code>", labelling and the press, hover and keyboard handlers."
+                        </ApiRow>
+                        <ApiRow name="label_props, description_props, keyboard_shortcut_props" ty="SlotProps">
+                            "For elements holding the item\u{2019}s label, description and keyboard shortcut. The item is "
+                            "labelled and described by the slots you render."
+                        </ApiRow>
+                        <ApiRow name="is_focused, is_focus_visible" ty="Signal<bool>">
+                            "Whether the item has focus, and whether a focus ring should be shown (keyboard focus)."
+                        </ApiRow>
+                        <ApiRow name="is_selected" ty="Signal<bool>">"Whether the item is checked (selection menus)."</ApiRow>
+                        <ApiRow name="is_pressed, is_disabled" ty="Signal<bool>">
+                            "Whether the item is being pressed, and whether it is disabled."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="use_menu_item" class="anchor">
-                "use_menu_item"
-                <AnchorLink href="#use_menu_item" description="Direct link to use_menu_item" />
-            </h2>
+                <Section title="Selection modes">
+                    <p>"The selection mode of the list state decides the item role:"</p>
+                    <DocTable headers=&["SelectionMode", "Item role"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"None"</Code></TableCell>
+                            <TableCell>"An action menu: "<Code inline=true>"menuitem"</Code>"."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Single"</Code></TableCell>
+                            <TableCell><Code inline=true>"menuitemradio"</Code>" with "<Code inline=true>"aria-checked"</Code>"."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Multiple"</Code></TableCell>
+                            <TableCell><Code inline=true>"menuitemcheckbox"</Code>" with "<Code inline=true>"aria-checked"</Code>"."</TableCell>
+                        </TableRow>
+                    </DocTable>
+                </Section>
 
-            <p>
-                "Provides behavior for individual menu items. Handles focus, selection, and keyboard activation."
-            </p>
+                <Section title="Close behavior">
+                    <p>
+                        "With "<Code inline=true>"should_close_on_select: None"</Code>", activating an item calls the menu\u{2019}s "
+                        <Code inline=true>"on_close"</Code>" unless the user is building up a selection: "<Keys keys="Enter"/>
+                        " always closes, "<Keys keys="Space"/>" closes action menus only, and a click closes unless the menu "
+                        "allows multiple selection. Links always close. "<Code inline=true>"Some(true)"</Code>" and "
+                        <Code inline=true>"Some(false)"</Code>" override this."
+                    </p>
+                </Section>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(
-                    r#"
-                    let item = use_menu_item(UseMenuItemInput {
-                        key: "edit".to_string(),
-                        is_disabled: false.into(),
-                        focused_key: menu.list.collection.focused_key,
-                        selected_keys: menu.list.collection.selection_state.selected_keys,
-                        on_focus: menu.list.collection.set_focused_key,
-                        on_action: Callback::new(|key| {
-                            // Handle action
-                        }),
-                        on_close: Some(Callback::new(|_| {
-                            // Close menu
-                        })),
-                        close_on_select: None, // Smart default
-                        selection_mode: menu.selection_mode,
-                        has_description: false,
-                        has_keyboard_shortcut: false,
-                    });
+            <Section title="use_menu_section">
+                <p>
+                    "Groups items of a collection section. The heading comes from the section\u{2019}s header in the collection, "
+                    "and labels the group."
+                </p>
 
-                    view! {
-                        <li {..item.item_props.into_attrs()}>
-                            <span {..item.label_props.into_attrs()}>"Edit"</span>
-                        </li>
-                    }
-                "#
-                )}
-            </Code>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let UseMenuSectionReturn { item_props, heading_props, group_props, heading } =
+                            use_menu_section(UseMenuSectionInput { menu: data.clone(), key });
 
-            <p>"The hook provides:"</p>
-            <ul>
-                <li>
-                    <strong>"item_props"</strong>
-                    " - ARIA role, tabindex, disabled state, checked state, and event handlers"
-                </li>
-                <li>
-                    <strong>"label_props"</strong>
-                    " - Props for the label slot (connects via aria-labelledby)"
-                </li>
-                <li>
-                    <strong>"description_props"</strong>
-                    " - Props for the description slot (connects via aria-describedby)"
-                </li>
-                <li>
-                    <strong>"keyboard_shortcut_props"</strong>
-                    " - Props for the keyboard shortcut slot"
-                </li>
-                <li>
-                    <strong>"is_focused"</strong>
-                    " - Whether this item is currently focused"
-                </li>
-                <li>
-                    <strong>"is_selected"</strong>
-                    " - Whether this item is currently selected"
-                </li>
-                <li>
-                    <strong>"is_disabled"</strong>
-                    " - Whether this item is disabled"
-                </li>
-                <li>
-                    <strong>"is_focus_visible"</strong>
-                    " - Whether focus ring should be visible (keyboard nav only)"
-                </li>
-            </ul>
+                        view! {
+                            <li {..item_props.into_attrs()}>
+                                {heading_props.map(|props| view! { <span {..props.into_attrs()}>{heading}</span> })}
+                                <ul {..group_props.into_attrs()}>/* the section's items */</ul>
+                            </li>
+                        }
+                    ")}
+                </Code>
 
-            <h3 id="selection_modes" class="anchor">
-                "Selection Modes"
-                <AnchorLink href="#selection_modes" description="Direct link to selection modes" />
-            </h3>
+                <Section title="Return" id="use-menu-section-return">
+                    <ApiTable kind=ApiKind::Return of="UseMenuSectionReturn">
+                        <ApiRow name="item_props" ty="UseMenuSectionItemProps">
+                            "For the element wrapping heading and group (an "<Code inline=true>"<li>"</Code>" in a "
+                            <Code inline=true>"<ul>"</Code>" menu): "<Code inline=true>"role=\"presentation\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="heading_props" ty="Option<UseMenuSectionHeadingProps>">
+                            "For the heading element; "<Code inline=true>"None"</Code>" when the section has no header."
+                        </ApiRow>
+                        <ApiRow name="group_props" ty="UseMenuSectionGroupProps">
+                            "For the element containing the items: "<Code inline=true>"role=\"group\""</Code>", labelled by the heading."
+                        </ApiRow>
+                        <ApiRow name="heading" ty="Option<String>">"The header text."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <p>"Menu items automatically adapt their ARIA role based on the selection mode:"</p>
-            <ul>
-                <li>
-                    <code>"SelectionMode::None"</code>
-                    " (default) - Action menu: " <code>"role=\"menuitem\""</code>
-                </li>
-                <li>
-                    <code>"SelectionMode::Single"</code>
-                    " - Radio selection: " <code>"role=\"menuitemradio\""</code> " with " <code>"aria-checked"</code>
-                </li>
-                <li>
-                    <code>"SelectionMode::Multiple"</code>
-                    " - Checkbox selection: " <code>"role=\"menuitemcheckbox\""</code> " with " <code>"aria-checked"</code>
-                </li>
-            </ul>
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="Enter / Space / ArrowDown">"On the trigger: open the menu and focus the first item."</KeyRow>
+                    <KeyRow keys="ArrowUp">"On the trigger: open the menu and focus the last item."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Move focus to the next or previous item, wrapping around."</KeyRow>
+                    <KeyRow keys="Home / End">"Focus the first or last item."</KeyRow>
+                    <KeyRow keys="Enter">"Activate the focused item and close the menu."</KeyRow>
+                    <KeyRow keys="Space">"Activate the focused item; in selection menus, toggle it and keep the menu open."</KeyRow>
+                    <KeyRow keys="Escape">"Close the menu (handled by the surrounding overlay)."</KeyRow>
+                    <KeyRow keys="Letter keys">"Focus the next item starting with the typed text, skipping disabled items."</KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <h3 id="close_behavior" class="anchor">
-                "Close Behavior"
-                <AnchorLink href="#close_behavior" description="Direct link to close behavior" />
-            </h3>
-
-            <p>
-                "The " <code>"close_on_select"</code> " option controls whether the menu closes after activation:"
-            </p>
-            <ul>
-                <li>
-                    <code>"None"</code>
-                    " (default) - Smart behavior: keyboard Enter always closes; multi-select click stays open; action/single-select always closes"
-                </li>
-                <li><code>"Some(true)"</code> " - Always close after activation"</li>
-                <li><code>"Some(false)"</code> " - Never close after activation"</li>
-            </ul>
-
-            <h2 id="use_menu_section" class="anchor">
-                "use_menu_section"
-                <AnchorLink
-                    href="#use_menu_section"
-                    description="Direct link to use_menu_section"
-                />
-            </h2>
-
-            <p>
-                "Groups menu items with optional headings. Useful for organizing related actions."
-            </p>
-
-            <Code language=Language::Rust>
-                {indoc!(
-                    r#"
-                    let section = use_menu_section(UseMenuSectionInput {
-                        heading: Some("File Operations".to_string()),
-                        aria_label: None,
-                    });
-
-                    view! {
-                        <li role=section.item_props.role>
-                            <span
-                                id=section.heading_props.id.clone()
-                                role=section.heading_props.role
-                                style="padding: 0.5em 1em; font-weight: bold; color: #666;"
-                            >
-                                "File Operations"
-                            </span>
-                            <ul
-                                role=section.group_props.role
-                                aria-labelledby=section.group_props.aria_labelledby.clone()
-                                style="list-style: none; padding: 0; margin: 0;"
-                            >
-                                // Section items here
-                            </ul>
-                        </li>
-                    }
-                "#
-                )}
-            </Code>
-
-            <h2 id="keyboard" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard" description="Direct link to keyboard" />
-            </h2>
-
-            <ul>
-                <li>
-                    <strong>"Arrow Up/Down"</strong>
-                    " - Navigate between items"
-                </li>
-                <li>
-                    <strong>"Home/End"</strong>
-                    " - Jump to first/last item"
-                </li>
-                <li>
-                    <strong>"Enter/Space"</strong>
-                    " - Select focused item"
-                </li>
-                <li>
-                    <strong>"Escape"</strong>
-                    " - Close menu"
-                </li>
-                <li>
-                    <strong>"Type characters"</strong>
-                    " - Type-ahead to jump to matching items"
-                </li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features" />
-            </h2>
-
-            <ul>
-                <li>"Full keyboard navigation with arrow keys"</li>
-                <li>"Type-ahead selection for quick item access"</li>
-                <li>"Focus management with visual focus ring"</li>
-                <li>"Section grouping with accessible headings"</li>
-                <li>"Disabled items support"</li>
-                <li>"Press and long-press trigger modes"</li>
-                <li>"Selection modes: action, radio, and checkbox menu items"</li>
-                <li>"Smart close behavior that varies by interaction type and selection mode"</li>
-                <li>"Repeat key event filtering to prevent accidental activation"</li>
-                <li>"Label, description, and keyboard shortcut slot props for accessible content"</li>
-                <li>"Proper ARIA attributes for screen readers"</li>
-                <li>"Mouse hover and click support"</li>
-            </ul>
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Menu.materialize()>"Menu overview"</Link></li>
-                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover concept"</Link></li>
-                <li><Link href=crate::routes::doc::Listbox.materialize()>"Listbox concept"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf {
-                    title: "Menu Hooks",
-                    link: "#menu",
-                },
-                Toc::Leaf {
-                    title: "Demo",
-                    link: "#demo",
-                },
-                Toc::Leaf {
-                    title: "use_menu_trigger",
-                    link: "#use_menu_trigger",
-                },
-                Toc::Leaf {
-                    title: "Opening the menu",
-                    link: "#trigger-behavior",
-                },
-                Toc::Leaf {
-                    title: "Combining with your own button settings",
-                    link: "#composition",
-                },
-                Toc::Leaf {
-                    title: "use_menu",
-                    link: "#use_menu",
-                },
-                Toc::Leaf {
-                    title: "use_menu_item",
-                    link: "#use_menu_item",
-                },
-                Toc::Leaf {
-                    title: "Selection Modes",
-                    link: "#selection_modes",
-                },
-                Toc::Leaf {
-                    title: "Close Behavior",
-                    link: "#close_behavior",
-                },
-                Toc::Leaf {
-                    title: "use_menu_section",
-                    link: "#use_menu_section",
-                },
-                Toc::Leaf {
-                    title: "Keyboard Navigation",
-                    link: "#keyboard",
-                },
-                Toc::Leaf {
-                    title: "Features",
-                    link: "#features",
-                },
-                Toc::Leaf {
-                    title: "See Also",
-                    link: "#see-also",
-                },
-            ],
-        } />
+            <SeeAlso>
+                <li><Link href=routes::doc::Menu.materialize()>"Menu overview"</Link></li>
+                <li><Link href=routes::doc::Popover.materialize()>"Popover concept"</Link></li>
+                <li><Link href=routes::doc::Listbox.materialize()>"Listbox concept"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

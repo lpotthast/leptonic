@@ -1,188 +1,93 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::tooltip::TooltipConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageTooltipOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="tooltip" class="anchor">
-                "Tooltip"
-                <AnchorLink href="#tooltip" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Tooltip">
             <p>
-                "Tooltips are non-interactive floating labels that appear on hover or focus "
-                "to describe an element. They are purely informational \u{2014} "
-                "if the user needs to interact with the popup content, use a Popover instead."
+                "Tooltips are small, non-interactive labels that appear on hover or keyboard focus to describe an element. "
+                "They are purely informational. If the user needs to interact with the popup content, use a "
+                <Link href=routes::doc::Popover.materialize()>"Popover"</Link>" instead."
             </p>
 
-            <p>
-                "Tooltips are currently available as hooks only. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Show a short description on hover or focus"</TableCell><TableCell><b>"Tooltip"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Show interactive content in a popup"</TableCell><TableCell><Link href=routes::doc::Popover.materialize()>"Popover"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Provide a permanently visible label"</TableCell><TableCell><Link href=routes::doc::hooks::UseLabel.materialize()>"Label"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Use the browser\u{2019}s native tooltip"</TableCell><TableCell>"The "<Code inline=true>"title"</Code>" attribute"</TableCell></TableRow>
+                </DocTable>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+                <p>
+                    "Tooltips opened by hovering don\u{2019}t appear instantly: the first one waits for a warmup delay, so "
+                    "they don\u{2019}t flash up while the pointer passes over the page. Once a tooltip has been shown, the next "
+                    "ones appear immediately, until a short cooldown after the last one closed. Focusing a trigger opens its "
+                    "tooltip immediately."
+                </p>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Show a short description on hover/focus"</TableCell>
-                            <TableCell><b>"Tooltip"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show interactive content in a popup"</TableCell>
-                            <TableCell>"Popover"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Provide a permanent visible label"</TableCell>
-                            <TableCell>"Label"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Use the browser's native tooltip"</TableCell>
-                            <TableCell><Code inline=true>"title"</Code>" attribute"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Tooltips exist as hooks and atoms. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <p>
-                "Tooltips have a warmup delay (they don't appear instantly) and a cooldown period. "
-                "Once one tooltip has been shown, subsequent tooltips appear faster \u{2014} "
-                "matching the user's expectation that hovering reveals information."
-            </p>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::tooltip::Hook.materialize()>"Tooltip hooks"</Link></TableCell>
+                        <TableCell>
+                            <Code inline=true>"use_tooltip_trigger_state"</Code>", "<Code inline=true>"use_tooltip_trigger"</Code>
+                            " and "<Code inline=true>"use_tooltip"</Code>": state, trigger behavior and ARIA attributes for "
+                            "elements you render yourself."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::tooltip::Atom.materialize()>"Tooltip atoms"</Link></TableCell>
+                        <TableCell>
+                            <Code inline=true>"TooltipTrigger"</Code>" and an unstyled "<Code inline=true>"Tooltip"</Code>
+                            ": wrap any button or link, no wiring needed."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>
+                    "The atoms are the quickest way to a tooltip: a "<Code inline=true>"TooltipTrigger"</Code>" around a "
+                    <Code inline=true>"Button"</Code>" and its "<Code inline=true>"Tooltip"</Code>". See the "
+                    <Link href=routes::doc::tooltip::Atom.materialize()>"tooltip atoms"</Link>" for all options, and the "
+                    <Link href=routes::doc::tooltip::Hook.materialize()>"tooltip hooks"</Link>" to build your own."
+                </p>
 
-            <ul>
-                <li><Link href=routes::doc::tooltip::Hook.materialize()>"Hook: use_tooltip"</Link></li>
-            </ul>
+                <Demo description="Tooltip above a button" source=include_str!("demos/tooltip.rs") source_open=true>
+                    <TooltipConceptDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>
+                    "Tooltips follow the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/" target=LinkTarget::_Blank>"Tooltip pattern"</LinkExt>
+                    "."
+                </p>
 
-            <p>
-                "Tooltips are composed from hooks. Here is the minimal setup. "
-                "See the "<Link href=routes::doc::tooltip::Hook.materialize()>"hook deep-dive"</Link>
-                " for full details."
-            </p>
+                <ul>
+                    <li><Code inline=true>"role=\"tooltip\""</Code>" on the tooltip element."</li>
+                    <li>
+                        <Code inline=true>"aria-describedby"</Code>" on the trigger, pointing to the tooltip while it is visible."
+                    </li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let target_element = CapturedElement::new();
-
-                    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-                        delay: 300,
-                        close_delay: 100,
-                        ..Default::default()
-                    });
-                    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-                    let tooltip = use_tooltip(UseTooltipInput {
-                        disabled: Signal::derive(|| false),
-                        state: Some(state),
-                        ..
-                    });
-                    let position = use_overlay_position(UseOverlayPositionInput {
-                        target: target_element,
-                        placement_x: Signal::derive(|| PlacementX::Center),
-                        placement_y: Signal::derive(|| PlacementY::Above),
-                        ..
-                    });
-
-                    view! {
-                        <button {..target_element.attr()} {..trigger.trigger_props.into_attrs()}>
-                            "Hover me"
-                        </button>
-                        <Portal>
-                            <Show when=move || trigger.is_open.get()>
-                                <div
-                                    {..position.props.into_attrs()}
-                                    {..tooltip.props.into_attrs()}
-                                    id=trigger.tooltip_props.id.clone()
-                                    role="tooltip"
-                                >
-                                    "This is a tooltip!"
-                                </div>
-                            </Show>
-                        </Portal>
-                    }
-                "#)}
-            </Code>
-
-            <DemoShell description="Tooltip with hover trigger" source=include_str!("demos/tooltip.rs")>
-                <TooltipConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic tooltips follow the WAI-ARIA Tooltip pattern."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"tooltip\""</Code>" on the popup content"</li>
-                <li><Code inline=true>"aria-describedby"</Code>" \u{2014} on the trigger, dynamically set only when the tooltip is visible"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Focus (Tab)"</Code></TableCell>
-                            <TableCell>"Shows the tooltip"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Hides the tooltip"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Tooltip", link: "#tooltip" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Focusing the trigger shows the tooltip immediately."</KeyRow>
+                    <KeyRow keys="Escape">"Hides the tooltip. The Escape press is not passed on, so an enclosing dialog stays open."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

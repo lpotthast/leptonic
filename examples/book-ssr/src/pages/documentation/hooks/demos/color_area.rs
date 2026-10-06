@@ -1,6 +1,12 @@
 use leptonic::{
+    components::prelude::*,
     hooks::*,
-    utils::color::{ColorValue, HSV, HsvChannel},
+    utils::{
+        color::{ColorValue, HSV, HsvChannel},
+        css::{CssColor, CssDimension, LengthPercentageAuto, try_pct},
+        style::{BackgroundColorProperty, BottomProperty, LeftProperty},
+        styles::Styles,
+    },
 };
 use leptos::prelude::*;
 
@@ -17,60 +23,62 @@ pub fn ColorAreaDemo() -> impl IntoView {
     });
 
     let display_color = state.display_color;
+    let disabled = RwSignal::new(false);
 
     let area = use_color_area(UseColorAreaInput {
         state,
-        disabled: false.into(),
+        is_disabled: disabled.into(),
         aria_label: Some("Color area"),
-        is_rtl: false,
         x_name: None,
         y_name: None,
         form: None,
     });
 
-    view! {
-        <div>
-            <div
-                {..area.area_props.into_attrs()}
-                style=move || format!(
-                    "position: relative; width: 200px; height: 200px; border-radius: 4px; touch-action: none; background: {};",
-                    area.background.get()
-                )
-            >
-                <div
-                    {..area.thumb_props.into_attrs()}
-                    style=move || format!(
-                        "position: absolute; width: 16px; height: 16px; border-radius: 50%; \
-                         border: 2px solid white; box-shadow: 0 0 2px rgba(0,0,0,0.5); \
-                         transform: translate(-50%, 50%); touch-action: none; \
-                         left: {}%; bottom: {}%; background: {};",
-                        area.thumb_x_percent.get(),
-                        area.thumb_y_percent.get(),
-                        area.thumb_color.get(),
-                    )
-                >
-                    <input
-                        {..area.x_input_props.into_attrs()}
-                        style="opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute;"
-                    />
-                    <input
-                        {..area.y_input_props.into_attrs()}
-                        style="opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute;"
-                    />
-                </div>
-            </div>
+    // The gradient and its blend mode are free-form values that leptos-css does not model, so they
+    // go through the explicit unchecked escape hatch.
+    let background = area.background;
+    let blend_mode = area.background_blend_mode;
+    let area_styles = Styles::new()
+        .add_optional_unchecked("background", move || Some(background.get()))
+        .add_optional_unchecked("background-blend-mode", move || blend_mode.get());
 
-            <p style="margin-top: 0.5em;">
-                "Current color: "
-                <span
-                    style=move || format!(
-                        "display: inline-block; width: 1em; height: 1em; vertical-align: middle; border-radius: 2px; background: {};",
-                        display_color.get().to_css_string()
-                    )
-                ></span>
-                " "
-                <code>{ move || display_color.get().to_css_string() }</code>
-            </p>
+    // Position and color of the thumb are live values with typed declarations.
+    // `try_pct` guards against a non-finite percentage, for which `pct` would panic.
+    let thumb_x = area.thumb_x_percent;
+    let thumb_y = area.thumb_y_percent;
+    let thumb_styles = Styles::builder()
+        .with_reactive(move || {
+            LeftProperty.declare(LengthPercentageAuto::from(
+                try_pct(thumb_x.get()).unwrap_or(CssDimension::Zero),
+            ))
+        })
+        .with_reactive(move || {
+            BottomProperty.declare(LengthPercentageAuto::from(
+                try_pct(thumb_y.get()).unwrap_or(CssDimension::Zero),
+            ))
+        })
+        .with_reactive(move || {
+            BackgroundColorProperty.declare(CssColor::from(display_color.get().into_rgb8()))
+        })
+        .build();
+
+    let preview_styles = Styles::new().add_reactive(move || {
+        BackgroundColorProperty.declare(CssColor::from(display_color.get().into_rgb8()))
+    });
+
+    view! {
+        <div {..area.area_props.into_attrs()} class="demo-color-area" style=area_styles>
+            <div {..area.thumb_props.into_attrs()} class="demo-color-area-thumb" style=thumb_styles>
+                <input {..area.x_input_props.into_attrs()} class="demo-visually-hidden-input" />
+                <input {..area.y_input_props.into_attrs()} class="demo-visually-hidden-input" />
+            </div>
         </div>
+
+        <p class="demo-mt-half">
+            "Current color: " <span class="demo-color-preview" style=preview_styles></span> " "
+            <code>{move || display_color.get().to_css_string()}</code>
+        </p>
+
+        <Checkbox state=disabled>"Disabled"</Checkbox>
     }
 }

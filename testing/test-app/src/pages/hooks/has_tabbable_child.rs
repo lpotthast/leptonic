@@ -15,7 +15,7 @@ pub fn PageHookHasTabbableChild() -> impl IntoView {
 
     // Section 3: Disabled hook
     let htc_disabled = use_has_tabbable_child(UseHasTabbableChildInput {
-        disabled: Signal::derive(|| true),
+        is_disabled: Signal::derive(|| true),
     });
     let has_tabbable_disabled = htc_disabled.has_tabbable_child;
 

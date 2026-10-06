@@ -1,13 +1,13 @@
-use leptonic::{components::prelude::*, utils::key::Key};
+use leptonic::{components::prelude::*, utils::key::KeyboardKey};
 use leptos::prelude::*;
 
 #[component]
 pub fn KbdManualDemo() -> impl IntoView {
     view! {
         <KbdShortcutRoot>
-            <KbdKey key=Key::Command/>
+            <KbdKey key=KeyboardKey::Command/>
             <KbdConcatenate with="+"/>
-            <KbdKey key=Key::Enter/>
+            <KbdKey key=KeyboardKey::Enter/>
         </KbdShortcutRoot>
     }
 }

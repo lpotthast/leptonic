@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
+use assertr::prelude::*;
+use browser_test::{
+    BrowserTest, async_trait,
+    thirtyfour::{WebDriver, prelude::*},
+};
 use rootcause::Report;
 
-use assertr::prelude::*;
-use browser_test::thirtyfour::{WebDriver, prelude::*};
-
-use crate::pages::focus_visible::FocusVisiblePage;
+use crate::pages::{BaseActions, focus_visible::FocusVisiblePage};
 
 pub struct FocusVisibleTests {}
 
@@ -68,7 +69,7 @@ async fn test_arrow_key_sets_keyboard_modality(page: &FocusVisiblePage<'_>) -> R
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
     // ArrowDown switches to keyboard modality
-    page.send_key_to_active(Key::Down).await?;
+    page.send_keys_to_active(Key::Down).await?;
     assert_that!(page.read_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(true);
 
@@ -88,7 +89,7 @@ async fn test_typing_on_non_text_input_sets_keyboard_modality(
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
     // Typing "a" on a non-text-input SHOULD switch to keyboard modality (type-ahead)
-    page.send_key_to_active("a").await?;
+    page.send_keys_to_active("a").await?;
     assert_that!(page.read_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(true);
 
@@ -108,7 +109,7 @@ async fn test_typing_in_text_input_does_not_set_keyboard_modality(
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
     // Typing "a" in a text input should NOT switch to keyboard modality
-    page.send_key_to_active("a").await?;
+    page.send_keys_to_active("a").await?;
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(false);
 
@@ -134,7 +135,7 @@ async fn test_typing_in_text_input_silently_updates_stored_modality(
     // - Subscriber modality stays Pointer (not notified)
     // - Stored modality silently updates to Keyboard
     // - Focus visibility stays false
-    page.send_key_to_active("a").await?;
+    page.send_keys_to_active("a").await?;
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
     assert_that!(page.read_stored_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(false);
@@ -150,7 +151,7 @@ async fn test_escape_sets_keyboard_modality(page: &FocusVisiblePage<'_>) -> Resu
     page.click_target().await?;
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
-    page.send_key_to_active(Key::Escape).await?;
+    page.send_keys_to_active(Key::Escape).await?;
     assert_that!(page.read_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(true);
 
@@ -165,7 +166,7 @@ async fn test_enter_sets_keyboard_modality(page: &FocusVisiblePage<'_>) -> Resul
     page.click_target().await?;
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
-    page.send_key_to_active(Key::Enter).await?;
+    page.send_keys_to_active(Key::Enter).await?;
     assert_that!(page.read_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(true);
 
@@ -180,7 +181,7 @@ async fn test_space_sets_keyboard_modality(page: &FocusVisiblePage<'_>) -> Resul
     page.click_target().await?;
     assert_that!(page.read_modality().await?).is_equal_to("Pointer".to_string());
 
-    page.send_key_to_active(" ").await?;
+    page.send_keys_to_active(" ").await?;
     assert_that!(page.read_modality().await?).is_equal_to("Keyboard".to_string());
     assert_that!(page.read_visible().await?).is_equal_to(true);
 

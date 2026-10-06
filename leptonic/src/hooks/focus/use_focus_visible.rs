@@ -24,6 +24,12 @@ use crate::{
 
 // ## DIFFERENT BEHAVIOR
 //
+// - When tracking starts
+//   React-aria tracks the modality from module load (`addWindowFocusTracking()` at the top level).
+//   Rust has no module initialization: the hooks reading the modality in their event handlers start
+//   tracking when they are created (`track_interaction_modality`). Without it, a grid saw
+//   `Unknown` (treated as keyboard) for mouse presses and moved focus to its old focused cell.
+//
 // - No `mousedown` fallback handler
 //   React-aria registers a `mousedown` listener as a fallback for browsers
 //   without PointerEvent support. Per CLAUDE.md, we assume PointerEvent is
@@ -49,10 +55,9 @@ use crate::{
 pub struct UseFocusVisibleInput {
     /// Whether to auto-focus the element (affects initial visibility).
     pub auto_focus: bool,
-    /// Whether the subscription is active. When `false`, the hook does not
-    /// subscribe to global modality changes (saving unnecessary signal updates).
-    /// Defaults to always-true for standalone use.
-    pub enabled: Signal<bool>,
+    /// Stops tracking modality changes while `true` (e.g. while the element isn't focused),
+    /// saving signal updates. Tracking resumes with the current modality.
+    pub is_disabled: Signal<bool>,
     /// Whether the element is a text input. When `true`, only Tab/Escape keys
     /// trigger focus-visible; other keyboard events are suppressed. This is
     /// used for compound text-input components (e.g., a date picker where focus
@@ -64,7 +69,7 @@ impl Default for UseFocusVisibleInput {
     fn default() -> Self {
         Self {
             auto_focus: false,
-            enabled: Signal::stored(true),
+            is_disabled: Signal::stored(false),
             is_text_input: false,
         }
     }
@@ -102,13 +107,13 @@ pub struct UseFocusVisibleReturn {
 pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
     let UseFocusVisibleInput {
         auto_focus,
-        enabled,
+        is_disabled,
         is_text_input,
     } = input;
 
     #[cfg(feature = "ssr")]
     {
-        let _ = enabled;
+        let _ = is_disabled;
         let _ = is_text_input;
         let (is_focus_visible, _) = signal(auto_focus);
         let (modality, _) = signal(Modality::Unknown);
@@ -141,7 +146,13 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
             StoredValue::new_local(None);
 
         Effect::new(move |_| {
-            if enabled.get() {
+            if is_disabled.get() {
+                // Unregister while disabled.
+                if let Some(old_id) = subscriber_id.get_value() {
+                    state.unregister(old_id);
+                    subscriber_id.set_value(None);
+                }
+            } else {
                 // Sync to current global state (may have changed while unsubscribed).
                 let current = state.modality();
                 set_is_focus_visible.set(is_focus_visible_for_modality(current));
@@ -153,12 +164,6 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
                     set_modality.set(new_modality);
                 });
                 subscriber_id.set_value(Some(id));
-            } else {
-                // Unregister while disabled.
-                if let Some(old_id) = subscriber_id.get_value() {
-                    state.unregister(old_id);
-                    subscriber_id.set_value(None);
-                }
             }
         });
 
@@ -304,14 +309,21 @@ impl FocusState {
     /// the active element at event time was a text input) are only notified for
     /// Tab/Escape keys. Other keyboard events are suppressed for those subscribers.
     fn notify_subscribers(&self, modality: Modality) {
-        let subscribers = self.subscribers.read().expect("subscriber lock poisoned");
-        for (_, sub_is_text_input, subscriber) in &*subscribers {
-            if modality == Modality::Keyboard {
-                let is_text = *sub_is_text_input || self.active_element_is_text_input();
-                if is_text && !self.last_key_is_focus_key() {
-                    continue;
-                }
-            }
+        // Collect first and notify without holding the lock: a subscriber may (un)register
+        // synchronously, which would deadlock (and panic on wasm).
+        let to_notify: Vec<Out<Modality>> = {
+            let subscribers = self.subscribers.read().expect("subscriber lock poisoned");
+            subscribers
+                .iter()
+                .filter(|(_, sub_is_text_input, _)| {
+                    modality != Modality::Keyboard
+                        || !(*sub_is_text_input || self.active_element_is_text_input())
+                        || self.last_key_is_focus_key()
+                })
+                .map(|(_, _, subscriber)| *subscriber)
+                .collect()
+        };
+        for subscriber in to_notify {
             subscriber.set(modality);
         }
     }
@@ -627,7 +639,7 @@ fn resolve_window_and_document(
         let win = doc.as_ref().and_then(web_sys::Document::default_view);
         (win, doc)
     } else {
-        let win = web_sys::window();
+        let win = leptos_use::use_window().as_ref().cloned();
         let doc = win.as_ref().and_then(web_sys::Window::document);
         (win, doc)
     }
@@ -755,10 +767,9 @@ pub fn add_window_focus_tracking(element: Option<&web_sys::HtmlElement>) -> Box<
             .and_then(|d| d.default_view())
             .map_or_else(
                 || {
-                    web_sys::window().map_or(
-                        wasm_bindgen::JsValue::UNDEFINED,
-                        wasm_bindgen::JsValue::from,
-                    )
+                    leptos_use::use_window()
+                        .as_ref()
+                        .map_or(wasm_bindgen::JsValue::UNDEFINED, |w| w.clone().into())
                 },
                 wasm_bindgen::JsValue::from,
             );
@@ -788,10 +799,9 @@ pub fn tear_down_window_focus_tracking(element: Option<&web_sys::HtmlElement>) {
             .and_then(|d| d.default_view())
             .map_or_else(
                 || {
-                    web_sys::window().map_or(
-                        wasm_bindgen::JsValue::UNDEFINED,
-                        wasm_bindgen::JsValue::from,
-                    )
+                    leptos_use::use_window()
+                        .as_ref()
+                        .map_or(wasm_bindgen::JsValue::UNDEFINED, |w| w.clone().into())
                 },
                 wasm_bindgen::JsValue::from,
             );
@@ -800,10 +810,38 @@ pub fn tear_down_window_focus_tracking(element: Option<&web_sys::HtmlElement>) {
     }
 }
 
+/// The current interaction modality, updated as it changes (react-aria's
+/// `useInteractionModality`). `None` during server-side rendering.
+pub fn use_interaction_modality() -> Signal<Option<Modality>> {
+    #[cfg(feature = "ssr")]
+    {
+        Signal::stored(None)
+    }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let modality = use_focus_visible(UseFocusVisibleInput {
+            auto_focus: false,
+            is_disabled: Signal::stored(false),
+            is_text_input: false,
+        })
+        .modality;
+        Signal::derive(move || Some(modality.get()))
+    }
+}
+
+/// Starts tracking the interaction modality (idempotent, a no-op during SSR). react-aria tracks it
+/// from module load; here, every hook reading the modality in its event handlers (`get_modality`)
+/// calls this when it is created, so the modality is known by the first interaction.
+pub(crate) fn track_interaction_modality() {
+    #[cfg(not(feature = "ssr"))]
+    setup_global_focus_events(None);
+}
+
 /// Returns the current input modality.
 ///
 /// This is a convenience function for checking the current modality
-/// without setting up a reactive hook.
+/// without setting up a reactive hook. Before any hook started tracking it (see
+/// `track_interaction_modality`), it is `Modality::Unknown`.
 ///
 /// During SSR, always returns `Modality::Unknown`.
 pub fn get_modality() -> Modality {
@@ -836,6 +874,8 @@ pub fn set_modality(modality: Modality) {
 
 #[cfg(all(test, not(feature = "ssr")))]
 mod tests {
+    use assertr::prelude::*;
+
     use std::sync::{
         Arc,
         atomic::{AtomicU32, Ordering},
@@ -859,17 +899,17 @@ mod tests {
 
         // Step 1: Keyboard event → should notify (count=1)
         state.set_modality_and_notify(Modality::Keyboard);
-        assert_eq!(count.load(Ordering::Relaxed), 1);
-        assert_eq!(last_modality.load(Ordering::Relaxed), Modality::Keyboard);
+        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(1);
+        assert_that!(last_modality.load(Ordering::Relaxed)).is_equal_to(Modality::Keyboard);
 
         // Step 2: Silent pointer update (pointermove) → no notification
         state.set_modality_silently(Modality::Pointer);
-        assert_eq!(count.load(Ordering::Relaxed), 1);
+        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(1);
 
         // Step 3: Pointer down → should notify (set_modality_and_notify always notifies).
         state.set_modality_and_notify(Modality::Pointer);
-        assert_eq!(count.load(Ordering::Relaxed), 2);
-        assert_eq!(last_modality.load(Ordering::Relaxed), Modality::Pointer);
+        assert_that!(count.load(Ordering::Relaxed)).is_equal_to(2);
+        assert_that!(last_modality.load(Ordering::Relaxed)).is_equal_to(Modality::Pointer);
 
         state.unregister(id);
     }

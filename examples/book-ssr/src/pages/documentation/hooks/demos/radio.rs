@@ -1,75 +1,65 @@
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::{collections::Key, *},
+};
 use leptos::prelude::*;
-use leptos_classes::Classes;
+
+const SIZES: [(&str, &str); 3] = [("s", "Small"), ("m", "Medium"), ("l", "Large")];
 
 #[component]
 pub fn RadioDemo() -> impl IntoView {
-    let UseRadioGroupStateReturn {
-        selected_value,
-        set_selected,
-    } = use_radio_group_state(Some("option1".to_string()));
+    let disabled = RwSignal::new(false);
+    let read_only = RwSignal::new(false);
 
-    let UseRadioGroupReturn {
-        group_props,
-        label_props,
-        error_props: _,
-        state,
-        is_invalid: _,
-        validation_errors: _,
-        validation_details: _,
-    } = use_radio_group(UseRadioGroupInput {
-        label: Some("Select an option".into()),
-        description: None,
-        is_disabled: Signal::derive(|| false),
-        is_read_only: Signal::derive(|| false),
-        is_required: false,
-        value: selected_value,
-        orientation: Orientation::Vertical,
-        on_change: Some(Callback::new(move |value: String| {
-            set_selected.run(value);
-        })),
-        ..Default::default()
+    let state = use_radio_group_state(UseRadioGroupStateInput {
+        default_value: Some(Key::from("m")),
+        name: Some("size".to_owned()),
+        is_disabled: disabled.into(),
+        is_read_only: read_only.into(),
+        ..UseRadioGroupStateInput::default()
     });
-
-    let options = vec![
-        ("option1", "First Option"),
-        ("option2", "Second Option"),
-        ("option3", "Third Option"),
-    ];
-
-    let label_id = label_props.id.clone();
+    let group = use_radio_group(UseRadioGroupInput {
+        has_label: true,
+        ..UseRadioGroupInput::new(state)
+    });
+    let data = group.data;
 
     view! {
-        <fieldset
-            {..group_props.into_attrs()}
-            style="border: none; padding: 0; margin: 0;"
-        >
-            <legend id=label_id style="font-weight: bold; margin-bottom: 0.5em;">
-                "Select an option"
-            </legend>
+        <div {..group.props.into_attrs()} class="demo-choice-group">
+            <span {..group.label_props.into_attrs()} class="demo-choice-group-label">"Size"</span>
+            {SIZES
+                .into_iter()
+                .map(|(value, label)| view! { <SizeRadio group=data value label/> })
+                .collect_view()}
+        </div>
 
-            {options.into_iter().map(|(value, label)| {
-                let value_owned = value.to_string();
-                let value_for_check = value_owned.clone();
-                let value_for_change = value_owned.clone();
-                let state_clone = state.clone();
-                view! {
-                    <label class=Classes::from("demo-form-row")>
-                        <input
-                            type="radio"
-                            name=state.name
-                            value=value
-                            checked=move || state_clone.selected_value.get().as_ref() == Some(&value_for_check)
-                            on:change=move |_| state.set_selected_value.run(value_for_change.clone())
-                        />
-                        <span>{ label }</span>
-                    </label>
-                }
-            }).collect::<Vec<_>>()}
-        </fieldset>
-
-        <p class=Classes::from("demo-mt-1")>
-            "Selected: " <strong>{ move || selected_value.get().unwrap_or_else(|| "None".to_string()) }</strong>
+        <p class="demo-status">
+            {move || state.selected_value.get().map_or_else(|| "Nothing selected".to_owned(), |v| format!("Selected: {v}"))}
         </p>
+
+        <div class="demo-toggle-settings">
+            <Checkbox state=disabled>"Disabled"</Checkbox>
+            <Checkbox state=read_only>"Read-only"</Checkbox>
+        </div>
+    }
+}
+
+#[component]
+fn SizeRadio(group: RadioGroupData, value: &'static str, label: &'static str) -> impl IntoView {
+    let radio = use_radio(UseRadioInput::new(group, value));
+    let (label_attrs, label_styles) = radio.label_props.into_parts();
+    let (input_attrs, input_styles) = radio.input_props.into_parts();
+    let is_focus_visible = radio.is_focus_visible;
+
+    view! {
+        <label
+            {..label_attrs}
+            style=label_styles
+            class="demo-checkbox-label demo-no-margin"
+            data-focus-visible=move || is_focus_visible.get().then_some("")
+        >
+            <input {..input_attrs} style=input_styles/>
+            {label}
+        </label>
     }
 }

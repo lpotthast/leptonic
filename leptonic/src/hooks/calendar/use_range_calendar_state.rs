@@ -123,7 +123,7 @@ pub struct UseRangeCalendarStateInput {
     pub default_focused_value: Option<OffsetDateTime>,
 
     /// External validity signal (e.g. from form validation).
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// The first day of the week. Defaults to Monday.
     pub first_day_of_week: time::Weekday,
@@ -142,7 +142,7 @@ impl Default for UseRangeCalendarStateInput {
             on_change: None,
             on_focus_change: None,
             default_focused_value: None,
-            is_invalid: None,
+            is_invalid: Signal::stored(false),
             first_day_of_week: time::Weekday::Monday,
         }
     }
@@ -348,7 +348,7 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
         on_change: None,
         on_focus_change,
         default_focused_value: default_focused_value.or(default_value.and_then(|r| r.start)),
-        is_invalid: None,
+        is_invalid: Signal::stored(false),
         first_day_of_week,
     });
 
@@ -467,9 +467,7 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
 
     let is_value_invalid = Signal::derive(move || {
         // External invalid signal.
-        if let Some(is_invalid) = is_invalid
-            && is_invalid.get()
-        {
+        if is_invalid.get() {
             return true;
         }
 

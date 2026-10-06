@@ -1,22 +1,13 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::tabs::TabsConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageTabsOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="tabs" class="anchor">
-                "Tabs"
-                <AnchorLink href="#tabs" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Tabs">
             <p>
                 "Tabs organize content into panels, showing one panel at a time. "
                 "The user switches panels by selecting a tab from a horizontal (or vertical) tab list. "
@@ -24,146 +15,108 @@ pub fn PageTabsOverview() -> impl IntoView {
                 "settings categories, data views, or step-by-step sections."
             </p>
 
-            <p>
-                "Leptonic provides tabs at two abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Switch between parallel content panels"</TableCell><TableCell><b>"Tabs"</b></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Expand/collapse independent sections"</TableCell>
+                        <TableCell><Link href=routes::doc::Collapsible.materialize()>"Collapsible"</Link></TableCell>
+                    </TableRow>
+                    <TableRow><TableCell>"Navigate between pages"</TableCell><TableCell><Link href=routes::doc::Link.materialize()>"Router / Link"</Link></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Choose a value from options"</TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::Select.materialize()>"Select"</Link>" / "
+                            <Link href=routes::doc::Radio.materialize()>"Radio"</Link>
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Tabs exist as hooks, as atoms and as a styled component. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Switch between parallel content panels"</TableCell>
-                            <TableCell><b>"Tabs"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Expand/collapse independent sections"</TableCell>
-                            <TableCell>"Collapsible"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Navigate between pages"</TableCell>
-                            <TableCell>"Router / Link"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Choose a value from options"</TableCell>
-                            <TableCell>"Select / Radio"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::tabs::Hook.materialize()>"Tab hooks"</Link></TableCell>
+                        <TableCell>
+                            "Behavior and ARIA attributes for a tab list, tabs and panels you render yourself: "
+                            <Code inline=true>"use_tab_list_state"</Code>", "<Code inline=true>"use_tab_list"</Code>", "
+                            <Code inline=true>"use_tab"</Code>", "<Code inline=true>"use_tab_panel"</Code>"."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::tabs::Atom.materialize()>"Tab atoms"</Link></TableCell>
+                        <TableCell>
+                            "Unstyled "<Code inline=true>"Tabs"</Code>", "<Code inline=true>"TabList"</Code>", "
+                            <Code inline=true>"Tab"</Code>" and "<Code inline=true>"TabPanel"</Code>" built on the hooks, "
+                            "styled through data attributes. The recommended starting point."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::tabs::Component.materialize()>"Tabs component"</Link></TableCell>
+                        <TableCell>
+                            "Themed tabs with a tab bar and panels. It predates the tab hooks and is not built on them: its "
+                            "tabs are mouse-only, without keyboard navigation, "<Code inline=true>"aria-selected"</Code>" or "
+                            "tab-to-panel references."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>
+                    "The atoms: a collection of tabs, a "<Code inline=true>"TabList"</Code>" with a "<Code inline=true>"Tab"</Code>
+                    " per tab and a "<Code inline=true>"TabPanel"</Code>" per tab. The classes come from the demo stylesheet."
+                </p>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+                <Demo description="Tabbed content panels built with the tab atoms" source=include_str!("demos/tabs.rs") source_open=true>
+                    <TabsConceptDemo/>
+                </Demo>
+            </Section>
 
-            <ul>
-                <li><Link href=routes::doc::tabs::Hook.materialize()>"Hook: use_tabs"</Link></li>
-                <li><Link href=routes::doc::tabs::Component.materialize()>"Component: Tabs"</Link></li>
-            </ul>
+            <Section title="Accessibility">
+                <p>
+                    "The tab hooks and atoms follow the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/tabs/" target=LinkTarget::_Blank>"Tabs pattern"</LinkExt>
+                    ":"
+                </p>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"tablist\""</Code>" on the tab list (with "<Code inline=true>"aria-orientation"</Code>
+                        " and a label you provide), "<Code inline=true>"role=\"tab\""</Code>" on each tab, "
+                        <Code inline=true>"role=\"tabpanel\""</Code>" on the panel"
+                    </li>
+                    <li><Code inline=true>"aria-selected"</Code>" on every tab, "<Code inline=true>"aria-disabled"</Code>" on disabled tabs"</li>
+                    <li>
+                        <Code inline=true>"aria-controls"</Code>" on the selected tab points to its panel, the panel\u{2019}s "
+                        <Code inline=true>"aria-labelledby"</Code>" back to the tab"
+                    </li>
+                    <li>"The tab list is one tab stop; the panel is the next one unless it contains tabbable elements"</li>
+                </ul>
 
-            <p>"The simplest way to use tabs (component layer):"</p>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">
+                        "Move focus to the selected tab (with manual activation: the tab focused last), then into the panel."
+                    </KeyRow>
+                    <KeyRow keys="ArrowRight / ArrowLeft">
+                        "Move to the next or previous enabled tab, wrapping around (mirrored in right-to-left locales)."
+                    </KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Move to the next or previous enabled tab (vertical tab lists)."</KeyRow>
+                    <KeyRow keys="Home / End">"Move to the first or last enabled tab."</KeyRow>
+                    <KeyRow keys="Enter / Space">"Select the focused tab (manual activation; otherwise moving selects)."</KeyRow>
+                </KeyboardTable>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Tabs>
-                        <Tab name="tab-1" label=|| "First">"Content of first tab"</Tab>
-                        <Tab name="tab-2" label=|| "Second">"Content of second tab"</Tab>
-                        <Tab name="tab-3" label=|| "Third">"Content of third tab"</Tab>
-                    </Tabs>
-                "#)}
-            </Code>
-
-            <DemoShell description="Tabbed content panels" source=include_str!("demos/tabs.rs")>
-                <TabsConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic tabs follow the WAI-ARIA Tabs pattern."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"tablist\""</Code>" on the tab bar, "
-                    <Code inline=true>"role=\"tab\""</Code>" on each tab, "
-                    <Code inline=true>"role=\"tabpanel\""</Code>" on each panel"</li>
-                <li><Code inline=true>"aria-selected"</Code>" \u{2014} \"true\" on the active tab"</li>
-                <li><Code inline=true>"aria-controls"</Code>" / "<Code inline=true>"aria-labelledby"</Code>" \u{2014} connect tabs to panels"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Right / Down"</Code></TableCell>
-                            <TableCell>"Focus next tab"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Left / Up"</Code></TableCell>
-                            <TableCell>"Focus previous tab"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Home"</Code></TableCell>
-                            <TableCell>"Focus first tab"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"End"</Code></TableCell>
-                            <TableCell>"Focus last tab"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Tab"</Code></TableCell>
-                            <TableCell>"Move focus from tab bar into panel content"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Tabs", link: "#tabs" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <p>
+                    "The legacy "<Link href=routes::doc::tabs::Component.materialize()>"Tabs component"</Link>" renders the "
+                    "roles, but none of the keyboard interaction or the other attributes."
+                </p>
+            </Section>
+        </DocPage>
     }
 }

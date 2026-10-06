@@ -1,12 +1,10 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
+use assertr::prelude::*;
+use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
-use assertr::prelude::*;
-use browser_test::thirtyfour::WebDriver;
-
-use crate::pages::focus_within::FocusWithinPage;
+use crate::pages::{BaseActions, focus_within::FocusWithinPage};
 
 pub struct FocusWithinTests {}
 
@@ -125,17 +123,17 @@ async fn test_tab_into_and_out_of_container(page: &FocusWithinPage<'_>) -> Resul
     page.click_before().await?;
 
     // Tab into container (should land on input-a)
-    page.tab_from_active().await?;
+    page.press_tab().await?;
     assert_that!(page.read_is_focus_within().await?).is_equal_to(true);
     assert_that!(page.read_focus_within_count().await?).is_equal_to(1);
 
     // Tab from input-a to input-b (still within container)
-    page.tab_from_active().await?;
+    page.press_tab().await?;
     assert_that!(page.read_is_focus_within().await?).is_equal_to(true);
     assert_that!(page.read_focus_within_count().await?).is_equal_to(1); // No re-trigger
 
     // Tab out of container
-    page.tab_from_active().await?;
+    page.press_tab().await?;
     assert_that!(page.read_is_focus_within().await?).is_equal_to(false);
     assert_that!(page.read_blur_within_count().await?).is_equal_to(1);
 

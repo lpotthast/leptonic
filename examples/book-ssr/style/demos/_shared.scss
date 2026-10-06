@@ -1,0 +1,115 @@
+// Utility classes used by demos of several sections (buttons, inputs, spacing, state displays).
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+/* Buttons */
+.demo-btn           { padding: var(--book-space-s) var(--book-space-m); border-radius: var(--book-radius-s); border: 1px solid var(--book-border-color); cursor: pointer; }
+
+.demo-btn-primary   { padding: var(--book-space-s) var(--book-space-l); border-radius: var(--book-radius-m); cursor: pointer; background: var(--brand-color); color: var(--book-on-brand-color); border: none; font-size: var(--book-font-size-m); }
+
+/* Inputs */
+.demo-input         { padding: var(--book-space-s); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-s); }
+
+/* Layout */
+.demo-form-row        { flex-direction: row; align-items: center; gap: var(--book-space-s); }
+
+.demo-flex-gap        { display: flex; gap: var(--book-space-xl); flex-wrap: wrap; margin-top: var(--book-space-s); }
+
+.demo-flex-center-row { display: flex; gap: var(--book-space-m); align-items: center; }
+
+.demo-inline-controls { display: flex; align-items: center; gap: var(--book-space-s); margin-top: var(--book-space-s); }
+
+.demo-mt-half         { margin-top: var(--book-space-s); }
+
+.demo-mt-1            { margin-top: var(--book-space-m); }
+
+.demo-mb-1            { margin-bottom: var(--book-space-m); }
+
+/* Text */
+.demo-caption    { font-size: var(--book-font-size-s); color: var(--book-muted-color); margin-top: var(--book-space-s); }
+
+/* Checkbox label (native input) */
+.demo-checkbox-label { display: flex; align-items: center; gap: var(--book-space-s); cursor: pointer; margin-top: var(--book-space-s); }
+
+/* State indicators */
+.demo-state-active   { color: var(--success-color); }
+
+.demo-state-inactive { color: var(--book-muted-color); }
+
+.demo-container-title    { margin: 0 0 var(--book-space-m) 0; font-weight: bold; }
+
+/* Slider
+ *
+ * `--demo-slider-accent` colors the fill and thumbs; the color modifiers below override it.
+ * Positioning (left/bottom/width/height of fill and thumbs) is computed by the slider itself.
+ */
+.demo-slider          { --demo-slider-accent: var(--brand-color); display: flex; align-items: center; gap: var(--book-space-m); }
+
+.demo-slider-track    { display: flex; flex: 1; width: 100%; height: 8px; position: relative; background: var(--book-border-color); border-radius: var(--book-radius-s); cursor: pointer; }
+
+.demo-slider-fill     { background-color: var(--demo-slider-accent); border-radius: var(--book-radius-s); }
+
+.demo-slider-thumb    { width: 20px; height: 20px; background-color: var(--demo-slider-accent); border: 2px solid var(--book-on-brand-color); border-radius: 50%; box-shadow: var(--book-shadow-s); cursor: grab; }
+
+.demo-slider-output   { min-width: 50px; text-align: right; }
+
+/* Overlay positioning */
+.demo-option-group       { border: 0.1em solid var(--book-border-color); border-radius: var(--book-radius-s); padding: var(--book-space-s); }
+
+.demo-radio-list         { display: flex; flex-direction: column; gap: var(--book-space-xs); width: 100%; margin-top: var(--book-space-s); }
+
+.demo-state-display  { margin-top: var(--book-space-m); padding: var(--book-space-s) var(--book-space-m); background: var(--book-surface-color-raised); border-radius: var(--book-radius-m); font-size: var(--book-font-size-s); font-family: monospace; }
+
+/* Event log */
+.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }
+
+// Focus ring of slider thumbs; `data-focus-visible` is set by `use_slider_thumb`.
+.demo-slider-thumb[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+
+// Text, search and number fields built with the field hooks.
+.demo-field             { display: flex; flex-direction: column; gap: var(--book-space-xs); }
+
+.demo-field-label       { font-weight: 500; }
+
+.demo-field-error       { margin: 0; font-size: var(--book-font-size-s); color: var(--danger-color); }
+
+.demo-field-error:empty { display: none; }
+
+.demo-text-input {
+    width: 250px;
+    max-width: 100%;
+    border-color: var(--book-border-color);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+
+    &[aria-invalid="true"] { border-color: var(--danger-color); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-text-input[contenteditable] { min-height: 1.5em; }
+
+.demo-overlays-caption {
+    margin: var(--book-space-s) 0 0 0;
+    font-size: var(--book-font-size-s);
+    color: var(--book-muted-color);
+}
+
+// A row of controls with their labels or status, vertically centered.
+.demo-control-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-m);
+}
+
+// Stacks several examples of one demo with some space between them.
+.demo-control-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-m);
+}
+
+.demo-control-row > .demo-status {
+    margin: 0;
+}

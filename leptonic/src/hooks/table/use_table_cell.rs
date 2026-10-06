@@ -1,226 +1,92 @@
-// Upstream: react-aria/src/table/useTableCell.ts @ 6f664fe911
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
-use web_sys::{FocusEvent, KeyboardEvent};
+// Upstream: react-aria/src/table/useTableCell.ts @ 99e6102368
+use leptos::prelude::*;
 
+use super::TableData;
 use crate::{
     hooks::{
-        IntoAttrs,
-        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        CellFocusMode, PropsWithStyles, UseGridCellInput, UseGridCellProps, UseGridCellReturn,
+        collections::Key, use_grid_cell,
     },
-    utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaRole},
-    },
+    utils::aria::AriaRole,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/table/useTableCell.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
 // No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
-/// Input parameters for the `use_table_cell` hook.
+/// Input of [`use_table_cell`].
 #[derive(Debug, Clone)]
 pub struct UseTableCellInput {
-    /// The column index (for aria-colindex).
-    pub column_index: usize,
-
-    /// Whether the cell is focused.
-    pub is_focused: Signal<bool>,
-
-    /// Whether the cell is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the cell contains an interactive element.
-    pub is_interactive: bool,
-
-    /// Callback when the cell receives focus.
-    pub on_focus: Option<Callback<()>>,
-
-    /// Callback when navigating to the next cell.
-    pub on_focus_next: Option<Callback<()>>,
-
-    /// Callback when navigating to the previous cell.
-    pub on_focus_previous: Option<Callback<()>>,
+    /// The table (from `use_table`).
+    pub table: TableData,
+    /// The cell's key (`Key::cell(row, column_index)`).
+    pub key: Key,
+    /// See `UseGridCellInput::focus_mode`.
+    pub focus_mode: Option<CellFocusMode>,
+    /// See `UseGridCellInput::allows_arrow_navigation`.
+    pub allows_arrow_navigation: bool,
+    /// Select when the press ends instead of when it starts.
+    pub should_select_on_press_up: bool,
 }
 
-impl Default for UseTableCellInput {
-    fn default() -> Self {
+impl UseTableCellInput {
+    pub fn new(table: TableData, key: Key) -> Self {
         Self {
-            column_index: 0,
-            is_focused: Signal::derive(|| false),
-            is_disabled: Signal::derive(|| false),
-            is_interactive: false,
-            on_focus: None,
-            on_focus_next: None,
-            on_focus_previous: None,
+            table,
+            key,
+            focus_mode: None,
+            allows_arrow_navigation: false,
+            should_select_on_press_up: false,
         }
     }
 }
 
-/// The return value of the `use_table_cell` hook.
+/// Return value of [`use_table_cell`].
 pub struct UseTableCellReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub cell_props: UseTableCellProps,
-
-    /// Whether the cell is focused.
-    pub is_focused: Signal<bool>,
-
-    /// Whether the focus ring should be visible (keyboard navigation only).
-    pub is_focus_visible: Signal<bool>,
+    pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
+    pub is_pressed: Signal<bool>,
 }
 
-/// Props from `use_table_cell` that can be extracted and merged programmatically.
-#[derive(Debug)]
-pub struct UseTableCellProps {
-    pub role: AriaRole,
-    pub aria_colindex: String,
-    pub tabindex: Signal<&'static str>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_blur: EventHandler<FocusEvent>,
-    pub on_focusin: EventHandler<FocusEvent>,
-    pub on_focusout: EventHandler<FocusEvent>,
-    pub data_focus_visible: Signal<Option<&'static str>>,
-}
-
-impl IntoAttrs for UseTableCellProps {
-    type Attrs = UseTableCellAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaColindex, self.aria_colindex),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
-            self.on_focusin.into_on(ev::focusin),
-            self.on_focusout.into_on(ev::focusout),
-            attr::custom::custom_attribute("data-focus-visible", self.data_focus_visible),
-        )
-    }
-}
-
-/// Attributes for the table cell element.
-pub type UseTableCellAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaColindex, String>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
-);
-
-/// Provides the behavior and accessibility for a table cell.
-///
-/// A table cell displays data within a row and column intersection.
-///
-/// # Example
-///
-/// ```ignore
-/// let cell = use_table_cell(UseTableCellInput {
-///     column_index: col_idx,
-///     is_focused: is_cell_focused.into(),
-///     is_disabled: Signal::derive(|| false),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <td {..cell.cell_props.into_attrs()}>
-///         {data}
-///     </td>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
+/// A body cell of a table. Cells of row header columns get `role="rowheader"` and the id the
+/// row's `aria-labelledby` refers to.
 pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
     let UseTableCellInput {
-        column_index,
-        is_focused,
-        is_disabled: disabled,
-        is_interactive,
-        on_focus,
-        on_focus_next,
-        on_focus_previous,
+        table,
+        key,
+        focus_mode,
+        allows_arrow_navigation,
+        should_select_on_press_up,
     } = input;
-
-    // Compute tabindex
-    let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
-
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Handle keyboard navigation
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-
-        // If the cell contains interactive content, let it handle events
-        if is_interactive {
-            return;
-        }
-
-        let key = e.key();
-        match key.as_str() {
-            "ArrowRight" => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowLeft" => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            _ => {}
-        }
-    };
-
-    // Use focus ring for keyboard focus visibility with user callback
-    let UseFocusRingReturn {
-        props: focus_ring_props,
-        is_focus_visible,
-        is_focused: _,
-    } = use_focus_ring(UseFocusRingInput {
-        disabled,
-        within: false,
-        auto_focus: false,
-        is_text_input: false,
-        on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
-        on_blur: None,
-        on_focus_change: None,
+    let row_header = table.state.table.with_untracked(|t| {
+        let column = t.cell_column(&key)?;
+        let row = t.collection().get(&key)?.parent_key.clone()?;
+        t.row_header_columns()
+            .contains(&column.key)
+            .then(|| (row, column.key.clone()))
     });
-
-    // Column index is 1-based for ARIA
-    let aria_colindex = (column_index + 1).to_string();
-
+    let id = row_header
+        .as_ref()
+        .map(|(row, column)| table.cell_id(row, column));
+    let UseGridCellReturn {
+        grid_cell_props,
+        is_pressed,
+    } = use_grid_cell(UseGridCellInput {
+        id,
+        focus_mode,
+        allows_arrow_navigation,
+        should_select_on_press_up,
+        ..UseGridCellInput::new(table.grid, key)
+    });
+    let (mut cell, styles) = grid_cell_props.into_inner();
+    if row_header.is_some() {
+        cell.role = AriaRole::Rowheader;
+    }
     UseTableCellReturn {
-        cell_props: UseTableCellProps {
-            role: AriaRole::Gridcell,
-            aria_colindex,
-            tabindex,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
-            on_focusin: focus_ring_props.on_focusin,
-            on_focusout: focus_ring_props.on_focusout,
-            data_focus_visible: focus_ring_props.data_focus_visible,
-        },
-        is_focused,
-        is_focus_visible,
+        grid_cell_props: PropsWithStyles::new(cell, styles),
+        is_pressed,
     }
 }

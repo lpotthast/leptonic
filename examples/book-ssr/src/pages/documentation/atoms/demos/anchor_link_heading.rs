@@ -4,15 +4,12 @@ use leptos::prelude::*;
 #[component]
 pub fn AnchorLinkHeadingDemo() -> impl IntoView {
     view! {
-        <div style="
-            padding: 1em;
-            border-radius: 0.25em;
-            border: 0.1em solid var(--typography-code-background-color);
-        ">
-            <h2 id="my-section-anchor">
+        <div class="demo-navigation-frame">
+            <h3 id="my-section-anchor">
                 "My Section"
-                <AnchorLink href="#my-section-anchor" description="Direct link to section: My Section">#</AnchorLink>
-            </h2>
+                // Without children, the link renders a single `#`.
+                <AnchorLink href="#my-section-anchor" description="Direct link to section: My Section"/>
+            </h3>
         </div>
     }
 }

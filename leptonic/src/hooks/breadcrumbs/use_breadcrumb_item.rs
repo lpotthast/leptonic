@@ -154,8 +154,11 @@ pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemRe
         }
     };
 
+    // Links activate natively: Enter on an `<a href>` clicks it (`handle_click` runs `on_press`),
+    // and Space doesn't activate links (as `usePress` treats links).
+    let is_link = href.is_some();
     let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() || is_current {
+        if disabled.get_untracked() || is_current || is_link {
             return;
         }
 

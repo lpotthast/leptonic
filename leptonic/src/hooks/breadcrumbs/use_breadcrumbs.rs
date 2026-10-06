@@ -1,8 +1,7 @@
 // Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::id::use_id};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/breadcrumbs/useBreadcrumbs.ts
 

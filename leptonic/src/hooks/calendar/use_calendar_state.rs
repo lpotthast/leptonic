@@ -1,7 +1,6 @@
 // Upstream: react-stately/src/calendar/useCalendarState.ts @ 6f664fe911
 use leptos::prelude::*;
 use time::macros::format_description;
-use uuid::Uuid;
 
 use crate::utils::{
     live_announcer::announce_polite,
@@ -64,7 +63,7 @@ pub struct UseCalendarStateInput {
     pub default_focused_value: Option<time::OffsetDateTime>,
 
     /// External validity signal (e.g. from form validation).
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// The first day of the week. Defaults to Monday.
     pub first_day_of_week: time::Weekday,
@@ -82,7 +81,7 @@ impl Default for UseCalendarStateInput {
             on_change: None,
             on_focus_change: None,
             default_focused_value: None,
-            is_invalid: None,
+            is_invalid: Signal::stored(false),
             first_day_of_week: time::Weekday::Monday,
         }
     }
@@ -168,8 +167,8 @@ pub struct UseCalendarStateReturn {
     pub navigate_years_forward: Callback<()>,
     /// Focus a specific year (updates focused date to that year).
     pub focus_year: Callback<i32>,
-    /// Focus a specific month (updates focused date to that month, 1-based index).
-    pub focus_month: Callback<u8>,
+    /// Focus a specific month (updates focused date to that month).
+    pub focus_month: Callback<time::Month>,
 
     // Query methods
     /// Check if a date is the currently selected date.
@@ -356,9 +355,7 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
     // --- Validation ---
 
     let is_value_invalid = Signal::derive(move || {
-        if let Some(is_invalid) = is_invalid
-            && is_invalid.get()
-        {
+        if is_invalid.get() {
             return true;
         }
         if let Some(val) = value.get() {
@@ -452,7 +449,10 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
         let current = focused_date.get_untracked();
         if larger {
             // +1 year
-            update_focused(current.save_replace_year(current.year() + 1).unwrap());
+            // At the end of the supported range, stay.
+            if let Ok(next) = current.save_replace_year(current.year() + 1) {
+                update_focused(next);
+            }
         } else {
             // +1 month
             update_focused(start_of_next_month(current));
@@ -463,7 +463,10 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
         let current = focused_date.get_untracked();
         if larger {
             // -1 year
-            update_focused(current.save_replace_year(current.year() - 1).unwrap());
+            // At the start of the supported range, stay.
+            if let Ok(previous) = current.save_replace_year(current.year() - 1) {
+                update_focused(previous);
+            }
         } else {
             // -1 month
             update_focused(start_of_previous_month(current));
@@ -494,18 +497,17 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
         });
     });
 
+    // Years outside the range `time` supports are ignored.
     let focus_year_cb = Callback::new(move |year: i32| {
-        let current = focused_date.get_untracked();
-        update_focused(current.save_replace_year(year).unwrap());
+        if let Ok(date) = focused_date.get_untracked().save_replace_year(year) {
+            update_focused(date);
+        }
     });
 
-    let focus_month_cb = Callback::new(move |month_index: u8| {
-        let current = focused_date.get_untracked();
-        update_focused(
-            current
-                .save_replace_month(time::Month::try_from(month_index).unwrap())
-                .unwrap(),
-        );
+    let focus_month_cb = Callback::new(move |month: time::Month| {
+        if let Ok(date) = focused_date.get_untracked().save_replace_month(month) {
+            update_focused(date);
+        }
     });
 
     // --- Query methods ---
@@ -653,14 +655,15 @@ pub fn create_months(
     let focused_year = focused.year();
     let focused_month = focused.month();
     let mut months = Vec::<Month>::with_capacity(12);
-    for i in 1..=12u8 {
-        let month: time::OffsetDateTime = focused
-            .save_replace_month(time::Month::try_from(i).unwrap())
-            .unwrap();
+    let mut month_of_year = time::Month::January;
+    for _ in 0..12 {
+        let Ok(month) = focused.save_replace_month(month_of_year) else {
+            continue;
+        };
         let month_year = month.year();
         let month_month = month.month();
         months.push(Month {
-            index: i,
+            month: month_of_year,
             // English-only; i18n would need a custom formatter
             name: month
                 .format(format_description!("[month repr:long]"))
@@ -671,8 +674,9 @@ pub fn create_months(
             is_now: this_year == month_year && this_month == month_month,
             disabled: !is_in_range(&month, min, max),
         });
+        month_of_year = month_of_year.next();
     }
-    assert_eq!(months.len(), 12);
+    debug_assert_eq!(months.len(), 12);
     months
 }
 
@@ -720,7 +724,6 @@ pub fn create_weeks(
     let mut weeks = Vec::<Week>::with_capacity(WEEKS_TO_DISPLAY as usize);
     for w in 0..WEEKS_TO_DISPLAY {
         let mut week = Week {
-            id: Uuid::new_v4(),
             days: Vec::with_capacity(DAYS_PER_WEEK as usize),
         };
         for d in 0..DAYS_PER_WEEK {
@@ -757,7 +760,6 @@ pub fn create_weeks(
             });
 
             week.days.push(Day {
-                id: Uuid::new_v4(),
                 index: day_in_month,
                 in_month,
                 date_time,

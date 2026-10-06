@@ -3,10 +3,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorPreviewDemo() -> impl IntoView {
-    let (hsv, _set_hsv) = signal(HSV::new());
-    let rgb = Signal::derive(move || hsv.get().into_rgb8());
+    let rgb = Signal::stored(HSV::from_hue_fully_saturated(200.0).into_rgb8());
 
     view! {
-        <ColorPreview rgb=rgb attr:style="width: 5em%; height: 5em;"/>
+        <ColorPreview rgb=rgb classes="demo-color-preview-large"/>
+        <p class="demo-status">{move || format!("#{:X}", rgb.get())}</p>
     }
 }

@@ -1,10 +1,10 @@
-use leptos::prelude::*;
-
 pub mod demos;
 
 pub mod anchor_link;
+pub mod animation;
 pub mod breadcrumbs;
 pub mod button;
+pub mod calendar;
 pub mod checkbox;
 pub mod color;
 pub mod color_area;
@@ -14,6 +14,8 @@ pub mod color_slider;
 pub mod color_swatch;
 pub mod color_wheel;
 pub mod combobox;
+pub mod date_field;
+pub mod date_picker;
 pub mod disclosure;
 pub mod dnd;
 pub mod focus;
@@ -43,7 +45,6 @@ pub mod progress;
 pub mod radio;
 pub mod scroll_wheel;
 pub mod select;
-pub mod selection;
 pub mod separator;
 pub mod slider;
 pub mod spin_button;
@@ -52,20 +53,7 @@ pub mod table;
 pub mod tabs;
 pub mod tag;
 pub mod text_field;
+pub mod toggle_button;
 pub mod toolbar;
 pub mod tooltip;
 pub mod tree;
-
-#[component]
-pub fn PageHooks() -> impl IntoView {
-    view! {
-        <div>
-            <h1>Hooks</h1>
-            <p>
-                Hooks are a way to extend the functionality of Leptos components.
-                They are a way to add functionality to components without having to
-                modify the component itself.
-            </p>
-        </div>
-    }
-}

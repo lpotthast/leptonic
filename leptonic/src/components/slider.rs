@@ -55,7 +55,7 @@ fn SliderInner(
             min=min
             max=max
             nostrip:step=step
-            disabled=disabled
+            is_disabled=disabled
             nostrip:on_change=on_change
             classes=classes.add("leptonic-slider")
             styles

@@ -1,0 +1,249 @@
+// Demo styles of the ListBox and Select atom pages. Theme-aware: use the book tokens (--book-surface-color, ...).
+// The atoms render state as data attributes; every state below is styled through them.
+
+// -- ListBox atom --
+
+// The listbox with its visible label.
+.demo-lb {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    width: 18em;
+    max-width: 100%;
+}
+
+.demo-lb-label {
+    font-weight: 600;
+}
+
+.demo-lb-listbox {
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    outline: none;
+}
+
+// A section's heading (`heading_classes`) and its group of options (`classes`).
+.demo-lb-heading {
+    padding: var(--book-space-s) var(--book-space-s) var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.demo-lb-group {
+    display: flex;
+    flex-direction: column;
+}
+
+// An option. Options receive DOM focus; `data-focus-visible` marks keyboard focus.
+.demo-lb-item {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &:hover:not([data-disabled]) {
+        background: var(--brand-color-subtle);
+    }
+
+    // Replaces the theme's generic focus ring, which would be clipped by the scroll container.
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[data-pressed] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+}
+
+// The checkbox drawn in front of an option; filled while the option is selected.
+.demo-lb-check {
+    flex: none;
+    width: 1em;
+    height: 1em;
+    border: 1px solid var(--book-muted-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+
+    [data-selected] > & {
+        border-color: var(--brand-color);
+        background: var(--brand-color);
+        box-shadow: inset 0 0 0 2px var(--book-surface-color);
+    }
+}
+
+.demo-lb-price {
+    margin-left: auto;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+}
+
+// -- Select atom --
+
+// The select: label, trigger and description, stacked.
+.demo-sel {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    width: 16em;
+    max-width: 100%;
+}
+
+.demo-sel-label {
+    font-weight: 600;
+    cursor: default;
+}
+
+.demo-sel-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--book-space-s);
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover:not([data-disabled]),
+    &[data-open] {
+        border-color: var(--brand-color);
+    }
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+
+    &[data-pressed] {
+        background: var(--book-surface-color-raised);
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    &[data-invalid] {
+        border-color: var(--danger-color);
+    }
+}
+
+// The selected option's text, or the placeholder.
+.demo-sel-value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &[data-placeholder] {
+        color: var(--book-muted-color);
+    }
+}
+
+.demo-sel-caret {
+    display: inline-block;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+
+    [data-open] > & {
+        transform: rotate(180deg);
+    }
+}
+
+.demo-sel-description {
+    display: block;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+}
+
+// The popover is rendered into the document body and positioned by the atom (inline styles).
+.demo-sel-popover {
+    z-index: 100;
+    min-width: 16em;
+    max-height: 18em;
+    overflow-y: auto;
+    padding: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-sel-listbox {
+    outline: none;
+}
+
+.demo-sel-heading {
+    padding: var(--book-space-s) var(--book-space-s) var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+// An option. The option under the pointer or the arrow keys has `data-focused`; `data-focus-visible` is
+// added while the keyboard is in use.
+.demo-sel-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--book-space-m);
+    padding: var(--book-space-s);
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+
+    &[data-focused] {
+        background: var(--brand-color-subtle);
+    }
+
+    // Replaces the theme's generic focus ring, which would be clipped by the popover.
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    &[data-selected] {
+        color: var(--brand-color);
+        font-weight: 600;
+    }
+
+    &[data-selected]::after {
+        content: "\2713";
+    }
+
+    &[data-disabled] {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+}
+
+.demo-sel-note {
+    margin-left: auto;
+    font-size: var(--book-font-size-s);
+}
+
+// The form around the select in the form demo.
+.demo-sel-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+}

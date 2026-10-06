@@ -2,221 +2,291 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::{grid_2d::Grid2dDemo, grid_list::GridListDemo};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseGrid() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_grid" class="anchor">
-                "use_grid"
-                <AnchorLink href="#use_grid" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Grid Hooks">
             <p>
-                "Hooks for creating accessible 2D grid layouts with keyboard navigation and selection. "
-                "See the "<Link href=crate::routes::doc::Grid.materialize()>"Grid overview"</Link>" for concept guidance."
+                <Code inline=true>"use_grid"</Code>" builds two-dimensional grids navigated by row and column (a color "
+                "palette, a calendar). "<Code inline=true>"use_grid_list"</Code>" builds lists of interactive rows that may "
+                "contain buttons, checkboxes or links. See the "<Link href=routes::doc::Grid.materialize()>"Grid overview"</Link>
+                " for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useGridList.html" target=LinkTarget::_Blank>
-                    "useGridList"
-                </LinkExt>
-                "."
-            </p>
+            <Section title="use_grid">
+                <p>
+                    "A grid has rows of cells. Build them as a collection with "<Code inline=true>"b.row(key, text, |r| r.cell(..))"</Code>
+                    " (cells may span columns with "<Code inline=true>".col_span(n)"</Code>"); cell keys derive from their row: "
+                    <Code inline=true>"Key::cell(&row, column)"</Code>". Selection works on rows."
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <Section title="Demo">
+                    <p>
+                        "Each row is a color palette, each cell a color. Arrow up and down move between palettes, arrow right "
+                        "and left between a palette\u{2019}s colors. Space selects the focused palette, Escape clears the selection, "
+                        "Enter on a color activates it."
+                    </p>
 
-            <p>"Click to select colors (multi-select enabled). Use arrow keys to navigate, Space to toggle selection, Escape to clear. Double-click a row to trigger the row action."</p>
+                    <Demo description="Grid of color palettes with row selection and cell actions" source=include_str!("demos/grid_2d.rs")>
+                        <Grid2dDemo/>
+                    </Demo>
+                </Section>
 
-            <DemoShell source=include_str!("demos/grid_2d.rs")>
-                <Grid2dDemo />
-            </DemoShell>
+                <Section title="Example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let collection = Memo::new(|_| Arc::new(Collection::build(|b| {
+                                b.row("ada", "Ada", |r| { r.cell("Ada"); r.cell("Admin"); });
+                                b.row("bob", "Bob", |r| { r.cell("Bob"); r.cell("User"); });
+                            })));
+                            let state = use_grid_state(UseGridStateInput {
+                                collection,
+                                selection: SelectionOptions::default(),
+                                focus_mode: GridFocusMode::Row,
+                            });
+                            let UseGridReturn { props, data } = use_grid(UseGridInput {
+                                aria_label: "Users".into(),
+                                ..UseGridInput::new(state, CapturedElement::new())
+                            });
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let collection = Signal::stored(GridCollection::new(vec![
-                        GridRow { key: "row-0".into(), cells: vec!["0-0".into(), "0-1".into()] },
-                        GridRow { key: "row-1".into(), cells: vec!["1-0".into(), "1-1".into()] },
-                    ]));
+                            // Per row:
+                            let row = use_grid_row(UseGridRowInput { grid: data.clone(), key: Key::from("ada") });
+                            // Per cell:
+                            let cell = use_grid_cell(UseGridCellInput::new(data.clone(), Key::cell(&Key::from("ada"), 0)));
+                        "#)}
+                    </Code>
+                </Section>
 
-                    let grid = use_grid(UseGridInput {
-                        label: Some("My Grid".to_string()),
-                        collection: collection.into(),
-                        selection_mode: SelectionMode::Multiple,
-                        focus_mode: GridFocusMode::Cell,
-                        on_row_action: Some(Callback::new(|key| { /* ... */ })),
-                        ..Default::default()
-                    });
+                <Section title="Input" id="use-grid-input">
+                    <p>"Create the input with "<Code inline=true>"UseGridInput::new(state, element)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseGridInput">
+                        <ApiRow name="state" ty="GridState">"From "<Code inline=true>"use_grid_state"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The grid element. The props capture it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the grid."</ApiRow>
+                        <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">"Replaces the grid keyboard navigation."</ApiRow>
+                        <ApiRow name="options" ty="CollectionOptions" default="default">"Keyboard and focus behavior."</ApiRow>
+                        <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">"How the keyboard reaches interactive children of cells."</ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
+                        <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated row or cell."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-                    let row_group = use_grid_row_group();
+                <Section title="Return" id="use-grid-return">
+                    <ApiTable kind=ApiKind::Return of="UseGridReturn">
+                        <ApiRow name="props" ty="UseGridProps">
+                            "For the grid element: "<Code inline=true>"role=\"grid\""</Code>", labelling, "
+                            <Code inline=true>"aria-multiselectable"</Code>", keyboard and focus handling."
+                        </ApiRow>
+                        <ApiRow name="data" ty="GridData">"Hand this to "<Code inline=true>"use_grid_row"</Code>" and "<Code inline=true>"use_grid_cell"</Code>"."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-                    // Per row:
-                    let row = use_grid_row(UseGridRowInput {
-                        state: grid.state,
-                        key: "row-0".to_string(),
-                        row_index: 0,
-                    });
+                <Section title="Focus Modes">
+                    <DocTable headers=&["Mode", "Behavior"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"GridFocusMode::Row"</Code></TableCell>
+                            <TableCell>"Arrow up/down move between rows; arrow right enters the cells, arrow left returns to the row."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"GridFocusMode::Cell"</Code></TableCell>
+                            <TableCell>"All arrow keys move between cells."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"CellFocusMode::Cell"</Code></TableCell>
+                            <TableCell>"A cell receives focus itself."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"CellFocusMode::Child"</Code></TableCell>
+                            <TableCell>"A cell moves focus to its first focusable child."</TableCell>
+                        </TableRow>
+                    </DocTable>
+                </Section>
 
-                    // Per cell:
-                    let cell = use_grid_cell(UseGridCellInput {
-                        state: grid.state,
-                        key: "0-0".to_string(),
-                        row_index: 0,
-                        column_index: 0,
-                        focus_mode: CellFocusMode::Cell,
-                    });
+                <Section title="Keyboard">
+                    <KeyboardTable>
+                        <KeyRow keys="ArrowUp / ArrowDown">"Move between rows (or cells, in cell focus mode)."</KeyRow>
+                        <KeyRow keys="ArrowLeft / ArrowRight">"Move between the cells of a row (or their focusable children)."</KeyRow>
+                        <KeyRow keys="Home / End">"First or last cell of the row; with "<Keys keys="Control"/>", first or last of the grid."</KeyRow>
+                        <KeyRow keys="PageUp / PageDown">"Move by a page."</KeyRow>
+                        <KeyRow keys="Space">"Toggle the selection of the row."</KeyRow>
+                        <KeyRow keys="Enter">"Activate the row or cell."</KeyRow>
+                        <KeyRow keys="Escape">"Clear the selection."</KeyRow>
+                        <KeyRow keys="Control + A">"Select all rows (multiple selection)."</KeyRow>
+                        <KeyRow keys="Tab">"Leave the grid (it is a single tab stop)."</KeyRow>
+                    </KeyboardTable>
+                    <p>
+                        "Cells can\u{2019}t be selected themselves; presses on a cell select its row. A cell with an action ("
+                        <Code inline=true>"on_cell_action"</Code>") owns its presses instead: a click or "<Keys keys="Enter"/>
+                        " runs the action, and "<Keys keys="Space"/>" does nothing."
+                    </p>
+                </Section>
+            </Section>
 
-                    view! {
-                        <div {..grid.props.into_attrs()}>
-                            <div {..row_group.props.into_attrs()}>
-                                <div {..row.props.into_attrs()}>
-                                    <div {..cell.props.into_attrs()}>
-                                        "Cell content"
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                "#)}
-            </Code>
+            <Section title="use_grid_state">
+                <ApiTable kind=ApiKind::Input of="UseGridStateInput">
+                    <ApiRow name="collection" ty="CollectionMemo">"The rows and cells."</ApiRow>
+                    <ApiRow name="selection" ty="SelectionOptions">
+                        "Row selection, see "<Link href=routes::doc::Collections.materialize()>"Collections"</Link>"."
+                    </ApiRow>
+                    <ApiRow name="focus_mode" ty="GridFocusMode">"Whether arrow keys move between rows or cells."</ApiRow>
+                </ApiTable>
+                <p>"Returns a "<Code inline=true>"GridState"</Code>" holding the list state ("<Code inline=true>"list"</Code>") and the focus mode."</p>
+            </Section>
 
-            <h2 id="grid-list-demo" class="anchor">
-                "Grid List Demo"
-                <AnchorLink href="#grid-list-demo" description="Direct link to grid list demo"/>
-            </h2>
+            <Section title="use_grid_row">
+                <p>"Takes "<Code inline=true>"UseGridRowInput { grid, key }"</Code>"."</p>
+                <ApiTable kind=ApiKind::Return of="UseGridRowReturn">
+                    <ApiRow name="row_props" ty="PropsWithStyles<UseGridRowProps>">
+                        "For the row: "<Code inline=true>"role=\"row\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
+                        <Code inline=true>"aria-disabled"</Code>", press and focus handling."
+                    </ApiRow>
+                    <ApiRow name="is_selected, is_focused, is_disabled, is_pressed" ty="Signal<bool>">"The row\u{2019}s state."</ApiRow>
+                    <ApiRow name="allows_selection, has_action" ty="Signal<bool>">"Whether the row can be selected, and whether it has an action."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p>"A grid list is a 1D list with grid role. Arrow Up/Down navigate rows. Arrow Left/Right navigate focusable children within a row. Click or Space to toggle selection."</p>
+            <Section title="use_grid_cell">
+                <p>"Create the input with "<Code inline=true>"UseGridCellInput::new(data, cell_key)"</Code>"."</p>
+                <ApiTable kind=ApiKind::Input of="UseGridCellInput">
+                    <ApiRow name="grid" ty="GridData">"From "<Code inline=true>"use_grid"</Code>"."</ApiRow>
+                    <ApiRow name="key" ty="Key">"The cell\u{2019}s key, "<Code inline=true>"Key::cell(&row, column)"</Code>"."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="focus_mode" ty="Option<CellFocusMode>" default="None">"Whether the cell or its first focusable child gets focus."</ApiRow>
+                    <ApiRow name="allows_arrow_navigation" ty="bool" default="false">"Let left/right move between the cell\u{2019}s children."</ApiRow>
+                    <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends."</ApiRow>
+                </ApiTable>
+                <p>
+                    "Returns "<Code inline=true>"grid_cell_props"</Code>" ("<Code inline=true>"role=\"gridcell\""</Code>", "
+                    <Code inline=true>"aria-colindex"</Code>", "<Code inline=true>"aria-colspan"</Code>") and "
+                    <Code inline=true>"is_pressed"</Code>". Selection and focus state belong to the row."
+                </p>
+            </Section>
 
-            <DemoShell source=include_str!("demos/grid_list.rs")>
-                <GridListDemo />
-            </DemoShell>
+            <Section title="use_grid_row_group">
+                <p>
+                    "Returns "<Code inline=true>"row_group_props"</Code>" ("<Code inline=true>"role=\"rowgroup\""</Code>
+                    ") for an element grouping rows."
+                </p>
+            </Section>
 
-            <h2 id="grid-vs-grid-list" class="anchor">
-                "Grid vs Grid List"
-                <AnchorLink href="#grid-vs-grid-list" description="Direct link to grid vs grid list"/>
-            </h2>
+            <Section title="use_grid_selection_checkbox">
+                <p>
+                    "Configures a checkbox selecting a row: "<Code inline=true>"UseGridSelectionCheckboxInput { selection, key }"</Code>
+                    " returns a "<Code inline=true>"UseCheckboxInput"</Code>" (with an id, labelled \u{201c}Select\u{201d}) for "
+                    <Link href=routes::doc::checkbox::Hook.materialize()>"use_checkbox"</Link>"."
+                </p>
+            </Section>
 
-            <ul>
-                <li><code>"use_grid"</code> " - 2D grid with row/column navigation (like a color picker or calendar)"</li>
-                <li><code>"use_grid_list"</code> " - 1D list with grid role (like a card gallery with arrow navigation)"</li>
-            </ul>
+            <Section title="use_grid_list">
+                <ReactAria hook="useGridList"/>
 
-            <h2 id="focus-modes" class="anchor">
-                "Focus Modes"
-                <AnchorLink href="#focus-modes" description="Direct link to focus modes"/>
-            </h2>
+                <p>
+                    "A grid list shows the rows of a collection, like a "<Link href=routes::doc::Listbox.materialize()>"listbox"</Link>
+                    ", but its rows may contain interactive elements. Arrow up and down move between rows, arrow left and right "
+                    "between a row and its focusable children. Build the rows with "<Code inline=true>"use_list_collection"</Code>
+                    " or "<Code inline=true>"use_collection"</Code>", hold their selection with "
+                    <Code inline=true>"use_list_state"</Code>", and render each row with "<Code inline=true>"use_grid_list_item"</Code>"."
+                </p>
 
-            <ul>
-                <li><code>"GridFocusMode::Row"</code> " - Arrow up/down navigate rows. Right enters cells, left exits to row."</li>
-                <li><code>"GridFocusMode::Cell"</code> " - All arrows navigate cells in 2D."</li>
-            </ul>
+                <Demo description="File list built with use_grid_list, with multiple selection and row actions" source=include_str!("demos/grid_list.rs")>
+                    <GridListDemo/>
+                </Demo>
 
-            <h2 id="cell-focus-modes" class="anchor">
-                "Cell Focus Modes"
-                <AnchorLink href="#cell-focus-modes" description="Direct link to cell focus modes"/>
-            </h2>
+                <Section title="Input" id="use-grid-list-input">
+                    <p>"Create the input with "<Code inline=true>"UseGridListInput::new(state, element)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseGridListInput">
+                        <ApiRow name="state" ty="ListState">"The rows and their selection, from "<Code inline=true>"use_list_state"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The grid element. The props capture it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The element id (row ids derive from it), generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="layout" ty="ListLayout" default="Stack">
+                            <Code inline=true>"Stack"</Code>": one row below the other. "<Code inline=true>"Grid"</Code>
+                            ": rows wrap like cards, and up/down find the row in the same column."
+                        </ApiRow>
+                        <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">
+                            <Code inline=true>"Arrow"</Code>": left/right move between a row and its children. "<Code inline=true>"Tab"</Code>
+                            ": Tab moves between the children, leaving arrow keys to them (e.g. text inputs)."
+                        </ApiRow>
+                        <ApiRow name="options" ty="CollectionOptions" default="default">
+                            "Keyboard and focus behavior: auto focus, wrapping, Escape, select all, type-ahead."
+                        </ApiRow>
+                        <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">"Replaces the list keyboard navigation."</ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">"Select when the press ends instead of when it starts."</ApiRow>
+                        <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">
+                            "Called with the key of an activated row: pressed without selection, double-clicked, or Enter with the "
+                            <Code inline=true>"Replace"</Code>" selection behavior."
+                        </ApiRow>
+                        <ApiRow name="tree" ty="Option<TreeExpansion>" default="None">
+                            "Makes the rows tree items that expand and collapse. "
+                            <Link href=routes::doc::hooks::UseTree.materialize()>"use_tree"</Link>" sets it."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><code>"CellFocusMode::Cell"</code> " - Focus the cell element itself (default)."</li>
-                <li><code>"CellFocusMode::Child"</code> " - Automatically focus the first focusable child within the cell."</li>
-            </ul>
+                <Section title="Return" id="use-grid-list-return">
+                    <ApiTable kind=ApiKind::Return of="UseGridListReturn">
+                        <ApiRow name="props" ty="UseGridListProps">
+                            "For the grid element: "<Code inline=true>"role=\"grid\""</Code>", label, "
+                            <Code inline=true>"aria-multiselectable"</Code>" and the collection\u{2019}s keyboard and focus handlers."
+                        </ApiRow>
+                        <ApiRow name="data" ty="GridListData">"Hand this to "<Code inline=true>"use_grid_list_item"</Code>" and "<Code inline=true>"use_grid_list_section"</Code>"."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h2 id="selection-modes" class="anchor">
-                "Selection Modes"
-                <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
-            </h2>
+            <Section title="use_grid_list_item">
+                <p>"Create the input with "<Code inline=true>"UseGridListItemInput::new(data, key)"</Code>"."</p>
+                <Section title="Input" id="use-grid-list-item-input">
+                    <ApiTable kind=ApiKind::Input of="UseGridListItemInput">
+                        <ApiRow name="list" ty="GridListData">"The grid list, from "<Code inline=true>"use_grid_list"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The row\u{2019}s key in the collection."</ApiRow>
+                        <ApiRow name="focus_mode" ty="FocusMode" default="Row">
+                            "What receives focus: the row itself, or its first focusable child (e.g. the remove button of a tag)."
+                        </ApiRow>
+                        <ApiRow name="allows_arrow_navigation" ty="bool" default="false">
+                            "Let left/right move between the row\u{2019}s children even with "
+                            <Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><code>"SelectionMode::None"</code> " - No selection"</li>
-                <li><code>"SelectionMode::Single"</code> " - Single cell selection"</li>
-                <li><code>"SelectionMode::Multiple"</code> " - Multiple cell selection (Shift+Arrow extends)"</li>
-            </ul>
+                <Section title="Return" id="use-grid-list-item-return">
+                    <ApiTable kind=ApiKind::Return of="UseGridListItemReturn">
+                        <ApiRow name="row_props" ty="PropsWithStyles<UseGridListItemRowProps>">
+                            "For the row: "<Code inline=true>"role=\"row\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
+                            <Code inline=true>"aria-disabled"</Code>", labelling, and press and keyboard handling."
+                        </ApiRow>
+                        <ApiRow name="grid_cell_props" ty="UseGridListItemCellProps">
+                            "For the single cell inside the row: "<Code inline=true>"role=\"gridcell\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="description_props" ty="SlotProps">"For an element describing the row, referenced only while rendered."</ApiRow>
+                        <ApiRow name="is_selected, is_focused, is_focus_visible, is_disabled, is_pressed" ty="Signal<bool>">"The row\u{2019}s state."</ApiRow>
+                        <ApiRow name="allows_selection, has_action" ty="Signal<bool>">"Whether the row can be selected, and whether it has an action."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h2 id="keyboard-navigation" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard-navigation" description="Direct link to keyboard"/>
-            </h2>
+            <Section title="use_grid_list_section">
+                <p>
+                    "Groups the rows of a collection section ("<Code inline=true>"UseGridListSectionInput { list, key }"</Code>
+                    "). Returns "<Code inline=true>"row_props"</Code>" and "<Code inline=true>"row_header_props"</Code>
+                    " for a row holding the header, "<Code inline=true>"row_group_props"</Code>" for the element containing the "
+                    "section\u{2019}s rows, and the "<Code inline=true>"heading"</Code>" text."
+                </p>
+            </Section>
 
-            <ul>
-                <li><code>"Arrow Up/Down"</code> " - Move between rows (or cells in Cell mode)"</li>
-                <li><code>"Arrow Left/Right"</code> " - Move between cells within a row (or focusable children within a cell)"</li>
-                <li><code>"Home"</code> " - First cell in row (Ctrl+Home for absolute first)"</li>
-                <li><code>"End"</code> " - Last cell in row (Ctrl+End for absolute last)"</li>
-                <li><code>"Page Up/Down"</code> " - Jump by page (if supported)"</li>
-                <li><code>"Space"</code> " - Toggle selection"</li>
-                <li><code>"Enter"</code> " - Activate row/cell action"</li>
-                <li><code>"Escape"</code> " - Clear selection"</li>
-                <li><code>"Ctrl+A"</code> " - Select all (Multiple mode)"</li>
-                <li><code>"Tab"</code> " - Exit grid (single tab stop)"</li>
-            </ul>
-
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
-
-            <p>"For the grid container:"</p>
-            <ul>
-                <li><code>"role=\"grid\""</code></li>
-                <li><code>"aria-label"</code></li>
-                <li><code>"aria-multiselectable"</code></li>
-                <li><code>"aria-disabled"</code></li>
-            </ul>
-
-            <p>"For grid row groups:"</p>
-            <ul>
-                <li><code>"role=\"rowgroup\""</code></li>
-            </ul>
-
-            <p>"For grid rows:"</p>
-            <ul>
-                <li><code>"role=\"row\""</code></li>
-                <li><code>"aria-rowindex"</code> " (1-based)"</li>
-                <li><code>"aria-selected"</code></li>
-                <li><code>"aria-disabled"</code></li>
-            </ul>
-
-            <p>"For grid cells:"</p>
-            <ul>
-                <li><code>"role=\"gridcell\""</code></li>
-                <li><code>"aria-selected"</code></li>
-                <li><code>"aria-rowindex"</code> " / " <code>"aria-colindex"</code></li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Grid.materialize()>"Grid overview"</Link></li>
-                <li><Link href=crate::routes::doc::grid::Atom.materialize()>"Grid atom"</Link></li>
-                <li><Link href=crate::routes::doc::grid::Component.materialize()>"Grid component"</Link></li>
-                <li><Link href=crate::routes::doc::Table.materialize()>"Table"</Link>" \u{2014} for tabular data with row/column semantics"</li>
-                <li><Link href=crate::routes::doc::hooks::Selection.materialize()>"Selection system"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_grid", link: "#use_grid" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Grid List Demo", link: "#grid-list-demo" },
-                Toc::Leaf { title: "Grid vs Grid List", link: "#grid-vs-grid-list" },
-                Toc::Leaf { title: "Focus Modes", link: "#focus-modes" },
-                Toc::Leaf { title: "Cell Focus Modes", link: "#cell-focus-modes" },
-                Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Grid.materialize()>"Grid overview"</Link></li>
+                <li><Link href=routes::doc::grid::Atom.materialize()>"Grid atom"</Link></li>
+                <li><Link href=routes::doc::grid::Component.materialize()>"Grid component"</Link></li>
+                <li><Link href=routes::doc::Table.materialize()>"Table"</Link>" \u{2014} for tabular data with row/column semantics"</li>
+                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

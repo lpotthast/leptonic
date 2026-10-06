@@ -24,7 +24,10 @@ pub fn Icon(
 
     #[prop(optional)] margin: Option<Margin>,
 
-    #[prop(into, optional)] aria_label: Option<Oco<'static, str>>,
+    /// Labels the icon as an image. Without it, the icon is decorative (hidden from assistive
+    /// technology), e.g. next to text or inside a labelled button.
+    #[prop(into, optional)]
+    aria_label: Option<Oco<'static, str>>,
 
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -40,7 +43,8 @@ where
         let mut svg = svg::svg()
             .inner_html(icon.data)
             .into_any()
-            .attr("aria-hidden", "false");
+            // The `<span>` around carries the label, if any.
+            .attr("aria-hidden", "true");
         svg = match icon.style {
             Some(s) => svg.attr("style", s),
             None => svg,
@@ -83,10 +87,10 @@ where
             svg = svg.attr("stroke", stroke);
         }
         svg = svg.attr("fill", icon.fill.unwrap_or("currentColor"));
-        svg = svg.attr("role", "graphics-symbol");
         svg
     };
 
+    let is_labelled = aria_label.is_some();
     let styles = match margin {
         Some(m) => styles.add(MARGIN.declare(m)),
         None => styles,
@@ -94,7 +98,9 @@ where
     view! {
         <span
             class=classes.add("leptonic-icon")
-            aria_label=aria_label
+            role=is_labelled.then_some("img")
+            aria-label=aria_label
+            aria-hidden=(!is_labelled).then_some("true")
             style=styles
         >
             {svg}

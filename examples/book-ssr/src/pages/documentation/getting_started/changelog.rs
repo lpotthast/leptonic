@@ -1,248 +1,268 @@
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::kit::*;
+
+/// A released (or upcoming) version.
+struct Release {
+    title: &'static str,
+    /// Optional introduction, before the change groups.
+    intro: &'static [&'static str],
+    groups: &'static [(&'static str, &'static [&'static str])],
+}
+
+/// Entries are plain text; identifiers are written in backticks and rendered as inline code.
+const RELEASES: &[Release] = &[
+    Release {
+        title: "Unreleased (main)",
+        intro: &[
+            "Leptonic was rebuilt in three layers: hooks, atoms and components. The hooks are ports of react-aria's \
+             hooks and carry the accessibility and interaction logic of everything built on top of them.",
+        ],
+        groups: &[
+            (
+                "Added",
+                &[
+                    "Hooks ported from react-aria for interactions (`use_press`, `use_hover`, `use_move`, `use_keyboard`, \
+                 drag and drop, ...), focus management, overlays, selection and collections, and for buttons, links, \
+                 text and number fields, checkboxes, radios, switches, sliders, listboxes, selects, menus, comboboxes, \
+                 tooltips, tabs, grids, tables, trees, color controls, dates and more.",
+                    "Atoms: unstyled single-element components built on the hooks.",
+                    "`Checkbox`, `Radio` and `RadioGroup` components.",
+                    "`TextField`, `SearchField` and `NumberField` components: inputs with label, description and validation. \
+                 `NumberField` is generic over its number type.",
+                    "Internationalization (number, date and list formatting, collation, plural rules) based on ICU4X, which \
+                 also works during server-side rendering.",
+                    "Element ids that are stable between server-side rendering and hydration.",
+                ],
+            ),
+            (
+                "Changed",
+                &[
+                    "Requires Leptos 0.8 and Rust edition 2024.",
+                    "Events handled by leptonic stop propagating unless the handler calls `continue_propagation()`. See \
+                 Event Propagation.",
+                    "Hooks own their state: you set an initial value, read signals and change state through the callbacks \
+                 a hook returns. There are no controlled/uncontrolled prop pairs.",
+                    "Components take `classes` and `styles` props (based on `leptos-classes` and `leptos-styles`).",
+                    "Reworked the `Popover` component for much greater flexibility.",
+                ],
+            ),
+            (
+                "Removed",
+                &[
+                    "Buttons no longer support `variations`. They resulted in non-compliant HTML.",
+                    "The `OptionalSignal` prop type.",
+                    "The `TextInput`, `PasswordInput` and `NumberInput` components and their `Label`, `Field`, `FieldLabel` \
+                 and `FormControl` helpers. Use `TextField` (with `input_type=InputType::Password` for passwords) and \
+                 `NumberField`.",
+                ],
+            ),
+        ],
+    },
+    Release {
+        title: "0.5.0",
+        intro: &["Leptonic now supports Leptos 0.6!"],
+        groups: &[
+            (
+                "Changed",
+                &[
+                    "Leptos dependencies were updated to v0.6.",
+                    "The `Icon` component no longer wraps an icon from `leptos-icons`. It now expects v0.3 `icondata` icons.",
+                ],
+            ),
+            (
+                "Added",
+                &[
+                    "Dependency on the `icondata` crate. Leptonic re-exports it through its prelude, so you don't have to \
+                 depend on it yourself.",
+                ],
+            ),
+            (
+                "Removed",
+                &[
+                    "Dependency on the `leptos-icons` crate. You can remove it from your `Cargo.toml` as well if you don't \
+                 use it outside of leptonic.",
+                ],
+            ),
+        ],
+    },
+    Release {
+        title: "0.4.0",
+        intro: &[
+            "Leptonic now supports server-side rendering (SSR). This book is now deployed with SSR enabled.",
+            "The `leptonic-template-ssr` and `leptonic-template-csr` templates were created. Use them to get started quickly.",
+        ],
+        groups: &[(
+            "Changed",
+            &[
+                "Getting started instructions were consolidated.",
+                "Installation instructions are now much more straightforward.",
+                "Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, rename all occurrences \
+                 to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce' errors. Storing \
+                 values moved into a `Modal`'s children with `StoredValue::new` should be a quick fix.",
+                "Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone.",
+                "Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if \
+                 custom styling is in play.",
+                "Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, \
+                 `TableHeaderCell` and `TableCell`.",
+                "The `build.rs` script, which previously had to be created by the consumer, is no longer required. It moved \
+                 into leptonic itself and copies the files required for a build.",
+                "The `Code` block component now has a \"Copy to clipboard\" button (thanks to https://github.com/wt).",
+                "A `SelectOption` no longer has to be `Eq`.",
+                "The `uuid` dependency was bumped to version 1.6.",
+                "A `RwSignal` can act as an `Out` type.",
+                "Modals now support the `on_escape` prop, letting you handle escape key presses.",
+                "The Tiptap editor is now gated behind the new `tiptap` feature. Enabling it includes the required JS files \
+                 in the build.",
+                "Fixed a bug which led to buttons not getting disabled properly.",
+            ],
+        )],
+    },
+    Release {
+        title: "0.3.0",
+        intro: &[],
+        groups: &[
+            (
+                "Added",
+                &[
+                    "The `Consumer` type. Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`.",
+                    "The `Producer` type. Use `Producer<Out>` when you would otherwise write `Callback<(), Out>`.",
+                    "The `ViewProducer` type. Use `ViewProducer` when you would otherwise write `Callback<(), leptos::View>`.",
+                    "The `ViewCallback` type. Use `ViewCallback<In>` when you would otherwise write `Callback<In, leptos::View>`.",
+                ],
+            ),
+            (
+                "Changed",
+                &[
+                    "Updated to Leptos 0.5.1. No more `cx`!",
+                    "The `render_option` prop of select inputs no longer requires you to call `.into_view()` on whatever your \
+                 closure returns.",
+                    "Collapsibles now use the slot approach.",
+                ],
+            ),
+            ("Fixed", &["Indeterminate progress bars animate again."]),
+            (
+                "Removed",
+                &[
+                    "The `Callback` and `Callable` types moved into Leptos itself. They are imported with `use leptos::*`, which \
+                 should already be present wherever the leptonic `Callback` was used.",
+                ],
+            ),
+        ],
+    },
+    Release {
+        title: "0.2.0",
+        intro: &[],
+        groups: &[
+            (
+                "Added",
+                &[
+                    "The `Out` type, abstracting over `Callback`s and `WriteSignal`s, for components where users are equally \
+                 likely to want a new value stored or to handle it themselves. The input component is the first one using it.",
+                    "The `Select`, `OptionalSelect` and `Multiselect` components accept a `class` prop.",
+                    "The `Kbd` component together with `KbdShortcut`, displaying keyboard keys and shortcuts.",
+                    "The `Chip` component accepts custom `id`, `class` and `style` props.",
+                    "Slider styling variables: `--slider-bar-background-image`, `--slider-range-background-color`, \
+                 `--slider-range-background-image`, `--slider-knob-border-width`, `--slider-knob-border-color`, \
+                 `--slider-knob-border-style`, `--slider-knob-background-color` and `--slider-knob-halo-background-color`.",
+                    "Initial version of a `ColorPicker` component.",
+                ],
+            ),
+            (
+                "Changed",
+                &[
+                    "The `on_change` prop of the `DateSelector` takes a `Callback` instead of a generic function.",
+                    "Outlined and filled buttons use the `--button-outlined-[color]-...` and `--button-filled-[color]-...` \
+                 variables. Outlined primary buttons use a dark text color.",
+                    "Number inputs take optional `min`, `max` and `step` values, propagated to the input element.",
+                    "The `set` prop of inputs is optional and no longer generic; it expects an `Out<String>`.",
+                    "The `set_value` props of `Slider` and `RangeSlider` expect an `Out<f64>`.",
+                    "The `on_toggle` prop of `Toggle` is now called `set_value` and expects an `Out<bool>`.",
+                    "The `set_value` prop of `TiptapEditor` expects an `Option<Out<TiptapContent>>`.",
+                    "Custom attributes are rendered with a `data-` prefix, making them standard-compliant.",
+                    "The `max` and `progress` props of `ProgressBar` accept signals.",
+                    "The `title` prop of `Alert` is a `Callback` instead of a generic closure.",
+                    "The `step` prop of `Slider` is optional, making continuous sliders easier to set up.",
+                    "The `Input` component was split into `TextInput`, `PasswordInput` and `NumberInput`. Their `label` prop was \
+                 renamed to `placeholder`. The `InputType` enum was removed.",
+                    "All `Select` components require a `search_text_provider` prop. `SelectOption` no longer requires `Display`.",
+                ],
+            ),
+            (
+                "Fixed",
+                &[
+                    "Buttons with variants respect their disabled state and trigger only one action per interaction.",
+                    "Flat info buttons are styled correctly.",
+                    "The installation instructions describe the required `web_sys_unstable_apis` opt-in.",
+                ],
+            ),
+        ],
+    },
+    Release {
+        title: "0.1.0",
+        intro: &["Initial release."],
+        groups: &[
+            (
+                "Added utilities",
+                &[
+                    "Callback types",
+                    "`OptionalMaybeSignal` type",
+                    "Global event listener contexts",
+                ],
+            ),
+            (
+                "Added components (with styles)",
+                &[
+                    "Root, Skeleton, Stack, Grid, Separator, Tabs, Collapsible, AppBar, Drawer, Button, Input, DateSelector, \
+                 Slider, Select, Toggle, Alert, Toast, Modal, Progress, Popover, Chip, Icon, Link, Anchor, Typography and \
+                 Transition components.",
+                ],
+            ),
+        ],
+    },
+];
 
 #[component]
 pub fn PageChangelog() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="changelog" class="anchor">
-                "Changelog"
-                <AnchorLink href="#changelog" description="Direct link to section: Changelog"/>
-            </h1>
-
-            <h2 id="v0.6.0" class="anchor">
-                "v0.6.0 (main branch)"
-                <AnchorLink href="#v0.6.0" description="Direct link to section: v0.6.0"/>
-            </h2>
-
-            <h3>"Overview"</h3>
-
-            <p>
-                ""
-            </p>
-
-            <h3>"Added:"</h3>
-            <ul>
-                <li>"`Checkbox` component, styling and documentation."</li>
-                <li>"`Radio` and `RadioGroup` components, styling and documentation."</li>
-            </ul>
-
-            <h3>"Changed:"</h3>
-            <ul>
-                <li>"Reworked the `Popover` component. It now allows for much greater flexibility. Documentation was updated."</li>
-            </ul>
-
-            <h3>"Removed:"</h3>
-            <ul>
-                <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
-                <li>"The `OptionalSignal` prop type, which was never used in our public API. You may want to use `OptMaybeSignal` instead."</li>
-            </ul>
-
-            <h2 id="v0.5.0" class="anchor">
-                "0.5.0"
-                <AnchorLink href="#v0.5.0" description="Direct link to section: v0.5.0"/>
-            </h2>
-
-            <p>"Leptonic now supports Leptos in version 0.6!"</p>
-
-            <h3>"Changed:"</h3>
-            <ul>
-                <li>"Leptos dependencies were update to v0.6."</li>
-                <li>"The `Icon' component no longer wraps an Icon from `leptos-icons`. It now expects v0.3 `icondata` icons. Documentation of the component was updated."</li>
-            </ul>
-
-            <h3>"Added:"</h3>
-            <ul>
-                <li>"Dependency on the `icondata` crate. Leptonic provides a re-export through `use leptonic::prelude::*;`. You do not have to depend on this yourself."</li>
-            </ul>
-
-            <h3>"Removed:"</h3>
-            <ul>
-                <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside of the Leptonic context."</li>
-                <li>"Lepton"</li>
-            </ul>
-
-            <h2 id="v0.4.0" class="anchor">
-                "0.4.0"
-                <AnchorLink href="#v0.4.0" description="Direct link to section: v0.4.0"/>
-            </h2>
-
-            <p>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</p>
-            <p>
-                "The "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkTarget::_Blank>"leptonic-template-ssr"</LinkExt>
-                " and "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::_Blank>"leptonic-template-csr"</LinkExt>
-                " templates were created. Use them to get started quickly."
-            </p>
-
-            <h3>"Changed:"</h3>
-            <ul>
-                <li>"Getting started instructions were consolidated."</li>
-                <li>"Installation instructions are now much more straight-forward."</li>
-                <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `StoredValue::new` should be a quick fix."</li>
-                <li>"Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone."</li>
-                <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if custom styling is in play."</li>
-                <li>"Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell` and `TableCell`."</li>
-                <li>"The `build.rs` script, which previously had to be create by the consumer is now longer required. It was moved into leptonic itself and will automatically take care of copying files required for a build."</li>
-                <li>"The `Code` block component now has a `Copy to clipboard` button (thanks to https://github.com/wt)."</li>
-                <li>"A `SelectOption` no longer requires to be `Eq`."</li>
-                <li>"The `uuid` dependency was bumped to version 1.6."</li>
-                <li>"A `RwSignal` can act as an `Out` type"</li>
-                <li>"Modals now support the `on_escape` prop, letting you handle escape key presses."</li>
-                <li>"The Tiptap-Editor functionality is now gated through the new `tiptap` feature. Enabling it will alter the build to automatically include required JS files."</li>
-            </ul>
-
-            <h3>"Fixed:"</h3>
-            <ul>
-                <li>"Fixed a bug which led to buttons not getting disabled properly."</li>
-            </ul>
-
-            <h2 id="v0.3.0" class="anchor">
-                "0.3.0"
-                <AnchorLink href="#v0.3.0" description="Direct link to section: v0.3.0"/>
-            </h2>
-
-            <h3>"Added:"</h3>
-            <ul>
-                <li>"The `Consumer` type. Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`."</li>
-                <li>"The `Producer` type. Use `Producer<Out>` when you would otherwise write `Callback<(), Out>`."</li>
-                <li>"The `ViewProducer` type. Use `ViewProducer` when you would otherwise write `Callback<(), leptos::View>`."</li>
-                <li>"The `ViewCallback` type. Use `ViewCallback<In>` when you would otherwise write `Callback<In, leptos::View>`."</li>
-            </ul>
-
-            <h3>"Changed:"</h3>
-            <ul>
-                <li>"Updated to leptos 0.5.1. No more `cx`!"</li>
-                <li>"The `render_option` prop for select inputs no longer requires you to call `.into_view()` on whatever your closure returns."</li>
-                <li>"Collapsibles now use the slot approach."</li>
-            </ul>
-
-            <h3>"Fixed:"</h3>
-            <ul>
-                <li>"Fixed a bug which prevented progress bars in their indeterminate state to animate."</li>
-            </ul>
-
-            <h3>"Removed:"</h3>
-            <ul>
-                <li>"The `Callback` and `Callable` types moved into leptos itself! They should still be accessible on most use-sites as they are now imported with `use leptos::*`, which should already be present in most places the leptonic Callback was used before."</li>
-            </ul>
-
-            <h2 id="v0.2.0" class="anchor">
-                "0.2.0"
-                <AnchorLink href="#v0.2.0" description="Direct link to section: v0.2.0"/>
-            </h2>
-
-            <h3>"Added:"</h3>
-            <ul>
-                <li>
-                    "Added the `Out` type. An enum abstracting over `Callback`s and `WriteSignal`s."
-                    " Components can use this type when it is equally likely that a user will provide either of the previously mentioned types."
-                    " In case of the WriteSignal, the user just wants a new value to be stored."
-                    " In case of a callback, the user wants fine control over how a new value is handled."
-                    " The input component is the first one using it, as mentioned in the `Changed` section."
-                </li>
-                <li>"The Select, OptionalSelect and Multiselect components now accept a `class` prop with which custom classes can be attached to a rendered <leptonic-select> element."</li>
-                <li>"The `Kbd` component together with `KbdShortcut`, displaying keyboard keys and shortcuts."</li>
-                <li>"The `Chip` component now accepts custom `id`, `class` and `style` props."</li>
-                <li>"You can now use the new `--slider-bar-background-image` CSS variable to style the bar of a `Slider` with more control. Defaults to `none`. `--slider-bar-background-color` is still the preferred way to style the bar if no image is needed. The image property will overwrite the color."</li>
-                <li>"Also added `--slider-range-background-color`, `--slider-range-background-image`, `--slider-knob-border-width`, `--slider-knob-border-color`, `--slider-knob-border-style`, `--slider-knob-background-color` and `--slider-knob-halo-background-color`."</li>
-                <li>"The background color/image of the selection of a `Slider` can now be styled using `--slider-range-background-color`, defaulting to `var(--brand-color)`, and `--slider-range-background-image`, defaulting to `none`."</li>
-                <li>"Initial version of a `ColorPicker` component."</li>
-            </ul>
-
-            <h3>"Changed:"</h3>
-            <ul>
-                <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
-                <li>"Buttons of type `outlined` now use --button-outlined-[color]-... variables for their styling."</li>
-                <li>"Buttons of type `filled` now use --button-filled-[color]-... variables for their styling."</li>
-                <li>"Buttons of type `outlined` and color `primary` now use a dark text color, contrasting the default bright background."</li>
-                <li>"When using an input of type `Number`, you now have to supply optional `min`, `max` and `step` values which are propagated to the underlying input element."</li>
-                <li>"The Input `set` prop is now optional."</li>
-                <li>"The Input `set` prop is no longer generic. It now expects an `Out<String>`, which can either be a `WriteSignal` or a custom `Callback`."</li>
-                <li>"The Slider and RangerSlider `set_value` props are no longer generic. They now expect an `Out<f64>`, which can either be a `WriteSignal` or a custom `Callback`."</li>
-                <li>"The Toggle `on_toggle` prop is now called `set_value` and is no longer generic. It now expect an `Out<bool>`, which can either be a `WriteSignal` or a custom `Callback`."</li>
-                <li>"The TiptapEditor `set_value` prop is no longer generic. It now expect an `Option<Out<TiptapContent>>`, which can either be a `WriteSignal` or a custom `Callback`."</li>
-                <li>
-                    "All components using custom attributes now render them with a \"data-\" prefix, allowing them to be standard-compliant and distinguishable from well-known / standard attributes."
-                    " `leptonic-theme` styling changed appropriately."
-                </li>
-                <li>"Prop `max` of the ProgressBar is now a MaybeSignal."</li>
-                <li>"Prop `progress` of the ProgressBar is now a MaybeSignal."</li>
-                <li>
-                    "Prop `title` of the Alert is now a Callback instead of a generic Fn closure."
-                    " Expect the now necessary `create_callback(move |()| {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
-                </li>
-                <li>"The Slider `step` prop is now optional, making continuous sliders with maximum precision easier to set up."</li>
-                <li>"The `Input` component was split into `TextInput`, `PasswordInput` and `NumberInput`. Their `label` prop was renamed to `placeholder`. The `InputType` enum was removed."</li>
-                <li>"All `Select` components now require a `search_text_provider` prop. The `SelectOption` trait no longer enforces `Display` to be implemented."</li>
-            </ul>
-
-            <h3>"Fixed:"</h3>
-            <ul>
-                <li>"A button with variants now properly respects its disabled state."</li>
-                <li>"A button with variants now only triggers one of its actions (either main or variant) per interaction."</li>
-                <li>"Buttons of type `flat` and color `info` now receive correct styling."</li>
-                <li>"The installation instructions now include a section describing how to enable the required web_sys_unstable_apis opt-in."</li>
-            </ul>
-
-            <h2 id="v0.1.0" class="anchor">
-                "0.1.0"
-                <AnchorLink href="#v0.1.0" description="Direct link to section: v0.1.0"/>
-            </h2>
-
-            <p>"Initial release."</p>
-
-            <h3>"Added utilities:"</h3>
-            <ul>
-                <li>"Callback types"</li>
-                <li>"OptionalMaybeSignal type"</li>
-                <li>"Global event listener contexts"</li>
-            </ul>
-
-            <h3>"Added components:"</h3>
-            <ul>
-                <li>"Root component"</li>
-                <li>"Skeleton component and styles"</li>
-                <li>"Stack component and styles"</li>
-                <li>"Grid component and styles"</li>
-                <li>"Separator component and styles"</li>
-                <li>"Tab components and styles"</li>
-                <li>"Collapsible components and styles"</li>
-                <li>"AppBar components and styles"</li>
-                <li>"Drawer components and styles"</li>
-                <li>"Button component and styles"</li>
-                <li>"Input component and styles"</li>
-                <li>"Date selector component and styles"</li>
-                <li>"Slider component and styles"</li>
-                <li>"Select component and styles"</li>
-                <li>"Toggle component and styles"</li>
-                <li>"Alert component and styles"</li>
-                <li>"Toast component and styles"</li>
-                <li>"Modal components and styles"</li>
-                <li>"Progress component and styles"</li>
-                <li>"Popover component and styles"</li>
-                <li>"Chip component and styles"</li>
-                <li>"Icon component and styles"</li>
-                <li>"Link component and styles"</li>
-                <li>"Anchor component and styles"</li>
-                <li>"Typography components and styles"</li>
-                <li>"Transition components and styles"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Changelog", link: "#changelog" },
-                Toc::Leaf { title: "v0.6.0", link: "#v0.6.0" },
-                Toc::Leaf { title: "v0.5.0", link: "#v0.5.0" },
-                Toc::Leaf { title: "v0.4.0", link: "#v0.4.0" },
-                Toc::Leaf { title: "v0.3.0", link: "#v0.3.0" },
-                Toc::Leaf { title: "v0.2.0", link: "#v0.2.0" },
-                Toc::Leaf { title: "v0.1.0", link: "#v0.1.0" },
-            ]
-        }/>
+        <DocPage title="Changelog">
+            <p>"Notable changes of each leptonic version, newest first."</p>
+            {RELEASES.iter().map(|release| view! { <ReleaseNotes release/> }).collect_view()}
+        </DocPage>
     }
+}
+
+#[component]
+fn ReleaseNotes(release: &'static Release) -> impl IntoView {
+    view! {
+        <Section title=release.title>
+            {release.intro.iter().map(|paragraph| view! { <p>{with_inline_code(paragraph)}</p> }).collect_view()}
+            {release
+                .groups
+                .iter()
+                .map(|(title, entries)| view! {
+                    <Section title=*title>
+                        <ul>
+                            {entries.iter().map(|entry| view! { <li>{with_inline_code(entry)}</li> }).collect_view()}
+                        </ul>
+                    </Section>
+                })
+                .collect_view()}
+        </Section>
+    }
+}
+
+/// Renders the backtick-quoted parts of `text` as inline code.
+fn with_inline_code(text: &'static str) -> impl IntoView {
+    text.split('`')
+        .enumerate()
+        .map(|(i, part)| {
+            if i % 2 == 1 {
+                view! { <Code inline=true>{part}</Code> }.into_any()
+            } else {
+                part.into_any()
+            }
+        })
+        .collect_view()
 }

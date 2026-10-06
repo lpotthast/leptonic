@@ -1,53 +1,50 @@
-use leptonic::hooks::*;
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
+use crate::routes;
+
+/// The breadcrumb trail of this page.
 #[component]
 pub fn BreadcrumbsDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
+
     let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
-        label: Some("Navigation".to_string()),
+        label: Some("Breadcrumbs".to_string()),
     });
 
-    let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some("#".to_string()),
-        is_current: false,
-        on_press: Some(Callback::new(|()| {})),
+    let docs = use_breadcrumb_item(UseBreadcrumbItemInput {
+        href: Some(routes::doc::Overview.materialize()),
+        is_disabled: disabled.into(),
         ..Default::default()
     });
-
-    let products_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some("#".to_string()),
-        is_current: false,
-        on_press: Some(Callback::new(|()| {})),
+    let navigation = use_breadcrumb_item(UseBreadcrumbItemInput {
+        href: Some(routes::doc::Navigation.materialize()),
+        is_disabled: disabled.into(),
         ..Default::default()
     });
-
-    let current_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: None,
+    // The current page: no `href`, `aria-current="page"`.
+    let current = use_breadcrumb_item(UseBreadcrumbItemInput {
         is_current: true,
         ..Default::default()
     });
 
     view! {
-        <nav {..nav_props.into_attrs()} style="margin: 1em 0;">
-            <ol style="display: flex; list-style: none; padding: 0; margin: 0; gap: 0.5em;">
+        <nav {..nav_props.into_attrs()} class="demo-navigation-breadcrumbs">
+            <ol>
                 <li>
-                    <a {..home_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
-                        "Home"
-                    </a>
-                    <span style="margin-left: 0.5em;">"/"</span>
+                    <a {..docs.link_props.into_attrs()} class="demo-navigation-breadcrumb">"Docs"</a>
+                    <span class="demo-navigation-separator" aria-hidden="true">"/"</span>
                 </li>
                 <li>
-                    <a {..products_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
-                        "Products"
-                    </a>
-                    <span style="margin-left: 0.5em;">"/"</span>
+                    <a {..navigation.link_props.into_attrs()} class="demo-navigation-breadcrumb">"Navigation"</a>
+                    <span class="demo-navigation-separator" aria-hidden="true">"/"</span>
                 </li>
                 <li>
-                    <span {..current_item.link_props.into_attrs()} style="color: inherit;">
-                        "Widget Pro"
-                    </span>
+                    <a {..current.link_props.into_attrs()} class="demo-navigation-breadcrumb">"use_breadcrumbs"</a>
                 </li>
             </ol>
         </nav>
+
+        <Checkbox state=disabled>"Disable links"</Checkbox>
     }
 }

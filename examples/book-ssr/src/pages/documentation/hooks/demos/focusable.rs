@@ -20,7 +20,7 @@ pub fn FocusableDemo() -> impl IntoView {
         props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         auto_focus: false,
         exclude_from_tab_order: exclude_from_tab.into(),
         on_focus: Some(Callback::new(move |_| {
@@ -34,7 +34,7 @@ pub fn FocusableDemo() -> impl IntoView {
         })),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             set_key_events.update(|events| {
-                events.push(format!("Key: {}", e.key()));
+                events.push(format!("Key: {}", e.key_value()));
                 if events.len() > 5 {
                     events.remove(0);
                 }
@@ -52,47 +52,25 @@ pub fn FocusableDemo() -> impl IntoView {
                 <div
                     {..attrs}
                     role="button"
-                    style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: 2px solid var(--brand-color);
-                        padding: 1em 2em;
-                        border-radius: 8px;
-                        cursor: pointer;
-                        background: var(--brand-color-light, rgba(230, 105, 86, 0.1));
-                        outline: none;
-                        transition: all 0.2s;
-                    "
+                    class="demo-focus-target"
                 >
                     "Custom Focusable Element"
                 </div>
             </FocusRing>
 
-            <button
-                on:click=move |_| focus_handle.focus()
-                class=Classes::from("demo-btn")
-            >
-                "Click to focus"
-            </button>
+            <Button on_press=move |_| focus_handle.focus()>"Click to focus"</Button>
         </div>
 
-        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) attr:style="margin-top: 1em;">
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
+        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) classes="demo-mt-1">
+            <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
 
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=exclude_from_tab set_checked=set_exclude_from_tab />
-                <Label>"Exclude from tab order (tabindex=-1)"</Label>
-            </FormControl>
+            <Checkbox state=(exclude_from_tab, set_exclude_from_tab) classes="demo-form-row">"Exclude from tab order (tabindex=-1)"</Checkbox>
         </Stack>
 
         <div class=Classes::from("demo-flex-gap")>
             <p>"Focus count: " { move || focus_count.get() }</p>
             <p>"Blur count: " { move || blur_count.get() }</p>
-            <p class=Classes::builder().with_toggle(is_focused.get(), "demo-state-active", "demo-state-inactive").build()>
+            <p class=Classes::builder().with_toggle(is_focused, "demo-state-active", "demo-state-inactive").build()>
                 { move || if is_focused.get() { "Focused" } else { "Not focused" } }
             </p>
         </div>

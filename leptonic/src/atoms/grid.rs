@@ -1,276 +1,193 @@
 use std::collections::HashSet;
 
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    hooks::*,
-    utils::{classes::Classes, styles::Styles},
+    hooks::{
+        CellFocusMode, DisabledBehavior, GridData, GridFocusMode, IntoAttrs,
+        KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, UseGridCellInput,
+        UseGridCellReturn, UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn,
+        UseGridStateInput,
+        collections::{
+            CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, Selection, SelectionOptions,
+        },
+        use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
+    },
+    utils::ValueBinding,
+    utils::data_attributes::flag,
+    utils::{CapturedElement, classes::Classes, styles::Styles},
 };
 
-/// Private context struct sharing grid state between `Grid`, `GridRow`, and `GridCell`.
-#[derive(Clone)]
-struct GridCtx<K: SelectionKey> {
-    state: UseGridState<K>,
-}
-
-// Manual Copy impl to avoid derive adding `K: Copy` bound.
-impl<K: SelectionKey> Copy for GridCtx<K> {}
-
-/// A headless 2D grid container atom.
+/// A headless grid: rows of cells, navigated in two dimensions with the arrow keys.
 ///
-/// Wraps `use_grid` and provides shared state to child `GridRowGroup`, `GridRow`,
-/// and `GridCell` atoms via context.
-///
-/// Renders a `<div>` with proper ARIA grid attributes.
+/// The rows and cells come from `collection` (built with `CollectionBuilder::row`): render one
+/// [`GridRow`] per row and one [`GridCell`] per cell, in collection order.
 #[component]
 #[allow(clippy::too_many_lines, clippy::implicit_hasher)]
-pub fn Grid<K>(
-    /// The grid collection describing rows and cells.
+pub fn Grid(
+    /// The rows and their cells.
     #[prop(into)]
-    collection: Signal<GridCollection<K>>,
-    /// Keys of disabled rows/cells.
-    #[prop(into, optional)]
-    disabled_keys: Option<Signal<HashSet<K>>>,
-    /// How focus moves within the grid (Row vs Cell mode).
-    #[prop(into, optional)]
+    collection: CollectionMemo,
+    /// Whether arrow keys focus rows (and then cells) or only cells.
+    #[prop(optional)]
     focus_mode: GridFocusMode,
-    /// The selection mode.
+    #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
+    #[prop(optional)] selection_behavior: SelectionBehavior,
+    /// The initially selected rows.
     #[prop(into, optional)]
-    selection_mode: SelectionMode,
-    /// The selection behavior (toggle vs replace).
+    default_selected_keys: Vec<Key>,
+    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
+    /// `default_selected_keys`.
     #[prop(into, optional)]
-    selection_behavior: SelectionBehavior,
-    /// Controlled selected keys.
-    #[prop(into, optional)]
-    selected_keys: Option<Signal<Selection<K>>>,
-    /// Default selected keys (uncontrolled).
-    #[prop(into, optional)]
-    default_selected_keys: Option<Selection<K>>,
-    /// Callback when selection changes.
-    #[prop(into, optional)]
-    on_selection_change: Option<Callback<Selection<K>>>,
-    /// Whether to disallow empty selection.
-    #[prop(into, optional)]
-    disallow_empty_selection: bool,
-    /// Whether the grid is disabled.
-    #[prop(into, optional)]
-    disabled: Option<Signal<bool>>,
-    /// Escape key behavior.
-    #[prop(into, optional)]
-    escape_key_behavior: EscapeKeyBehavior,
-    /// Whether arrow key navigation wraps around.
-    #[prop(into, optional)]
+    selection: Option<ValueBinding<Selection>>,
+    #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
+    #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
+    #[prop(optional)] disabled_behavior: DisabledBehavior,
+    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
+    /// Arrow keys wrap around at the ends.
+    #[prop(optional)]
     should_focus_wrap: bool,
-    /// Callback when a row is activated (Enter key on a row key).
+    #[prop(optional)] keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Called with the key of an activated row.
     #[prop(into, optional)]
-    on_row_action: Option<Callback<K>>,
-    /// Callback when a cell is activated (Enter key on a cell key).
+    on_row_action: Option<Callback<Key>>,
+    /// Called with the key of an activated cell.
     #[prop(into, optional)]
-    on_cell_action: Option<Callback<K>>,
-    /// An accessible label for the grid.
-    #[prop(into, optional)]
-    label: Option<String>,
-    /// The ID of an element that labels the grid.
-    #[prop(into, optional)]
-    labelled_by: Option<String>,
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+    on_cell_action: Option<Callback<Key>>,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
-) -> impl IntoView
-where
-    K: SelectionKey,
-{
-    let disabled_keys = disabled_keys.unwrap_or_else(|| Signal::derive(HashSet::new));
-    let is_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
-
-    let grid = use_grid(UseGridInput {
-        label,
-        labelled_by,
+) -> impl IntoView {
+    let state = use_grid_state(UseGridStateInput {
         collection,
-        disabled_keys,
+        selection: SelectionOptions {
+            selection_mode,
+            selection_behavior,
+            default_selection: Selection::keys(default_selected_keys),
+            selection,
+            on_selection_change,
+            disallow_empty_selection: Signal::stored(disallow_empty_selection),
+            disabled_keys: disabled_keys.unwrap_or_default(),
+            disabled_behavior,
+            ..SelectionOptions::default()
+        },
         focus_mode,
-        selection_mode,
-        selection_behavior,
-        selected_keys,
-        default_selected_keys,
-        on_selection_change,
-        disallow_empty_selection,
-        is_disabled,
-        escape_key_behavior,
-        should_focus_wrap,
-        on_row_action,
-        on_cell_action,
     });
 
-    provide_context(GridCtx { state: grid.state });
+    let UseGridReturn { props, data } = use_grid(UseGridInput {
+        aria_label,
+        aria_labelledby,
+        options: CollectionOptions {
+            should_focus_wrap,
+            escape_key_behavior,
+            ..CollectionOptions::default()
+        },
+        keyboard_navigation_behavior,
+        on_row_action,
+        on_cell_action,
+        ..UseGridInput::new(state, CapturedElement::new())
+    });
 
     view! {
-        <div {..grid.props.into_attrs()} class=classes style=styles>
-            {children()}
-        </div>
+        <Provider value=data>
+            <div {..props.into_attrs()} class=classes style=styles>
+                {children()}
+            </div>
+        </Provider>
     }
 }
 
-/// A headless grid row group atom.
-///
-/// Wraps `use_grid_row_group` and renders a `<div>` with `role="rowgroup"`.
+/// A group of rows of a [`Grid`] (`role="rowgroup"`).
 #[component]
 pub fn GridRowGroup(
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
-
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let row_group = use_grid_row_group();
     view! {
-        <div {..row_group.props.into_attrs()} class=classes style=styles>
+        <div {..row_group.row_group_props.into_attrs()} class=classes style=styles>
             {children()}
         </div>
     }
 }
 
-/// A headless grid row atom.
+/// A row of a [`Grid`], for the collection row `key`.
 ///
-/// Wraps `use_grid_row` and renders a `<div>` with proper ARIA row attributes.
-/// Exposes `data-selected`, `data-focused`, and `data-disabled` attributes
-/// for CSS styling.
+/// Exposes `data-selected`, `data-focused`, `data-disabled` and `data-pressed` for styling.
 #[component]
-pub fn GridRow<K>(
-    /// The unique key for this row.
+pub fn GridRow(
+    /// The row's key in the grid's collection.
     #[prop(into)]
-    item_key: K,
-    /// The row index (0-based).
-    row_index: usize,
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+    key: Key,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
-) -> impl IntoView
-where
-    K: SelectionKey,
-{
-    let ctx = expect_context::<GridCtx<K>>();
-
-    let row = use_grid_row(UseGridRowInput {
-        state: ctx.state,
-        key: item_key,
-        row_index,
-    });
-
-    let is_focused = row.is_focused;
-
-    let data_selected = Signal::derive(move || {
-        if row.is_selected.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-    let data_focused = Signal::derive(move || if is_focused.get() { Some("true") } else { None });
-    let data_disabled = Signal::derive(move || {
-        if row.is_disabled.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-
-    let (row_props, row_styles) = row.props.into_inner();
+) -> impl IntoView {
+    let grid = expect_context::<GridData>();
+    let UseGridRowReturn {
+        row_props,
+        is_selected,
+        is_focused,
+        is_disabled,
+        is_pressed,
+        ..
+    } = use_grid_row(UseGridRowInput { grid, key });
+    let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
 
     view! {
         <div
-            {..row_props.into_attrs()}
+            {..attrs}
             class=classes
             style=styles
-            attr:data-selected=data_selected
-            attr:data-focused=data_focused
-            attr:data-disabled=data_disabled
+            data-selected=flag(is_selected)
+            data-focused=flag(is_focused)
+            data-disabled=flag(is_disabled)
+            data-pressed=flag(is_pressed)
         >
             {children()}
         </div>
     }
 }
 
-/// A headless grid cell atom.
+/// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
 ///
-/// Wraps `use_grid_cell` and renders a `<div>` with proper ARIA gridcell attributes.
-/// Exposes `data-selected`, `data-focused`, and `data-disabled` attributes
-/// for CSS styling.
+/// Exposes `data-pressed` for styling.
 #[component]
-pub fn GridCell<K>(
-    /// The unique key for this cell.
+pub fn GridCell(
+    /// The cell's key in the grid's collection.
     #[prop(into)]
-    item_key: K,
-    /// The row index (0-based).
-    row_index: usize,
-    /// The column index (0-based).
-    column_index: usize,
-    /// How focus should behave when this cell receives focus.
-    #[prop(into, optional)]
-    focus_mode: CellFocusMode,
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+    key: Key,
+    /// What gets focus: the cell, or its first focusable child. Defaults to the cell with
+    /// `KeyboardNavigationBehavior::Tab` and the child otherwise.
+    #[prop(optional)]
+    focus_mode: Option<CellFocusMode>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
-) -> impl IntoView
-where
-    K: SelectionKey,
-{
-    let ctx = expect_context::<GridCtx<K>>();
-
-    let cell = use_grid_cell(UseGridCellInput {
-        state: ctx.state,
-        key: item_key,
-        row_index,
-        column_index,
+) -> impl IntoView {
+    let grid = expect_context::<GridData>();
+    let UseGridCellReturn {
+        grid_cell_props,
+        is_pressed,
+    } = use_grid_cell(UseGridCellInput {
         focus_mode,
+        ..UseGridCellInput::new(grid, key)
     });
 
-    let is_focused = cell.is_focused;
-
-    let data_selected = Signal::derive(move || {
-        if cell.is_selected.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-    let data_focused = Signal::derive(move || if is_focused.get() { Some("true") } else { None });
-    let data_disabled = Signal::derive(move || {
-        if cell.is_disabled.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
-
-    let (cell_attrs, cell_styles) = cell.props.into_inner();
+    let (attrs, cell_styles) = grid_cell_props.into_parts();
     let styles = cell_styles.merge(styles);
 
     view! {
         <div
-            {..cell_attrs.into_attrs()}
+            {..attrs}
             class=classes
             style=styles
-            attr:data-selected=data_selected
-            attr:data-focused=data_focused
-            attr:data-disabled=data_disabled
+            data-pressed=move || is_pressed.get().then_some("true")
         >
             {children()}
         </div>

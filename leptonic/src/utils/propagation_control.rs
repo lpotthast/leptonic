@@ -38,16 +38,6 @@ impl PropagationControl {
         (self.trigger)();
     }
 
-    // TODO: We should delete this here. This could be an override of an events default `stop_propagation` event...
-    /// Warns the caller that `stop_propagation` is the default behavior.
-    #[allow(clippy::unused_self)]
-    pub(crate) fn stop_propagation(&self) {
-        tracing::warn!(
-            "stop_propagation is now the default behavior for events in Leptonic. \
-             You can use continue_propagation() to revert this behavior."
-        );
-    }
-
     /// Returns `true` when propagation will be stopped (the default).
     pub(crate) fn is_propagation_stopped(&self) -> bool {
         !self.state.load(Ordering::Acquire)
@@ -92,11 +82,6 @@ pub trait Propagation: sealed::Sealed {
     /// Allow parent handlers to also handle this event.
     fn continue_propagation(&self) {
         self.propagation_control().continue_propagation();
-    }
-
-    /// Warns that `stop_propagation` is the default behavior.
-    fn stop_propagation(&self) {
-        self.propagation_control().stop_propagation();
     }
 
     /// Returns `true` when propagation will be stopped (the default).

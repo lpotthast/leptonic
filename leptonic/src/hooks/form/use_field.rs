@@ -1,116 +1,80 @@
-// Upstream: react-aria/src/label/useField.ts @ 6f664fe911
-use crate::utils::id::use_id;
-use leptos::{attr, attr::Attr};
-
-use crate::{
-    hooks::IntoAttrs,
-    utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired, AriaRole},
+// Upstream: react-aria/src/label/useField.ts @ 99e6102368
+// Upstream: react-aria/src/label/useLabel.ts @ 99e6102368
+use leptos::{
+    attr::{self, Attr},
+    prelude::*,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/label/useField.ts
+use super::use_label::{
+    LabelElementType, UseLabelFieldProps, UseLabelInput, UseLabelProps, UseLabelReturn, use_label,
+};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{SlotProps, use_slot},
+};
 
-// No intentional deviations from the react-aria implementation.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - As [`use_label`]: `has_label` instead of the `label` content, an optional `label_id`, the
+//   presence of `aria_label` read once.
+// - Descriptions and error messages are detected when rendered (react-aria: `useSlotId`), so
+//   there are no `description`/`errorMessage` inputs. Reason: the hook never sees the rendered
+//   content; the slot registers itself when its element mounts.
+//
+// =============================================================================
 
-/// Validation state for a field.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ValidationState {
-    /// The field value is valid.
-    #[default]
-    Valid,
-    /// The field value is invalid.
-    Invalid,
-}
-
-/// Input parameters for the `use_field` hook.
+/// Input of [`use_field`].
 #[derive(Debug, Clone, Default)]
 pub struct UseFieldInput {
-    /// A custom id for the field element.
+    /// The field element's id. Generated when `None`.
     pub id: Option<String>,
-
-    /// The label for the field.
-    pub label: Option<String>,
-
-    /// A description for the field.
-    pub description: Option<String>,
-
-    /// An error message for the field.
-    pub error_message: Option<String>,
-
-    /// The validation state of the field.
-    pub validation_state: ValidationState,
-
-    /// Whether the field is required.
-    pub is_required: bool,
-
-    /// Whether the field is disabled.
-    pub is_disabled: bool,
-
-    /// Whether the field is read-only.
-    pub is_read_only: bool,
+    /// The label element's id. Generated when `None`.
+    pub label_id: Option<String>,
+    /// Whether a visible label is rendered (with `label_props`).
+    pub has_label: bool,
+    pub label_element_type: LabelElementType,
+    /// Labels the field when there is no visible label. Next to a visible label, it is added to the
+    /// field's name.
+    pub aria_label: MaybeProp<String>,
+    /// Further elements labelling the field.
+    pub aria_labelledby: Option<String>,
+    /// Further elements describing the field.
+    pub aria_describedby: Option<String>,
 }
 
-/// The return value of the `use_field` hook.
+/// Return value of [`use_field`].
 #[derive(Debug)]
 pub struct UseFieldReturn {
-    /// Props for the label element.
-    pub label_props: UseFieldLabelProps,
-
-    /// Props for the field element.
+    pub label_props: UseLabelProps,
     pub field_props: UseFieldProps,
-
-    /// Props for the description element.
-    pub description_props: UseFieldDescriptionProps,
-
-    /// Props for the error message element.
-    pub error_message_props: UseFieldErrorMessageProps,
+    /// For the description element.
+    pub description_props: SlotProps,
+    /// For the error message element. Render it only while the field is invalid.
+    pub error_message_props: SlotProps,
+    /// The description's id while it is rendered (for other elements it describes).
+    pub description_id: Signal<Option<String>>,
+    /// The error message's id while it is rendered.
+    pub error_message_id: Signal<Option<String>>,
 }
-
-/// Props for the label element.
-#[derive(Debug)]
-pub struct UseFieldLabelProps {
-    /// The id of the label element.
-    pub id: String,
-
-    /// The "for" attribute linking to the field.
-    pub html_for: String,
-}
-
-impl IntoAttrs for UseFieldLabelProps {
-    type Attrs = UseFieldLabelAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
-    }
-}
-
-/// Attributes for the label element (id, for).
-/// Spread onto the label element using `<label {..label_props.into_attrs()}>`.
-pub type UseFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the field element.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseFieldProps {
-    /// The id of the field element.
     pub id: String,
-
-    /// The aria-labelledby attribute.
+    pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
-
-    /// The aria-describedby attribute.
-    pub aria_describedby: Option<String>,
-
-    /// The aria-invalid attribute.
-    pub aria_invalid: Option<AriaInvalid>,
-
-    /// The aria-required attribute.
-    pub aria_required: Option<AriaRequired>,
-
-    /// The aria-disabled attribute.
-    pub aria_disabled: Option<AriaDisabled>,
-
-    /// The aria-readonly attribute.
-    pub aria_readonly: Option<AriaReadonly>,
+    pub aria_describedby: Signal<Option<String>>,
 }
+
+pub type UseFieldAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+);
 
 impl IntoAttrs for UseFieldProps {
     type Attrs = UseFieldAttrs;
@@ -118,176 +82,125 @@ impl IntoAttrs for UseFieldProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
+            Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaInvalid, self.aria_invalid),
-            Attr(attr::AriaRequired, self.aria_required),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaReadonly, self.aria_readonly),
         )
     }
 }
 
-/// Attributes for the field element.
-/// Spread onto the field element using `<input {..field_props.into_attrs()}>`.
-pub type UseFieldAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
-    Attr<attr::AriaRequired, Option<AriaRequired>>,
-    Attr<attr::AriaDisabled, Option<AriaDisabled>>,
-    Attr<attr::AriaReadonly, Option<AriaReadonly>>,
-);
-
-/// Props for the description element.
-#[derive(Debug, Clone)]
-pub struct UseFieldDescriptionProps {
-    /// The id of the description element.
-    pub id: String,
-}
-
-impl IntoAttrs for UseFieldDescriptionProps {
-    type Attrs = UseFieldDescriptionAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Id, self.id),)
-    }
-}
-
-/// Attributes for the description element (id).
-/// Spread onto the description element using `<p {..description_props.into_attrs()}>`.
-pub type UseFieldDescriptionAttrs = (Attr<attr::Id, String>,);
-
-/// Props for the error message element.
-#[derive(Debug, Clone)]
-pub struct UseFieldErrorMessageProps {
-    /// The id of the error message element.
-    pub id: String,
-
-    /// The role attribute.
-    pub role: AriaRole,
-
-    /// The aria-live attribute.
-    pub aria_live: AriaLive,
-}
-
-impl IntoAttrs for UseFieldErrorMessageProps {
-    type Attrs = UseFieldErrorMessageAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLive, self.aria_live),
-        )
-    }
-}
-
-/// Attributes for the error message element (id, role, aria-live).
-/// Spread onto the error message element using `<p {..error_message_props.into_attrs()}>`.
-pub type UseFieldErrorMessageAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLive, AriaLive>,
-);
-
-/// Provides the accessibility implementation for a form field with label,
-/// description, and error message support.
-///
-/// This hook generates all the necessary IDs and ARIA attributes to
-/// properly associate a field with its label, description, and error message.
-///
-/// # Example
+/// Connects a field with its label, description and error message: ids and the field's
+/// `aria-labelledby` / `aria-describedby`.
 ///
 /// ```ignore
-/// let field = use_field(UseFieldInput {
-///     label: Some("Email".to_string()),
-///     description: Some("Enter your email address".to_string()),
-///     validation_state: if is_valid { ValidationState::Valid } else { ValidationState::Invalid },
-///     error_message: Some("Please enter a valid email".to_string()),
-///     is_required: true,
-///     ..Default::default()
-/// });
-///
+/// let field = use_field(UseFieldInput { has_label: true, ..UseFieldInput::default() });
 /// view! {
-///     <div>
-///         <label {..field.label_props.into_attrs()}>
-///             "Email"
-///         </label>
-///         <input {..field.field_props.into_attrs()} />
-///         <p {..field.description_props.into_attrs()}>
-///             "Enter your email address"
-///         </p>
-///         <Show when=move || !is_valid>
-///             <p {..field.error_message_props.into_attrs()}>
-///                 "Please enter a valid email"
-///             </p>
-///         </Show>
-///     </div>
+///     <label {..field.label_props.into_attrs()}>"Email"</label>
+///     <input type="email" {..field.field_props.into_attrs()} />
+///     <span {..field.description_props.into_attrs()}>"We never share it."</span>
 /// }
 /// ```
 pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
     let UseFieldInput {
         id,
-        label,
-        description,
-        error_message,
-        validation_state,
-        is_required,
-        is_disabled,
-        is_read_only,
+        label_id,
+        has_label,
+        label_element_type,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
     } = input;
 
-    let base_id = use_id("field");
+    let UseLabelReturn {
+        label_props,
+        field_props:
+            UseLabelFieldProps {
+                id,
+                aria_label,
+                aria_labelledby,
+            },
+    } = use_label(UseLabelInput {
+        id,
+        label_id,
+        has_label,
+        label_element_type,
+        aria_label,
+        aria_labelledby,
+    });
 
-    let field_id = id.unwrap_or_else(|| format!("field-{base_id}"));
-    let label_id = format!("label-{base_id}");
-    let description_id = format!("description-{base_id}");
-    let error_message_id = format!("error-{base_id}");
-
-    // Build aria-describedby
-    let mut describedby_parts = Vec::new();
-    if description.is_some() {
-        describedby_parts.push(description_id.clone());
-    }
-    if validation_state == ValidationState::Invalid && error_message.is_some() {
-        describedby_parts.push(error_message_id.clone());
-    }
-
-    let aria_describedby = if describedby_parts.is_empty() {
-        None
-    } else {
-        Some(describedby_parts.join(" "))
-    };
-
-    // Build aria-labelledby (only if label exists)
-    let aria_labelledby = if label.is_some() {
-        Some(label_id.clone())
-    } else {
-        None
-    };
+    let description = use_slot("description");
+    let error_message = use_slot("error-message");
+    let (description_id, error_message_id) =
+        (description.referenced_id, error_message.referenced_id);
 
     UseFieldReturn {
-        label_props: UseFieldLabelProps {
-            id: label_id,
-            html_for: field_id.clone(),
-        },
+        label_props,
         field_props: UseFieldProps {
-            id: field_id,
+            id,
+            aria_label,
             aria_labelledby,
-            aria_describedby,
-            aria_invalid: (validation_state == ValidationState::Invalid)
-                .then_some(AriaInvalid::True),
-            aria_required: is_required.then_some(AriaRequired::True),
-            aria_disabled: is_disabled.then_some(AriaDisabled::True),
-            aria_readonly: is_read_only.then_some(AriaReadonly::True),
+            // The error message is a description too: `aria-errormessage` is unsupported by
+            // VoiceOver and NVDA.
+            aria_describedby: Signal::derive(move || {
+                let ids: Vec<String> = [description_id.get(), error_message_id.get()]
+                    .into_iter()
+                    .flatten()
+                    .chain(aria_describedby.clone())
+                    .collect();
+                (!ids.is_empty()).then(|| ids.join(" "))
+            }),
         },
-        description_props: UseFieldDescriptionProps { id: description_id },
-        error_message_props: UseFieldErrorMessageProps {
-            id: error_message_id,
-            role: AriaRole::Alert,
-            aria_live: AriaLive::Polite,
-        },
+        description_props: description.props,
+        error_message_props: error_message.props,
+        description_id,
+        error_message_id,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    #[test]
+    fn a_visible_label_labels_the_field() {
+        Owner::new().with(|| {
+            let field = use_field(UseFieldInput {
+                id: Some("f".to_owned()),
+                has_label: true,
+                ..UseFieldInput::default()
+            });
+            let label_id = field.label_props.id.clone();
+            assert_that!(field.field_props.aria_labelledby).is_equal_to(Some(label_id));
+            assert_that!(field.label_props.html_for).is_equal_to(Some("f".to_owned()));
+            // Nothing describes the field until a description is rendered.
+            assert_that!(field.field_props.aria_describedby.get_untracked()).is_none();
+        });
+    }
+
+    #[test]
+    fn aria_label_next_to_other_labels_adds_the_field_itself() {
+        Owner::new().with(|| {
+            let field = use_field(UseFieldInput {
+                id: Some("f".to_owned()),
+                aria_label: "Name".into(),
+                aria_labelledby: Some("other".to_owned()),
+                ..UseFieldInput::default()
+            });
+            assert_that!(field.field_props.aria_labelledby).is_equal_to(Some("other f".to_owned()));
+        });
+    }
+
+    #[test]
+    fn span_labels_have_no_for_attribute() {
+        Owner::new().with(|| {
+            let field = use_field(UseFieldInput {
+                has_label: true,
+                label_element_type: LabelElementType::Span,
+                ..UseFieldInput::default()
+            });
+            assert_that!(field.label_props.html_for).is_none();
+        });
     }
 }

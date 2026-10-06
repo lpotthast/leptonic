@@ -2,157 +2,166 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
-
 use super::demos::color_slider::ColorSliderDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseColorSlider() -> impl IntoView {
     view! {
-        <Article>
-            <p style="margin-bottom: 0.5em;">
-                <Link href=routes::doc::color::Hooks.materialize()>"\u{2190} Color Hooks Overview"</Link>
-            </p>
-
-            <h1 id="use_color_slider" class="anchor">
-                "use_color_slider"
-                <AnchorLink href="#use_color_slider" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_color_slider">
             <p>
                 "The "<Code inline=true>"use_color_slider_state"</Code>" and "<Code inline=true>"use_color_slider"</Code>
-                " hooks provide state management and interaction for a slider that adjusts a single color channel."
+                " hooks build a slider that adjusts one channel of a color, e.g. its hue. They work with any "
+                <Link href=routes::doc::color::Hooks.materialize()>"color type"</Link>". See the "
+                <Link href=routes::doc::Color.materialize()>"Color overview"</Link>" for concept guidance."
             </p>
+
+            <ReactAria hook="useColorSlider"/>
 
             <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useColorSlider.html" target=LinkTarget::_Blank>
-                    "useColorSlider"
-                </LinkExt>
-                "."
+                "The color slider wraps the general-purpose "<Link href=routes::doc::slider::Hook.materialize()>"slider hooks"</Link>
+                " with a gradient background for the track and color-aware ARIA. Without an "<Code inline=true>"aria_label"</Code>
+                ", it is labelled with the channel name (e.g. \u{201c}Hue\u{201d}), and its value text includes the hue name "
+                "for hue channels."
             </p>
 
-            <h2 id="overview" class="anchor">
-                "Overview"
-                <AnchorLink href="#overview" description="Direct link to overview"/>
-            </h2>
+            <Section title="Demo">
+                <Demo description="Hue slider for an HSV color" source=include_str!("demos/color_slider.rs")>
+                    <ColorSliderDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "The color slider wraps the general-purpose "<Code inline=true>"use_slider"</Code>
-                " hook with color-specific gradient computation and ARIA value text enrichment. "
-                "It auto-generates an accessibility label from the channel name (e.g., \"Hue\", \"Saturation\") and "
-                "provides a CSS gradient background derived from the current color."
-            </p>
+            <Section title="use_color_slider_state">
+                <p>
+                    "Owns the color and keeps it in sync with a single-thumb "<Code inline=true>"use_slider_state"</Code>
+                    " whose range and step are those of the channel. Takes its input by reference."
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <Section title="Input" id="use-color-slider-state-input">
+                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
 
-            <DemoShell
-                source=include_str!("demos/color_slider.rs")
-                description="Hue channel color slider"
-            >
-                <ColorSliderDemo />
-            </DemoShell>
+                    <ApiTable kind=ApiKind::Input of="UseColorSliderStateInput">
+                        <ApiRow name="default_value" ty="C">"The initial color."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the slider controls."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the slider is disabled."</ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>">
+                            "Horizontal or vertical. Affects keyboard navigation and how pointer positions are read."
+                        </ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<C>>">"Called when the color changes during interaction."</ApiRow>
+                        <ApiRow name="on_change_end" ty="Option<Callback<C>>">"Called when an interaction ends."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="api" class="anchor">
-                "API"
-                <AnchorLink href="#api" description="Direct link to API section"/>
-            </h2>
+                <Section title="Return" id="use-color-slider-state-return">
+                    <ApiTable kind=ApiKind::Return of="UseColorSliderStateReturn">
+                        <ApiRow name="value" ty="Signal<C>">"The current color."</ApiRow>
+                        <ApiRow name="set_value" ty="Callback<C>">"Sets the whole color."</ApiRow>
+                        <ApiRow name="slider_state" ty="UseSliderStateReturn">"The underlying single-thumb slider state."</ApiRow>
+                        <ApiRow name="display_color" ty="Signal<C>">
+                            "The color for the gradient: for hue, full saturation and brightness at the current hue; otherwise "
+                            "the color as it is."
+                        </ApiRow>
+                        <ApiRow name="thumb_value_label" ty="Signal<String>">"The formatted channel value."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the slider controls."</ApiRow>
+                        <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the thumb is being dragged."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h3>"State Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorSliderStateInput<C: ColorValue> {
-                        pub default_value: C,
-                        pub channel: C::Channel,
-                        pub disabled: Signal<bool>,
-                        pub orientation: Signal<SliderOrientation>,
-                        pub on_change: Option<Callback<C>>,
-                        pub on_change_end: Option<Callback<C>>,
-                    }
-                ")}
-            </Code>
+            <Section title="use_color_slider">
+                <p>
+                    "Adds interaction and ARIA through "<Code inline=true>"use_slider"</Code>" and "
+                    <Code inline=true>"use_slider_thumb"</Code>", plus the track gradient."
+                </p>
 
-            <h3>"State Return"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorSliderStateReturn<C: ColorValue> {
-                        pub value: Signal<C>,
-                        pub set_value: Callback<C>,
-                        pub slider_state: UseSliderStateReturn,
-                        pub display_color: Signal<C>,
-                        pub thumb_value_label: Signal<String>,
-                        pub channel: C::Channel,
-                        pub is_dragging: Signal<bool>,
-                    }
-                ")}
-            </Code>
+                <Section title="Input" id="use-color-slider-input">
+                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
 
-            <h3>"Hook Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorSliderInput<C: ColorValue> {
-                        pub state: UseColorSliderStateReturn<C>,
-                        pub disabled: Signal<bool>,
-                        pub orientation: Signal<SliderOrientation>,
-                        pub aria_label: Option<&'static str>,
-                        pub is_rtl: bool,
-                        pub name: Option<&'static str>,
-                    }
-                ")}
-            </Code>
+                    <ApiTable kind=ApiKind::Input of="UseColorSliderInput">
+                        <ApiRow name="state" ty="UseColorSliderStateReturn<C>">"The state from "<Code inline=true>"use_color_slider_state"</Code>"."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the thumb is disabled."</ApiRow>
+                        <ApiRow name="orientation" ty="Signal<Orientation>">
+                            "The direction of the track gradient. A horizontal gradient runs right to left in right-to-left locales."
+                        </ApiRow>
+                        <ApiRow name="aria_label" ty="Option<&'static str>">
+                            "An accessible name. "<Code inline=true>"None"</Code>" uses the channel name."
+                        </ApiRow>
+                        <ApiRow name="name" ty="Option<&'static str>">"The form field name of the thumb\u{2019}s hidden input."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3>"Hook Return"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorSliderReturn {
-                        pub slider: UseSliderReturn,
-                        pub thumb: UseSliderThumbReturn,
-                        pub background: Signal<String>,
-                        pub track_style: Signal<String>,
-                    }
-                ")}
-            </Code>
+                <Section title="Return" id="use-color-slider-return">
+                    <ApiTable kind=ApiKind::Return of="UseColorSliderReturn">
+                        <ApiRow name="slider" ty="UseSliderReturn">
+                            "Props for the group, label, output and track, as returned by "<Code inline=true>"use_slider"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="thumb" ty="UseSliderThumbReturn">
+                            "Props for the thumb and its hidden input, as returned by "<Code inline=true>"use_slider_thumb"</Code>
+                            ", including the thumb\u{2019}s "<Code inline=true>"percentage"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="background" ty="Signal<String>">"The CSS gradient for the track."</ApiRow>
+                        <ApiRow name="track_style" ty="Signal<String>">
+                            "A CSS style string with the gradient and "<Code inline=true>"forced-color-adjust: none"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                <Section title="Example" id="use-color-slider-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            let state = use_color_slider_state(&UseColorSliderStateInput {
+                                default_value: HSV::new(),
+                                channel: HsvChannel::Hue,
+                                is_disabled: Signal::stored(false),
+                                orientation: Orientation::Horizontal.into(),
+                                on_change: None,
+                                on_change_end: None,
+                            });
+                            let slider = use_color_slider(UseColorSliderInput {
+                                state,
+                                is_disabled: Signal::stored(false),
+                                orientation: Orientation::Horizontal.into(),
+                                aria_label: None,
+                                name: None,
+                            });
+                            let (track_attrs, track_styles) = slider.slider.track_props.into_parts();
 
-            <ul>
-                <li>"Single-channel color adjustment via slider interaction"</li>
-                <li>"Auto-generated CSS gradient for the track background"</li>
-                <li>"Enriched ARIA value text with hue/color name"</li>
-                <li>"Horizontal and vertical orientation support"</li>
-                <li>"Built on top of "<Code inline=true>"use_slider"</Code>" for full keyboard and pointer support"</li>
-            </ul>
+                            view! {
+                                <div {..track_attrs} style=track_styles>
+                                    <div {..slider.thumb.thumb_props.into_attrs()}>
+                                        <input {..slider.thumb.input_props.into_attrs()} />
+                                    </div>
+                                </div>
+                            }
+                        ")}
+                    </Code>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                    <p>
+                        "Add the gradient from "<Code inline=true>"background"</Code>" to the track\u{2019}s styles and position the "
+                        "thumb with "<Code inline=true>"thumb.percentage"</Code>"; the demo source shows how."
+                    </p>
+                </Section>
+            </Section>
 
-            <ul>
-                <li><Link href=crate::routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link>" - 2D color area for two channels"</li>
-                <li><Link href=crate::routes::doc::hooks::UseColorWheel.materialize()>"use_color_wheel"</Link>" - Circular hue wheel"</li>
-                <li><Link href=crate::routes::doc::slider::Hook.materialize()>"use_slider"</Link>" - General-purpose slider hook"</li>
-            </ul>
-        </Article>
+            <Section title="Keyboard">
+                <p>"With the thumb\u{2019}s input focused (horizontal, left-to-right):"</p>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_color_slider", link: "#use_color_slider" },
-                Toc::Leaf { title: "Overview", link: "#overview" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "API", link: "#api" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowRight / ArrowUp">"Increase the channel by its step."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowDown">"Decrease the channel by its step."</KeyRow>
+                    <KeyRow keys="Shift + ArrowRight / Shift + ArrowUp / PageUp">"Increase the channel by its page step."</KeyRow>
+                    <KeyRow keys="Shift + ArrowLeft / Shift + ArrowDown / PageDown">"Decrease the channel by its page step."</KeyRow>
+                    <KeyRow keys="Home / End">"Set the channel to its minimum or maximum."</KeyRow>
+                </KeyboardTable>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
+                <li><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorWheel.materialize()>"use_color_wheel"</Link></li>
+                <li><Link href=routes::doc::slider::Hook.materialize()>"use_slider"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

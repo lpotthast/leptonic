@@ -1,0 +1,128 @@
+// Design tokens of the book (see `STYLE_GUIDE.md`). Leptonic's theme variables (`--brand-color`, `--danger-color`,
+// `--typography-*`, ...) are used where they fit; the `--book-*` variables cover what is specific to the documentation.
+// Colors are defined per theme, everything else once in `:root`.
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --main-color: var(--std-text-dark);
+  --main-background-color: #efebe8;
+
+  --brand-color: #e66956;
+  --brand-color-subtle: rgba(230, 105, 86, 0.12);
+
+  --font-family: 'Roboto', sans-serif;
+  --typography-code-font-family: 'JetBrains Mono', monospace;
+
+  --drawer-background-color: none;
+  --drawer-box-shadow: none;
+
+  --book-menu-background-color: var(--box-background-color);
+  --book-menu-header-color: #3e3434;
+  --book-menu-item-color: #3e3434;
+  --book-menu-item-active-color: var(--std-text-bright);
+
+  --book-border-color: #d3d3d3;
+  --book-hover-background-color: #e2dcd8;
+  --book-muted-color: #6b6262;
+  --book-surface-color: #ffffff;
+  --book-surface-color-raised: #f7f5f3;
+  --book-shadow-s: 0 1px 3px rgba(0, 0, 0, 0.25);
+  --book-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --book-focus-color: #0066cc;
+  --book-on-brand-color: #ffffff;
+  --book-backdrop-color: rgba(0, 0, 0, 0.5);
+
+  // Distinguishing series in demos.
+  --book-categorical-1: #4a90d9;
+  --book-categorical-2: #27ae60;
+  --book-categorical-3: #9b59b6;
+  --book-categorical-4: #e67e22;
+
+  // Layer badges in the sidebar.
+  --book-badge-hook-color: #2563eb;
+  --book-badge-atom-color: #7c3aed;
+  --book-badge-comp-color: #16a34a;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --main-color: var(--std-text-bright);
+  --main-background-color: #141414;
+
+  --brand-color: #e66956;
+  --brand-color-subtle: rgba(230, 105, 86, 0.16);
+
+  --font-family: 'Roboto', sans-serif;
+  --typography-code-font-family: 'JetBrains Mono', monospace;
+
+  --app-bar-background-color: #141414;
+  --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
+
+  --box-background-color: #141414;
+
+  --drawer-background-color: none;
+  --drawer-box-shadow: none;
+
+  --book-menu-background-color: var(--box-background-color);
+  --book-menu-header-color: var(--std-text-bright);
+  --book-menu-item-color: var(--std-text-bright);
+  --book-menu-item-active-color: var(--std-text-bright);
+
+  --book-border-color: #2a2a2a;
+  --book-hover-background-color: #222222;
+  --book-muted-color: #a19a9a;
+  --book-surface-color: #1e1e1e;
+  --book-surface-color-raised: #262626;
+  --book-shadow-s: 0 1px 3px rgba(0, 0, 0, 0.6);
+  --book-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  --book-focus-color: #5aa2ff;
+  --book-on-brand-color: #ffffff;
+  --book-backdrop-color: rgba(0, 0, 0, 0.65);
+
+  --book-categorical-1: #5b9ee6;
+  --book-categorical-2: #2ecc71;
+  --book-categorical-3: #a66bbe;
+  --book-categorical-4: #f39c4b;
+
+  --book-badge-hook-color: #3b82f6;
+  --book-badge-atom-color: #8b5cf6;
+  --book-badge-comp-color: #22c55e;
+}
+
+:root {
+  // Spacing, relative to the font size of the element using it.
+  --book-space-xs: 0.25em;
+  --book-space-s: 0.5em;
+  --book-space-m: 1em;
+  --book-space-l: 1.5em;
+  --book-space-xl: 2em;
+  --book-space-xxl: 3em;
+
+  // Corner radii.
+  --book-radius-s: 4px;
+  --book-radius-m: 8px;
+  --book-radius-l: 12px;
+  --book-radius-pill: 999px;
+
+  // Font sizes, relative to the parent's.
+  --book-font-size-xs: 0.75em;
+  --book-font-size-s: 0.85em;
+  --book-font-size-m: 1em;
+  --book-font-size-l: 1.25em;
+  --book-font-size-xl: 1.5em;
+
+  --book-transition: 0.15s ease;
+
+  // The slogan on the welcome page.
+  --book-brand-gradient: linear-gradient(90deg, #d53369 0%, #daae51 100%);
+
+  --book-z-sticky: 10;
+
+  // Height of the fixed app bar, and the offset anchored headings need to not end up underneath it.
+  --book-app-bar-height: 3.5em;
+  --book-scroll-offset: calc(var(--book-app-bar-height) + 1em);
+  --book-drawer-width: 16em;
+  --book-toc-width: 12em;
+}

@@ -1,14 +1,16 @@
 # We must be able to control the name of the application build!
 # By letting it contain a random part, cache-busting is made possible.
 # Overwrite this using a `--build-arg`, like in:
-# `docker build --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)" -t image-name .`
+# `docker build --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)" -t image-name -f examples/book-ssr/Dockerfile .`
+#
+# The build context must be the repository root, as the book depends on leptonic through a path dependency.
 ARG DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr"
 
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
 
-FROM --platform=linux/amd64 rust:1.75-slim-bookworm as builder
+FROM --platform=linux/amd64 rust:1-slim-bookworm AS builder
 
 WORKDIR /build
 
@@ -34,6 +36,7 @@ RUN <<EOF
 EOF
 
 COPY . /build
+WORKDIR /build/examples/book-ssr
 
 # Configuring ENV variables to alter the `cargo leptos build` command.
 ENV LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl"
@@ -42,7 +45,7 @@ ENV LEPTOS_OUTPUT_NAME=${DEFAULT_LEPTOS_OUTPUT_NAME}
 RUN <<EOF
     cargo leptos build --release
 
-    /bin/bash ./precompress.sh "/build/target/site"
+    /bin/bash ./precompress.sh "/build/examples/book-ssr/target/site"
 EOF
 
 # ------------------------------------------------------------------------------
@@ -55,10 +58,10 @@ WORKDIR /app
 
 ARG DEFAULT_LEPTOS_OUTPUT_NAME
 
-COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/book-ssr .
-COPY --from=builder /build/target/site ./site
-COPY --from=builder /build/certs/ssl_cert.pem ./certs/www.leptonic.dev-cert.pem
-COPY --from=builder /build/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
+COPY --from=builder /build/examples/book-ssr/target/x86_64-unknown-linux-musl/release/book-ssr .
+COPY --from=builder /build/examples/book-ssr/target/site ./site
+COPY --from=builder /build/examples/book-ssr/certs/ssl_cert.pem ./certs/www.leptonic.dev-cert.pem
+COPY --from=builder /build/examples/book-ssr/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
 
 ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
 ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"

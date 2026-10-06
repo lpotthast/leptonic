@@ -14,10 +14,10 @@ use std::cell::{Cell, RefCell};
 use leptos::prelude::TimeoutHandle;
 
 /// Default delay before showing the first tooltip (in ms).
-pub const TOOLTIP_DELAY: u32 = 1500;
+pub const TOOLTIP_DELAY: std::time::Duration = std::time::Duration::from_millis(1500);
 
 /// Default cooldown period after all tooltips close before resetting warmup state (in ms).
-pub const TOOLTIP_COOLDOWN: u32 = 500;
+pub const TOOLTIP_COOLDOWN: std::time::Duration = std::time::Duration::from_millis(500);
 
 #[cfg(not(feature = "ssr"))]
 thread_local! {
@@ -32,9 +32,9 @@ thread_local! {
     /// should appear without delay.
     static GLOBAL_WARMED_UP: Cell<bool> = const { Cell::new(false) };
 
-    /// Pending warmup timer handle. Set when the first tooltip starts its
-    /// delay; cleared when the tooltip is shown or cancelled.
-    static GLOBAL_WARMUP_TIMEOUT: Cell<Option<TimeoutHandle>> = const { Cell::new(None) };
+    /// Pending warmup timer handle, with the id of the tooltip it shows. Set when the first
+    /// tooltip starts its delay; cleared when the tooltip is shown, cancelled or unmounted.
+    static GLOBAL_WARMUP_TIMEOUT: Cell<Option<(u64, TimeoutHandle)>> = const { Cell::new(None) };
 
     /// Pending cooldown timer handle. Set when all tooltips close; cleared
     /// when a new tooltip opens or when the cooldown expires.
@@ -75,13 +75,17 @@ pub(super) fn unregister_tooltip(id: u64) {
 /// Close all open tooltips except the one with the given ID.
 #[cfg(not(feature = "ssr"))]
 pub(super) fn close_open_tooltips(except_id: u64) {
-    TOOLTIPS.with_borrow(|tooltips| {
-        for (tid, close_fn) in tooltips {
-            if *tid != except_id {
-                close_fn();
-            }
-        }
+    // Take the other entries out first: closing them must not run while the registry is borrowed.
+    let others: Vec<_> = TOOLTIPS.with_borrow_mut(|tooltips| {
+        let (others, own) = std::mem::take(tooltips)
+            .into_iter()
+            .partition(|(tid, _)| *tid != except_id);
+        *tooltips = own;
+        others
     });
+    for (_, close_fn) in others {
+        close_fn();
+    }
 }
 
 /// Check if the system is in warmed-up state (subsequent tooltips skip delay).
@@ -100,9 +104,18 @@ pub(super) fn set_warmed_up(value: bool) {
 #[cfg(not(feature = "ssr"))]
 pub(super) fn clear_warmup_timeout() {
     GLOBAL_WARMUP_TIMEOUT.with(|c| {
-        if let Some(handle) = c.take() {
+        if let Some((_, handle)) = c.take() {
             handle.clear();
         }
+    });
+}
+
+/// Clear the pending warmup timeout if it would show the tooltip `id` (which is going away).
+#[cfg(not(feature = "ssr"))]
+pub(super) fn clear_warmup_timeout_of(id: u64) {
+    GLOBAL_WARMUP_TIMEOUT.with(|c| match c.take() {
+        Some((owner, handle)) if owner == id => handle.clear(),
+        other => c.set(other),
     });
 }
 
@@ -116,11 +129,11 @@ pub(super) fn clear_cooldown_timeout() {
     });
 }
 
-/// Set a warmup timeout. Clears any existing one first.
+/// Set the warmup timeout showing the tooltip `id`. Clears any existing one first.
 #[cfg(not(feature = "ssr"))]
-pub(super) fn set_warmup_timeout(handle: TimeoutHandle) {
+pub(super) fn set_warmup_timeout(id: u64, handle: TimeoutHandle) {
     clear_warmup_timeout();
-    GLOBAL_WARMUP_TIMEOUT.with(|c| c.set(Some(handle)));
+    GLOBAL_WARMUP_TIMEOUT.with(|c| c.set(Some((id, handle))));
 }
 
 /// Set a cooldown timeout. Clears any existing one first.

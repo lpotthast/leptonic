@@ -4,18 +4,29 @@ use leptos::prelude::*;
 
 use crate::{
     Language,
-    utils::{classes::Classes, key::Key, styles::Styles},
+    utils::{
+        classes::Classes, key::KeyboardKey, styles::Styles, visually_hidden::visually_hidden_styles,
+    },
 };
 
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn KbdKey(
-    key: Key,
+    key: KeyboardKey,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let display = key.display(Language::En).to_owned();
-    view! { <kbd class=classes.add("leptonic-kbd-key") style=styles>{display}</kbd> }
+    // Glyphs and abbreviations are shown, their names read.
+    let content = match key.spoken_name() {
+        Some(name) => view! {
+            <span aria-hidden="true">{display}</span>
+            <span style=visually_hidden_styles()>{name}</span>
+        }
+        .into_any(),
+        None => display.into_any(),
+    };
+    view! { <kbd class=classes.add("leptonic-kbd-key") style=styles>{content}</kbd> }
 }
 
 #[component]
@@ -38,7 +49,7 @@ pub fn KbdShortcutRoot(
 
 #[component]
 pub fn KbdShortcut<const N: usize>(
-    keys: [Key; N],
+    keys: [KeyboardKey; N],
     #[prop(into, optional)] concatenate_with: Option<Cow<'static, str>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,

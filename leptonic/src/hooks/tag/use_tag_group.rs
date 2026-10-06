@@ -1,211 +1,242 @@
-// Upstream: react-aria/src/tag/useTagGroup.ts @ 6f664fe911
-use crate::utils::id::use_id;
+// Upstream: react-aria/src/tag/useTagGroup.ts @ 99e6102368
+use std::{collections::HashSet, sync::Arc};
+
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
     prelude::*,
 };
-use web_sys::KeyboardEvent;
 
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{
+        IntoAttrs,
+        collections::{
+            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
+            use_list_keyboard_delegate,
+        },
+        focus::use_focus_within::{
+            UseFocusWithinAttrs, UseFocusWithinInput, UseFocusWithinProps, use_focus_within,
+        },
+        form::{
+            use_field::{UseFieldInput, UseFieldReturn, use_field},
+            use_label::LabelElementType,
+            use_label::UseLabelProps,
+        },
+        gridlist::{
+            GridListData, KeyboardNavigationBehavior, UseGridListAttrs, UseGridListInput,
+            UseGridListProps, UseGridListReturn, use_grid_list,
+        },
+    },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaRole},
+        CapturedElement, SlotProps,
+        aria::{AriaLive, AriaRole},
+        focus::focus_safely,
+        orientation::Orientation,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tag/useTagGroup.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Tags get the group's settings through the returned `TagGroupData` (react-aria: a `WeakMap`
+//   keyed by the state), which the caller hands to `use_tag`.
+// - `has_label` says whether a visible label is rendered.
 //
+// =============================================================================
 
-/// The selection mode for a tag group.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TagGroupSelectionMode {
-    /// No selection allowed.
-    #[default]
-    None,
-    /// Single tag selection.
-    Single,
-    /// Multiple tag selection.
-    Multiple,
-}
-
-/// Input parameters for the `use_tag_group` hook.
-#[derive(Debug, Clone)]
+/// Input of [`use_tag_group`].
+#[derive(Clone)]
 pub struct UseTagGroupInput {
-    /// The label for the tag group.
-    pub label: Option<String>,
-
-    /// The selection mode.
-    pub selection_mode: TagGroupSelectionMode,
-
-    /// Whether the tag group is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The currently selected tag keys.
-    pub selected_keys: Signal<Vec<String>>,
-
-    /// Callback when selection changes.
-    pub on_selection_change: Option<Callback<Vec<String>>>,
-
-    /// Callback when a tag is removed.
-    pub on_remove: Option<Callback<String>>,
-
-    /// Whether tags can be removed.
-    pub allow_removal: bool,
+    pub state: ListState,
+    /// The group element; the hook's props capture it.
+    pub element: CapturedElement,
+    /// The element id. Generated when `None`.
+    pub id: Option<String>,
+    /// Whether a visible label is rendered (with `label_props`).
+    pub has_label: bool,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    /// Replaces the (horizontal) list keyboard delegate.
+    pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Called with the keys of tags to remove (Delete/Backspace, or a remove button). Without
+    /// it, tags can't be removed.
+    pub on_remove: Option<Callback<HashSet<Key>>>,
+    /// Called with the key of an activated tag.
+    pub on_action: Option<Callback<Key>>,
 }
 
-impl Default for UseTagGroupInput {
-    fn default() -> Self {
+impl UseTagGroupInput {
+    /// A tag group for `state`, with all other settings at their defaults.
+    pub fn new(state: ListState, element: CapturedElement) -> Self {
         Self {
-            label: None,
-            selection_mode: TagGroupSelectionMode::None,
-            is_disabled: Signal::derive(|| false),
-            selected_keys: Signal::derive(Vec::new),
-            on_selection_change: None,
+            state,
+            element,
+            id: None,
+            has_label: false,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            keyboard_delegate: None,
             on_remove: None,
-            allow_removal: false,
+            on_action: None,
         }
     }
 }
 
-/// The return value of the `use_tag_group` hook.
+/// What tags need to know about their group. Pass it to `use_tag`.
+#[derive(Debug, Clone)]
+pub struct TagGroupData {
+    pub list: GridListData,
+    pub on_remove: Option<Callback<HashSet<Key>>>,
+}
+
+/// Return value of [`use_tag_group`].
 #[derive(Debug)]
 pub struct UseTagGroupReturn {
-    /// Props for the tag group container element.
-    pub group_props: UseTagGroupProps,
-
-    /// Props for the label element.
-    pub label_props: UseTagGroupLabelProps,
-
-    /// The ID of the tag group.
-    pub group_id: String,
-
-    /// The currently focused tag key.
-    pub focused_key: Signal<Option<String>>,
-
-    /// Set the focused tag.
-    pub set_focused_key: Callback<Option<String>>,
+    pub grid_props: UseTagGroupProps,
+    pub label_props: UseLabelProps,
+    pub description_props: SlotProps,
+    pub error_message_props: SlotProps,
+    pub data: TagGroupData,
 }
 
-/// Props from `use_tag_group` that can be extracted and merged programmatically.
+/// Props for the tag group element.
 #[derive(Debug)]
 pub struct UseTagGroupProps {
-    pub id: String,
-    pub role: AriaRole,
-    pub aria_label: Option<String>,
-    pub aria_labelledby: Option<String>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub grid: UseGridListProps,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_atomic: &'static str,
+    pub aria_relevant: &'static str,
+    /// Announces added tags while focus is in the group.
+    pub aria_live: Signal<AriaLive>,
+    pub focus_within: UseFocusWithinProps,
 }
+
+pub type UseTagGroupAttrs = (
+    UseGridListAttrs,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaAtomic, &'static str>,
+    Attr<attr::AriaRelevant, &'static str>,
+    Attr<attr::AriaLive, Signal<AriaLive>>,
+    UseFocusWithinAttrs,
+);
 
 impl IntoAttrs for UseTagGroupProps {
     type Attrs = UseTagGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
+            self.grid.into_attrs(),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaAtomic, self.aria_atomic),
+            Attr(attr::AriaRelevant, self.aria_relevant),
+            Attr(attr::AriaLive, self.aria_live),
+            self.focus_within.into_attrs(),
         )
     }
 }
 
-/// Attributes for the tag group container element.
-pub type UseTagGroupAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Props for the tag group label element.
-#[derive(Debug)]
-pub struct UseTagGroupLabelProps {
-    /// The ID of the label.
-    pub id: String,
-}
-
-/// Provides the behavior and accessibility for a tag group.
-///
-/// A tag group displays a list of tags that can be selected or removed.
-///
-/// # Example
-///
-/// ```ignore
-/// let tag_group = use_tag_group(UseTagGroupInput {
-///     label: Some("Categories".to_string()),
-///     selection_mode: TagGroupSelectionMode::Multiple,
-///     allow_removal: true,
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div>
-///         <label id=tag_group.label_props.id>"Categories"</label>
-///         <div {..tag_group.group_props}>
-///             // Tags...
-///         </div>
-///     </div>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
+/// A tag group: a list of tags (keywords, filters, recipients), navigated with arrow keys and
+/// optionally removable with Delete/Backspace. Built on the grid list.
 pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     let UseTagGroupInput {
-        label,
-        selection_mode: _selection_mode,
-        is_disabled: disabled,
-        selected_keys: _selected_keys,
-        on_selection_change: _on_selection_change,
-        on_remove: _on_remove,
-        allow_removal: _allow_removal,
+        state,
+        element,
+        id,
+        has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        keyboard_delegate,
+        on_remove,
+        on_action,
     } = input;
 
-    let base_id = use_id("tag-group");
-    let group_id = format!("tag-group-{base_id}");
-    let label_id = format!("tag-group-label-{base_id}");
-
-    // Track focused tag
-    let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
-
-    let set_focused_key = Callback::new(move |key: Option<String>| {
-        set_focused_key_signal.set(key);
+    let delegate = keyboard_delegate.unwrap_or_else(|| {
+        use_list_keyboard_delegate(state, element, Orientation::Horizontal, ListLayout::Stack)
+    });
+    let UseFieldReturn {
+        label_props,
+        field_props,
+        description_props,
+        error_message_props,
+        ..
+    } = use_field(UseFieldInput {
+        id,
+        has_label,
+        label_element_type: LabelElementType::Span,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        ..UseFieldInput::default()
     });
 
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
+    let UseGridListReturn {
+        props: mut grid,
+        data,
+    } = use_grid_list(UseGridListInput {
+        id: Some(field_props.id),
+        aria_label: field_props.aria_label,
+        aria_labelledby: field_props.aria_labelledby,
+        keyboard_delegate: Some(delegate),
+        options: CollectionOptions {
+            should_focus_wrap: true,
+            link_behavior: LinkBehavior::Override,
+            ..CollectionOptions::default()
+        },
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::Tab,
+        on_action,
+        ..UseGridListInput::new(state, element)
+    });
+    let is_empty = Signal::derive(move || state.collection.with(|c| c.size() == 0));
+    grid.role = Signal::derive(move || {
+        if is_empty.get() {
+            AriaRole::Group
+        } else {
+            AriaRole::Grid
+        }
+    });
 
-    let aria_labelledby = if label.is_some() {
-        Some(label_id.clone())
-    } else {
-        None
-    };
+    let focus_within = use_focus_within(UseFocusWithinInput::default());
+    let is_focus_within = focus_within.is_focus_within;
 
-    let handle_keydown = move |_e: KeyboardEvent| {
-        // Navigation is handled at the tag level
-    };
+    // Removing the last tag keeps focus in the (now empty) group.
+    let previous_count = StoredValue::new(untrack(|| state.collection.with(|c| c.size())));
+    Effect::new(move |_| {
+        let count = state.collection.with(|c| c.size());
+        if previous_count.get_value() > 0
+            && count == 0
+            && untrack(|| is_focus_within.get())
+            && let Some(el) = element.get_untracked()
+        {
+            focus_safely(&el);
+        }
+        previous_count.set_value(count);
+    });
 
     UseTagGroupReturn {
-        group_props: UseTagGroupProps {
-            id: group_id.clone(),
-            role: AriaRole::Grid,
-            aria_label: None,
-            aria_labelledby,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
+        grid_props: UseTagGroupProps {
+            grid,
+            aria_describedby: field_props.aria_describedby,
+            aria_atomic: "false",
+            aria_relevant: "additions",
+            aria_live: Signal::derive(move || {
+                if is_focus_within.get() {
+                    AriaLive::Polite
+                } else {
+                    AriaLive::Off
+                }
+            }),
+            focus_within: focus_within.props,
         },
-        label_props: UseTagGroupLabelProps { id: label_id },
-        group_id,
-        focused_key: focused_key.into(),
-        set_focused_key,
+        label_props,
+        description_props,
+        error_message_props,
+        data: TagGroupData {
+            list: data,
+            on_remove,
+        },
     }
 }

@@ -14,7 +14,6 @@ static IS_OPENING_LINK: AtomicBool = AtomicBool::new(false);
 
 /// Returns whether a link is currently being programmatically opened.
 /// Used by focus-visible tracking to suppress modality changes during link activation.
-#[cfg(not(feature = "ssr"))]
 pub(crate) fn is_opening_link() -> bool {
     IS_OPENING_LINK.load(Ordering::Acquire)
 }
@@ -24,10 +23,7 @@ pub(crate) fn is_opening_link() -> bool {
 /// We cannot use the native `HTMLElement.click()` method because:
 /// 1. `click()` does not carry modifier key state (ctrl, meta, alt, shift),
 ///    so Ctrl+click / Cmd+click cannot open links in a new tab.
-/// 2. Firefox blocks `target="_blank"` links opened from keyboard events
-///    via its popup blocker. We work around this by forcing a modifier key,
-///    which opens the link in a background tab instead.
-/// 3. `WebKit` on macOS does not support firing click events with modifier keys.
+/// 2. `WebKit` on macOS does not support firing click events with modifier keys.
 ///    We dispatch a `KeyboardEvent('keydown')` with `keyIdentifier: 'Enter'`
 ///    instead, which `WebKit` recognizes for link activation.
 ///
@@ -40,24 +36,7 @@ pub(crate) fn is_opening_link() -> bool {
 ///
 /// Otherwise matches the `openLink` function from
 /// `packages/react-aria/src/utils/openLink.tsx`.
-pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers, is_keyboard_event: bool) {
-    let mut modifiers = modifiers;
-
-    // Firefox blocks target="_blank" links from keyboard events via its popup blocker.
-    // Force a modifier key so the link opens in a background tab instead.
-    if browser::is_firefox()
-        && is_keyboard_event
-        && element
-            .get_attribute("target")
-            .is_some_and(|t| t == "_blank")
-    {
-        if device::is_mac() {
-            modifiers.meta_key = true;
-        } else {
-            modifiers.ctrl_key = true;
-        }
-    }
-
+pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers) {
     // WebKit on macOS (not iPad) doesn't support MouseEvent click with modifier keys.
     // Use a KeyboardEvent with the non-standard `keyIdentifier` property instead.
     let event: web_sys::Event = if browser::is_webkit()

@@ -95,19 +95,79 @@ pub fn use_description(description: Oco<'static, str>) -> AriaDescribedby {
 }
 
 fn create_dom_node(id: Oco<'static, str>, description: Oco<'static, str>) {
-    Effect::new(move || {
-        if let Some(document) = use_document().as_ref()
-            && let Ok(div) = document.create_element("div")
-        {
-            let _ = div.set_attribute("id", &id);
-            let _ = div.set_attribute("style", "display: none;");
-            div.set_text_content(Some(&description));
+    Effect::new(move || insert_dom_node(&id, &description));
+}
 
-            if let Some(body) = document.body() {
-                let _ = body.append_child(&div);
-            }
+fn insert_dom_node(id: &str, description: &str) {
+    if let Some(document) = use_document().as_ref()
+        && let Ok(div) = document.create_element("div")
+    {
+        let _ = div.set_attribute("id", id);
+        let _ = div.set_attribute("style", "display: none;");
+        // Created after hydration only; tells tooling it has no server-rendered counterpart.
+        let _ = div.set_attribute("data-client-only", "");
+        div.set_text_content(Some(description));
+
+        if let Some(body) = document.body() {
+            let _ = body.append_child(&div);
+        }
+    }
+}
+
+/// Take a reference on the description element for `description` (creating it), returning its id.
+fn acquire(description: &Oco<'static, str>) -> Oco<'static, str> {
+    DESCRIPTION_NODES.with(|nodes| {
+        let mut map = nodes.borrow_mut();
+        let entry = map
+            .entry(description.clone())
+            .and_modify(|e| e.ref_count += 1)
+            .or_insert_with(|| {
+                let elem_id = next_id();
+                insert_dom_node(&elem_id, description);
+                DescriptionEntry {
+                    elem_id,
+                    ref_count: 1,
+                }
+            });
+        entry.elem_id.clone()
+    })
+}
+
+/// Release a reference taken with `acquire`.
+fn release(description: &Oco<'static, str>, id: &str) {
+    if decrement(description) {
+        remove_dom_node(&Oco::Owned(id.to_owned()));
+    }
+}
+
+/// [`use_description`] for a description that changes: the id of a hidden element containing
+/// the current description (`None` without one, and during server-side rendering).
+pub fn use_reactive_description(description: Signal<Option<String>>) -> Signal<Option<String>> {
+    let id = RwSignal::new(None::<String>);
+    let current: StoredValue<Option<(Oco<'static, str>, Oco<'static, str>)>> =
+        StoredValue::new(None);
+    Effect::new(move || {
+        let next = description.get().map(Oco::from);
+        let unchanged = current.with_value(|c| c.as_ref().map(|(text, _)| text) == next.as_ref());
+        if unchanged {
+            return;
+        }
+        if let Some((text, elem_id)) = current.get_value() {
+            release(&text, &elem_id);
+        }
+        let acquired = next.map(|text| {
+            let elem_id = acquire(&text);
+            (text, elem_id)
+        });
+        id.set(acquired.as_ref().map(|(_, elem_id)| elem_id.to_string()));
+        current.set_value(acquired);
+    });
+    on_cleanup(move || {
+        if let Some((text, elem_id)) = current.try_get_value().flatten() {
+            release(&text, &elem_id);
         }
     });
+    id.into()
 }
 
 fn remove_dom_node(id: &Oco<'static, str>) {

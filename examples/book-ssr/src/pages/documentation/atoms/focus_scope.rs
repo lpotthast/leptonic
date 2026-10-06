@@ -3,114 +3,136 @@ use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focus_scope::FocusScopeDemo;
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAtomFocusScope() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="focus-scope" class="anchor">
-                "FocusScope"
-                <AnchorLink href="#focus-scope" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="FocusScope">
             <p>
-                "A FocusScope manages focus containment, restoration, and auto-focus for dialogs, menus, and overlays. "
-                "It ensures keyboard navigation stays within the scope and provides a FocusManager through context for programmatic focus control."
+                "The "<Code inline=true>"FocusScope"</Code>" atom contains, restores and auto-focuses focus for dialogs, menus "
+                "and other overlays, and gives its children a "<Code inline=true>"FocusManager"</Code>
+                " to move focus programmatically. See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>
+                " for domain guidance."
             </p>
 
-            <h2 id="props" class="anchor">
-                "Props"
-                <AnchorLink href="#props" description="Direct link to props section"/>
-            </h2>
+            <ReactAria hook="FocusScope"/>
 
-            <ul>
-                <li><Code inline=true>"contain"</Code>" - When true, Tab/Shift+Tab navigation wraps within the scope, preventing focus from leaving."</li>
-                <li><Code inline=true>"restore_focus"</Code>" - When true, focus returns to the previously focused element when the scope unmounts."</li>
-                <li><Code inline=true>"auto_focus"</Code>" - When true, focus moves to the first focusable element in the scope when it mounts."</li>
-            </ul>
+            <Section title="Hooks Used">
+                <p>
+                    "The "<Code inline=true>"FocusManager"</Code>" of "
+                    <Link href=routes::doc::focus::UseFocusManager.materialize()><Code inline=true>"use_focus_manager"</Code></Link>
+                    ", which also decides what counts as focusable."
+                </p>
+            </Section>
 
-            <h2 id="example" class="anchor">
-                "Example"
-                <AnchorLink href="#example" description="Direct link to example section"/>
-            </h2>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="FocusScope">
+                    <ApiRow name="contain" ty="bool" default="false">
+                        "Keep focus inside the scope: Tab and Shift + Tab wrap around, and focus that leaves the scope (by a "
+                        "click or programmatically) is moved back."
+                    </ApiRow>
+                    <ApiRow name="restore_focus" ty="bool" default="false">
+                        "When the scope unmounts, focus the element that was focused when it mounted."
+                    </ApiRow>
+                    <ApiRow name="auto_focus" ty="bool" default="false">
+                        "Focus the first tabbable element (or, if there is none, the first focusable one) when the scope mounts, "
+                        "unless focus is already inside."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Classes and styles of the wrapper "<Code inline=true>"<div>"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="children" ty="Children">"The scope\u{2019}s content."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p>
-                "The following example demonstrates a focus-trapped dialog with inputs and a button. "
-                "When you Tab through the elements, focus will wrap from the last element back to the first, never leaving the scope."
-            </p>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::atoms::focus_scope::FocusScope;
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    use leptonic::atoms::focus_scope::FocusScope;
-
-                    view! {
-                        <FocusScope contain=true restore_focus=true auto_focus=true>
-                            <div style="display: flex; flex-direction: column; gap: 0.5em; padding: 1em; border: 2px solid var(--brand-color); border-radius: 0.5em;">
-                                <input type="text" placeholder="First name" />
-                                <input type="text" placeholder="Last name" />
+                        view! {
+                            <FocusScope contain=true restore_focus=true auto_focus=true>
+                                <input type="text" placeholder="First name"/>
+                                <input type="text" placeholder="Last name"/>
                                 <button>"Submit"</button>
-                            </div>
-                        </FocusScope>
-                    }
-                "#)}
-            </Code>
+                            </FocusScope>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <h2 id="demo" class="anchor">
-                "Demo"
-                <AnchorLink href="#demo" description="Direct link to demo section"/>
-            </h2>
+            <Section title="Demo">
+                <p>
+                    "Open the form: focus moves to the first input. Tab cycles through the form without leaving it. Submit or "
+                    "cancel, and focus returns to \u{201c}Open form\u{201d}."
+                </p>
 
-            <p>
-                "Try pressing Tab repeatedly in the demo below. Focus will cycle through the three inputs and the button, never escaping the scope."
-            </p>
+                <Demo
+                    description="Form in a FocusScope with contain, restore_focus and auto_focus"
+                    source=include_str!("demos/focus_scope.rs")
+                >
+                    <FocusScopeDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/focus_scope.rs")>
-                <FocusScopeDemo />
-            </DemoShell>
+            <Section title="Styling">
+                <p>
+                    "The scope renders a wrapper "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"display: contents"</Code>
+                    ", so it does not affect the layout of its children. Style the children, or a container you put inside the scope."
+                </p>
+            </Section>
 
-            <h2 id="focus-manager" class="anchor">
-                "FocusManager Context"
-                <AnchorLink href="#focus-manager" description="Direct link to FocusManager context section"/>
-            </h2>
+            <Section title="FocusScopeContext">
+                <p>
+                    <Code inline=true>"FocusScope"</Code>" provides a "<Code inline=true>"FocusScopeContext"</Code>
+                    ". Its "<Code inline=true>"focus_manager"</Code>" moves focus within the scope, with the methods described on the "
+                    <Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link>" page."
+                </p>
 
-            <p>
-                "FocusScope provides a "<Code inline=true>"FocusScopeContext"</Code>" through Leptos context. "
-                "Child components can access this context to programmatically move focus using the FocusManager."
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::{atoms::focus_scope::FocusScopeContext, components::prelude::Button};
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    use leptonic::atoms::focus_scope::{FocusScope, FocusScopeContext};
+                        #[component]
+                        fn NextButton() -> impl IntoView {
+                            let ctx = expect_context::<FocusScopeContext>();
 
-                    #[component]
-                    fn MyComponent() -> impl IntoView {
-                        let ctx = expect_context::<FocusScopeContext>();
+                            view! {
+                                <Button on_press=move |_| {
+                                    ctx.focus_manager.focus_next(FocusManagerOptions { wrap: true, ..Default::default() });
+                                }>
+                                    "Next"
+                                </Button>
+                            }
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-                        // Move focus to the next element
-                        ctx.focus_manager.focus_next(Default::default());
+            <Section title="Composition">
+                <ul>
+                    <li>
+                        "Scopes nest. Only the innermost containing scope handles Tab, and an outer scope does not pull focus out "
+                        "of an inner one."
+                    </li>
+                    <li>
+                        "Before restoring focus, the scope dispatches the cancelable "<Code inline=true>"leptonic-focus-scope-restore"</Code>
+                        " event ("<Code inline=true>"RESTORE_FOCUS_EVENT"</Code>"). Call "<Code inline=true>"prevent_default()"</Code>
+                        " on it to restore focus yourself."
+                    </li>
+                    <li>
+                        "Without "<Code inline=true>"contain"</Code>", a scope with "<Code inline=true>"restore_focus"</Code>
+                        " sends Tab to the element after the one focus will return to, so you can tab out of an overlay naturally."
+                    </li>
+                </ul>
+            </Section>
 
-                        // Move focus to the previous element
-                        ctx.focus_manager.focus_previous(Default::default());
-
-                        // Move focus to the first element
-                        ctx.focus_manager.focus_first(Default::default());
-
-                        // Move focus to the last element
-                        ctx.focus_manager.focus_last(Default::default());
-                    }
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "FocusScope", link: "#focus-scope" },
-                Toc::Leaf { title: "Props", link: "#props" },
-                Toc::Leaf { title: "Example", link: "#example" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "FocusManager Context", link: "#focus-manager" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+                <li><Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -1,152 +1,95 @@
+use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::focus::FocusDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseFocus() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use-focus" class="anchor">
-                "use_focus"
-                <AnchorLink href="#use-focus" description="Direct link to section: use_focus"/>
-            </h1>
-
+        <DocPage title="use_focus">
             <p>
-                "The "<Code inline=true>"use_focus"</Code>" hook tracks element focus. It fires callbacks when the element itself receives or loses focus (not descendants \u{2014} see "
-                <Link href=crate::routes::doc::focus::UseFocusWithin.materialize()><Code inline=true>"use_focus_within"</Code></Link>
-                " for that). "
-                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_focus"</Code>" hook tracks the focus of a single element. Its callbacks fire "
+                "when the element itself receives or loses focus, not when a descendant does \u{2014} use "
+                <Link href=routes::doc::focus::UseFocusWithin.materialize()><Code inline=true>"use_focus_within"</Code></Link>
+                " for that. See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocus.html" target=LinkTarget::_Blank>
-                    "useFocus"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useFocus"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseFocusInput"</Code>" does not implement "<Code inline=true>"Default"</Code>
+                    ", so you set every field."
+                </p>
 
-            <DemoShell
-                source=include_str!("demos/focus.rs")
-                description="Focus event tracking"
-            >
-                <FocusDemo />
-            </DemoShell>
+                <ApiTable kind=ApiKind::Input of="UseFocusInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>">"Ignores all focus events while true."</ApiRow>
+                    <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>">"Called when the element receives focus."</ApiRow>
+                    <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>">"Called when the element loses focus."</ApiRow>
+                    <ApiRow name="on_focus_change" ty="Option<Callback<bool>>">
+                        "Called with the new focus state whenever the element gains or loses focus."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to input"/>
-            </h2>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseFocusReturn">
+                    <ApiRow name="props" ty="UseFocusProps">
+                        "The "<Code inline=true>"focus"</Code>" and "<Code inline=true>"blur"</Code>
+                        " listeners. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p><code>"UseFocusInput"</code> " fields:"</p>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let (is_focused, set_is_focused) = signal(false);
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"disabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Disables all focus event handling when true."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called when the element receives focus."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_blur"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called when the element loses focus."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called on every focus state transition."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        let UseFocusReturn { props } = use_focus(UseFocusInput {
+                            is_disabled: Signal::stored(false),
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: Some(Callback::new(move |focused| set_is_focused.set(focused))),
+                        });
 
-            <h2 id="return-value" class="anchor">
-                "Return Value"
-                <AnchorLink href="#return-value" description="Direct link to return value"/>
-            </h2>
+                        view! {
+                            <input {..props.into_attrs()}/>
+                        }
+                    ")}
+                </Code>
+            </Section>
 
-            <p><code>"UseFocusReturn"</code> " fields:"</p>
+            <Section title="Demo">
+                <Demo description="Focus and blur events of a focusable div, with a disabled toggle" source=include_str!("demos/focus.rs")>
+                    <FocusDemo/>
+                </Demo>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"props"</code></TableCell>
-                            <TableCell><code>"UseFocusProps"</code></TableCell>
-                            <TableCell>"Spread onto the target element via " <code>"props.into_attrs()"</code> " to wire up focus/blur listeners."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Behavior">
+                <ul>
+                    <li>"Only fires when the element itself is focused or blurred, not its descendants."</li>
+                    <li>
+                        "Before calling "<Code inline=true>"on_focus"</Code>", the hook checks that "
+                        <Code inline=true>"document.activeElement"</Code>" still is the element, in case an earlier focus "
+                        "handler already moved focus elsewhere. The check pierces shadow roots."
+                    </li>
+                    <li>
+                        "Firefox does not fire "<Code inline=true>"blur"</Code>" when a focused form element becomes disabled. "
+                        "The hook watches the element and dispatches a synthetic blur in that case."
+                    </li>
+                    <li>"While "<Code inline=true>"is_disabled"</Code>" is true, no callback is called."</li>
+                </ul>
+            </Section>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Fires only when the element itself is focused/blurred (not descendants)."</li>
-                <li>"Verifies "<Code inline=true>"document.activeElement"</Code>" matches the target before firing."</li>
-                <li>"Synthetic blur support for Firefox (form elements disabled while focused)."</li>
-                <li>"Respects disabled state \u{2014} handlers are suppressed when disabled."</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusWithin.materialize()>"use_focus_within"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_focus", link: "#use-focus" },
-                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return Value", link: "#return-value" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusWithin.materialize()>"use_focus_within"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

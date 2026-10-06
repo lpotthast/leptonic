@@ -6,7 +6,7 @@ use leptos::{
 };
 use web_sys::PointerEvent;
 
-use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
+use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
     hooks::{
         IntoAttrs,
@@ -20,21 +20,21 @@ use crate::{
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
-// - Accepts `UseTooltipTriggerStateReturn` directly instead of separate
+// - Accepts `TooltipTriggerState` directly instead of separate
 //   `on_open`/`on_close` callbacks, enabling the tooltip to participate in
 //   the warmup/cooldown system when hovered.
 //
 
 /// Input parameters for the `use_tooltip` hook.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct UseTooltipInput {
     /// Whether the tooltip is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Tooltip trigger state. When provided, hovering the tooltip itself
-    /// keeps it open (calls `state.open(true)` on hover start and
-    /// `state.close(false)` on hover end).
-    pub state: Option<UseTooltipTriggerStateReturn>,
+    /// keeps it open (calls `state.open(TooltipTiming::Immediate)` on hover start and
+    /// `state.close(TooltipTiming::Delayed)` on hover end).
+    pub state: Option<TooltipTriggerState>,
 
     /// Called when the tooltip should open. Used when `state` is `None`.
     pub on_open: Option<Callback<()>>,
@@ -102,7 +102,7 @@ pub type UseTooltipAttrs = (
 /// ```
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
     let UseTooltipInput {
-        disabled,
+        is_disabled: disabled,
         state,
         on_open,
         on_close,
@@ -111,7 +111,7 @@ pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
     // Determine hover callbacks: prefer state-based, fall back to direct callbacks.
     let on_hover_start: Option<Callback<()>> = if let Some(st) = state {
         Some(Callback::new(move |_| {
-            st.open.run(true);
+            st.open(TooltipTiming::Immediate);
         }))
     } else {
         on_open
@@ -119,14 +119,14 @@ pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
 
     let on_hover_end: Option<Callback<()>> = if let Some(st) = state {
         Some(Callback::new(move |_| {
-            st.close.run(false);
+            st.close(TooltipTiming::Delayed);
         }))
     } else {
         on_close
     };
 
     let hover = use_hover(UseHoverInput {
-        disabled,
+        is_disabled: disabled,
         on_hover_start: on_hover_start.map(|cb| {
             Callback::new(move |_| {
                 cb.run(());

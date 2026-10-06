@@ -38,7 +38,7 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusRingInput {
     /// Whether the focus ring is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Whether to track focus within descendants rather than just the element itself.
     ///
@@ -74,7 +74,7 @@ pub struct UseFocusRingInput {
 impl Default for UseFocusRingInput {
     fn default() -> Self {
         Self {
-            disabled: Signal::derive(|| false),
+            is_disabled: Signal::derive(|| false),
             within: false,
             auto_focus: false,
             is_text_input: false,
@@ -171,7 +171,7 @@ pub type UseFocusRingAttrs = (
 /// ```
 pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     let UseFocusRingInput {
-        disabled,
+        is_disabled: disabled,
         within,
         auto_focus,
         is_text_input,
@@ -187,7 +187,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
         modality: _,
     } = use_focus_visible(UseFocusVisibleInput {
         auto_focus,
-        enabled: focused.into(),
+        is_disabled: Signal::derive(move || !focused.get()),
         is_text_input,
     });
 
@@ -243,7 +243,7 @@ fn track_focus(
     if within {
         // Track focus within the element's subtree.
         let focus_within = use_focus_within(UseFocusWithinInput {
-            disabled,
+            is_disabled: disabled,
             on_focus_within: Some(Callback::new(move |e: FocusWithinEvent| {
                 set_focused.set(true);
                 if let Some(on_focus) = on_focus {
@@ -268,7 +268,7 @@ fn track_focus(
     } else {
         // Track focus on the element itself.
         let focus = use_focus(UseFocusInput {
-            disabled,
+            is_disabled: disabled,
             on_focus: Some(Callback::new(move |e| {
                 set_focused.set(true);
                 if let Some(on_focus) = on_focus {

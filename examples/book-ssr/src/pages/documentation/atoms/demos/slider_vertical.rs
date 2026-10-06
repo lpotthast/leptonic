@@ -2,7 +2,7 @@ use leptonic::{
     atoms::slider::{
         Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
     },
-    hooks::{SliderOrientation, SliderValues},
+    hooks::{Orientation, SliderValues},
 };
 use leptos::prelude::*;
 
@@ -12,12 +12,12 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         <div class="demo-frame">
             <SliderAtom
                 values=SliderValues::Uncontrolled(vec![60.0])
-                orientation=SliderOrientation::Vertical
+                orientation=Orientation::Vertical
                 classes=["demo-slider", "demo-slider-purple", "demo-slider-vertical"]
             >
                 <SliderTrack classes="demo-slider-track">
                     <SliderTrackFill classes="demo-slider-fill" />
-                    <SliderThumb classes="demo-slider-thumb" />
+                    <SliderThumb aria_label="Level" classes="demo-slider-thumb" />
                 </SliderTrack>
                 <SliderOutput let:attrs let:values>
                     <output {..attrs} class="demo-slider-output">

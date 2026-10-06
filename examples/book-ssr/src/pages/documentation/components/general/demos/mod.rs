@@ -1,2 +1,9 @@
 pub mod icon;
+pub mod transitions_collapse;
+pub mod transitions_collapse_x;
+pub mod transitions_compare;
+pub mod transitions_fade;
+pub mod transitions_grow;
+pub mod transitions_slide;
+pub mod transitions_zoom;
 pub mod typography;

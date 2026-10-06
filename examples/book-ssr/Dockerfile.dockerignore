@@ -1,0 +1,4 @@
+# Used by BuildKit for this Dockerfile; the build context is the repository root.
+**/target
+.git
+testing

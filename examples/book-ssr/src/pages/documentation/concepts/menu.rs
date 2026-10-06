@@ -1,21 +1,12 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, toc::Toc},
-    routes,
-};
+use crate::{kit::*, pages::documentation::atoms::demos::menu::MenuDemo, routes};
 
 #[component]
 pub fn PageMenuOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="menu" class="anchor">
-                "Menu"
-                <AnchorLink href="#menu" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Menu">
             <p>
                 "Menus present a list of actions or options in an overlay triggered by a button. "
                 "They support single-select, multi-select, and purely action-based modes. "
@@ -26,151 +17,83 @@ pub fn PageMenuOverview() -> impl IntoView {
                 <Code inline=true>"use_menu_section"</Code>"."
             </p>
 
-            <p>
-                "Menus are currently available as hooks only. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Show a list of actions triggered by a button"</TableCell><TableCell><b>"Menu"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Choose a value from a dropdown"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Show rich contextual content"</TableCell><TableCell><Link href=routes::doc::Popover.materialize()>"Popover"</Link></TableCell></TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Menus exist as hooks and atoms. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for a detailed explanation of each layer."
+                </p>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Show a list of actions triggered by a button"</TableCell>
-                            <TableCell><b>"Menu"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Choose a value from a dropdown"</TableCell>
-                            <TableCell>"Select"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show rich contextual content"</TableCell>
-                            <TableCell>"Popover"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::menu::Hook.materialize()>"Menu hooks"</Link></TableCell>
+                        <TableCell>"Trigger, menu, item and section behavior for elements you render yourself."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::menu::Atom.materialize()>"Menu atoms"</Link></TableCell>
+                        <TableCell>
+                            <Code inline=true>"MenuTrigger"</Code>", "<Code inline=true>"Menu"</Code>", "<Code inline=true>"MenuItem"</Code>
+                            " and "<Code inline=true>"MenuSection"</Code>" with the complete behavior, unstyled."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>
+                    "The atoms are the quickest way to a menu: a "<Code inline=true>"MenuTrigger"</Code>" around a button and a "
+                    <Code inline=true>"Popover"</Code>" with the "<Code inline=true>"Menu"</Code>", whose items come from a "
+                    "collection. See the "<Link href=routes::doc::menu::Atom.materialize()>"menu atoms"</Link>" for every "
+                    "option, and the "<Link href=routes::doc::menu::Hook.materialize()>"menu hooks"</Link>" to build your own."
+                </p>
 
-            <ul>
-                <li><Link href=routes::doc::menu::Hook.materialize()>"Hook: use_menu"</Link></li>
-            </ul>
+                <Demo
+                    description="An action menu and a menu with checkable items, with a disabled toggle"
+                    source=include_str!("../atoms/demos/menu.rs")
+                    source_open=true
+                >
+                    <MenuDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>"Leptonic menus follow the WAI-ARIA Menu pattern."</p>
 
-            <p>
-                "Menus are composed from hooks. Here is a brief sketch of the API. "
-                "See the "<Link href=routes::doc::menu::Hook.materialize()>"hook deep-dive"</Link>
-                " for a full interactive demo."
-            </p>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"menu\""</Code>" on the container, "
+                        <Code inline=true>"role=\"menuitem\""</Code>" (or "<Code inline=true>"\"menuitemradio\""</Code>
+                        " / "<Code inline=true>"\"menuitemcheckbox\""</Code>")"
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-haspopup=\"true\""</Code>", "<Code inline=true>"aria-expanded"</Code>" and "
+                        <Code inline=true>"aria-controls"</Code>" on the trigger; the menu is labelled by the trigger"
+                    </li>
+                    <li><Code inline=true>"role=\"group\""</Code>" for sections, labelled by their heading"</li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let menu_trigger = use_menu_trigger(/* ... */);
-                    let menu = use_menu(/* ... */);
-
-                    // The trigger configures a button; use_button renders it.
-                    let (trigger_attrs, trigger_styles) =
-                        use_button(menu_trigger.button).props.into_parts();
-
-                    view! {
-                        <button {..trigger_attrs} style=trigger_styles>
-                            "Actions"
-                        </button>
-
-                        // Render the menu overlay with items
-                        <ul {..menu.menu_props.into_attrs()}>
-                            // Each item uses use_menu_item
-                        </ul>
-                    }
-                "#)}
-            </Code>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic menus follow the WAI-ARIA Menu pattern."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"menu\""</Code>" on the container, "
-                    <Code inline=true>"role=\"menuitem\""</Code>" (or "<Code inline=true>"\"menuitemradio\""</Code>
-                    " / "<Code inline=true>"\"menuitemcheckbox\""</Code>")"</li>
-                <li><Code inline=true>"aria-haspopup=\"menu\""</Code>" on the trigger"</li>
-                <li><Code inline=true>"aria-expanded"</Code>" on the trigger"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Enter / Space / Arrow Down"</Code>" (on the trigger)"</TableCell>
-                            <TableCell>"Open the menu and focus the first item"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Up"</Code>" (on the trigger)"</TableCell>
-                            <TableCell>"Open the menu and focus the last item"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Alt + Arrow Down / Up"</Code>" (on the trigger)"</TableCell>
-                            <TableCell>"Open the menu. Long press triggers also accept "<Code inline=true>"Alt + Enter / Space"</Code>", since a plain press is reserved for the button\u{2019}s own action"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Enter / Space"</Code></TableCell>
-                            <TableCell>"Activate focused item"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Down / Up"</Code></TableCell>
-                            <TableCell>"Navigate between items"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Close the menu"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Menu", link: "#menu" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Enter / Space / ArrowDown">"On the trigger: open the menu and focus the first item."</KeyRow>
+                    <KeyRow keys="ArrowUp">"On the trigger: open the menu and focus the last item."</KeyRow>
+                    <KeyRow keys="Alt + ArrowDown / Alt + ArrowUp">
+                        "On the trigger: open the menu. Long press triggers also accept "<Code inline=true>"Alt + Enter / Space"</Code>
+                        ", since a plain press is reserved for the button\u{2019}s own action."
+                    </KeyRow>
+                    <KeyRow keys="Enter / Space">"Activate the focused item."</KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Navigate between items."</KeyRow>
+                    <KeyRow keys="Home / End">"Focus the first or last item."</KeyRow>
+                    <KeyRow keys="Escape">"Close the menu."</KeyRow>
+                    <KeyRow keys="Letter keys">"Focus the next item starting with the typed text."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

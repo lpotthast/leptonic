@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/calendar/useRangeCalendar.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -8,17 +7,6 @@ use leptos::{
     prelude::*,
 };
 use web_sys::KeyboardEvent;
-
-use super::use_range_calendar_state::{
-    DateRange, UseRangeCalendarStateInput, UseRangeCalendarStateReturn, use_range_calendar_state,
-};
-use crate::{
-    hooks::IntoAttrs,
-    utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaRole},
-    },
-};
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/calendar/useRangeCalendar.ts
 
@@ -40,6 +28,17 @@ use crate::{
 
 // Re-export for convenience.
 pub use super::use_range_calendar_state::DateRange as RangeDateRange;
+use super::use_range_calendar_state::{
+    DateRange, UseRangeCalendarStateInput, UseRangeCalendarStateReturn, use_range_calendar_state,
+};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        EventHandler,
+        aria::{AriaDisabled, AriaRole},
+        id::use_id,
+    },
+};
 
 /// Input parameters for the `use_range_calendar` hook.
 #[derive(Debug, Clone, Copy)]
@@ -75,7 +74,7 @@ pub struct UseRangeCalendarInput {
     pub default_focused_value: Option<time::OffsetDateTime>,
 
     /// External validity signal.
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// The first day of the week. Defaults to Monday.
     pub first_day_of_week: time::Weekday,
@@ -94,7 +93,7 @@ impl Default for UseRangeCalendarInput {
             on_change: None,
             on_focus_change: None,
             default_focused_value: None,
-            is_invalid: None,
+            is_invalid: Signal::stored(false),
             first_day_of_week: time::Weekday::Monday,
         }
     }

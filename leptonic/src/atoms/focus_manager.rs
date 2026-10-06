@@ -5,7 +5,6 @@ use crate::{
     utils::{classes::Classes, styles::Styles},
 };
 
-// TODO: add documentation page
 #[component]
 pub fn FocusManager<C, V>(
     #[prop(into, optional)] classes: Classes,

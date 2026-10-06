@@ -1,0 +1,130 @@
+// The app shell: app bar, page content area and the menus covering the page on small screens.
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#book-app-bar {
+  display: flex;
+  justify-content: center;
+  position: fixed;
+
+  #book-app-bar-content {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  #book-logo {
+    display: inline-flex;
+    height: 2.5em;
+    width: 2.5em;
+    margin-left: 1em;
+  }
+
+  .docs-link {
+    margin: 0 0 0 0.5em;
+    font-size: 1.17em;
+    font-weight: 700;
+  }
+
+  .github-link {
+    font-size: var(--book-font-size-xl);
+  }
+
+  .app-bar-theme-toggle {
+    margin-right: 1em;
+  }
+}
+
+// Icon-only buttons (menu triggers, close buttons): flat leptonic buttons in the surrounding text color.
+.leptonic-btn.book-icon-button {
+  padding: var(--book-space-s);
+  color: inherit;
+  font-size: var(--book-font-size-xl);
+  text-transform: none;
+
+  &:hover {
+    color: var(--brand-color);
+    background-color: var(--book-hover-background-color);
+  }
+}
+
+#book-content {
+  display: block;
+  min-height: 100vh;
+  padding-top: var(--book-app-bar-height);
+  color: var(--main-color);
+  background-color: var(--main-background-color);
+}
+
+// Menus covering the page on small screens (`Sheet`): a panel at one side of the screen above leptonic's modal
+// backdrop.
+.leptonic-modal-backdrop.book-sheet-backdrop {
+  padding: 0;
+  background: var(--book-backdrop-color);
+  backdrop-filter: none;
+}
+
+.book-sheet {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: min(20em, 85vw);
+  overflow-y: auto;
+  color: var(--main-color);
+  background-color: var(--book-menu-background-color);
+  box-shadow: var(--book-shadow);
+
+  &.book-sheet-left {
+    left: 0;
+    animation: book-sheet-from-left 0.2s ease-out;
+  }
+
+  &.book-sheet-right {
+    right: 0;
+    animation: book-sheet-from-right 0.2s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none !important;
+  }
+}
+
+@keyframes book-sheet-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes book-sheet-from-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+.book-sheet-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--book-space-s);
+}
+
+// The main menu (app bar links on small screens).
+.book-main-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--book-space-xl);
+  padding: var(--book-space-m) 0;
+
+  .github-link {
+    font-size: 3em;
+  }
+}

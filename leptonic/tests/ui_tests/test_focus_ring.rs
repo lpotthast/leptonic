@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
+use assertr::prelude::*;
+use browser_test::{
+    BrowserTest, async_trait,
+    thirtyfour::{WebDriver, prelude::*},
+};
 use rootcause::Report;
 
-use assertr::prelude::*;
-use browser_test::thirtyfour::{WebDriver, prelude::*};
-
-use crate::pages::focus_ring::FocusRingPage;
+use crate::pages::{BaseActions, focus_ring::FocusRingPage};
 
 pub struct FocusRingTests {}
 
@@ -140,7 +141,7 @@ async fn test_arrow_key_keyboard_modality(page: &FocusRingPage<'_>) -> Result<()
     assert_that!(page.read_is_focus_visible().await?).is_equal_to(false);
 
     // Press ArrowDown: switches to keyboard modality, focus ring appears
-    page.send_key_to_active(Key::Down).await?;
+    page.send_keys_to_active(Key::Down).await?;
     assert_that!(page.read_is_focus_visible().await?).is_equal_to(true);
     assert_that!(page.read_data_focus_visible_attr().await?).is_equal_to(Some("true".to_string()));
 

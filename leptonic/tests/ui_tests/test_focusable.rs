@@ -1,12 +1,10 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
+use assertr::prelude::*;
+use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
-use assertr::prelude::*;
-use browser_test::thirtyfour::WebDriver;
-
-use crate::pages::focusable::FocusablePage;
+use crate::pages::{BaseActions, focusable::FocusablePage};
 
 pub struct FocusableTests {}
 
@@ -44,7 +42,7 @@ async fn test_tabindex_attributes(page: &FocusablePage<'_>) -> Result<(), Report
     assert_that!(page.read_excluded_tabindex().await?).is_equal_to(Some("-1".to_string()));
 
     // Auto-focus element is focused on page load
-    assert_that!(page.get_active_element_id().await?)
+    assert_that!(page.active_element_id().await?)
         .is_equal_to(Some("test-fcbl-autofocus".to_string()));
 
     Ok(())
@@ -60,7 +58,7 @@ async fn test_keyboard_events(page: &FocusablePage<'_>) -> Result<(), Report> {
     assert_that!(page.read_keydown_count().await?).is_equal_to(0);
     assert_that!(page.read_keyup_count().await?).is_equal_to(0);
 
-    page.send_key_to_active("a").await?;
+    page.send_keys_to_active("a").await?;
     assert_that!(page.read_keydown_count().await?).is_equal_to(1);
     assert_that!(page.read_keyup_count().await?).is_equal_to(1);
 
@@ -75,13 +73,12 @@ async fn test_tab_skip(page: &FocusablePage<'_>) -> Result<(), Report> {
 
     // Focus the normal element
     page.click_normal().await?;
-    assert_that!(page.get_active_element_id().await?)
-        .is_equal_to(Some("test-fcbl-normal".to_string()));
+    assert_that!(page.active_element_id().await?).is_equal_to(Some("test-fcbl-normal".to_string()));
 
     // Tab: should skip disabled (no tabindex) and excluded (tabindex=-1),
     // landing on the next tabbable element
-    page.tab_from_active().await?;
-    assert_that!(page.get_active_element_id().await?)
+    page.press_tab().await?;
+    assert_that!(page.active_element_id().await?)
         .is_equal_to(Some("test-fcbl-tab-target".to_string()));
 
     Ok(())
@@ -96,8 +93,7 @@ async fn test_focus_handle(page: &FocusablePage<'_>) -> Result<(), Report> {
     page.click_focus_btn().await?;
 
     // The normal focusable element should now be focused
-    assert_that!(page.get_active_element_id().await?)
-        .is_equal_to(Some("test-fcbl-normal".to_string()));
+    assert_that!(page.active_element_id().await?).is_equal_to(Some("test-fcbl-normal".to_string()));
 
     Ok(())
 }

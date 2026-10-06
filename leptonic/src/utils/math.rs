@@ -72,19 +72,24 @@ pub fn snap_value_to_step(value: f64, min: f64, max: f64, step: f64, precision: 
     }
 }
 
+/// An operation of [`handle_decimal_operation`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DecimalOperation {
+    Add,
+    Subtract,
+}
+
 /// Performs a decimal arithmetic operation (add or subtract) with precision handling.
 ///
 /// Avoids floating-point errors by computing in integer space when possible.
-/// For example, `handle_decimal_operation('+', 0.1, 0.2)` returns `0.3`
+/// For example, `handle_decimal_operation(DecimalOperation::Add, 0.1, 0.2)` returns `0.3`
 /// instead of the naive `0.30000000000000004`.
 ///
-/// Based on react-aria's `handleDecimalOperation` from `react-stately/src/utils/number.ts`.
-///
-/// # Panics
-/// Panics if `op` is not `'+'` or `'-'`.
+/// Based on react-aria's `handleDecimalOperation` from `react-stately/src/utils/number.ts`
+/// (which takes the operator as a `'+' | '-'` string).
 #[must_use]
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-pub fn handle_decimal_operation(op: char, value1: f64, value2: f64) -> f64 {
+pub fn handle_decimal_operation(op: DecimalOperation, value1: f64, value2: f64) -> f64 {
     let precision = decimal_precision(value1).max(decimal_precision(value2));
     let multiplier = 10_f64.powi(precision as i32);
 
@@ -92,9 +97,8 @@ pub fn handle_decimal_operation(op: char, value1: f64, value2: f64) -> f64 {
     let int2 = (value2 * multiplier).round();
 
     let result = match op {
-        '+' => int1 + int2,
-        '-' => int1 - int2,
-        _ => panic!("handle_decimal_operation: unsupported operation '{op}'"),
+        DecimalOperation::Add => int1 + int2,
+        DecimalOperation::Subtract => int1 - int2,
     };
 
     result / multiplier
@@ -116,8 +120,8 @@ mod tests {
     use assertr::prelude::*;
 
     use super::{
-        calculate_page_size, decimal_precision, handle_decimal_operation, percentage_in_range,
-        round_to_precision, snap_value_to_step, value_in_range,
+        DecimalOperation, calculate_page_size, decimal_precision, handle_decimal_operation,
+        percentage_in_range, round_to_precision, snap_value_to_step, value_in_range,
     };
 
     #[test]
@@ -227,29 +231,58 @@ mod tests {
     #[test]
     fn test_handle_decimal_operation_add() {
         // Classic floating-point issue: 0.1 + 0.2 should be 0.3
-        assert_that!(handle_decimal_operation('+', 0.1, 0.2)).is_equal_to(0.3);
-        assert_that!(handle_decimal_operation('+', 0.01, 0.02)).is_equal_to(0.03);
+        assert_that!(handle_decimal_operation(DecimalOperation::Add, 0.1, 0.2)).is_equal_to(0.3);
+        assert_that!(handle_decimal_operation(DecimalOperation::Add, 0.01, 0.02)).is_equal_to(0.03);
 
         // Integer addition
-        assert_that!(handle_decimal_operation('+', 1.0, 2.0)).is_equal_to(3.0);
+        assert_that!(handle_decimal_operation(DecimalOperation::Add, 1.0, 2.0)).is_equal_to(3.0);
 
         // Mixed precision
-        assert_that!(handle_decimal_operation('+', 1.0, 0.1)).is_equal_to(1.1);
-        assert_that!(handle_decimal_operation('+', 1_000_000.001, 0.002))
-            .is_equal_to(1_000_000.003);
+        assert_that!(handle_decimal_operation(DecimalOperation::Add, 1.0, 0.1)).is_equal_to(1.1);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Add,
+            1_000_000.001,
+            0.002
+        ))
+        .is_equal_to(1_000_000.003);
     }
 
     #[test]
     fn test_handle_decimal_operation_subtract() {
-        assert_that!(handle_decimal_operation('-', 0.3, 0.1)).is_equal_to(0.2);
-        assert_that!(handle_decimal_operation('-', 1.0, 0.1)).is_equal_to(0.9);
-        assert_that!(handle_decimal_operation('-', 0.03, 0.01)).is_equal_to(0.02);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Subtract,
+            0.3,
+            0.1
+        ))
+        .is_equal_to(0.2);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Subtract,
+            1.0,
+            0.1
+        ))
+        .is_equal_to(0.9);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Subtract,
+            0.03,
+            0.01
+        ))
+        .is_equal_to(0.02);
 
         // Subtraction resulting in zero
-        assert_that!(handle_decimal_operation('-', 0.1, 0.1)).is_equal_to(0.0);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Subtract,
+            0.1,
+            0.1
+        ))
+        .is_equal_to(0.0);
 
         // Subtraction resulting in negative
-        assert_that!(handle_decimal_operation('-', 0.1, 0.3)).is_equal_to(-0.2);
+        assert_that!(handle_decimal_operation(
+            DecimalOperation::Subtract,
+            0.1,
+            0.3
+        ))
+        .is_equal_to(-0.2);
     }
 
     #[test]

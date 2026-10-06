@@ -2,145 +2,127 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::tag::TagDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseTag() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_tag" class="anchor">
-                "use_tag"
-                <AnchorLink href="#use_tag" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Tag Group Hooks">
             <p>
-                "Hooks for creating accessible tag groups with selection and removal capabilities. "
-                "See the "<Link href=crate::routes::doc::Chip.materialize()>"Chip overview"</Link>" for concept guidance."
+                <Code inline=true>"use_tag_group"</Code>" and "<Code inline=true>"use_tag"</Code>
+                " build a group of tags (keywords, filters, recipients) that can be navigated with the arrow keys, selected and "
+                "removed. A tag group is a horizontal "<Link href=routes::doc::grid::Hook.materialize()>"grid list"</Link>
+                ". See the "<Link href=routes::doc::Chip.materialize()>"Chip overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTagGroup.html" target=LinkTarget::_Blank>
-                    "useTagGroup"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useTagGroup"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Demo">
+                <Demo description="Selectable tags removable with Delete, Backspace or their remove button" source=include_str!("demos/tag.rs")>
+                    <TagDemo/>
+                </Demo>
+            </Section>
 
-            <p>"Click the x button or press Delete/Backspace to remove a tag:"</p>
+            <Section title="use_tag_group">
+                <p>
+                    "Takes a list state (see "<Link href=routes::doc::Collections.materialize()>"Collections"</Link>
+                    ") with the tags. Tags can only be removed if you pass "<Code inline=true>"on_remove"</Code>
+                    ", which receives the keys to remove: drop them from your data."
+                </p>
 
-            <DemoShell source=include_str!("demos/tag.rs")>
-                <TagDemo />
-            </DemoShell>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let collection = use_list_collection(tags.into(), |tag| Key::from(*tag), |tag| (*tag).to_owned());
+                        let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseTagGroupReturn { group_props, label_props, .. } = use_tag_group(UseTagGroupInput {
-                        label: Some("Categories".to_string()),
-                        selection_mode: TagGroupSelectionMode::Multiple,
-                        allow_removal: true,
-                        on_remove: Some(Callback::new(|key| remove_tag(key))),
-                        ..Default::default()
-                    });
+                        let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {
+                            has_label: true,
+                            on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
+                                tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
+                            })),
+                            ..UseTagGroupInput::new(state, CapturedElement::new())
+                        });
+                    ")}
+                </Code>
 
-                    let tag = use_tag(UseTagInput {
-                        tag_key: "rust".to_string(),
-                        is_selected: Signal::derive(|| false),
-                        is_focused: Signal::derive(|| true),
-                        is_disabled: Signal::derive(|| false),
-                        allow_removal: true,
-                        on_remove: Some(Callback::new(|_| remove_this_tag())),
-                        ..Default::default()
-                    });
+                <Section title="Input" id="use-tag-group-input">
+                    <p>"Create the input with "<Code inline=true>"UseTagGroupInput::new(state, element)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseTagGroupInput">
+                        <ApiRow name="state" ty="ListState">"The tags and their selection."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The group element. The props capture it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="has_label" ty="bool" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Labels the tag group without a visible label."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling and describing elements."</ApiRow>
+                        <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
+                            "Replaces the horizontal list keyboard navigation."
+                        </ApiRow>
+                        <ApiRow name="on_remove" ty="Option<Callback<HashSet<Key>>>" default="None">
+                            "Called with the keys of tags to remove. Without it, tags can\u{2019}t be removed."
+                        </ApiRow>
+                        <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated tag."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-                    view! {
-                        <div {..group_props}>
-                            <div {..tag.row_props.into_attrs()}>
-                                <span {..tag.cell_props.into_attrs()}>"Rust"</span>
-                                <button {..tag.remove_button_props.into_attrs()}>"×"</button>
-                            </div>
-                        </div>
-                    }
-                "#)}
-            </Code>
+                <Section title="Return" id="use-tag-group-return">
+                    <ApiTable kind=ApiKind::Return of="UseTagGroupReturn">
+                        <ApiRow name="grid_props" ty="UseTagGroupProps">
+                            "For the group element: "<Code inline=true>"role=\"grid\""</Code>" ("<Code inline=true>"group"</Code>
+                            " while empty), labelling, and a polite live region announcing added tags while focus is in the group."
+                        </ApiRow>
+                        <ApiRow name="label_props" ty="UseLabelProps">"For the label."</ApiRow>
+                        <ApiRow name="description_props, error_message_props" ty="SlotProps">
+                            "For a description and an error message, referenced only while rendered."
+                        </ApiRow>
+                        <ApiRow name="data" ty="TagGroupData">"Hand this to "<Code inline=true>"use_tag"</Code>" for every tag."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h2 id="selection-modes" class="anchor">
-                "Selection Modes"
-                <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
-            </h2>
+            <Section title="use_tag">
+                <Section title="Input" id="use-tag-input">
+                    <ApiTable kind=ApiKind::Input of="UseTagInput">
+                        <ApiRow name="group" ty="TagGroupData">"The group, from "<Code inline=true>"use_tag_group"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The tag\u{2019}s key in the collection."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><code>"TagGroupSelectionMode::None"</code> " - No selection (default)"</li>
-                <li><code>"TagGroupSelectionMode::Single"</code> " - Single tag selection"</li>
-                <li><code>"TagGroupSelectionMode::Multiple"</code> " - Multiple tag selection"</li>
-            </ul>
+                <Section title="Return" id="use-tag-return">
+                    <ApiTable kind=ApiKind::Return of="UseTagReturn">
+                        <ApiRow name="row_props" ty="PropsWithStyles<UseTagRowProps>">
+                            "For the tag: "<Code inline=true>"role=\"row\""</Code>", selection and disabled state, press handling, "
+                            "and Delete/Backspace removal. Removable tags are described as \u{201c}Press Delete or Backspace to remove.\u{201d}"
+                        </ApiRow>
+                        <ApiRow name="grid_cell_props" ty="UseGridListItemCellProps">"For the tag\u{2019}s content: "<Code inline=true>"role=\"gridcell\""</Code>"."</ApiRow>
+                        <ApiRow name="remove_button" ty="Option<UseButtonInput>">
+                            "The remove button\u{2019}s configuration, for "<Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>
+                            ". "<Code inline=true>"None"</Code>" when the group has no "<Code inline=true>"on_remove"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_selected, is_focused, is_focus_visible, is_disabled, is_pressed" ty="Signal<bool>">"The tag\u{2019}s state."</ApiRow>
+                        <ApiRow name="allows_selection" ty="Signal<bool>">"Whether the tag can be selected."</ApiRow>
+                        <ApiRow name="allows_removing" ty="bool">"Whether the tag can be removed."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="ArrowLeft / ArrowRight">"Focus the previous or next tag, wrapping around."</KeyRow>
+                    <KeyRow keys="Home / End">"Focus the first or last tag."</KeyRow>
+                    <KeyRow keys="Space">"Toggle the selection of the focused tag (when selection is enabled)."</KeyRow>
+                    <KeyRow keys="Delete / Backspace">
+                        "Remove the focused tag, or all selected tags if it is selected. Focus moves to a neighbor, or stays in the "
+                        "empty group."
+                    </KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <p>"The hooks automatically set:"</p>
-            <ul>
-                <li><code>"role=\"grid\""</code> " on the group"</li>
-                <li><code>"role=\"row\""</code> " on each tag"</li>
-                <li><code>"role=\"gridcell\""</code> " on the tag content"</li>
-                <li><code>"aria-selected"</code> " for selection state"</li>
-                <li><code>"aria-disabled"</code> " for disabled tags"</li>
-                <li><code>"aria-label=\"Remove\""</code> " on remove button"</li>
-            </ul>
-
-            <h2 id="keyboard-navigation" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard-navigation" description="Direct link to keyboard"/>
-            </h2>
-
-            <ul>
-                <li><code>"Arrow Left/Up"</code> " - Focus previous tag"</li>
-                <li><code>"Arrow Right/Down"</code> " - Focus next tag"</li>
-                <li><code>"Enter/Space"</code> " - Select/toggle tag"</li>
-                <li><code>"Delete/Backspace"</code> " - Remove tag (if removable)"</li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Multiple selection modes"</li>
-                <li>"Removable tags"</li>
-                <li>"Keyboard navigation"</li>
-                <li>"Focus management"</li>
-                <li>"Full ARIA support"</li>
-            </ul>
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Chip.materialize()>"Chip overview"</Link></li>
-                <li><Link href=crate::routes::doc::chip::Component.materialize()>"Chip component"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_tag", link: "#use_tag" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Chip.materialize()>"Chip overview"</Link></li>
+                <li><Link href=routes::doc::chip::Component.materialize()>"Chip component"</Link></li>
+                <li><Link href=routes::doc::grid::Hook.materialize()>"Grid list hooks"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

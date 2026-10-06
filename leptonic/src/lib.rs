@@ -41,6 +41,7 @@ pub mod prelude {
     //pub use crate::hooks::prelude::*;
     pub use crate::hooks::IntoAttrs;
     pub use crate::signal_ls;
+    pub use crate::utils::ValueBinding;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -160,8 +161,6 @@ pub enum Mount {
     #[default]
     Once,
 
-    /// Mount the child view once. May defer mounting to the point where the view is first needed. Then keep it mounted as long as the parent lives.
-    // OnceShown, // TODO: Implement this variant in tabs.
     /// Always re-mount the child view when it is needed.
     WhenShown,
 }

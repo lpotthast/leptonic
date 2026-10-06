@@ -1,21 +1,20 @@
 // Upstream: react-aria/src/interactions/useHover.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::{UseEventListenerOptions, use_event_listener, use_event_listener_with_options};
 use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        ContainsTarget, EventAccessors, EventHandler, EventTargetExt, node_contains,
+        ContainsTarget, EventAccessors, EventHandler, EventTargetExt,
+        event_listeners::{Listener, listen_to},
+        node_contains,
         pointer_type::PointerType,
     },
 };
@@ -24,17 +23,66 @@ use crate::{
 
 // No intentional deviations from the react-aria implementation.
 
-// iOS fires onPointerEnter twice: once with pointerType="touch" and again with
-// pointerType="mouse". We want to ignore these emulated events so they do not trigger hover
-// behavior. See https://bugs.webkit.org/show_bug.cgi?id=214609.
-//
-// When a touch pointerenter is detected, a temporary global pointerup listener is registered.
-// When the touch pointerup fires (finger lifts), this flag is set to true. The emulated mouse
-// pointerenter that follows sees the flag and bails out. After 50ms, a timeout clears the flag
-// and removes the temporary listener. The 50ms window is measured from pointerup to keep it
-// tight. Long enough to catch the emulated event, short enough to not block real mouse hovers
-// that may happen shortly after a touch.
-static IGNORE_EMULATED_MOUSE_EVENTS: AtomicBool = AtomicBool::new(false);
+/// iOS fires `pointerenter` twice: once with `pointerType="touch"` and again with
+/// `pointerType="mouse"` (https://bugs.webkit.org/show_bug.cgi?id=214609). After a touch
+/// `pointerup`, emulated mouse hovers are ignored for 500 ms. One document listener, shared by
+/// all hover hooks (react-aria's `setupGlobalTouchEvents`).
+#[cfg(not(feature = "ssr"))]
+mod global_touch {
+    use std::{
+        cell::{Cell, RefCell},
+        time::Duration,
+    };
+
+    use leptos::{ev, prelude::set_timeout};
+
+    use crate::utils::{
+        event_listeners::{Listener, listen_to},
+        pointer_type::PointerType,
+    };
+
+    thread_local! {
+        static IGNORE_EMULATED_MOUSE_EVENTS: Cell<bool> = const { Cell::new(false) };
+        static HOVER_COUNT: Cell<usize> = const { Cell::new(0) };
+        static POINTERUP_LISTENER: RefCell<Option<Listener>> = const { RefCell::new(None) };
+    }
+
+    pub(super) fn ignore_emulated_mouse_events() -> bool {
+        IGNORE_EMULATED_MOUSE_EVENTS.get()
+    }
+
+    /// Registers a hover hook; the first one adds the document listener.
+    pub(super) fn setup() {
+        if HOVER_COUNT.get() == 0
+            && let Some(document) = leptos_use::use_document().as_ref()
+        {
+            let listener = listen_to(
+                document,
+                ev::pointerup,
+                false,
+                |e: web_sys::PointerEvent| {
+                    if PointerType::from(e.pointer_type()) == PointerType::Touch {
+                        IGNORE_EMULATED_MOUSE_EVENTS.set(true);
+                        set_timeout(
+                            || IGNORE_EMULATED_MOUSE_EVENTS.set(false),
+                            Duration::from_millis(500),
+                        );
+                    }
+                },
+            );
+            POINTERUP_LISTENER.set(Some(listener));
+        }
+        HOVER_COUNT.set(HOVER_COUNT.get() + 1);
+    }
+
+    /// Unregisters a hover hook; the last one removes the document listener.
+    pub(super) fn teardown() {
+        HOVER_COUNT.set(HOVER_COUNT.get().saturating_sub(1));
+        if HOVER_COUNT.get() == 0 {
+            POINTERUP_LISTENER.set(None);
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct HoverStartEvent {
@@ -54,17 +102,29 @@ pub struct UseHoverInput {
     /// When true, both `on_hover_start` and `on_hover_end` are no longer called.
     /// When the element is currently hovered when this switches to `true`,
     /// a programmatic `on_hover_end` is triggered and `is_hovered` transitions to `false`.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
     pub on_hover_start: Option<Callback<HoverStartEvent>>,
 
     /// Called whenever a pointer stops hovering the element
-    /// or when the element is hovered and `disabled` transitions to `true`.
+    /// or when the element is hovered and `is_disabled` transitions to `true`.
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
 
     /// Called whenever the hover state changes.
     pub on_hover_change: Option<Callback<bool>>,
+}
+
+impl Default for UseHoverInput {
+    /// Enabled, no callbacks.
+    fn default() -> Self {
+        Self {
+            is_disabled: Signal::stored(false),
+            on_hover_start: None,
+            on_hover_end: None,
+            on_hover_change: None,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -106,21 +166,11 @@ pub type UseHoverAttrs = (
 struct HoverState {
     pointer_type: PointerType,
     target: web_sys::EventTarget,
-    /// Cleanup function for the global `pointerover` listener that detects element removal.
-    global_pointerover_cleanup: Option<Box<dyn Fn()>>,
+    /// The global `pointerover` listener that detects the removal of the hovered element
+    /// (removed when the state is dropped).
+    _pointerover: Option<Listener>,
 }
 
-impl HoverState {
-    fn cleanup_global_listeners(&self) {
-        if let Some(cleanup) = &self.global_pointerover_cleanup {
-            cleanup();
-        }
-    }
-}
-
-/// # Panics
-///
-/// Panics if the hover state is expected to be present but is not.
 #[allow(clippy::too_many_lines)]
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     #[cfg(feature = "ssr")]
@@ -139,11 +189,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     #[cfg(not(feature = "ssr"))]
     {
         let UseHoverInput {
-            disabled,
+            is_disabled: disabled,
             on_hover_start,
             on_hover_end,
             on_hover_change,
         } = input;
+
+        global_touch::setup();
+        on_cleanup(global_touch::teardown);
 
         let state: StoredValue<Option<HoverState>, LocalStorage> = StoredValue::new_local(None);
         let (is_hovered, set_is_hovered) = signal(false);
@@ -153,17 +206,15 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
-            let (pointer_type, target) = state.with_value(|s| {
-                let s = s.as_ref().expect("present");
-                (s.pointer_type.clone(), s.target.clone())
-            });
-
-            // Clean up global listeners before clearing state.
-            state.with_value(|s| {
-                if let Some(s) = s.as_ref() {
-                    s.cleanup_global_listeners();
-                }
-            });
+            // Dropping the state removes its global listener.
+            let Some(HoverState {
+                pointer_type,
+                target,
+                ..
+            }) = state.try_update_value(Option::take).flatten()
+            else {
+                return;
+            };
 
             if let Some(on_hover_end) = on_hover_end {
                 on_hover_end.run(HoverEndEvent {
@@ -177,7 +228,6 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
 
             set_is_hovered.set(false);
-            state.set_value(None);
         };
 
         let trigger_hover_start =
@@ -188,7 +238,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                     return;
                 }
 
-                if pointer_type != PointerType::Mouse && pointer_type != PointerType::Pen {
+                if pointer_type == PointerType::Touch {
                     return;
                 }
 
@@ -218,32 +268,26 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 // the mouse is over. We detect this case by checking if the new pointerover target is
                 // still contained within our hovered element — if not, the element was removed and we
                 // trigger a hover end.
-                let global_pointerover_cleanup = {
+                let pointerover = current_target.get_owner_document().map(|document| {
                     let ct_for_closure = current_target.clone();
-                    let cleanup = use_event_listener_with_options(
-                        current_target.get_owner_document(),
-                        ev::pointerover,
-                        move |e: PointerEvent| {
-                            if is_hovered.get_untracked() {
-                                let event_target = e.expect_target();
-                                if node_contains(
-                                    ct_for_closure.as_node().as_ref(),
-                                    event_target.as_node().as_ref(),
-                                ) == Some(false)
-                                {
-                                    trigger_hover_end();
-                                }
+                    listen_to(&document, ev::pointerover, true, move |e: PointerEvent| {
+                        if is_hovered.get_untracked() {
+                            let event_target = e.expect_target();
+                            if node_contains(
+                                ct_for_closure.as_node().as_ref(),
+                                event_target.as_node().as_ref(),
+                            ) == Some(false)
+                            {
+                                trigger_hover_end();
                             }
-                        },
-                        UseEventListenerOptions::default().capture(true),
-                    );
-                    Some(Box::new(cleanup) as Box<dyn Fn()>)
-                };
+                        }
+                    })
+                });
 
                 state.set_value(Some(HoverState {
                     pointer_type,
                     target: current_target,
-                    global_pointerover_cleanup,
+                    _pointerover: pointerover,
                 }));
             };
 
@@ -252,42 +296,12 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
-            if IGNORE_EMULATED_MOUSE_EVENTS.load(Ordering::Acquire) && e.pointer_type() == "mouse" {
+            let pointer_type = PointerType::from(e.pointer_type());
+            if global_touch::ignore_emulated_mouse_events() && pointer_type == PointerType::Mouse {
                 return;
             }
 
-            // When a touch pointerenter is detected, register a temporary global pointerup listener.
-            // On iOS, after a touch, a phantom pointerenter with pointerType="mouse" is fired.
-            // The pointerup listener sets the ignore flag so the emulated mouse event is skipped.
-            if e.pointer_type() == "touch" {
-                let cleanup =
-                    use_event_listener(document(), ev::pointerup, move |pu: PointerEvent| {
-                        if pu.pointer_type() == "touch" {
-                            IGNORE_EMULATED_MOUSE_EVENTS.store(true, Ordering::Release);
-                        }
-                    });
-                let cleanup = StoredValue::<Option<Box<dyn Fn()>>, LocalStorage>::new_local(Some(
-                    Box::new(cleanup),
-                ));
-                set_timeout(
-                    move || {
-                        IGNORE_EMULATED_MOUSE_EVENTS.store(false, Ordering::Release);
-                        cleanup.with_value(|c| {
-                            if let Some(cleanup_fn) = c.as_ref() {
-                                cleanup_fn();
-                            }
-                        });
-                        cleanup.set_value(None);
-                    },
-                    std::time::Duration::from_millis(50),
-                );
-            }
-
-            trigger_hover_start(
-                PointerType::from(e.pointer_type()),
-                e.expect_current_target(),
-                e.expect_target(),
-            );
+            trigger_hover_start(pointer_type, e.expect_current_target(), e.expect_target());
         };
 
         let handle_pointer_leave = move |e: PointerEvent| {
@@ -308,12 +322,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         });
 
         on_cleanup(move || {
-            // Clean up any active global listeners.
-            state.with_value(|s| {
-                if let Some(s) = s.as_ref() {
-                    s.cleanup_global_listeners();
-                }
-            });
+            // Dropping the state removes its global listener.
+            state.try_update_value(Option::take);
         });
 
         UseHoverReturn {

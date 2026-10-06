@@ -1,48 +1,48 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::app_bar::AppBarDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAppBar() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="overview">
-                "App Bar"
-                <AnchorLink href="#overview" description="Direct link to main article header"/>
-            </h1>
+        <DocPage title="App Bar">
+            <p>
+                "The "<Code inline=true>"AppBar"</Code>" component is a horizontal bar that sticks to the top of its "
+                "scrolling parent. Many app layouts use one as their entry point, holding the app name, navigation and "
+                "global actions. It lays its children out in a row, with space between them."
+            </p>
 
-            <p>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</p>
+            <Demo description="App bar sticking to the top of a scrolling container" source=include_str!("demos/app_bar.rs")>
+                <AppBarDemo/>
+            </Demo>
 
-            <DemoShell source=include_str!("demos/app_bar.rs")>
-                <AppBarDemo />
-            </DemoShell>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="AppBar">
+                    <ApiRow name="height" ty="Option<Height>" default="None">
+                        "The bar height. Sets "<Code inline=true>"--app-bar-height"</Code>
+                        " on the element; without it, the theme\u{2019}s value applies."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                    <ApiRow name="children" ty="Children">"The bar content."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="styling">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="Styling">
+                <p>
+                    "The theme gives the bar a high "<Code inline=true>"z-index"</Code>" so that it stays above scrolling "
+                    "content. Override any of these CSS variables to adapt it to your design:"
+                </p>
+                <CssVariables prefix="--app-bar-" scss=theme_scss!("app-bar")/>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --app-bar-height
-                    --app-bar-background-color
-                    --app-bar-border-bottom
-                    --app-bar-box-shadow
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "AppBar", link: "#overview" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::components::Drawer.materialize()>"Drawer"</Link></li>
+                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

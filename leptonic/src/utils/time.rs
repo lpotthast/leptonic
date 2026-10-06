@@ -1,5 +1,3 @@
-use uuid::Uuid;
-
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Year {
@@ -13,8 +11,7 @@ pub struct Year {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Month {
-    /// base 1
-    pub index: u8,
+    pub month: time::Month,
     pub name: String,
     pub is_focused: bool,
     pub is_selected: bool,
@@ -24,7 +21,6 @@ pub struct Month {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Week {
-    pub id: Uuid,
     pub days: Vec<Day>, // Not always full?
 }
 
@@ -38,7 +34,6 @@ pub enum InMonth {
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Day {
-    pub id: Uuid,
     /// base 1
     pub index: u8,
     pub in_month: InMonth,
@@ -178,6 +173,8 @@ pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use time::macros::datetime;
 
     use super::SaveReplaceYear;
@@ -186,13 +183,13 @@ mod tests {
     fn save_replace_year_replaces_when_coming_from_feb_29() {
         let dt = datetime!(2000-02-29 0:00 UTC);
         let result = dt.save_replace_year(1999).unwrap();
-        assert_eq!(result, datetime!(1999-02-28 0:00 UTC));
+        assert_that!(result).is_equal_to(datetime!(1999-02-28 0:00 UTC));
     }
 
     #[test]
     fn save_replace_month_replaces_when_coming_from_day_out_of_targeted_months_range() {
         let dt = datetime!(2023-03-31 0:00 UTC);
         let result = dt.save_replace_month(time::Month::February).unwrap();
-        assert_eq!(result, datetime!(2023-02-28 0:00 UTC));
+        assert_that!(result).is_equal_to(datetime!(2023-02-28 0:00 UTC));
     }
 }

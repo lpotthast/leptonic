@@ -1,9 +1,9 @@
-use leptonic::hooks::*;
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkDisabledDemo() -> impl IntoView {
-    let (is_disabled, set_is_disabled) = signal(false);
+    let is_disabled = RwSignal::new(false);
     let disabled_link = use_link(UseLinkInput {
         href: Some("#".to_string()),
         target: None,
@@ -27,13 +27,6 @@ pub fn LinkDisabledDemo() -> impl IntoView {
             </a>
         </div>
 
-        <label class="demo-checkbox-label">
-            <input
-                type="checkbox"
-                prop:checked=is_disabled
-                on:change=move |e| set_is_disabled.set(event_target_checked(&e))
-            />
-            "Disable link"
-        </label>
+        <Checkbox state=is_disabled>"Disable link"</Checkbox>
     }
 }

@@ -1,5 +1,4 @@
-use std::fmt;
-use std::hash::Hash;
+use std::{fmt, hash::Hash};
 
 // REACT-ARIA DEVIATIONS (color types)
 //
@@ -1102,7 +1101,7 @@ mod tests {
             g: 23,
             b: 241,
         };
-        assert_eq!(format!("{rgb:x}").as_str(), "ba17f1");
+        assert_that!(format!("{rgb:x}").as_str()).is_equal_to("ba17f1");
     }
 
     #[test]
@@ -1112,7 +1111,7 @@ mod tests {
             g: 23,
             b: 241,
         };
-        assert_eq!(format!("{rgb:X}").as_str(), "BA17F1");
+        assert_that!(format!("{rgb:X}").as_str()).is_equal_to("BA17F1");
     }
 
     #[test]
@@ -1122,7 +1121,7 @@ mod tests {
             g: 23,
             b: 241,
         };
-        assert_eq!(&rgb.to_string(), "#BA17F1");
+        assert_that!(&rgb.to_string()).is_equal_to("#BA17F1");
     }
 
     // --- Hex parsing tests ---

@@ -7,23 +7,14 @@ pub fn LabelBasicDemo() -> impl IntoView {
         label_props,
         field_props,
     } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
+        has_label: true,
+        ..UseLabelInput::default()
     });
 
     view! {
-        <div style="margin-bottom: 0.5em;">
-            <label
-                {..label_props.into_attrs()}
-                style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-            >
-                "Username"
-            </label>
-            <input
-                type="text"
-                {..field_props.into_attrs()}
-                style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 200px;"
-            />
+        <div class="demo-field">
+            <label class="demo-field-label" {..label_props.into_attrs()}>"Username"</label>
+            <input type="text" class="demo-input demo-text-input" {..field_props.into_attrs()}/>
         </div>
     }
 }

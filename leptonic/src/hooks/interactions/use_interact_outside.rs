@@ -32,7 +32,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct UseInteractOutsideInput {
     /// Whether the interact outside events should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Handler called when an interaction starts outside the element.
     pub on_interact_outside_start: Option<Callback<PointerEvent>>,
@@ -112,7 +112,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     #[cfg(not(feature = "ssr"))]
     {
         let UseInteractOutsideInput {
-            disabled,
+            is_disabled: disabled,
             on_interact_outside_start,
             on_interact_outside,
         } = input;

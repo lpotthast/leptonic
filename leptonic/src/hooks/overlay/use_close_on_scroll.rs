@@ -72,7 +72,7 @@ pub fn use_close_on_scroll(input: UseCloseOnScrollInput) {
                 return;
             };
 
-            let Some(window) = web_sys::window() else {
+            let Some(window) = leptos_use::use_window().as_ref().cloned() else {
                 return;
             };
 

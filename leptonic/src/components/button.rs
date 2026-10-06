@@ -5,7 +5,7 @@ use leptos_router::components::ToHref;
 
 use crate::{
     atoms,
-    hooks::{HoverEndEvent, HoverStartEvent, LinkTarget, PressEvent},
+    hooks::{ButtonType, HoverEndEvent, HoverStartEvent, LinkTarget, PressEvent},
     utils::{
         aria::{AriaExpanded, AriaHasPopup},
         classes::Classes,
@@ -91,9 +91,16 @@ impl Display for ButtonSize {
     }
 }
 
+/// A themed button.
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Callback<PressEvent>,
+    /// Called when the button is pressed. Not needed for submit/reset buttons or inside a
+    /// `PressResponder`.
+    #[prop(into, optional)]
+    on_press: Option<Callback<PressEvent>>,
+    /// The `type` of the button. Defaults to `button`; `Submit` and `Reset` act on their form.
+    #[prop(optional)]
+    button_type: ButtonType,
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
@@ -104,23 +111,33 @@ pub fn Button(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    view! {
-        <atoms::button::Button
-            on_press=on_press
-            disabled=disabled
-            aria_haspopup=aria_haspopup
-            aria_expanded=aria_expanded
-            classes=classes.add("leptonic-btn")
-            styles=styles
-            attr:data-variant=move || variant.get().as_str()
-            attr:data-color=move || color.get().as_str()
-            attr:data-size=move || size.get().as_str()
-        >
-            {children()}
-        </atoms::button::Button>
-    }
+    let mut props = atoms::button::ButtonProps::builder()
+        .button_type(button_type)
+        .is_disabled(disabled)
+        .aria_haspopup(aria_haspopup)
+        .aria_expanded(aria_expanded)
+        .classes(classes.add("leptonic-btn"))
+        .styles(styles)
+        .children(children)
+        .build();
+    // An `Option` can't be passed to an optional prop through `view!`.
+    props.on_press = on_press;
+    atoms::button::Button(props)
+        .add_any_attr(leptos::attr::custom::custom_attribute(
+            "data-variant",
+            move || variant.get().as_str(),
+        ))
+        .add_any_attr(leptos::attr::custom::custom_attribute(
+            "data-color",
+            move || color.get().as_str(),
+        ))
+        .add_any_attr(leptos::attr::custom::custom_attribute(
+            "data-size",
+            move || size.get().as_str(),
+        ))
 }
 
+/// Joins adjacent buttons into one seamless row (use the `Filled` variant inside).
 #[component]
 pub fn ButtonGroup(
     #[prop(into, optional)] classes: Classes,
@@ -130,6 +147,7 @@ pub fn ButtonGroup(
     view! { <div class=classes.add("leptonic-btn-group") style=styles>{children()}</div> }
 }
 
+/// Lays out separate buttons in a row that keeps their spacing and wraps when space runs out.
 #[component]
 pub fn ButtonWrapper(
     #[prop(into, optional)] classes: Classes,
@@ -168,7 +186,7 @@ where
     atoms::button::LinkButton(atoms::button::LinkButtonProps {
         href,
         target,
-        disabled,
+        is_disabled: disabled.unwrap_or_default(),
         aria_haspopup,
         aria_expanded,
         exact,

@@ -1,7 +1,7 @@
 use leptos::{attr::custom::custom_attribute, ev, prelude::*};
 use web_sys::FocusEvent;
 
-use crate::hooks::*;
+use crate::{hooks::*, utils::scoped_context::scoped_view};
 
 /// Context for accessing focus ring state from child components.
 #[derive(Clone, Copy)]
@@ -12,7 +12,7 @@ pub struct FocusRingContext {
 
 #[component(transparent)]
 pub fn FocusRing(
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(optional)] within: bool,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] on_focus: Option<Callback<FocusEvent>>,
@@ -25,7 +25,7 @@ pub fn FocusRing(
         is_focused,
         props: focus_ring_props,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: disabled.unwrap_or(false.into()),
+        is_disabled,
         within,
         auto_focus,
         is_text_input: false,
@@ -50,18 +50,23 @@ pub fn FocusRing(
     let on_focusin_attr = focus_ring_props.on_focusin.into_on(ev::focusin);
     let on_focusout_attr = focus_ring_props.on_focusout.into_on(ev::focusout);
 
-    provide_context(FocusRingContext {
-        is_focused,
-        is_focus_visible,
-    });
-
-    children()
-        .into_view()
-        .add_any_attr(on_focus_attr)
-        .add_any_attr(on_blur_attr)
-        .add_any_attr(on_focusin_attr)
-        .add_any_attr(on_focusout_attr)
-        .add_any_attr(custom_attribute("data-focus-visible", move || {
-            data_focus_visible_signal.try_get().flatten()
-        }))
+    scoped_view(
+        move || {
+            provide_context(FocusRingContext {
+                is_focused,
+                is_focus_visible,
+            });
+        },
+        move || {
+            children()
+                .into_view()
+                .add_any_attr(on_focus_attr)
+                .add_any_attr(on_blur_attr)
+                .add_any_attr(on_focusin_attr)
+                .add_any_attr(on_focusout_attr)
+                .add_any_attr(custom_attribute("data-focus-visible", move || {
+                    data_focus_visible_signal.try_get().flatten()
+                }))
+        },
+    )
 }

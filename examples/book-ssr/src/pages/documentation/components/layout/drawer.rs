@@ -1,66 +1,69 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::drawer_left::DrawerLeftDemo;
-use super::demos::drawer_right_overlay::DrawerRightOverlayDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{drawer_left::DrawerLeftDemo, drawer_right_overlay::DrawerRightOverlayDemo};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageDrawer() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="drawer" class="anchor">
-                "Drawer"
-                <AnchorLink href="#drawer" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Drawer">
             <p>
-                "The "<Code inline=true>"<Drawer>"</Code>" component is intended to be used as a side menu. It is animated to conditionally move in and out of visibility."
-                "The required "<Code inline=true>"side"</Code>" prop controls to which side the drawer should move when hiding."
+                "The "<Code inline=true>"Drawer"</Code>" component is a side panel, typically used as a side menu. "
+                "It slides in and out of view whenever its "<Code inline=true>"shown"</Code>" signal changes. "
+                "The required "<Code inline=true>"side"</Code>" prop decides to which side it moves when hiding."
             </p>
 
-            <DemoShell source=include_str!("demos/drawer_left.rs")>
-                <DrawerLeftDemo />
-            </DemoShell>
+            <Demo description="Drawer on the left side, toggled with a switch" source=include_str!("demos/drawer_left.rs")>
+                <DrawerLeftDemo/>
+            </Demo>
 
-            <h2 id="layout-shifts" class="anchor">
-                "Layout shifts"
-                <AnchorLink href="#layout-shifts" description="Direct link to section: Layout shifts"/>
-            </h2>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="Drawer">
+                    <ApiRow name="side" ty="DrawerSide">
+                        <Code inline=true>"Left"</Code>" or "<Code inline=true>"Right"</Code>
+                        ": the side the drawer slides out to. Required."
+                    </ApiRow>
+                    <ApiRow name="shown" ty="Signal<bool>" default="true">"Whether the drawer is visible."</ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                    <ApiRow name="children" ty="Children">"The drawer content."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p>
-                "To avoid layout shifts, you may declare the drawer as absolutely positioned to let it overlay your content when shown. "
-                "This is especially useful when the menu is only animated on user action on small / mobile screens and fills the whole width of the viewport when shown. "
-                "When viewing this documentation on a small device, the open- and closeable main and documentation menus are created this way."
-            </p>
+            <Section title="Avoiding Layout Shifts">
+                <p>
+                    "A drawer in the normal document flow pushes the neighboring content aside when it appears. "
+                    "To avoid this layout shift, position the drawer absolutely, so that it overlays your content when shown. "
+                    "This works well for menus that only open on user action on small screens, where they often fill the "
+                    "whole width of the viewport. When you view this documentation on a small device, its main and "
+                    "documentation menus work this way."
+                </p>
 
-            <DemoShell source=include_str!("demos/drawer_right_overlay.rs")>
-                <DrawerRightOverlayDemo />
-            </DemoShell>
+                <Demo
+                    description="Absolutely positioned drawer overlaying the content on the right side"
+                    source=include_str!("demos/drawer_right_overlay.rs")
+                >
+                    <DrawerRightOverlayDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="styling">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="Styling">
+                <p>
+                    "While animating, the drawer carries the class "<Code inline=true>"showing"</Code>" or "
+                    <Code inline=true>"hiding"</Code>", afterwards "<Code inline=true>"shown"</Code>" or "
+                    <Code inline=true>"hidden"</Code>". Its "<Code inline=true>"data-side"</Code>" attribute is "
+                    <Code inline=true>"left"</Code>" or "<Code inline=true>"right"</Code>
+                    ". Override any of these CSS variables to adapt the drawer to your design:"
+                </p>
+                <CssVariables prefix="--drawer-" scss=theme_scss!("drawer")/>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --drawer-background-color
-                    --drawer-box-shadow
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Drawer", link: "#drawer" },
-                Toc::Leaf { title: "Layout shifts", link: "#layout-shifts" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::components::AppBar.materialize()>"App Bar"</Link></li>
+                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

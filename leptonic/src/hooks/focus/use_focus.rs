@@ -34,7 +34,7 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
@@ -90,7 +90,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     #[cfg(not(feature = "ssr"))]
     {
         let UseFocusInput {
-            disabled,
+            is_disabled: disabled,
             on_focus,
             on_blur,
             on_focus_change,

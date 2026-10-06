@@ -4,6 +4,6 @@ use leptos::prelude::*;
 #[component]
 pub fn ProgressIndeterminateDemo() -> impl IntoView {
     view! {
-        <ProgressBar progress=signal(None).0 />
+        <ProgressBar progress=Signal::stored(None)/>
     }
 }

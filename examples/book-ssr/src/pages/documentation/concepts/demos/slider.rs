@@ -3,9 +3,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn SliderConceptDemo() -> impl IntoView {
-    let (value, set_value) = signal(50.0_f64);
+    let (volume, set_volume) = signal(50.0_f64);
 
     view! {
-        <Slider value=value set_value=set_value min=0.0 max=100.0 step=1.0 />
+        <Slider value=volume set_value=set_volume min=0.0 max=100.0 step=1.0/>
+        <p>{move || format!("Volume: {:.0}", volume.get())}</p>
     }
 }

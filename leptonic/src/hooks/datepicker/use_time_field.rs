@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/datepicker/useDateField.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -19,6 +18,7 @@ use crate::{
     utils::{
         EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaRequired, AriaRole},
+        id::use_id,
     },
 };
 

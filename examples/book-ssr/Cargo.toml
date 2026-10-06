@@ -14,6 +14,8 @@ js-dir = "public/js"
 [package.metadata.leptos]
 # The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
 output-name = "book-ssr"
+# `--cfg=erase_components` comes from the repository's `.cargo/config.toml` (identical flags for all builds).
+disable-erase-components = true
 
 # The site root folder is where cargo-leptos generate all output. WARNING: all content of this folder will be erased on a rebuild. Use it in your server setup.
 site-root = "target/site"
@@ -107,6 +109,7 @@ ssr = [
     "dep:axum",
     "dep:axum-server",
     "dep:htmd",
+    "dep:markup5ever_rcdom",
     "dep:scraper",
     "dep:tokio",
     "dep:tower",
@@ -135,6 +138,7 @@ leptos-routes = { git = "https://github.com/lpotthast/leptos-routes", branch = "
 leptos-styles = "0.1.0"
 leptos-use = "0.19.2"
 leptos_axum = { version = "0.8.8", optional = true }
+markup5ever_rcdom = { version = "0.38", optional = true }
 leptos_meta = { version = "0.8.6", features = [] }
 leptos_router = { version = "0.8.12", features = [] }
 ordered-float = "5.1.0"
@@ -155,7 +159,25 @@ wasm-bindgen-futures = "0.4.64"
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Response"] }
 itertools = "0.14.0"
 
-#[patch.crates-io]
+[dev-dependencies]
+assertr = "0.7.1"
+browser-test = "0.5.0"
+leptos-browser-test = "0.3.0"
+rootcause = "0.13.0"
+serde_json = "1"
+syn = { version = "2.0.117", features = ["full"] }
+tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }
+
+[patch.crates-io]
+# TEMPORARY (same as the root Cargo.toml): chrome-for-testing 0.4 can't parse the Chrome for Testing API since it
+# started listing `linux-arm64`, which breaks the browser tests. Remove once a chrome-for-testing-manager release on
+# chrome-for-testing 0.5 (and a browser-test release on it) is published. Requires `../chrome-for-testing-manager`
+# (next to this repository) checked out on branch `cft-0.5-linux-arm64`.
+chrome-for-testing-manager = { path = "../../../chrome-for-testing-manager" }
+# TEMPORARY (same as the root Cargo.toml): session reuse, timing report and progress warnings of the browser test
+# runner. Remove once a browser-test release with them is published (and bump `browser-test` above). Requires
+# `../browser-test` (next to this repository) checked out on branch `session-reuse-timing`.
+browser-test = { path = "../../../browser-test" }
 #any_spawner = { path = "/Users/lukaspotthast/dev/leptos/any_spawner" }
 #const_str_slice_concat = { path = "/Users/lukaspotthast/dev/leptos/const_str_slice_concat" }
 #either_of = { path = "/Users/lukaspotthast/dev/leptos/either_of" }
@@ -181,6 +203,16 @@ itertools = "0.14.0"
 #leptos_meta = { path = "/Users/lukaspotthast/dev/leptos/meta" }
 #leptos_router = { path = "/Users/lukaspotthast/dev/leptos/router" }
 #leptos_router_macro = { path = "/Users/lukaspotthast/dev/leptos/router_macro" }
+
+[profile.dev.package.book-ssr]
+# Line tables only (backtraces keep file:line): the book's full debug info is huge, exceeded the 4 GiB that 32-bit DWARF
+# can address, and with `split-debuginfo = "unpacked"` piled up as new `.dwo` files on every build (rust#161824).
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+# No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): much
+# smaller build directories and faster linking of the server and the wasm bundle.
+debug = false
 
 [profile.dev.package.leptonic]
 # High optimization for our dependencies. This should decrease wasm-filesize and increase performance drastically

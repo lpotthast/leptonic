@@ -9,7 +9,7 @@ pub fn PageHookFocus() -> impl IntoView {
     let (focus_change_count, set_focus_change_count) = signal(0u32);
 
     let focus = use_focus(UseFocusInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         on_focus: Some(Callback::new(move |_| {
             set_focus_count.update(|c| *c += 1);
         })),
@@ -25,7 +25,7 @@ pub fn PageHookFocus() -> impl IntoView {
     let (disabled_focus_count, set_disabled_focus_count) = signal(0u32);
 
     let disabled_focus = use_focus(UseFocusInput {
-        disabled: Signal::derive(|| true),
+        is_disabled: Signal::derive(|| true),
         on_focus: Some(Callback::new(move |_| {
             set_disabled_focus_count.update(|c| *c += 1);
         })),
@@ -78,7 +78,7 @@ pub fn PageHookFocus() -> impl IntoView {
                     let (parent_focus_count, set_parent_focus_count) = signal(0u32);
                     let (parent_blur_count, set_parent_blur_count) = signal(0u32);
                     let parent_focus = use_focus(UseFocusInput {
-                        disabled: Signal::derive(|| false),
+                        is_disabled: Signal::derive(|| false),
                         on_focus: Some(
                             Callback::new(move |_| {
                                 set_parent_focus_count.update(|c| *c += 1);

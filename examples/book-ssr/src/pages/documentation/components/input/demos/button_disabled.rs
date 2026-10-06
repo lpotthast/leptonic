@@ -7,7 +7,7 @@ pub fn ButtonDisabledDemo() -> impl IntoView {
 
     view! {
         <div>
-            "Disable: " <Toggle state=disabled set_state=set_disabled/>
+            <Switch state=(disabled, set_disabled)>"Disable"</Switch>
         </div>
 
         <ButtonWrapper>

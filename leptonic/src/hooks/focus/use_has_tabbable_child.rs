@@ -1,6 +1,5 @@
 // Upstream: react-aria/src/focus/useHasTabbableChild.ts @ 6f664fe911
 use leptos::prelude::*;
-
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::prelude::*;
 
@@ -42,13 +41,13 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct UseHasTabbableChildInput {
     /// Whether the check should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 }
 
 impl Default for UseHasTabbableChildInput {
     fn default() -> Self {
         Self {
-            disabled: Signal::derive(|| false),
+            is_disabled: Signal::derive(|| false),
         }
     }
 }
@@ -108,7 +107,9 @@ pub type UseHasTabbableChildAttrs = (ElementCaptureAttr,);
 /// }
 /// ```
 pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbableChildReturn {
-    let UseHasTabbableChildInput { disabled } = input;
+    let UseHasTabbableChildInput {
+        is_disabled: disabled,
+    } = input;
 
     let (has_tabbable_child, set_has_tabbable_child) = signal(false);
 
@@ -168,9 +169,10 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
                 options.set_attribute_filter(&filter);
 
                 if observer.observe_with_options(&el, &options).is_ok() {
-                    callback.forget();
+                    // The cleanup owns the callback: it lives exactly as long as the observer.
                     observer_cleanup.set_value(Some(Box::new(move || {
                         observer.disconnect();
+                        let _owned_until_cleanup = &callback;
                     })));
                 }
             }

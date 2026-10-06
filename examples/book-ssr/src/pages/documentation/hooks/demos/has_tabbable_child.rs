@@ -15,41 +15,35 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
         has_tabbable_child,
         props,
     } = use_has_tabbable_child(UseHasTabbableChildInput {
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
     });
 
+    // The container is a tab stop only while it has no tabbable children.
+    let container_tabindex = move || if has_tabbable_child.get() { -1 } else { 0 };
+
     view! {
-        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) attr:style="margin-bottom: 1em;">
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=show_button set_checked=set_show_button />
-                <Label>"Show button"</Label>
-            </FormControl>
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=show_input set_checked=set_show_input />
-                <Label>"Show input"</Label>
-            </FormControl>
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
+        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) classes="demo-mb-1">
+            <Checkbox state=(show_button, set_show_button) classes="demo-form-row">"Show button"</Checkbox>
+            <Checkbox state=(show_input, set_show_input) classes="demo-form-row">"Show input"</Checkbox>
+            <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
         </Stack>
 
-        <div {..props.into_attrs()}>
-            <p style="margin: 0 0 1em 0; font-weight: bold;">"Container"</p>
-            <Stack orientation=StackOrientation::Horizontal spacing=em(0.5)>
+        <div
+            {..props.into_attrs()}
+            tabindex=container_tabindex
+            class=Classes::from("demo-focus-scope")
+        >
+            <p class=Classes::from("demo-container-title")>
+                "Container (tabindex=" {container_tabindex} ")"
+            </p>
+            <div class=Classes::from("demo-focus-row")>
                 <Show when=move || show_button.get()>
-                    <button class=Classes::from("demo-btn")>
-                        "Tabbable Button"
-                    </button>
+                    <button class=Classes::from("demo-focus-item")>"Tabbable button"</button>
                 </Show>
                 <Show when=move || show_input.get()>
-                    <input
-                        type="text"
-                        placeholder="Tabbable input"
-                        class=Classes::from("demo-input")
-                    />
+                    <input type="text" placeholder="Tabbable input" class=Classes::from("demo-focus-item")/>
                 </Show>
-            </Stack>
+            </div>
         </div>
 
         <p>

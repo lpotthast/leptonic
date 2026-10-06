@@ -1,14 +1,26 @@
-use leptonic::hooks::*;
+use leptonic::{
+    hooks::*,
+    utils::{
+        css::{CssDimension, LengthPercentageAuto, try_px},
+        style::{LeftProperty, TopProperty},
+        styles::Styles,
+    },
+};
 use leptos::prelude::*;
+
+fn offset(px: f64) -> LengthPercentageAuto {
+    LengthPercentageAuto::from(try_px(px).unwrap_or(CssDimension::Zero))
+}
 
 #[component]
 pub fn ContainerClickExample() -> impl IntoView {
     let UseMoveReturn {
-        props, constraint, ..
+        props,
+        is_moving,
+        constraint,
     } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        is_rtl: false,
+        is_disabled: false.into(),
+        axis: None.into(),
         on_move_start: None,
         on_move: None,
         on_move_end: None,
@@ -17,46 +29,27 @@ pub fn ContainerClickExample() -> impl IntoView {
         allow_container_click: true,
         initial_position: None,
     });
-    let c = constraint.unwrap();
-    let pixel_position = c.pixel_position;
-    let container_attrs = c.container_props.into_attrs();
-    let movable_attrs = props.into_attrs();
+    let constraint = constraint.expect("`constraint` is set, so the constraint return is present");
+    let pixel_position = constraint.pixel_position;
+
+    let handle_styles = Styles::builder()
+        .with_reactive(move || LeftProperty.declare(offset(pixel_position.get().0)))
+        .with_reactive(move || TopProperty.declare(offset(pixel_position.get().1)))
+        .build();
 
     view! {
-        <div
-            {..container_attrs}
-            style="
-                width: 100%;
-                height: 10em;
-                touch-action: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                position: relative;
-                cursor: crosshair;
-            "
-        >
+        <div {..constraint.container_props.into_attrs()} class="demo-move-area demo-move-area-clickable">
             <div
-                {..movable_attrs}
+                {..props.into_attrs()}
                 tabindex="0"
-                style=move || format!("
-                    border: 0.15em solid cyan;
-                    padding: 0.5em 1em;
-                    position: absolute;
-                    cursor: grab;
-                    user-select: none;
-                    left: {}px;
-                    top: {}px;
-                ",
-                    pixel_position.get().0,
-                    pixel_position.get().1
-                )
+                class="demo-move-handle"
+                class:moving=move || is_moving.get()
+                style=handle_styles
             >
                 "Click anywhere!"
             </div>
         </div>
 
-        <p style="font-size: 0.9em; font-style: italic;">
-            "Click anywhere in the container to move the element there, or drag it directly."
-        </p>
+        <p class="demo-caption">"Click anywhere in the area to move the element there, or drag it directly."</p>
     }
 }

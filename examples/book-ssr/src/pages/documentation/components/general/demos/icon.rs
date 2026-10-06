@@ -1,11 +1,12 @@
-use leptonic::components::icon::Icon;
-use leptonic::prelude::*;
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn IconDemo() -> impl IntoView {
     view! {
-        <Icon icon=icondata::BsFolderFill attr:style="font-size: 6em;"/>
-        <Icon icon=icondata::BsFolder attr:style="font-size: 6em;"/>
+        <div class="demo-control-row">
+            <Icon icon=icondata::BsFolderFill classes="demo-icon-large"/>
+            <Icon icon=icondata::BsFolder classes="demo-icon-large"/>
+        </div>
     }
 }

@@ -2,168 +2,160 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
-
 use super::demos::color_channel_field::ColorChannelFieldDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseColorChannelField() -> impl IntoView {
     view! {
-        <Article>
-            <p style="margin-bottom: 0.5em;">
-                <Link href=routes::doc::color::Hooks.materialize()>"\u{2190} Color Hooks Overview"</Link>
-            </p>
-
-            <h1 id="use_color_channel_field" class="anchor">
-                "use_color_channel_field"
-                <AnchorLink href="#use_color_channel_field" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_color_channel_field">
             <p>
                 "The "<Code inline=true>"use_color_channel_field_state"</Code>" and "<Code inline=true>"use_color_channel_field"</Code>
-                " hooks provide state and interaction for a numeric input that edits a single color channel."
+                " hooks build a number field that edits a single channel of a color, e.g. its hue or red value. They work "
+                "with any "<Link href=routes::doc::color::Hooks.materialize()>"color type"</Link>". See the "
+                <Link href=routes::doc::Color.materialize()>"Color overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useColorChannelField.html" target=LinkTarget::_Blank>
-                    "useColorChannelField"
-                </LinkExt>
-                " (part of the color field family)."
-            </p>
+            <ReactAria hook="useColorChannelField"/>
 
-            <h2 id="overview" class="anchor">
-                "Overview"
-                <AnchorLink href="#overview" description="Direct link to overview"/>
-            </h2>
+            <Section title="Demo">
+                <p>"Type a hue, use the buttons, or focus the field and use the arrow keys."</p>
 
-            <p>
-                "This hook bridges a full color value to a single numeric channel input. "
-                "It delegates to "<Code inline=true>"use_number_field"</Code>" with channel-derived range parameters "
-                "(min, max, step) and auto-generates an ARIA label from the channel name (e.g., \"Hue\", \"Red\")."
-            </p>
+                <Demo description="Hue channel number field with stepper buttons and a disabled toggle" source=include_str!("demos/color_channel_field.rs")>
+                    <ColorChannelFieldDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "Changes to the channel value are mapped back to the full color via "
-                <Code inline=true>"ColorValue::with_channel_value"</Code>
-                ". External color changes are synced back into the number field via a reactive effect."
-            </p>
+            <Section title="use_color_channel_field_state">
+                <p>
+                    "Owns the full color and exposes the value of one channel. Setting the channel value clamps it to the "
+                    "channel\u{2019}s range and maps it back to the full color with "
+                    <Code inline=true>"ColorValue::with_channel_value"</Code>"."
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <Section title="Input" id="use-color-channel-field-state-input">
+                    <p>
+                        "The input has no "<Code inline=true>"Default"</Code>"; set every field. The hook takes it by reference: "
+                        <Code inline=true>"use_color_channel_field_state(&input)"</Code>"."
+                    </p>
 
-            <DemoShell
-                source=include_str!("demos/color_channel_field.rs")
-                description="Hue channel numeric input"
-            >
-                <ColorChannelFieldDemo />
-            </DemoShell>
+                    <ApiTable kind=ApiKind::Input of="UseColorChannelFieldStateInput">
+                        <ApiRow name="default_value" ty="C">"The initial color."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the field edits."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<C>>">"Called with the full color when it changes."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="api" class="anchor">
-                "API"
-                <AnchorLink href="#api" description="Direct link to API section"/>
-            </h2>
+                <Section title="Return" id="use-color-channel-field-state-return">
+                    <ApiTable kind=ApiKind::Return of="UseColorChannelFieldStateReturn">
+                        <ApiRow name="color_value" ty="Signal<C>">"The current color."</ApiRow>
+                        <ApiRow name="set_color_value" ty="Callback<C>">"Sets the full color."</ApiRow>
+                        <ApiRow name="channel_value" ty="Signal<Option<f64>>">"The value of the channel."</ApiRow>
+                        <ApiRow name="set_channel_value" ty="Callback<Option<f64>>">
+                            "Sets the channel, clamped to its range. "<Code inline=true>"None"</Code>" is ignored."
+                        </ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the field edits."</ApiRow>
+                        <ApiRow name="min_value, max_value, step" ty="f64">"The channel\u{2019}s range and step."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h3>"State Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorChannelFieldStateInput<C: ColorValue> {
-                        pub default_value: C,
-                        pub channel: C::Channel,
-                        pub on_change: Option<Callback<C>>,
-                    }
-                ")}
-            </Code>
+            <Section title="use_color_channel_field">
+                <p>
+                    "A thin wrapper around "<Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                    ": it creates the number field state with the channel\u{2019}s range and step, labels the field with the "
+                    "channel name (e.g. \u{201c}Hue\u{201d}, \u{201c}Red\u{201d}) unless you pass an "<Code inline=true>"aria_label"</Code>", and keeps field and "
+                    "color in sync in both directions."
+                </p>
 
-            <h3>"State Return"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorChannelFieldStateReturn<C: ColorValue> {
-                        pub color_value: Signal<C>,
-                        pub set_color_value: Callback<C>,
-                        pub channel_value: Signal<Option<f64>>,
-                        pub set_channel_value: Callback<Option<f64>>,
-                        pub channel: C::Channel,
-                        pub min_value: f64,
-                        pub max_value: f64,
-                        pub step: f64,
-                    }
-                ")}
-            </Code>
+                <Section title="Input" id="use-color-channel-field-input">
+                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
 
-            <h3>"Hook Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorChannelFieldInput<C: ColorValue> {
-                        pub state: UseColorChannelFieldStateReturn<C>,
-                        pub is_disabled: Signal<bool>,
-                        pub is_read_only: Signal<bool>,
-                        pub aria_label: Option<&'static str>,
-                    }
-                ")}
-            </Code>
+                    <ApiTable kind=ApiKind::Input of="UseColorChannelFieldInput">
+                        <ApiRow name="state" ty="UseColorChannelFieldStateReturn<C>">
+                            "The state from "<Code inline=true>"use_color_channel_field_state"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the field is disabled."</ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>">"Whether the field is read-only."</ApiRow>
+                        <ApiRow name="aria_label" ty="Option<&'static str>">
+                            "An accessible name. "<Code inline=true>"None"</Code>" uses the channel name."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3>"Hook Return"</h3>
-            <p>
-                "Returns "<Code inline=true>"UseNumberFieldReturn"</Code>
-                " directly. These are the fields you typically need; see "
-                <Link href=crate::routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
-                " for the rest (validation, description and error props, \u{2026})."
-            </p>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseNumberFieldReturn {
-                        pub group_props: UseNumberFieldGroupProps,
-                        pub input_props: UseNumberFieldInputProps,
-                        pub label_props: UseNumberFieldLabelProps,
-                        // Pass these to `use_button` to render the stepper buttons.
-                        pub increment_button: UseButtonInput,
-                        pub decrement_button: UseButtonInput,
-                        pub display_value: Signal<String>,
-                        // ...
-                    }
-                ")}
-            </Code>
+                <Section title="Return" id="use-color-channel-field-return">
+                    <p>
+                        "Returns the "<Code inline=true>"UseNumberFieldReturn"</Code>" of "
+                        <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                        "."
+                    </p>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                    <ApiTable kind=ApiKind::Return of="UseNumberFieldReturn">
+                        <ApiRow name="group_props" ty="UseNumberFieldGroupProps">"For the element wrapping the input and the buttons."</ApiRow>
+                        <ApiRow name="label_props" ty="UseLabelProps">"For a visible label."</ApiRow>
+                        <ApiRow name="input_props" ty="UseNumberFieldInputProps">"For the text input, including its value."</ApiRow>
+                        <ApiRow name="increment_button, decrement_button" ty="UseButtonInput">
+                            "The stepper buttons\u{2019} configuration. Pass them to "
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
+                        </ApiRow>
+                        <ApiRow name="description_props, error_message_props" ty="SlotProps">"For a description and an error message."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The input, once rendered."</ApiRow>
+                        <ApiRow name="is_focused, is_focus_visible" ty="Signal<bool>">"Whether the input has focus, and whether to show a focus ring."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation result is invalid."</ApiRow>
+                        <ApiRow name="validation_errors" ty="Signal<Vec<String>>">"The displayed error messages."</ApiRow>
+                        <ApiRow name="validation_details" ty="Signal<ValidityStateSnapshot>">"Detailed validity state."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li>"Single channel numeric editing with full number field interaction"</li>
-                <li>"Auto-derived min, max, step from channel range"</li>
-                <li>"Auto-generated ARIA label from channel name"</li>
-                <li>"Bidirectional sync between color value and number field"</li>
-                <li>"Increment/decrement buttons and keyboard support"</li>
-            </ul>
+                <Section title="Example" id="use-color-channel-field-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let state = use_color_channel_field_state(&UseColorChannelFieldStateInput {
+                                default_value: HSV::new(),
+                                channel: HsvChannel::Hue,
+                                on_change: None,
+                            });
+                            let field = use_color_channel_field(UseColorChannelFieldInput {
+                                state,
+                                is_disabled: Signal::stored(false),
+                                is_read_only: Signal::stored(false),
+                                aria_label: None,
+                            });
+                            let (decrement, decrement_styles) = use_button(field.decrement_button).props.into_parts();
+                            let (increment, increment_styles) = use_button(field.increment_button).props.into_parts();
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                            view! {
+                                <div {..field.group_props.into_attrs()}>
+                                    <button {..decrement} style=decrement_styles>"\u{2212}"</button>
+                                    <input {..field.input_props.into_attrs()} />
+                                    <button {..increment} style=increment_styles>"+"</button>
+                                </div>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
 
-            <ul>
-                <li><Link href=crate::routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link>" - Hex color text input"</li>
-                <li><Link href=crate::routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link>" - Single-channel color slider"</li>
-                <li><Link href=crate::routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>" - General-purpose number field hook"</li>
-            </ul>
-        </Article>
+            <Section title="Keyboard">
+                <p>
+                    "As in "<Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                    ", with the channel\u{2019}s step:"
+                </p>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_color_channel_field", link: "#use_color_channel_field" },
-                Toc::Leaf { title: "Overview", link: "#overview" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "API", link: "#api" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowUp / PageUp">"Increase the channel by one step."</KeyRow>
+                    <KeyRow keys="ArrowDown / PageDown">"Decrease the channel by one step."</KeyRow>
+                    <KeyRow keys="Home / End">"Set the channel to its minimum or maximum."</KeyRow>
+                </KeyboardTable>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
+                <li><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link></li>
+                <li><Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

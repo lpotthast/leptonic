@@ -1,74 +1,82 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::alert_custom::AlertCustomDemo;
-use super::demos::alert_variants::AlertVariantsDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{alert_custom::AlertCustomDemo, alert_variants::AlertVariantsDemo};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAlert() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="alert" class="anchor">
-                "Alert"
-                <AnchorLink href="#alert" description="Direct link to article header"/>
-            </h1>
+        <DocPage title="Alert">
+            <p>
+                "An alert is a highlighted box that tells your users about something important: an operation succeeded, "
+                "something needs their attention, or an error occurred. The "<Code inline=true>"Alert"</Code>
+                " component shows a title, content and an icon, colored by its variant."
+            </p>
 
-            <DemoShell source=include_str!("demos/alert_variants.rs")>
-                <AlertVariantsDemo />
-            </DemoShell>
+            <Demo description="Alerts in all four variants" source=include_str!("demos/alert_variants.rs")>
+                <AlertVariantsDemo/>
+            </Demo>
 
-            <h2 id="customization" class="anchor">
-                "Customization"
-                <AnchorLink href="#customization" description="Direct link to section: Customization"/>
-            </h2>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="Alert">
+                    <ApiRow name="variant" ty="AlertVariant">
+                        <Code inline=true>"Success"</Code>", "<Code inline=true>"Info"</Code>", "
+                        <Code inline=true>"Warn"</Code>" or "<Code inline=true>"Danger"</Code>
+                        ". Rendered as the "<Code inline=true>"data-variant"</Code>" attribute. Required."
+                    </ApiRow>
+                    <ApiRow name="default_icon_slot" ty="AlertIconSlot" default="Prepend">
+                        "Where the variant\u{2019}s icon goes: "<Code inline=true>"Prepend"</Code>", "
+                        <Code inline=true>"Append"</Code>" or "<Code inline=true>"None"</Code>" (no icon)."
+                    </ApiRow>
+                    <ApiRow name="alert_prepend" ty="Option<AlertPrepend>" default="None">
+                        "Slot before the text. Replaces the icon if it would go there."
+                    </ApiRow>
+                    <ApiRow name="alert_title" ty="Option<AlertTitle>" default="None">"The title slot."</ApiRow>
+                    <ApiRow name="alert_content" ty="Option<AlertContent>" default="None">"The content slot."</ApiRow>
+                    <ApiRow name="alert_append" ty="Option<AlertAppend>" default="None">
+                        "Slot after the text. Replaces the icon if it would go there."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                </ApiTable>
+                <p>
+                    "All slots take their content as children. "<Code inline=true>"AlertPrepend"</Code>", "
+                    <Code inline=true>"AlertTitle"</Code>" and "<Code inline=true>"AlertAppend"</Code>
+                    " also accept an inline "<Code inline=true>"style"</Code>" string. "
+                    "The "<Code inline=true>"AlertIcon"</Code>" component renders the icon of a variant on its own."
+                </p>
+            </Section>
 
-            <Ul>
-                <Li slot>"The "<Code inline=true>"default_icon_slot"</Code> " can be specified to change the default position of the icon. Slot `None` will lead to no icon being rendered."</Li>
-                <Li slot>"Both " <Code inline=true>"AlertTitle"</Code> "and" <Code inline=true>"AlertContent"</Code> " can be omitted."</Li>
-                <Li slot>"The " <Code inline=true>"AlertPrepend"</Code> "and" <Code inline=true>"AlertAppend"</Code> " slot can be overridden."</Li>
-                <Li slot>"Custom ids, classes and styles can be applied to all slots."</Li>
-            </Ul>
+            <Section title="Customization">
+                <p>
+                    "Title and content are both optional. Set "<Code inline=true>"default_icon_slot"</Code>" to "
+                    <Code inline=true>"AlertIconSlot::None"</Code>" and fill the "<Code inline=true>"AlertPrepend"</Code>
+                    " and "<Code inline=true>"AlertAppend"</Code>" slots to replace the icon, or place an "
+                    <Code inline=true>"AlertIcon"</Code>" wherever you like. To restyle the slots, pass "
+                    <Code inline=true>"classes"</Code>" to the alert and target its "
+                    <Code inline=true>".leptonic-alert-*"</Code>
+                    " elements."
+                </p>
 
-            <DemoShell source=include_str!("demos/alert_custom.rs")>
-                <AlertCustomDemo />
-            </DemoShell>
+                <Demo
+                    description="Alerts with custom prepend and append slots and an icon in the title"
+                    source=include_str!("demos/alert_custom.rs")
+                >
+                    <AlertCustomDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt alerts to your design:"</p>
+                <CssVariables prefix="--alert-" scss=theme_scss!("alert")/>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --alert-margin
-                    --alert-padding
-                    --alert-border
-                    --alert-border-radius
-                    --alert-primary-background-color
-                    --alert-primary-color
-                    --alert-info-background-color
-                    --alert-info-color
-                    --alert-success-background-color
-                    --alert-success-color
-                    --alert-warn-background-color
-                    --alert-warn-color
-                    --alert-danger-background-color
-                    --alert-danger-color
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Alert", link: "#alert" },
-                Toc::Leaf { title: "Customization", link: "#customization" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::components::Toast.materialize()>"Toast"</Link></li>
+                <li><Link href=routes::doc::components::Icon.materialize()>"Icon"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

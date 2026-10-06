@@ -1,180 +1,118 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::modal::ModalConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageModalOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="modal" class="anchor">
-                "Modal"
-                <AnchorLink href="#modal" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Modal">
             <p>
-                "Modals are dialog overlays that demand the user's attention. "
-                "They capture focus, block interaction with the rest of the page, "
-                "and prevent scrolling until dismissed. Use them for confirmations, "
-                "critical decisions, or multi-step flows that require acknowledgement."
+                "Modals are dialogs that demand the user\u{2019}s attention. While open, they keep focus inside, block "
+                "interaction with the rest of the page and prevent scrolling. Use them for confirmations, critical "
+                "decisions or short flows that need a response."
             </p>
 
             <p>
-                "Leptonic provides modals at two abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "Internally, the modal concept composes three hooks: "
-                <Code inline=true>"use_dialog"</Code>" (ARIA semantics + focus), "
-                <Code inline=true>"use_modal"</Code>" (marks as modal), and "
-                <Code inline=true>"use_modal_backdrop"</Code>" (dismiss behavior + scroll prevention)."
+                "A modal combines three hooks: "<Code inline=true>"use_dialog"</Code>" (ARIA semantics and focus), "
+                <Code inline=true>"use_modal"</Code>" (marks it as modal) and "<Code inline=true>"use_modal_backdrop"</Code>
+                " (dismissal and scroll prevention)."
             </p>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Block the page and require a decision"</TableCell><TableCell><b>"Modal"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Show contextual content anchored to an element"</TableCell><TableCell><Link href=routes::doc::Popover.materialize()>"Popover"</Link></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Notify without blocking"</TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::components::Alert.materialize()>"Alert"</Link>" / "
+                            <Link href=routes::doc::components::Toast.materialize()>"Toast"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow><TableCell>"Show a sliding panel from the edge"</TableCell><TableCell><Link href=routes::doc::components::Drawer.materialize()>"Drawer"</Link></TableCell></TableRow>
+                </DocTable>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Block the page and require a decision"</TableCell>
-                            <TableCell><b>"Modal"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show contextual content anchored to an element"</TableCell>
-                            <TableCell>"Popover"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Notify without blocking"</TableCell>
-                            <TableCell>"Alert / Toast"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show a sliding panel from the edge"</TableCell>
-                            <TableCell>"Drawer"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <p>
+                    "Modals are disruptive by design. If the information is supplementary rather than essential, a popover "
+                    "or toast is less intrusive."
+                </p>
+            </Section>
 
-            <p>
-                "Modals are disruptive by design. If the information is supplementary "
-                "rather than essential, a popover or toast is less intrusive."
-            </p>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Modals exist as hooks, atoms and a component. Each layer builds on the one below: the atoms combine the "
+                    "hooks, and the "<Code inline=true>"Modal"</Code>" component is built from the atoms. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::modal::Hook.materialize()>"Modal & dialog hooks"</Link></TableCell>
+                        <TableCell>"State, dismissal, "<Code inline=true>"aria-modal"</Code>" and dialog semantics for elements you render yourself."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::modal::Atom.materialize()>"Modal & dialog atoms"</Link></TableCell>
+                        <TableCell>
+                            <Code inline=true>"ModalBackdrop"</Code>", "<Code inline=true>"ModalContent"</Code>" and "
+                            <Code inline=true>"Dialog"</Code>" with the complete behavior \u{2014} portal, focus trap and "
+                            "restore, dismissal, scroll lock, labelling \u{2014} but no styles. For modals in your own design."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::modal::Component.materialize()>"Modal component"</Link></TableCell>
+                        <TableCell>"The atoms with leptonic\u{2019}s theme: a styled modal with header, body and footer."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+            <Section title="Quick Start">
+                <p>
+                    "The component is the quickest way to a modal. It is bound to your open state ("
+                    <Code inline=true>"state=(read, write)"</Code>" or an "<Code inline=true>"RwSignal<bool>"</Code>
+                    "), and dismissing it sets that state to "<Code inline=true>"false"</Code>". To style the modal yourself, "
+                    "build it from the "<Link href=routes::doc::modal::Atom.materialize()>"atoms"</Link>" instead; they "
+                    "bind the same open state, or a "<Code inline=true>"DialogTrigger"</Code>" around a button and the "
+                    "modal owns it for you."
+                </p>
 
-            <ul>
-                <li><Link href=routes::doc::modal::Hook.materialize()>"Hook: use_modal"</Link></li>
-                <li><Link href=routes::doc::modal::Component.materialize()>"Component: Modal"</Link></li>
-            </ul>
+                <Demo description="Modal dialog opened by a button" source=include_str!("demos/modal.rs") source_open=true>
+                    <ModalConceptDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>
+                    "Modals follow the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/" target=LinkTarget::_Blank>"Dialog (Modal) pattern"</LinkExt>
+                    ". Focus moves into the modal when it opens, stays inside while it is open and returns to where it was "
+                    "when it closes."
+                </p>
 
-            <p>"The simplest way to use a modal (component layer):"</p>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"dialog\""</Code>", or "<Code inline=true>"\"alertdialog\""</Code>
+                        " for messages that require a response."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-modal=\"true\""</Code>" tells assistive technology to ignore the content "
+                        "behind the modal, which is also made inert."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-labelledby"</Code>" points to the title, which names the dialog as soon as "
+                        "you render it (the component\u{2019}s "<Code inline=true>"ModalTitle"</Code>"). An alert dialog is "
+                        "also described by its message ("<Code inline=true>"aria-describedby"</Code>")."
+                    </li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let (show_modal, set_show_modal) = signal(false);
-
-                    <Button on_press=move |_| set_show_modal.set(true)>"Open Modal"</Button>
-
-                    <Modal show_when=show_modal on_close=move |()| set_show_modal.set(false)>
-                        <ModalHeader><ModalTitle>"Confirm"</ModalTitle></ModalHeader>
-                        <ModalBody>"Are you sure?"</ModalBody>
-                        <ModalFooter>
-                            <ButtonWrapper>
-                                <Button on_press=move |_| set_show_modal.set(false)
-                                    color=ButtonColor::Secondary>
-                                    "Close"
-                                </Button>
-                            </ButtonWrapper>
-                        </ModalFooter>
-                    </Modal>
-                "#)}
-            </Code>
-
-            <DemoShell description="Modal dialog with trigger button" source=include_str!("demos/modal.rs")>
-                <ModalConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic modals follow the WAI-ARIA Dialog (Modal) pattern. "
-                "Focus is automatically trapped within the modal while it is open."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"dialog\""</Code>" \u{2014} or "<Code inline=true>"\"alertdialog\""</Code>" for critical prompts"</li>
-                <li><Code inline=true>"aria-modal=\"true\""</Code>" \u{2014} tells assistive technology to ignore content behind the modal"</li>
-                <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} points to the modal's title element"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Closes the modal"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Tab"</Code></TableCell>
-                            <TableCell>"Cycles focus within the modal (focus is trapped)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Shift+Tab"</Code></TableCell>
-                            <TableCell>"Cycles focus backward within the modal"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Modal", link: "#modal" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Escape">"Closes the modal."</KeyRow>
+                    <KeyRow keys="Tab">"Moves focus to the next element inside the modal."</KeyRow>
+                    <KeyRow keys="Shift + Tab">"Moves focus to the previous element inside the modal."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

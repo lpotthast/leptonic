@@ -55,7 +55,7 @@ pub struct CollatorOptions {
 /// # Example
 ///
 /// ```ignore
-/// let collator = Collator::new(&Locale::new("en-US"), &CollatorOptions::default());
+/// let collator = Collator::new(&Locale::from(locale!("en-US")), &CollatorOptions::default());
 /// let ordering = collator.compare("apple", "banana");
 /// assert_eq!(ordering, Ordering::Less);
 /// ```
@@ -111,7 +111,7 @@ fn normalize_nfc(s: &str) -> String {
 /// # Example
 ///
 /// ```ignore
-/// let filter = Filter::new(&Locale::new("en-US"), &CollatorOptions::default());
+/// let filter = Filter::new(&Locale::from(locale!("en-US")), &CollatorOptions::default());
 ///
 /// assert!(filter.contains("café", "cafe"));   // base sensitivity: accent-insensitive
 /// assert!(filter.starts_with("Hello", "hello")); // base sensitivity: case-insensitive
@@ -234,14 +234,16 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::utils::i18n::locale;
 
     fn default_filter(locale_str: &str) -> Filter {
-        Filter::new(&Locale::new(locale_str), &CollatorOptions::default())
+        let locale: Locale = locale_str.parse().expect("test locales are valid");
+        Filter::new(&locale, &CollatorOptions::default())
     }
 
     #[test]
     fn test_collator_basic_ordering() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let collator = Collator::new(&locale, &CollatorOptions::default());
         assert_that!(collator.compare("apple", "banana")).is_equal_to(Ordering::Less);
         assert_that!(collator.compare("banana", "apple")).is_equal_to(Ordering::Greater);
@@ -250,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_collator_case_insensitive_with_base_sensitivity() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let collator = Collator::new(
             &locale,
             &CollatorOptions {
@@ -263,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_collator_accent_insensitive_with_base_sensitivity() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let collator = Collator::new(
             &locale,
             &CollatorOptions {

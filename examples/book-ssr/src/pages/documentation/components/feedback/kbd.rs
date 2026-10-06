@@ -1,109 +1,121 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, utils::key::Key};
+use leptonic::{components::prelude::*, utils::key::KeyboardKey};
 use leptos::prelude::*;
 
-use super::demos::kbd_custom::KbdCustomDemo;
-use super::demos::kbd_manual::KbdManualDemo;
-use super::demos::kbd_shortcut::KbdShortcutDemo;
-use super::demos::kbd_single::KbdSingleDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    kbd_custom::KbdCustomDemo, kbd_manual::KbdManualDemo, kbd_shortcut::KbdShortcutDemo,
+    kbd_single::KbdSingleDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageKbd() -> impl IntoView {
-    let known_keys = Key::known_keys();
-
     view! {
-        <Article>
-            <h1 id="keyboard" class="anchor">
-                "Keyboard"
-                <AnchorLink href="#keyboard" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Kbd">
             <p>
-                "Display labeled keyboard key-caps using the "<Code inline=true>"<KbdKey>"</Code>" component."
-                " Leptonic provides the "<Code inline=true>"Key"</Code>" enum which provides well-known keys and their display properties."
+                "The "<Code inline=true>"KbdKey"</Code>" component renders a labeled key cap in a "
+                <Code inline=true>"<kbd>"</Code>" element. The "<Code inline=true>"KeyboardKey"</Code>
+                " enum lists well-known keys and their labels."
             </p>
 
-            <DemoShell source=include_str!("demos/kbd_single.rs")>
-                <KbdSingleDemo />
-            </DemoShell>
+            <Demo description="Key cap of the Option key" source=include_str!("demos/kbd_single.rs")>
+                <KbdSingleDemo/>
+            </Demo>
 
-            <h2 id="shortcuts" class="anchor">
-                "Shortcuts"
-                <AnchorLink href="#shortcuts" description="Direct link to section: Shortcuts"/>
-            </h2>
+            <Section title="Props">
+                <Section title="KbdKey">
+                    <ApiTable kind=ApiKind::Props of="KbdKey">
+                        <ApiRow name="key" ty="KeyboardKey">"The key to display. Required."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>
-                "You may use this component to display a hint to a keyboard shortcut your users can use to interact with your app."
-                " As shortcuts mostly consist of two or more keys, Leptonic also provide the "<Code inline=true>"<KbdShortcut>"</Code>
-                " component to make this task as easy as possible. Simply provide the keys which must be pressed in order to activate the shortcut."
-            </p>
+                <Section title="KbdShortcut">
+                    <ApiTable kind=ApiKind::Props of="KbdShortcut">
+                        <ApiRow name="keys" ty="[KeyboardKey; N]">"The keys of the shortcut, in order. Required."</ApiRow>
+                        <ApiRow name="concatenate_with" ty="Option<Cow<'static, str>>" default="None">
+                            "Text between two keys. "<Code inline=true>"None"</Code>" means "<Code inline=true>"\"+\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles of the outer "<Code inline=true>"<kbd>"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>"Note that these component do not listen for key-presses. Their sole purpose is to unify rendering of key caps and shortcuts!"</p>
+                <Section title="KbdShortcutRoot">
+                    <ApiTable kind=ApiKind::Props of="KbdShortcutRoot">
+                        <ApiRow name="children" ty="Children">"The keys and separators of the shortcut."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <DemoShell source=include_str!("demos/kbd_shortcut.rs")>
-                <KbdShortcutDemo />
-            </DemoShell>
+                <Section title="KbdConcatenate">
+                    <ApiTable kind=ApiKind::Props of="KbdConcatenate">
+                        <ApiRow name="with" ty="Option<Cow<'static, str>>" default="None">
+                            "The separator text. "<Code inline=true>"None"</Code>" means "<Code inline=true>"\"+\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <p>"This could also be rendered manually using the following markup."</p>
+            <Section title="Shortcuts">
+                <p>
+                    "Use these components to hint at keyboard shortcuts of your app. As shortcuts usually consist of "
+                    "two or more keys, "<Code inline=true>"KbdShortcut"</Code>" renders a whole combination from the keys "
+                    "that must be pressed."
+                </p>
+                <p>
+                    "These components only display keys. They don\u{2019}t listen for key presses; handle the shortcut "
+                    "itself in your app."
+                </p>
 
-            <DemoShell source=include_str!("demos/kbd_manual.rs")>
-                <KbdManualDemo />
-            </DemoShell>
+                <Demo description="Shortcut Command + Enter" source=include_str!("demos/kbd_shortcut.rs")>
+                    <KbdShortcutDemo/>
+                </Demo>
 
-            <h2 id="keys" class="anchor">
-                "Keys"
-                <AnchorLink href="#keys" description="Direct link to section: Keys"/>
-            </h2>
+                <p>
+                    "The same shortcut, built by hand from "<Code inline=true>"KbdShortcutRoot"</Code>", "
+                    <Code inline=true>"KbdKey"</Code>" and "<Code inline=true>"KbdConcatenate"</Code>
+                    ". Use this when you need control over the individual parts."
+                </p>
 
-            <p>"Here is a list of all keys provided by the "<Code inline=true>"Key"</Code>" enum."</p>
+                <Demo description="Shortcut Command + Enter composed by hand" source=include_str!("demos/kbd_manual.rs")>
+                    <KbdManualDemo/>
+                </Demo>
+            </Section>
 
-            {
-                known_keys
-                    .map(|key| view! {
-                        <KbdKey key/>
-                    })
-                    .collect_view()
-            }
+            <Section title="Keys">
+                <p>"These are all keys of the "<Code inline=true>"KeyboardKey"</Code>" enum, with their labels:"</p>
 
-            <p>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Other(Cow::Borrowed(...))"</Code>" variant."</p>
+                <Demo description="All keys of the KeyboardKey enum">
+                    <div class="demo-clf-wrap">
+                        {KeyboardKey::known_keys().map(|key| view! { <KbdKey key/> }).collect_view()}
+                    </div>
+                </Demo>
 
-            <DemoShell source=include_str!("demos/kbd_custom.rs")>
-                <KbdCustomDemo />
-            </DemoShell>
+                <p>
+                    "For any other content, use the "<Code inline=true>"KeyboardKey::Other(Cow<'static, str>)"</Code>" variant."
+                </p>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+                <Demo description="Key cap with custom text" source=include_str!("demos/kbd_custom.rs")>
+                    <KbdCustomDemo/>
+                </Demo>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt key caps to your design:"</p>
+                <CssVariables prefix="--leptonic-kbd-" scss=theme_scss!("kbd")/>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --leptonic-kbd-key-color
-                    --leptonic-kbd-key-background-color
-                    --leptonic-kbd-key-margin
-                    --leptonic-kbd-key-padding
-                    --leptonic-kbd-key-border-radius
-                    --leptonic-kbd-key-border-color
-                    --leptonic-kbd-concatenate-color
-                    --leptonic-kbd-concatenate-background-color
-                    --leptonic-kbd-concatenate-margin
-                    --leptonic-kbd-concatenate-padding
-                    --leptonic-kbd-concatenate-border-radius
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Keyboard", link: "#keyboard" },
-                Toc::Leaf { title: "Shortcuts", link: "#shortcuts" },
-                Toc::Leaf { title: "Keys", link: "#keys" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

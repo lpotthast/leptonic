@@ -1,13 +1,14 @@
 // Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 6f664fe911
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useNumberFormatter.ts
 
+use fixed_decimal::{Decimal, Sign, SignedRoundingMode, UnsignedRoundingMode};
 use icu_decimal::{DecimalFormatter, options::DecimalFormatterOptions};
 use icu_locale::Locale as IcuLocale;
 
-use super::i18n::Locale;
+use super::{i18n::Locale, number_value::NumberValue};
 
-/// Number formatting options.
-#[derive(Debug, Clone, Default)]
+/// Number formatting options (as `Intl.NumberFormatOptions`).
+#[derive(Debug, Clone, PartialEq)]
 pub struct NumberFormatOptions {
     /// The formatting style. Default is "decimal".
     pub style: NumberStyle,
@@ -18,10 +19,10 @@ pub struct NumberFormatOptions {
     /// How to display the currency. Default is "symbol".
     pub currency_display: CurrencyDisplay,
 
-    /// Whether to use grouping separators (e.g., thousands separators).
+    /// Whether to use grouping separators (e.g., thousands separators). Default: `true`.
     pub use_grouping: bool,
 
-    /// The minimum number of integer digits to use.
+    /// The minimum number of integer digits to use (padded with zeros).
     pub minimum_integer_digits: Option<u32>,
 
     /// The minimum number of fraction digits to use.
@@ -30,7 +31,8 @@ pub struct NumberFormatOptions {
     /// The maximum number of fraction digits to use.
     pub maximum_fraction_digits: Option<u32>,
 
-    /// The minimum number of significant digits to use.
+    /// The minimum number of significant digits to use. With either significant digit option,
+    /// the fraction digit options are ignored (as `Intl.NumberFormat`).
     pub minimum_significant_digits: Option<u32>,
 
     /// The maximum number of significant digits to use.
@@ -44,12 +46,25 @@ pub struct NumberFormatOptions {
 
     /// How to display the sign. Default is "auto".
     pub sign_display: SignDisplay,
+}
 
-    /// The notation to use. Default is "standard".
-    pub notation: Notation,
-
-    /// How to display compact notation. Default is "short".
-    pub compact_display: CompactDisplay,
+impl Default for NumberFormatOptions {
+    fn default() -> Self {
+        Self {
+            style: NumberStyle::default(),
+            currency: None,
+            currency_display: CurrencyDisplay::default(),
+            use_grouping: true,
+            minimum_integer_digits: None,
+            minimum_fraction_digits: None,
+            maximum_fraction_digits: None,
+            minimum_significant_digits: None,
+            maximum_significant_digits: None,
+            unit: None,
+            unit_display: UnitDisplay::default(),
+            sign_display: SignDisplay::default(),
+        }
+    }
 }
 
 /// Number formatting styles.
@@ -106,30 +121,6 @@ pub enum SignDisplay {
     Never,
 }
 
-/// Number notation options.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Notation {
-    /// Standard notation.
-    #[default]
-    Standard,
-    /// Scientific notation (e.g., "1.23E4").
-    Scientific,
-    /// Engineering notation (e.g., "12.3E3").
-    Engineering,
-    /// Compact notation (e.g., "12K").
-    Compact,
-}
-
-/// Compact display options.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum CompactDisplay {
-    /// Short compact display (e.g., "12K").
-    #[default]
-    Short,
-    /// Long compact display (e.g., "12 thousand").
-    Long,
-}
-
 /// A locale-aware number formatter backed by ICU4X.
 ///
 /// Uses `icu_decimal::DecimalFormatter` for locale-aware grouping
@@ -151,81 +142,86 @@ impl NumberFormatter {
         }
     }
 
-    /// Formats a number according to the formatter's options.
+    /// Formats a number according to the formatter's options. Empty for infinite and NaN floats.
     #[must_use]
-    pub fn format(&self, value: f64) -> String {
+    pub fn format<T: NumberValue>(&self, value: T) -> String {
+        let Some(decimal) = value.to_decimal() else {
+            return String::new();
+        };
         match self.options.style {
-            NumberStyle::Percent => self.format_percent(value),
-            NumberStyle::Currency => self.format_currency(value),
-            NumberStyle::Unit => self.format_unit(value),
-            NumberStyle::Decimal => self.format_decimal(value),
+            NumberStyle::Percent => self.format_percent(decimal),
+            NumberStyle::Currency => self.format_currency(decimal),
+            NumberStyle::Unit => self.format_unit(decimal),
+            NumberStyle::Decimal => self.format_decimal(decimal),
         }
     }
 
-    /// Formats a number as a decimal with locale-aware separators.
-    #[must_use]
-    pub fn format_decimal(&self, value: f64) -> String {
-        let min_frac = self.options.minimum_fraction_digits.unwrap_or(0);
-        let max_frac = self.options.maximum_fraction_digits.unwrap_or(3);
-
-        let raw = if max_frac == 0 {
-            format!("{value:.0}")
+    /// Applies the digit options: significant digits if set, else fraction digits (`min` and
+    /// `max` are the style's defaults), rounding half away from zero (as `Intl.NumberFormat`);
+    /// then the minimum integer digits.
+    fn with_digits(&self, mut decimal: Decimal, min: u32, max: u32) -> Decimal {
+        let to_i16 = |digits: u32| i16::try_from(digits).unwrap_or(i16::MAX);
+        let half_expand = SignedRoundingMode::Unsigned(UnsignedRoundingMode::HalfExpand);
+        let options = &self.options;
+        if options.minimum_significant_digits.is_some()
+            || options.maximum_significant_digits.is_some()
+        {
+            let min = options.minimum_significant_digits.unwrap_or(1).max(1);
+            let max = options.maximum_significant_digits.unwrap_or(21).max(min);
+            let first = |d: &Decimal| d.absolute.nonzero_magnitude_start();
+            decimal.round_with_mode(first(&decimal) - to_i16(max) + 1, half_expand);
+            decimal.absolute.trim_end();
+            let position = (first(&decimal) - to_i16(min) + 1).min(0);
+            decimal.absolute.pad_end(position);
         } else {
-            let prec = max_frac as usize;
-            let full = format!("{value:.prec$}");
-            trim_fraction_digits(&full, min_frac as usize)
-        };
-
-        if self.options.use_grouping {
-            self.format_with_icu_grouping(&raw)
-        } else {
-            self.format_with_icu_no_grouping(&raw)
+            let min = options.minimum_fraction_digits.unwrap_or(min);
+            let max = options.maximum_fraction_digits.unwrap_or(max).max(min);
+            decimal.round_with_mode(-to_i16(max), half_expand);
+            decimal.absolute.trim_end();
+            decimal.absolute.pad_end(-to_i16(min));
         }
+        if let Some(digits) = options.minimum_integer_digits {
+            decimal.absolute.pad_start(to_i16(digits));
+        }
+        decimal
     }
 
-    /// Formats a number as a percentage.
-    #[must_use]
-    pub fn format_percent(&self, value: f64) -> String {
-        let percent_value = value * 100.0;
-        let min_frac = self.options.minimum_fraction_digits.unwrap_or(0);
-        let max_frac = self.options.maximum_fraction_digits.unwrap_or(0);
+    /// Sets the sign of `decimal` as the sign display shows it.
+    fn apply_sign_display(&self, decimal: &mut Decimal) {
+        decimal.apply_sign_display(match self.options.sign_display {
+            SignDisplay::Auto => fixed_decimal::SignDisplay::Auto,
+            SignDisplay::Always => fixed_decimal::SignDisplay::Always,
+            SignDisplay::ExceptZero => fixed_decimal::SignDisplay::ExceptZero,
+            SignDisplay::Never => fixed_decimal::SignDisplay::Never,
+        });
+    }
 
-        let raw = if max_frac == 0 {
-            format!("{percent_value:.0}")
-        } else {
-            let prec = max_frac as usize;
-            let full = format!("{percent_value:.prec$}");
-            trim_fraction_digits(&full, min_frac as usize)
-        };
+    fn format_decimal(&self, decimal: Decimal) -> String {
+        let mut decimal = self.with_digits(decimal, 0, 3);
+        self.apply_sign_display(&mut decimal);
+        self.format_with_icu(&decimal)
+    }
 
-        let formatted = if self.options.use_grouping {
-            self.format_with_icu_grouping(&raw)
-        } else {
-            self.format_with_icu_no_grouping(&raw)
-        };
-
+    fn format_percent(&self, mut decimal: Decimal) -> String {
+        decimal.absolute.multiply_pow10(2);
+        decimal.absolute.trim_start();
+        let mut decimal = self.with_digits(decimal, 0, 0);
+        self.apply_sign_display(&mut decimal);
+        let formatted = self.format_with_icu(&decimal);
         format!("{formatted}%")
     }
 
-    /// Formats a number as currency.
-    #[must_use]
-    pub fn format_currency(&self, value: f64) -> String {
+    fn format_currency(&self, decimal: Decimal) -> String {
         let currency = self.options.currency.as_deref().unwrap_or("USD");
-        let min_frac = self.options.minimum_fraction_digits.unwrap_or(2);
-        let max_frac = self.options.maximum_fraction_digits.unwrap_or(2);
-
-        let abs_value = value.abs();
-        let prec = max_frac as usize;
-        let raw = format!("{abs_value:.prec$}");
-        let raw = trim_fraction_digits(&raw, min_frac as usize);
-
-        let formatted = if self.options.use_grouping {
-            self.format_with_icu_grouping(&raw)
-        } else {
-            self.format_with_icu_no_grouping(&raw)
+        let mut decimal = self.with_digits(decimal, 2, 2);
+        self.apply_sign_display(&mut decimal);
+        let sign = match decimal.sign {
+            Sign::Negative => "-",
+            Sign::Positive => "+",
+            Sign::None => "",
         };
-
-        let sign = if value < 0.0 { "-" } else { "" };
+        decimal.sign = Sign::None;
+        let formatted = self.format_with_icu(&decimal);
         let symbol = get_currency_symbol(currency);
 
         match self.options.currency_display {
@@ -240,11 +236,9 @@ impl NumberFormatter {
         }
     }
 
-    /// Formats a number with a unit.
-    #[must_use]
-    pub fn format_unit(&self, value: f64) -> String {
+    fn format_unit(&self, decimal: Decimal) -> String {
         let unit = self.options.unit.as_deref().unwrap_or("unit");
-        let formatted = self.format_decimal(value);
+        let formatted = self.format_decimal(decimal);
 
         match self.options.unit_display {
             UnitDisplay::Narrow => format!("{formatted}{unit}"),
@@ -253,60 +247,19 @@ impl NumberFormatter {
         }
     }
 
-    /// Uses ICU4X `DecimalFormatter` to apply locale-aware grouping and decimal separators.
-    fn format_with_icu_grouping(&self, raw_number: &str) -> String {
+    /// Applies the locale's separators (and grouping, if enabled) with ICU4X.
+    fn format_with_icu(&self, decimal: &Decimal) -> String {
         let mut options = DecimalFormatterOptions::default();
-        options.grouping_strategy = Some(icu_decimal::options::GroupingStrategy::Auto);
-        self.format_with_icu(raw_number, options)
-    }
-
-    /// Uses ICU4X `DecimalFormatter` to apply locale-aware decimal separator without grouping.
-    fn format_with_icu_no_grouping(&self, raw_number: &str) -> String {
-        let mut options = DecimalFormatterOptions::default();
-        options.grouping_strategy = Some(icu_decimal::options::GroupingStrategy::Never);
-        self.format_with_icu(raw_number, options)
-    }
-
-    fn format_with_icu(&self, raw_number: &str, options: DecimalFormatterOptions) -> String {
+        options.grouping_strategy = Some(if self.options.use_grouping {
+            icu_decimal::options::GroupingStrategy::Auto
+        } else {
+            icu_decimal::options::GroupingStrategy::Never
+        });
         let prefs = icu_decimal::DecimalFormatterPreferences::from(&self.locale);
-
-        let Ok(formatter) = DecimalFormatter::try_new(prefs, options) else {
-            return raw_number.to_string();
-        };
-
-        // Parse the raw number string into a Decimal.
-        // raw_number is something like "1234.56" or "-1234" (always with '.' as decimal separator).
-        let Ok(decimal) = raw_number.parse::<icu_decimal::input::Decimal>() else {
-            return raw_number.to_string();
-        };
-
-        formatter.format(&decimal).to_string()
-    }
-}
-
-fn trim_fraction_digits(s: &str, min_digits: usize) -> String {
-    if let Some(dot_pos) = s.find('.') {
-        let (integer, fraction) = s.split_at(dot_pos);
-        let fraction = &fraction[1..]; // Remove the dot
-
-        if min_digits == 0 && fraction.chars().all(|c| c == '0') {
-            return integer.to_string();
+        match DecimalFormatter::try_new(prefs, options) {
+            Ok(formatter) => formatter.format(decimal).to_string(),
+            Err(_) => decimal.to_string(),
         }
-
-        let trimmed = fraction.trim_end_matches('0');
-        let final_frac = if trimmed.len() < min_digits {
-            format!("{trimmed:0<min_digits$}")
-        } else {
-            trimmed.to_string()
-        };
-
-        if final_frac.is_empty() {
-            integer.to_string()
-        } else {
-            format!("{integer}.{final_frac}")
-        }
-    } else {
-        s.to_string()
     }
 }
 
@@ -339,18 +292,22 @@ fn get_currency_name(currency: &str) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use super::*;
+    use crate::utils::i18n::locale;
 
     #[test]
     fn test_number_formatter_decimal() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let formatter = NumberFormatter::new(&locale, NumberFormatOptions::default());
-        assert_eq!(formatter.format(1234.567), "1234.567");
+        // Grouped by default, as `Intl.NumberFormat`.
+        assert_that!(formatter.format(1234.567)).is_equal_to("1,234.567".to_owned());
     }
 
     #[test]
     fn test_number_formatter_percent() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let formatter = NumberFormatter::new(
             &locale,
             NumberFormatOptions {
@@ -358,12 +315,12 @@ mod tests {
                 ..Default::default()
             },
         );
-        assert_eq!(formatter.format(0.75), "75%");
+        assert_that!(formatter.format(0.75)).is_equal_to("75%".to_owned());
     }
 
     #[test]
     fn test_number_formatter_currency() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let formatter = NumberFormatter::new(
             &locale,
             NumberFormatOptions {
@@ -373,12 +330,12 @@ mod tests {
                 ..Default::default()
             },
         );
-        assert_eq!(formatter.format(1234.56), "$1,234.56");
+        assert_that!(formatter.format(1234.56)).is_equal_to("$1,234.56".to_owned());
     }
 
     #[test]
     fn test_number_formatter_grouping() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let formatter = NumberFormatter::new(
             &locale,
             NumberFormatOptions {
@@ -387,12 +344,12 @@ mod tests {
                 ..Default::default()
             },
         );
-        assert_eq!(formatter.format(1_234_567.0), "1,234,567");
+        assert_that!(formatter.format(1_234_567.0)).is_equal_to("1,234,567".to_owned());
     }
 
     #[test]
     fn test_number_formatter_german_locale() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         let formatter = NumberFormatter::new(
             &locale,
             NumberFormatOptions {
@@ -403,12 +360,12 @@ mod tests {
             },
         );
         // German uses '.' for grouping and ',' for decimal
-        assert_eq!(formatter.format(1234.56), "1.234,56");
+        assert_that!(formatter.format(1234.56)).is_equal_to("1.234,56".to_owned());
     }
 
     #[test]
     fn test_number_formatter_no_grouping_german() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         let formatter = NumberFormatter::new(
             &locale,
             NumberFormatOptions {
@@ -419,6 +376,56 @@ mod tests {
             },
         );
         // German uses ',' for decimal, no grouping
-        assert_eq!(formatter.format(1234.56), "1234,56");
+        assert_that!(formatter.format(1234.56)).is_equal_to("1234,56".to_owned());
+    }
+
+    #[test]
+    fn digit_and_sign_options() {
+        let format = |options: NumberFormatOptions, value: f64| {
+            NumberFormatter::new(&Locale::from(locale!("en-US")), options).format(value)
+        };
+        let significant = NumberFormatOptions {
+            maximum_significant_digits: Some(3),
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(significant.clone(), 1234.5)).is_equal_to("1,230".to_owned());
+        assert_that!(format(significant, 0.012_345)).is_equal_to("0.0123".to_owned());
+        let padded = NumberFormatOptions {
+            minimum_significant_digits: Some(3),
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(padded, 1.0)).is_equal_to("1.00".to_owned());
+        let integer_digits = NumberFormatOptions {
+            minimum_integer_digits: Some(3),
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(integer_digits, 7.5)).is_equal_to("007.5".to_owned());
+        let always = NumberFormatOptions {
+            sign_display: SignDisplay::Always,
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(always, 5.0)).is_equal_to("+5".to_owned());
+        let never = NumberFormatOptions {
+            sign_display: SignDisplay::Never,
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(never, -5.0)).is_equal_to("5".to_owned());
+        // Half away from zero.
+        let rounded = NumberFormatOptions {
+            maximum_fraction_digits: Some(0),
+            ..NumberFormatOptions::default()
+        };
+        assert_that!(format(rounded.clone(), 2.5)).is_equal_to("3".to_owned());
+        assert_that!(format(rounded, -2.5)).is_equal_to("-3".to_owned());
+    }
+
+    #[test]
+    fn integers_format_exactly() {
+        let formatter = NumberFormatter::new(
+            &Locale::from(locale!("en-US")),
+            NumberFormatOptions::default(),
+        );
+        assert_that!(formatter.format(u128::MAX))
+            .is_equal_to("340,282,366,920,938,463,463,374,607,431,768,211,455".to_owned());
     }
 }

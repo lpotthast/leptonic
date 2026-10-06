@@ -8,7 +8,9 @@ use leptos::{
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
-    hooks::{IntoAttrs, UseFocusableProps, UsePressProps},
+    hooks::{
+        FocusableContextAttr, FocusableContextAttrs, IntoAttrs, UseFocusableProps, UsePressProps,
+    },
     utils::{ElementCaptureAttr, EventHandler, MergeWith, aria::AriaDescribedby},
 };
 
@@ -32,7 +34,8 @@ use crate::{
 #[derive(Debug)]
 pub struct MergedFocusablePressProps {
     pub tabindex: Signal<Option<i32>>,
-    pub aria_describedby: Option<AriaDescribedby>,
+    /// The press's long press description and the focusable context's description.
+    pub aria_describedby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
@@ -44,6 +47,8 @@ pub struct MergedFocusablePressProps {
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_pointerup: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
+    /// The focusable context's further attributes.
+    pub context_attrs: Option<FocusableContextAttrs>,
 }
 
 /// Attribute tuple type for [`MergedFocusablePressProps`].
@@ -51,7 +56,7 @@ pub struct MergedFocusablePressProps {
 /// Spread this onto elements: `<button {..attrs}/>`
 pub type MergedFocusablePressAttrs = (
     Attr<attr::Tabindex, Signal<Option<i32>>>,
-    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
@@ -63,6 +68,7 @@ pub type MergedFocusablePressAttrs = (
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
+    FocusableContextAttr,
 );
 
 impl IntoAttrs for MergedFocusablePressProps {
@@ -83,6 +89,7 @@ impl IntoAttrs for MergedFocusablePressProps {
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
             self.on_dragstart.into_on(ev::dragstart),
+            FocusableContextAttr(self.context_attrs),
         )
     }
 }
@@ -98,6 +105,8 @@ impl MergeWith<UsePressProps> for UseFocusableProps {
             on_keydown: focusable_on_keydown,
             on_keyup: focusable_on_keyup,
             element_capture: focusable_element_capture,
+            context_aria_describedby,
+            context_attrs,
         } = self;
 
         let UsePressProps {
@@ -113,7 +122,7 @@ impl MergeWith<UsePressProps> for UseFocusableProps {
 
         MergedFocusablePressProps {
             tabindex: focusable_tabindex,
-            aria_describedby: press_aria_describedby,
+            aria_describedby: merge_describedby(press_aria_describedby, context_aria_describedby),
             element_capture: focusable_element_capture,
             on_keydown: focusable_on_keydown.chain(press_on_keydown),
             on_keyup: focusable_on_keyup,
@@ -125,8 +134,28 @@ impl MergeWith<UsePressProps> for UseFocusableProps {
             on_mousedown: press_on_mousedown,
             on_pointerup: press_on_pointerup,
             on_dragstart: press_on_dragstart,
+            context_attrs,
         }
     }
+}
+
+/// The press's description followed by another one.
+pub(crate) fn merge_describedby(
+    press: Signal<Option<AriaDescribedby>>,
+    other: Signal<Option<String>>,
+) -> Signal<Option<String>> {
+    Signal::derive(move || {
+        let ids: Vec<String> = press
+            .with(|d| {
+                d.as_ref()
+                    .map(|d| d.ids().map(str::to_owned).collect::<Vec<_>>())
+            })
+            .unwrap_or_default()
+            .into_iter()
+            .chain(other.get())
+            .collect();
+        (!ids.is_empty()).then(|| ids.join(" "))
+    })
 }
 
 impl MergeWith<UseFocusableProps> for UsePressProps {

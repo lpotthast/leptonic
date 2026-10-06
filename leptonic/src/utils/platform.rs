@@ -83,15 +83,6 @@ pub mod browser {
         user_agent.contains("Chrome")
     }
 
-    /// Returns `true` if the current browser is Firefox.
-    pub fn is_firefox() -> bool {
-        user_agent().as_deref().is_some_and(_is_firefox)
-    }
-
-    fn _is_firefox(user_agent: &str) -> bool {
-        user_agent.contains("Firefox")
-    }
-
     /// Returns `true` if the current browser is apple `WebKit`-based (Safari) but not Chrome.
     pub fn is_webkit() -> bool {
         user_agent().as_deref().is_some_and(_is_webkit)

@@ -14,9 +14,9 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
     hooks::{
-        FocusHandle, HoverEndEvent, HoverStartEvent, IntoAttrs, LinkTarget, LongPressEvent,
-        PressEvent, PropsWithStyles, UseFocusRingReturn, UseFocusableReturn, UseHoverReturn,
-        UsePressReturn,
+        FocusHandle, FocusableContextAttr, FocusableContextAttrs, HoverEndEvent, HoverStartEvent,
+        IntoAttrs, LinkTarget, LongPressEvent, PressEvent, PropsWithStyles, UseFocusRingReturn,
+        UseFocusableReturn, UseHoverReturn, UsePressReturn,
         focus::{
             use_focus_ring::{UseFocusRingInput, use_focus_ring},
             use_focusable::{UseFocusableInput, use_focusable},
@@ -30,7 +30,7 @@ use crate::{
     utils::{
         ElementCaptureAttr, EventHandler,
         aria::{
-            AriaCurrent, AriaDescribedby, AriaDisabled, AriaExpanded, AriaHasPopup, AriaPressed,
+            AriaChecked, AriaCurrent, AriaDisabled, AriaExpanded, AriaHasPopup, AriaPressed,
             AriaRole,
         },
         keyboard_shortcut::KeyboardShortcuts,
@@ -44,7 +44,7 @@ use crate::{
 // =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
-// - Hover and focus-visible tracking are built in (`is_hovered`, `is_focus_visible`,
+// - Hover and focus tracking are built in (`is_hovered`, `is_focused`, `is_focus_visible`,
 //   `data-focus-visible`). React-aria leaves this to the `Button` component of
 //   react-aria-components, which combines `useButton`, `useHover` and `useFocusRing`. Every
 //   leptonic button needs them, so the hook provides them.
@@ -143,13 +143,13 @@ pub struct UseButtonInput {
     pub id: Option<Oco<'static, str>>,
 
     /// An accessible name, for buttons without visible text (e.g. icon buttons).
-    pub aria_label: Option<Oco<'static, str>>,
+    pub aria_label: MaybeProp<String>,
 
     /// The id(s) of the element(s) naming the button.
     pub aria_labelledby: Option<Oco<'static, str>>,
 
     /// Whether the button is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Keep the button focusable (but out of the tab order) while disabled.
     pub allow_focus_when_disabled: bool,
@@ -181,8 +181,15 @@ pub struct UseButtonInput {
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// The id(s) of the element(s) the button controls.
     pub aria_controls: Signal<Option<String>>,
+    /// The id(s) of the element(s) describing the button.
+    pub aria_describedby: Signal<Option<String>>,
     /// The pressed state of a toggle button.
     pub aria_pressed: Signal<Option<AriaPressed>>,
+    /// `aria-checked`, for buttons acting as checkable items (e.g. `role="radio"`).
+    pub aria_checked: Signal<Option<AriaChecked>>,
+    /// Overrides the element's role (e.g. `radio` for the buttons of a single-selection toggle
+    /// button group).
+    pub role: Option<AriaRole>,
     /// Whether the button represents the current item of a set.
     pub aria_current: Signal<Option<AriaCurrent>>,
 
@@ -220,6 +227,8 @@ pub struct UseButtonReturn {
     pub props: PropsWithStyles<UseButtonProps>,
     pub is_pressed: Signal<bool>,
     pub is_hovered: Signal<bool>,
+    /// Whether the button is focused.
+    pub is_focused: Signal<bool>,
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
     /// Programmatic focus.
@@ -230,7 +239,7 @@ pub struct UseButtonReturn {
 #[derive(Debug)]
 pub struct UseButtonProps {
     pub id: Option<Oco<'static, str>>,
-    pub aria_label: Option<Oco<'static, str>>,
+    pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<Oco<'static, str>>,
     pub role: Option<AriaRole>,
     pub button_type: Option<&'static str>,
@@ -245,8 +254,9 @@ pub struct UseButtonProps {
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_controls: Signal<Option<String>>,
     pub aria_pressed: Signal<Option<AriaPressed>>,
+    pub aria_checked: Signal<Option<AriaChecked>>,
     pub aria_current: Signal<Option<AriaCurrent>>,
-    pub aria_describedby: Option<AriaDescribedby>,
+    pub aria_describedby: Signal<Option<String>>,
     pub data_focus_visible: Signal<Option<&'static str>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -261,6 +271,8 @@ pub struct UseButtonProps {
     pub on_dragstart: EventHandler<DragEvent>,
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
+    /// A `FocusableContext`'s further attributes (e.g. a tooltip trigger's pointer handlers).
+    pub context_attrs: Option<FocusableContextAttrs>,
 }
 
 /// Attributes of [`UseButtonProps`], spreadable with `{..attrs}`.
@@ -286,15 +298,16 @@ pub type UseButtonAttrs = (
         Attr<attr::Value, Option<Oco<'static, str>>>,
     ),
     (
-        Attr<attr::AriaLabel, Option<Oco<'static, str>>>,
+        Attr<attr::AriaLabel, MaybeProp<String>>,
         Attr<attr::AriaLabelledby, Option<Oco<'static, str>>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
         Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
         Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
         Attr<attr::AriaControls, Signal<Option<String>>>,
         Attr<attr::AriaPressed, Signal<Option<AriaPressed>>>,
+        Attr<attr::AriaChecked, Signal<Option<AriaChecked>>>,
         Attr<attr::AriaCurrent, Signal<Option<AriaCurrent>>>,
-        Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         CustomAttr<&'static str, Signal<Option<&'static str>>>,
         ElementCaptureAttr,
     ),
@@ -312,6 +325,7 @@ pub type UseButtonAttrs = (
         On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
         On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     ),
+    FocusableContextAttr,
 );
 
 impl IntoAttrs for UseButtonProps {
@@ -357,6 +371,7 @@ impl IntoAttrs for UseButtonProps {
                 Attr(attr::AriaExpanded, self.aria_expanded),
                 Attr(attr::AriaControls, self.aria_controls),
                 Attr(attr::AriaPressed, self.aria_pressed),
+                Attr(attr::AriaChecked, self.aria_checked),
                 Attr(attr::AriaCurrent, self.aria_current),
                 Attr(attr::AriaDescribedby, self.aria_describedby),
                 custom_attribute("data-focus-visible", self.data_focus_visible),
@@ -376,6 +391,7 @@ impl IntoAttrs for UseButtonProps {
                 self.on_pointerenter.into_on(ev::pointerenter),
                 self.on_pointerleave.into_on(ev::pointerleave),
             ),
+            FocusableContextAttr(self.context_attrs),
         )
     }
 }
@@ -399,7 +415,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         id,
         aria_label,
         aria_labelledby,
-        disabled,
+        is_disabled: disabled,
         allow_focus_when_disabled,
         exclude_from_tab_order,
         auto_focus,
@@ -411,7 +427,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         aria_haspopup,
         aria_expanded,
         aria_controls,
+        aria_describedby,
         aria_pressed,
+        aria_checked,
+        role,
         aria_current,
         on_press,
         on_press_start,
@@ -433,11 +452,34 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         shortcuts,
     } = input;
 
+    // An overlay trigger's props from a `PressResponder` (`DialogTrigger`); the button's own win
+    // (react-aria-components merges `triggerProps` into the pressable child).
+    let responder = use_context::<crate::hooks::PressResponderContext>();
+    let trigger = responder.as_ref().and_then(|ctx| ctx.trigger);
+    // The responder's shortcuts (a menu trigger's) after the button's own.
+    let shortcuts = match (
+        shortcuts,
+        responder
+            .and_then(|ctx| ctx.shortcuts)
+            .map(|shortcuts| shortcuts.get_value()),
+    ) {
+        (Some(own), Some(responder)) => Some(own.with(responder)),
+        (own, responder) => own.or(responder),
+    };
+    let (aria_haspopup, aria_expanded, aria_controls) = match trigger {
+        Some(trigger) => (
+            Signal::derive(move || aria_haspopup.get().or_else(|| trigger.aria_haspopup.get())),
+            Signal::derive(move || aria_expanded.get().or_else(|| trigger.aria_expanded.get())),
+            Signal::derive(move || aria_controls.get().or_else(|| trigger.aria_controls.get())),
+        ),
+        None => (aria_haspopup, aria_expanded, aria_controls),
+    };
+
     let UsePressReturn {
         props: press_props,
         is_pressed,
     } = use_press(UsePressInput {
-        disabled,
+        is_disabled: disabled,
         // Client-side routers (like leptos_router) handle link clicks in a document-level
         // listener, so clicks on anchors must bubble.
         force_propagation: element_type == ButtonElementType::Anchor,
@@ -459,7 +501,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         focus_handle,
         ..
     } = use_focusable(UseFocusableInput {
-        disabled,
+        is_disabled: disabled,
         auto_focus,
         exclude_from_tab_order,
         on_focus,
@@ -470,12 +512,14 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         shortcuts,
         allow_shortcut_repeats: false,
     });
+    let context_attrs = focusable_props.context_attrs.clone();
+    let context_describedby = focusable_props.context_aria_describedby;
 
     let UseHoverReturn {
         props: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
-        disabled,
+        is_disabled: disabled,
         on_hover_start,
         on_hover_end,
         on_hover_change,
@@ -483,10 +527,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     let UseFocusRingReturn {
         props: focus_ring_props,
+        is_focused,
         is_focus_visible,
-        ..
     } = use_focus_ring(UseFocusRingInput {
-        disabled,
+        is_disabled: disabled,
         ..UseFocusRingInput::default()
     });
 
@@ -515,10 +559,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         id,
         aria_label,
         aria_labelledby,
-        role: match element_type {
+        role: role.or(match element_type {
             ButtonElementType::Button => None,
             _ => Some(AriaRole::Button),
-        },
+        }),
         button_type: match element_type {
             ButtonElementType::Button | ButtonElementType::Input => Some(button_type.as_str()),
             _ => None,
@@ -543,10 +587,34 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         aria_expanded,
         aria_controls,
         aria_pressed,
+        aria_checked,
         aria_current,
-        aria_describedby: press_props.aria_describedby,
+        aria_describedby: {
+            // The long press description (from `use_press`) adds to the caller's.
+            let press_describedby = press_props.aria_describedby;
+            Signal::derive(move || {
+                let press_ids: Vec<String> = press_describedby
+                    .with(|d| {
+                        d.as_ref()
+                            .map(|d| d.ids().map(str::to_owned).collect::<Vec<_>>())
+                    })
+                    .unwrap_or_default();
+                let ids: Vec<String> = aria_describedby
+                    .get()
+                    .into_iter()
+                    .chain(press_ids)
+                    .chain(context_describedby.get())
+                    .collect();
+                (!ids.is_empty()).then(|| ids.join(" "))
+            })
+        },
         data_focus_visible: focus_ring_props.data_focus_visible,
-        element_capture: focusable_props.element_capture,
+        element_capture: match trigger {
+            Some(trigger) => focusable_props
+                .element_capture
+                .chain(trigger.element.attr()),
+            None => focusable_props.element_capture,
+        },
         // Keyboard handlers (and shortcuts) run before press handling, as in react-aria's
         // `mergeProps(focusableProps, pressProps)`. Press handling prevents the default action of
         // Enter/Space, which shortcuts check to see whether something else handled the key.
@@ -562,12 +630,14 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         on_dragstart: press_props.on_dragstart,
         on_pointerenter: hover_props.on_pointerenter,
         on_pointerleave: hover_props.on_pointerleave,
+        context_attrs,
     };
 
     UseButtonReturn {
         props: PropsWithStyles::new(props, styles),
         is_pressed,
         is_hovered,
+        is_focused,
         is_focus_visible,
         focus_handle,
     }

@@ -45,11 +45,13 @@ where
     };
 
     view! {
-        <Modal show_when=show_when on_close=move |()| on_cancel()>
+        <Modal state=ValueBinding::new(
+            show_when,
+            Callback::new(move |open: bool| if !open { on_cancel() }),
+        )>
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
-                "Please enter \""{required.get_value()}"\" to confirm."
-                <TextInput get=input set=set_input/>
+                <TextField label=format!("Enter \u{201c}{}\u{201d} to confirm", required.get_value()) state=(input, set_input)/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>

@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/disclosure/useDisclosure.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -20,6 +19,7 @@ use crate::{
     utils::{
         EventHandler,
         aria::{AriaDisabled, AriaExpanded, AriaHidden, AriaRole},
+        id::use_id,
     },
 };
 
@@ -236,7 +236,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled,
+        is_disabled: disabled,
         within: false,
         auto_focus: false,
         is_text_input: false,

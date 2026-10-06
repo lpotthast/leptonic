@@ -5,490 +5,238 @@ use super::demos::{
     tooltip_basic::TooltipDemo, tooltip_hover_to_keep_open::HoverToKeepOpenDemo,
     tooltip_positioning::PositioningDemo,
 };
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseTooltipHook() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="tooltip" class="anchor">
-                "Tooltip Hooks"
-                <AnchorLink href="#tooltip" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Hooks for creating accessible tooltips with hover/focus triggers, warmup/cooldown delays, hover-to-keep-open behavior, and proper ARIA associations. "
-               "The tooltip system is built from three composable hooks. "
-               "See the "<Link href=crate::routes::doc::Tooltip.materialize()>"Tooltip overview"</Link>" for concept guidance."</p>
-
+        <DocPage title="Tooltip Hooks">
             <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTooltip.html" target=LinkTarget::_Blank>
-                    "useTooltip"
-                </LinkExt>
-                "."
+                "These hooks build accessible tooltips: shown on hover and keyboard focus, with warmup and cooldown "
+                "delays shared by all tooltips, hover-to-keep-open, and the ARIA link between trigger and tooltip. "
+                "See the "<Link href=routes::doc::Tooltip.materialize()>"Tooltip overview"</Link>" for concept guidance."
             </p>
 
-            <h2 id="hook-composition" class="anchor">
-                "Hook Composition"
-                <AnchorLink href="#hook-composition" description="Direct link to hook composition"/>
-            </h2>
+            <ReactAria hook="useTooltipTrigger"/>
 
-            <p>"The tooltip system is built from composable layers, each handling a specific concern:"</p>
+            <Section title="Hook Composition">
+                <p>"A tooltip is built from three hooks, each handling one concern:"</p>
 
-            <ol>
-                <li>
-                    <strong>"State Layer"</strong>
-                    " - "
-                    <code>"use_tooltip_trigger_state"</code>
-                    ": Manages open/close state, global warmup/cooldown, and singleton enforcement (only one tooltip at a time)"
-                </li>
-                <li>
-                    <strong>"Trigger Layer"</strong>
-                    " - "
-                    <code>"use_tooltip_trigger"</code>
-                    ": ARIA attributes, event handlers (hover, focus, Escape key, press-to-close)"
-                </li>
-                <li>
-                    <strong>"Tooltip Layer"</strong>
-                    " - "
-                    <code>"use_tooltip"</code>
-                    ": Hover-to-keep-open behavior on the tooltip content element"
-                </li>
-            </ol>
+                <ol>
+                    <li>
+                        <a href="#use-tooltip-trigger-state"><Code inline=true>"use_tooltip_trigger_state"</Code></a>
+                        " owns the open state, applies the warmup and cooldown delays and makes sure only one tooltip is "
+                        "open at a time."
+                    </li>
+                    <li>
+                        <a href="#use-tooltip-trigger"><Code inline=true>"use_tooltip_trigger"</Code></a>
+                        " provides the trigger\u{2019}s event handlers (hover, focus, Escape, press) and its "
+                        <Code inline=true>"aria-describedby"</Code>", plus the id and role of the tooltip."
+                    </li>
+                    <li>
+                        <a href="#use-tooltip"><Code inline=true>"use_tooltip"</Code></a>
+                        " keeps the tooltip open while the pointer is over the tooltip itself."
+                    </li>
+                </ol>
 
-            <p>"For positioned tooltips, combine with "<code>"use_overlay_position"</code>" for automatic placement with collision detection."</p>
+                <p>
+                    "The hooks don\u{2019}t position anything. Combine them with "<Code inline=true>"use_overlay_position"</Code>
+                    " to place the tooltip next to its trigger."
+                </p>
+            </Section>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to when to use"/>
-            </h2>
+            <Section title="When to Use">
+                <p>
+                    "Tooltips hold short, supplementary, non-interactive text. WAI-ARIA doesn\u{2019}t allow interactive "
+                    "content in a tooltip; use a popover for that."
+                </p>
 
-            <p>"Tooltips are for supplementary, non-interactive text. Choose the right hook based on your needs:"</p>
+                <DocTable headers=&["Use case", "Hooks"]>
+                    <TableRow><TableCell>"Brief helper text on hover or focus"</TableCell><TableCell>"Tooltip hooks"</TableCell></TableRow>
+                    <TableRow><TableCell>"Rich or interactive overlay content"</TableCell><TableCell><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Menu with keyboard navigation"</TableCell><TableCell><Link href=routes::doc::menu::Hook.materialize()>"use_menu_trigger, use_menu"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Modal dialog"</TableCell><TableCell><Link href=routes::doc::modal::Hook.materialize()>"use_modal_backdrop, use_modal, use_dialog"</Link></TableCell></TableRow>
+                </DocTable>
+            </Section>
 
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--brand-color);">
-                        <th style="text-align: left; padding: 0.5em;">"Use Case"</th>
-                        <th style="text-align: left; padding: 0.5em;">"Hook(s)"</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Brief helper text on hover/focus"</td>
-                        <td style="padding: 0.5em;">"Tooltip hooks"</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Rich interactive overlay content"</td>
-                        <td style="padding: 0.5em;"><code>"use_popover"</code></td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Menu with keyboard navigation"</td>
-                        <td style="padding: 0.5em;"><code>"use_menu"</code>" + "<code>"use_menu_trigger"</code></td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Modal dialog"</td>
-                        <td style="padding: 0.5em;"><code>"use_modal"</code>" + "<code>"use_modal_backdrop"</code></td>
-                    </tr>
-                </tbody>
-            </table>
+            <Section title="Example">
+                <p>
+                    "Hover or focus the button with the keyboard to show the tooltip, and press Escape to hide it. The tooltip "
+                    "stays open while you move the pointer onto it."
+                </p>
 
-            <p style="margin-top: 1em;">
-                <strong>"Key distinction:"</strong>
-                " Tooltips should not contain interactive content (per WAI-ARIA). For interactive overlays, use a popover."
-            </p>
+                <Demo description="Tooltip above a button, with a disabled toggle" source=include_str!("demos/tooltip_basic.rs") source_open=true>
+                    <TooltipDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Hover-to-Keep-Open">
+                <p>
+                    <Code inline=true>"use_tooltip"</Code>" adds pointer handlers to the tooltip element. When you move the "
+                    "pointer from the trigger onto the tooltip, it stays open, which matters for longer text you want to "
+                    "read or select. Without it, the tooltip closes as soon as the pointer leaves the trigger. Compare both:"
+                </p>
 
-            <p>"Hover over or focus the button to see the tooltip. Move your mouse to the tooltip content — it stays open. Press Escape to close it."</p>
+                <Demo description="Two tooltips, one with use_tooltip disabled" source=include_str!("demos/tooltip_hover_to_keep_open.rs")>
+                    <HoverToKeepOpenDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/tooltip_basic.rs")>
-                <TooltipDemo />
-            </DemoShell>
+            <Section title="Warmup and Cooldown">
+                <p>"All tooltips share one global state:"</p>
 
-            <h2 id="hover-to-keep-open" class="anchor">
-                "Hover-to-Keep-Open"
-                <AnchorLink href="#hover-to-keep-open" description="Direct link to hover-to-keep-open"/>
-            </h2>
+                <ul>
+                    <li>
+                        "On hover, the first tooltip appears after "<Code inline=true>"delay"</Code>" (1500 ms by default). "
+                        "Keyboard focus shows it immediately."
+                    </li>
+                    <li>"Once a tooltip has been shown, the next ones appear immediately."</li>
+                    <li>
+                        "After the last tooltip closes, a cooldown ("<Code inline=true>"close_delay"</Code>
+                        ", 500 ms by default) returns to the initial state."
+                    </li>
+                    <li>"Only one tooltip is open at a time."</li>
+                </ul>
+            </Section>
 
-            <p>"The "<code>"use_tooltip"</code>" hook adds pointer event handlers to the tooltip content element. "
-               "When the user moves their cursor from the trigger to the tooltip, it stays open. "
-               "Without this hook, the tooltip closes as soon as the cursor leaves the trigger."</p>
+            <Section title="Trigger Modes">
+                <DocTable headers=&["TooltipTriggerMode", "Shows the tooltip on"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Hover"</Code>" (default)"</TableCell>
+                        <TableCell>"Pointer hover and keyboard focus. Focusing the trigger by clicking it does not show the tooltip."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Focus"</Code></TableCell>
+                        <TableCell>"Keyboard focus only. Hover is ignored."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p>"Compare the two buttons below:"</p>
+            <Section title="Positioning">
+                <p>
+                    "With "<Code inline=true>"use_overlay_position"</Code>" the tooltip is placed next to its trigger and "
+                    "flips to the opposite side when there is not enough space. Hover the buttons:"
+                </p>
 
-            <DemoShell source=include_str!("demos/tooltip_hover_to_keep_open.rs")>
-                <HoverToKeepOpenDemo />
-            </DemoShell>
+                <Demo description="Tooltips above, below, left and right of their buttons" source=include_str!("demos/tooltip_positioning.rs")>
+                    <PositioningDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="warmup-cooldown" class="anchor">
-                "Warmup / Cooldown System"
-                <AnchorLink href="#warmup-cooldown" description="Direct link to warmup/cooldown"/>
-            </h2>
+            <Section title="use_tooltip_trigger_state">
+                <p>"Owns the open state. Pass the returned state to the other two hooks."</p>
 
-            <p>"The tooltip state hook implements a global warmup/cooldown system (matching react-aria):"</p>
-            <ul>
-                <li>"The first tooltip requires a delay before appearing (default: 1500ms)"</li>
-                <li>"Once a tooltip has been shown, subsequent tooltips appear instantly (warm state)"</li>
-                <li>"After all tooltips close, a cooldown period (default: 500ms) resets back to cold state"</li>
-                <li>"Only one tooltip is visible at a time"</li>
-            </ul>
+                <Section title="Input" id="use-tooltip-trigger-state-input">
+                    <ApiTable kind=ApiKind::Input of="UseTooltipTriggerStateInput">
+                        <ApiRow name="delay" ty="Duration" default="1.5 s">
+                            "How long hovering takes to open the first tooltip. Once a tooltip was open, others open right away "
+                            "until all were closed for a while."
+                        </ApiRow>
+                        <ApiRow name="close_delay" ty="Duration" default="500 ms">"How long the tooltip stays open after the pointer leaves."</ApiRow>
+                        <ApiRow name="default_open" ty="bool" default="false">"Whether the tooltip starts open. Ignored when "<Code inline=true>"value"</Code>" is bound."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<bool>>" default="None">
+                            "The open state as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_open"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">"Called when the open state changes."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="trigger-modes" class="anchor">
-                "Trigger Modes"
-                <AnchorLink href="#trigger-modes" description="Direct link to trigger modes"/>
-            </h2>
+                <Section title="Return" id="use-tooltip-trigger-state-return">
+                    <ApiTable kind=ApiKind::Return of="TooltipTriggerState">
+                        <ApiRow name="overlay" ty="OverlayTriggerState">"Whether the tooltip is open ("<Code inline=true>"overlay.is_open"</Code>")."</ApiRow>
+                        <ApiRow name="should_skip_animation" ty="Signal<bool>">
+                            "Whether the current transition should skip its animation: set when one tooltip replaces another "
+                            "during the warm-up period."
+                        </ApiRow>
+                    </ApiTable>
+                    <p>
+                        <Code inline=true>"open(timing)"</Code>" and "<Code inline=true>"close(timing)"</Code>" take a "<Code inline=true>"TooltipTiming"</Code>": "
+                        <Code inline=true>"Delayed"</Code>" waits for the delay (as hovering does), "<Code inline=true>"Immediate"</Code>
+                        " doesn\u{2019}t (as focus and Escape do). "<Code inline=true>"is_open()"</Code>" reads the open state."
+                    </p>
+                </Section>
+            </Section>
 
-            <ul>
-                <li><code>"TooltipTrigger::Hover"</code>" - Show on hover and keyboard/virtual focus (default, most accessible). "
-                    "Note: pointer focus (clicking the trigger) does not show the tooltip, only keyboard focus does."</li>
-                <li><code>"TooltipTrigger::Focus"</code>" - Show on focus only (hover is ignored)"</li>
-            </ul>
+            <Section title="use_tooltip_trigger">
+                <p>
+                    "Takes the input and the state: "<Code inline=true>"use_tooltip_trigger(input, state)"</Code>
+                    ". Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>" onto the trigger and put "
+                    <Code inline=true>"tooltip_props.id"</Code>" and "<Code inline=true>"tooltip_props.role"</Code>
+                    " on the tooltip element."
+                </p>
 
-            <h2 id="positioning" class="anchor">
-                "Positioning with use_overlay_position"
-                <AnchorLink href="#positioning" description="Direct link to positioning"/>
-            </h2>
+                <Section title="Input" id="use-tooltip-trigger-input">
+                    <ApiTable kind=ApiKind::Input of="UseTooltipTriggerInput">
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Never show the tooltip."</ApiRow>
+                        <ApiRow name="trigger" ty="TooltipTriggerMode" default="Hover">
+                            "What shows the tooltip, see "<a href="#trigger-modes">"Trigger Modes"</a>"."
+                        </ApiRow>
+                        <ApiRow name="should_close_on_press" ty="bool" default="true">"Close the tooltip when the trigger is pressed."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>"Combine the tooltip hooks with "<code>"use_overlay_position"</code>" for automatic positioning with collision detection. "
-               "Hover over the buttons to see tooltips positioned in different directions:"</p>
+                <Section title="Return" id="use-tooltip-trigger-return">
+                    <ApiTable kind=ApiKind::Return of="UseTooltipTriggerReturn">
+                        <ApiRow name="trigger_props" ty="UseTooltipTriggerProps">
+                            "The trigger\u{2019}s id, "<Code inline=true>"aria-describedby"</Code>" (set while the tooltip is open) "
+                            "and its pointer, focus and keyboard handlers."
+                        </ApiRow>
+                        <ApiRow name="tooltip_props" ty="UseTooltipTriggerTooltipProps">
+                            "The "<Code inline=true>"id"</Code>" and "<Code inline=true>"role"</Code>" ("<Code inline=true>"tooltip"</Code>
+                            ") for the tooltip element."
+                        </ApiRow>
+                        <ApiRow name="is_open" ty="Signal<bool>">"Whether the tooltip is open."</ApiRow>
+                        <ApiRow name="trigger_id" ty="String">"The id of the trigger."</ApiRow>
+                        <ApiRow name="tooltip_id" ty="String">"The id of the tooltip."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <DemoShell source=include_str!("demos/tooltip_positioning.rs")>
-                <PositioningDemo />
-            </DemoShell>
+            <Section title="use_tooltip">
+                <p>"Spread "<Code inline=true>"props.into_attrs()"</Code>" onto the tooltip element."</p>
 
-            <h2 id="api" class="anchor">
-                "API"
-                <AnchorLink href="#api" description="Direct link to API"/>
-            </h2>
+                <Section title="Input" id="use-tooltip-input">
+                    <ApiTable kind=ApiKind::Input of="UseTooltipInput">
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Ignore hovering the tooltip."</ApiRow>
+                        <ApiRow name="state" ty="Option<TooltipTriggerState>">
+                            "The tooltip state. Hovering the tooltip opens it immediately, leaving it closes it after the close delay."
+                        </ApiRow>
+                        <ApiRow name="on_open" ty="Option<Callback<()>>">"Called on hover start when "<Code inline=true>"state"</Code>" is "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="on_close" ty="Option<Callback<()>>">"Called on hover end when "<Code inline=true>"state"</Code>" is "<Code inline=true>"None"</Code>"."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3 id="state-input" class="anchor">
-                "UseTooltipTriggerStateInput"
-                <AnchorLink href="#state-input" description="Direct link to state input"/>
-            </h3>
+                <Section title="Return" id="use-tooltip-return">
+                    <ApiTable kind=ApiKind::Return of="UseTooltipReturn">
+                        <ApiRow name="props" ty="UseTooltipProps">"The "<Code inline=true>"pointerenter"</Code>" and "<Code inline=true>"pointerleave"</Code>" handlers of the tooltip."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"delay"</code></TableCell>
-                            <TableCell><code>"u32"</code></TableCell>
-                            <TableCell><code>"1500"</code></TableCell>
-                            <TableCell>"Delay before showing the tooltip when cold (in ms)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"close_delay"</code></TableCell>
-                            <TableCell><code>"u32"</code></TableCell>
-                            <TableCell><code>"500"</code></TableCell>
-                            <TableCell>"Delay before hiding the tooltip (in ms)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Option<Signal<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Controlled open state. When Some, external code controls the state."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"default_open"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Default open state for uncontrolled mode."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_open_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Callback when the open state changes."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Accessibility">
+                <ul>
+                    <li>"The tooltip element has "<Code inline=true>"role=\"tooltip\""</Code>" (from "<Code inline=true>"tooltip_props.role"</Code>")."</li>
+                    <li>"While the tooltip is open, the trigger\u{2019}s "<Code inline=true>"aria-describedby"</Code>" points to it."</li>
+                    <li>"Keyboard focus shows the tooltip immediately, focus by pointer does not."</li>
+                    <li>"Pressing the trigger closes the tooltip (unless "<Code inline=true>"should_close_on_press"</Code>" is "<Code inline=true>"false"</Code>")."</li>
+                    <li>"Tooltip content should be supplementary and must not contain interactive elements."</li>
+                </ul>
 
-            <h3 id="state-return" class="anchor">
-                "UseTooltipTriggerStateReturn"
-                <AnchorLink href="#state-return" description="Direct link to state return"/>
-            </h3>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Focusing the trigger shows the tooltip, leaving it hides the tooltip."</KeyRow>
+                    <KeyRow keys="Escape">
+                        "Hides the tooltip, wherever focus is. Only the tooltip closes: an enclosing dialog or popover stays open."
+                    </KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"Whether the tooltip is open."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"open"</code></TableCell>
-                            <TableCell><code>"Callback<bool>"</code></TableCell>
-                            <TableCell>"Open the tooltip. bool = true: skip delay, false: respect delay."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"close"</code></TableCell>
-                            <TableCell><code>"Callback<bool>"</code></TableCell>
-                            <TableCell>"Close the tooltip. bool = true: skip delay, false: respect delay."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="trigger-input" class="anchor">
-                "UseTooltipTriggerInput"
-                <AnchorLink href="#trigger-input" description="Direct link to trigger input"/>
-            </h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_disabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Whether the tooltip is disabled."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"trigger"</code></TableCell>
-                            <TableCell><code>"TooltipTrigger"</code></TableCell>
-                            <TableCell><code>"Hover"</code></TableCell>
-                            <TableCell>"The trigger behavior (Hover or Focus)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"should_close_on_press"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"true"</code></TableCell>
-                            <TableCell>"Whether pressing the trigger closes the tooltip."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="trigger-return" class="anchor">
-                "UseTooltipTriggerReturn"
-                <AnchorLink href="#trigger-return" description="Direct link to trigger return"/>
-            </h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"trigger_props"</code></TableCell>
-                            <TableCell><code>"UseTooltipTriggerProps"</code></TableCell>
-                            <TableCell>"Props for the trigger element (events + ARIA)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"tooltip_props"</code></TableCell>
-                            <TableCell><code>"UseTooltipTriggerTooltipProps"</code></TableCell>
-                            <TableCell>"Props for the tooltip element (id + role)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"Whether the tooltip is open."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"trigger_id"</code></TableCell>
-                            <TableCell><code>"String"</code></TableCell>
-                            <TableCell>"The ID of the trigger element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"tooltip_id"</code></TableCell>
-                            <TableCell><code>"String"</code></TableCell>
-                            <TableCell>"The ID of the tooltip element."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="tooltip-input" class="anchor">
-                "UseTooltipInput"
-                <AnchorLink href="#tooltip-input" description="Direct link to tooltip input"/>
-            </h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"disabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Whether the tooltip is disabled."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"state"</code></TableCell>
-                            <TableCell><code>"Option<UseTooltipTriggerStateReturn>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Tooltip trigger state. When provided, hovering the tooltip keeps it open via the warmup/cooldown system."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_open"</code></TableCell>
-                            <TableCell><code>"Option<Callback<()>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Called when the tooltip should open. Used when state is None."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_close"</code></TableCell>
-                            <TableCell><code>"Option<Callback<()>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Called when the tooltip should close. Used when state is None."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="tooltip-return" class="anchor">
-                "UseTooltipReturn"
-                <AnchorLink href="#tooltip-return" description="Direct link to tooltip return"/>
-            </h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"props"</code></TableCell>
-                            <TableCell><code>"UseTooltipProps"</code></TableCell>
-                            <TableCell>"Props for the tooltip element (pointerenter/pointerleave handlers)."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to accessibility"/>
-            </h2>
-
-            <ul>
-                <li>"Tooltip elements must have "<code>"role=\"tooltip\""</code>" (provided by "<code>"tooltip_props.role"</code>")"</li>
-                <li>"Tooltips are shown on keyboard/virtual focus (not pointer focus)"</li>
-                <li>"Pressing Escape closes the tooltip (global document handler in capture phase)"</li>
-                <li>"ARIA attributes ("<code>"aria-describedby"</code>") are automatically managed by the trigger"</li>
-                <li>"Tooltip content should be supplementary, not essential"</li>
-                <li>"Tooltips should not contain interactive elements (WAI-ARIA)"</li>
-                <li>"Clicking/pressing the trigger closes the tooltip"</li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Hover and focus triggers"</li>
-                <li>"Hover-to-keep-open on tooltip content (via "<code>"use_tooltip"</code>")"</li>
-                <li>"Global warmup/cooldown system (instant subsequent tooltips)"</li>
-                <li>"Singleton enforcement (only one tooltip at a time)"</li>
-                <li>"Configurable open/close delays"</li>
-                <li>"Escape key to close (global handler)"</li>
-                <li>"Press to close"</li>
-                <li>"Automatic ARIA associations"</li>
-                <li>"Disabled state support"</li>
-                <li>"Automatic positioning with collision detection (via "<code>"use_overlay_position"</code>")"</li>
-            </ul>
-
-            <h2 id="related-hooks" class="anchor">
-                "Related Hooks"
-                <AnchorLink href="#related-hooks" description="Direct link to related hooks"/>
-            </h2>
-
-            <ul>
-                <li><code>"use_overlay_position"</code>" — Positioning primitive for tooltip placement."</li>
-                <li><code>"use_popover"</code>" — For interactive overlay content (tooltips should be non-interactive per WAI-ARIA)."</li>
-                <li><code>"use_focus_visible"</code>" — Provides "<code>"get_modality()"</code>" for keyboard vs pointer focus."</li>
-            </ul>
-
-            <h2 id="deviations" class="anchor">
-                "React Aria Deviations"
-                <AnchorLink href="#deviations" description="Direct link to deviations"/>
-            </h2>
-
-            <h3>"Omitted"</h3>
-            <ul>
-                <li>"No "<code>"mousedown"</code>" fallback handler — PointerEvent is always available"</li>
-            </ul>
-
-            <h3>"API Differences"</h3>
-            <ul>
-                <li><code>"Callback<bool>"</code>" for open/close (bool = immediate) instead of separate "<code>"() => void"</code>" callbacks"</li>
-                <li><code>"use_tooltip"</code>" accepts "<code>"UseTooltipTriggerStateReturn"</code>" directly instead of separate "<code>"on_open"</code>"/"<code>"on_close"</code>" callbacks, enabling participation in the warmup/cooldown system"</li>
-                <li>"Thread-local global state ("<code>"tooltip_registry"</code>") for warmup/cooldown instead of module-level JS variables"</li>
-                <li><code>"get_modality()"</code>" from "<code>"use_focus_visible"</code>" instead of react-aria's "<code>"getInteractionModality()"</code></li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Tooltip.materialize()>"Tooltip overview"</Link></li>
-                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover concept"</Link></li>
-                <li><Link href=crate::routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Tooltip Hooks", link: "#tooltip" },
-                Toc::Leaf { title: "Hook Composition", link: "#hook-composition" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
-                Toc::Leaf { title: "Hover-to-Keep-Open", link: "#hover-to-keep-open" },
-                Toc::Leaf { title: "Warmup / Cooldown", link: "#warmup-cooldown" },
-                Toc::Leaf { title: "Trigger Modes", link: "#trigger-modes" },
-                Toc::Leaf { title: "Positioning", link: "#positioning" },
-                Toc::Leaf { title: "API", link: "#api" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
-                Toc::Leaf { title: "React Aria Deviations", link: "#deviations" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Tooltip.materialize()>"Tooltip overview"</Link></li>
+                <li><Link href=routes::doc::tooltip::Atom.materialize()>"Tooltip atoms"</Link></li>
+                <li><Link href=routes::doc::Popover.materialize()>"Popover"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusVisible.materialize()>"use_focus_visible"</Link></li>
+                <li><Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

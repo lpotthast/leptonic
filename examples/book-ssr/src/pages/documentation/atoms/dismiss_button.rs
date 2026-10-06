@@ -2,82 +2,64 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAtomDismissButton() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="dismiss-button" class="anchor">
-                "DismissButton"
-                <AnchorLink href="#dismiss-button" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="DismissButton">
             <p>
-                "A visually hidden button that allows screen reader users to dismiss an overlay. "
-                "Place at the start and/or end of overlay content (popovers, modals, trays) "
-                "to provide an accessible dismiss mechanism for users who cannot press Escape, "
-                "such as mobile VoiceOver users."
+                "A visually hidden button that lets screen reader users dismiss an overlay. Users of mobile screen readers "
+                "such as VoiceOver on iOS have no Escape key, so place one at the start and one at the end of popovers, "
+                "modals and trays. See the "<Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link>
+                " for the other overlay building blocks."
             </p>
 
-            <h2 id="usage" class="anchor">
-                "Usage"
-                <AnchorLink href="#usage" description="Direct link to usage"/>
-            </h2>
+            <ReactAriaSource path="overlays/DismissButton.tsx"/>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    use leptonic::atoms::dismiss_button::DismissButton;
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="DismissButton">
+                    <ApiRow name="on_dismiss" ty="Option<Callback<()>>" default="None">
+                        "Called when the button is activated. Close the overlay here."
+                    </ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
+                        "The accessible name of the button. Without it (and without "<Code inline=true>"aria_labelledby"</Code>
+                        "), the button is labeled \u{201c}Dismiss\u{201d}."
+                    </ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Elements naming the button."</ApiRow>
+                </ApiTable>
+            </Section>
 
-                    view! {
-                        <div class="my-overlay">
-                            <DismissButton on_dismiss=move |_| close_overlay() />
-                            // ... overlay content ...
-                            <DismissButton on_dismiss=move |_| close_overlay() />
-                        </div>
-                    }
-                "#)}
-            </Code>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::atoms::prelude::DismissButton;
 
-            <p>
-                "The button is visually hidden but accessible to screen readers. "
-                "It renders as a "<code>"<button>"</code>" with "<code>"tabindex=\"-1\""</code>
-                " so it is only reachable via screen reader navigation, not regular Tab key navigation."
-            </p>
+                        view! {
+                            <div class="my-overlay">
+                                <DismissButton on_dismiss=move |()| set_is_open.set(false)/>
+                                // ... overlay content ...
+                                <DismissButton on_dismiss=move |()| set_is_open.set(false)/>
+                            </div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <h2 id="props" class="anchor">
-                "Props"
-                <AnchorLink href="#props" description="Direct link to props"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>
+                    "The atom renders an empty "<Code inline=true>"<button>"</Code>" with an "<Code inline=true>"aria-label"</Code>
+                    ", visually hidden with inline styles. It has "<Code inline=true>"tabindex=\"-1\""</Code>
+                    ", so the Tab key skips it while screen reader navigation still reaches it."
+                </p>
+            </Section>
 
-            <ul>
-                <li><code>"on_dismiss: Option<Callback<()>>"</code>" - Callback invoked when the dismiss button is activated."</li>
-                <li><code>"aria_label: Option<&'static str>"</code>" - Custom accessible label. Defaults to \"Dismiss\"."</li>
-            </ul>
-
-            <h2 id="react-aria" class="anchor">
-                "React-aria Reference"
-                <AnchorLink href="#react-aria" description="Direct link to react-aria reference"/>
-            </h2>
-
-            <p>
-                "Based on react-aria's "
-                <code>"DismissButton"</code>
-                " component. See the "
-                <LinkExt href="https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/DismissButton.tsx" target=LinkTarget::_Blank>
-                    "source"
-                </LinkExt>
-                " for reference."
-            </p>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "DismissButton", link: "#dismiss-button" },
-                Toc::Leaf { title: "Usage", link: "#usage" },
-                Toc::Leaf { title: "Props", link: "#props" },
-                Toc::Leaf { title: "React-aria Reference", link: "#react-aria" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
+                <li><Link href=routes::doc::overlays::UseOverlay.materialize()>"Overlay hooks"</Link></li>
+                <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
+                <li><Link href=routes::doc::Modal.materialize()>"Modal overview"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

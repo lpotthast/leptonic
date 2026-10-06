@@ -74,8 +74,9 @@ pub fn use_enter_animation(input: UseEnterAnimationInput) -> UseEnterAnimationRe
 
     #[cfg(not(feature = "ssr"))]
     {
-        use super::use_animation::watch_animations;
         use wasm_bindgen::JsCast;
+
+        use super::use_animation::watch_animations;
 
         let (is_entering_raw, set_is_entering) = signal(true);
 

@@ -1860,6 +1860,7 @@ dependencies = [
  "cargo_toml",
  "cfg-if",
  "educe",
+ "fixed_decimal",
  "icondata",
  "icu_calendar",
  "icu_collator",

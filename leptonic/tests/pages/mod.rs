@@ -10,7 +10,10 @@ pub mod has_tabbable_child;
 
 use std::time::{Duration, Instant};
 
-use browser_test::thirtyfour::{By, Key, TypingData, WebDriver, WebElement};
+use browser_test::{
+    StepExt,
+    thirtyfour::{By, Key, TypingData, WebDriver, WebElement},
+};
 use leptos_browser_test::{Report, ResultExt, bail};
 
 /// A page object without page-specific helpers. Tests that only need [`BaseActions`] use this
@@ -34,6 +37,10 @@ const POLL_TIMEOUT: Duration = Duration::from_secs(10);
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 /// Shared page-object actions. Page objects only need to provide the driver and base URL.
+///
+/// Navigations, waits and element lookups run as [`step`]s: each is debug-logged with its duration,
+/// a slow one is logged as a warning, and the run summary lists the step kinds that took the most
+/// time.
 #[allow(dead_code)] // Not every test binary uses every helper.
 pub trait BaseActions {
     fn driver(&self) -> &WebDriver;
@@ -42,23 +49,81 @@ pub trait BaseActions {
     /// Navigate to `path` and wait until the test-app finished hydrating, so that event handlers
     /// are attached before the test starts interacting with the page.
     async fn goto_path(&self, path: &str) -> Result<(), Report> {
+        // The page we leave must not have reported errors.
+        self.expect_no_page_errors().await?;
         let url = format!("{}{path}", self.base_url());
         self.driver()
             .goto(&url)
+            .step("navigate")
+            .detail(path)
             .await
             .context_with(|| format!("failed to go to {url}"))?;
         self.wait_for_selector("body[data-hydrated]")
+            .step("wait_for_hydration")
+            .detail(path)
             .await
             .context_with(|| format!("{url} did not finish hydrating"))?;
         Ok(())
     }
 
+    /// Fail if the page reported uncaught errors (collected by the test-app since the page
+    /// loaded), e.g. wasm-bindgen errors thrown from event handlers, or has elements with literal
+    /// `attr:` attributes.
+    async fn expect_no_page_errors(&self) -> Result<(), Report> {
+        async {
+            let errors = self
+                .driver()
+                .execute("return window.__pageErrors || [];", vec![])
+                .await
+                .context("failed to read the page errors")?;
+            let errors: Vec<String> = errors
+                .json()
+                .as_array()
+                .map(|errors| {
+                    errors
+                        .iter()
+                        .map(|e| e.as_str().unwrap_or_default().to_owned())
+                        .collect()
+                })
+                .unwrap_or_default();
+            if !errors.is_empty() {
+                bail!("the page reported errors: {errors:?}");
+            }
+            // `attr:` only means something on components; on elements it becomes a literal attribute.
+            let literal = self
+                .driver()
+                .execute(
+                    "return [...document.querySelectorAll('*')].flatMap(e => [...e.attributes].map(a => a.name)).filter(n => n.startsWith('attr:'));",
+                    vec![],
+                )
+                .await
+                .context("failed to read the attribute names")?;
+            if literal
+                .json()
+                .as_array()
+                .is_some_and(|names| !names.is_empty())
+            {
+                bail!(
+                    "elements have literal `attr:` attributes: {}",
+                    literal.json()
+                );
+            }
+            Ok(())
+        }.step("check_page_errors")
+        .await
+    }
+
     async fn element(&self, id: &str) -> Result<WebElement, Report> {
-        Ok(self
-            .driver()
-            .find(By::Id(id))
-            .await
-            .context_with(|| format!("failed to find #{id}"))?)
+        async {
+            Ok(self
+                .driver()
+                .find(By::Id(id))
+                .await
+                .context_with(|| format!("failed to find #{id}"))?)
+        }
+        .step("find")
+        .detail(format!("#{id}"))
+        .await
     }
 
     async fn click_element_with_id(&self, id: &str) -> Result<(), Report> {
@@ -142,60 +207,90 @@ pub trait BaseActions {
         self.send_keys_to_active(Key::Shift + Key::Tab).await
     }
 
+    /// The number of elements matching the CSS `selector`, counted in the page. Unlike
+    /// `find_all`, this never blocks for the session's implicit wait when nothing matches.
+    async fn count_matching(&self, selector: &str) -> Result<u64, Report> {
+        let count = self
+            .driver()
+            .execute(
+                "return document.querySelectorAll(arguments[0]).length;",
+                vec![serde_json::Value::from(selector)],
+            )
+            .await
+            .context_with(|| format!("failed to query {selector:?}"))?;
+        match count.json().as_u64() {
+            Some(count) => Ok(count),
+            None => bail!("counting {selector:?} returned {}", count.json()),
+        }
+    }
+
     /// Wait until at least one element matches the CSS `selector`.
     async fn wait_for_selector(&self, selector: &str) -> Result<(), Report> {
-        let deadline = Instant::now() + POLL_TIMEOUT;
-        loop {
-            let found = self
-                .driver()
-                .find_all(By::Css(selector))
-                .await
-                .context_with(|| format!("failed to query {selector:?}"))?;
-            if !found.is_empty() {
-                return Ok(());
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                if self.count_matching(selector).await? > 0 {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!("no element matched {selector:?} within {POLL_TIMEOUT:?}");
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
             }
-            if Instant::now() >= deadline {
-                bail!("no element matched {selector:?} within {POLL_TIMEOUT:?}");
-            }
-            tokio::time::sleep(POLL_INTERVAL).await;
         }
+        .step("wait_for_selector")
+        .detail(selector)
+        .await
     }
 
     /// Wait until the text of `id` equals `expected`. Use this after interactions whose effects
     /// are applied asynchronously (timers, effects, animation frames).
     async fn wait_for_text(&self, id: &str, expected: &str) -> Result<(), Report> {
-        let deadline = Instant::now() + POLL_TIMEOUT;
-        loop {
-            let actual = self.read_text_of(id).await?;
-            if actual == expected {
-                return Ok(());
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let actual = self.read_text_of(id).await?;
+                if actual == expected {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!(
+                        "#{id} did not become {expected:?} within {POLL_TIMEOUT:?}; last seen {actual:?}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
             }
-            if Instant::now() >= deadline {
-                bail!(
-                    "#{id} did not become {expected:?} within {POLL_TIMEOUT:?}; last seen {actual:?}"
-                );
-            }
-            tokio::time::sleep(POLL_INTERVAL).await;
-        }
+        }.step("wait_for_text").detail(format!("#{id} = {expected:?}"))
+        .await
     }
 
     /// The element matching the CSS `selector`.
     async fn css(&self, selector: &str) -> Result<WebElement, Report> {
-        Ok(self
-            .driver()
-            .find(By::Css(selector))
-            .await
-            .context_with(|| format!("failed to find {selector:?}"))?)
+        async {
+            Ok(self
+                .driver()
+                .find(By::Css(selector))
+                .await
+                .context_with(|| format!("failed to find {selector:?}"))?)
+        }
+        .step("find")
+        .detail(selector)
+        .await
     }
 
     /// The element with ARIA `role` whose visible text is `text`.
     async fn by_role_and_text(&self, role: &str, text: &str) -> Result<WebElement, Report> {
-        let xpath = format!("//*[@role='{role}'][normalize-space(.)='{text}']");
-        Ok(self
-            .driver()
-            .find(By::XPath(xpath))
-            .await
-            .context_with(|| format!("failed to find role={role} with text {text:?}"))?)
+        async {
+            let xpath = format!("//*[@role='{role}'][normalize-space(.)='{text}']");
+            Ok(self
+                .driver()
+                .find(By::XPath(xpath))
+                .await
+                .context_with(|| format!("failed to find role={role} with text {text:?}"))?)
+        }
+        .step("find")
+        .detail(format!("role={role} {text:?}"))
+        .await
     }
 
     /// The visible text of `document.activeElement`.
@@ -208,21 +303,196 @@ pub trait BaseActions {
         Ok(active.text().await?.trim().to_owned())
     }
 
+    /// Wait until no element matches the CSS `selector` (e.g. an overlay closed).
+    async fn wait_for_no_selector(&self, selector: &str) -> Result<(), Report> {
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let found = self.count_matching(selector).await?;
+                if found == 0 {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!("{found} element(s) still matched {selector:?} after {POLL_TIMEOUT:?}");
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
+            }
+        }
+        .step("wait_for_no_selector")
+        .detail(selector)
+        .await
+    }
+
+    /// The ARIA role and visible text of `document.activeElement`, e.g. `role=row "Inbox"`.
+    async fn describe_active_element(&self) -> Result<String, Report> {
+        let active = self
+            .driver()
+            .active_element()
+            .await
+            .context("failed to get the active element")?;
+        let role = active.attr("role").await?;
+        let label = active.attr("aria-label").await?;
+        let tag = active.tag_name().await?;
+        let text = active.text().await?;
+        Ok(format!(
+            "<{tag}> role={} {:?}{}",
+            role.as_deref().unwrap_or("(none)"),
+            text.trim(),
+            label
+                .map(|l| format!(" aria-label={l:?}"))
+                .unwrap_or_default()
+        ))
+    }
+
+    /// Wait until `document.activeElement` has the ARIA `role` and, if given, the visible `text`.
+    async fn wait_for_focus(&self, role: &str, text: Option<&str>) -> Result<(), Report> {
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let active = self
+                    .driver()
+                    .active_element()
+                    .await
+                    .context("failed to get the active element")?;
+                let role_matches = active.attr("role").await?.as_deref() == Some(role);
+                let text_matches = match text {
+                    Some(text) => active.text().await?.trim() == text,
+                    None => true,
+                };
+                if role_matches && text_matches {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    let actual = self.describe_active_element().await?;
+                    bail!(
+                        "focus did not move to role={role} {text:?} within {POLL_TIMEOUT:?}; it is on {actual}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
+            }
+        }.step("wait_for_focus").detail(format!("role={role} {text:?}"))
+        .await
+    }
+
+    /// Wait until the attribute `name` of `element` is `expected` (`None`: absent). State
+    /// attributes often update in an effect after the triggering event.
+    async fn wait_for_attr(
+        &self,
+        element: &WebElement,
+        name: &str,
+        expected: Option<&str>,
+    ) -> Result<(), Report> {
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let actual = element
+                    .attr(name)
+                    .await
+                    .context_with(|| format!("failed to read attribute {name}"))?;
+                if actual.as_deref() == expected {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!(
+                        "attribute {name} did not become {expected:?} within {POLL_TIMEOUT:?}; last seen {actual:?}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
+            }
+        }.step("wait_for_attr").detail(format!("{name} = {expected:?}"))
+        .await
+    }
+
+    /// Wait until `element` is `document.activeElement`. `what` names it in the error.
+    async fn wait_for_focus_on(&self, element: &WebElement, what: &str) -> Result<(), Report> {
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let active = self
+                    .driver()
+                    .active_element()
+                    .await
+                    .context("failed to get the active element")?;
+                if &active == element {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    let actual = self.describe_active_element().await?;
+                    bail!(
+                        "focus did not move to {what} within {POLL_TIMEOUT:?}; it is on {actual}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
+            }
+        }
+        .step("wait_for_focus")
+        .detail(what)
+        .await
+    }
+
     /// Wait until the focused element's visible text is `expected`. Focus often moves in an
     /// effect after the triggering event, so assert it by waiting rather than sampling once.
+    /// Wait until the element with the id `expected` has focus.
+    async fn wait_for_active_id(&self, expected: &str) -> Result<(), Report> {
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let actual = self.active_element_id().await?;
+                if actual.as_deref() == Some(expected) {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!(
+                        "focus did not move to #{expected} within {POLL_TIMEOUT:?}; it is on {actual:?}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
+            }
+        }.step("wait_for_focus").detail(format!("#{expected}"))
+        .await
+    }
+
     async fn wait_for_active_text(&self, expected: &str) -> Result<(), Report> {
-        let deadline = Instant::now() + POLL_TIMEOUT;
-        loop {
-            let actual = self.active_element_text().await?;
-            if actual == expected {
-                return Ok(());
+        async {
+            let deadline = Instant::now() + POLL_TIMEOUT;
+            loop {
+                let actual = self.active_element_text().await?;
+                if actual == expected {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    bail!(
+                        "focus did not move to {expected:?} within {POLL_TIMEOUT:?}; it is on {actual:?}"
+                    );
+                }
+                tokio::time::sleep(POLL_INTERVAL).await;
             }
-            if Instant::now() >= deadline {
-                bail!(
-                    "focus did not move to {expected:?} within {POLL_TIMEOUT:?}; it is on {actual:?}"
-                );
-            }
-            tokio::time::sleep(POLL_INTERVAL).await;
+        }.step("wait_for_focus").detail(format!("{expected:?}"))
+        .await
+    }
+}
+
+/// Summarize the checks of a `*KnownIssues` test: each `(issue, result)` pair is one independent
+/// check of a known bug. Fails listing every still-broken issue, and warns about issues that
+/// pass now, so that they get moved into the regular test.
+// Used by `*KnownIssues` tests; there are none at the moment.
+#[allow(dead_code)]
+pub fn known_issues_outcome(results: Vec<(&str, Result<(), Report>)>) -> Result<(), Report> {
+    let mut broken = Vec::new();
+    for (issue, result) in results {
+        match result {
+            Ok(()) => tracing::warn!(
+                "Known issue '{issue}' passes now; move its check into the regular test."
+            ),
+            Err(err) => broken.push(format!("- {issue}: {err}")),
         }
     }
+    if broken.is_empty() {
+        return Ok(());
+    }
+    bail!(
+        "{} known issue(s) still broken:\n{}",
+        broken.len(),
+        broken.join("\n")
+    )
 }

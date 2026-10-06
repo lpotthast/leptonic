@@ -6,843 +6,381 @@ use super::demos::{
     modal_alert::AlertDialogDemo, modal_basic::BasicModalDemo,
     modal_confirmation::ConfirmationDialogDemo, modal_non_dismissable::NonDismissableModalDemo,
 };
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseModalHook() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="modal" class="anchor">
-                "Modal & Dialog Hooks"
-                <AnchorLink href="#modal" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Modal & Dialog Hooks">
             <p>
-                "Hooks for creating accessible modal dialogs with proper focus management, dismiss handling, and ARIA attributes. "
-                "See the "<Link href=crate::routes::doc::Modal.materialize()>"Modal overview"</Link>" for concept guidance."
+                "These hooks build accessible modal dialogs: open state, dismissal, scroll prevention, "
+                <Code inline=true>"aria-modal"</Code>", dialog roles and labelling, and focus on mount. "
+                "See the "<Link href=routes::doc::Modal.materialize()>"Modal overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDialog.html" target=LinkTarget::_Blank>
-                    "useDialog"
-                </LinkExt>
-                " and "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useModalOverlay.html" target=LinkTarget::_Blank>
-                    "useModalOverlay"
-                </LinkExt>
-                "."
-            </p>
+            <Section title="Hook Composition">
+                <p>"Each hook handles one concern. You combine the ones you need:"</p>
 
-            <h2 id="hook-composition" class="anchor">
-                "Hook Composition"
-                <AnchorLink href="#hook-composition" description="Direct link to hook composition"/>
-            </h2>
+                <ol>
+                    <li>
+                        <b>"State"</b>": "<a href="#use-overlay-trigger-state"><Code inline=true>"use_overlay_trigger_state"</Code></a>
+                        " owns the open state."
+                    </li>
+                    <li>
+                        <b>"Backdrop"</b>": "<a href="#use-modal-backdrop"><Code inline=true>"use_modal_backdrop"</Code></a>
+                        " closes the modal on Escape and outside clicks, prevents page scrolling and hides the rest of the "
+                        "page from assistive technology."
+                    </li>
+                    <li>
+                        <b>"Modal"</b>": "<a href="#use-modal"><Code inline=true>"use_modal"</Code></a>" sets "
+                        <Code inline=true>"aria-modal=\"true\""</Code>"."
+                    </li>
+                    <li>
+                        <b>"Dialog"</b>": "<a href="#use-dialog"><Code inline=true>"use_dialog"</Code></a>" sets the "
+                        <Code inline=true>"dialog"</Code>" or "<Code inline=true>"alertdialog"</Code>
+                        " role, names the dialog by its title, and focuses it when it opens."
+                    </li>
+                    <li>
+                        <b>"Focus"</b>": the "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
+                        " atom keeps focus inside the dialog and restores it on close."
+                    </li>
+                </ol>
+            </Section>
 
-            <p>"The modal system is built from composable layers, each handling a specific concern:"</p>
+            <Section title="When to Use">
+                <DocTable headers=&["Use case", "Hooks"]>
+                    <TableRow>
+                        <TableCell>"Modal dialog with a title"</TableCell>
+                        <TableCell>
+                            <Code inline=true>"use_overlay_trigger_state"</Code>", "<Code inline=true>"use_modal_backdrop"</Code>", "
+                            <Code inline=true>"use_modal"</Code>", "<Code inline=true>"use_dialog"</Code>" and "
+                            <Code inline=true>"FocusScope"</Code>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Alert dialog that requires a response"</TableCell>
+                        <TableCell>"The same, with "<Code inline=true>"DialogRole::AlertDialog"</Code>" and a non-dismissable backdrop"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Confirmation dialog (confirm or cancel)"</TableCell>
+                        <TableCell>"The same, remembering in your own signal which button closed it"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Modal without a visible title"</TableCell>
+                        <TableCell><Code inline=true>"use_dialog"</Code>" with "<Code inline=true>"aria_label"</Code>" instead of a title element"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Overlay positioned next to a trigger"</TableCell>
+                        <TableCell><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Other non-modal overlay"</TableCell>
+                        <TableCell><Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link></TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <ol>
-                <li>
-                    <strong>"State Layer"</strong>
-                    " - "
-                    <code>"use_modal_state"</code>
-                    " or "
-                    <code>"use_dialog_state"</code>
-                    ": Manages open/close state and optional confirmation tracking"
-                </li>
-                <li>
-                    <strong>"Backdrop Layer"</strong>
-                    " - "
-                    <code>"use_modal_backdrop"</code>
-                    ": Dismiss behavior (Escape key, outside click via use_overlay) and scroll prevention"
-                </li>
-                <li>
-                    <strong>"Aria-modal Layer"</strong>
-                    " - "
-                    <code>"use_modal"</code>
-                    ": Sets aria-modal=\"true\" for assistive technology"
-                </li>
-                <li>
-                    <strong>"Dialog Layer"</strong>
-                    " - "
-                    <code>"use_dialog"</code>
-                    " (optional): ARIA labeling (aria-labelledby/describedby), Dialog vs AlertDialog role, focus on mount"
-                </li>
-                <li>
-                    <strong>"Focus Layer"</strong>
-                    " - "
-                    <code>"FocusScope"</code>
-                    " atom: Focus trapping and restoration"
-                </li>
-            </ol>
+            <Section title="Example">
+                <p>
+                    "A complete modal dialog. The backdrop closes it on Escape and outside clicks, the page doesn\u{2019}t "
+                    "scroll while it is open, and focus stays inside."
+                </p>
 
-            <p>"For complete modal functionality, combine the layers you need. A basic modal uses "
-               <code>"use_modal_state"</code>", "
-               <code>"use_modal_backdrop"</code>", "
-               <code>"use_modal"</code>", and "
-               <code>"FocusScope"</code>". Add "
-               <code>"use_dialog"</code>" when you need title/description ARIA associations or focus-on-mount behavior."
-            </p>
+                <Demo description="Modal dialog composed from the modal and dialog hooks" source=include_str!("demos/modal_basic.rs") source_open=true>
+                    <BasicModalDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to when to use"/>
-            </h2>
+            <Section title="Alert Dialog">
+                <p>
+                    "An alert dialog asks for a response to an important message. It uses "
+                    <Code inline=true>"role=\"alertdialog\""</Code>" and typically ignores Escape and outside clicks:"
+                </p>
 
-            <p>"Choose the right hook combination based on your use case:"</p>
+                <Demo description="Alert dialog with Cancel and Delete buttons" source=include_str!("demos/modal_alert.rs")>
+                    <AlertDialogDemo/>
+                </Demo>
+            </Section>
 
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="border-bottom: 2px solid var(--brand-color);">
-                        <th style="text-align: left; padding: 0.5em;">"Use Case"</th>
-                        <th style="text-align: left; padding: 0.5em;">"Hook(s)"</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Modal dialog (title, description, focus trap)"</td>
-                        <td style="padding: 0.5em;">
-                            <code>"use_modal_state"</code>" + "
-                            <code>"use_modal_backdrop"</code>" + "
-                            <code>"use_modal"</code>" + "
-                            <code>"use_dialog"</code>" + "
-                            <code>"FocusScope"</code>
-                        </td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Alert dialog (requires acknowledgment)"</td>
-                        <td style="padding: 0.5em;">
-                            "Same as above with "
-                            <code>"DialogRole::AlertDialog"</code>" + non-dismissable"
-                        </td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Confirmation dialog (confirm/cancel tracking)"</td>
-                        <td style="padding: 0.5em;">
-                            <code>"use_dialog_state"</code>" instead of "
-                            <code>"use_modal_state"</code>", rest same"
-                        </td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Simple modal (no ARIA title/description)"</td>
-                        <td style="padding: 0.5em;">
-                            <code>"use_modal_state"</code>" + "
-                            <code>"use_modal_backdrop"</code>" + "
-                            <code>"use_modal"</code>" + "
-                            <code>"FocusScope"</code>
-                        </td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Popover positioned relative to trigger"</td>
-                        <td style="padding: 0.5em;">
-                            <code>"use_popover"</code>" (not modal hooks)"
-                        </td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #ccc;">
-                        <td style="padding: 0.5em;">"Non-modal overlay"</td>
-                        <td style="padding: 0.5em;">
-                            <code>"use_overlay"</code>" directly"
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            <Section title="Non-Dismissable Modal">
+                <p>
+                    "With "<Code inline=true>"is_dismissable: false"</Code>" and "<Code inline=true>"is_keyboard_dismiss_disabled: true"</Code>
+                    ", only your own controls close the modal, for example after a required step:"
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <Demo description="Modal that only its own button closes" source=include_str!("demos/modal_non_dismissable.rs")>
+                    <NonDismissableModalDemo/>
+                </Demo>
+            </Section>
 
-            <p>"A complete modal with scroll prevention, backdrop dismiss, Escape key handling, and focus trapping:"</p>
+            <Section title="Confirmation Dialog">
+                <p>
+                    "The demo remembers in a signal whether the dialog was confirmed. Closing it any other way, including "
+                    "Escape, counts as cancelled:"
+                </p>
 
-            <DemoShell source=include_str!("demos/modal_basic.rs")>
-                <BasicModalDemo />
-            </DemoShell>
+                <Demo description="Confirmation dialog showing the last outcome" source=include_str!("demos/modal_confirmation.rs")>
+                    <ConfirmationDialogDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="alert-dialog-demo" class="anchor">
-                "Alert Dialog Demo"
-                <AnchorLink href="#alert-dialog-demo" description="Direct link to alert dialog demo"/>
-            </h2>
+            <Section title="use_overlay_trigger_state">
+                <ReactAria hook="useOverlayTriggerState"/>
 
-            <p>"An alert dialog is used for important messages that require user acknowledgment. "
-               "It uses "<code>"role=\"alertdialog\""</code>" and typically cannot be dismissed with Escape:"</p>
+                <p>
+                    "Owns the open state of an overlay (modal, popover, menu, ...). Change it through the state\u{2019}s "
+                    "methods, or bind it to a signal of your app with "<Code inline=true>"value"</Code>"."
+                </p>
 
-            <DemoShell source=include_str!("demos/modal_alert.rs")>
-                <AlertDialogDemo />
-            </DemoShell>
+                <Section title="Input" id="use-overlay-trigger-state-input">
+                    <ApiTable kind=ApiKind::Input of="UseOverlayTriggerStateInput">
+                        <ApiRow name="default_open" ty="bool" default="false">"Whether the overlay starts open."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<bool>>" default="None">
+                            "The open state as app state ("<Code inline=true>"ValueBinding::from(rw_signal)"</Code>"), replacing "
+                            <Code inline=true>"default_open"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">
+                            "Called when the overlay opens or closes."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="non-dismissable-demo" class="anchor">
-                "Non-Dismissable Modal Demo"
-                <AnchorLink href="#non-dismissable-demo" description="Direct link to non-dismissable demo"/>
-            </h2>
-
-            <p>"A modal that cannot be dismissed by clicking outside or pressing Escape. "
-               "Users must complete an action (like filling a form) to close it:"</p>
-
-            <DemoShell source=include_str!("demos/modal_non_dismissable.rs")>
-                <NonDismissableModalDemo />
-            </DemoShell>
-
-            <h2 id="confirmation-demo" class="anchor">
-                "Confirmation Dialog Demo"
-                <AnchorLink href="#confirmation-demo" description="Direct link to confirmation demo"/>
-            </h2>
-
-            <p>"A confirmation dialog using "<code>"use_dialog_state"</code>" to track whether the user confirmed or cancelled. "
-               "Watch the status text below to see the result:"</p>
-
-            <DemoShell source=include_str!("demos/modal_confirmation.rs")>
-                <ConfirmationDialogDemo />
-            </DemoShell>
-
-            <h2 id="api" class="anchor">
-                "API"
-                <AnchorLink href="#api" description="Direct link to API"/>
-            </h2>
-
-            <h3 id="use_modal_state" class="anchor">
-                "use_modal_state"
-                <AnchorLink href="#use_modal_state" description="Direct link to use_modal_state"/>
-            </h3>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let UseModalStateReturn { is_open, set_open, open, close, toggle } =
-                        use_modal_state(UseModalStateInput::default());
-
-                    // set_open.run(true) - opens the modal
-                    // set_open.run(false) - closes the modal
-                    // open.run(()) - opens the modal
-                    // close.run(()) - closes the modal
-                    // toggle.run(()) - toggles the modal
-                ")}
-            </Code>
-
-            <h3 id="use_modal_state-input" class="anchor">
-                "Input"
-                <AnchorLink href="#use_modal_state-input" description="Direct link to input"/>
-            </h3>
-
-            <p><code>"UseModalStateInput"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
+                <Section title="State" id="use-overlay-trigger-state-state">
+                    <ApiTable kind=ApiKind::Fields of="OverlayTriggerState">
+                        <ApiRow name="is_open" ty="Signal<bool>">"Whether the overlay is open."</ApiRow>
+                        <ApiRow name="point" ty="Signal<Option<Point>>">"Where a point-anchored overlay (e.g. a context menu) opened."</ApiRow>
+                    </ApiTable>
+                    <DocTable headers=&["Method", "Purpose"]>
                         <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"default_open"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Initial open state."</TableCell>
+                            <TableCell><Code inline=true>"open(), close(), toggle()"</Code></TableCell>
+                            <TableCell>"Open, close or toggle the overlay."</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><code>"on_open_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Called whenever the open state changes."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="use_modal_state-return" class="anchor">
-                "Return Value"
-                <AnchorLink href="#use_modal_state-return" description="Direct link to return value"/>
-            </h3>
-
-            <p><code>"UseModalStateReturn"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"Whether the modal is open."</TableCell>
+                            <TableCell><Code inline=true>"set_open(is_open)"</Code></TableCell>
+                            <TableCell>"Sets the open state."</TableCell>
                         </TableRow>
                         <TableRow>
-                            <TableCell><code>"set_open"</code></TableCell>
-                            <TableCell><code>"Callback<bool>"</code></TableCell>
-                            <TableCell>"Set the open state directly."</TableCell>
+                            <TableCell><Code inline=true>"set_point(point)"</Code></TableCell>
+                            <TableCell>"Sets the point the overlay opens at."</TableCell>
                         </TableRow>
-                        <TableRow>
-                            <TableCell><code>"open"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Open the modal."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"close"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Close the modal."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"toggle"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Toggle the modal."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                    </DocTable>
+                </Section>
+            </Section>
 
-            <h3 id="use_modal_backdrop" class="anchor">
-                "use_modal_backdrop"
-                <AnchorLink href="#use_modal_backdrop" description="Direct link to use_modal_backdrop"/>
-            </h3>
+            <Section title="use_modal_backdrop">
+                <ReactAria hook="useModalOverlay"/>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseModalBackdropReturn { modal_props, backdrop_props, id: _ } =
-                        use_modal_backdrop(UseModalBackdropInput {
-                            is_open: state.is_open,
-                            on_close: state.close,
-                            is_dismissable: true,
-                            is_keyboard_dismiss_disabled: false,
-                            should_close_on_interact_outside: None,
-                        });
+                <p>
+                    "Provides the dismiss behavior of a modal through "
+                    <Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>
+                    ": Escape (ignored during IME composition) and outside clicks close only the topmost overlay. While the "
+                    "modal is open, it prevents page scrolling and makes everything outside the modal inert, so assistive "
+                    "technology ignores it. Unlike popovers, modals don\u{2019}t close on blur."
+                </p>
 
-                    view! {
-                        <Show when=move || is_open.get()>
-                            // Backdrop - spread backdrop_props (pointerdown Firefox fix)
-                            <div {..backdrop_props.into_attrs()} class="backdrop">
-                                <FocusScope contain=true restore_focus=true auto_focus=true>
-                                    // Modal content - spread modal_props (overlay behavior)
-                                    <div {..modal_props.into_attrs()} class="modal">
-                                        "Modal content"
-                                    </div>
-                                </FocusScope>
-                            </div>
-                        </Show>
-                    }
-                "#)}
-            </Code>
+                <Section title="Input" id="use-modal-backdrop-input">
+                    <p><Code inline=true>"UseModalBackdropInput::new(state)"</Code>" sets the defaults: closed by "<Keys keys="Escape"/>
+                        ", not by outside clicks."</p>
 
-            <p>"Handles (via "<code>"use_overlay"</code>" internally):"</p>
-            <ul>
-                <li>"Escape key dismissal (topmost overlay only, respects is_composing)"</li>
-                <li>"Click outside detection (overlay stacking aware)"</li>
-                <li>"Scroll prevention on body"</li>
-            </ul>
+                    <ApiTable kind=ApiKind::Input of="UseModalBackdropInput">
+                        <ApiRow name="state" ty="OverlayTriggerState">
+                            "Whether the modal is open ("<Code inline=true>"use_overlay_trigger_state"</Code>"); dismissing closes it."
+                        </ApiRow>
+                        <ApiRow name="is_dismissable" ty="bool">"Whether clicking outside the modal closes it."</ApiRow>
+                        <ApiRow name="is_keyboard_dismiss_disabled" ty="bool">"Ignore Escape."</ApiRow>
+                        <ApiRow name="should_close_on_interact_outside" ty="Option<Callback<web_sys::Element, bool>>">
+                            "Decides per outside element whether clicking it closes the modal. "
+                            <Code inline=true>"None"</Code>" closes on every outside click."
+                        </ApiRow>
+                        <ApiRow name="is_entering" ty="Signal<bool>">
+                            "While "<Code inline=true>"true"</Code>" (an entry animation runs), the page outside isn\u{2019}t hidden from "
+                            "assistive technology yet."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3 id="use_modal_backdrop-input" class="anchor">
-                "Input"
-                <AnchorLink href="#use_modal_backdrop-input" description="Direct link to input"/>
-            </h3>
+                <Section title="Return" id="use-modal-backdrop-return">
+                    <ApiTable kind=ApiKind::Return of="UseModalBackdropReturn">
+                        <ApiRow name="modal_props" ty="UseModalBackdropModalProps">
+                            "Spread "<Code inline=true>"modal_props.into_attrs()"</Code>" onto the modal element: its id, "
+                            "the Escape handler and focus tracking."
+                        </ApiRow>
+                        <ApiRow name="id" ty="Oco<'static, str>">"The id of the modal element."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p><code>"UseModalBackdropInput"</code>" fields:"</p>
+                <Section title="Example" id="use-modal-backdrop-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r"
+                            let UseModalBackdropReturn { modal_props, .. } =
+                                use_modal_backdrop(UseModalBackdropInput {
+                                    is_dismissable: true,
+                                    ..UseModalBackdropInput::new(state)
+                                });
+                            // `modal_props.into_attrs()` go onto the modal element inside the
+                            // backdrop. The backdrop itself needs no props.
+                        ")}
+                    </Code>
+                </Section>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Whether the modal is open."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_close"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Called when the modal should close."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_dismissable"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Whether clicking outside closes the modal."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_keyboard_dismiss_disabled"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Whether pressing Escape to close is disabled."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"should_close_on_interact_outside"</code></TableCell>
-                            <TableCell><code>"Option<Callback<Element, bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Filter for which outside interactions should close the modal."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="use_modal">
+                <p>
+                    "Sets "<Code inline=true>"aria-modal=\"true\""</Code>" on the modal element, which tells assistive "
+                    "technology that the content outside is unavailable."
+                </p>
 
-            <h3 id="use_modal_backdrop-return" class="anchor">
-                "Return Value"
-                <AnchorLink href="#use_modal_backdrop-return" description="Direct link to return value"/>
-            </h3>
+                <Section title="Input" id="use-modal-input">
+                    <ApiTable kind=ApiKind::Input of="UseModalInput">
+                        <ApiRow name="is_disabled" ty="bool" default="false">
+                            "Leave out "<Code inline=true>"aria-modal"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p><code>"UseModalBackdropReturn"</code>" fields:"</p>
+                <Section title="Return" id="use-modal-return">
+                    <ApiTable kind=ApiKind::Return of="UseModalReturn">
+                        <ApiRow name="modal_props" ty="UseModalProps">
+                            "Spread "<Code inline=true>"modal_props.into_attrs()"</Code>" onto the modal element."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"modal_props"</code></TableCell>
-                            <TableCell><code>"UseModalBackdropModalProps"</code></TableCell>
-                            <TableCell>"Props for the modal content element. Includes overlay id, element capture, keydown (Escape), focus events."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"backdrop_props"</code></TableCell>
-                            <TableCell><code>"UseModalBackdropProps"</code></TableCell>
-                            <TableCell>"Props for the backdrop element. Includes pointerdown handler (Firefox text-selection fix)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"id"</code></TableCell>
-                            <TableCell><code>"Oco<'static, str>"</code></TableCell>
-                            <TableCell>"Unique overlay ID for ARIA."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <Section title="Example" id="use-modal-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let UseModalReturn { modal_props } = use_modal(UseModalInput::default());
 
-            <h3 id="use_modal" class="anchor">
-                "use_modal"
-                <AnchorLink href="#use_modal" description="Direct link to use_modal"/>
-            </h3>
+                            view! { <div {..modal_props.into_attrs()}>"Modal content"</div> }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseModalReturn { modal_props } = use_modal(UseModalInput {
-                        is_disabled: false,
-                    });
+            <Section title="use_dialog">
+                <ReactAria hook="useDialog"/>
 
-                    view! {
-                        <div {..modal_props.into_attrs()}>
-                            "Modal content (aria-modal='true')"
-                        </div>
-                    }
-                "#)}
-            </Code>
+                <p>
+                    "Gives an element dialog semantics: the "<Code inline=true>"dialog"</Code>" or "
+                    <Code inline=true>"alertdialog"</Code>" role, an accessible name and "
+                    <Code inline=true>"tabindex=\"-1\""</Code>". When the dialog mounts, it receives focus unless an element "
+                    "inside it already has focus; with "<Code inline=true>"is_entering"</Code>", focusing waits until an "
+                    "entry animation has finished. On iOS Safari, the dialog is blurred and focused again after 500 ms, so "
+                    "VoiceOver announces it. The hook doesn\u{2019}t close the dialog; use "
+                    <a href="#use-modal-backdrop"><Code inline=true>"use_modal_backdrop"</Code></a>" for that."
+                </p>
+                <p>
+                    "Spread "<Code inline=true>"title_props"</Code>" onto the dialog\u{2019}s heading: while the heading is "
+                    "rendered, the dialog\u{2019}s "<Code inline=true>"aria-labelledby"</Code>" points to it. An alert "
+                    "dialog is also described by the element you spread "<Code inline=true>"content_props"</Code>" onto ("
+                    <Code inline=true>"aria-describedby"</Code>"), so screen readers read its message when it opens. "
+                    <Code inline=true>"aria_label"</Code>" names a dialog without a visible title; "
+                    <Code inline=true>"aria_labelledby"</Code>" and "<Code inline=true>"aria_describedby"</Code>
+                    " point to other elements instead. In debug builds, a dialog without a name logs a warning."
+                </p>
 
-            <p>"Sets "<code>"aria-modal=\"true\""</code>" on the element so screen readers treat outside content as hidden."</p>
+                <Section title="Input" id="use-dialog-input">
+                    <ApiTable kind=ApiKind::Input of="UseDialogInput">
+                        <ApiRow name="aria_label" ty="MaybeProp<String>">
+                            "Names a dialog without a title element; the title then doesn\u{2019}t name it."
+                        </ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>">
+                            "Ids of the elements naming the dialog, instead of its title element."
+                        </ApiRow>
+                        <ApiRow name="aria_describedby" ty="Option<String>">
+                            "Ids of the elements describing the dialog. Default for alert dialogs: the content element ("
+                            <Code inline=true>"content_props"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="is_entering" ty="Signal<bool>">
+                            "While "<Code inline=true>"true"</Code>" (an entry animation runs), the dialog isn\u{2019}t focused yet."
+                        </ApiRow>
+                        <ApiRow name="fallback_aria_labelledby" ty="Signal<Option<String>>">
+                            "Names the dialog when it has no title, "<Code inline=true>"aria_label"</Code>" or "
+                            <Code inline=true>"aria_labelledby"</Code>": the "<Code inline=true>"Dialog"</Code>
+                            " atom passes its "<Code inline=true>"DialogTrigger"</Code>"\u{2019}s button."
+                        </ApiRow>
+                        <ApiRow name="role" ty="DialogRole">
+                            <Code inline=true>"DialogRole::Dialog"</Code>" (the enum\u{2019}s default) or "
+                            <Code inline=true>"DialogRole::AlertDialog"</Code>" for messages that require a response."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3 id="use_modal-input" class="anchor">
-                "Input"
-                <AnchorLink href="#use_modal-input" description="Direct link to input"/>
-            </h3>
+                <Section title="Return" id="use-dialog-return">
+                    <ApiTable kind=ApiKind::Return of="UseDialogReturn">
+                        <ApiRow name="dialog_props" ty="UseDialogProps">
+                            "Spread "<Code inline=true>"dialog_props.into_attrs()"</Code>" onto the dialog element: id, role, "
+                            "labelling, "<Code inline=true>"tabindex"</Code>", a blur handler and the element capture used to "
+                            "focus it on mount."
+                        </ApiRow>
+                        <ApiRow name="title_props" ty="SlotProps">
+                            "Spread onto the title element (a heading): while it is rendered, it names the dialog."
+                        </ApiRow>
+                        <ApiRow name="content_props" ty="SlotProps">
+                            "Spread onto the content element: while it is rendered, it describes an alert dialog."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p><code>"UseModalInput"</code>" fields:"</p>
+                <Section title="Example" id="use-dialog-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let UseDialogReturn { dialog_props, title_props, content_props } =
+                                use_dialog(UseDialogInput {
+                                    role: DialogRole::AlertDialog,
+                                    ..UseDialogInput::default()
+                                });
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_disabled"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"When true, aria-modal is not set."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                            view! {
+                                // Named by the heading, described by the paragraph.
+                                <section {..dialog_props.into_attrs()}>
+                                    <h2 {..title_props.into_attrs()}>"Delete file?"</h2>
+                                    <p {..content_props.into_attrs()}>"It is deleted permanently."</p>
+                                    <button>"Delete"</button>
+                                </section>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
 
-            <h3 id="use_modal-return" class="anchor">
-                "Return Value"
-                <AnchorLink href="#use_modal-return" description="Direct link to return value"/>
-            </h3>
+            <Section title="Accessibility">
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"dialog\""</Code>" or "<Code inline=true>"role=\"alertdialog\""</Code>
+                        " come from "<Code inline=true>"use_dialog"</Code>". The dialog is named by its title element ("
+                        <Code inline=true>"aria-labelledby"</Code>") or "<Code inline=true>"aria_label"</Code>
+                        "; an alert dialog is described by its content element ("<Code inline=true>"aria-describedby"</Code>")."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-modal=\"true\""</Code>" comes from "<Code inline=true>"use_modal"</Code>
+                        "; "<Code inline=true>"use_modal_backdrop"</Code>" additionally makes the rest of the page inert."
+                    </li>
+                    <li>"Escape closes only the topmost modal."</li>
+                    <li>
+                        "Focus moves into the dialog when it opens. Wrap the dialog in a "
+                        <Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>" with "
+                        <Code inline=true>"contain=true"</Code>" and "<Code inline=true>"restore_focus=true"</Code>
+                        " to keep focus inside and return it to the trigger afterwards."
+                    </li>
+                </ul>
 
-            <p><code>"UseModalReturn"</code>" fields:"</p>
+                <KeyboardTable>
+                    <KeyRow keys="Escape">"Closes the modal, unless keyboard dismissal is disabled."</KeyRow>
+                    <KeyRow keys="Tab">"Moves focus to the next element inside the modal."</KeyRow>
+                    <KeyRow keys="Shift + Tab">"Moves focus to the previous element inside the modal."</KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"modal_props"</code></TableCell>
-                            <TableCell><code>"UseModalProps"</code></TableCell>
-                            <TableCell>"Spread onto the modal element via " <code>"modal_props.into_attrs()"</code> ". Sets aria-modal=\"true\"."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="use_dialog" class="anchor">
-                "use_dialog"
-                <AnchorLink href="#use_dialog" description="Direct link to use_dialog"/>
-            </h3>
-
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseDialogReturn { dialog_props, title_props, description_props, dialog_id } =
-                        use_dialog(UseDialogInput {
-                            title: Some("Title".to_string()),
-                            description: Some("Description".to_string()),
-                            aria_label: None,
-                            role: DialogRole::Dialog, // or DialogRole::AlertDialog
-                        });
-
-                    // dialog_props includes an ElementCaptureAttr that automatically captures
-                    // the DOM element for focus-on-mount — no manual NodeRef wiring needed.
-                    view! {
-                        <div {..dialog_props.into_attrs()}>
-                            <h2 id=title_props.id>"Title"</h2>
-                            <p id=description_props.id>"Description"</p>
-                        </div>
-                    }
-                "#)}
-            </Code>
-
-            <p>"Provides:"</p>
-            <ul>
-                <li>"role=\"dialog\" or role=\"alertdialog\""</li>
-                <li>"aria-labelledby (links to title)"</li>
-                <li>"aria-describedby (links to description)"</li>
-                <li>"Focus on mount (focuses the dialog unless a child already has focus)"</li>
-                <li>"iOS Safari VoiceOver workaround (blur/refocus after 500ms)"</li>
-            </ul>
-
-            <p>"For dismiss behavior (Escape key, outside click), use "<code>"use_modal_backdrop"</code>". "
-               "For aria-modal, use "<code>"use_modal"</code>"."</p>
-
-            <h3 id="use_dialog-input" class="anchor">
-                "Input"
-                <AnchorLink href="#use_dialog-input" description="Direct link to input"/>
-            </h3>
-
-            <p><code>"UseDialogInput"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"title"</code></TableCell>
-                            <TableCell><code>"Option<String>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Title for aria-labelledby. A unique ID is generated for the title element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"description"</code></TableCell>
-                            <TableCell><code>"Option<String>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Description for aria-describedby. A unique ID is generated for the description element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"aria_label"</code></TableCell>
-                            <TableCell><code>"Option<String>"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"When set, suppresses aria-labelledby. For dialogs without a visible title."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"role"</code></TableCell>
-                            <TableCell><code>"DialogRole"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Dialog or AlertDialog."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="use_dialog-return" class="anchor">
-                "Return Value"
-                <AnchorLink href="#use_dialog-return" description="Direct link to return value"/>
-            </h3>
-
-            <p><code>"UseDialogReturn"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"dialog_props"</code></TableCell>
-                            <TableCell><code>"UseDialogProps"</code></TableCell>
-                            <TableCell>"Spread onto the dialog element. Includes role, aria-labelledby, aria-describedby, tabindex, blur handler, and element capture."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"title_props"</code></TableCell>
-                            <TableCell><code>"UseDialogTitleProps"</code></TableCell>
-                            <TableCell>"Contains the generated " <code>"id"</code> " for the title element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"description_props"</code></TableCell>
-                            <TableCell><code>"UseDialogDescriptionProps"</code></TableCell>
-                            <TableCell>"Contains the generated " <code>"id"</code> " for the description element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"dialog_id"</code></TableCell>
-                            <TableCell><code>"String"</code></TableCell>
-                            <TableCell>"Unique dialog ID."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="use_dialog_state" class="anchor">
-                "use_dialog_state"
-                <AnchorLink href="#use_dialog_state" description="Direct link to use_dialog_state"/>
-            </h3>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let UseDialogStateReturn {
-                        is_open, set_open, open, close, toggle, confirm, is_confirmed,
-                    } = use_dialog_state(UseDialogStateInput::default());
-
-                    // set_open.run(true) - opens the dialog
-                    // set_open.run(false) - closes the dialog
-                    // open.run(()) - opens the dialog (resets is_confirmed)
-                    // close.run(()) - closes the dialog
-                    // toggle.run(()) - toggles the dialog
-                    // confirm.run(()) - confirms and closes the dialog
-                    // Check is_confirmed.get() to determine the result after close
-                ")}
-            </Code>
-
-            <h3 id="use_dialog_state-input" class="anchor">
-                "Input"
-                <AnchorLink href="#use_dialog_state-input" description="Direct link to input"/>
-            </h3>
-
-            <p><code>"UseDialogStateInput"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"default_open"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Initial open state."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_open_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Called whenever the open state changes."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="use_dialog_state-return" class="anchor">
-                "Return Value"
-                <AnchorLink href="#use_dialog_state-return" description="Direct link to return value"/>
-            </h3>
-
-            <p><code>"UseDialogStateReturn"</code>" fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"is_open"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"Whether the dialog is open."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"set_open"</code></TableCell>
-                            <TableCell><code>"Callback<bool>"</code></TableCell>
-                            <TableCell>"Set the open state directly."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"open"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Open the dialog (resets is_confirmed)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"close"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Close the dialog."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"toggle"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Toggle the dialog."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"confirm"</code></TableCell>
-                            <TableCell><code>"Callback<()>"</code></TableCell>
-                            <TableCell>"Confirm and close the dialog."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_confirmed"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"Whether the dialog was confirmed (vs cancelled)."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h3 id="dialog-roles" class="anchor">
-                "Dialog Roles"
-                <AnchorLink href="#dialog-roles" description="Direct link to dialog roles"/>
-            </h3>
-
-            <ul>
-                <li><code>"DialogRole::Dialog"</code> " - Standard dialog for user interaction"</li>
-                <li><code>"DialogRole::AlertDialog"</code> " - Important message requiring user response"</li>
-            </ul>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to accessibility"/>
-            </h2>
-
-            <ul>
-                <li><strong><code>"aria-modal=\"true\""</code></strong>
-                    " — Set by "<code>"use_modal"</code>" so screen readers treat outside content as hidden."
-                </li>
-                <li><strong><code>"role=\"dialog\""</code>" / "<code>"role=\"alertdialog\""</code></strong>
-                    " — Set by "<code>"use_dialog"</code>" based on "<code>"DialogRole"</code>"."
-                </li>
-                <li><strong><code>"aria-labelledby"</code>" / "<code>"aria-describedby"</code></strong>
-                    " — Automatic ARIA associations via "<code>"use_dialog"</code>" title and description props."
-                </li>
-                <li><strong>"Keyboard dismiss"</strong>
-                    " — Escape closes the topmost modal only (respects overlay stacking)."
-                </li>
-                <li><strong>"Focus on mount"</strong>
-                    " — "<code>"use_dialog"</code>" focuses the dialog element unless a child already has focus. "
-                    "Includes an iOS Safari VoiceOver workaround (blur/refocus after 500ms)."
-                </li>
-                <li><strong>"Focus trapping and restoration"</strong>
-                    " — Via the "<code>"FocusScope"</code>" atom with "<code>"contain=true"</code>" and "<code>"restore_focus=true"</code>"."
-                </li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Escape key dismissal with overlay stacking (via use_modal_backdrop → use_overlay)"</li>
-                <li>"Click outside to close (via use_modal_backdrop → use_overlay)"</li>
-                <li>"Proper ARIA roles and associations (via use_dialog)"</li>
-                <li>"aria-modal attribute (via use_modal)"</li>
-                <li>"Focus on mount with iOS Safari VoiceOver workaround (via use_dialog)"</li>
-                <li>"Focus trapping (when combined with FocusScope)"</li>
-                <li>"Scroll prevention on body (via use_modal_backdrop)"</li>
-                <li>"Dismissable and non-dismissable modes"</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Modal.materialize()>"Modal overview"</Link></li>
-                <li><Link href=crate::routes::doc::modal::Component.materialize()>"Modal component"</Link></li>
-                <li><Link href=crate::routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>" \u{2014} internal dismiss/stacking logic"</li>
-                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover"</Link>" \u{2014} for trigger-anchored overlays"</li>
-                <li><Link href=crate::routes::doc::interactions::UsePreventScroll.materialize()>"use_prevent_scroll"</Link>" \u{2014} used internally"</li>
-                <li><Link href=crate::routes::doc::interactions::UseInteractOutside.materialize()>"use_interact_outside"</Link>" \u{2014} used internally"</li>
-                <li><Link href=crate::routes::doc::focus::FocusScope.materialize()>"FocusScope atom"</Link>" \u{2014} focus trapping and restoration"</li>
-            </ul>
-
-            <h2 id="deviations" class="anchor">
-                "React Aria Deviations"
-                <AnchorLink href="#deviations" description="Direct link to deviations"/>
-            </h2>
-
-            <h3>"Omitted Features"</h3>
-
-            <ul>
-                <li><code>"ariaHideOutside()"</code>" — Relies on "<code>"aria-modal=\"true\""</code>" instead of setting "<code>"aria-hidden"</code>" on all sibling DOM trees."</li>
-                <li><code>"useOverlayFocusContain"</code>" — Focus containment is handled by the "<code>"FocusScope"</code>" atom at the consumer level."</li>
-                <li><code>"ModalProvider"</code>" / "<code>"ModalContext"</code>" — Not needed without "<code>"ariaHideOutside()"</code>"."</li>
-                <li><code>"useControlledState"</code>" — Leptos "<code>"Signal<T>"</code>" is Copy, making the controlled/uncontrolled pattern unnecessary. Hooks always own their WriteSignal internally."</li>
-            </ul>
-
-            <h3>"API Differences"</h3>
-
-            <ul>
-                <li><code>"useModalOverlay"</code>" + "<code>"underlayProps"</code>" → "<code>"use_modal_backdrop"</code>" + "<code>"backdrop_props"</code>"."</li>
-                <li><code>"aria-modal"</code>" is set by "<code>"use_modal"</code>", not "<code>"use_dialog"</code>" (React Aria avoids "<code>"aria-modal"</code>" due to a Safari iframe bug)."</li>
-                <li><code>"use_modal"</code>" sets "<code>"aria-modal=\"true\""</code>" directly vs React Aria's "<code>"aria-hidden"</code>" on siblings."</li>
-                <li><code>"description_props"</code>" returned separately (React Aria passes through "<code>"filterDOMProps"</code>")."</li>
-                <li>"Element capture via "<code>"CapturedElement"</code>" / "<code>"ElementCaptureAttr"</code>" instead of React "<code>"RefObject"</code>"."</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Modal & Dialog Hooks", link: "#modal" },
-                Toc::Leaf { title: "Hook Composition", link: "#hook-composition" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Alert Dialog Demo", link: "#alert-dialog-demo" },
-                Toc::Leaf { title: "Non-Dismissable Demo", link: "#non-dismissable-demo" },
-                Toc::Leaf { title: "Confirmation Demo", link: "#confirmation-demo" },
-                Toc::Leaf { title: "API", link: "#api" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-                Toc::Leaf { title: "React Aria Deviations", link: "#deviations" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Modal.materialize()>"Modal overview"</Link></li>
+                <li><Link href=routes::doc::modal::Component.materialize()>"Modal component"</Link></li>
+                <li><Link href=routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link></li>
+                <li><Link href=routes::doc::Popover.materialize()>"Popover"</Link></li>
+                <li><Link href=routes::doc::interactions::UsePreventScroll.materialize()>"use_prevent_scroll"</Link></li>
+                <li><Link href=routes::doc::interactions::UseInteractOutside.materialize()>"use_interact_outside"</Link></li>
+                <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope atom"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

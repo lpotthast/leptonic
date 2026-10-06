@@ -3,6 +3,7 @@ use leptos::{
     attr::Attr,
     ev,
     ev::{On, SharedEventCallback},
+    prelude::Signal,
 };
 use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -44,7 +45,7 @@ pub struct MergedPressHoverProps {
     pub on_dragstart: EventHandler<DragEvent>,
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
-    pub aria_describedby: Option<AriaDescribedby>,
+    pub aria_describedby: Signal<Option<AriaDescribedby>>,
     // From hover.
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
@@ -61,7 +62,7 @@ pub type MergedPressHoverAttrs = (
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
+    Attr<attr::AriaDescribedby, Signal<Option<AriaDescribedby>>>,
     // From hover.
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,

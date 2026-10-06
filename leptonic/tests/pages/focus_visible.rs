@@ -1,4 +1,4 @@
-use browser_test::thirtyfour::{TypingData, WebDriver, prelude::*};
+use browser_test::thirtyfour::{WebDriver, prelude::*};
 use rootcause::Report;
 
 use crate::pages::BaseActions;
@@ -42,12 +42,6 @@ impl FocusVisiblePage<'_> {
         self.click_before().await?;
         let active = self.driver.active_element().await?;
         active.send_keys(Key::Tab).await?;
-        Ok(())
-    }
-
-    pub async fn send_key_to_active(&self, key: impl Into<TypingData>) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(key).await?;
         Ok(())
     }
 

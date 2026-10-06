@@ -123,6 +123,8 @@ impl<T, Other> MergeWithExt<Other> for T where T: MergeWith<Other> {}
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use super::*;
 
     struct PropsA {
@@ -158,8 +160,8 @@ mod tests {
 
         let merged = a.merge_with(b);
 
-        assert_eq!(merged.a, 42);
-        assert_eq!(merged.b, "hello");
+        assert_that!(merged.a).is_equal_to(42);
+        assert_that!(merged.b).is_equal_to("hello");
     }
 
     #[test]
@@ -171,7 +173,7 @@ mod tests {
 
         let merged = a.and(b);
 
-        assert_eq!(merged.a, 42);
-        assert_eq!(merged.b, "hello");
+        assert_that!(merged.a).is_equal_to(42);
+        assert_that!(merged.b).is_equal_to("hello");
     }
 }

@@ -42,7 +42,7 @@ components = ["atoms"]
 # Themes for atoms and components. Copied on build to your applicaiton root directory.
 themes = []
 
-# Enables clipboard support. Requires `[build] rustflags = ["--cfg=web_sys_unstable_apis"]` in your cargo.toml.
+# Enables clipboard support.
 clipboard = ["components", "web-sys/Clipboard"]
 
 # Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
@@ -113,6 +113,7 @@ web-sys = { version = "0.3.91", features = [
     "KeyboardEventInit",
     "MouseEvent",
     "MouseEventInit",
+    "NodeFilter",
     "NodeList",
     "RadioNodeList",
     "ScrollIntoViewOptions",
@@ -129,7 +130,24 @@ web-sys = { version = "0.3.91", features = [
     "ValidityState",
     "VisualViewport",
     "HtmlSelectElement",
+    "Blob",
+    "ClipboardEvent",
+    "CompositionEvent",
+    "InputEvent",
+    "DataTransfer",
+    "DataTransferItem",
+    "DataTransferItemList",
+    "DragEvent",
+    "File",
+    "FileSystemDirectoryEntry",
+    "FileSystemDirectoryReader",
+    "FileSystemEntry",
+    "FileSystemFileEntry",
+    "MutationObserver",
+    "MutationObserverInit",
+    "MutationRecord",
 ] }
+fixed_decimal = "0.7"
 icu_calendar = "2"
 icu_collator = "2"
 icu_datetime = "2"
@@ -151,7 +169,7 @@ leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
 assertr = "0.7.1"
-browser-test = "0.4.0"
+browser-test = "0.5.0"
 leptos-browser-test = "0.3.0"
 rootcause = "0.13.0"
 tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }

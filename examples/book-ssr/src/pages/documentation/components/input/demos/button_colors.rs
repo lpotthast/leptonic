@@ -4,7 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ButtonColorsDemo() -> impl IntoView {
     view! {
-        <Stack orientation=StackOrientation::Horizontal spacing=em(0.6) attr:style="justify-content: flex-start;">
+        <Stack orientation=StackOrientation::Horizontal spacing=em(0.6) classes="demo-row-start">
             <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
             <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
             <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>

@@ -6,17 +6,17 @@ pub fn CollapsibleDemo() -> impl IntoView {
     view! {
         <Collapsibles default_on_open=OnOpen::CloseOthers>
             <Stack spacing=em(0.6)>
-                <Collapsible>
-                    <CollapsibleHeader slot>"Header1"</CollapsibleHeader>
-                    <CollapsibleBody class="my-body" slot>"Body1"</CollapsibleBody>
+                <Collapsible open=true>
+                    <CollapsibleHeader slot>"Header 1"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Opening this collapsible closes all others."</CollapsibleBody>
                 </Collapsible>
                 <Collapsible>
-                    <CollapsibleHeader slot>"Header2"</CollapsibleHeader>
-                    <CollapsibleBody slot>"Body2"</CollapsibleBody>
+                    <CollapsibleHeader slot>"Header 2"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Opening this collapsible closes all others."</CollapsibleBody>
                 </Collapsible>
-                <Collapsible on_open=OnOpen::DoNothing >
-                    <CollapsibleHeader slot>"Header3 - on_open::DoNothing"</CollapsibleHeader>
-                    <CollapsibleBody slot>"Body3"</CollapsibleBody>
+                <Collapsible on_open=OnOpen::DoNothing>
+                    <CollapsibleHeader slot>"Header 3 \u{2014} OnOpen::DoNothing"</CollapsibleHeader>
+                    <CollapsibleBody slot>"Opening this collapsible leaves the others as they are."</CollapsibleBody>
                 </Collapsible>
             </Stack>
         </Collapsibles>

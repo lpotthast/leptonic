@@ -11,7 +11,7 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
     let focus_ring_custom = use_focus_ring(UseFocusRingInput {
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         on_focus: Some(Callback::new(move |_| {
             set_focus_count.update(|c| *c += 1);
         })),
@@ -24,8 +24,7 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
     view! {
         <button
             {..focus_ring.props.into_attrs()}
-            tabindex="0"
-            class=Classes::from("demo-btn")
+            class=Classes::from(["demo-focus-item", "demo-focus-ring"])
         >
             "Tab to me (keyboard) or click me (mouse)"
         </button>
@@ -37,8 +36,7 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
 
         <button
             {..focus_ring_custom.props.into_attrs()}
-            tabindex="0"
-            class=Classes::from("demo-btn")
+            class=Classes::from(["demo-focus-item", "demo-focus-ring"])
         >
             "Focus ring with callbacks"
         </button>
@@ -48,9 +46,6 @@ pub fn FocusRingKeyboardDemo() -> impl IntoView {
             <p>"Blur count: " <strong>{ move || blur_count.get() }</strong></p>
         </div>
 
-        <FormControl classes="demo-form-row">
-            <Checkbox checked=disabled set_checked=set_disabled />
-            <Label>"Disabled"</Label>
-        </FormControl>
+        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
     }
 }

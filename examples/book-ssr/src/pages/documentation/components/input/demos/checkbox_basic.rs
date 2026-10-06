@@ -6,7 +6,7 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
     let (checked, set_checked) = signal(false);
 
     view! {
-        <Checkbox checked=checked set_checked=set_checked />
-        <span>"checked: " {move || checked.get()}</span>
+        <Checkbox state=(checked, set_checked) classes="demo-control-row">"Subscribe to the newsletter"</Checkbox>
+        <p class="demo-status">{move || if checked.get() { "Subscribed" } else { "Not subscribed" }}</p>
     }
 }

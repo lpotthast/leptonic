@@ -1,72 +1,145 @@
 use leptos::prelude::*;
 
-use super::form_control::FormInput;
 use crate::{
-    Out,
-    components::{form_control::FormControlContext, icon::Icon},
+    atoms::checkbox::{
+        Checkbox as CheckboxAtom, CheckboxGroup as CheckboxGroupAtom,
+        CheckboxGroupProps as CheckboxGroupAtomProps, CheckboxProps as CheckboxAtomProps,
+    },
+    atoms::field::{Description, FieldError, Label, TextElement},
+    components::icon::Icon,
+    hooks::{Orientation, ToggleState, collections::Key},
     utils::{classes::Classes, styles::Styles},
 };
 
-#[derive(Debug, Clone, Copy)]
-pub struct CheckboxContext {
-    checked: Signal<bool>,
-    set_checked: Out<bool>,
-}
-
-impl CheckboxContext {
-    fn toggle(&self) {
-        self.set_checked.set(!self.checked.get_untracked());
-    }
-}
-
-impl FormInput for CheckboxContext {
-    fn on_label_press(&self) {
-        self.toggle();
-    }
-}
-
+/// A checkbox with its label (the children).
+///
+/// Its selection starts at `default_selected` and is reported through `on_change`; bind it to
+/// a signal with `state=ToggleState::from(rw_signal)` (or a `(read, write)` signal pair).
+/// Inside a [`CheckboxGroup`], give it a `value` instead.
+#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn Checkbox(
-    #[prop(into)] checked: Signal<bool>,
-    #[prop(into)] set_checked: Out<bool>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(optional)] default_selected: bool,
+    #[prop(into, optional)] on_change: Option<Callback<bool>>,
+    /// External selection state, replacing `default_selected`.
+    #[prop(into, optional)]
+    state: Option<ToggleState>,
+    /// The checkbox's value in its [`CheckboxGroup`].
+    #[prop(into, optional)]
+    value: Option<Key>,
+    #[prop(into, optional)] is_indeterminate: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    #[prop(into, optional)] is_read_only: Signal<bool>,
+    #[prop(into, optional)] is_required: Signal<bool>,
+    #[prop(into, optional)] is_invalid: Signal<bool>,
+    #[prop(into, optional)] name: Option<String>,
+    /// The value submitted with the form while checked.
+    #[prop(into, optional)]
+    form_value: Option<String>,
+    /// The accessible name, when there is no visible label.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
     #[prop(default = icondata::BsCheck2)] checked_icon: icondata::Icon,
+    #[prop(default = icondata::BsDash)] indeterminate_icon: icondata::Icon,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
-    let ctx = CheckboxContext {
-        checked,
-        set_checked,
+    let content = move || {
+        view! {
+            <span class="leptonic-checkbox-box" aria-hidden="true">
+                <Icon icon=checked_icon classes="leptonic-checkbox-checked-icon" />
+                <Icon icon=indeterminate_icon classes="leptonic-checkbox-indeterminate-icon" />
+            </span>
+            {children.map(|children| view! { <span class="leptonic-checkbox-label">{children()}</span> })}
+        }
+        .into_any()
     };
+    // Built from the props struct: the view macro can't forward `Option` props.
+    CheckboxAtom(CheckboxAtomProps {
+        value,
+        default_selected,
+        on_change,
+        state,
+        is_indeterminate,
+        is_disabled,
+        is_read_only,
+        is_required,
+        is_invalid,
+        validate: None,
+        validation_behavior: None,
+        name,
+        form_value,
+        form: None,
+        id: None,
+        aria_label,
+        aria_labelledby: None,
+        aria_describedby: None,
+        auto_focus: false,
+        on_focus_change: None,
+        classes: classes.add("leptonic-checkbox"),
+        styles,
+        children: Some(Box::new(content)),
+    })
+}
 
-    let form_ctrl_ctx = use_context::<FormControlContext>();
-
-    if let Some(form_ctrl_ctx) = form_ctrl_ctx {
-        form_ctrl_ctx.input.set(Some(Box::new(ctx)));
-    }
-
-    view! {
-        <div
-            class=classes.add("leptonic-checkbox")
-            style=styles
-            role="checkbox"
-            aria-checked=move || if checked.get() { "true" } else { "false" }
-            aria-disabled=move || if disabled.get() { "true" } else { "false" }
-            tabindex="0"
-            on:click=move |_e| {
-                if !disabled.get_untracked() {
-                    set_checked.set(!checked.get_untracked());
-                }
-            }
-        >
-            <Icon
-                icon=checked_icon
-                styles=Styles::new()
-                    .add_optional_unchecked(
-                        "display",
-                        move || Some(if checked.get() { "inherit" } else { "none" }),
-                    )
-            />
-        </div>
-    }
+/// A labelled group of [`Checkbox`]es (each with a `value`) selecting a set of values.
+#[allow(clippy::too_many_arguments)]
+#[component]
+pub fn CheckboxGroup(
+    /// The visible label. Without it, set `aria_label`.
+    #[prop(into, optional)]
+    label: Option<String>,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    #[prop(into, optional)] description: Option<String>,
+    #[prop(into, optional)] default_value: Vec<Key>,
+    #[prop(into, optional)] on_change: Option<Callback<Vec<Key>>>,
+    #[prop(default = Orientation::Vertical)] orientation: Orientation,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    #[prop(into, optional)] is_read_only: Signal<bool>,
+    /// Whether at least one checkbox must be checked.
+    #[prop(into, optional)]
+    is_required: Signal<bool>,
+    #[prop(into, optional)] is_invalid: Signal<bool>,
+    #[prop(into, optional)] name: Option<String>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let content = move || {
+        view! {
+            {label.map(|label| view! {
+                <Label classes="leptonic-checkbox-group-label">{label}</Label>
+            })}
+            <div class="leptonic-checkbox-group-items" data-orientation=orientation.as_str()>
+                {children()}
+            </div>
+            {description.map(|description| view! {
+                <Description element=TextElement::Div classes="leptonic-checkbox-group-description">
+                    {description}
+                </Description>
+            })}
+            <FieldError element=TextElement::Div classes="leptonic-checkbox-group-error" />
+        }
+        .into_any()
+    };
+    CheckboxGroupAtom(CheckboxGroupAtomProps {
+        default_value,
+        on_change,
+        is_disabled,
+        is_read_only,
+        is_required,
+        is_invalid,
+        validate: None,
+        validation_behavior: None,
+        name,
+        form: None,
+        id: None,
+        aria_label,
+        aria_labelledby: None,
+        aria_describedby: None,
+        classes: classes.add("leptonic-checkbox-group"),
+        styles,
+        children: Box::new(content),
+    })
 }

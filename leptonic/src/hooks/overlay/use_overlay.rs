@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/overlays/useOverlay.ts @ 6f664fe911
+// Upstream: react-aria/src/overlays/useOverlay.ts @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{
@@ -18,11 +18,16 @@ use crate::{
     hooks::{
         IntoAttrs,
         focus::use_focus_within::{UseFocusWithinInput, use_focus_within},
-        interactions::use_interact_outside::{UseInteractOutsideInput, use_interact_outside},
+        interactions::{
+            use_interact_outside::{UseInteractOutsideInput, use_interact_outside},
+            use_keyboard::{UseKeyboardInput, use_keyboard},
+        },
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventHandler,
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         focus_scope_tree::is_element_in_child_of_active_scope,
+        id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
     },
 };
 
@@ -41,6 +46,9 @@ use crate::{
 //   being passed as a ref argument.
 //
 // - Uses `EventHandler<E>` / `On<>` attributes instead of React event handler props.
+//
+// - No `underlay_props`: react-aria's are empty (`{}`) since its Firefox text-selection workaround
+//   was removed; an underlay element needs no props.
 //
 
 /// Input parameters for the `use_overlay` hook.
@@ -76,9 +84,6 @@ pub struct UseOverlayInput {
 pub struct UseOverlayReturn {
     /// Props for the overlay container element. Call `.into_attrs()` for view spreading.
     pub props: UseOverlayProps,
-
-    /// Props for the underlay element, if any. Call `.into_attrs()` for view spreading.
-    pub underlay_props: UseOverlayUnderlayProps,
 
     /// Unique ID for the overlay. Pass to `use_overlay_trigger` as `overlay_id`.
     pub id: Oco<'static, str>,
@@ -121,23 +126,6 @@ pub type UseOverlayAttrs = (
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
-/// Props for the underlay element (optional background layer behind the overlay).
-#[derive(Debug)]
-pub struct UseOverlayUnderlayProps {
-    pub on_pointerdown: EventHandler<PointerEvent>,
-}
-
-impl IntoAttrs for UseOverlayUnderlayProps {
-    type Attrs = UseOverlayUnderlayAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (self.on_pointerdown.into_on(ev::pointerdown),)
-    }
-}
-
-/// These attributes must be spread onto the underlay element.
-pub type UseOverlayUnderlayAttrs = (On<ev::pointerdown, SharedEventCallback<PointerEvent>>,);
-
 /// Provides the behavior for overlays such as dialogs, popovers, and menus.
 ///
 /// Hides the overlay when the user interacts outside it, when the Escape key is pressed,
@@ -148,7 +136,7 @@ pub type UseOverlayUnderlayAttrs = (On<ev::pointerdown, SharedEventCallback<Poin
 /// ```ignore
 /// let (is_open, set_is_open) = signal(false);
 ///
-/// let UseOverlayReturn { props: overlay_props, underlay_props, id } = use_overlay(UseOverlayInput {
+/// let UseOverlayReturn { props: overlay_props, .. } = use_overlay(UseOverlayInput {
 ///     is_open: is_open.into(),
 ///     on_close: Callback::new(move |_| set_is_open.set(false)),
 ///     is_dismissable: true,
@@ -170,7 +158,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     cfg_if::cfg_if! {
         if #[cfg(feature = "ssr")] {
             let _ = input;
-            let id = uuid::Uuid::new_v4().to_string();
+            let id = use_id("overlay");
             let overlay_element = CapturedElement::new();
             UseOverlayReturn {
                 props: UseOverlayProps {
@@ -179,9 +167,6 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                     on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
                     on_focusin: EventHandler::new(|_: FocusEvent| {}),
                     on_focusout: EventHandler::new(|_: FocusEvent| {}),
-                },
-                underlay_props: UseOverlayUnderlayProps {
-                    on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
                 },
                 id: Oco::Owned(id),
                 overlay_element,
@@ -196,8 +181,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                 should_close_on_interact_outside,
             } = input;
 
-    let id = uuid::Uuid::new_v4();
-    let id_string = id.to_string();
+    let id_string = use_id("overlay");
 
     // Element capture for the overlay element. This is used by the overlay stack
     // and chained with the element capture from use_interact_outside.
@@ -238,16 +222,21 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             }
     };
 
-    let handle_keydown = move |e: KeyboardEvent| {
-        if e.key() == "Escape" && !is_keyboard_dismiss_disabled && !e.is_composing() {
-            e.stop_propagation();
-            e.prevent_default();
+    // Escape closes the topmost overlay (a handled shortcut stops propagation). With keyboard
+    // dismissal disabled, the key press bubbles on.
+    let keyboard = use_keyboard(UseKeyboardInput {
+        shortcuts: Some(KeyboardShortcuts::new().on(Shortcut::key("Escape"), move |_| {
+            if is_keyboard_dismiss_disabled {
+                return false;
+            }
             on_hide();
-        }
-    };
+            true
+        })),
+        ..UseKeyboardInput::default()
+    });
 
     let interact_outside_return = use_interact_outside(UseInteractOutsideInput {
-        disabled: Signal::derive(move || !(is_dismissable && is_open.get())),
+        is_disabled: Signal::derive(move || !(is_dismissable && is_open.get())),
 
         on_interact_outside_start: Some(Callback::new(move |e: PointerEvent| {
             // Capture topmost at pointerdown time.
@@ -261,32 +250,32 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
 
             // Check the filter callback.
             let should_close = should_close_on_interact_outside.is_none_or(|filter| {
-                e.target()
-                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                    .is_some_and(|target_el| filter.run(target_el))
+                e.expect_target()
+                    .dyn_into::<web_sys::Element>().is_ok_and(|target_el| filter.run(target_el))
             });
 
             if should_close
                 && let Some(el) = overlay_element.get_untracked()
                     && visible_overlays::is_topmost(&el) {
+                        // Only stop propagation (as react-aria): the outside element still gets
+                        // its default action (a link navigates, a checkbox toggles).
                         e.stop_propagation();
-                        e.prevent_default();
                     }
         })),
 
         on_interact_outside: Some(Callback::new(move |e: web_sys::MouseEvent| {
             // Check the filter callback.
             let should_close = should_close_on_interact_outside.is_none_or(|filter| {
-                e.target()
-                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                    .is_some_and(|target_el| filter.run(target_el))
+                e.expect_target()
+                    .dyn_into::<web_sys::Element>().is_ok_and(|target_el| filter.run(target_el))
             });
 
             if should_close {
                 if let Some(el) = overlay_element.get_untracked()
                     && visible_overlays::is_topmost(&el) {
+                        // Only stop propagation (as react-aria): the outside element still gets
+                        // its default action (a link navigates, a checkbox toggles).
                         e.stop_propagation();
-                        e.prevent_default();
                     }
 
                 // Close if this overlay was topmost at pointerdown time.
@@ -312,7 +301,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
         .chain(interact_outside_return.props.element_capture);
 
     let focus_within_return = use_focus_within(UseFocusWithinInput {
-        disabled: Signal::derive(move || !should_close_on_blur),
+        is_disabled: Signal::derive(move || !should_close_on_blur),
 
         on_focus_within: None,
 
@@ -348,26 +337,15 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
         on_focus_within_change: None,
     });
 
-    let handle_underlay_pointerdown = move |e: PointerEvent| {
-        // Fixes a Firefox issue that starts text selection.
-        // https://bugzilla.mozilla.org/show_bug.cgi?id=1675846
-        if e.target() == e.current_target() {
-            e.prevent_default();
-        }
-    };
-
             UseOverlayReturn {
                 props: UseOverlayProps {
-                    id: id_string,
+                    id: id_string.clone(),
                     element_capture,
-                    on_keydown: EventHandler::new(handle_keydown),
+                    on_keydown: keyboard.props.on_keydown,
                     on_focusin: focus_within_return.props.on_focusin,
                     on_focusout: focus_within_return.props.on_focusout,
                 },
-                underlay_props: UseOverlayUnderlayProps {
-                    on_pointerdown: EventHandler::new(handle_underlay_pointerdown),
-                },
-                id: Oco::Owned(id.to_string()),
+                id: Oco::Owned(id_string.clone()),
                 overlay_element,
             }
         }

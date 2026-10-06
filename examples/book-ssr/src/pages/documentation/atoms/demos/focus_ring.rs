@@ -5,7 +5,7 @@ use leptos::prelude::*;
 pub fn FocusRingDemo() -> impl IntoView {
     view! {
         <FocusRing>
-            <button class="demo-btn">"Focus me with Tab"</button>
+            <button class="demo-focus-item demo-focus-ring">"Focus me with Tab"</button>
         </FocusRing>
     }
 }

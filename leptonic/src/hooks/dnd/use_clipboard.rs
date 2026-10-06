@@ -1,225 +1,228 @@
-// Upstream: react-aria/src/dnd/useClipboard.ts @ 6f664fe911
-//! Clipboard hook for cut/copy/paste operations on collections.
-//!
-//! Provides element-level event handlers for clipboard events, reusing the
-//! same serialization format as drag-and-drop for consistency.
-//!
-//! Based on react-aria's `useClipboard` from
-//! `react-aria/src/dnd/useClipboard.ts`.
+// Upstream: react-aria/src/dnd/useClipboard.ts @ 99e6102368
+use std::{cell::RefCell, rc::Rc};
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
+use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::ClipboardEvent;
 
-use super::drop_item::{DropItem, read_drop_items_from_data_transfer};
-use crate::hooks::{DragItem, IntoAttrs, write_to_data_transfer};
-use crate::utils::EventHandler;
+use super::{
+    types::{DragItem, DropItem},
+    utils::{read_from_data_transfer, write_to_data_transfer},
+};
+use crate::{
+    hooks::focus::use_focus::{UseFocusInput, UseFocusProps, use_focus},
+    utils::event_listeners::{Listener, listen},
+};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## RUST-NATIVE DESIGN
+// No intentional deviations from the react-aria implementation.
 //
-// - Uses element-level event handlers (consistent with other leptonic hooks
-//   via the attrs pattern) instead of react-aria's global event listeners.
-// - `ClipboardAction` is a simple enum instead of a string union.
-//
-// ## OMITTED
-//
-// - `beforecopy`/`beforecut`/`beforepaste` events for enabling browser menu
-//   items. These are non-standard and browser support is inconsistent.
-//
+// =============================================================================
 
-/// The clipboard action being performed.
+/// Whether data is cut or copied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClipboardAction {
-    /// Copying items.
-    Copy,
-    /// Cutting items (copy + mark for removal).
     Cut,
+    Copy,
 }
 
-/// Input for the [`use_clipboard`] hook.
-#[derive(Clone)]
+/// Input of [`use_clipboard`].
+#[derive(Clone, Default)]
 pub struct UseClipboardInput {
-    /// Returns the items to write to the clipboard for the given action.
-    /// If `None`, copy/cut are not supported.
+    /// The data to cut or copy. Without it, cut and copy keep their default.
     pub get_items: Option<Callback<ClipboardAction, Vec<DragItem>>>,
-
-    /// Called after a successful copy.
     pub on_copy: Option<Callback<()>>,
-
-    /// Called after a successful cut.
+    /// Remove the cut data. Without it, cut keeps its default.
     pub on_cut: Option<Callback<()>>,
-
-    /// Called when items are pasted.
+    /// Pasted data. Without it, paste keeps its default.
     pub on_paste: Option<Callback<Vec<DropItem>>>,
-
-    /// Whether clipboard operations are disabled.
     pub is_disabled: Signal<bool>,
 }
 
-impl Default for UseClipboardInput {
-    fn default() -> Self {
-        Self {
-            get_items: None,
-            on_copy: None,
-            on_cut: None,
-            on_paste: None,
-            is_disabled: Signal::derive(|| false),
-        }
-    }
-}
-
-/// Return value of the [`use_clipboard`] hook.
-pub struct UseClipboardReturn {
-    /// Props for the element that should receive clipboard events.
-    pub clipboard_props: UseClipboardProps,
-}
-
-/// Props from `use_clipboard` that can be spread onto an element.
+/// Return value of [`use_clipboard`].
 #[derive(Debug)]
-pub struct UseClipboardProps {
-    /// Tabindex to make the element focusable (clipboard events require focus).
-    pub tabindex: Signal<i32>,
-    /// Copy event handler.
-    pub on_copy: EventHandler<ClipboardEvent>,
-    /// Cut event handler.
-    pub on_cut: EventHandler<ClipboardEvent>,
-    /// Paste event handler.
-    pub on_paste: EventHandler<ClipboardEvent>,
+pub struct UseClipboardReturn {
+    /// Tracks whether the element has focus (clipboard events only act on it while it has).
+    pub clipboard_props: UseFocusProps,
 }
 
-impl IntoAttrs for UseClipboardProps {
-    type Attrs = UseClipboardAttrs;
+type Handler = Rc<dyn Fn(&ClipboardEvent)>;
 
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_copy.into_on(ev::copy),
-            self.on_cut.into_on(ev::cut),
-            self.on_paste.into_on(ev::paste),
-        )
-    }
+/// One document listener per clipboard event, shared by all elements using the clipboard.
+struct GlobalEvent {
+    _listener: Listener,
+    handlers: Rc<RefCell<Vec<(u64, Handler)>>>,
 }
 
-/// Attributes for a clipboard-enabled element.
-pub type UseClipboardAttrs = (
-    Attr<attr::Tabindex, Signal<i32>>,
-    On<ev::copy, SharedEventCallback<ClipboardEvent>>,
-    On<ev::cut, SharedEventCallback<ClipboardEvent>>,
-    On<ev::paste, SharedEventCallback<ClipboardEvent>>,
-);
+thread_local! {
+    static GLOBAL_EVENTS: RefCell<Vec<(&'static str, GlobalEvent)>> = const { RefCell::new(Vec::new()) };
+    static NEXT_HANDLER: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
 
-/// Provides clipboard (cut/copy/paste) behavior for a collection.
-///
-/// Attaches event handlers for `copy`, `cut`, and `paste` events on the
-/// element. Uses the same serialization format as drag-and-drop for
-/// consistency.
-///
-/// # Example
-///
-/// ```ignore
-/// let clipboard = use_clipboard(UseClipboardInput {
-///     get_items: Some(Callback::new(|action: ClipboardAction| {
-///         vec![DragItem::text("Selected content")]
-///     })),
-///     on_paste: Some(Callback::new(|items: Vec<DropItem>| {
-///         for item in &items {
-///             if let Some(text) = item.as_text() {
-///                 tracing::info!("Pasted: {:?}", text.get("text/plain"));
-///             }
-///         }
-///     })),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div {..clipboard.clipboard_props.into_attrs()}>
-///         "Clipboard-enabled content"
-///     </div>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
+fn add_global_event_listener(event: &'static str, handler: Handler) -> u64 {
+    let id = NEXT_HANDLER.with(|n| {
+        let id = n.get();
+        n.set(id.wrapping_add(1));
+        id
+    });
+    GLOBAL_EVENTS.with(|events| {
+        let mut events = events.borrow_mut();
+        if !events.iter().any(|(e, _)| *e == event)
+            && let Some(document) = leptos_use::use_document().as_ref()
+        {
+            let handlers: Rc<RefCell<Vec<(u64, Handler)>>> = Rc::default();
+            let dispatch = handlers.clone();
+            let listener = listen(document.unchecked_ref(), event, false, move |e| {
+                let current: Vec<Handler> =
+                    dispatch.borrow().iter().map(|(_, h)| h.clone()).collect();
+                for handler in current {
+                    handler(e.unchecked_ref());
+                }
+            });
+            events.push((
+                event,
+                GlobalEvent {
+                    _listener: listener,
+                    handlers,
+                },
+            ));
+        }
+        if let Some((_, global)) = events.iter().find(|(e, _)| *e == event) {
+            global.handlers.borrow_mut().push((id, handler));
+        }
+    });
+    id
+}
+
+fn remove_global_event_listener(event: &'static str, id: u64) {
+    GLOBAL_EVENTS.with(|events| {
+        let mut events = events.borrow_mut();
+        if let Some(position) = events.iter().position(|(e, _)| *e == event) {
+            let empty = {
+                let mut handlers = events[position].1.handlers.borrow_mut();
+                handlers.retain(|(i, _)| *i != id);
+                handlers.is_empty()
+            };
+            if empty {
+                events.remove(position);
+            }
+        }
+    });
+}
+
+/// Cut, copy and paste for an element (e.g. a collection) while it has focus, using the same
+/// data format as drag and drop.
 pub fn use_clipboard(input: UseClipboardInput) -> UseClipboardReturn {
     let UseClipboardInput {
         get_items,
         on_copy,
         on_cut,
         on_paste,
-        is_disabled: disabled,
+        is_disabled,
     } = input;
+    let is_focused = StoredValue::new(false);
+    let clipboard_props = use_focus(UseFocusInput {
+        is_disabled: Signal::stored(false),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: Some(Callback::new(move |focused| is_focused.set_value(focused))),
+    })
+    .props;
+    let focused = move || is_focused.try_get_value().unwrap_or(false);
 
-    let tabindex = Signal::derive(move || if disabled.get() { -1_i32 } else { 0 });
-
-    let handle_copy = move |e: ClipboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-        let Some(get_items) = get_items else {
-            return;
-        };
-        let Some(dt) = e.clipboard_data() else {
-            return;
-        };
-
-        e.prevent_default();
-
-        let items = get_items.run(ClipboardAction::Copy);
-        write_to_data_transfer(&dt, &items);
-
-        if let Some(on_copy) = on_copy {
-            on_copy.run(());
+    let registered: StoredValue<Vec<(&'static str, u64)>> = StoredValue::new(Vec::new());
+    let unregister = move || {
+        for (event, id) in registered
+            .try_update_value(std::mem::take)
+            .unwrap_or_default()
+        {
+            remove_global_event_listener(event, id);
         }
     };
-
-    let handle_cut = move |e: ClipboardEvent| {
-        if disabled.get_untracked() {
+    Effect::new(move || {
+        unregister();
+        if is_disabled.get() {
             return;
         }
-        let Some(get_items) = get_items else {
-            return;
-        };
-        let Some(dt) = e.clipboard_data() else {
-            return;
-        };
+        let handlers: [(&'static str, Handler); 6] = [
+            (
+                "beforecopy",
+                Rc::new(move |e: &ClipboardEvent| {
+                    if focused() && get_items.is_some() {
+                        e.prevent_default();
+                    }
+                }),
+            ),
+            (
+                "copy",
+                Rc::new(move |e: &ClipboardEvent| {
+                    let Some(get_items) = get_items.filter(|_| focused()) else {
+                        return;
+                    };
+                    e.prevent_default();
+                    if let Some(data) = e.clipboard_data() {
+                        write_to_data_transfer(&data, &get_items.run(ClipboardAction::Copy));
+                        if let Some(on_copy) = on_copy {
+                            on_copy.run(());
+                        }
+                    }
+                }),
+            ),
+            (
+                "beforecut",
+                Rc::new(move |e: &ClipboardEvent| {
+                    if focused() && on_cut.is_some() && get_items.is_some() {
+                        e.prevent_default();
+                    }
+                }),
+            ),
+            (
+                "cut",
+                Rc::new(move |e: &ClipboardEvent| {
+                    let (Some(get_items), Some(on_cut)) = (get_items, on_cut) else {
+                        return;
+                    };
+                    if !focused() {
+                        return;
+                    }
+                    e.prevent_default();
+                    if let Some(data) = e.clipboard_data() {
+                        write_to_data_transfer(&data, &get_items.run(ClipboardAction::Cut));
+                        on_cut.run(());
+                    }
+                }),
+            ),
+            (
+                "beforepaste",
+                Rc::new(move |e: &ClipboardEvent| {
+                    if focused() && on_paste.is_some() {
+                        e.prevent_default();
+                    }
+                }),
+            ),
+            (
+                "paste",
+                Rc::new(move |e: &ClipboardEvent| {
+                    let Some(on_paste) = on_paste.filter(|_| focused()) else {
+                        return;
+                    };
+                    e.prevent_default();
+                    if let Some(data) = e.clipboard_data() {
+                        on_paste.run(read_from_data_transfer(&data));
+                    }
+                }),
+            ),
+        ];
+        let ids = handlers
+            .into_iter()
+            .map(|(event, handler)| (event, add_global_event_listener(event, handler)))
+            .collect();
+        registered.set_value(ids);
+    });
+    on_cleanup(unregister);
 
-        e.prevent_default();
-
-        let items = get_items.run(ClipboardAction::Cut);
-        write_to_data_transfer(&dt, &items);
-
-        if let Some(on_cut) = on_cut {
-            on_cut.run(());
-        }
-    };
-
-    let handle_paste = move |e: ClipboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-        let Some(on_paste) = on_paste else {
-            return;
-        };
-        let Some(dt) = e.clipboard_data() else {
-            return;
-        };
-
-        e.prevent_default();
-
-        let items = read_drop_items_from_data_transfer(&dt);
-        on_paste.run(items);
-    };
-
-    UseClipboardReturn {
-        clipboard_props: UseClipboardProps {
-            tabindex,
-            on_copy: EventHandler::new(handle_copy),
-            on_cut: EventHandler::new(handle_cut),
-            on_paste: EventHandler::new(handle_paste),
-        },
-    }
+    UseClipboardReturn { clipboard_props }
 }

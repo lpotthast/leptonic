@@ -10,6 +10,10 @@ version = "0.5.0"
 leptonic = { path = "./leptonic", default-features = false }
 leptonic_theme = { path = "./leptonic-theme", default-features = false }
 
+[profile.dev.package."*"]
+# No debug info for dependencies (the workspace members keep theirs): smaller build directories and faster linking.
+debug = false
+
 [profile.release]
 opt-level = 'z'
 lto = true
@@ -42,3 +46,8 @@ wildcard_imports = { level = "allow", priority = 1 }
 # branch `cft-0.5-linux-arm64`.
 [patch.crates-io]
 chrome-for-testing-manager = { path = "../chrome-for-testing-manager" }
+# TEMPORARY (2026-10-05): session reuse, timing report and progress warnings of the browser test
+# runner. Remove this patch once a browser-test release with them is published (and bump
+# `browser-test` in `leptonic/Cargo.toml`). Requires `../browser-test` checked out on branch
+# `session-reuse-timing`.
+browser-test = { path = "../browser-test" }

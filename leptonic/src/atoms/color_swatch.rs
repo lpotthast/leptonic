@@ -24,7 +24,7 @@ pub fn ColorSwatch<C: ColorValue>(
     color_name: Option<Signal<String>>,
     /// An optional aria-label override.
     #[prop(into, optional)]
-    aria_label: Option<String>,
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     /// Optional children to render inside the swatch.

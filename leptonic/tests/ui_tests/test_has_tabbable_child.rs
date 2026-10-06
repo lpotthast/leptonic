@@ -1,15 +1,10 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
+use assertr::prelude::*;
+use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
-use std::time::Duration;
-
-use assertr::prelude::*;
-use browser_test::thirtyfour::WebDriver;
-use tokio::time::sleep;
-
-use crate::pages::has_tabbable_child::HasTabbableChildPage;
+use crate::pages::{BaseActions, has_tabbable_child::HasTabbableChildPage};
 
 pub struct HasTabbableChildTests {}
 
@@ -53,9 +48,8 @@ async fn test_child_removed(page: &HasTabbableChildPage<'_>) -> Result<(), Repor
 
     // Toggle to remove the child button
     page.click_toggle().await?;
-    sleep(Duration::from_millis(200)).await;
 
-    assert_that!(page.read_result().await?).is_equal_to(false);
+    page.wait_for_text("test-htc-result", "false").await?;
 
     Ok(())
 }
@@ -67,13 +61,11 @@ async fn test_child_re_added(page: &HasTabbableChildPage<'_>) -> Result<(), Repo
 
     // Remove
     page.click_toggle().await?;
-    sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_result().await?).is_equal_to(false);
+    page.wait_for_text("test-htc-result", "false").await?;
 
     // Re-add
     page.click_toggle().await?;
-    sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_result().await?).is_equal_to(true);
+    page.wait_for_text("test-htc-result", "true").await?;
 
     Ok(())
 }
@@ -100,13 +92,11 @@ async fn test_child_disabled_attribute_change(
 
     // Toggle to disable the child button
     page.click_attr_toggle().await?;
-    sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_attr_result().await?).is_equal_to(false);
+    page.wait_for_text("test-htc-attr-result", "false").await?;
 
     // Toggle again to re-enable
     page.click_attr_toggle().await?;
-    sleep(Duration::from_millis(200)).await;
-    assert_that!(page.read_attr_result().await?).is_equal_to(true);
+    page.wait_for_text("test-htc-attr-result", "true").await?;
 
     Ok(())
 }

@@ -10,7 +10,7 @@ pub fn PageHookMenuTrigger() -> impl IntoView {
     let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
         menu_type: OverlayTriggerType::Menu,
-        disabled: false.into(),
+        is_disabled: false.into(),
         trigger: MenuTriggerType::Press,
         state,
     });
@@ -28,9 +28,9 @@ pub fn PageHookMenuTrigger() -> impl IntoView {
             <h1>"use_menu_trigger"</h1>
             <button id="test-mt-before">"Before"</button>
             <button {..attrs} style=styles data-testid="trigger">"Actions"</button>
-            <button id="test-mt-close" on:click=move |_| state.close.run(())>"Close"</button>
+            <button id="test-mt-close" on:click=move |_| state.close()>"Close"</button>
             <div id=menu_id>"(menu)"</div>
-            <div>"Open: " <span id="test-mt-is-open">{move || state.is_open.get().to_string()}</span></div>
+            <div>"Open: " <span id="test-mt-is-open">{move || state.is_open().to_string()}</span></div>
             <div>"Focus strategy: " <span id="test-mt-strategy">{strategy}</span></div>
         </div>
     }

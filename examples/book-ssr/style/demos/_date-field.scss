@@ -1,0 +1,115 @@
+// Demo styles of the date field and date picker hooks pages.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+/* Fields */
+.demo-date-field             { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); max-width: 100%; }
+
+.demo-date-field-label       { font-weight: 500; }
+
+.demo-date-field-description { color: var(--book-muted-color); font-size: var(--book-font-size-s); }
+
+.demo-date-field-error       { color: var(--danger-color); font-size: var(--book-font-size-s); }
+
+.demo-date-field-error:empty { display: none; }
+
+.demo-date-field-input {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    font-family: monospace;
+    font-size: var(--book-font-size-m);
+    font-variant-numeric: tabular-nums;
+
+    &:focus-within { border-color: var(--book-focus-color); }
+
+    &[aria-invalid="true"] { border-color: var(--danger-color); }
+
+    &[aria-disabled="true"] { opacity: 0.5; }
+}
+
+/* Segments */
+.demo-date-segment {
+    padding: 0 0.1em;
+    border-radius: var(--book-radius-s);
+    outline: none;
+    cursor: default;
+
+    &[data-placeholder] { color: var(--book-muted-color); }
+
+    &:focus { background: var(--brand-color); color: var(--book-on-brand-color); }
+}
+
+.demo-date-segment-literal { color: var(--book-muted-color); white-space: pre; }
+
+/* Date picker */
+.demo-date-picker            { display: inline-block; max-width: 100%; }
+
+.demo-date-picker-group      { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); }
+
+.demo-date-picker-input      { gap: var(--book-space-s); padding-right: var(--book-space-xs); }
+
+.demo-date-picker-segments   { display: inline-flex; }
+
+.demo-date-picker-button {
+    padding: 0.1em var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: pointer;
+
+    &[aria-expanded="true"] { border-color: var(--brand-color); }
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// Positioning styles come from `use_popover`.
+.demo-date-picker-popover {
+    z-index: 1000;
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+}
+
+.demo-date-picker-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: var(--book-space-s); margin-bottom: var(--book-space-s); }
+
+.demo-date-picker-month { font-weight: 600; }
+
+.demo-date-picker-grid {
+    width: auto;
+    margin: 0;
+    border-collapse: collapse;
+
+    th, td { padding: 1px; border: none; background: none; text-align: center; }
+
+    th { color: var(--book-muted-color); font-size: var(--book-font-size-s); font-weight: 500; }
+}
+
+.demo-date-picker-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1em;
+    height: 2.1em;
+    border-radius: var(--book-radius-m);
+    cursor: pointer;
+    outline: none;
+
+    &:hover { background: var(--brand-color-subtle); }
+
+    &[data-outside-month] { color: var(--book-muted-color); }
+
+    &[data-today] { font-weight: 700; }
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+.demo-date-picker-cell[aria-selected="true"] .demo-date-picker-day { background: var(--brand-color); color: var(--book-on-brand-color); }

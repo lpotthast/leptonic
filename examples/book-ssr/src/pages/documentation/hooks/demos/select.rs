@@ -1,103 +1,168 @@
+use leptonic::{
+    atoms::focus_scope::FocusScope,
+    components::prelude::*,
+    hooks::{
+        IntoAttrs, ListBoxData, UseHiddenSelectReturn, UseListBoxInput, UseListBoxReturn,
+        UseOptionInput, UseOptionReturn, UseOverlayInput, UseSelectInput, UseSelectReturn,
+        UseSelectStateInput,
+        collections::{Key, use_list_collection},
+        use_button, use_hidden_select, use_listbox, use_option, use_overlay, use_select,
+        use_select_state,
+    },
+    utils::classes::Classes,
+};
 use leptos::prelude::*;
+
+const FRUITS: [(&str, &str); 4] = [
+    ("apple", "Apple"),
+    ("banana", "Banana"),
+    ("cherry", "Cherry"),
+    ("date", "Date"),
+];
 
 #[component]
 pub fn SelectDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (selected, set_selected) = signal::<Option<String>>(None);
+    let collection = use_list_collection(
+        Signal::stored(FRUITS.to_vec()),
+        |(key, _)| Key::from(*key),
+        |(_, label)| (*label).to_owned(),
+    );
+    let state = use_select_state(UseSelectStateInput::new(collection));
+    let disabled = RwSignal::new(false);
 
-    let options: &[(&str, &str)] = &[
-        ("apple", "Apple"),
-        ("banana", "Banana"),
-        ("cherry", "Cherry"),
-        ("date", "Date"),
-    ];
+    let UseSelectReturn {
+        label_props,
+        trigger,
+        trigger_props,
+        value_props,
+        listbox,
+        hidden_select,
+        ..
+    } = use_select(UseSelectInput {
+        has_label: true,
+        is_disabled: disabled.into(),
+        name: Some("fruit".to_owned()),
+        ..UseSelectInput::new(state)
+    });
+
+    let button = use_button(trigger);
+    let (button_attrs, button_styles) = button.props.into_parts();
+
+    let selected_text = move || {
+        state.selected_items().first().map_or_else(
+            || "Select a fruit...".to_owned(),
+            |n| n.text_value.to_string(),
+        )
+    };
 
     view! {
-        <div style="position: relative; display: inline-block; min-width: 200px;">
+        <div class="demo-select">
+            <span {..label_props.into_attrs()} class="demo-select-label">
+                "Fruit"
+            </span>
             <button
-                on:click=move |_| set_is_open.update(|v| *v = !*v)
-                aria-haspopup="listbox"
-                aria-expanded=move || is_open.get()
-                style="
-                    width: 100%;
-                    padding: 0.75em 1em;
-                    border: 2px solid var(--brand-color);
-                    border-radius: 8px;
-                    background: white;
-                    cursor: pointer;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    font-size: 1em;
-                "
+                {..button_attrs}
+                {..trigger_props.into_attrs()}
+                style=button_styles
+                class="demo-select-trigger"
             >
-                <span>{ move || selected.get().unwrap_or_else(|| "Select a fruit...".to_string()) }</span>
-                <span style=move || format!(
-                    "transition: transform 0.2s; {}",
-                    if is_open.get() { "transform: rotate(180deg);" } else { "" }
-                )>{"\u{25bc}"}</span>
+                <span {..value_props.into_attrs()}>{selected_text}</span>
+                <span aria-hidden="true">"\u{25bc}"</span>
             </button>
 
-            <Show when=move || is_open.get()>
-                <div
-                    role="listbox"
-                    style="
-                        position: absolute;
-                        top: 100%;
-                        left: 0;
-                        right: 0;
-                        margin-top: 4px;
-                        background: white;
-                        border: 1px solid #ddd;
-                        border-radius: 8px;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                        z-index: 100;
-                        overflow: hidden;
-                    "
-                >
-                    {options.iter().map(|(_key, label)| {
-                        let label_owned = label.to_string();
-                        let label_for_click = label_owned.clone();
-                        let label_for_check = label_owned.clone();
-                        let label_for_style = label_owned.clone();
-                        view! {
-                            <div
-                                role="option"
-                                aria-selected=move || selected.get().as_ref() == Some(&label_for_check)
-                                on:click=move |_| {
-                                    set_selected.set(Some(label_for_click.clone()));
-                                    set_is_open.set(false);
-                                }
-                                style=move || format!(
-                                    "padding: 0.75em 1em; cursor: pointer; transition: background 0.15s; {}",
-                                    if selected.get().as_ref() == Some(&label_for_style) {
-                                        "background: var(--brand-color); color: white;"
-                                    } else {
-                                        "background: transparent;"
-                                    }
-                                )
-                            >
-                                { *label }
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                </div>
+            <Show when=move || state.is_open()>
+                <FruitPopover listbox=listbox.clone() close=Callback::new(move |()| state.close()) />
             </Show>
 
-            <select
-                style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden;"
-                aria-hidden="true"
-                tabindex="-1"
-            >
-                <option value="">"Select a fruit..."</option>
-                {options.iter().map(|(key, label)| {
-                    view! {
-                        <option value=*key>{ *label }</option>
-                    }
-                }).collect::<Vec<_>>()}
-            </select>
+            <FruitHiddenSelect hidden_select=hidden_select.clone() />
         </div>
 
-        <p>"Selected: " <strong>{ move || selected.get().unwrap_or_else(|| "None".to_string()) }</strong></p>
+        <Checkbox state=disabled>"Disabled"</Checkbox>
+
+        <p>
+            "Selected: "
+            <strong>{move || state.selected_key().map_or_else(|| "None".to_owned(), |k| k.to_string())}</strong>
+        </p>
+    }
+}
+
+/// The popover: dismissable with Escape or a click outside, returning focus to the trigger.
+#[component]
+fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView {
+    let overlay = use_overlay(UseOverlayInput {
+        is_open: Signal::stored(true),
+        on_close: close,
+        is_dismissable: true,
+        should_close_on_blur: true,
+        is_keyboard_dismiss_disabled: false,
+        should_close_on_interact_outside: None,
+    });
+    let UseListBoxReturn { props, data } = use_listbox(listbox);
+
+    view! {
+        <FocusScope restore_focus=true>
+            <div {..overlay.props.into_attrs()} class="demo-select-popover">
+                <div {..props.into_attrs()}>
+                    {FRUITS
+                        .map(|(key, label)| {
+                            view! { <FruitOption list=data.clone() key=key label=label /> }
+                        })
+                        .collect_view()}
+                </div>
+            </div>
+        </FocusScope>
+    }
+}
+
+#[component]
+fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
+    let UseOptionReturn {
+        props,
+        is_selected,
+        is_focused,
+        ..
+    } = use_option(UseOptionInput {
+        list,
+        key: Key::from(key),
+    });
+    let (attrs, styles) = props.into_parts();
+
+    view! {
+        <div
+            {..attrs}
+            style=styles
+            class=Classes::from("demo-select-option")
+                .add_reactive("selected", is_selected)
+                .add_reactive("focused", is_focused)
+        >
+            {label}
+        </div>
+    }
+}
+
+/// A visually hidden native `<select>` that takes part in forms and autofill.
+#[component]
+fn FruitHiddenSelect(hidden_select: leptonic::hooks::UseHiddenSelectInput) -> impl IntoView {
+    let UseHiddenSelectReturn {
+        container_props,
+        select_props,
+        options,
+        ..
+    } = use_hidden_select(hidden_select);
+
+    view! {
+        <div {..container_props.into_attrs()}>
+            <select {..select_props.into_attrs()}>
+                <For
+                    each=move || options.get()
+                    key=|option| (option.value.clone(), option.is_selected)
+                    let:option
+                >
+                    <option value=option.value selected=option.is_selected>
+                        {option.text}
+                    </option>
+                </For>
+            </select>
+        </div>
     }
 }

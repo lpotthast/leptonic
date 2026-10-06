@@ -64,7 +64,7 @@ pub struct UseDateFieldStateInput {
     pub validate: Option<ValidateFn<Option<time::OffsetDateTime>>>,
 
     /// Whether the field is explicitly marked as invalid (controlled validation).
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// Validation behavior mode.
     pub validation_behavior: ValidationBehavior,

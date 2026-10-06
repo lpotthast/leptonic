@@ -4,34 +4,14 @@ use leptos::prelude::*;
 use crate::{
     hooks::slider::ThumbIdx,
     utils::{
-        aria::AriaOrientation,
         math::{calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step},
+        orientation::Orientation,
     },
 };
 
 //
 // No intentional deviations from the react-aria implementation.
 //
-
-/// The orientation of a slider.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum SliderOrientation {
-    /// Horizontal layout.
-    #[default]
-    Horizontal,
-
-    /// Vertical layout.
-    Vertical,
-}
-
-impl From<SliderOrientation> for AriaOrientation {
-    fn from(value: SliderOrientation) -> Self {
-        match value {
-            SliderOrientation::Horizontal => Self::Horizontal,
-            SliderOrientation::Vertical => Self::Vertical,
-        }
-    }
-}
 
 /// Specifies how slider values are managed.
 #[derive(Clone)]
@@ -58,10 +38,10 @@ pub struct UseSliderStateInput {
     pub step: Option<f64>,
 
     /// Whether the slider is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// The current orientation of the slider.
-    pub orientation: Signal<SliderOrientation>,
+    pub orientation: Signal<Orientation>,
 
     /// Callback fired when any value changes during interaction.
     pub on_change: Option<Callback<Vec<f64>>>,
@@ -74,10 +54,10 @@ pub struct UseSliderStateInput {
 #[derive(Debug, Clone, Copy)]
 pub struct UseSliderStateReturn {
     /// Whether the slider is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// The current orientation of the slider.
-    pub orientation: Signal<SliderOrientation>,
+    pub orientation: Signal<Orientation>,
 
     /// The current values of all thumbs.
     pub values: Signal<Vec<f64>>,
@@ -172,7 +152,7 @@ pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
         min_value,
         max_value,
         step,
-        disabled,
+        is_disabled: disabled,
         orientation,
         on_change,
         on_change_end,
@@ -280,7 +260,7 @@ pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
     };
 
     UseSliderStateReturn {
-        disabled,
+        is_disabled: disabled,
         orientation,
         values,
         get_thumb_value: Callback::new(move |index: usize| {

@@ -16,7 +16,7 @@ pub fn FocusWithinDemo() -> impl IntoView {
         props,
         is_focus_within,
     } = use_focus_within(UseFocusWithinInput {
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         on_focus_within: Some(Callback::new(move |_| {
             set_focus_count.update(|c| *c += 1);
         })),
@@ -31,12 +31,12 @@ pub fn FocusWithinDemo() -> impl IntoView {
     view! {
         <div
             {..props.into_attrs()}
-            class=Classes::builder().with_toggle(is_focus_within.get(), "demo-container-active", "demo-container-inactive").build()
+            class=Classes::builder().with_toggle(is_focus_within, "demo-container-active", "demo-container-inactive").build()
         >
             <Stack orientation=StackOrientation::Vertical spacing=em(1.0)>
-                <p style="margin: 0;">
+                <p class="demo-focus-flush">
                     "Focus within: "
-                    <strong class=Classes::builder().with_toggle(is_focus_within.get(), "demo-state-active", "demo-state-inactive").build()>
+                    <strong class=Classes::builder().with_toggle(is_focus_within, "demo-state-active", "demo-state-inactive").build()>
                         { move || if is_focus_within.get() { "Yes" } else { "No" } }
                     </strong>
                 </p>
@@ -55,8 +55,8 @@ pub fn FocusWithinDemo() -> impl IntoView {
                     </button>
                 </Stack>
 
-                <p style="margin: 0; font-size: 0.85em; opacity: 0.7;">
-                    "Tab between elements - focus stays \"within\" the container"
+                <p class="demo-focus-hint">
+                    "Tab between the elements: focus stays within the container."
                 </p>
             </Stack>
         </div>
@@ -67,9 +67,6 @@ pub fn FocusWithinDemo() -> impl IntoView {
             <p>"Change: " <strong>{ move || change_count.get() }</strong></p>
         </div>
 
-        <FormControl classes="demo-form-row">
-            <Checkbox checked=disabled set_checked=set_disabled />
-            <Label>"Disabled"</Label>
-        </FormControl>
+        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
     }
 }

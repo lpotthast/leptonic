@@ -156,14 +156,14 @@ pub fn DateSelector(
                         <div class="months">
                             <For
                                 each=move || calendar.months.get()
-                                key=|month| month.index
+                                key=|month| month.month
                                 children=move |month| {
-                                    let month_index = month.index;
+                                    let month_of_year = month.month;
                                     view! {
                                         <div
                                             on:click=move |_| {
                                                 if !month.disabled {
-                                                    calendar.focus_month.run(month_index);
+                                                    calendar.focus_month.run(month_of_year);
                                                     set_show.update(|show| *show = Selection::Day);
                                                 }
                                             }
@@ -195,13 +195,13 @@ pub fn DateSelector(
                         <div class="weeks">
                             <For
                                 each=move || calendar.weeks.get()
-                                key=|week| week.id
+                                key=|week| week.days.first().map(|day| day.date_time.date())
                                 children=move |week| {
                                     view! {
                                         <div class="week">
                                             <For
                                                 each=move || week.days.clone()
-                                                key=|day| day.id
+                                                key=|day| day.date_time.date()
                                                 children=move |day| {
                                                     view! {
                                                         <div

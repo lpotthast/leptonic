@@ -57,7 +57,7 @@ pub fn focus_safely(element: &web_sys::Element) {
             let owner_doc = element.owner_document();
             let active_element = owner_doc.as_ref().and_then(get_active_element);
             let element = element.clone();
-            super::run_after_transition::run_after_transition(move || {
+            super::run_after_transition::run_after_transition(move |_| {
                 let owner_doc = element.owner_document();
                 let current_active = owner_doc.as_ref().and_then(get_active_element);
                 let body = owner_doc

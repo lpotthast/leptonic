@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -9,13 +8,13 @@ use leptos::{
 };
 use web_sys::KeyboardEvent;
 
-use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
+use super::use_tooltip_trigger_state::{TooltipTiming, TooltipTriggerState};
 use crate::{
     hooks::{
         IntoAttrs,
         focus::use_focus_visible::{Modality, get_modality},
     },
-    utils::{EventHandler, aria::AriaRole},
+    utils::{EventHandler, aria::AriaRole, id::use_id, pointer_type::PointerType},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tooltip/useTooltipTrigger.ts
@@ -23,7 +22,7 @@ use crate::{
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
-// - State is passed as a separate parameter (`UseTooltipTriggerStateReturn`)
+// - State is passed as a separate parameter (`TooltipTriggerState`)
 //   instead of being embedded in the hook, matching react-aria's
 //   `useTooltipTrigger(props, state, ref)` pattern.
 //
@@ -50,7 +49,7 @@ pub struct UseTooltipTriggerInput {
     pub is_disabled: Signal<bool>,
 
     /// The trigger behavior.
-    pub trigger: TooltipTrigger,
+    pub trigger: TooltipTriggerMode,
 
     /// Whether pressing the trigger should close the tooltip. Default: `true`.
     pub should_close_on_press: bool,
@@ -58,7 +57,7 @@ pub struct UseTooltipTriggerInput {
 
 /// What triggers the tooltip.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TooltipTrigger {
+pub enum TooltipTriggerMode {
     /// Show on hover (and focus for accessibility).
     #[default]
     Hover,
@@ -70,7 +69,7 @@ impl Default for UseTooltipTriggerInput {
     fn default() -> Self {
         Self {
             is_disabled: Signal::derive(|| false),
-            trigger: TooltipTrigger::Hover,
+            trigger: TooltipTriggerMode::Hover,
             should_close_on_press: true,
         }
     }
@@ -178,8 +177,9 @@ pub struct UseTooltipTriggerTooltipProps {
 #[allow(clippy::too_many_lines)]
 pub fn use_tooltip_trigger(
     input: UseTooltipTriggerInput,
-    state: UseTooltipTriggerStateReturn,
+    state: TooltipTriggerState,
 ) -> UseTooltipTriggerReturn {
+    crate::hooks::track_interaction_modality();
     let UseTooltipTriggerInput {
         is_disabled,
         trigger: trigger_type,
@@ -190,16 +190,20 @@ pub fn use_tooltip_trigger(
     let trigger_id = format!("tooltip-trigger-{base_id}");
     let tooltip_id = format!("tooltip-{base_id}");
 
-    let is_open = state.is_open;
+    let is_open = state.overlay.is_open;
 
     // Track hover/focus state to coordinate show/hide.
     let is_hovered: StoredValue<bool> = StoredValue::new(false);
     let is_focused: StoredValue<bool> = StoredValue::new(false);
 
-    // handle_show: open the tooltip if hovered or focused.
+    // handle_show: open the tooltip if hovered or focused (immediately when focused).
     let handle_show = move || {
         if is_hovered.get_value() || is_focused.get_value() {
-            state.open.run(false);
+            state.open(if is_focused.get_value() {
+                TooltipTiming::Immediate
+            } else {
+                TooltipTiming::Delayed
+            });
         }
     };
 
@@ -207,29 +211,31 @@ pub fn use_tooltip_trigger(
     let handle_hide = move |immediate: bool| {
         if !is_hovered.get_value() && !is_focused.get_value() {
             if immediate {
-                state.close.run(true);
+                state.close(TooltipTiming::Immediate);
             } else {
-                state.close.run(false);
+                state.close(TooltipTiming::Delayed);
             }
         }
     };
 
     // --- Pointer handlers ---
 
-    let handle_pointer_enter = move |_e: web_sys::PointerEvent| {
-        if is_disabled.get_untracked() || trigger_type == TooltipTrigger::Focus {
+    let handle_pointer_enter = move |e: web_sys::PointerEvent| {
+        // Touch never hovers (as `useHover`).
+        if is_disabled.get_untracked()
+            || trigger_type == TooltipTriggerMode::Focus
+            || PointerType::from(e.pointer_type()) == PointerType::Touch
+        {
             return;
         }
-        // Only set hovered when the user is using a pointer (mouse/pen/touch).
-        // This prevents Chrome's phantom hover events after keyboard interactions.
-        if get_modality() == Modality::Pointer {
-            is_hovered.set_value(true);
-            handle_show();
-        }
+        // Only count as hovered when the user is using a pointer. This prevents Chrome's phantom
+        // hover events after keyboard interactions.
+        is_hovered.set_value(get_modality() == Modality::Pointer);
+        handle_show();
     };
 
     let handle_pointer_leave = move |_e: web_sys::PointerEvent| {
-        if trigger_type == TooltipTrigger::Focus {
+        if trigger_type == TooltipTriggerMode::Focus {
             return;
         }
         is_hovered.set_value(false);
@@ -258,23 +264,17 @@ pub fn use_tooltip_trigger(
         handle_hide(true);
     };
 
-    // --- Keydown handler (local, for Escape) ---
-    // This is a local handler as a fallback. The global Escape handler
-    // on the document (below) handles the primary case, but this ensures
-    // the tooltip closes even if the global handler is somehow bypassed.
-    let handle_keydown = move |e: KeyboardEvent| {
-        if e.key() == "Escape" && is_open.get_untracked() {
-            e.prevent_default();
-            state.close.run(true);
+    // --- Press start (pointer down or key down on the trigger) ---
+    let press_start = move || {
+        if !should_close_on_press {
+            return;
         }
+        is_focused.set_value(false);
+        is_hovered.set_value(false);
+        handle_hide(true);
     };
-
-    // --- Press handler (for should_close_on_press) ---
-    let handle_pointer_down = move |_e: web_sys::PointerEvent| {
-        if should_close_on_press && is_open.get_untracked() {
-            state.close.run(true);
-        }
-    };
+    let handle_keydown = move |_e: KeyboardEvent| press_start();
+    let handle_pointer_down = move |_e: web_sys::PointerEvent| press_start();
 
     // --- Global Escape handler ---
     // Register a document-level Escape handler in capture phase when the tooltip
@@ -283,6 +283,8 @@ pub fn use_tooltip_trigger(
     #[cfg(not(feature = "ssr"))]
     {
         use leptos_use::{UseEventListenerOptions, use_document, use_event_listener_with_options};
+
+        use crate::utils::key::{KeyboardEventKey, KeyboardKey};
 
         let document = use_document();
         Effect::new(move |_| {
@@ -293,9 +295,10 @@ pub fn use_tooltip_trigger(
                     doc.clone(),
                     ev::keydown,
                     move |e: KeyboardEvent| {
-                        if e.key() == "Escape" {
-                            e.prevent_default();
-                            state.close.run(true);
+                        // Escape closes the tooltip only, not an enclosing overlay.
+                        if e.typed_key() == KeyboardKey::Escape {
+                            e.stop_propagation();
+                            state.close(TooltipTiming::Immediate);
                         }
                     },
                     UseEventListenerOptions::default().capture(true),

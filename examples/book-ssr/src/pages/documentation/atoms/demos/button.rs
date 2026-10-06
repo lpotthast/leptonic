@@ -1,16 +1,18 @@
-use leptonic::atoms::prelude as atoms;
+use leptonic::{atoms::prelude as atoms, components::prelude::Checkbox};
 use leptos::prelude::*;
-use leptos_use::use_window;
 
 #[component]
 pub fn ButtonDemo() -> impl IntoView {
+    let presses = RwSignal::new(0u32);
+    let disabled = RwSignal::new(false);
+
     view! {
-        <atoms::Button on_press=move |_| {
-            if let Some(window) = use_window().as_ref() {
-                let _ = window.alert_with_message("Pressed!");
-            }
-        }>
-            "Press me"
-        </atoms::Button>
+        <div class="demo-flex-center-row">
+            <atoms::Button classes="demo-btn" is_disabled=disabled on_press=move |_| presses.update(|p| *p += 1)>
+                "Press me"
+            </atoms::Button>
+            <Checkbox state=disabled>"Disabled"</Checkbox>
+        </div>
+        <p>{move || format!("Pressed {} times.", presses.get())}</p>
     }
 }

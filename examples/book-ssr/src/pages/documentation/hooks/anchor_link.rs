@@ -1,108 +1,107 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::anchor_link::AnchorLinkDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseAnchorLink() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use-anchor-link" class="anchor">
-                "use_anchor_link"
-                <AnchorLink href="#use-anchor-link" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_anchor_link">
             <p>
-                "The "<code>"use_anchor_link"</code>" hook creates accessible in-page anchor links with smooth scrolling and URL hash updates. "
-                "See the "<Link href=crate::routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
+                "The "<Code inline=true>"use_anchor_link"</Code>" hook makes a link that scrolls to an element on the "
+                "current page and puts its id into the URL. It has the press handling, focus management and focus ring "
+                "tracking of "<Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link>". See the "
+                <Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Composes " <code>"use_focusable"</code> ", " <code>"use_press"</code> ", and " <code>"use_focus_ring"</code>
-                " to provide the same interaction quality as " <code>"use_link"</code> " but specialized for anchor navigation."
-            </p>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseAnchorLinkInput"</Code>" has no "<Code inline=true>"Default"</Code>
+                    ", so you set every field."
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <ApiTable kind=ApiKind::Input of="UseAnchorLinkInput">
+                    <ApiRow name="href" ty="Href">
+                        "The element to link to, by id: "<Code inline=true>"Href::from(\"#my-section\")"</Code>" or "
+                        <Code inline=true>"Href::new(\"my-section\")"</Code>" (the "<Code inline=true>"#"</Code>
+                        " is optional). "<Code inline=true>"fragment()"</Code>" returns the id, "<Code inline=true>"as_str()"</Code>
+                        " the href with its "<Code inline=true>"#"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="scroll_behavior" ty="Option<ScrollBehavior>">
+                        <Code inline=true>"Smooth"</Code>" or "<Code inline=true>"Instant"</Code>" scrolling to the target. "
+                        <Code inline=true>"None"</Code>" doesn\u{2019}t scroll; only the URL changes."
+                    </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the link is disabled."</ApiRow>
+                    <ApiRow name="element_type" ty="LinkElementType">
+                        "The element you spread the props onto. Elements other than "<Code inline=true>"<a>"</Code>
+                        " get "<Code inline=true>"role=\"link\""</Code>"."
+                    </ApiRow>
+                    <ApiRow name="description" ty="Option<Oco<'static, str>>">
+                        "Accessible name ("<Code inline=true>"aria-label"</Code>"). Set it when the link has no descriptive "
+                        "text, such as a bare "<Code inline=true>"#"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>">"Called after scrolling and updating the URL."</ApiRow>
+                    <ApiRow name="on_press_start, on_press_end" ty="Option<Callback<PressEvent>>">
+                        "Called when a press starts and ends."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <DemoShell
-                source=include_str!("demos/anchor_link.rs")
-                description="Anchor link with smooth scrolling"
-            >
-                <AnchorLinkDemo />
-            </DemoShell>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseAnchorLinkReturn">
+                    <ApiRow name="props" ty="PropsWithStyles<UseAnchorLinkProps>">
+                        "Attributes, event handlers and styles for the link element. Call "
+                        <Code inline=true>"props.into_parts()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
+                        ", then spread "<Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_pressed" ty="Signal<bool>">"Whether the link is currently pressed."</ApiRow>
+                    <ApiRow name="is_focus_visible" ty="Signal<bool>">"Whether a focus ring should be shown (keyboard focus only)."</ApiRow>
+                    <ApiRow name="focus_handle" ty="FocusHandle">"Focus the link programmatically."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+            <Section title="Demo">
+                <p>"Press the "<Code inline=true>"#"</Code>" link to scroll to the target below it."</p>
 
-            <ul>
-                <li>"Composes " <code>"use_press"</code> " for robust press interactions (pointer, keyboard, drag cancellation)"</li>
-                <li>"Composes " <code>"use_focusable"</code> " for focus/blur handling, auto-focus, and tabindex management"</li>
-                <li>"Composes " <code>"use_focus_ring"</code> " for keyboard-only focus ring visibility"</li>
-                <li>"Smooth or instant scrolling to target element"</li>
-                <li>"URL hash update without page reload"</li>
-                <li>"Disabled state handling"</li>
-                <li>"Pressed state tracking (" <code>"is_pressed"</code> ")"</li>
-                <li><code>"on_press_start"</code> " / " <code>"on_press_end"</code> " callbacks for press lifecycle"</li>
-                <li>"Programmatic focus via " <code>"FocusHandle"</code></li>
-            </ul>
+                <Demo description="Anchor link scrolling smoothly to a target, with a disabled toggle" source=include_str!("demos/anchor_link.rs") source_open=true>
+                    <AnchorLinkDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+            <Section title="Behavior">
+                <p>"When the link is pressed and not disabled, the hook:"</p>
 
-            <p>"The hook automatically sets:"</p>
-            <ul>
-                <li><code>"href"</code> " pointing to the anchor target"</li>
-                <li><code>"aria-label"</code> " from the " <code>"description"</code> " input"</li>
-                <li><code>"aria-disabled"</code> " for disabled state"</li>
-                <li><code>"tabindex"</code> " managed by " <code>"use_focusable"</code></li>
-                <li><code>"data-focus-visible"</code> " for keyboard-only focus ring"</li>
-            </ul>
+                <ol>
+                    <li>"prevents the browser\u{2019}s default navigation,"</li>
+                    <li>"scrolls the element with the anchor\u{2019}s id into view, if "<Code inline=true>"scroll_behavior"</Code>" is set,"</li>
+                    <li>"replaces the URL hash with "<Code inline=true>"history.replaceState"</Code>", so no history entry is added and the page doesn\u{2019}t reload,"</li>
+                    <li>"calls your "<Code inline=true>"on_press"</Code>"."</li>
+                </ol>
+            </Section>
 
-            <h2 id="deviations" class="anchor">
-                "Deviations from react-aria"
-                <AnchorLink href="#deviations" description="Direct link to deviations"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>"The hook sets:"</p>
 
-            <ul>
-                <li>
-                    "This hook has no direct react-aria equivalent. React-aria's " <code>"useLink"</code>
-                    " does not handle in-page anchor scrolling. This hook extends that pattern with "
-                    "scroll-to-element behavior and URL hash management."
-                </li>
-                <li>
-                    <code>"use_focus_ring"</code>
-                    " is composed directly in the hook. React-aria handles focus ring visibility at the component level."
-                </li>
-            </ul>
+                <ul>
+                    <li><Code inline=true>"href"</Code>" pointing to the anchor."</li>
+                    <li><Code inline=true>"role=\"link\""</Code>" on elements other than "<Code inline=true>"<a>"</Code>"."</li>
+                    <li><Code inline=true>"aria-label"</Code>" from "<Code inline=true>"description"</Code>"."</li>
+                    <li><Code inline=true>"aria-disabled"</Code>" while disabled, and a "<Code inline=true>"tabindex"</Code>" managed by "<Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link>"."</li>
+                    <li><Code inline=true>"data-focus-visible"</Code>" while the link has keyboard focus."</li>
+                </ul>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to see also"/>
-            </h2>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Focuses the link."</KeyRow>
+                    <KeyRow keys="Enter">"Activates the link."</KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <ul>
-                <li><code>"use_link"</code> " - For general-purpose links (internal, external, non-anchor elements)"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_anchor_link", link: "#use-anchor-link" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Deviations", link: "#deviations" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
+                <li><Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
+                <li><Link href=routes::doc::link::AnchorLinkAtom.materialize()>"AnchorLink atom"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

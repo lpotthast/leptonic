@@ -1,313 +1,192 @@
-// Upstream: react-aria/src/menu/useMenu.ts @ 6f664fe911
-use std::collections::HashSet;
+// Upstream: react-aria/src/menu/useMenu.ts @ 99e6102368
+use std::sync::Arc;
 
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
     prelude::*,
 };
 use web_sys::KeyboardEvent;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenu.ts
-
-// 1. `selection_mode` defaults to `SelectionMode::None` (action-only menu).
-//    React-aria determines mode from the collection; we require it upfront.
-//
-// 2. Auto-focus defaults to `FocusStrategy::First` when no explicit strategy
-//    is provided, matching react-aria's `autoFocus: state.focusStrategy || true`.
-//
-// 3. Tab key is not intercepted at the menu level. React-aria delegates Tab
-//    handling to `useSelectableCollection` / `FocusScope`. We do the same.
-
-use crate::hooks::selection::use_selectable_collection::EscapeKeyBehavior;
-use crate::hooks::selection::use_selection_state::FocusStrategy;
 use crate::{
     hooks::{
-        IntoAttrs,
-        form::use_checkbox_group::Orientation,
-        selection::{
-            SelectionKey,
-            use_selectable_list::{
-                UseSelectableListInput, UseSelectableListReturn, use_selectable_list,
-            },
-            use_selection_state::{DisabledBehavior, Selection, SelectionBehavior, SelectionMode},
-            use_type_select::{UseTypeSelectInput, UseTypeSelectReturn, use_type_select},
+        IntoAttrs, Orientation,
+        collections::{
+            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
+            UseSelectableCollectionAttrs, UseSelectableCollectionProps, UseSelectableListInput,
+            use_selectable_list,
         },
     },
-    utils::{CapturedElement, EventHandler, aria::AriaRole, locale::WritingDirection},
+    utils::{CapturedElement, EventHandler, aria::AriaRole, id::use_id},
 };
 
-/// Input parameters for the `use_menu` hook.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The menu's items come from a list state (react-aria: a tree state, for submenus).
+// - Items get the menu's settings through the returned `MenuData` (react-aria: a `WeakMap`
+//   keyed by the state), which the caller hands to `use_menu_item`.
+//
+// ## OMITTED FEATURES
+// - Submenus (`useSubmenuTrigger`, tree state) and virtual focus.
+//
+// =============================================================================
+
+/// Input of [`use_menu`].
 #[derive(Clone)]
-pub struct UseMenuInput<K>
-where
-    K: SelectionKey,
-{
-    /// Whether keyboard navigation should wrap around.
-    pub should_focus_wrap: bool,
-
-    /// An accessibility label for the menu.
-    pub aria_label: Option<String>,
-
-    /// All available menu item keys.
-    pub all_keys: Signal<Vec<K>>,
-
-    /// Keys that are disabled.
-    pub disabled_keys: Signal<HashSet<K>>,
-
-    /// Callback to get the text label for a key (used for type-ahead).
-    pub get_key_label: Callback<K, String>,
-
-    /// Handler called when the menu should close.
+pub struct UseMenuInput {
+    /// The items and their selection (`SelectionMode::None` for action menus).
+    pub state: ListState,
+    /// The menu element; the hook's props capture it.
+    pub element: CapturedElement,
+    /// The element id. Generated when `None`. A menu trigger provides one (`menu_props.id`).
+    pub id: Option<String>,
+    pub aria_label: MaybeProp<String>,
+    /// A menu trigger provides this (`menu_props.aria_labelledby`).
+    pub aria_labelledby: MaybeProp<String>,
+    /// Keyboard and focus behavior. Arrow keys wrap around by default.
+    pub options: CollectionOptions,
+    /// Replaces the list keyboard delegate.
+    pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Called with the key of an activated item.
+    pub on_action: Option<Callback<Key>>,
+    /// Called when an item asks the menu to close (after its action).
     pub on_close: Option<Callback<()>>,
-
-    /// Handler called when an action is performed on a menu item.
-    pub on_action: Option<Callback<K>>,
-
-    /// Whether the menu is disabled.
-    pub disabled: Signal<bool>,
-
-    /// Focus strategy signal. When this becomes Some(strategy), focus moves accordingly.
-    /// Connect this to `use_menu_trigger_state().focus_strategy` for proper menu focus behavior.
-    pub auto_focus: Signal<Option<FocusStrategy>>,
-
-    /// The selection mode for this menu.
-    /// - `None` (default): Action-only menu items (`role="menuitem"`).
-    /// - `Single`: Radio-style selection (`role="menuitemradio"`).
-    /// - `Multiple`: Checkbox-style selection (`role="menuitemcheckbox"`).
-    pub selection_mode: SelectionMode,
-
-    /// Element ref for the menu container.
-    pub collection_ref: CapturedElement,
 }
 
-impl<K: SelectionKey> Default for UseMenuInput<K> {
-    fn default() -> Self {
+impl UseMenuInput {
+    /// A menu for `state` whose arrow keys wrap around, with all other settings at their
+    /// defaults.
+    pub fn new(state: ListState, element: CapturedElement) -> Self {
         Self {
-            should_focus_wrap: true,
-            aria_label: None,
-            all_keys: Signal::derive(Vec::new),
-            disabled_keys: Signal::derive(HashSet::new),
-            get_key_label: Callback::new(|_| String::new()),
-            on_close: None,
+            state,
+            element,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: MaybeProp::default(),
+            options: CollectionOptions {
+                should_focus_wrap: true,
+                ..CollectionOptions::default()
+            },
+            keyboard_delegate: None,
             on_action: None,
-            disabled: Signal::derive(|| false),
-            auto_focus: Signal::derive(|| None),
-            selection_mode: SelectionMode::None,
-            collection_ref: CapturedElement::new(),
+            on_close: None,
         }
     }
 }
 
-/// The return value of the `use_menu` hook.
-pub struct UseMenuReturn<K>
-where
-    K: SelectionKey,
-{
-    /// Props for the menu element. Call `.into_attrs()` for view spreading.
-    pub menu_props: UseMenuProps,
-
-    /// The selectable list state.
-    pub list: UseSelectableListReturn<K>,
-
-    /// The type select state.
-    pub type_select: UseTypeSelectReturn,
-
-    /// The selection mode of this menu. Pass to `UseMenuItemInput` for correct ARIA roles.
-    pub selection_mode: SelectionMode,
+/// What items need to know about their menu. Pass it to `use_menu_item`.
+#[derive(Debug, Clone)]
+pub struct MenuData {
+    pub state: ListState,
+    /// See `UseSelectableItemInput::collection_id`.
+    pub collection_id: String,
+    pub on_action: Option<Callback<Key>>,
+    pub on_close: Option<Callback<()>>,
 }
 
-/// Props from `use_menu` that can be extracted and merged programmatically.
+/// Return value of [`use_menu`].
+#[derive(Debug)]
+pub struct UseMenuReturn {
+    pub props: UseMenuProps,
+    pub data: MenuData,
+}
+
+/// Props for the menu element.
 #[derive(Debug)]
 pub struct UseMenuProps {
+    pub id: String,
     pub role: AriaRole,
-    pub aria_label: Option<String>,
-    pub tabindex: i32,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: MaybeProp<String>,
+    /// Keyboard navigation, type-ahead and focus handling (`use_selectable_list`).
+    pub collection: UseSelectableCollectionProps,
 }
+
+pub type UseMenuAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, MaybeProp<String>>,
+    UseSelectableCollectionAttrs,
+);
 
 impl IntoAttrs for UseMenuProps {
     type Attrs = UseMenuAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
+            Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_keydown.into_on(ev::keydown),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            self.collection.into_attrs(),
         )
     }
 }
 
-/// Attributes for the menu element.
-pub type UseMenuAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::Tabindex, i32>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Provides the behavior and accessibility implementation for a menu component.
+/// A menu: a list of actions (or of options to check), navigated with arrow keys and
+/// type-ahead. Render one `use_menu_item` per collection item, in collection order.
 ///
-/// A menu displays a list of actions or options that a user can choose.
-/// This hook handles keyboard navigation, type-ahead selection, and ARIA attributes.
-///
-/// # Example
-///
-/// ```ignore
-/// let items = vec!["copy", "paste", "cut"];
-/// let all_keys = Signal::derive(move || items.iter().map(|s| s.to_string()).collect());
-///
-/// let menu = use_menu(UseMenuInput {
-///     all_keys,
-///     get_key_label: Callback::new(|key: String| key.clone()),
-///     on_action: Some(Callback::new(|key| {
-///         // Handle menu item selection
-///     })),
-///     on_close: Some(Callback::new(|_| {
-///         // Close the menu
-///     })),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <ul {..menu.menu_props.into_attrs()}>
-///         // Menu items here
-///     </ul>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_menu<K>(input: UseMenuInput<K>) -> UseMenuReturn<K>
-where
-    K: SelectionKey,
-{
+/// Escape is left to the surrounding overlay, which closes the menu.
+pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
     let UseMenuInput {
-        should_focus_wrap,
+        state,
+        element,
+        id,
         aria_label,
-        all_keys,
-        disabled_keys,
-        get_key_label,
-        on_close,
+        aria_labelledby,
+        mut options,
+        keyboard_delegate,
         on_action,
-        disabled,
-        auto_focus,
-        selection_mode,
-        collection_ref,
+        on_close,
     } = input;
 
-    // Auto-focus fallback: default to FocusStrategy::First when no explicit strategy
-    // is provided, matching react-aria's `autoFocus: state.focusStrategy || true`.
-    let auto_focus_with_fallback =
-        Signal::derive(move || auto_focus.get().or(Some(FocusStrategy::First)));
-
-    // Determine list selection mode and behavior.
-    // For action-only menus (SelectionMode::None), we still use Single/Replace internally
-    // so that the selectable list handles navigation. The on_selection_change callback
-    // routes to on_action for action-only menus.
-    let (list_selection_mode, list_selection_behavior) = match selection_mode {
-        SelectionMode::None | SelectionMode::Single => {
-            (SelectionMode::Single, SelectionBehavior::Replace)
+    // Checked once mounted: a label may arrive after creation (a menu trigger's id).
+    #[cfg(debug_assertions)]
+    Effect::new(move |_| {
+        if aria_label.get_untracked().is_none() && aria_labelledby.get_untracked().is_none() {
+            crate::utils::dev_warn!(
+                "use_menu: an aria_label or aria_labelledby is required for accessibility"
+            );
         }
-        SelectionMode::Multiple => (SelectionMode::Multiple, SelectionBehavior::Toggle),
-    };
+    });
 
-    // Create the selectable list.
-    // Menu handles Escape for closing, so disable collection's Escape behavior.
-    let list = use_selectable_list(UseSelectableListInput {
-        selection_mode: list_selection_mode,
-        selection_behavior: list_selection_behavior,
-        disabled,
-        selected_keys: None,
-        default_selected_keys: None,
-        on_selection_change: Some(Callback::new(move |selection: Selection<K>| {
-            // When an item is selected, trigger the action
-            if let Selection::Keys(keys) = selection
-                && let Some(key) = keys.into_iter().next()
-                && let Some(on_action) = on_action
-            {
-                on_action.run(key);
-            }
-        })),
-        disabled_keys,
-        disallow_empty_selection: false,
-        disabled_behavior: DisabledBehavior::default(),
-        all_keys,
-        should_focus_wrap,
-        auto_focus: auto_focus_with_fallback,
-        select_on_focus: Some(false),
+    // Link items open on press, never by moving focus.
+    options.link_behavior = LinkBehavior::Override;
+
+    let mut collection = use_selectable_list(UseSelectableListInput {
+        state,
+        element,
         orientation: Orientation::Vertical,
-        direction: Signal::derive(|| WritingDirection::Ltr), // TODO: get from i18n context
-        collection_ref,
-        escape_key_behavior: EscapeKeyBehavior::None, // Menu handles Escape for closing
-        disallow_select_all: true,                    // Menus don't support Ctrl+A
-        on_close: None,                               // Menu handles close separately
-        disallow_type_ahead: false,
-        get_key_label: None,
-        allows_tab_navigation: false,
-    });
+        layout: ListLayout::Stack,
+        keyboard_delegate,
+        options,
+    })
+    .props;
 
-    // Access focused key through selection_state
-    let focused_key = list.collection.selection_state.focused_key;
-    let set_focused_key = list.collection.selection_state.set_focused_key;
-
-    // Create type-ahead selection
-    let type_select = use_type_select(UseTypeSelectInput {
-        disabled,
-        all_keys,
-        get_key_label,
-        focused_key,
-        on_focus: Callback::new(move |key: Option<K>| {
-            set_focused_key.run((key, None));
-        }),
-        timeout_ms: 500,
-    });
-
-    // Get the keyboard handler callbacks from sub-hooks for delegation
-    let list_on_keydown = list.on_keydown;
-    let type_select_on_keydown = type_select.on_keydown;
-
-    // Keyboard handler: only handles Escape at the menu level.
-    // Enter/Space is handled exclusively by use_menu_item (which stops propagation).
-    // Tab is not intercepted — FocusScope handles it.
-    // Navigation keys delegate to the selectable list.
-    // Other keys delegate to type-ahead.
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
+    // Escape bubbles to the overlay (which closes the menu) instead of clearing the selection.
+    let list_keydown = collection.on_keydown;
+    collection.on_keydown = EventHandler::new(move |e: KeyboardEvent| {
+        if e.key() != "Escape" {
+            list_keydown.call(e);
         }
-
-        let key = e.key();
-
-        match key.as_str() {
-            // Menu-specific: close on Escape (override list's Escape which clears selection)
-            "Escape" => {
-                e.prevent_default();
-                if let Some(on_close) = on_close {
-                    on_close.run(());
-                }
-            }
-            // Delegate navigation keys to list handler
-            "ArrowDown" | "ArrowRight" | "ArrowUp" | "ArrowLeft" | "Home" | "End" => {
-                list_on_keydown.run(e);
-            }
-            // Delegate type-ahead to type_select handler
-            _ => {
-                type_select_on_keydown.run(e);
-            }
-        }
-    };
+    });
 
     UseMenuReturn {
-        menu_props: UseMenuProps {
+        data: MenuData {
+            state,
+            collection_id: collection.collection_id.clone(),
+            on_action,
+            on_close,
+        },
+        props: UseMenuProps {
+            id: id.unwrap_or_else(|| use_id("menu")),
             role: AriaRole::Menu,
             aria_label,
-            tabindex: 0,
-            on_keydown: EventHandler::new(handle_keydown),
+            aria_labelledby,
+            collection,
         },
-        list,
-        type_select,
-        selection_mode,
     }
 }

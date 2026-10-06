@@ -2,153 +2,112 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
-use super::demos::toolbar_horizontal::ToolbarHorizontalDemo;
-use super::demos::toolbar_vertical::ToolbarVerticalDemo;
+use super::demos::{
+    toolbar_horizontal::ToolbarHorizontalDemo, toolbar_vertical::ToolbarVerticalDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseToolbar() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_toolbar" class="anchor">
-                "use_toolbar"
-                <AnchorLink href="#use_toolbar" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_toolbar">
             <p>
-                "The "<Code inline=true>"use_toolbar"</Code>" hook is a standalone hook for creating accessible toolbars that group related controls together."
+                "A toolbar groups related controls, like the formatting buttons of a text editor. The "
+                <Code inline=true>"use_toolbar"</Code>" hook makes the toolbar one tab stop: "<Keys keys="Tab"/>
+                " enters and leaves it, the arrow keys move focus between its controls, and when focus comes back, it returns "
+                "to the control focused last. The hook moves focus itself, so the controls need no tabindex management."
             </p>
+            <ReactAria hook="useToolbar"/>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useToolbar.html" target=LinkTarget::_Blank>
-                    "useToolbar"
-                </LinkExt>
-                "."
-            </p>
+            <Section title="Input">
+                <ApiTable kind=ApiKind::Input of="UseToolbarInput">
+                    <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                        "The axis of the arrow keys: "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" for "
+                        <Code inline=true>"Horizontal"</Code>", "<Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" for "
+                        <Code inline=true>"Vertical"</Code>". Also sets "<Code inline=true>"aria-orientation"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The toolbar\u{2019}s accessible name."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">
+                        "The id of an element naming the toolbar. Ignored when "<Code inline=true>"aria_label"</Code>" is set."
+                    </ApiRow>
+                </ApiTable>
+                <p><Code inline=true>"UseToolbarInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
+            </Section>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseToolbarReturn">
+                    <ApiRow name="props" ty="UseToolbarProps">
+                        <Code inline=true>"role=\"toolbar\""</Code>", "<Code inline=true>"aria-orientation"</Code>
+                        ", the label and the focus handling. Spread with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h3>"Horizontal Toolbar"</h3>
-            <DemoShell source=include_str!("demos/toolbar_horizontal.rs")>
-                <ToolbarHorizontalDemo />
-            </DemoShell>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let toolbar = use_toolbar(UseToolbarInput {
+                            aria_label: "Text formatting".into(),
+                            ..UseToolbarInput::default()
+                        });
 
-            <h3>"Vertical Toolbar"</h3>
-            <DemoShell source=include_str!("demos/toolbar_vertical.rs")>
-                <ToolbarVerticalDemo />
-            </DemoShell>
+                        view! {
+                            <div {..toolbar.props.into_attrs()}>
+                                <button>"Bold"</button>
+                                <button>"Italic"</button>
+                                <button>"Underline"</button>
+                            </div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let toolbar = use_toolbar(UseToolbarInput {
-                        label: Some("Text Formatting".to_string()),
-                        orientation: ToolbarOrientation::Horizontal,
-                        on_focus_next: Some(Callback::new(|_| focus_next_item())),
-                        on_focus_previous: Some(Callback::new(|_| focus_previous_item())),
-                        on_focus_first: Some(Callback::new(|_| focus_first_item())),
-                        on_focus_last: Some(Callback::new(|_| focus_last_item())),
-                        ..Default::default()
-                    });
+            <Section title="Demo">
+                <p>
+                    "A horizontal toolbar of "<Link href=routes::doc::toggle_button::Hook.materialize()>"toggle buttons"</Link>
+                    ". Tab into it, move with the arrow keys, tab out and back in:"
+                </p>
+                <Demo
+                    description="Horizontal text formatting toolbar with bold, italic and underline toggle buttons"
+                    source=include_str!("demos/toolbar_horizontal.rs")
+                >
+                    <ToolbarHorizontalDemo/>
+                </Demo>
 
-                    view! {
-                        <div {..toolbar.toolbar_props.into_attrs()}>
-                            <button tabindex="0">"Bold"</button>
-                            <button tabindex="-1">"Italic"</button>
-                            <button tabindex="-1">"Underline"</button>
-                        </div>
-                    }
-                "#)}
-            </Code>
+                <p>
+                    "A vertical toolbar of "<Link href=routes::doc::button::Hook.materialize()>"buttons"</Link>": "
+                    <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" move between them."
+                </p>
+                <Demo description="Vertical toolbar with three action buttons showing the last action" source=include_str!("demos/toolbar_vertical.rs")>
+                    <ToolbarVerticalDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="orientation" class="anchor">
-                "Orientation"
-                <AnchorLink href="#orientation" description="Direct link to orientation"/>
-            </h2>
+            <Section title="Nested Toolbars">
+                <p>
+                    "A toolbar inside another toolbar becomes a "<Code inline=true>"group"</Code>" of it and leaves the keyboard "
+                    "handling to the outer toolbar, so the arrow keys move through all controls of both."
+                </p>
+            </Section>
 
-            <ul>
-                <li><code>"ToolbarOrientation::Horizontal"</code> " - Arrow Left/Right navigation (default)"</li>
-                <li><code>"ToolbarOrientation::Vertical"</code> " - Arrow Up/Down navigation"</li>
-            </ul>
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="Tab / Shift + Tab">
+                        "Moves focus into the toolbar (to the control focused last) or out of it."
+                    </KeyRow>
+                    <KeyRow keys="ArrowRight / ArrowLeft">
+                        "Horizontal toolbars: focuses the next or previous control (reversed in right-to-left locales)."
+                    </KeyRow>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Vertical toolbars: focuses the next or previous control."</KeyRow>
+                </KeyboardTable>
+                <p>"Focus doesn\u{2019}t wrap around: at the first or last control, the arrow keys do nothing."</p>
+            </Section>
 
-            <h2 id="keyboard-navigation" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard-navigation" description="Direct link to keyboard"/>
-            </h2>
-
-            <p>"For horizontal toolbars:"</p>
-            <ul>
-                <li><code>"Arrow Right"</code> " - Focus next item"</li>
-                <li><code>"Arrow Left"</code> " - Focus previous item"</li>
-                <li><code>"Home"</code> " - Focus first item"</li>
-                <li><code>"End"</code> " - Focus last item"</li>
-            </ul>
-
-            <p>"For vertical toolbars, Arrow Up/Down are used instead."</p>
-
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
-
-            <p>"The hook automatically sets:"</p>
-            <ul>
-                <li><code>"role=\"toolbar\""</code></li>
-                <li><code>"aria-label"</code> " (from label prop)"</li>
-                <li><code>"aria-orientation"</code> " (horizontal or vertical)"</li>
-                <li><code>"aria-disabled"</code> " when disabled"</li>
-            </ul>
-
-            <h2 id="roving-tabindex" class="anchor">
-                "Roving Tabindex"
-                <AnchorLink href="#roving-tabindex" description="Direct link to roving tabindex"/>
-            </h2>
-
-            <p>
-                "Toolbars typically use roving tabindex for navigation. Only one item has "
-                <code>"tabindex=\"0\""</code> " while others have " <code>"tabindex=\"-1\""</code> ". "
-                "This allows users to Tab into the toolbar once, then use arrow keys to navigate within."
-            </p>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Horizontal and vertical orientation"</li>
-                <li>"Keyboard navigation callbacks"</li>
-                <li>"Home/End key support"</li>
-                <li>"Disabled state"</li>
-                <li>"Full ARIA toolbar support"</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Navigation.materialize()>"Navigation domain"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_toolbar", link: "#use_toolbar" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Orientation", link: "#orientation" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Roving Tabindex", link: "#roving-tabindex" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Navigation.materialize()>"Navigation"</Link></li>
+                <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle button hooks"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

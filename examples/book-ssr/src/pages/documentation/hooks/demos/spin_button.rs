@@ -1,4 +1,4 @@
-use leptonic::{hooks::*, utils::classes::Classes};
+use leptonic::hooks::*;
 use leptos::prelude::*;
 
 const MIN: f64 = 0.0;
@@ -31,16 +31,16 @@ pub fn SpinButtonDemo() -> impl IntoView {
     // them with `use_button`. They stay focusable while disabled, so holding "+" until the
     // maximum doesn't lose focus.
     let (decrement_attrs, decrement_styles) = use_button(UseButtonInput {
-        aria_label: Some("Fewer cups".into()),
-        disabled: Signal::derive(move || cups.get() <= MIN),
+        aria_label: "Fewer cups".into(),
+        is_disabled: Signal::derive(move || cups.get() <= MIN),
         allow_focus_when_disabled: true,
         ..decrement_button
     })
     .props
     .into_parts();
     let (increment_attrs, increment_styles) = use_button(UseButtonInput {
-        aria_label: Some("More cups".into()),
-        disabled: Signal::derive(move || cups.get() >= MAX),
+        aria_label: "More cups".into(),
+        is_disabled: Signal::derive(move || cups.get() >= MAX),
         allow_focus_when_disabled: true,
         ..increment_button
     })
@@ -48,7 +48,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
     .into_parts();
 
     view! {
-        <div class=Classes::from("demo-flex-center-row")>
+        <div class="demo-flex-center-row">
             <button {..decrement_attrs} style=decrement_styles class="demo-stepper-btn">
                 "\u{2212}"
             </button>
@@ -56,7 +56,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
                 {..props.into_attrs()}
                 tabindex="0"
                 aria-label="Cups of coffee"
-                class=Classes::from("demo-spinbutton")
+                class="demo-spinbutton"
             >
                 {move || cups.get()}
             </div>
@@ -64,7 +64,7 @@ pub fn SpinButtonDemo() -> impl IntoView {
                 "+"
             </button>
         </div>
-        <p class=Classes::from("demo-caption")>
+        <p class="demo-caption">
             "Focus the number and use \u{2191} / \u{2193}, Page Up / Page Down, Home and End, or hold a button."
         </p>
     }

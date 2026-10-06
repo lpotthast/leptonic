@@ -32,9 +32,10 @@ use leptos::prelude::*;
 //   render-cycle scheduling.
 // - FormValidationContext: Uses Leptos `provide_context`/`use_context` instead of
 //   React's `createContext`.
-// - `is_invalid` uses `Option<Signal<bool>>` to distinguish "not controlled" (`None`)
-//   from "controlled as valid" (`Some(false)`) -- matches React-aria's `undefined` vs
-//   `false` semantics.
+// - `is_invalid` is a `Signal<bool>` that marks the field invalid while `true` and leaves the
+//   other validation sources in charge while `false` (API convention C4). React-aria's
+//   `isInvalid` is a controlled prop: `false` forces the field valid, overriding `validate` and
+//   native validity; a controlled valid state is not a hook-owned-state shape.
 
 /// Snapshot of the browser's native `ValidityState`.
 ///
@@ -150,12 +151,9 @@ pub struct FormValidationContext {
 
 /// Input parameters for [`use_form_validation_state`].
 pub struct UseFormValidationStateInput<T: Send + Sync + 'static> {
-    /// Whether the field is explicitly marked as invalid (controlled error).
-    ///
-    /// - `None` — not controlled; validation comes from other sources.
-    /// - `Some(signal)` — controlled; the signal value determines valid/invalid
-    ///   and overrides all other validation sources.
-    pub is_invalid: Option<Signal<bool>>,
+    /// Marks the field invalid while `true` (taking precedence over the other sources); while
+    /// `false`, the other validation sources decide.
+    pub is_invalid: Signal<bool>,
 
     /// The current field value, used by the `validate` function.
     pub value: Signal<T>,
@@ -171,6 +169,46 @@ pub struct UseFormValidationStateInput<T: Send + Sync + 'static> {
     /// The field's `name` attribute, used to match server errors
     /// from [`FormValidationContext`].
     pub name: Option<String>,
+}
+
+/// The readers of the native validity of the inputs validated with a state (registered by
+/// [`use_form_validation`](super::use_form_validation::use_form_validation)). A commit runs them
+/// first, so it shows the inputs' current validity.
+#[derive(Debug, Clone, Copy)]
+pub struct NativeValidityReaders {
+    readers: StoredValue<Vec<(u64, Callback<()>)>>,
+    next_id: StoredValue<u64>,
+}
+
+impl NativeValidityReaders {
+    fn new() -> Self {
+        Self {
+            readers: StoredValue::new(Vec::new()),
+            next_id: StoredValue::new(0),
+        }
+    }
+
+    /// Register `reader` until the current owner is cleaned up.
+    pub(crate) fn register(&self, reader: Callback<()>) {
+        let id = self.next_id.get_value();
+        self.next_id.set_value(id + 1);
+        self.readers
+            .update_value(|readers| readers.push((id, reader)));
+        let readers = self.readers;
+        on_cleanup(move || {
+            readers.try_update_value(|readers| readers.retain(|(other, _)| *other != id));
+        });
+    }
+
+    fn read_all(&self) {
+        // Collected first: readers update the validation, which must not find this borrowed.
+        let readers: Vec<Callback<()>> = self
+            .readers
+            .with_value(|readers| readers.iter().map(|(_, reader)| *reader).collect());
+        for reader in readers {
+            reader.run(());
+        }
+    }
 }
 
 /// Return value of [`use_form_validation_state`].
@@ -206,6 +244,9 @@ pub struct UseFormValidationStateReturn {
 
     /// Commits realtime validation so it is displayed to the user (on change/submit).
     pub commit_validation: Callback<()>,
+
+    /// Readers of the native validity of the validated inputs, run before each commit.
+    pub native_validity_readers: NativeValidityReaders,
 }
 
 /// Manages form validation state with multiple validation sources.
@@ -217,7 +258,7 @@ pub struct UseFormValidationStateReturn {
 ///
 /// # Validation Sources (in priority order)
 ///
-/// 1. **Controlled** — explicit `is_invalid` prop
+/// 1. **Explicit** — `is_invalid` while `true`
 /// 2. **Server** — errors from [`FormValidationContext`] matched by field `name`
 /// 3. **Client** — custom `validate` function
 /// 4. **Committed** — native validity read via
@@ -247,19 +288,15 @@ where
     let validate = StoredValue::new(validate);
     let name = StoredValue::new(name);
 
-    // ---- Controlled error ----
-    // When is_invalid is explicitly provided, it overrides all other sources.
-    // Even `Some(false)` overrides — it means "I control validation and say it's valid."
-    let controlled_error: Signal<Option<ValidationResult>> = match is_invalid {
-        Some(is_invalid_signal) => Signal::derive(move || {
-            Some(ValidationResult {
-                is_invalid: is_invalid_signal.get(),
-                validation_errors: vec![],
-                validation_details: CUSTOM_VALIDITY_STATE,
-            })
-        }),
-        None => Signal::derive(|| None),
-    };
+    // ---- Explicit error ----
+    // `is_invalid` marks the field invalid, taking precedence over the other sources.
+    let controlled_error: Signal<Option<ValidationResult>> = Signal::derive(move || {
+        is_invalid.get().then(|| ValidationResult {
+            is_invalid: true,
+            validation_errors: vec![],
+            validation_details: CUSTOM_VALIDITY_STATE,
+        })
+    });
 
     // ---- Client validation ----
     let client_error: Memo<Option<ValidationResult>> = Memo::new(move |_| {
@@ -319,6 +356,7 @@ where
     let last_error = StoredValue::new(DEFAULT_VALIDATION_RESULT);
     let (commit_queued, set_commit_queued) = signal(false);
     let commit_trigger = Trigger::new();
+    let native_validity_readers = NativeValidityReaders::new();
 
     // Commit effect: when commit is queued, read latest validation and display it.
     Effect::new(move |_| {
@@ -327,6 +365,9 @@ where
             return;
         }
         set_commit_queued.set(false);
+        // The inputs' native validity may have changed since it was last read (a checked
+        // checkbox, a removed `required`): react-aria re-reads it after every render.
+        native_validity_readers.read_all();
         let error = client_error
             .get_untracked()
             .unwrap_or_else(|| next_validation.get_value());
@@ -404,6 +445,7 @@ where
             // Clear server errors (user changed their value).
             set_server_error_cleared.set(true);
         }),
+        native_validity_readers,
     }
 }
 

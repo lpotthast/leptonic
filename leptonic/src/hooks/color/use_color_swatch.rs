@@ -21,7 +21,7 @@ pub struct UseColorSwatchInput<C: ColorValue> {
     pub color_name: Option<Signal<String>>,
 
     /// An optional aria-label override.
-    pub aria_label: Option<String>,
+    pub aria_label: MaybeProp<String>,
 }
 
 /// Return value of `use_color_swatch`.
@@ -80,8 +80,8 @@ pub fn use_color_swatch<C: ColorValue>(input: UseColorSwatchInput<C>) -> UseColo
     let background_color = Signal::derive(move || color.get().to_css_string());
 
     let effective_label = Signal::derive(move || {
-        if let Some(ref label) = aria_label {
-            return label.clone();
+        if let Some(label) = aria_label.get() {
+            return label;
         }
         if let Some(name_signal) = color_name {
             return name_signal.get();

@@ -1,91 +1,106 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::radio_basic::RadioBasicDemo;
-use super::demos::radio_disabled::RadioDisabledDemo;
-use super::demos::radio_group::RadioGroupDemo;
-use super::demos::radio_labeled::RadioLabeledDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    radio_basic::RadioBasicDemo, radio_disabled::RadioDisabledDemo, radio_group::RadioGroupDemo,
+    radio_labeled::RadioLabeledDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageRadio() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="radio" class="anchor">
-                "Radio"
-                <AnchorLink href="#radio" description="Direct link to article header"/>
-            </h1>
+        <DocPage title="Radio component">
+            <p>
+                "The themed "<Code inline=true>"RadioGroup"</Code>" and its "<Code inline=true>"Radio"</Code>
+                " buttons, of which one is selected. See the "<Link href=routes::doc::Radio.materialize()>"Radio overview"</Link>
+                " for concept guidance."
+            </p>
 
-            <p>"Radio..."</p>
+            <Demo description="Yes/no radio group reporting the selection" source=include_str!("demos/radio_basic.rs")>
+                <RadioBasicDemo/>
+            </Demo>
 
-            <DemoShell source=include_str!("demos/radio_basic.rs")>
-                <RadioBasicDemo />
-            </DemoShell>
+            <Section title="Props">
+                <Section title="RadioGroup">
+                    <ApiTable kind=ApiKind::Props of="components::radio::RadioGroup">
+                        <ApiRow name="label" ty="Option<String>" default="None">"The visible label. Without it, set "<Code inline=true>"aria_label"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a group without visible label."</ApiRow>
+                        <ApiRow name="description" ty="Option<String>" default="None">"Help text below the radios, describing the group and each radio."</ApiRow>
+                        <ApiRow name="default_value" ty="Option<Key>" default="None">
+                            "The initially selected value, e.g. "<Code inline=true>"default_value=\"standard\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Option<Key>>>" default="None">"Called with the selected value when it changes."</ApiRow>
+                        <ApiRow name="orientation" ty="Orientation" default="Vertical">
+                            "Lays the radios out in a column or a row, and sets "<Code inline=true>"aria-orientation"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables all radios."</ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Shows the selection without allowing changes."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the group as required."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the group invalid (red circles)."</ApiRow>
+                        <ApiRow name="name" ty="Option<String>" default="None">"The radios\u{2019} "<Code inline=true>"name"</Code>". Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the group element."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The radios."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="radio-groups" class="anchor">
-                "Radio groups"
-                 <AnchorLink href="#radio-groups" description="Direct link to section: Radio groups"/>
-            </h2>
+                <Section title="Radio">
+                    <ApiTable kind=ApiKind::Props of="components::radio::Radio">
+                        <ApiRow name="value" ty="Key">"The value the radio selects, e.g. "<Code inline=true>"value=\"express\""</Code>"."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without children."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The label text."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <DemoShell source=include_str!("demos/radio_group.rs")>
-                <RadioGroupDemo />
-            </DemoShell>
+            <Section title="Values">
+                <p>
+                    "The group keeps the selected value, a "<Code inline=true>"Key"</Code>" (a string or an integer). It starts at "
+                    <Code inline=true>"default_value"</Code>" and reports changes through "<Code inline=true>"on_change"</Code>
+                    ". Each radio\u{2019}s children are its label; pressing the label selects it. The arrow keys move the "
+                    "selection between the radios."
+                </p>
+            </Section>
 
-            <h2 id="labeled" class="anchor">
-                "Labeled"
-                <AnchorLink href="#labeled" description="Direct link to section: Labeled"/>
-            </h2>
+            <Section title="Orientation">
+                <p>"Lay the radios out in a row with "<Code inline=true>"Orientation::Horizontal"</Code>":"</p>
+                <Demo description="Horizontal size radio group with a label" source=include_str!("demos/radio_group.rs")>
+                    <RadioGroupDemo/>
+                </Demo>
+            </Section>
 
-            <p>"Wrap an input and a label to link them together."</p>
+            <Section title="Description">
+                <p>"A "<Code inline=true>"description"</Code>" explains the choice. Screen readers read it with each radio:"</p>
+                <Demo description="Shipping radio group with a label and a description" source=include_str!("demos/radio_labeled.rs")>
+                    <RadioLabeledDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/radio_labeled.rs")>
-                <RadioLabeledDemo />
-            </DemoShell>
+            <Section title="Disabled">
+                <p>
+                    "Disable the whole group with "<Code inline=true>"is_disabled"</Code>" on the "<Code inline=true>"RadioGroup"</Code>
+                    ", or single options with "<Code inline=true>"is_disabled"</Code>" on a "<Code inline=true>"Radio"</Code>
+                    ". The arrow keys skip disabled radios."
+                </p>
+                <Demo description="Plan radio group with a disabled option and a checkbox disabling the group" source=include_str!("demos/radio_disabled.rs")>
+                    <RadioDisabledDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="disabled" class="anchor">
-                "Disabled"
-                <AnchorLink href="#disabled" description="Direct link to section: Disabled"/>
-            </h2>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt the radio buttons to your design:"</p>
+                <CssVariables prefix="--radio-" scss=theme_scss!("radio")/>
+            </Section>
 
-            <p>"Radio buttons support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</p>
-
-            <DemoShell source=include_str!("demos/radio_disabled.rs")>
-                <RadioDisabledDemo />
-            </DemoShell>
-
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
-
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --radio-size
-                    --radio-fill-size
-                    --radio-border
-                    --radio-border-radius
-                    --radio-border-color
-                    --radio-hover-border-color
-                    --radio-checked-border-color
-                    --radio-background-color
-                    --radio-checked-fill-background-color
-                    --radio-disabled-filter
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Radio", link: "#radio" },
-                Toc::Leaf { title: "Groups", link: "#radio-groups" },
-                Toc::Leaf { title: "Labeled", link: "#labeled" },
-                Toc::Leaf { title: "Disabled", link: "#disabled" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Radio.materialize()>"Radio overview"</Link></li>
+                <li><Link href=routes::doc::radio::Atom.materialize()>"Radio atoms"</Link></li>
+                <li><Link href=routes::doc::radio::Hook.materialize()>"Radio hooks"</Link></li>
+                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox component"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -8,6 +8,7 @@ use leptos::{
 };
 use web_sys::{Event, KeyboardEvent};
 
+use super::use_color_area_state::UseColorAreaStateReturn;
 use crate::{
     hooks::{
         IntoAttrs, MoveEndEvent, MoveStartEvent, UseMoveAttrs, UseMoveInput,
@@ -18,10 +19,10 @@ use crate::{
         EventHandler,
         aria::{AriaDisabled, AriaHidden, AriaOrientation, AriaRole},
         color::ColorValue,
+        i18n::use_direction,
+        locale::WritingDirection,
     },
 };
-
-use super::use_color_area_state::UseColorAreaStateReturn;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorArea.ts
 
@@ -45,13 +46,10 @@ pub struct UseColorAreaInput<C: ColorValue> {
     pub state: UseColorAreaStateReturn<C>,
 
     /// Whether the color area is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// An accessibility label for the color area.
     pub aria_label: Option<&'static str>,
-
-    /// Whether to use RTL layout (reverses horizontal axis).
-    pub is_rtl: bool,
 
     /// HTML `name` attribute for the hidden X-axis range input (form submission).
     pub x_name: Option<&'static str>,
@@ -245,9 +243,8 @@ pub type UseColorAreaInputAttrs = (
 pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAreaReturn {
     let UseColorAreaInput {
         state,
-        disabled,
+        is_disabled: disabled,
         aria_label,
-        is_rtl,
         x_name,
         y_name,
         form,
@@ -264,9 +261,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     // Position changes propagate to color state via `on_position_change`.
     let set_color_from_point = state.set_color_from_point;
     let move_return = use_move(UseMoveInput {
-        disabled,
+        is_disabled: disabled,
         axis: Signal::derive(|| None), // both axes
-        is_rtl,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             set_dragging_start.run(true);
         })),
@@ -382,6 +378,9 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     let x_page = state.x_channel_page_step;
     let y_page = state.y_channel_page_step;
 
+    // Right-to-left layouts mirror the horizontal axis (Home/End; dragging mirrors in `use_move`).
+    let direction = use_direction();
+    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
     let handle_keydown = EventHandler::new(move |e: KeyboardEvent| {
         if disabled.get_untracked() {
             return;
@@ -398,7 +397,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             }
             "Home" => {
                 e.prevent_default();
-                if is_rtl {
+                if is_rtl() {
                     increment_x.run(Some(x_page));
                 } else {
                     decrement_x.run(Some(x_page));
@@ -406,7 +405,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
             }
             "End" => {
                 e.prevent_default();
-                if is_rtl {
+                if is_rtl() {
                     decrement_x.run(Some(x_page));
                 } else {
                     increment_x.run(Some(x_page));

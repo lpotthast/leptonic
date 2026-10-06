@@ -1,130 +1,179 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::slider_basic::SliderBasicDemo;
-use super::demos::slider_marks::SliderMarksDemo;
-use super::demos::slider_volume::SliderVolumeDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    slider_basic::SliderBasicDemo, slider_marks::SliderMarksDemo,
+    slider_popover::SliderPopoverDemo, slider_range::SliderRangeDemo,
+    slider_volume::SliderVolumeDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageSlider() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="slider" class="anchor">
-                "Slider"
-                <AnchorLink href="#slider" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Allow users to adjust a value within a specified range by sliding a handle."</p>
-
+        <DocPage title="Slider component">
             <p>
-                "All sliders require the "<Code inline=true>"min"</Code>", "<Code inline=true>"max"</Code>" and "<Code inline=true>"step"</Code>" properties, specifying the range of values the slider provides. "
-                "Using smaller step values results in ever so slightly smoother sliders until they can be considered \"continuous\". "
-                "You may exclude the "<Code inline=true>"step"</Code>" prop altogether to let the sliders use its full "<Code inline=true>"f64"</Code>" precision."
+                "The themed "<Code inline=true>"Slider"</Code>" and "<Code inline=true>"RangeSlider"</Code>
+                " let you adjust a value, or a range of values, by dragging a thumb along a track. "
+                "See the "<Link href=routes::doc::Slider.materialize()>"Slider overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "The slider always operates with "<Code inline=true>"f64"</Code>" values and may suffer from typical IEEE-math rounding problems. "
-                "We use the "<Code inline=true>"value_display"</Code>" property to specify how a selected value should be rendered."
-            </p>
+            <Demo description="Sliders with a coarse and a fine step" source=include_str!("demos/slider_basic.rs")>
+                <SliderBasicDemo/>
+            </Demo>
 
-            <DemoShell source=include_str!("demos/slider_basic.rs")>
-                <SliderBasicDemo />
-            </DemoShell>
+            <Section title="Props">
+                <Section title="Slider">
+                    <ApiTable kind=ApiKind::Props of="components::slider::Slider">
+                        <ApiRow name="value" ty="Signal<f64>">"The current value. Required."</ApiRow>
+                        <ApiRow name="set_value" ty="Out<f64>">"Receives the new value. Required."</ApiRow>
+                        <ApiRow name="min, max" ty="f64">"The range of the slider. Required."</ApiRow>
+                        <ApiRow name="step" ty="Option<f64>" default="None">
+                            "The step between selectable values. Without it, the slider is continuous."
+                        </ApiRow>
+                        <ApiRow name="marks" ty="SliderMarks" default="SliderMarks::None">
+                            "Marks along the track, see "<a href="#marks">"Marks"</a>"."
+                        </ApiRow>
+                        <ApiRow name="popover" ty="SliderPopover" default="SliderPopover::Never">
+                            "When to show the value above the thumb, see "<a href="#value-popover">"Value Popover"</a>"."
+                        </ApiRow>
+                        <ApiRow name="value_display" ty="Option<Callback<f64, String>>" default="None">
+                            "Formats values for the tooltip and the names of automatic marks."
+                        </ApiRow>
+                        <ApiRow name="variant" ty="SliderVariant" default="Round">
+                            <Code inline=true>"Round"</Code>" or "<Code inline=true>"Block"</Code>
+                            ", rendered as "<Code inline=true>"data-variant"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h1 id="example" class="anchor">
-                "Example - Volume slider"
-                <AnchorLink href="#example" description="Direct link to section: Example"/>
-            </h1>
+                <Section title="RangeSlider">
+                    <p>"Like "<Code inline=true>"Slider"</Code>", with two values instead of one:"</p>
+                    <ApiTable kind=ApiKind::Props of="RangeSlider">
+                        <ApiRow name="value_a, value_b" ty="Signal<f64>">"The start and end of the range. Required."</ApiRow>
+                        <ApiRow name="set_value_a, set_value_b" ty="Out<f64>">
+                            "Receive the new start and end. Required."
+                        </ApiRow>
+                        <ApiRow name="min, max" ty="f64">"The range of the slider. Required."</ApiRow>
+                        <ApiRow name="step" ty="Option<f64>" default="None">
+                            "The step between selectable values. Without it, the slider is continuous."
+                        </ApiRow>
+                        <ApiRow name="marks" ty="SliderMarks" default="SliderMarks::None">
+                            "Marks along the track, see "<a href="#marks">"Marks"</a>"."
+                        </ApiRow>
+                        <ApiRow name="popover" ty="SliderPopover" default="SliderPopover::Never">
+                            "When to show the values above the thumbs, see "<a href="#value-popover">"Value Popover"</a>"."
+                        </ApiRow>
+                        <ApiRow name="value_display" ty="Option<Callback<f64, String>>" default="None">
+                            "Formats values for the tooltips and the names of automatic marks."
+                        </ApiRow>
+                        <ApiRow name="variant" ty="SliderVariant" default="Round">
+                            <Code inline=true>"Round"</Code>" or "<Code inline=true>"Block"</Code>
+                            ", rendered as "<Code inline=true>"data-variant"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+                    <p>"The two thumbs cannot cross each other."</p>
+                </Section>
+            </Section>
 
-            <p>"Continuous sliders are perfect when the exact value selected is of no particular interest to your user. For example, when operating a volume slider."</p>
+            <Section title="Step and Precision">
+                <p>
+                    "The "<Code inline=true>"step"</Code>" prop decides which values you can select: "<Code inline=true>"min"</Code>
+                    " plus multiples of "<Code inline=true>"step"</Code>". Smaller steps make the slider smoother until it "
+                    "feels continuous. Leave out "<Code inline=true>"step"</Code>" to use the full "<Code inline=true>"f64"</Code>
+                    " precision."
+                </p>
+                <p>
+                    "Sliders always work with "<Code inline=true>"f64"</Code>" values, which are subject to the usual "
+                    "floating-point rounding. Format values for display, as the demos do, instead of showing them raw."
+                </p>
+            </Section>
 
-            <DemoShell source=include_str!("demos/slider_volume.rs")>
-                <SliderVolumeDemo />
-            </DemoShell>
+            <Section title="Volume Slider">
+                <p>
+                    "A continuous slider suits values whose exact number doesn\u{2019}t matter to the user, such as a volume."
+                </p>
 
-            <h2 id="marks" class="anchor">
-                "Marks, Ranges, Popovers"
-                <AnchorLink href="#marks" description="Direct link to section: Marks"/>
-            </h2>
+                <Demo description="Continuous volume slider between two icons" source=include_str!("demos/slider_volume.rs")>
+                    <SliderVolumeDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "Small step values result in lesser selectable values, as only values starting from min and increased by multiples of step are selectable. "
-                "To help visualize the selectable values of the slider, marks can be automatically generated. "
-                "Sliders also support range selection, popovers, and custom marks."
-            </p>
+            <Section title="Marks">
+                <p>
+                    "Marks visualize the selectable values. "<Code inline=true>"SliderMarks::Automatic"</Code>
+                    " generates one mark per step (it requires a "<Code inline=true>"step"</Code>"), optionally with a name "
+                    "formatted by "<Code inline=true>"value_display"</Code>". "<Code inline=true>"SliderMarks::Custom"</Code>
+                    " places "<Code inline=true>"SliderMark"</Code>"s at absolute values ("
+                    <Code inline=true>"SliderMarkValue::Value"</Code>
+                    ") or at a fraction of the track ("<Code inline=true>"SliderMarkValue::Percentage"</Code>"). A "
+                    <Code inline=true>"min"</Code>" greater than "<Code inline=true>"max"</Code>" reverses the slider."
+                </p>
+                <Demo description="Automatic and custom marks, a fractional step and a reversed slider" source=include_str!("demos/slider_marks.rs")>
+                    <SliderMarksDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/slider_marks.rs")>
-                <SliderMarksDemo />
-            </DemoShell>
+            <Section title="Range Slider">
+                <p>
+                    <Code inline=true>"RangeSlider"</Code>" selects a range with two thumbs. It takes the same marks, steps "
+                    "and popovers as "<Code inline=true>"Slider"</Code>"."
+                </p>
+                <Demo description="A continuous and a stepped range slider" source=include_str!("demos/slider_range.rs")>
+                    <SliderRangeDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="keyboard-input" class="anchor">
-                "Keyboard input"
-                <AnchorLink href="#keyboard-input" description="Direct link to section: Keyboard input"/>
-            </h2>
+            <Section title="Value Popover">
+                <p>
+                    <Code inline=true>"popover"</Code>" shows the formatted value above the thumb: "
+                    <Code inline=true>"SliderPopover::When { hovered, dragged }"</Code>" while the thumb is hovered or "
+                    "dragged, "<Code inline=true>"SliderPopover::Always"</Code>" permanently."
+                </p>
+                <Demo description="Value popovers on interaction and always, on a slider and a range slider" source=include_str!("demos/slider_popover.rs")>
+                    <SliderPopoverDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "Slider knobs are keyboard-interactable and can be cycled through using the "<Code inline=true>"Tab"</Code>" key."
-            </p>
+            <Section title="Keyboard">
+                <p>"Each thumb is focusable; "<Keys keys="Tab"/>" moves between them."</p>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowRight / ArrowUp">
+                        "Increase by one step (by 1% of the range on continuous sliders)."
+                    </KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowDown">
+                        "Decrease by one step (by 1% of the range on continuous sliders)."
+                    </KeyRow>
+                    <KeyRow keys="PageUp / Shift + ArrowRight / Shift + ArrowUp">
+                        "Increase by a page: a tenth of the range, snapped to the step."
+                    </KeyRow>
+                    <KeyRow keys="PageDown / Shift + ArrowLeft / Shift + ArrowDown">
+                        "Decrease by a page."
+                    </KeyRow>
+                    <KeyRow keys="Home">"Jump to the minimum."</KeyRow>
+                    <KeyRow keys="End">"Jump to the maximum."</KeyRow>
+                </KeyboardTable>
+                <p>"In right-to-left layouts, the left and right arrow keys swap their meaning."</p>
+            </Section>
 
-            <ul>
-                <li><Code inline=true>"Arrow Left"</Code>" / "<Code inline=true>"Arrow Down"</Code>" - Decrease by step"</li>
-                <li><Code inline=true>"Arrow Right"</Code>" / "<Code inline=true>"Arrow Up"</Code>" - Increase by step"</li>
-                <li><Code inline=true>"Shift + Arrow"</Code>" / "<Code inline=true>"Page Up"</Code>" / "<Code inline=true>"Page Down"</Code>" - Increase/decrease by page size (10% of range)"</li>
-                <li><Code inline=true>"Home"</Code>" - Jump to minimum"</li>
-                <li><Code inline=true>"End"</Code>" - Jump to maximum"</li>
-            </ul>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt the sliders to your design:"</p>
+                <CssVariables prefix="--slider-" scss=theme_scss!("slider")/>
+            </Section>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
-
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --slider-margin
-                    --slider-track-height
-                    --slider-track-background-color
-                    --slider-track-background-image
-                    --slider-fill-height
-                    --slider-fill-background-color
-                    --slider-fill-background-image
-                    --slider-thumb-size
-                    --slider-thumb-border-width
-                    --slider-thumb-border-color
-                    --slider-thumb-border-style
-                    --slider-thumb-background-color
-                    --slider-thumb-halo-size
-                    --slider-thumb-halo-size-while-dragged
-                    --slider-thumb-halo-opacity
-                    --slider-thumb-halo-background-color
-                    --slider-thumb-transition-speed
-                    --slider-thumb-box-shadow
-                    --slider-thumb-tooltip-background-color
-                    --slider-thumb-tooltip-color
-                    --slider-thumb-tooltip-border-radius
-                    --slider-thumb-tooltip-font-size
-                    --slider-mark-size
-                    --slider-mark-color
-                    --slider-mark-color-in-range
-                    --slider-mark-title-color
-                    --slider-mark-title-color-in-range
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Slider", link: "#slider" },
-                Toc::Leaf { title: "Example", link: "#example" },
-                Toc::Leaf { title: "Marks, Ranges, Popovers", link: "#marks" },
-                Toc::Leaf { title: "Keyboard input", link: "#keyboard-input" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Slider.materialize()>"Slider overview"</Link></li>
+                <li><Link href=routes::doc::slider::Hook.materialize()>"use_slider"</Link></li>
+                <li><Link href=routes::doc::slider::Atom.materialize()>"Slider atoms"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

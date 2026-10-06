@@ -11,8 +11,11 @@ use leptos::{
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
-    hooks::{IntoAttrs, MergedFocusablePressProps, UseFocusRingProps},
-    utils::{ElementCaptureAttr, EventHandler, MergeWith, aria::AriaDescribedby},
+    hooks::{
+        FocusableContextAttr, FocusableContextAttrs, IntoAttrs, MergedFocusablePressProps,
+        UseFocusRingProps,
+    },
+    utils::{ElementCaptureAttr, EventHandler, MergeWith},
 };
 
 /// Combined props from `use_focusable`, `use_press` and `use_focus_ring` hooks.
@@ -35,7 +38,7 @@ use crate::{
 #[derive(Debug)]
 pub struct MergedFocusablePressFocusRingProps {
     pub tabindex: Signal<Option<i32>>,
-    pub aria_describedby: Option<AriaDescribedby>,
+    pub aria_describedby: Signal<Option<String>>,
     pub data_focus_visible: Signal<Option<&'static str>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -50,6 +53,8 @@ pub struct MergedFocusablePressFocusRingProps {
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_pointerup: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
+    /// The focusable context's further attributes.
+    pub context_attrs: Option<FocusableContextAttrs>,
 }
 
 /// Attribute tuple type for [`MergedFocusablePressFocusRingProps`].
@@ -57,7 +62,7 @@ pub struct MergedFocusablePressFocusRingProps {
 /// Spread this onto elements: `<button {..attrs}/>`
 pub type MergedFocusablePressFocusRingAttrs = (
     Attr<attr::Tabindex, Signal<Option<i32>>>,
-    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -72,6 +77,7 @@ pub type MergedFocusablePressFocusRingAttrs = (
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
+    FocusableContextAttr,
 );
 
 impl IntoAttrs for MergedFocusablePressFocusRingProps {
@@ -95,6 +101,7 @@ impl IntoAttrs for MergedFocusablePressFocusRingProps {
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
             self.on_dragstart.into_on(ev::dragstart),
+            FocusableContextAttr(self.context_attrs),
         )
     }
 }
@@ -117,6 +124,7 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
             on_mousedown: merged_on_mousedown,
             on_pointerup: merged_on_pointerup,
             on_dragstart: merged_on_dragstart,
+            context_attrs,
         } = self;
 
         let UseFocusRingProps {
@@ -144,6 +152,7 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
             on_mousedown: merged_on_mousedown,
             on_pointerup: merged_on_pointerup,
             on_dragstart: merged_on_dragstart,
+            context_attrs,
         }
     }
 }

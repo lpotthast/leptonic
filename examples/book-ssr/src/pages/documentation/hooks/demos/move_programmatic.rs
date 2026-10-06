@@ -1,14 +1,36 @@
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::*,
+    utils::{
+        css::{CssDimension, LengthPercentageAuto, try_px},
+        style::{LeftProperty, TopProperty},
+        styles::Styles,
+    },
+};
 use leptos::prelude::*;
+
+fn offset(px: f64) -> LengthPercentageAuto {
+    LengthPercentageAuto::from(try_px(px).unwrap_or(CssDimension::Zero))
+}
+
+const PRESETS: [(&str, f64, f64); 6] = [
+    ("Top left", 0.0, 0.0),
+    ("Top center", 0.5, 0.0),
+    ("Top right", 1.0, 0.0),
+    ("Center", 0.5, 0.5),
+    ("Bottom left", 0.0, 1.0),
+    ("Bottom right", 1.0, 1.0),
+];
 
 #[component]
 pub fn ProgrammaticExample() -> impl IntoView {
     let UseMoveReturn {
-        props, constraint, ..
+        props,
+        is_moving,
+        constraint,
     } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        is_rtl: false,
+        is_disabled: false.into(),
+        axis: None.into(),
         on_move_start: None,
         on_move: None,
         on_move_end: None,
@@ -17,89 +39,45 @@ pub fn ProgrammaticExample() -> impl IntoView {
         allow_container_click: false,
         initial_position: None,
     });
-    let c = constraint.unwrap();
-    let normalized_position = c.normalized_position;
-    let pixel_position = c.pixel_position;
-    let set_position = c.set_position;
-    let container_attrs = c.container_props.into_attrs();
-    let movable_attrs = props.into_attrs();
+    let constraint = constraint.expect("`constraint` is set, so the constraint return is present");
+    let normalized_position = constraint.normalized_position;
+    let pixel_position = constraint.pixel_position;
+    let set_position = constraint.set_position;
+
+    let handle_styles = Styles::builder()
+        .with_reactive(move || LeftProperty.declare(offset(pixel_position.get().0)))
+        .with_reactive(move || TopProperty.declare(offset(pixel_position.get().1)))
+        .build();
 
     view! {
-        <div
-            {..container_attrs}
-            style="
-                width: 100%;
-                height: 10em;
-                touch-action: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                position: relative;
-            "
-        >
+        <div {..constraint.container_props.into_attrs()} class="demo-move-area">
             <div
-                {..movable_attrs}
+                {..props.into_attrs()}
                 tabindex="0"
-                style=move || format!("
-                    border: 0.15em solid yellow;
-                    padding: 0.5em 1em;
-                    position: absolute;
-                    cursor: grab;
-                    user-select: none;
-                    left: {}px;
-                    top: {}px;
-                ",
-                    pixel_position.get().0,
-                    pixel_position.get().1
-                )
+                class="demo-move-handle"
+                class:moving=move || is_moving.get()
+                style=handle_styles
             >
                 "Programmable"
             </div>
         </div>
 
-        <div style="display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 0.5em;">
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 0.0, y: 0.0 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Left"
-            </button>
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 0.5, y: 0.0 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Center"
-            </button>
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 1.0, y: 0.0 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Right"
-            </button>
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 0.5, y: 0.5 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Center"
-            </button>
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 0.0, y: 1.0 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Bottom-Left"
-            </button>
-            <button
-                on:click=move |_| set_position.run(NormalizedPosition { x: 1.0, y: 1.0 })
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Bottom-Right"
-            </button>
+        <div class="demo-inline-controls demo-move-presets">
+            {PRESETS
+                .into_iter()
+                .map(|(label, x, y)| {
+                    view! {
+                        <Button on_press=move |_| set_position.run(NormalizedPosition { x, y })>{label}</Button>
+                    }
+                })
+                .collect_view()}
         </div>
 
-        <p style="font-size: 0.9em;">
+        <p>
             "Normalized: ("
-            { move || format!("{:.2}", normalized_position.get().x) }
+            {move || format!("{:.2}", normalized_position.get().x)}
             ", "
-            { move || format!("{:.2}", normalized_position.get().y) }
+            {move || format!("{:.2}", normalized_position.get().y)}
             ")"
         </p>
     }

@@ -139,7 +139,8 @@ impl Shortcut {
             meta_key: self.modifiers.meta_key || (self.primary && is_mac),
             ..self.modifiers
         };
-        pressed == required && canonical_key(&self.key) == canonical_key(key)
+        // Aliases ("Esc", "Up", ...) are for writing shortcuts; events carry the standard key names.
+        pressed == required && *canonical_key(&self.key) == *key.to_lowercase()
     }
 }
 
@@ -290,6 +291,13 @@ impl KeyboardShortcuts {
     ) -> Self {
         self.bindings
             .push((shortcut, Arc::new(move |e| action(e).into())));
+        self
+    }
+
+    /// These shortcuts and `other`'s; where both bind a shortcut, `other`'s handler wins.
+    #[must_use]
+    pub fn with(mut self, other: KeyboardShortcuts) -> Self {
+        self.bindings.extend(other.bindings);
         self
     }
 

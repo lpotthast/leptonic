@@ -141,16 +141,9 @@ impl AriaDescribedby {
         }
     }
 
-    pub fn elements_with_ids<ID: Into<Oco<'static, str>>>(ids: impl Iterator<Item = ID>) -> Self {
-        let (_, remaining) = ids.size_hint();
-        let capacity = remaining.unwrap_or(0);
-        Self {
-            ids: {
-                let mut vec = SmallVec::with_capacity(capacity);
-                vec.extend(ids.map(Into::into));
-                vec
-            },
-        }
+    /// The referenced element ids.
+    pub fn ids(&self) -> impl Iterator<Item = &str> {
+        self.ids.iter().map(Oco::as_str)
     }
 
     // TODO: This could be made more efficient.

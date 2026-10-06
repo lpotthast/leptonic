@@ -1,7 +1,12 @@
 // Upstream: react-aria/src/interactions/useFocusable.tsx @ 99e6102368
+use std::sync::Arc;
+
 use leptos::{
     attr,
-    attr::Attr,
+    attr::{
+        Attr, Attribute, NextAttribute,
+        any_attribute::{AnyAttribute, AnyAttributeState},
+    },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -14,11 +19,11 @@ use crate::{
         focus::use_focus::{UseFocusInput, use_focus},
         interactions::use_keyboard::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
     },
-    utils::keyboard_shortcut::KeyboardShortcuts,
     utils::{
         EventHandler,
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_safely,
+        keyboard_shortcut::KeyboardShortcuts,
     },
 };
 
@@ -48,7 +53,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct UseFocusableInput {
     /// Whether focus should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Whether the element should be focused on mount.
     pub auto_focus: bool,
@@ -82,7 +87,7 @@ pub struct UseFocusableInput {
 impl Default for UseFocusableInput {
     fn default() -> Self {
         Self {
-            disabled: Signal::derive(|| false),
+            is_disabled: Signal::derive(|| false),
             auto_focus: false,
             exclude_from_tab_order: Signal::derive(|| false),
             on_focus: None,
@@ -128,8 +133,106 @@ pub struct FocusableContext {
     pub on_keydown: Option<EventHandler<KeyboardEvent>>,
     /// Additional keyup handler chained with the focusable element's own.
     pub on_keyup: Option<EventHandler<KeyboardEvent>>,
+    /// Describes the focusable element (e.g. a tooltip), in addition to its own description.
+    pub aria_describedby: Option<Signal<Option<String>>>,
+    /// Further attributes for the focusable element (e.g. pointer handlers), spread as given.
+    pub attrs: Option<FocusableContextAttrs>,
     /// Parent's element capture — the focusable element will be captured here too.
     pub element: Option<CapturedElement>,
+}
+
+/// Further attributes a [`FocusableContext`] gives the focusable element (react-aria-components'
+/// `FocusableProvider` passes arbitrary DOM props): a factory, as attributes are spread once per
+/// render of the element.
+#[derive(Clone)]
+pub struct FocusableContextAttrs(Arc<dyn Fn() -> AnyAttribute + Send + Sync>);
+
+impl FocusableContextAttrs {
+    pub fn new(attrs: impl Fn() -> AnyAttribute + Send + Sync + 'static) -> Self {
+        Self(Arc::new(attrs))
+    }
+
+    /// The attributes, to spread onto the focusable element.
+    pub fn attrs(&self) -> AnyAttribute {
+        (self.0)()
+    }
+}
+
+impl std::fmt::Debug for FocusableContextAttrs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("FocusableContextAttrs")
+    }
+}
+
+/// The attribute spreading a [`FocusableContext`]'s further attributes (nothing without a
+/// context). It keeps the thread-safe factory and creates the type-erased attributes only when the
+/// element renders, so the attributes of focusable hooks stay `Send + Sync` (storable in a
+/// `StoredValue`).
+#[derive(Debug, Clone)]
+pub struct FocusableContextAttr(pub Option<FocusableContextAttrs>);
+
+impl Attribute for FocusableContextAttr {
+    const MIN_LENGTH: usize = 0;
+
+    type State = Option<AnyAttributeState>;
+    type AsyncOutput = Self;
+    type Cloneable = Self;
+    type CloneableOwned = Self;
+
+    fn html_len(&self) -> usize {
+        0
+    }
+
+    fn to_html(
+        self,
+        buf: &mut String,
+        class: &mut String,
+        style: &mut String,
+        inner_html: &mut String,
+    ) {
+        if let Some(attrs) = self.0 {
+            attrs.attrs().to_html(buf, class, style, inner_html);
+        }
+    }
+
+    fn hydrate<const FROM_SERVER: bool>(self, el: &web_sys::Element) -> Self::State {
+        self.0.map(|attrs| attrs.attrs().hydrate::<FROM_SERVER>(el))
+    }
+
+    fn build(self, el: &web_sys::Element) -> Self::State {
+        self.0.map(|attrs| attrs.attrs().build(el))
+    }
+
+    fn rebuild(self, state: &mut Self::State) {
+        // Whether there is a context doesn't change for an element.
+        if let (Some(attrs), Some(state)) = (self.0, state.as_mut()) {
+            attrs.attrs().rebuild(state);
+        }
+    }
+
+    fn into_cloneable(self) -> Self::Cloneable {
+        self
+    }
+
+    fn into_cloneable_owned(self) -> Self::CloneableOwned {
+        self
+    }
+
+    fn dry_resolve(&mut self) {
+        // The attributes are created when rendering; nothing to resolve beforehand.
+    }
+
+    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+        std::future::ready(self)
+    }
+}
+
+impl NextAttribute for FocusableContextAttr {
+    type Output<NewAttr: Attribute> = (Self, NewAttr);
+
+    fn add_any_attr<NewAttr: Attribute>(self, new_attr: NewAttr) -> Self::Output<NewAttr> {
+        (self, new_attr)
+    }
 }
 
 /// A handle for programmatically focusing an element.
@@ -162,13 +265,6 @@ impl FocusHandle {
         }
     }
 
-    /// Focuses the element without scrolling the page.
-    ///
-    /// This is an alias for `focus()` since `focus()` already prevents scrolling.
-    pub fn focus_without_scrolling(&self) {
-        self.focus();
-    }
-
     /// Returns whether the element has been captured (non-reactive).
     ///
     /// The element is captured when the view is built (attrs are spread).
@@ -184,6 +280,11 @@ impl FocusHandle {
     /// Effect to re-run when the element is captured.
     pub fn get_element(&self) -> Option<send_wrapper::SendWrapper<web_sys::Element>> {
         self.element.get()
+    }
+
+    /// The element capture behind this handle, for hooks that need the element too.
+    pub fn element(&self) -> CapturedElement {
+        self.element
     }
 }
 
@@ -214,7 +315,7 @@ impl std::fmt::Debug for UseFocusableReturn {
 }
 
 /// Props from `use_focusable` that can be extracted and merged programmatically.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseFocusableProps {
     pub tabindex: Signal<Option<i32>>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -222,12 +323,18 @@ pub struct UseFocusableProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
     pub element_capture: ElementCaptureAttr,
+    /// The [`FocusableContext`]'s description of the element. Not part of the attributes: hooks
+    /// rendering `aria-describedby` merge it into theirs, the others render it.
+    pub context_aria_describedby: Signal<Option<String>>,
+    /// The [`FocusableContext`]'s further attributes (none without a context).
+    pub context_attrs: Option<FocusableContextAttrs>,
 }
 
 impl IntoAttrs for UseFocusableProps {
     type Attrs = UseFocusableAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
+        let context_attrs = FocusableContextAttr(self.context_attrs);
         (
             Attr(attr::Tabindex, self.tabindex),
             self.on_focus.into_on(ev::focus),
@@ -235,6 +342,7 @@ impl IntoAttrs for UseFocusableProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_keyup.into_on(ev::keyup),
             self.element_capture,
+            context_attrs,
         )
     }
 }
@@ -247,6 +355,7 @@ pub type UseFocusableAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
     ElementCaptureAttr,
+    FocusableContextAttr,
 );
 
 /// Used to make an element focusable and capable of auto focus.
@@ -306,7 +415,7 @@ pub type UseFocusableAttrs = (
 /// ```
 pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     let UseFocusableInput {
-        disabled,
+        is_disabled: disabled,
         auto_focus,
         exclude_from_tab_order,
         on_focus,
@@ -328,7 +437,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
 
     // Use the focus hook
     let focus = use_focus(UseFocusInput {
-        disabled,
+        is_disabled: disabled,
         on_focus,
         on_blur,
         on_focus_change,
@@ -336,7 +445,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
 
     // Use the keyboard hook
     let keyboard = use_keyboard(UseKeyboardInput {
-        disabled,
+        is_disabled: disabled,
         on_key_down,
         on_key_up,
         shortcuts,
@@ -421,6 +530,18 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         }
     });
 
+    // As react-aria: a disabled element gets none of the context's props.
+    let context_aria_describedby = match ctx.as_ref().and_then(|c| c.aria_describedby) {
+        Some(describedby) => {
+            Signal::derive(move || (!disabled.get()).then(|| describedby.get()).flatten())
+        }
+        None => Signal::stored(None),
+    };
+    let context_attrs = ctx
+        .as_ref()
+        .and_then(|c| c.attrs.clone())
+        .filter(|_| !disabled.get_untracked());
+
     UseFocusableReturn {
         props: UseFocusableProps {
             tabindex: tab_index,
@@ -429,6 +550,8 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
             on_keydown,
             on_keyup,
             element_capture,
+            context_aria_describedby,
+            context_attrs,
         },
         focus_handle,
     }

@@ -2,97 +2,92 @@ use indoc::indoc;
 use leptonic::{components::prelude::*, hooks::LinkTarget};
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageThemes() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="theming">
-                "Theming"
-                <AnchorLink href="#theming" description="Direct link to section: Theming"/>
-            </h1>
-
-            <p>"From the first day on, Leptonic was built with theming in mind."</p>
-
+        <DocPage title="Themes">
             <p>
-                "Styles are not attached to components directly, are not injected in any way upon rendering, "
-                "which means that all components could be describes as \"headless\" in that regard."
+                "Leptonic\u{2019}s components don\u{2019}t carry their styles. All styling comes from the "
+                <LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::_Blank>"leptonic-theme"</LinkExt>
+                " crate, whose stylesheets leptonic\u{2019}s build script copies into your project (see "
+                <Link href=routes::doc::Installation.materialize()>"Installation"</Link>"). They define two themes, "
+                <Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>". Hooks and atoms bring no styles at all."
             </p>
 
-            <p>
-                "All styling is provided through the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::_Blank>"leptonic-theme"</LinkExt>" crate. "
-                "When used as a build.rs dependency, this crate can write out SCSS code, styling the Leptonic components in two themes: "<Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>"."
-            </p>
+            <Section title="Switching themes">
+                <p>
+                    <Code inline=true>"<Root>"</Code>" provides the active theme. It starts with its "<Code inline=true>"default_theme"</Code>
+                    ", remembers the user\u{2019}s choice in local storage (key "<Code inline=true>"theme"</Code>") and sets the "
+                    <Code inline=true>"data-theme"</Code>" attribute on the document element, which the theme stylesheets select on."
+                </p>
 
-            <p>
-                "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=routes::doc::Installation.materialize()>"Installation"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
-            </p>
+                <p>"Let users switch between two themes with a "<Code inline=true>"ThemeToggle"</Code>":"</p>
 
-            <p>
-                "A simple " <Code inline=true>"ThemeToggle"</Code>" component is provided, which you can embed like this:"
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
+                    ")}
+                </Code>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
-                ")}
-            </Code>
+                <p>
+                    "The toggle is a "<Link href=routes::doc::Switch.materialize()>"switch"</Link>" showing the icons of both "
+                    "themes; it is on while the "<Code inline=true>"on"</Code>" theme is active. Screen readers name it after that theme "
+                    "(\u{201c}dark theme\u{201d}); pass "<Code inline=true>"aria_label"</Code>" for a different name."
+                </p>
 
-            <p>
-                "We are using the "<Code inline=true>"<LeptonicTheme>"</Code>" enum here, which describes the two out-of-the-box themes (light and dark). "
-                "This is not mandatory though as you could create your own theme-defining type and your own theme toggle components."
-            </p>
+                <p>
+                    "To build your own theme control, read and change the theme with "<Code inline=true>"use_theme"</Code>
+                    ". It returns the "<Code inline=true>"ThemeContext"</Code>" of the closest provider of that theme type, or "
+                    <Code inline=true>"None"</Code>" outside of one:"
+                </p>
 
-            <h2 id="customization">
-                "Customization"
-                <AnchorLink href="#customization" description="Direct link to section: Customization"/>
-            </h2>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let theme = use_theme::<LeptonicTheme>().expect("inside <Root>");
+                        view! {
+                            <Button on_press=move |_| theme.set_theme(LeptonicTheme::Dark)>"Dark"</Button>
+                            <p>"Current theme: " {move || theme.theme().get().name()}</p>
+                        }
+                    "#)}
+                </Code>
 
-            <p>
-                "Having a theme, even better a theme provided by default is, is great, but only if that them can be customized in a meaningful way."
-            </p>
+                <p>
+                    <Code inline=true>"LeptonicTheme"</Code>" describes the two built-in themes. For themes of your own, define a type "
+                    "implementing the "<Code inline=true>"Theme"</Code>" trait (a name, used as the "<Code inline=true>"data-theme"</Code>
+                    " value, and an icon for the toggle) and use it with "<Code inline=true>"<Root>"</Code>" and "
+                    <Code inline=true>"ThemeToggle"</Code>"."
+                </p>
+            </Section>
 
-            <p>
-                "All components styles therefore make broad use of CSS variables, with which many aspects of the two default themes can be changed. "
-                "In every page of this book explaining a component, we hint you to the styles you might want to override. A theme generator may come in the future..."
-            </p>
+            <Section title="Customization">
+                <p>
+                    "The theme stylesheets are built on CSS variables, so you adapt a theme by overriding variables for its "
+                    <Code inline=true>"data-theme"</Code>". Each component page lists the variables of its component under "
+                    "\u{201c}Styling\u{201d}."
+                </p>
 
-            <p>
-                "Have a look at this excerpt from this book's main "<Code inline=true>"style.scss"</Code>" file, "
-                "showing you how we include the leptonic standard themes previously written by our build script "
-                "and overwrite a few variables to meet our design needs."
-            </p>
+                <p>"This book, for example, includes the themes and changes a few variables:"</p>
 
-            <Code language=Language::Css>
-                {indoc!(r#"
-                    @use "../generated/leptonic/leptonic-themes";
+                <Code language=Language::Css>
+                    {indoc!(r#"
+                        @use "./leptonic/leptonic-themes";
 
-                    [data-theme="light"] {
-                        --brand-color: #e66956;
+                        [data-theme="light"] {
+                            --brand-color: #e66956;
+                            --drawer-background-color: none;
+                            --drawer-box-shadow: none;
+                        }
 
-                        --drawer-background-color: none;
-                        --drawer-box-shadow: none;
-                    }
-
-                    [data-theme="dark"] {
-                        --brand-color: #e66956;
-
-                        --drawer-background-color: none;
-                        --drawer-box-shadow: none;
-                    }
-                "#)}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Theming", link: "#theming" },
-                Toc::Leaf { title: "Customization", link: "#customization" },
-            ]
-        }/>
+                        [data-theme="dark"] {
+                            --brand-color: #e66956;
+                            --drawer-background-color: none;
+                            --drawer-box-shadow: none;
+                        }
+                    "#)}
+                </Code>
+            </Section>
+        </DocPage>
     }
 }

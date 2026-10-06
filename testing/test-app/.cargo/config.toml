@@ -1,5 +1,4 @@
-[build]
-rustflags = ["--cfg=web_sys_unstable_apis"]
+# `build.rustflags` come from the repository's `.cargo/config.toml`.
 
 [env]
 LEPTOS_OUTPUT_NAME = "leptonic-test-app"

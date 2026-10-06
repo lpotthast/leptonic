@@ -23,7 +23,7 @@ thread_local! {
     static IOS_STATE: Cell<IosSelectionState> = const { Cell::new(IosSelectionState::Default) };
 }
 
-// Saved original `webkit-user-select` value for the iOS path.
+// Saved original `-webkit-user-select` value for the iOS path.
 thread_local! {
     static SAVED_USER_SELECT: RefCell<String> = const { RefCell::new(String::new()) };
 }
@@ -83,12 +83,12 @@ fn disable_text_selection_ios() {
     // Transitioning from Default: save the original value before overwriting.
     if let Some(style) = get_document_element_style() {
         let original = style
-            .get_property_value("webkit-user-select")
+            .get_property_value("-webkit-user-select")
             .unwrap_or_default();
         SAVED_USER_SELECT.with(|saved| {
             *saved.borrow_mut() = original;
         });
-        let _ = style.set_property("webkit-user-select", "none");
+        let _ = style.set_property("-webkit-user-select", "none");
     }
 
     IOS_STATE.set(IosSelectionState::Disabled);
@@ -108,18 +108,19 @@ fn restore_text_selection_ios() {
         move || {
             // Wait for any CSS transitions to complete so we don't recompute style
             // for the whole page in the middle of the animation and cause jank.
-            run_after_transition(move || {
+            run_after_transition(move |_| {
                 if IOS_STATE.with(Cell::get) == IosSelectionState::Restoring {
                     if let Some(style) = get_document_element_style() {
                         // Guard: only restore if the current value is still "none".
                         // Another piece of code may have changed it in the meantime.
-                        if style.get_property_value("webkit-user-select").as_deref() == Ok("none") {
+                        if style.get_property_value("-webkit-user-select").as_deref() == Ok("none")
+                        {
                             let saved = SAVED_USER_SELECT
                                 .with(|saved| std::mem::take(&mut *saved.borrow_mut()));
                             if saved.is_empty() {
-                                let _ = style.remove_property("webkit-user-select");
+                                let _ = style.remove_property("-webkit-user-select");
                             } else {
-                                let _ = style.set_property("webkit-user-select", &saved);
+                                let _ = style.set_property("-webkit-user-select", &saved);
                             }
                         }
                     }

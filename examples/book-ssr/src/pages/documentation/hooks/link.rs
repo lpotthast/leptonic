@@ -2,201 +2,174 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
-use super::demos::link_disabled::LinkDisabledDemo;
-use super::demos::link_external::LinkExternalDemo;
-use super::demos::link_internal::LinkInternalDemo;
-use super::demos::link_pressed::LinkPressedDemo;
-use super::demos::link_programmatic_focus::LinkProgrammaticFocusDemo;
-use super::demos::link_span::LinkSpanDemo;
+use super::demos::{
+    link_disabled::LinkDisabledDemo, link_external::LinkExternalDemo,
+    link_internal::LinkInternalDemo, link_pressed::LinkPressedDemo,
+    link_programmatic_focus::LinkProgrammaticFocusDemo, link_span::LinkSpanDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseLink() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_link" class="anchor">
-                "use_link"
-                <AnchorLink href="#use_link" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_link">
             <p>
-                "The "<code>"use_link"</code>" hook creates accessible links with robust press handling, focus management, and keyboard navigation. "
-                "See the "<Link href=crate::routes::doc::link::UseLink.materialize()>"Link overview"</Link>" for concept guidance."
+                "The "<Code inline=true>"use_link"</Code>" hook makes an element behave and announce itself as a link, "
+                "with the press handling, focus management and focus ring tracking of "
+                <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>". See the "
+                <Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useLink.html" target=LinkTarget::_Blank>
-                    "useLink"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useLink"/>
 
-            <p>
-                "Composes " <code>"use_focusable"</code> ", " <code>"use_press"</code> ", and " <code>"use_focus_ring"</code>
-                " to provide the same interaction quality as " <code>"use_button"</code> " but for link elements."
-            </p>
+            <Section title="Input">
+                <p><Code inline=true>"UseLinkInput"</Code>" has no "<Code inline=true>"Default"</Code>", so you set every field."</p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <ApiTable kind=ApiKind::Input of="UseLinkInput">
+                    <ApiRow name="href" ty="Option<String>">"The link target."</ApiRow>
+                    <ApiRow name="target" ty="Option<LinkTarget>">
+                        "Where to open the link, e.g. "<Code inline=true>"LinkTarget::_Blank"</Code>" for a new tab."
+                    </ApiRow>
+                    <ApiRow name="rel" ty="Vec<LinkRel>">
+                        "Values of the "<Code inline=true>"rel"</Code>" attribute, such as "<Code inline=true>"LinkRel::NoOpener"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the link is disabled."</ApiRow>
+                    <ApiRow name="element_type" ty="LinkElementType">
+                        "The element you spread the props onto, see "<a href="#element-types">"Element Types"</a>"."
+                    </ApiRow>
+                    <ApiRow name="aria_current" ty="Option<AriaCurrent>">
+                        "Marks the link as the current item of a set, e.g. the current page in a navigation."
+                    </ApiRow>
+                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>">"Called when the link is pressed."</ApiRow>
+                    <ApiRow name="on_press_start, on_press_end" ty="Option<Callback<PressEvent>>">
+                        "Called when a press starts and ends, as in "
+                        <Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <DemoShell source=include_str!("demos/link_internal.rs")>
-                <LinkInternalDemo />
-            </DemoShell>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseLinkReturn">
+                    <ApiRow name="props" ty="PropsWithStyles<UseLinkProps>">
+                        "Attributes, event handlers and styles for the link element. Call "
+                        <Code inline=true>"props.into_parts()"</Code>" to get "<Code inline=true>"(attrs, styles)"</Code>
+                        ", then spread "<Code inline=true>"{..attrs}"</Code>" and set "<Code inline=true>"style=styles"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the link is disabled."</ApiRow>
+                    <ApiRow name="is_pressed" ty="Signal<bool>">"Whether the link is currently pressed."</ApiRow>
+                    <ApiRow name="is_focus_visible" ty="Signal<bool>">
+                        "Whether a focus ring should be shown (keyboard focus only). Also exposed as "
+                        <Code inline=true>"data-focus-visible"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="focus_handle" ty="FocusHandle">
+                        "Focus the link programmatically with "<Code inline=true>"focus_handle.focus()"</Code>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <DemoShell source=include_str!("demos/link_external.rs")>
-                <LinkExternalDemo />
-            </DemoShell>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let link = use_link(UseLinkInput {
+                            href: Some("https://example.com".to_string()),
+                            target: Some(LinkTarget::_Blank),
+                            rel: vec![LinkRel::NoOpener, LinkRel::NoReferrer],
+                            is_disabled: Signal::default(),
+                            element_type: LinkElementType::Anchor,
+                            aria_current: None,
+                            on_press: None,
+                            on_press_start: None,
+                            on_press_end: None,
+                        });
+                        let (attrs, styles) = link.props.into_parts();
 
-            <DemoShell source=include_str!("demos/link_disabled.rs")>
-                <LinkDisabledDemo />
-            </DemoShell>
+                        view! {
+                            <a {..attrs} style=styles>"External link"</a>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let link = use_link(UseLinkInput {
-                        href: Some("https://example.com".to_string()),
-                        target: Some("_blank"),
-                        rel: vec![LinkRel::NoOpener, LinkRel::NoReferrer],
-                        ..Default::default()
-                    });
+            <Section title="Demo">
+                <p>"A link to a section of this page:"</p>
+                <Demo description="Internal link to an anchor on the page" source=include_str!("demos/link_internal.rs")>
+                    <LinkInternalDemo/>
+                </Demo>
 
-                    view! {
-                        <a {..link.props.into_attrs()}>"External Link"</a>
-                    }
-                "#)}
-            </Code>
+                <p>"A link opening another site in a new tab, with "<Code inline=true>"rel"</Code>" values:"</p>
+                <Demo description="External link opening in a new tab" source=include_str!("demos/link_external.rs")>
+                    <LinkExternalDemo/>
+                </Demo>
 
-            <h2 id="pressed-state" class="anchor">
-                "Pressed State"
-                <AnchorLink href="#pressed-state" description="Direct link to pressed state"/>
-            </h2>
+                <p>"A link you can disable. The hook sets "<Code inline=true>"aria-disabled"</Code>", which the demo uses for styling:"</p>
+                <Demo description="Link with a disabled toggle" source=include_str!("demos/link_disabled.rs")>
+                    <LinkDisabledDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "The hook exposes " <code>"is_pressed"</code> " (from " <code>"use_press"</code>
-                ") for visual feedback during interactions. Press and hold the link below to see the effect."
-            </p>
+            <Section title="Pressed State">
+                <p>
+                    <Code inline=true>"is_pressed"</Code>" is "<Code inline=true>"true"</Code>
+                    " while the link is held down, for visual feedback. Press and hold the link:"
+                </p>
 
-            <DemoShell source=include_str!("demos/link_pressed.rs")>
-                <LinkPressedDemo />
-            </DemoShell>
+                <Demo description="Link that shrinks while pressed" source=include_str!("demos/link_pressed.rs")>
+                    <LinkPressedDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="non-anchor-elements" class="anchor">
-                "Non-Anchor Elements"
-                <AnchorLink href="#non-anchor-elements" description="Direct link to non-anchor elements"/>
-            </h2>
+            <Section title="Element Types">
+                <p>
+                    "Links don\u{2019}t have to be "<Code inline=true>"<a>"</Code>" elements. For any other element, the hook "
+                    "adds "<Code inline=true>"role=\"link\""</Code>" and the keyboard handling of a link. In debug builds, it "
+                    "checks that the element matches "<Code inline=true>"element_type"</Code>"."
+                </p>
 
-            <p>
-                "Links can use non-anchor elements like " <code>"<span>"</code> " or " <code>"<button>"</code>
-                ". The hook automatically adds " <code>"role=\"link\""</code>
-                " and keyboard handling (Enter via " <code>"use_press"</code> ")."
-            </p>
+                <DocTable headers=&["LinkElementType", "Element"]>
+                    <TableRow><TableCell><Code inline=true>"Anchor"</Code>" (default)"</TableCell><TableCell>"A native "<Code inline=true>"<a>"</Code>"."</TableCell></TableRow>
+                    <TableRow><TableCell><Code inline=true>"Span"</Code></TableCell><TableCell>"A "<Code inline=true>"<span>"</Code>", gets "<Code inline=true>"role=\"link\""</Code>"."</TableCell></TableRow>
+                    <TableRow><TableCell><Code inline=true>"Button"</Code></TableCell><TableCell>"A "<Code inline=true>"<button>"</Code>", gets "<Code inline=true>"role=\"link\""</Code>"."</TableCell></TableRow>
+                </DocTable>
 
-            <DemoShell source=include_str!("demos/link_span.rs")>
-                <LinkSpanDemo />
-            </DemoShell>
+                <Demo description="Span acting as a link, counting presses" source=include_str!("demos/link_span.rs")>
+                    <LinkSpanDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="focus-handle" class="anchor">
-                "Programmatic Focus"
-                <AnchorLink href="#focus-handle" description="Direct link to focus handle"/>
-            </h2>
+            <Section title="Programmatic Focus">
+                <p>"Move focus to the link with the returned "<Code inline=true>"FocusHandle"</Code>":"</p>
 
-            <p>
-                "The hook provides a " <code>"FocusHandle"</code>
-                " for programmatic focus control."
-            </p>
+                <Demo description="Button that focuses a link" source=include_str!("demos/link_programmatic_focus.rs")>
+                    <LinkProgrammaticFocusDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/link_programmatic_focus.rs")>
-                <LinkProgrammaticFocusDemo />
-            </DemoShell>
+            <Section title="Accessibility">
+                <p>"The hook sets:"</p>
 
-            <h2 id="element-types" class="anchor">
-                "Element Types"
-                <AnchorLink href="#element-types" description="Direct link to element types"/>
-            </h2>
+                <ul>
+                    <li><Code inline=true>"href"</Code>", "<Code inline=true>"target"</Code>" and "<Code inline=true>"rel"</Code>" from the input."</li>
+                    <li><Code inline=true>"role=\"link\""</Code>" on elements other than "<Code inline=true>"<a>"</Code>"."</li>
+                    <li><Code inline=true>"aria-current"</Code>" from the input, and "<Code inline=true>"aria-disabled"</Code>" while disabled."</li>
+                    <li>
+                        <Code inline=true>"tabindex"</Code>": "<Code inline=true>"0"</Code>", or none while disabled."
+                    </li>
+                    <li><Code inline=true>"data-focus-visible"</Code>" while the link has keyboard focus."</li>
+                </ul>
 
-            <p>"Links can be rendered as different elements:"</p>
-            <ul>
-                <li><code>"LinkElementType::Anchor"</code> " - Standard anchor element (default)"</li>
-                <li><code>"LinkElementType::Span"</code> " - Span styled as link (gets role=\"link\")"</li>
-                <li><code>"LinkElementType::Button"</code> " - Button styled as link (gets role=\"link\")"</li>
-            </ul>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Focuses the link."</KeyRow>
+                    <KeyRow keys="Enter">"Activates the link. Unlike buttons, links don\u{2019}t react to Space."</KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
-
-            <p>"The hook automatically sets:"</p>
-            <ul>
-                <li><code>"target"</code> " and " <code>"rel"</code> " from user-provided values"</li>
-                <li><code>"role=\"link\""</code> " for non-anchor elements"</li>
-                <li><code>"aria-current"</code> " for marking the current item in a navigation set"</li>
-                <li><code>"aria-disabled"</code> " for disabled state"</li>
-                <li><code>"tabindex"</code> " managed by " <code>"use_focusable"</code> " (disabled → removed, exclude_from_tab_order → -1, normal → 0)"</li>
-                <li><code>"data-focus-visible"</code> " for keyboard-only focus ring"</li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Composes " <code>"use_press"</code> " for robust press interactions (pointer, keyboard, drag cancellation)"</li>
-                <li>"Composes " <code>"use_focusable"</code> " for focus/blur handling, auto-focus, and tabindex management"</li>
-                <li>"Composes " <code>"use_focus_ring"</code> " for keyboard-only focus ring visibility"</li>
-                <li>"Internal and external link support"</li>
-                <li>"Type-safe " <code>"rel"</code> " attribute via " <code>"LinkRel"</code> " enum"</li>
-                <li>"Multiple element type support"</li>
-                <li>"Disabled state handling"</li>
-                <li>"Pressed state tracking (" <code>"is_pressed"</code> ")"</li>
-                <li><code>"on_press_start"</code> " / " <code>"on_press_end"</code> " callbacks for press lifecycle"</li>
-                <li>"Programmatic focus via " <code>"FocusHandle"</code></li>
-            </ul>
-
-            <h2 id="deviations" class="anchor">
-                "Deviations from react-aria"
-                <AnchorLink href="#deviations" description="Direct link to deviations"/>
-            </h2>
-
-            <ul>
-                <li>
-                    "Client-side router integration is not handled at the hook level. "
-                    "Leptos router handles this at the component level via " <code>"<A>"</code> "."
-                </li>
-                <li>
-                    <code>"use_focus_ring"</code>
-                    " is composed directly in the hook. React-aria handles focus ring visibility at the component level."
-                </li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to see also"/>
-            </h2>
-
-            <ul>
-                <li><code>"use_anchor_link"</code> " - For in-page anchor navigation with smooth scrolling"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_link", link: "#use_link" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Pressed State", link: "#pressed-state" },
-                Toc::Leaf { title: "Non-Anchor Elements", link: "#non-anchor-elements" },
-                Toc::Leaf { title: "Programmatic Focus", link: "#focus-handle" },
-                Toc::Leaf { title: "Element Types", link: "#element-types" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "Deviations", link: "#deviations" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
+                <li><Link href=routes::doc::link::UseAnchorLink.materialize()>"use_anchor_link"</Link></li>
+                <li><Link href=routes::doc::link::LinkAtom.materialize()>"Link atom"</Link></li>
+                <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

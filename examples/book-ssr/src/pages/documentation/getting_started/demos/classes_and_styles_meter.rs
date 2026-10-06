@@ -1,8 +1,11 @@
-use leptonic::utils::{
-    classes::Classes,
-    css::{CssColor, NonNegativeLengthPercentage, Size, css_custom_property, pct, rgb},
-    style::WidthProperty,
-    styles::Styles,
+use leptonic::{
+    components::prelude::{Button, Checkbox},
+    utils::{
+        classes::Classes,
+        css::{CssColor, NonNegativeLengthPercentage, Size, css_custom_property, pct, rgb},
+        style::WidthProperty,
+        styles::Styles,
+    },
 };
 use leptos::prelude::*;
 
@@ -42,28 +45,11 @@ pub fn ClassesAndStylesMeterDemo() -> impl IntoView {
         </div>
 
         <div class="demo-flex-center-row">
-            <button
-                class="demo-btn"
-                on:click=move |_| set_progress.update(|p| *p = p.saturating_sub(10))
-            >
-                "-10%"
-            </button>
-            <button
-                class="demo-btn"
-                on:click=move |_| set_progress.update(|p| *p = (*p + 10).min(100))
-            >
-                "+10%"
-            </button>
+            <Button on_press=move |_| set_progress.update(|p| *p = p.saturating_sub(10))>"-10%"</Button>
+            <Button on_press=move |_| set_progress.update(|p| *p = (*p + 10).min(100))>"+10%"</Button>
             <span>{move || format!("{}%", progress.get())}</span>
         </div>
 
-        <label class="demo-checkbox-label">
-            <input
-                type="checkbox"
-                prop:checked=warm
-                on:change=move |e| set_warm.set(event_target_checked(&e))
-            />
-            "Warm accent color"
-        </label>
+        <Checkbox state=(warm, set_warm)>"Warm accent color"</Checkbox>
     }
 }

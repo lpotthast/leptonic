@@ -1,373 +1,204 @@
 use std::collections::HashSet;
 
-use leptos::{context::Provider, ev, prelude::*};
+use leptos::{context::Provider, prelude::*};
 
 use crate::{
     hooks::{
-        EscapeKeyBehavior, FocusStrategy, IntoAttrs, Keyed, ListBoxOrientation, Selection,
-        SelectionBehavior, SelectionKey, SelectionMode, UseListBoxInput, UseListBoxReturn,
-        UseOptionInput, UseOptionReturn, UseSelectionStateReturn, use_listbox, use_option,
+        DisabledBehavior, IntoAttrs, ListBoxData, Orientation, SelectionBehavior, SelectionMode,
+        UseListBoxInput, UseListBoxReturn, UseListBoxSectionInput, UseListBoxSectionReturn,
+        UseOptionInput, UseOptionReturn,
+        collections::{
+            AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout,
+            ListState, Node, Selection, SelectionOptions, UseListStateInput, use_list_state,
+        },
+        use_listbox, use_listbox_section, use_option,
     },
-    utils::{CapturedElement, classes::Classes, styles::Styles},
+    utils::ValueBinding,
+    utils::data_attributes::flag,
+    utils::{CapturedElement, SlotProps, classes::Classes, styles::Styles},
 };
 
-use super::select::SelectCtx;
-
-/// Context shared from [`ListBox`] to [`ListBoxItem`] children.
-#[derive(Clone)]
-pub struct ListBoxCtx<K: SelectionKey> {
-    /// The selection state for wiring individual options.
-    pub selection_state: UseSelectionStateReturn<K>,
-    /// The currently focused key in the listbox.
-    pub focused_key: Signal<Option<K>>,
-    /// Whether selection occurs on pointer-up rather than pointer-down.
-    pub should_select_on_press_up: bool,
-    /// Whether options use virtual focus (aria-activedescendant).
-    pub should_use_virtual_focus: bool,
-    /// Whether options receive focus on mouse hover.
-    pub should_focus_on_hover: bool,
+/// Provided by components that render a [`ListBox`] for their own options (a select's or combo
+/// box's popover): the listbox then uses this configuration instead of its props.
+#[derive(Clone, Copy)]
+pub struct ListBoxParent {
+    pub input: StoredValue<UseListBoxInput>,
 }
 
-// Manual Copy impl: derive(Copy) would add `K: Copy` which is too restrictive.
-// All fields are Copy (Signal, bool, UseSelectionStateReturn).
-impl<K: SelectionKey> Copy for ListBoxCtx<K> {}
-
-/// Context shared from [`ListBoxItem`] to [`ListBoxItemLabel`] and [`ListBoxItemDescription`].
-#[derive(Clone)]
+/// Context from [`ListBoxItem`] to [`ListBoxItemLabel`] and [`ListBoxItemDescription`].
+#[derive(Debug, Clone)]
 pub struct ListBoxItemCtx {
-    /// The ID for the label element.
-    pub label_id: String,
-    /// The ID for the description element.
-    pub description_id: String,
-    /// Whether this option is currently selected.
+    label_props: StoredValue<Option<SlotProps>>,
+    description_props: StoredValue<Option<SlotProps>>,
     pub is_selected: Signal<bool>,
-    /// Whether this option is currently focused.
     pub is_focused: Signal<bool>,
-    /// Whether this option is disabled.
-    pub is_disabled: Signal<bool>,
-    /// Whether this option is pressed.
-    pub is_pressed: Signal<bool>,
-    /// Whether the focus ring should be visible.
     pub is_focus_visible: Signal<bool>,
+    pub is_disabled: Signal<bool>,
+    pub is_pressed: Signal<bool>,
 }
 
-/// A headless listbox container atom.
+/// A headless listbox: a list of options to select one or more from.
 ///
-/// Wraps `use_listbox` and provides shared state to child [`ListBoxItem`] atoms
-/// via context.
+/// The options come from `collection`: render one [`ListBoxItem`] (or [`ListBoxSection`]) per
+/// collection entry, in collection order. Inside a [`Select`](super::select::Select) or
+/// [`ComboBox`](super::combobox::ComboBox) (see [`ListBoxParent`]), the
+/// listbox shows the parent's options with the parent's settings; the props below are then
+/// ignored.
 ///
-/// When used inside a [`Select`](super::select::Select) atom, automatically
-/// reads [`SelectCtx`] and wires the `menu_config` from the select hook.
-/// Explicit props always override the `menu_config` values.
+/// ```ignore
+/// let fruits = use_list_collection(Signal::stored(vec!["Apple", "Banana"]), |f| Key::from(*f), |f| f.to_string());
+/// view! {
+///     <ListBox collection=fruits selection_mode=SelectionMode::Multiple aria_label="Fruits">
+///         <ListBoxItem key="Apple">"Apple"</ListBoxItem>
+///         <ListBoxItem key="Banana">"Banana"</ListBoxItem>
+///     </ListBox>
+/// }
+/// ```
 #[component]
-#[allow(clippy::too_many_lines, clippy::implicit_hasher)]
-pub fn ListBox<V: Keyed + Clone + Send + Sync + 'static>(
-    /// Ordered list of all items.
+#[allow(
+    clippy::too_many_lines,
+    clippy::fn_params_excessive_bools,
+    clippy::implicit_hasher
+)]
+pub fn ListBox(
+    /// The options. Required outside of a select.
     #[prop(into, optional)]
-    items: Option<Signal<Vec<V>>>,
-    /// The selection mode.
+    collection: Option<CollectionMemo>,
+    /// Use an existing list state instead of creating one from `collection` and the selection
+    /// props.
+    #[prop(optional)]
+    state: Option<ListState>,
+    #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
+    #[prop(optional)] selection_behavior: SelectionBehavior,
+    /// The initially selected keys.
     #[prop(into, optional)]
-    selection_mode: Option<SelectionMode>,
-    /// The selection behavior (toggle vs replace).
+    default_selected_keys: Vec<Key>,
+    /// The selection as app state (e.g. an `RwSignal<Selection>`), replacing
+    /// `default_selected_keys`.
     #[prop(into, optional)]
-    selection_behavior: Option<SelectionBehavior>,
-    /// Controlled selected keys.
+    selection: Option<ValueBinding<Selection>>,
+    #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
+    #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
+    #[prop(optional)] disabled_behavior: DisabledBehavior,
+    #[prop(optional)] disallow_empty_selection: bool,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(default = Orientation::Vertical)] orientation: Orientation,
+    #[prop(optional)] layout: ListLayout,
+    /// Arrow keys wrap around at the ends.
+    #[prop(optional)]
+    should_focus_wrap: bool,
+    /// Focus an item when the listbox mounts.
+    #[prop(optional)]
+    auto_focus: Option<AutoFocus>,
+    #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
+    /// Called with the key of an activated option.
     #[prop(into, optional)]
-    selected_keys: Option<Signal<Selection<V::Key>>>,
-    /// Default selected keys (uncontrolled).
-    #[prop(into, optional)]
-    default_selected_keys: Option<Selection<V::Key>>,
-    /// Callback when selection changes.
-    #[prop(into, optional)]
-    on_selection_change: Option<Callback<Selection<V::Key>>>,
-    /// Keys that cannot be selected.
-    #[prop(into, optional)]
-    disabled_keys: Option<Signal<HashSet<V::Key>>>,
-    /// Whether to disallow empty selection.
-    #[prop(into, optional)]
-    disallow_empty_selection: Option<bool>,
-    /// Whether the listbox is disabled.
-    #[prop(into, optional)]
-    disabled: Option<Signal<bool>>,
-    /// Escape key behavior.
-    #[prop(into, optional)]
-    escape_key_behavior: Option<EscapeKeyBehavior>,
-    /// Whether arrow key navigation wraps around.
-    #[prop(into, optional)]
-    should_focus_wrap: Option<bool>,
-    /// Auto-focus strategy.
-    #[prop(into, optional)]
-    auto_focus: Option<Signal<Option<FocusStrategy>>>,
-    /// Whether to select items on focus.
-    #[prop(into, optional)]
-    select_on_focus: Option<bool>,
-    /// An accessible label for the listbox.
-    #[prop(into, optional)]
-    aria_label: Option<&'static str>,
-    /// The ID of an element that labels the listbox.
-    #[prop(into, optional)]
-    aria_labelledby: Option<String>,
-    /// A function to get the text value for type-ahead.
-    #[prop(into, optional)]
-    get_text_value: Option<Callback<V::Key, String>>,
-    /// Whether selection occurs on pointer-up rather than pointer-down.
-    #[prop(into, optional)]
-    should_select_on_press_up: Option<bool>,
-    /// Whether options should receive focus on mouse hover.
-    #[prop(into, optional)]
-    should_focus_on_hover: Option<bool>,
-    /// Whether options use virtual focus (aria-activedescendant).
-    #[prop(into, optional)]
-    should_use_virtual_focus: Option<bool>,
-    /// Callback when the listbox should close (e.g. Escape key).
-    #[prop(into, optional)]
-    on_close: Option<Callback<()>>,
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+    on_action: Option<Callback<Key>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    // Try to read SelectCtx for composition mode.
-    let select_ctx = use_context::<SelectCtx<V::Key>>();
-    let menu_config = select_ctx.map(|ctx| ctx.menu_config());
-
-    // Resolve items: convert V → V::Key via Keyed trait, or use menu_config keys.
-    let resolved_items = items
-        .map(V::items_to_keys)
-        .or_else(|| menu_config.as_ref().map(|mc| mc.items))
-        .unwrap_or_else(|| Signal::derive(Vec::new));
-
-    let resolved_selection_mode = selection_mode
-        .or_else(|| menu_config.as_ref().map(|mc| mc.selection_mode))
-        .unwrap_or(SelectionMode::Single);
-
-    let resolved_selection_behavior = selection_behavior.unwrap_or(SelectionBehavior::Toggle);
-
-    let resolved_selected_keys =
-        selected_keys.or_else(|| menu_config.as_ref().map(|mc| mc.selected_keys));
-
-    let resolved_on_selection_change =
-        on_selection_change.or_else(|| menu_config.as_ref().map(|mc| mc.on_selection_change));
-
-    let resolved_disabled_keys = disabled_keys
-        .or_else(|| menu_config.as_ref().map(|mc| mc.disabled_keys))
-        .unwrap_or_else(|| Signal::derive(HashSet::new));
-
-    let resolved_disallow_empty_selection = disallow_empty_selection
-        .or_else(|| menu_config.as_ref().map(|mc| mc.disallow_empty_selection))
-        .unwrap_or(false);
-
-    let resolved_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
-
-    let resolved_escape_key_behavior = escape_key_behavior
-        .or_else(|| menu_config.as_ref().map(|mc| mc.escape_key_behavior))
-        .unwrap_or_default();
-
-    // A standalone listbox doesn't wrap (as in react-aria); a select's listbox does.
-    let resolved_should_focus_wrap = should_focus_wrap
-        .or_else(|| menu_config.as_ref().map(|mc| mc.should_focus_wrap))
-        .unwrap_or(false);
-
-    let resolved_auto_focus = auto_focus
-        .or_else(|| menu_config.as_ref().map(|mc| mc.auto_focus))
-        .unwrap_or_else(|| Signal::derive(|| None));
-
-    let resolved_select_on_focus = select_on_focus
-        .or_else(|| menu_config.as_ref().map(|mc| mc.select_on_focus))
-        .unwrap_or(false);
-
-    let resolved_aria_label = aria_label;
-    let resolved_aria_labelledby =
-        aria_labelledby.or_else(|| menu_config.as_ref().map(|mc| mc.aria_labelledby.clone()));
-
-    let resolved_get_text_value =
-        get_text_value.or_else(|| menu_config.as_ref().and_then(|mc| mc.get_text_value));
-
-    let resolved_on_close = on_close.or_else(|| menu_config.as_ref().and_then(|mc| mc.on_close));
-
-    let resolved_should_select_on_press_up = should_select_on_press_up
-        .or_else(|| menu_config.as_ref().map(|mc| mc.should_select_on_press_up))
-        .unwrap_or(false);
-
-    let resolved_should_focus_on_hover = should_focus_on_hover
-        .or_else(|| menu_config.as_ref().map(|mc| mc.should_focus_on_hover))
-        .unwrap_or(false);
-
-    let resolved_should_use_virtual_focus = should_use_virtual_focus
-        .or_else(|| menu_config.as_ref().map(|mc| mc.should_use_virtual_focus))
-        .unwrap_or(false);
-
-    let collection_ref = CapturedElement::new();
-
-    let UseListBoxReturn {
-        listbox_props,
-        state,
-        id: _,
-    } = use_listbox(UseListBoxInput {
-        selection_mode: resolved_selection_mode,
-        selection_behavior: resolved_selection_behavior,
-        is_disabled: resolved_disabled,
-        selected_keys: resolved_selected_keys,
-        default_selected_keys,
-        on_selection_change: resolved_on_selection_change,
-        disabled_keys: resolved_disabled_keys,
-        disallow_empty_selection: resolved_disallow_empty_selection,
-        items: resolved_items,
-        should_focus_wrap: resolved_should_focus_wrap,
-        auto_focus: resolved_auto_focus,
-        select_on_focus: resolved_select_on_focus,
-        aria_label: resolved_aria_label,
-        aria_labelledby: resolved_aria_labelledby,
-        get_text_value: resolved_get_text_value,
-        is_virtualized: false,
-        orientation: ListBoxOrientation::Vertical,
-        collection_ref,
-        on_close: resolved_on_close,
-        escape_key_behavior: resolved_escape_key_behavior,
-        id: menu_config.as_ref().map(|mc| mc.id.clone()),
-    });
-
-    // Extract blur handler and focused key setter before consuming menu_config.
-    let on_blur_handler = menu_config.as_ref().map(|mc| mc.on_blur.clone());
-    let menu_set_focused_key = menu_config.as_ref().map(|mc| mc.set_focused_key);
-
-    // Wire focused key back to Select when in composition mode.
-    if let Some(set_focused_key) = menu_set_focused_key {
-        let listbox_focused_key = state.collection.selection_state.focused_key;
-        Effect::new(move |_| {
-            set_focused_key.set(listbox_focused_key.get());
+    let element = CapturedElement::new();
+    let input = if let Some(parent) = use_context::<ListBoxParent>() {
+        parent.input.get_value()
+    } else {
+        let state = state.unwrap_or_else(|| {
+            let collection = collection.unwrap_or_else(|| {
+                crate::utils::dev_warn!("ListBox: no `collection` given (and not inside a Select)");
+                Memo::new(|_| std::sync::Arc::default())
+            });
+            use_list_state(UseListStateInput {
+                collection,
+                selection: SelectionOptions {
+                    selection_mode,
+                    selection_behavior,
+                    default_selection: Selection::keys(default_selected_keys),
+                    selection,
+                    on_selection_change,
+                    disallow_empty_selection: Signal::stored(disallow_empty_selection),
+                    disabled_keys: disabled_keys.unwrap_or_default(),
+                    disabled_behavior,
+                    ..SelectionOptions::default()
+                },
+            })
         });
-    }
-
-    // Provide context for ListBoxItem children.
-    let ctx = ListBoxCtx {
-        selection_state: state.collection.selection_state,
-        focused_key: state.collection.selection_state.focused_key,
-        should_select_on_press_up: resolved_should_select_on_press_up,
-        should_use_virtual_focus: resolved_should_use_virtual_focus,
-        should_focus_on_hover: resolved_should_focus_on_hover,
+        UseListBoxInput {
+            aria_label,
+            aria_labelledby,
+            orientation,
+            layout,
+            options: CollectionOptions {
+                auto_focus: Signal::stored(auto_focus),
+                should_focus_wrap,
+                escape_key_behavior,
+                ..CollectionOptions::default()
+            },
+            on_action,
+            ..UseListBoxInput::new(state, element)
+        }
     };
 
-    let listbox_attrs = listbox_props.into_attrs();
-    let collection_attr = collection_ref.attr();
+    let UseListBoxReturn { props, data } = use_listbox(input);
 
-    if let Some(blur_handler) = on_blur_handler {
-        view! {
-            <Provider value=ctx>
-                <div
-                    {..listbox_attrs}
-                    {..collection_attr}
-                    {..blur_handler.into_on(ev::focusout)}
-                    class=classes
-                    style=styles
-                >
-                    {children()}
-                </div>
-            </Provider>
-        }
-        .into_any()
-    } else {
-        view! {
-            <Provider value=ctx>
-                <div
-                    {..listbox_attrs}
-                    {..collection_attr}
-                    class=classes
-                    style=styles
-                >
-                    {children()}
-                </div>
-            </Provider>
-        }
-        .into_any()
+    view! {
+        <Provider value=data>
+            <div {..props.into_attrs()} class=classes style=styles>
+                {children()}
+            </div>
+        </Provider>
     }
 }
 
-/// A headless listbox option atom.
+/// An option of a [`ListBox`], for the collection item `key`.
 ///
-/// Wraps `use_option` and provides state to child [`ListBoxItemLabel`] and
-/// [`ListBoxItemDescription`] atoms via context.
-///
-/// Exposes `data-selected`, `data-focused`, `data-disabled`, `data-pressed`
-/// attributes for CSS styling.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
+/// `data-pressed` for styling.
 #[component]
-pub fn ListBoxItem<K: SelectionKey>(
-    /// The unique key for this option.
+pub fn ListBoxItem(
+    /// The item's key in the listbox's collection.
     #[prop(into)]
-    key: K,
-    /// Whether this option is disabled.
-    #[prop(into, optional)]
-    disabled: Option<Signal<bool>>,
-    /// Text value for accessibility (screen reader announcement).
-    #[prop(into, optional)]
-    text_value: Option<String>,
-    /// Callback when the option is pressed/activated.
-    #[prop(into, optional)]
-    on_press: Option<Callback<()>>,
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+    key: Key,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let ctx = expect_context::<ListBoxCtx<K>>();
-    let is_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
-
+    let list = expect_context::<ListBoxData>();
     let UseOptionReturn {
-        option_props,
+        props,
         label_props,
         description_props,
         is_selected,
         is_focused,
-        is_disabled: resolved_disabled,
-        is_pressed,
         is_focus_visible,
-    } = use_option(UseOptionInput {
-        key,
-        state: ctx.selection_state,
         is_disabled,
-        should_select_on_press_up: ctx.should_select_on_press_up,
-        should_use_virtual_focus: ctx.should_use_virtual_focus,
-        should_focus_on_hover: ctx.should_focus_on_hover,
-        on_focus: None,
-        on_press,
-        text_value,
-        focused_key: ctx.focused_key,
-    });
+        is_pressed,
+        ..
+    } = use_option(UseOptionInput { list, key });
 
-    let item_ctx = ListBoxItemCtx {
-        label_id: label_props.id,
-        description_id: description_props.id,
+    let ctx = ListBoxItemCtx {
+        label_props: StoredValue::new(Some(label_props)),
+        description_props: StoredValue::new(Some(description_props)),
         is_selected,
         is_focused,
-        is_disabled: resolved_disabled,
-        is_pressed,
         is_focus_visible,
+        is_disabled,
+        is_pressed,
     };
-
-    let data_selected = Signal::derive(move || is_selected.get().then_some("true"));
-    let data_focused = Signal::derive(move || is_focused.get().then_some("true"));
-    let data_disabled = Signal::derive(move || resolved_disabled.get().then_some("true"));
-    let data_pressed = Signal::derive(move || is_pressed.get().then_some("true"));
-
-    let (option_props, option_styles) = option_props.into_inner();
+    let (attrs, option_styles) = props.into_parts();
     let styles = option_styles.merge(styles);
 
     view! {
-        <Provider value=item_ctx>
+        <Provider value=ctx>
             <div
-                {..option_props.into_attrs()}
+                {..attrs}
                 class=classes
                 style=styles
-                attr:data-selected=data_selected
-                attr:data-focused=data_focused
-                attr:data-disabled=data_disabled
-                attr:data-pressed=data_pressed
+                data-selected=flag(is_selected)
+                data-focused=flag(is_focused)
+                data-focus-visible=flag(is_focus_visible)
+                data-disabled=flag(is_disabled)
+                data-pressed=flag(is_pressed)
             >
                 {children()}
             </div>
@@ -375,40 +206,137 @@ pub fn ListBoxItem<K: SelectionKey>(
     }
 }
 
-/// Renders a label element wired to the parent [`ListBoxItem`]'s ARIA label association.
+/// One [`ListBoxItem`] per item of the listbox's collection, as it currently is (e.g. filtered
+/// by a combo box's input), rendered by `children`.
+///
+/// ```ignore
+/// <ListBox>
+///     <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
+/// </ListBox>
+/// ```
 #[component]
-pub fn ListBoxItemLabel(
-    /// CSS classes.
+pub fn ListBoxItems<F, IV>(
+    /// Renders an item's content.
+    children: F,
+    /// CSS classes of each item.
     #[prop(into, optional)]
     classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
-    children: Children,
-) -> impl IntoView {
-    let ctx = expect_context::<ListBoxItemCtx>();
+) -> impl IntoView
+where
+    F: Fn(Node) -> IV + Send + Sync + 'static,
+    IV: IntoView + 'static,
+{
+    let list = expect_context::<ListBoxData>();
+    let collection = list.state.collection;
+    let children = std::sync::Arc::new(children);
     view! {
-        <span id=ctx.label_id class=classes style=styles>
-            {children()}
-        </span>
+        <For
+            each=move || collection.with(|c| c.items().cloned().collect::<Vec<_>>())
+            key=|node| node.key.clone()
+            let:node
+        >
+            {
+                let children = children.clone();
+                let key = node.key.clone();
+                view! { <ListBoxItem key=key classes=classes.clone()>{children(node)}</ListBoxItem> }
+            }
+        </For>
     }
 }
 
-/// Renders a description element wired to the parent [`ListBoxItem`]'s ARIA description.
+/// The main text of a [`ListBoxItem`] (labels the option).
 #[component]
-pub fn ListBoxItemDescription(
-    /// CSS classes.
-    #[prop(into, optional)]
-    classes: Classes,
-    /// CSS styles.
-    #[prop(into, optional)]
-    styles: Styles,
+pub fn ListBoxItemLabel(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let ctx = expect_context::<ListBoxItemCtx>();
+    slot(
+        ctx.label_props,
+        "ListBoxItemLabel",
+        classes,
+        styles,
+        children,
+    )
+}
+
+/// Secondary text of a [`ListBoxItem`] (describes the option).
+#[component]
+pub fn ListBoxItemDescription(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let ctx = expect_context::<ListBoxItemCtx>();
+    slot(
+        ctx.description_props,
+        "ListBoxItemDescription",
+        classes,
+        styles,
+        children,
+    )
+}
+
+/// Renders a label/description slot. The slot's props go to the first such element only.
+fn slot(
+    props: StoredValue<Option<SlotProps>>,
+    component: &str,
+    classes: Classes,
+    styles: Styles,
+    children: Children,
+) -> AnyView {
+    if let Some(props) = props.try_update_value(Option::take).flatten() {
+        view! {
+            <span {..props.into_attrs()} class=classes style=styles>
+                {children()}
+            </span>
+        }
+        .into_any()
+    } else {
+        crate::utils::dev_warn!("{component}: only one per ListBoxItem is supported");
+        view! {
+            <span class=classes style=styles>
+                {children()}
+            </span>
+        }
+        .into_any()
+    }
+}
+
+/// A group of options in a [`ListBox`], for the collection section `key`. Renders the
+/// section's header (if the collection has one) followed by the children.
+#[component]
+pub fn ListBoxSection(
+    /// The section's key in the listbox's collection.
+    #[prop(into)]
+    key: Key,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(into, optional)] heading_classes: Classes,
+    children: Children,
+) -> impl IntoView {
+    let list = expect_context::<ListBoxData>();
+    let UseListBoxSectionReturn {
+        item_props,
+        heading_props,
+        group_props,
+        heading,
+    } = use_listbox_section(UseListBoxSectionInput { list, key });
+
     view! {
-        <span id=ctx.description_id class=classes style=styles>
-            {children()}
-        </span>
+        <div {..item_props.into_attrs()}>
+            {heading_props
+                .map(|props| {
+                    view! {
+                        <div {..props.into_attrs()} class=heading_classes>
+                            {heading}
+                        </div>
+                    }
+                })}
+            <div {..group_props.into_attrs()} class=classes style=styles>
+                {children()}
+            </div>
+        </div>
     }
 }

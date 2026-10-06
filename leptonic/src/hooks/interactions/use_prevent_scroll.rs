@@ -9,17 +9,17 @@
 // - DEV-I3: Uses `thread_local! { Cell<usize> }` instead of a plain `let` variable.
 //   Rust requires thread-safe globals. WASM is single-threaded so `Cell` suffices.
 
-use std::cell::{Cell, RefCell};
-use std::rc::Rc;
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use leptos::prelude::*;
 use leptos_use::use_window;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsCast, prelude::*};
 use web_sys::HtmlElement;
 
-use crate::hooks::IntoAttrs;
-use crate::utils::platform::device;
+use crate::{hooks::IntoAttrs, utils::platform::device};
 
 thread_local! {
     static PREVENT_SCROLL_STATE: RefCell<PreventScrollState> = const { RefCell::new(PreventScrollState::new()) };
@@ -41,7 +41,7 @@ impl PreventScrollState {
 
 #[derive(Debug, Clone, Copy)]
 pub struct UsePreventScrollInput {
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 }
 
 #[derive(Debug)]
@@ -72,7 +72,9 @@ pub type UsePreventScrollAttrs = ();
 /// On iOS Safari, implements comprehensive touch event interception and focus
 /// override to prevent Safari's native scrolling behavior.
 pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollReturn {
-    let UsePreventScrollInput { disabled } = input;
+    let UsePreventScrollInput {
+        is_disabled: disabled,
+    } = input;
 
     let _effect = Effect::new(move |last| {
         if let Some(Some(())) = last {

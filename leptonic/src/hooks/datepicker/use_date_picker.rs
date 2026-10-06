@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/datepicker/useDatePicker.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -23,6 +22,7 @@ use crate::{
         EventHandler,
         aria::{AriaDisabled, AriaExpanded, AriaModal, AriaRole},
         element_capture::{CapturedElement, ElementCaptureAttr},
+        id::use_id,
     },
 };
 
@@ -112,7 +112,7 @@ pub struct UseDatePickerInput {
     pub is_date_unavailable: Option<Callback<time::Date, bool>>,
 
     /// Whether the field is explicitly invalid (controlled).
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// Custom validation function.
     pub validate: Option<ValidateFn<Option<time::OffsetDateTime>>>,
@@ -142,7 +142,7 @@ impl Default for UseDatePickerInput {
             hour_cycle_24: true,
             should_close_on_select: true,
             is_date_unavailable: None,
-            is_invalid: None,
+            is_invalid: Signal::stored(false),
             validate: None,
             validation_behavior: ValidationBehavior::default(),
             name: None,

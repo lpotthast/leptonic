@@ -1,9 +1,9 @@
-use leptonic::{components::prelude::*, utils::key::Key};
+use leptonic::{components::prelude::*, utils::key::KeyboardKey};
 use leptos::prelude::*;
 
 #[component]
 pub fn KbdShortcutDemo() -> impl IntoView {
     view! {
-        <KbdShortcut keys=[Key::Command, Key::Enter]/>
+        <KbdShortcut keys=[KeyboardKey::Command, KeyboardKey::Enter]/>
     }
 }

@@ -11,7 +11,7 @@ pub fn PageHookButton() -> impl IntoView {
     let (native_attrs, native_styles) = use_button(UseButtonInput {
         id: Some("test-btn-native".into()),
         on_press: Some(Callback::new(count)),
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         ..Default::default()
     })
     .props
@@ -21,7 +21,7 @@ pub fn PageHookButton() -> impl IntoView {
         id: Some("test-btn-div".into()),
         element_type: ButtonElementType::Other,
         on_press: Some(Callback::new(count)),
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         ..Default::default()
     })
     .props
@@ -31,7 +31,7 @@ pub fn PageHookButton() -> impl IntoView {
         id: Some("test-btn-anchor".into()),
         element_type: ButtonElementType::Anchor,
         href: Some(Signal::stored("#anchor-target".to_owned())),
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         ..Default::default()
     })
     .props

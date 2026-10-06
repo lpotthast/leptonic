@@ -1,59 +1,66 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::skeleton::SkeletonDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageSkeleton() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="skeleton" class="anchor">
-                "Skeleton"
-                <AnchorLink href="#skeleton" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Skeleton">
             <p>
-                "A skeleton is a placeholder element of a specific shape and size which can be displayed in place of some actual content, "
-                "whenever, for example, this content cannot be displayed because required data is still being fetched from a network resource. "
-                "This reduces layout shifts and prepares the user for where content will be visible when available."
+                "A skeleton is a placeholder of a specific shape and size, shown in place of content that can\u{2019}t be "
+                "displayed yet, for example because its data is still being fetched. It reduces layout shifts and shows "
+                "your users where the content will appear. The "<Code inline=true>"Skeleton"</Code>
+                " component renders such a placeholder, animated by default."
             </p>
 
-            <DemoShell source=include_str!("demos/skeleton.rs")>
-                <SkeletonDemo />
-            </DemoShell>
+            <Demo
+                description="Animated skeleton, static skeleton and skeleton with content"
+                source=include_str!("demos/skeleton.rs")
+            >
+                <SkeletonDemo/>
+            </Demo>
 
-            <p>
-                "Albeit used quite often these days, I would like to remind you that this concept is only tries to mitigate the problem of slowly loading resources. "
-                "All that might just not be required, if resources are preloaded, if services providing data do that in a few milliseconds, and so on and so forth... Try avoiding overly aggressive use of the skeleton component."
-                "But, even if your services respond quickly, keep in mind that the (uncontrollable) user-network-speeds may still result in slow resources."
-            </p>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="Skeleton">
+                    <ApiRow name="width" ty="Option<CssDimension>" default="None">
+                        "The width. Without it, the skeleton spans the full width ("<Code inline=true>"100%"</Code>")."
+                    </ApiRow>
+                    <ApiRow name="height" ty="Option<CssDimension>" default="None">
+                        "The height. Without it, the skeleton is as high as its content."
+                    </ApiRow>
+                    <ApiRow name="animated" ty="bool" default="true">
+                        "Whether a highlight sweeps across the skeleton. Sets the "<Code inline=true>"data-animated"</Code>
+                        " attribute."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                    <ApiRow name="children" ty="Option<Children>
+                        " default="None">"Content shown centered in the skeleton."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="styling">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="When to Use">
+                <p>
+                    "A skeleton only mitigates slowly loading content. Often you can avoid the wait altogether, by "
+                    "preloading resources or by serving data fast, so don\u{2019}t reach for skeletons by default. "
+                    "Keep in mind, though, that even fast services can\u{2019}t make up for a slow network connection "
+                    "of your users."
+                </p>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt skeletons to your design:"</p>
+                <CssVariables prefix="--skeleton-" scss=theme_scss!("skeleton")/>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --skeleton-background-color
-                    --skeleton-animation-highlight-color
-                    --skeleton-border-radius
-                    --skeleton-padding
-                    --skeleton-cursor
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Skeleton", link: "#skeleton" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::components::Stack.materialize()>"Stack"</Link></li>
+                <li><Link href=routes::doc::Progress.materialize()>"Progress"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

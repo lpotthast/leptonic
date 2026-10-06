@@ -15,6 +15,7 @@ pub mod focus;
 pub mod focus_scope_tree;
 pub mod focusability;
 pub(crate) mod focusable_tree_walker;
+pub mod heading_level;
 pub mod i18n;
 pub mod id;
 pub(crate) mod interaction_rect;
@@ -28,12 +29,17 @@ pub mod merge;
 pub(crate) mod modifiers;
 pub mod number_formatter;
 pub mod number_parser;
+pub mod number_value;
 pub(crate) mod open_link;
+pub mod orientation;
+pub(crate) mod owner_alive;
 pub mod platform;
 pub mod plurals;
+pub mod point;
 pub mod pointer_type;
 pub mod propagation_control;
 pub(crate) mod run_after_transition;
+pub(crate) mod scoped_context;
 pub(crate) mod scroll;
 pub mod scroll_behavior;
 pub(crate) mod shadow_dom;
@@ -46,7 +52,10 @@ pub(crate) mod synthetic_blur;
 pub(crate) mod text_selection;
 pub mod time;
 pub mod use_description;
+pub mod value_binding;
 pub(crate) mod virtual_click;
+pub mod virtual_focus;
+pub mod visually_hidden;
 
 #[cfg(all(feature = "syntax-highlight", not(feature = "ssr")))]
 pub(crate) mod syntax_highlight;
@@ -54,21 +63,34 @@ pub(crate) mod syntax_highlight;
 // Re-exports from aria_hide_outside
 pub use aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside, keep_visible};
 // Re-exports from dom_ext
-pub use dom_ext::{ContainsTarget, get_owner_document, get_owner_window};
+pub use dom_ext::ContainsTarget;
 pub(crate) use dom_ext::{
     ElementExt, EventAccessors, EventTargetExt, node_contains, set_event_target,
 };
 pub use event_handler::EventHandler;
-pub use event_listeners::EventListenerOptions;
 pub use event_wrapper::EventWrapper;
 pub use focusability::will_open_keyboard;
-pub use leptos_element_capture as element_capture;
-pub use leptos_element_capture::{CapturedElement, ElementCaptureAttr, ElementCaptureCallback};
+pub use number_value::NumberValue;
+pub use point::Point;
+pub use value_binding::ValueBinding;
 // Re-exports from interaction_rect
 pub use interaction_rect::{InteractionRect, RectPrecise, is_over};
+pub use leptos_element_capture as element_capture;
+pub use leptos_element_capture::{CapturedElement, ElementCaptureAttr, ElementCaptureCallback};
 pub use merge::{MergeWith, MergeWithExt};
 // Re-exports from modifiers
 pub use modifiers::{EventModifiers, Modifiers};
 // Re-exports from propagation_control
 pub use propagation_control::{Propagation, PropagationControl};
-pub use slot_id::{join_slot_ids, use_slot_id};
+pub use slot_id::{Slot, SlotAttrs, SlotProps, join_slot_ids, use_slot, use_slot_id};
+
+/// A warning about API misuse for developers, as react-aria's `NODE_ENV !== 'production'`
+/// warnings: logged in debug builds only.
+macro_rules! dev_warn {
+    ($($arg:tt)*) => {
+        if cfg!(debug_assertions) {
+            ::leptos::logging::warn!($($arg)*);
+        }
+    };
+}
+pub(crate) use dev_warn;

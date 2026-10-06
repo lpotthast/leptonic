@@ -1,0 +1,168 @@
+// Content of documentation pages (`DocPage`): headings, tables, keys, the "Copy as MD" button.
+
+article {
+  position: relative;
+  width: 100%;
+  max-width: 75em;
+  padding: 0 1.5em 6em;
+
+  // Inline code may wrap: the theme renders it with `white-space: pre`, so a long expression in a sentence would widen
+  // the page on phones. Long identifiers break only where nothing else fits.
+  .leptonic-code[data-inline="true"],
+  .leptonic-code[data-inline="true"] .leptonic-code-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  // Anchor targets must not end up underneath the fixed app bar (and the sticky concept tabs).
+  :is(h1, h2, h3, h4)[id] {
+    scroll-margin-top: var(--book-scroll-offset);
+  }
+
+  // Plain links in prose (`<a href="#...">`); leptonic's `Link` components bring their own style.
+  a:not([class]) {
+    color: var(--brand-color);
+  }
+
+  // Keys (leptonic's `KbdKey`) in prose and tables: the font of code, slightly smaller than the text.
+  .leptonic-kbd-key {
+    min-width: 1.5em;
+    font-family: var(--typography-code-font-family);
+    font-size: var(--book-font-size-s);
+    font-weight: 400;
+    line-height: 1.2;
+  }
+}
+
+.leptonic-btn.copy-md-button {
+  position: absolute;
+  top: var(--book-space-s);
+  right: var(--book-space-m);
+  z-index: var(--book-z-sticky);
+}
+
+// Documentation tables use leptonic's `Table` components, configured through its variables.
+.leptonic-table-container.doc-table-container {
+  --table-color: inherit;
+  --table-background-color: transparent;
+  --table-header-background-color: transparent;
+  --table-wrapper-box-shadow-color: transparent;
+  --table-row-border-bottom-color: transparent;
+  --table-header-cell-padding: 0.6em 0.75em;
+  --table-body-cell-padding: 0.6em 0.75em;
+
+  margin: var(--book-space-m) 0;
+  border-radius: 0;
+}
+
+// The Rust item an API table documents, right above the table.
+.doc-api-of {
+  margin: 1em 0 -0.5em;
+  font-size: var(--book-font-size-s);
+}
+
+.leptonic-table.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+
+  th,
+  td {
+    border-bottom: 1px solid var(--book-border-color);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    border-bottom-width: 2px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  tbody tr:hover {
+    background-color: var(--book-hover-background-color);
+  }
+
+  // Types (`ApiRow`) look like inline code but may wrap at their `<wbr>`s.
+  code.doc-type {
+    padding: var(--typography-inline-code-padding);
+    border-radius: var(--typography-code-border-radius);
+    background-color: var(--typography-code-background-color);
+    color: var(--typography-code-color);
+    font-family: var(--typography-inline-code-font-family);
+    font-size: var(--typography-code-font-size);
+    line-height: 1.6;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  // Table cells have tighter lines than paragraphs: with the theme's `1em` line height, the padded backgrounds of
+  // inline code wrapped onto consecutive lines would cover each other.
+  td .leptonic-code[data-inline="true"] {
+    line-height: 1.6;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  // Identifier columns (names, types, defaults, keys) shrink to their content; the description gets the space. Names
+  // stay whole and wrap only between each other: the inline code rule above would otherwise let the table squeeze
+  // them letter by letter.
+  td.doc-table-name {
+    .leptonic-code[data-inline="true"],
+    .leptonic-code[data-inline="true"] .leptonic-code-text {
+      white-space: nowrap;
+      overflow-wrap: normal;
+    }
+  }
+
+  th:last-child,
+  td:last-child {
+    width: 50%;
+  }
+}
+
+// Narrow screens: every row becomes a card of stacked cells, labelled by their column (`data-label`, set by the kit's
+// API and keyboard tables). The first cell (the name) acts as the card's title.
+@media (max-width: 800px) {
+  .leptonic-table.doc-table {
+    thead {
+      display: none;
+    }
+
+    tr {
+      display: block;
+      padding: 0.6em 0;
+      border-bottom: 1px solid var(--book-border-color);
+    }
+
+    th:last-child,
+    td,
+    td:last-child {
+      display: block;
+      width: auto;
+      padding: 0.2em 0.25em;
+      border: none;
+    }
+
+    td:first-child {
+      font-weight: 700;
+    }
+
+    td.doc-table-name {
+      .leptonic-code[data-inline="true"],
+      .leptonic-code[data-inline="true"] .leptonic-code-text {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+    }
+
+    td[data-label]::before {
+      content: attr(data-label) ": ";
+      color: var(--book-muted-color);
+      font-size: var(--book-font-size-s);
+      font-weight: 700;
+    }
+  }
+}

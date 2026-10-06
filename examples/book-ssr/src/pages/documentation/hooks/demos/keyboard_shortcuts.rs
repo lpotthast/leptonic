@@ -3,7 +3,6 @@ use leptonic::{
     utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
 };
 use leptos::prelude::*;
-use leptos_classes::Classes;
 
 #[component]
 pub fn KeyboardShortcutsDemo() -> impl IntoView {
@@ -41,7 +40,7 @@ pub fn KeyboardShortcutsDemo() -> impl IntoView {
     });
 
     view! {
-        <div {..props.into_attrs()} tabindex="0" class=Classes::from("demo-btn")>
+        <div {..props.into_attrs()} tabindex="0" class="demo-keyboard-target">
             "Focus me, then use \u{2190} / \u{2192}, Home, and Ctrl+S (\u{2318}S on a Mac)"
         </div>
         <p>

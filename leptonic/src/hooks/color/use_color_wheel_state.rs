@@ -26,7 +26,7 @@ pub struct UseColorWheelStateInput<C: ColorValue> {
     pub channel: C::Channel,
 
     /// Whether the wheel is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Callback fired when the color changes during interaction.
     pub on_change: Option<Callback<C>>,
@@ -159,7 +159,7 @@ pub fn use_color_wheel_state<C: ColorValue>(
     let UseColorWheelStateInput {
         default_value,
         channel,
-        disabled,
+        is_disabled: disabled,
         on_change,
         on_change_end,
     } = input;

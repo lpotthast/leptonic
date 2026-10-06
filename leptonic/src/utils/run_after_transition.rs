@@ -1,184 +1,168 @@
-// Upstream: react-aria/src/utils/runAfterTransition.ts @ 6f664fe911
-/// Transition-aware callback utility, matching react-aria's `runAfterTransition.ts`.
-///
-/// Tracks elements that are currently transitioning via global `transitionrun`/`transitionend`
-/// event listeners on `document.body`. Callbacks queued via [`run_after_transition`] will be
-/// called once all tracked transitions have completed, ensuring style recalculations don't
-/// cause jank in the middle of CSS transitions.
-use std::cell::{Cell, RefCell};
+// Upstream: react-aria/src/utils/runAfterTransition.ts @ 99e6102368
+//! Runs callbacks once all running CSS transitions have finished, so that style recalculations
+//! (e.g. moving focus, restoring text selection) don't cause jank in the middle of a
+//! transition.
 
-// Loosely based on https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/runAfterTransition.ts
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::{JsCast, prelude::*};
-
-use super::EventTargetExt;
-
-// We store a global map of elements that are currently transitioning,
-// mapped to a set of CSS properties that are transitioning for that element.
-// This is necessary rather than a simple count of transitions because of browser
-// bugs, e.g. Chrome sometimes fires both transitionend and transitioncancel rather
-// than one or the other. So we need to track what's actually transitioning so that
-// we can ignore these duplicate events.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// We use `js_sys::Map` and `js_sys::Set` here because the keys are `EventTarget`
-// (JS objects) and Rust's `HashMap` cannot use them as keys without hashing issues.
+// ## OMITTED FEATURES
+// - The cancel function `runAfterTransition` returns: no caller cancels (react-aria's don't
+//   either).
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - The global `transitionrun`/`transitionend` listeners are registered on first use instead of
+//   at module load (Rust has no module initializers). Transitions that started before the first
+//   call are not tracked. React-aria: registers when the module loads.
+//
+// =============================================================================
+
+use std::cell::{OnceCell, RefCell};
+
+use leptos::prelude::request_animation_frame;
+use wasm_bindgen::{JsCast, prelude::*};
+use web_sys::{AddEventListenerOptions, Event, EventTarget, TransitionEvent};
+
+use super::EventAccessors;
+
+/// The listeners tracking transitions (shared, so the per-element `transitioncancel` listener
+/// can be removed again).
+struct Listeners {
+    on_transition_start: js_sys::Function,
+    on_transition_end: js_sys::Function,
+}
+
 thread_local! {
+    // Elements that are currently transitioning, mapped to the CSS properties that are
+    // transitioning. A set rather than a count because of browser bugs: e.g. Chrome sometimes
+    // fires both `transitionend` and `transitioncancel` for one transition. `js_sys` collections,
+    // as the keys are `EventTarget`s.
     static TRANSITIONS_BY_ELEMENT: js_sys::Map = js_sys::Map::new();
-    static TRANSITION_CALLBACKS: RefCell<Vec<Box<dyn FnOnce()>>> = RefCell::new(Vec::new());
-    static INITIALIZED: Cell<bool> = const { Cell::new(false) };
+    static TRANSITION_CALLBACKS: RefCell<Vec<Box<dyn FnOnce(bool)>>> =
+        const { RefCell::new(Vec::new()) };
+    static LISTENERS: OnceCell<Listeners> = const { OnceCell::new() };
 }
 
-fn setup_global_events() {
-    let was_initialized = INITIALIZED.with(|init| init.replace(true));
-    if was_initialized {
-        return;
-    }
-
-    let Some(window) = web_sys::window() else {
+fn on_transition_start(e: &Event) {
+    let Some(e) = e.dyn_ref::<TransitionEvent>() else {
         return;
     };
-    let Some(document) = window.document() else {
-        return;
-    };
-    let Some(body) = document.body() else {
-        return;
-    };
-
-    // --- transitionrun handler ---
-    let on_transition_start: Closure<dyn Fn(web_sys::TransitionEvent)> =
-        Closure::new(move |e: web_sys::TransitionEvent| {
-            let Some(target) = e.target() else {
-                return;
-            };
-            let property_name = e.property_name();
-
-            TRANSITIONS_BY_ELEMENT.with(|map| {
-                let existing = map.get(&target);
-                let properties: js_sys::Set = if existing.is_undefined() {
-                    let set = js_sys::Set::new(&JsValue::UNDEFINED);
-                    map.set(&target, &set);
-
-                    // The transitioncancel event must be registered on the element itself,
-                    // rather than as a global event. This enables us to handle when the node
-                    // is deleted from the document while it is transitioning.
-                    // In that case, the cancel event would have nowhere to bubble to so we
-                    // need to handle it directly.
-                    let target_clone = target.clone();
-                    target.listen_once("transitioncancel", move |e: web_sys::TransitionEvent| {
-                        let property_name = e.property_name();
-                        handle_transition_end(&target_clone, &property_name);
-                    });
-
-                    set
-                } else {
-                    existing.unchecked_into()
-                };
-
-                properties.add(&JsValue::from_str(&property_name));
-            });
-        });
-
-    let _ = body.add_event_listener_with_callback(
-        "transitionrun",
-        on_transition_start.as_ref().unchecked_ref(),
-    );
-    on_transition_start.forget();
-
-    // --- transitionend handler ---
-    let on_transition_end: Closure<dyn Fn(web_sys::TransitionEvent)> =
-        Closure::new(move |e: web_sys::TransitionEvent| {
-            let Some(target) = e.target() else {
-                return;
-            };
-            let property_name = e.property_name();
-            handle_transition_end(&target, &property_name);
-        });
-
-    let _ = body.add_event_listener_with_callback(
-        "transitionend",
-        on_transition_end.as_ref().unchecked_ref(),
-    );
-    on_transition_end.forget();
-}
-
-fn handle_transition_end(target: &web_sys::EventTarget, property_name: &str) {
+    let target = e.expect_target();
     TRANSITIONS_BY_ELEMENT.with(|map| {
-        let existing = map.get(target);
-        if existing.is_undefined() {
-            return;
-        }
-        let properties: js_sys::Set = existing.unchecked_into();
-
-        properties.delete(&JsValue::from_str(property_name));
-
-        // If empty, remove the element from the map.
-        if properties.size() == 0 {
-            let _ = target
-                .remove_event_listener_with_callback("transitioncancel", &JsValue::NULL.into());
-            map.delete(target);
-        }
-
-        // If no transitioning elements, call all of the queued callbacks.
-        if map.size() == 0 {
-            TRANSITION_CALLBACKS.with(|callbacks| {
-                let drained = std::mem::take(&mut *callbacks.borrow_mut());
-                for cb in drained {
-                    cb();
-                }
+        let existing = map.get(&target);
+        let properties: js_sys::Set = if existing.is_undefined() {
+            let set = js_sys::Set::new(&JsValue::UNDEFINED);
+            map.set(&target, &set);
+            // `transitioncancel` is registered on the element itself: an element removed while
+            // transitioning has nowhere to bubble it to.
+            with_listeners(|listeners| {
+                let options = AddEventListenerOptions::new();
+                options.set_once(true);
+                let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
+                    "transitioncancel",
+                    &listeners.on_transition_end,
+                    &options,
+                );
             });
-        }
+            set
+        } else {
+            existing.unchecked_into()
+        };
+        properties.add(&JsValue::from_str(&e.property_name()));
     });
 }
 
-/// Cleans up any elements that are no longer in the document.
-/// This is necessary because we can't rely on transitionend events to fire
-/// for elements that are removed from the document while transitioning.
+fn on_transition_end(e: &Event) {
+    let Some(e) = e.dyn_ref::<TransitionEvent>() else {
+        return;
+    };
+    let target: EventTarget = e.expect_target();
+    let all_done = TRANSITIONS_BY_ELEMENT.with(|map| {
+        let existing = map.get(&target);
+        if existing.is_undefined() {
+            return false;
+        }
+        let properties: js_sys::Set = existing.unchecked_into();
+        properties.delete(&JsValue::from_str(&e.property_name()));
+        if properties.size() == 0 {
+            with_listeners(|listeners| {
+                let _ = target.remove_event_listener_with_callback(
+                    "transitioncancel",
+                    &listeners.on_transition_end,
+                );
+            });
+            map.delete(&target);
+        }
+        map.size() == 0
+    });
+    if all_done {
+        // Taken out first: callbacks may queue new callbacks.
+        let callbacks = TRANSITION_CALLBACKS.with_borrow_mut(std::mem::take);
+        for callback in callbacks {
+            callback(true);
+        }
+    }
+}
+
+/// Runs `f` with the shared listeners, registering them on the document on first use.
+fn with_listeners(f: impl FnOnce(&Listeners)) {
+    LISTENERS.with(|listeners| {
+        let listeners = listeners.get_or_init(|| {
+            let function = |handler: fn(&Event)| -> js_sys::Function {
+                Closure::<dyn Fn(Event)>::new(move |e: Event| handler(&e))
+                    .into_js_value()
+                    .unchecked_into()
+            };
+            let listeners = Listeners {
+                on_transition_start: function(on_transition_start),
+                on_transition_end: function(on_transition_end),
+            };
+            if let Some(document) = leptos_use::use_document().as_ref() {
+                let _ = document.add_event_listener_with_callback(
+                    "transitionrun",
+                    &listeners.on_transition_start,
+                );
+                let _ = document.add_event_listener_with_callback(
+                    "transitionend",
+                    &listeners.on_transition_end,
+                );
+            }
+            listeners
+        });
+        f(listeners);
+    });
+}
+
+/// Forgets elements that left the document: their `transitionend` never fires.
 fn cleanup_detached_elements() {
     TRANSITIONS_BY_ELEMENT.with(|map| {
-        let keys_to_remove: Vec<JsValue> = map
+        let detached: Vec<JsValue> = map
             .keys()
             .into_iter()
             .filter_map(Result::ok)
             .filter(|key| {
-                // Check if the event target has isConnected and is disconnected
-                let is_connected = js_sys::Reflect::get(key, &JsValue::from_str("isConnected"));
-                matches!(is_connected, Ok(val) if val == JsValue::FALSE)
+                key.dyn_ref::<web_sys::Node>()
+                    .is_some_and(|node| !node.is_connected())
             })
             .collect();
-
-        for key in keys_to_remove {
+        for key in detached {
             map.delete(&key);
         }
     });
 }
 
-/// Run a callback after all currently running CSS transitions have completed.
-///
-/// This waits one animation frame to detect if any transitions start (e.g. on mount),
-/// then either calls the function immediately if no transitions are running, or queues
-/// it until all transitions end.
-pub(crate) fn run_after_transition(f: impl FnOnce() + 'static) {
-    setup_global_events();
-
-    // Wait one frame to see if an animation starts, e.g. a transition on mount.
-    let callback = Closure::once(Box::new(move || {
+/// Runs `f` after all currently running CSS transitions have finished: waits one animation frame
+/// (a transition may start on mount), then calls `f(false)` right away if nothing transitions,
+/// or `f(true)` once the last transition ends.
+pub(crate) fn run_after_transition(f: impl FnOnce(bool) + 'static) {
+    with_listeners(|_| {});
+    request_animation_frame(move || {
         cleanup_detached_elements();
-
-        TRANSITIONS_BY_ELEMENT.with(|map| {
-            if map.size() == 0 {
-                // No transitions running, call immediately.
-                f();
-            } else {
-                // Queue the callback for after transitions complete.
-                TRANSITION_CALLBACKS.with(|callbacks| {
-                    callbacks.borrow_mut().push(Box::new(f));
-                });
-            }
-        });
-    }) as Box<dyn FnOnce()>);
-
-    if let Some(window) = web_sys::window() {
-        let _ = window.request_animation_frame(callback.as_ref().unchecked_ref());
-    }
-    callback.forget();
+        if TRANSITIONS_BY_ELEMENT.with(js_sys::Map::size) == 0 {
+            f(false);
+        } else {
+            TRANSITION_CALLBACKS.with_borrow_mut(|callbacks| callbacks.push(Box::new(f)));
+        }
+    });
 }

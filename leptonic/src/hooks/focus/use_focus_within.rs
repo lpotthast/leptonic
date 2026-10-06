@@ -6,15 +6,16 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        EventAccessors, EventHandler, EventTargetExt, dom_ext::node_contains, set_event_target,
-        synthetic_blur,
+        EventAccessors, EventHandler, EventTargetExt,
+        dom_ext::node_contains,
+        event_listeners::{Listener, listen_to},
+        set_event_target, synthetic_blur,
     },
 };
 
@@ -61,7 +62,7 @@ pub struct FocusWithinEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusWithinInput {
     /// Whether focus within events should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Handler called when focus enters the target element or any descendant.
     pub on_focus_within: Option<Callback<FocusWithinEvent>>,
@@ -71,6 +72,18 @@ pub struct UseFocusWithinInput {
 
     /// Handler called when the focus within state changes.
     pub on_focus_within_change: Option<Callback<bool>>,
+}
+
+impl Default for UseFocusWithinInput {
+    /// Enabled, no callbacks.
+    fn default() -> Self {
+        Self {
+            is_disabled: Signal::stored(false),
+            on_focus_within: None,
+            on_blur_within: None,
+            on_focus_within_change: None,
+        }
+    }
 }
 
 /// The return value of the `use_focus_within` hook.
@@ -155,7 +168,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
     #[cfg(not(feature = "ssr"))]
     {
         let UseFocusWithinInput {
-            disabled,
+            is_disabled: disabled,
             on_focus_within,
             on_blur_within,
             on_focus_within_change,
@@ -163,16 +176,12 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
 
         let (is_focus_within, set_is_focus_within) = signal(false);
 
-        // Store cleanup function for global focus listener
-        let global_listener_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
+        // The global focus listener while focus is within (removed when dropped).
+        let global_listener: StoredValue<Option<Listener>, LocalStorage> =
             StoredValue::new_local(None);
 
         let cleanup_global_listener = move || {
-            global_listener_cleanup.update_value(|cleanup| {
-                if let Some(cleanup_fn) = cleanup.take() {
-                    cleanup_fn();
-                }
-            });
+            global_listener.try_update_value(Option::take);
         };
 
         // Store cleanup function for synthetic blur MutationObserver (Firefox workaround).
@@ -260,10 +269,8 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                         .dyn_ref::<web_sys::Node>()
                         .and_then(web_sys::Node::owner_document);
                     if let Some(document) = document {
-                        let cleanup = use_event_listener(
-                            document,
-                            ev::focusin,
-                            move |focus_e: FocusEvent| {
+                        let listener =
+                            listen_to(&document, ev::focusin, false, move |focus_e: FocusEvent| {
                                 if !is_focus_within.try_get_untracked().unwrap_or(false) {
                                     return;
                                 }
@@ -298,10 +305,9 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                                         trigger_blur_within(synthetic_blur);
                                     }
                                 }
-                            },
-                        );
+                            });
 
-                        global_listener_cleanup.set_value(Some(Box::new(cleanup)));
+                        global_listener.set_value(Some(listener));
                     }
 
                     // Set up synthetic blur observer for form elements (Firefox workaround:

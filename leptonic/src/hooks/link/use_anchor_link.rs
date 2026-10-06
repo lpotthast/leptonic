@@ -1,3 +1,5 @@
+// No upstream: links to an element on the same page, scrolling it into view and updating the URL
+// fragment (react-aria leaves in-page anchors to the browser).
 use educe::Educe;
 use leptos::{attr, attr::Attr, oco::Oco, prelude::*};
 use leptos_element_capture::ElementCaptureAttr;
@@ -7,33 +9,65 @@ use wasm_bindgen::JsValue;
 use web_sys::ScrollIntoViewOptions;
 
 use super::LinkElementType;
-use crate::hooks::PropsWithStyles;
 use crate::{
     hooks::{
         FocusHandle, IntoAttrs, MergedFocusablePressFocusRingAttrs,
-        MergedFocusablePressFocusRingProps, PressEvent, UseFocusRingInput, UseFocusRingReturn,
-        UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn, use_focus_ring,
-        use_focusable, use_press,
+        MergedFocusablePressFocusRingProps, PressEvent, PropsWithStyles, UseFocusRingInput,
+        UseFocusRingReturn, UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn,
+        use_focus_ring, use_focusable, use_press,
     },
     utils::{MergeWith, aria::*, scroll_behavior::ScrollBehavior},
 };
-//
-// No intentional deviations from the react-aria implementation.
-//
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// The target of an anchor link: an element on the current page, addressed by the URL fragment
+/// (`#id`). Converts from strings with or without the leading `#`: `"#section"` and `"section"`
+/// are the same target.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Href(Oco<'static, str>);
 
 impl Href {
-    /// # Errors
-    ///
-    /// Returns an error if the href does not start with `'#'`.
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(str: Oco<'static, str>) -> Result<Self, String> {
-        if !str.starts_with('#') {
-            return Err(format!("Href must start with '#', got: {str}"));
+    /// The target with the id `fragment` (a leading `#` is optional).
+    pub fn new(fragment: impl Into<Oco<'static, str>>) -> Self {
+        let fragment = fragment.into();
+        if fragment.starts_with('#') {
+            Self(fragment)
+        } else {
+            Self(Oco::Owned(format!("#{fragment}")))
         }
-        Ok(Self(str))
+    }
+
+    /// The href, starting with `#`.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// The id of the target element (the href without its `#`).
+    pub fn fragment(&self) -> &str {
+        &self.0[1..]
+    }
+}
+
+impl From<&'static str> for Href {
+    fn from(fragment: &'static str) -> Self {
+        Self::new(fragment)
+    }
+}
+
+impl From<String> for Href {
+    fn from(fragment: String) -> Self {
+        Self::new(fragment)
+    }
+}
+
+impl From<Oco<'static, str>> for Href {
+    fn from(fragment: Oco<'static, str>) -> Self {
+        Self::new(fragment)
+    }
+}
+
+impl std::fmt::Display for Href {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -47,7 +81,7 @@ pub struct UseAnchorLinkInput {
     pub scroll_behavior: Option<ScrollBehavior>,
 
     /// Whether the link is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// The element type. Default is `Anchor`. Non-anchor elements get `role="link"`.
     pub element_type: LinkElementType,
@@ -126,11 +160,11 @@ fn update_url(href: &Href) {
     if let Some(window) = use_window().as_ref() {
         if let Ok(history) = window.history() {
             if let Err(e) =
-                history.replace_state_with_url(&JsValue::null(), "", Some(href.0.as_str()))
+                history.replace_state_with_url(&JsValue::null(), "", Some(href.as_str()))
             {
                 tracing::warn!("Failed to update URL via history.replaceState: {e:?}");
             }
-        } else if let Err(e) = window.location().set_hash(href.0.as_str()) {
+        } else if let Err(e) = window.location().set_hash(href.as_str()) {
             tracing::warn!("Failed to update URL hash: {e:?}");
         }
     }
@@ -139,8 +173,8 @@ fn update_url(href: &Href) {
 /// Scroll to the element referenced by `href` using the given scroll behavior.
 fn scroll_to_anchor(href: &Href, scroll_behavior: ScrollBehavior) {
     if let Some(document) = use_document().as_ref() {
-        let el_id = href.0.replace('#', "");
-        if let Some(el) = document.get_element_by_id(el_id.as_str()) {
+        let el_id = href.fragment();
+        if let Some(el) = document.get_element_by_id(el_id) {
             el.scroll_into_view_with_scroll_into_view_options(&{
                 let opts = ScrollIntoViewOptions::new();
                 opts.set_behavior(web_sys::ScrollBehavior::from(scroll_behavior));
@@ -161,7 +195,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     let UseAnchorLinkInput {
         href,
         scroll_behavior,
-        disabled,
+        is_disabled: disabled,
         element_type,
         description,
         on_press,
@@ -194,7 +228,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         props: focusable_props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
-        disabled,
+        is_disabled: disabled,
         ..UseFocusableInput::default()
     });
 
@@ -202,7 +236,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         props: press_props,
         is_pressed,
     } = use_press(UsePressInput {
-        disabled,
+        is_disabled: disabled,
         // Anchor links always need prevent_default for custom scroll behavior.
         force_prevent_default: true,
         force_propagation: false,
@@ -221,6 +255,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         on_long_press_end: None,
         long_press_threshold: None,
         long_press_accessibility_description: None,
+        long_press_disabled: Signal::stored(false),
     });
 
     let UseFocusRingReturn {
@@ -228,7 +263,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled,
+        is_disabled: disabled,
         ..UseFocusRingInput::default()
     });
 

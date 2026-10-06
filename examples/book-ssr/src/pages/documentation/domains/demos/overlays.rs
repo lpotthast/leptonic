@@ -1,88 +1,72 @@
-use leptonic::hooks::*;
+use leptonic::{
+    atoms::prelude::FocusScope,
+    components::prelude::{Button, ButtonVariant},
+    hooks::*,
+};
 use leptos::prelude::*;
-use leptos_classes::Classes;
+use leptos_element_capture::CapturedElement;
 
+/// A button that opens a dismissable panel: `use_button` presses, `use_overlay` dismisses, `use_overlay_trigger`
+/// connects the two for assistive technology.
 #[component]
 pub fn OverlaysDomainDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
+    let trigger = CapturedElement::new();
 
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
-        disabled: Signal::derive(|| false),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(move |_: PressEvent| {
-            set_is_open.update(|v| *v = !*v);
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
+    let UseOverlayReturn {
+        props: overlay_props,
+        id,
+        ..
+    } = use_overlay(UseOverlayInput {
+        is_open: is_open.into(),
+        on_close: Callback::new(move |()| set_is_open.set(false)),
+        is_dismissable: true,
+        should_close_on_blur: true,
+        is_keyboard_dismiss_disabled: false,
+        // The trigger toggles the panel itself, so presses on it must not count as "outside".
+        should_close_on_interact_outside: Some(Callback::new(move |el: web_sys::Element| {
+            !trigger.with_untracked(|trigger| {
+                trigger.is_some_and(|trigger| trigger.contains(Some(el.as_ref())))
+            })
+        })),
+    });
+    let overlay_attrs = StoredValue::new(overlay_props.into_attrs());
+
+    let UseOverlayTriggerReturn {
+        props: trigger_props,
+    } = use_overlay_trigger(UseOverlayTriggerInput {
+        show: is_open.into(),
+        overlay_id: id,
+        overlay_type: OverlayTriggerType::Dialog,
     });
 
-    let UsePressReturn {
-        props: close_props, ..
-    } = use_press(UsePressInput {
-        disabled: Signal::derive(|| false),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(move |_: PressEvent| {
-            set_is_open.set(false);
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
+    let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+        on_press: Some(Callback::new(move |_| {
+            set_is_open.update(|open| *open = !*open);
+        })),
+        ..Default::default()
     });
-    let (close_props, close_styles) = close_props.into_parts();
-    let close_attrs = StoredValue::new(close_props);
-    let close_styles = StoredValue::new(close_styles);
-
-    let (press_props, press_styles) = props.into_parts();
+    let (button_attrs, button_styles) = props.into_parts();
 
     view! {
-        <div
-            tabindex=0
-            {..press_props}
-            style=press_styles
-            class=Classes::from("demo-btn")
+        <button
+            {..button_attrs}
+            {..trigger_props.into_attrs()}
+            {..trigger.attr()}
+            style=button_styles
+            class="demo-btn-primary"
         >
-            { move || if is_open.get() { "Close panel" } else { "Open panel" } }
-        </div>
+            {move || if is_open.get() { "Close panel" } else { "Open panel" }}
+        </button>
+
         <Show when=move || is_open.get()>
-            <div class=Classes::from("demo-popover-panel")>
-                <p style="margin: 0 0 0.5em 0;">"This is overlay content."</p>
-                <p style="margin: 0 0 1em 0; color: #666; font-size: 0.875em;">
-                    "The full overlay hooks add dismiss-on-click-outside, "
-                    "ARIA attributes, and CSS positioning."
-                </p>
-                <div
-                    tabindex=0
-                    {..close_attrs.get_value()}
-                    style=close_styles.get_value()
-                    class=Classes::from("demo-btn")
-                >
-                    "Close"
-                </div>
+            <div {..overlay_attrs.get_value()} class="demo-overlay-inline-panel">
+                <FocusScope restore_focus=true auto_focus=true>
+                    <p class="demo-overlay-text">
+                        "Press Escape, click outside or tab out of this panel to close it."
+                    </p>
+                    <Button variant=ButtonVariant::Outlined on_press=move |_| set_is_open.set(false)>"Close"</Button>
+                </FocusScope>
             </div>
         </Show>
     }

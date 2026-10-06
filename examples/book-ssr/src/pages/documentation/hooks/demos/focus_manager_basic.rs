@@ -5,7 +5,6 @@ use leptonic::{
 };
 use leptos::{prelude::*, web_sys};
 use send_wrapper::SendWrapper;
-use wasm_bindgen::JsCast;
 
 #[component]
 pub fn FocusManagerBasicDemo() -> impl IntoView {
@@ -39,91 +38,53 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
     };
 
     view! {
-        <Stack orientation=StackOrientation::Horizontal spacing=em(0.5) attr:style="margin-bottom: 1em;">
-            <button
-                class=Classes::from("demo-btn")
-                on:click={
-                    let fm = focus_manager.clone();
-                    let opts = build_opts;
-                    move |_| store_result(fm.focus_first(opts()))
-                }
-            >
+        <Stack orientation=StackOrientation::Horizontal spacing=em(0.5) classes="demo-mb-1">
+            <Button on_press={
+                let fm = focus_manager.clone();
+                move |_| store_result(fm.focus_first(build_opts()))
+            }>
                 "Focus First"
-            </button>
-            <button
-                class=Classes::from("demo-btn")
-                on:click={
-                    let fm = focus_manager.clone();
-                    let opts = build_opts;
-                    move |_| store_result(fm.focus_previous(opts()))
-                }
-            >
+            </Button>
+            <Button on_press={
+                let fm = focus_manager.clone();
+                move |_| store_result(fm.focus_previous(build_opts()))
+            }>
                 "Focus Previous"
-            </button>
-            <button
-                class=Classes::from("demo-btn")
-                on:click={
-                    let fm = focus_manager.clone();
-                    let opts = build_opts;
-                    move |_| store_result(fm.focus_next(opts()))
-                }
-            >
+            </Button>
+            <Button on_press={
+                let fm = focus_manager.clone();
+                move |_| store_result(fm.focus_next(build_opts()))
+            }>
                 "Focus Next"
-            </button>
-            <button
-                class=Classes::from("demo-btn")
-                on:click={
-                    let fm = focus_manager.clone();
-                    let opts = build_opts;
-                    move |_| store_result(fm.focus_last(opts()))
-                }
-            >
+            </Button>
+            <Button on_press={
+                let fm = focus_manager.clone();
+                move |_| store_result(fm.focus_last(build_opts()))
+            }>
                 "Focus Last"
-            </button>
+            </Button>
         </Stack>
 
-        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) attr:style="margin-bottom: 1em;">
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=wrap set_checked=set_wrap />
-                <Label>"Wrap around"</Label>
-            </FormControl>
-            <FormControl classes="demo-form-row">
-                <Checkbox checked=tabbable_only set_checked=set_tabbable_only />
-                <Label>"Tabbable only (tabindex >= 0)"</Label>
-            </FormControl>
+        <Stack orientation=StackOrientation::Vertical spacing=em(0.5) classes="demo-mb-1">
+            <Checkbox state=(wrap, set_wrap) classes="demo-form-row">"Wrap around"</Checkbox>
+            <Checkbox state=(tabbable_only, set_tabbable_only) classes="demo-form-row">"Tabbable only (tabindex >= 0)"</Checkbox>
         </Stack>
-
-        <style>
-            ".focus-scope-demo button:focus, .focus-scope-demo input:focus { outline: 3px solid var(--brand-color, #e66956); outline-offset: 2px; }"
-        </style>
 
         <div
             {..props.into_attrs()}
-            class=Classes::from(["focus-scope-demo", "demo-container-active"])
+            class=Classes::from("demo-focus-scope")
             on:focusin=move |ev| {
-                if let Some(target) = ev.target()
-                    && let Some(el) = target.dyn_ref::<web_sys::Element>() {
-                        last_focused.set_value(Some(SendWrapper::new(el.clone())));
-                    }
+                last_focused.set_value(Some(SendWrapper::new(event_target::<web_sys::Element>(&ev))));
             }
         >
-            <p class=Classes::from("demo-container-title")>"Focus Scope Container"</p>
-            <Stack orientation=StackOrientation::Horizontal spacing=em(0.5)>
-                <button class=Classes::from("demo-btn-solid")>
-                    "Button 1"
-                </button>
-                <button class=Classes::from("demo-btn-solid")>
-                    "Button 2"
-                </button>
-                <input
-                    type="text"
-                    placeholder="Input field"
-                    class=Classes::from("demo-input-solid")
-                />
-                <button class=Classes::from("demo-btn-solid")>
-                    "Button 3"
-                </button>
-            </Stack>
+            <p class=Classes::from("demo-container-title")>"Managed container"</p>
+            <div class=Classes::from("demo-focus-row")>
+                <button class=Classes::from("demo-focus-item")>"Button 1"</button>
+                <button class=Classes::from("demo-focus-item")>"Button 2"</button>
+                <div tabindex="-1" class=Classes::from("demo-focus-item")>"tabindex=-1"</div>
+                <input type="text" placeholder="Input field" class=Classes::from("demo-focus-item")/>
+                <button class=Classes::from("demo-focus-item")>"Button 3"</button>
+            </div>
         </div>
     }
 }

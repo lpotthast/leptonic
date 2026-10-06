@@ -1,42 +1,55 @@
-// Upstream: react-aria/src/menu/useMenuSection.ts @ 6f664fe911
-use crate::utils::id::use_id;
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/menu/useMenuSection.ts @ 99e6102368
+use leptos::{
+    attr::{self, Attr},
+    prelude::*,
+};
 
-use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
+use super::MenuData;
+use crate::{
+    hooks::{
+        IntoAttrs,
+        collections::{Key, NodeKind},
+    },
+    utils::{aria::AriaRole, id::use_id},
+};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuSection.ts
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The heading and `aria-label` come from the collection: the section's `Header` child and its
+//   `aria_label`.
+//
+// =============================================================================
 
-// No intentional deviations from the react-aria implementation.
-
-/// Input parameters for the `use_menu_section` hook.
-#[derive(Debug, Clone, Default)]
+/// Input of [`use_menu_section`].
+#[derive(Debug, Clone)]
 pub struct UseMenuSectionInput {
-    /// The heading for the section. If provided, it will be used as the label for the group.
-    pub heading: Option<String>,
-
-    /// An accessibility label for the section. Required if `heading` is not present.
-    pub aria_label: Option<String>,
+    pub menu: MenuData,
+    /// The section's key in the menu's collection.
+    pub key: Key,
 }
 
-/// The return value of the `use_menu_section` hook.
+/// Return value of [`use_menu_section`].
 #[derive(Debug)]
 pub struct UseMenuSectionReturn {
-    /// Props for the wrapper list item.
+    /// For the element wrapping heading and group (e.g. an `<li>` in a `<ul>` menu).
     pub item_props: UseMenuSectionItemProps,
-
-    /// Props for the heading element, if any.
-    pub heading_props: UseMenuSectionHeadingProps,
-
-    /// Props for the group element.
+    /// For the heading element; `None` when the section has no header.
+    pub heading_props: Option<UseMenuSectionHeadingProps>,
+    /// For the element containing the section's items.
     pub group_props: UseMenuSectionGroupProps,
+    /// The header text, if any.
+    pub heading: Option<String>,
 }
 
-/// Props for the menu section wrapper item.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct UseMenuSectionItemProps {
-    /// The role attribute.
     pub role: AriaRole,
 }
+
+pub type UseMenuSectionItemAttrs = (Attr<attr::Role, AriaRole>,);
 
 impl IntoAttrs for UseMenuSectionItemProps {
     type Attrs = UseMenuSectionItemAttrs;
@@ -46,18 +59,13 @@ impl IntoAttrs for UseMenuSectionItemProps {
     }
 }
 
-/// Attributes for a menu section wrapper item.
-pub type UseMenuSectionItemAttrs = (Attr<attr::Role, AriaRole>,);
-
-/// Props for the menu section heading element.
 #[derive(Debug)]
 pub struct UseMenuSectionHeadingProps {
-    /// The id of the heading element, for aria-labelledby.
-    pub id: Option<String>,
-
-    /// The role attribute. Set to "presentation" to hide from assistive technology.
-    pub role: Option<AriaRole>,
+    pub id: String,
+    pub role: AriaRole,
 }
+
+pub type UseMenuSectionHeadingAttrs = (Attr<attr::Id, String>, Attr<attr::Role, AriaRole>);
 
 impl IntoAttrs for UseMenuSectionHeadingProps {
     type Attrs = UseMenuSectionHeadingAttrs;
@@ -67,24 +75,18 @@ impl IntoAttrs for UseMenuSectionHeadingProps {
     }
 }
 
-/// Attributes for a menu section heading element.
-pub type UseMenuSectionHeadingAttrs = (
-    Attr<attr::Id, Option<String>>,
-    Attr<attr::Role, Option<AriaRole>>,
-);
-
-/// Props for the menu section group element.
 #[derive(Debug)]
 pub struct UseMenuSectionGroupProps {
-    /// The role attribute.
     pub role: AriaRole,
-
-    /// An accessibility label for the section.
     pub aria_label: Option<String>,
-
-    /// The id of the heading that labels this group.
     pub aria_labelledby: Option<String>,
 }
+
+pub type UseMenuSectionGroupAttrs = (
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+);
 
 impl IntoAttrs for UseMenuSectionGroupProps {
     type Attrs = UseMenuSectionGroupAttrs;
@@ -98,102 +100,37 @@ impl IntoAttrs for UseMenuSectionGroupProps {
     }
 }
 
-/// Attributes for a menu section group element.
-pub type UseMenuSectionGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-);
-
-/// Provides the behavior and accessibility implementation for a section in a menu.
-///
-/// Menu sections are used to group related menu items together. Each section can have
-/// an optional heading that is announced by screen readers but hidden from the visual
-/// DOM structure (using `role="presentation"`).
-///
-/// # Example
-///
-/// ```ignore
-/// let section = use_menu_section(UseMenuSectionInput {
-///     heading: Some("File Actions".to_string()),
-///     aria_label: None,
-/// });
-///
-/// view! {
-///     <li {..section.item_props.into_attrs()}>
-///         <span {..section.heading_props.into_attrs()}>
-///             { section_heading }
-///         </span>
-///         <ul {..section.group_props.into_attrs()}>
-///             // Menu items here
-///         </ul>
-///     </li>
-/// }
-/// ```
+/// A section of a menu: a group of items with an optional heading.
 pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
-    let UseMenuSectionInput {
-        heading,
-        aria_label,
-    } = input;
-
+    let UseMenuSectionInput { menu, key } = input;
     let heading_id = use_id("menu-section-heading");
 
-    let has_heading = heading.is_some();
+    let (aria_label, heading) = untrack(|| {
+        menu.state.collection.with(|c| {
+            let aria_label = c
+                .get(&key)
+                .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
+            let heading = c
+                .children(&key)
+                .find(|n| n.kind == NodeKind::Header)
+                .map(|n| n.text_value.to_string());
+            (aria_label, heading)
+        })
+    });
 
     UseMenuSectionReturn {
         item_props: UseMenuSectionItemProps {
             role: AriaRole::Presentation,
         },
-        heading_props: if has_heading {
-            UseMenuSectionHeadingProps {
-                // Technically, menus cannot contain headings according to ARIA.
-                // We hide the heading from assistive technology, using role="presentation",
-                // and only use it as a label for the nested group.
-                id: Some(heading_id.clone()),
-                role: Some(AriaRole::Presentation),
-            }
-        } else {
-            UseMenuSectionHeadingProps {
-                id: None,
-                role: None,
-            }
-        },
+        heading_props: heading.as_ref().map(|_| UseMenuSectionHeadingProps {
+            id: heading_id.clone(),
+            role: AriaRole::Presentation,
+        }),
         group_props: UseMenuSectionGroupProps {
             role: AriaRole::Group,
             aria_label,
-            aria_labelledby: if has_heading { Some(heading_id) } else { None },
+            aria_labelledby: heading.as_ref().map(|_| heading_id),
         },
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_menu_section_with_heading() {
-        let result = use_menu_section(UseMenuSectionInput {
-            heading: Some("Actions".to_string()),
-            aria_label: None,
-        });
-
-        assert_eq!(result.item_props.role, AriaRole::Presentation);
-        assert_eq!(result.heading_props.role, Some(AriaRole::Presentation));
-        assert!(result.heading_props.id.is_some());
-        assert_eq!(result.group_props.role, AriaRole::Group);
-        assert!(result.group_props.aria_labelledby.is_some());
-    }
-
-    #[test]
-    fn test_menu_section_with_aria_label() {
-        let result = use_menu_section(UseMenuSectionInput {
-            heading: None,
-            aria_label: Some("Actions".to_string()),
-        });
-
-        assert_eq!(result.item_props.role, AriaRole::Presentation);
-        assert!(result.heading_props.id.is_none());
-        assert_eq!(result.group_props.aria_label, Some("Actions".to_string()));
-        assert!(result.group_props.aria_labelledby.is_none());
+        heading,
     }
 }

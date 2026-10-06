@@ -836,19 +836,18 @@ mod tests {
                 input.placement_y = py;
                 input.container_padding = 12.0;
                 let result = calculate_position(&input);
-                assert!(
-                    result.top.is_finite(),
-                    "top is not finite for {px:?}/{py:?}"
-                );
-                assert!(
-                    result.left.is_finite(),
-                    "left is not finite for {px:?}/{py:?}"
-                );
-                assert!(
-                    result.max_height.is_finite() && result.max_height >= 0.0,
-                    "max_height invalid for {px:?}/{py:?}: {}",
-                    result.max_height
-                );
+                assert_that!(result.top.is_finite())
+                    .with_detail_message(format!("top is not finite for {px:?}/{py:?}"))
+                    .is_true();
+                assert_that!(result.left.is_finite())
+                    .with_detail_message(format!("left is not finite for {px:?}/{py:?}"))
+                    .is_true();
+                assert_that!(result.max_height.is_finite() && result.max_height >= 0.0)
+                    .with_detail_message(format!(
+                        "max_height invalid for {px:?}/{py:?}: {}",
+                        result.max_height
+                    ))
+                    .is_true();
             }
         }
     }

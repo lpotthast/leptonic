@@ -1,0 +1,408 @@
+// Demo styles of the Input pages (combo box, listbox/select and color atoms have their own files).
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+.demo-mono-log  { margin-top: var(--book-space-s); font-size: var(--book-font-size-s); font-family: monospace; }
+
+/* Containers */
+.demo-frame              { padding: var(--book-space-l); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-m); margin: var(--book-space-m) 0; }
+
+.demo-slider-stacked  { flex-direction: column; align-items: stretch; gap: var(--book-space-s); }
+
+.demo-slider-row      { display: flex; align-items: center; gap: var(--book-space-m); }
+
+.demo-slider-label    { min-width: 80px; font-weight: 500; }
+
+.demo-slider-label-wide { min-width: 120px; }
+
+.demo-slider-output-wide { min-width: 80px; }
+
+.demo-slider-marks    { position: relative; height: 1.5em; margin-left: 120px; margin-right: 40px; }
+
+.demo-slider-marks-no-output { margin-right: 10px; }
+
+.demo-slider-vertical { height: 150px; }
+
+.demo-slider-vertical .demo-slider-track { flex: none; width: 8px; height: 100%; }
+
+.demo-slider-blue   { --demo-slider-accent: var(--book-categorical-1); }
+
+.demo-slider-green  { --demo-slider-accent: var(--book-categorical-2); }
+
+.demo-slider-purple { --demo-slider-accent: var(--book-categorical-3); }
+
+.demo-slider-orange { --demo-slider-accent: var(--book-categorical-4); }
+
+/* Used by the hook-only slider demos, which position fill and thumb themselves. */
+.demo-slider-fill-positioned  { position: absolute; left: 0; top: 0; height: 100%; }
+
+.demo-slider-thumb-positioned { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+
+.demo-visually-hidden-input   { opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute; top: 0; left: 0; }
+
+/* Listbox */
+.demo-listbox                       { border: 2px solid var(--brand-color); border-radius: var(--book-radius-m); max-width: 250px; margin: var(--book-space-m) 0; overflow: hidden; }
+
+.demo-listbox-option                { display: flex; align-items: center; gap: var(--book-space-s); padding: var(--book-space-s) var(--book-space-m); cursor: pointer; transition: background-color var(--book-transition), color var(--book-transition); }
+
+.demo-listbox-option.selected       { background: var(--brand-color); color: var(--book-on-brand-color); }
+
+.demo-listbox-option.focus-visible  { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+
+.demo-listbox-option.disabled       { cursor: not-allowed; opacity: 0.5; }
+
+.demo-listbox-checkbox              { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: var(--book-radius-s); }
+
+.demo-listbox-option.selected .demo-listbox-checkbox { border-color: var(--book-on-brand-color); }
+
+.demo-select-trigger                { display: flex; justify-content: space-between; align-items: center; gap: var(--book-space-m); width: 100%; padding: var(--book-space-s) var(--book-space-m); border: 2px solid var(--brand-color); border-radius: var(--book-radius-m); background: var(--book-surface-color); cursor: pointer; font-size: var(--book-font-size-m); }
+
+.demo-select-popover                { position: absolute; top: 100%; left: 0; right: 0; margin-top: var(--book-space-xs); background: var(--book-surface-color); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-m); box-shadow: var(--book-shadow); z-index: 100; overflow: hidden; }
+
+.demo-select-option                 { padding: var(--book-space-s) var(--book-space-m); cursor: pointer; }
+
+.demo-select-option.focused         { background: var(--brand-color-subtle); }
+
+.demo-select-option.selected        { background: var(--brand-color); color: var(--book-on-brand-color); }
+
+/* Color */
+.demo-color-swatch { width: 4em; height: 4em; border-radius: var(--book-radius-m); cursor: pointer; border: 2px solid var(--book-border-color); box-shadow: var(--book-shadow-s); }
+
+.demo-color-slider-track { position: relative; width: 100%; height: 16px; border-radius: var(--book-radius-m); cursor: pointer; forced-color-adjust: none; }
+
+.demo-color-slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--book-on-brand-color); box-shadow: var(--book-shadow-s); cursor: grab; touch-action: none; }
+
+.demo-color-preview      { display: inline-block; width: 1em; height: 1em; vertical-align: middle; border-radius: 2px; }
+
+// Increment/decrement buttons of number field demos.
+.demo-stepper-btn {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: pointer;
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+// Value element of the spin button demo.
+.demo-spinbutton {
+    min-width: 3em;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Rows of components that should not be centered (e.g. a horizontal `Stack`) */
+.demo-row-start { justify-content: flex-start; flex-wrap: wrap; }
+
+// Checkbox and radio groups rendered as a plain fieldset.
+.demo-fieldset { border: none; padding: 0; margin: 0; }
+
+.demo-legend   { font-weight: bold; margin-bottom: var(--book-space-s); padding: 0; }
+
+.demo-no-margin { margin-top: 0; }
+
+// Hidden form input next to a custom control (e.g. the switch's checkbox).
+.demo-hidden-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+
+// Hook-built sliders (see `demo-slider-*` in `_shared.scss`). Positions are set from Rust.
+.demo-slider-fill-range     { position: absolute; top: 0; height: 100%; }
+
+.demo-slider-fill-vertical  { position: absolute; left: 0; bottom: 0; width: 100%; }
+
+.demo-slider-thumb-vertical { position: absolute; left: 50%; transform: translate(-50%, 50%); }
+
+.demo-slider-disableable[aria-disabled="true"] { opacity: 0.5; }
+
+.demo-slider-disableable[aria-disabled="true"] .demo-slider-thumb { cursor: not-allowed; }
+
+.demo-field-description { margin: 0; font-size: var(--book-font-size-s); color: var(--book-muted-color); }
+
+// Validation errors as a list (field atoms page).
+.demo-field-error-list { margin: 0; padding-left: var(--book-space-l); }
+
+.demo-invisible { visibility: hidden; }
+
+.demo-number-input { width: 80px; text-align: center; }
+
+// Select hook demo: the label above the trigger, the popover positioned below it.
+.demo-select {
+    position: relative;
+    display: inline-block;
+    min-width: 200px;
+}
+
+.demo-select-label {
+    display: block;
+    margin-bottom: var(--book-space-xs);
+}
+
+.demo-select-trigger:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+// Color area hook demo. The gradient and the thumb position and color are set from Rust.
+.demo-color-area {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border-radius: var(--book-radius-s);
+    touch-action: none;
+    forced-color-adjust: none;
+
+    &[aria-disabled="true"] {
+        opacity: 0.5;
+    }
+}
+
+.demo-color-area-thumb {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    transform: translate(-50%, 50%);
+    touch-action: none;
+    cursor: grab;
+}
+
+// Color field hook demo: hex input with a color preview next to it.
+.demo-color-field-row {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+}
+
+.demo-color-field-input {
+    width: 120px;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    font-family: monospace;
+    text-transform: uppercase;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.demo-color-field-preview {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+}
+
+// Color channel field hook demo: a number field with stepper buttons and a color preview.
+.demo-color-channel-field-label {
+    display: block;
+    margin-bottom: var(--book-space-xs);
+    font-weight: 500;
+}
+
+.demo-color-channel-field-row {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-xs);
+}
+
+.demo-color-channel-field-input {
+    width: 80px;
+    padding: var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    text-align: center;
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.demo-color-channel-field-preview {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    margin-left: var(--book-space-xs);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+}
+
+// Color slider hook demo: dim the slider while its hidden input is disabled.
+.demo-color-slider-track:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+// Color wheel hook demo. Size, shape, gradient and thumb position are computed by the hook.
+.demo-color-wheel-modes {
+    display: flex;
+    gap: var(--book-space-s);
+    margin-bottom: var(--book-space-m);
+}
+
+.demo-color-wheel {
+    position: relative;
+    display: inline-block;
+}
+
+.demo-color-wheel-track {
+    position: relative;
+    border-radius: 50%;
+    touch-action: none;
+}
+
+.demo-color-wheel-thumb {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--book-on-brand-color);
+    border-radius: 50%;
+    box-shadow: var(--book-shadow-s);
+    transform: translate(-50%, -50%);
+    touch-action: none;
+    cursor: grab;
+
+    &[data-focus-visible] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// Centered in the hole of the wheel; clicks pass through to the wheel.
+.demo-color-wheel-info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+// Color swatch hook demo. The background color is set from Rust.
+.demo-color-swatch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-xl);
+}
+
+.demo-color-swatch-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-s);
+    margin: 0;
+}
+
+.demo-color-swatch-hook {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    forced-color-adjust: none;
+}
+
+// Color concept demo: a palette of swatches, each opening a color picker in a popover.
+.demo-color-palette {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.5em;
+    padding: var(--book-space-l);
+}
+
+.demo-color-palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--book-space-s);
+}
+
+.demo-color-palette-label {
+    font-size: var(--book-font-size-s);
+    font-weight: 600;
+}
+
+.demo-color-palette-hex {
+    font-size: var(--book-font-size-s);
+}
+
+.demo-color-palette-rgb {
+    font-size: var(--book-font-size-xs);
+    color: var(--book-muted-color);
+}
+
+.demo-color-picker-popover {
+    padding: var(--book-space-m);
+    background: var(--book-surface-color-raised);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    box-shadow: var(--book-shadow);
+}
+
+// Current value shown below or next to a control.
+.demo-status {
+    margin: var(--book-space-s) 0 0;
+    color: var(--book-muted-color);
+    font-style: italic;
+}
+
+// Color picker parts at a fixed size.
+.demo-color-palette-small {
+    width: 10em;
+    height: 5em;
+}
+
+.demo-color-preview-large {
+    width: 5em;
+    height: 5em;
+}
+
+// Volume slider: a slider between two icons.
+.demo-volume-icon {
+    width: 2.5em;
+    height: 2.5em;
+}
+
+.demo-volume-slider {
+    width: 10em;
+}
+
+// Input and TextArea atoms, styled through their data attributes (text field atoms page).
+.demo-atom-input {
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-invalid] { border-color: var(--danger-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
+
+// SearchField atom: the clear button next to the input, hidden while the field is empty.
+.demo-search-field-row { display: flex; align-items: center; gap: var(--book-space-s); }
+
+.demo-search-field[data-empty] .demo-search-field-clear { visibility: hidden; }
+
+// NumberField atom: the group of input and stepper buttons, styled through data attributes.
+.demo-number-field-group { display: inline-flex; align-items: center; gap: var(--book-space-s); }
+
+.demo-number-field-group .demo-stepper-btn {
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
+}

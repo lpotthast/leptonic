@@ -6,16 +6,18 @@ pub fn DrawerRightOverlayDemo() -> impl IntoView {
     let (shown, set_shown) = signal(true);
 
     view! {
-        <Toggle state=shown set_state=set_shown/>
+        <div class="demo-inline-controls demo-mb-1">
+            <Switch state=(shown, set_shown)>"Show drawer"</Switch>
+        </div>
 
-        <div style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-            <div style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                <p>"Scroll ↓"</p>
+        <div class="demo-clf-frame demo-clf-frame-row">
+            <div class="demo-clf-frame-content">
+                <p>"Scroll \u{2193}"</p>
                 <Stack spacing=em(0.5)>
                     {(0..8).map(|_| view! { <Skeleton height=em(3.0)/> }).collect_view()}
                 </Stack>
             </div>
-            <Drawer side=DrawerSide::Right shown=shown attr:style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray; z-index: 1;">
+            <Drawer side=DrawerSide::Right shown=shown classes=["demo-clf-drawer", "demo-clf-drawer-overlay"]>
                 <Stack spacing=em(0.5)>
                     {(0..8).map(|_| view! { <Skeleton height=em(3.0)/> }).collect_view()}
                 </Stack>

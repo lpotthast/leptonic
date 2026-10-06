@@ -1,0 +1,134 @@
+// Demo styles of the Focus pages.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+.demo-container-active   { border: 2px solid var(--brand-color); padding: var(--book-space-l); border-radius: var(--book-radius-m); background: var(--brand-color-subtle); }
+
+.demo-container-inactive { border: 2px solid var(--book-border-color); padding: var(--book-space-l); border-radius: var(--book-radius-m); background: transparent; }
+
+.demo-focus-flush {
+    margin: 0;
+}
+
+.demo-focus-hint {
+    margin: 0;
+    font-size: var(--book-font-size-s);
+    color: var(--book-muted-color);
+}
+
+// Focusable buttons and inputs inside focus demos. Every focus is outlined, so you can follow where focus moves.
+.demo-focus-item {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:focus {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+
+    // Focusable, but skipped by Tab.
+    &[tabindex="-1"] {
+        border-style: dashed;
+    }
+}
+
+input.demo-focus-item {
+    width: 10em;
+    cursor: text;
+}
+
+// A custom focusable element (not a native control). Shows a ring only for keyboard focus (`data-focus-visible`).
+.demo-focus-target {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--book-space-m) var(--book-space-xl);
+    border: 2px solid var(--brand-color);
+    border-radius: var(--book-radius-m);
+    background: var(--brand-color-subtle);
+    color: var(--main-color);
+    cursor: pointer;
+    outline: none;
+
+    &[data-focus-visible] {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// Container whose focus is trapped or managed.
+.demo-focus-scope {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-m);
+    padding: var(--book-space-l);
+    border: 2px solid var(--book-focus-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+}
+
+.demo-focus-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-s);
+}
+
+.demo-focus-scope:focus {
+    outline: 3px solid var(--book-focus-color);
+    outline-offset: 2px;
+}
+
+// Shows a ring only for keyboard focus, driven by the `data-focus-visible` attribute of `use_focus_ring` / `FocusRing`.
+.demo-focus-ring {
+    &:focus {
+        outline: none;
+    }
+
+    &[data-focus-visible] {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// A group of controls that shows one ring around all of them while a child has keyboard focus.
+.demo-focus-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--book-space-s);
+    padding: var(--book-space-m);
+    border: 2px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    transition: border-color var(--book-transition);
+
+    &[data-focus-visible] {
+        border-color: var(--book-focus-color);
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// Shows the focus outline only while `use_focus_visible` reports keyboard or virtual modality (`.focus-visible`).
+.demo-focus-modality {
+    &:focus {
+        outline: none;
+    }
+
+    &.focus-visible:focus {
+        outline: 3px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// FocusManager atom demo: the buttons the arrow keys move between.
+.demo-focus-manager-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-s);
+}

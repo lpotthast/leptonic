@@ -1,3 +1,4 @@
+// Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -28,34 +29,10 @@ impl BrowserTest<str> for ListBoxTests {
         keyboard_navigation_skips_disabled_items(&page).await?;
         selection(&page).await?;
         tab_in_and_out(&page).await?;
+        type_ahead(&page).await?;
+        select_all_and_clear(&page).await?;
+        shift_arrow_extends_selection(&page).await?;
 
-        Ok(())
-    }
-}
-
-/// Listbox behavior that is known to be broken today. Run with `BROWSER_TEST_KNOWN_ISSUES=1`;
-/// move a check into [`ListBoxTests`] once it is fixed.
-pub struct ListBoxKnownIssues {}
-
-#[async_trait]
-impl BrowserTest<str> for ListBoxKnownIssues {
-    fn name(&self) -> Cow<'_, str> {
-        "listbox_known_issues".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/listbox").await?;
-
-        // Type-ahead: typing moves focus to the next item starting with the typed text.
-        option(&page, "Apple").await?.click().await?;
-        page.send_keys_to_active("d").await?;
-        page.wait_for_active_text("Durian").await?;
-
-        // Type-ahead skips disabled items: "c" must not land on "Cherry".
-        option(&page, "Apple").await?.click().await?;
-        page.send_keys_to_active("c").await?;
-        assert_that!(page.active_element_text().await?).is_equal_to("Apple".to_owned());
         Ok(())
     }
 }
@@ -135,4 +112,46 @@ async fn tab_in_and_out(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(page.active_element_id().await?).is_equal_to(Some("test-lb-after".to_owned()));
     page.press_shift_tab().await?;
     expect_focus(page, "Banana").await
+}
+
+/// Typing moves focus to the next option starting with the typed text, skipping disabled ones.
+async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+    expect_focus(page, "Banana").await?;
+    page.send_keys_to_active("d").await?;
+    expect_focus(page, "Durian").await?;
+    // Wait for the search to expire, then search again: "Cherry" is disabled.
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+    page.send_keys_to_active("c").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert_that!(page.active_element_text().await?).is_equal_to("Durian".to_owned());
+    // Typing continues the search within a second: "e" then "l" finds "Elderberry".
+    tokio::time::sleep(std::time::Duration::from_millis(1100)).await;
+    page.send_keys_to_active("el").await?;
+    expect_focus(page, "Elderberry").await
+}
+
+/// Ctrl+A selects everything, Escape clears the selection.
+async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
+    page.send_keys_to_active(Key::Control + "a").await?;
+    page.wait_for_text("test-lb-selection", "all").await?;
+    assert_that!(attr(&option(page, "Durian").await?, "aria-selected").await?)
+        .is_equal_to(Some("true".to_owned()));
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_text("test-lb-selection", "").await?;
+    assert_that!(attr(&option(page, "Durian").await?, "aria-selected").await?)
+        .is_equal_to(Some("false".to_owned()));
+    Ok(())
+}
+
+/// Shift+Arrow extends the selection from the anchor (skipping the disabled option).
+async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
+    option(page, "Banana").await?.click().await?;
+    page.wait_for_text("test-lb-selection", "Banana").await?;
+    page.send_keys_to_active(Key::Shift + Key::Down).await?;
+    expect_focus(page, "Durian").await?;
+    page.wait_for_text("test-lb-selection", "Banana,Durian")
+        .await?;
+    page.send_keys_to_active(Key::Shift + Key::Down).await?;
+    page.wait_for_text("test-lb-selection", "Banana,Durian,Elderberry")
+        .await
 }

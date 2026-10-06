@@ -82,7 +82,7 @@ pub fn TableHeaderCell(
     let UsePressReturn {
         props: press_props, ..
     } = use_press(UsePressInput {
-        disabled: false.into(),
+        is_disabled: false.into(),
         force_prevent_default: false,
         force_propagation: false,
         allow_text_selection_on_press: false,
@@ -104,6 +104,7 @@ pub fn TableHeaderCell(
         on_long_press_end: None,
         long_press_threshold: None,
         long_press_accessibility_description: None,
+        long_press_disabled: Signal::stored(false),
     });
 
     let (press_attrs, press_styles) = press_props.into_parts();

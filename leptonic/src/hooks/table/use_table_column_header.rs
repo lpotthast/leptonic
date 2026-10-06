@@ -1,251 +1,171 @@
-// Upstream: react-aria/src/table/useTableColumnHeader.ts @ 6f664fe911
+// Upstream: react-aria/src/table/useTableColumnHeader.ts @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
     prelude::*,
 };
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-use super::use_table::SortDirection;
+use super::{ColumnKind, SortDirection, TableData};
 use crate::{
     hooks::{
-        IntoAttrs,
-        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+        CellFocusMode, IntoAttrs, PropsWithStyles, UseGridCellAttrs, UseGridCellInput,
+        UseGridCellProps, UseGridCellReturn,
+        collections::{Key, SelectionMode},
+        interactions::use_press::{UsePressAttrs, UsePressInput, UsePressProps, use_press},
+        use_grid_cell,
     },
-    utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaRole},
-    },
+    utils::aria::{AriaRole, AriaSort},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/table/useTableColumnHeader.ts
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## OMITTED FEATURES
+// - The "sortable" description (`aria-describedby`): it needs localized messages.
+// - Android's sort direction description (Android gets `aria-sort` as well).
+//
+// =============================================================================
 
-// No intentional deviations from the react-aria implementation.
-
-/// Input parameters for the `use_table_column_header` hook.
+/// Input of [`use_table_column_header`].
 #[derive(Debug, Clone)]
 pub struct UseTableColumnHeaderInput {
-    /// The unique key for this column.
-    pub column_key: String,
-
-    /// The column index (for aria-colindex).
-    pub column_index: usize,
-
-    /// Whether the column is sortable.
-    pub is_sortable: bool,
-
-    /// Whether the column is currently sorted.
-    pub is_sorted: Signal<bool>,
-
-    /// The current sort direction (if sorted).
-    pub sort_direction: Signal<Option<SortDirection>>,
-
-    /// Whether the column header is focused.
-    pub is_focused: Signal<bool>,
-
-    /// Whether the table is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Callback when sort is triggered.
-    pub on_sort: Option<Callback<()>>,
+    /// The table (from `use_table`).
+    pub table: TableData,
+    /// The column's key.
+    pub key: Key,
+    /// Let ArrowLeft/ArrowRight move between the header's children even with
+    /// `KeyboardNavigationBehavior::Tab`.
+    pub allows_arrow_navigation: bool,
 }
 
-/// The return value of the `use_table_column_header` hook.
+impl UseTableColumnHeaderInput {
+    pub fn new(table: TableData, key: Key) -> Self {
+        Self {
+            table,
+            key,
+            allows_arrow_navigation: false,
+        }
+    }
+}
+
+/// Return value of [`use_table_column_header`].
 pub struct UseTableColumnHeaderReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub column_props: UseTableColumnHeaderProps,
-
-    /// The column key.
-    pub column_key: String,
-
-    /// Whether the column is sortable.
-    pub is_sortable: bool,
-
-    /// Whether the focus ring should be visible (keyboard navigation only).
-    pub is_focus_visible: Signal<bool>,
+    pub column_header_props: PropsWithStyles<UseTableColumnHeaderProps>,
+    pub is_pressed: Signal<bool>,
 }
 
-/// Props from `use_table_column_header` that can be extracted and merged programmatically.
+/// Props for the column header element.
 #[derive(Debug)]
 pub struct UseTableColumnHeaderProps {
-    pub role: AriaRole,
-    pub aria_colindex: String,
-    pub aria_sort: Signal<Option<&'static str>>,
-    pub tabindex: Signal<&'static str>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_click: EventHandler<MouseEvent>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_blur: EventHandler<FocusEvent>,
-    pub on_focusin: EventHandler<FocusEvent>,
-    pub on_focusout: EventHandler<FocusEvent>,
-    pub data_focus_visible: Signal<Option<&'static str>>,
+    /// Focus and navigation (`use_grid_cell`), with the `columnheader` role.
+    pub cell: UseGridCellProps,
+    /// Sorting by pressing the header.
+    pub press: UsePressProps,
+    pub aria_sort: Signal<Option<AriaSort>>,
 }
+
+pub type UseTableColumnHeaderAttrs = (
+    UseGridCellAttrs,
+    UsePressAttrs,
+    Attr<attr::AriaSort, Signal<Option<AriaSort>>>,
+);
 
 impl IntoAttrs for UseTableColumnHeaderProps {
     type Attrs = UseTableColumnHeaderAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaColindex, self.aria_colindex),
+            self.cell.into_attrs(),
+            self.press.into_attrs(),
             Attr(attr::AriaSort, self.aria_sort),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_click.into_on(ev::click),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
-            self.on_focusin.into_on(ev::focusin),
-            self.on_focusout.into_on(ev::focusout),
-            attr::custom::custom_attribute("data-focus-visible", self.data_focus_visible),
         )
     }
 }
 
-/// Attributes for the table column header element.
-pub type UseTableColumnHeaderAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaColindex, String>,
-    Attr<attr::AriaSort, Signal<Option<&'static str>>>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
-);
-
-/// Provides the behavior and accessibility for a table column header.
-///
-/// A column header can be sortable and displays the current sort direction.
-///
-/// # Example
-///
-/// ```ignore
-/// let column = use_table_column_header(UseTableColumnHeaderInput {
-///     column_key: "name".to_string(),
-///     column_index: 1,
-///     is_sortable: true,
-///     is_sorted: is_name_sorted.into(),
-///     sort_direction: name_sort_direction.into(),
-///     is_focused: is_focused.into(),
-///     is_disabled: Signal::derive(|| false),
-///     on_sort: Some(Callback::new(|_| { /* toggle sort */ })),
-/// });
-///
-/// view! {
-///     <th {..column.column_props.into_attrs()}>
-///         "Name"
-///         {move || if column.is_sortable {
-///             // Show sort indicator
-///         }}
-///     </th>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
+/// A column header of a table: focusable like a cell (its children get focus first), and
+/// sorting the table when pressed if the column allows sorting.
 pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColumnHeaderReturn {
     let UseTableColumnHeaderInput {
-        column_key,
-        column_index,
-        is_sortable,
-        is_sorted,
-        sort_direction,
-        is_focused,
-        is_disabled: disabled,
-        on_sort,
+        table,
+        key,
+        allows_arrow_navigation,
     } = input;
+    let state = table.state;
+    let selection = state.grid.list.selection;
+    let (allows_sorting, is_selection_column) = untrack(|| {
+        state.table.with(|t| {
+            t.column(&key).map_or((false, false), |c| {
+                (c.allows_sorting, c.kind == ColumnKind::SelectionCheckbox)
+            })
+        })
+    });
 
-    // Compute aria-sort
+    let UseGridCellReturn {
+        grid_cell_props,
+        is_pressed: cell_pressed,
+    } = use_grid_cell(UseGridCellInput {
+        id: Some(table.column_header_id(&key)),
+        focus_mode: Some(CellFocusMode::Child),
+        allows_arrow_navigation,
+        ..UseGridCellInput::new(table.grid.clone(), key.clone())
+    });
+    let (mut cell, cell_styles) = grid_cell_props.into_inner();
+    cell.role = AriaRole::Columnheader;
+
+    // Without rows, the headers aren't focusable (and lose focus).
+    let is_empty = Signal::derive(move || state.table.with(|t| t.size() == 0));
+    let cell_tabindex = cell.item.tabindex;
+    cell.item.tabindex = Signal::derive(move || {
+        if is_empty.get() {
+            Some(-1)
+        } else {
+            cell_tabindex.get()
+        }
+    });
+    let focus_key = key.clone();
+    Effect::new(move || {
+        if is_empty.get() && untrack(|| selection.is_focused_key(&focus_key)) {
+            selection.set_focused_key(None, None);
+        }
+    });
+
+    let sort_key = key.clone();
+    let press = use_press(UsePressInput {
+        is_disabled: Signal::derive(move || {
+            !allows_sorting
+                || (is_selection_column && selection.selection_mode() == SelectionMode::Single)
+        }),
+        on_press: Callback::new(move |_| state.sort(&sort_key, None)),
+        ..UsePressInput::default()
+    });
+    let (press_props, press_styles) = press.props.into_inner();
+
+    let sorted_key = key;
     let aria_sort = Signal::derive(move || {
-        if !is_sortable || !is_sorted.get() {
-            None
-        } else {
-            match sort_direction.get() {
-                Some(SortDirection::Ascending) => Some("ascending"),
-                Some(SortDirection::Descending) => Some("descending"),
-                None => Some("none"),
-            }
-        }
+        allows_sorting.then(|| {
+            state
+                .sort_descriptor
+                .with(|sort| match sort {
+                    Some(sort) if sort.column == sorted_key => Some(sort.direction),
+                    _ => None,
+                })
+                .map_or(AriaSort::None, |direction| match direction {
+                    SortDirection::Ascending => AriaSort::Ascending,
+                    SortDirection::Descending => AriaSort::Descending,
+                })
+        })
     });
-
-    // Compute tabindex
-    let tabindex = Signal::derive(move || {
-        if is_focused.get() && is_sortable {
-            "0"
-        } else {
-            "-1"
-        }
-    });
-
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Handle click for sorting
-    let handle_click = move |_e: web_sys::MouseEvent| {
-        if disabled.get_untracked() || !is_sortable {
-            return;
-        }
-        if let Some(on_sort) = on_sort {
-            on_sort.run(());
-        }
-    };
-
-    // Handle keyboard for sorting
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() || !is_sortable {
-            return;
-        }
-
-        let key = e.key();
-        if key == "Enter" || key == " " {
-            e.prevent_default();
-            if let Some(on_sort) = on_sort {
-                on_sort.run(());
-            }
-        }
-    };
-
-    // Use focus ring for keyboard focus visibility
-    let UseFocusRingReturn {
-        props: focus_ring_props,
-        is_focus_visible,
-        is_focused: _,
-    } = use_focus_ring(UseFocusRingInput {
-        disabled,
-        within: false,
-        auto_focus: false,
-        is_text_input: false,
-        on_focus: None,
-        on_blur: None,
-        on_focus_change: None,
-    });
-
-    // Column index is 1-based for ARIA
-    let aria_colindex = (column_index + 1).to_string();
+    let is_pressed = press.is_pressed;
 
     UseTableColumnHeaderReturn {
-        column_props: UseTableColumnHeaderProps {
-            role: AriaRole::Columnheader,
-            aria_colindex,
-            aria_sort,
-            tabindex,
-            aria_disabled,
-            on_click: EventHandler::new(handle_click),
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
-            on_focusin: focus_ring_props.on_focusin,
-            on_focusout: focus_ring_props.on_focusout,
-            data_focus_visible: focus_ring_props.data_focus_visible,
-        },
-        column_key,
-        is_sortable,
-        is_focus_visible,
+        column_header_props: PropsWithStyles::new(
+            UseTableColumnHeaderProps {
+                cell,
+                press: press_props,
+                aria_sort,
+            },
+            cell_styles.merge(press_styles),
+        ),
+        is_pressed: Signal::derive(move || cell_pressed.get() || is_pressed.get()),
     }
 }

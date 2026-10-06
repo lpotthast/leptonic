@@ -1,10 +1,10 @@
-use leptonic::hooks::*;
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 #[component]
 pub fn LinkProgrammaticFocusDemo() -> impl IntoView {
     let focus_link = use_link(UseLinkInput {
-        href: Some("#focus-handle".to_string()),
+        href: Some("#programmatic-focus".to_string()),
         target: None,
         rel: vec![],
         is_disabled: Signal::default(),
@@ -23,8 +23,6 @@ pub fn LinkProgrammaticFocusDemo() -> impl IntoView {
                 "Target link"
             </a>
         </div>
-        <button on:click=move |_| focus_handle.focus() class="demo-mt-half">
-            "Focus the link above"
-        </button>
+        <Button on_press=move |_| focus_handle.focus() classes="demo-mt-half">"Focus the link above"</Button>
     }
 }

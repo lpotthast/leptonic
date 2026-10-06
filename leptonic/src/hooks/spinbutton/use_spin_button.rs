@@ -8,7 +8,8 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::{UseEventListenerOptions, use_event_listener_with_options, use_window};
+use leptos_use::use_window;
+use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
@@ -19,6 +20,7 @@ use crate::{
     utils::{
         EventHandler,
         aria::AriaRole,
+        event_listeners::{Listener, listen_to},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         live_announcer::{Assertiveness, announce, clear_announcer},
         pointer_type::PointerType,
@@ -64,9 +66,9 @@ pub struct UseSpinButtonInput {
     pub text_value: Signal<Option<String>>,
     pub min_value: Signal<Option<f64>>,
     pub max_value: Signal<Option<f64>>,
-    pub disabled: Signal<bool>,
-    pub read_only: Signal<bool>,
-    pub required: Signal<bool>,
+    pub is_disabled: Signal<bool>,
+    pub is_read_only: Signal<bool>,
+    pub is_required: Signal<bool>,
     /// Step up (ArrowUp, increment button).
     pub on_increment: Option<Callback<()>>,
     /// Step up by a page (PageUp). Falls back to `on_increment`.
@@ -213,8 +215,6 @@ impl Spinner {
     }
 }
 
-type CleanupFn = Box<dyn Fn() + Send + Sync>;
-
 /// Implements a spin button: an element whose numeric value is changed with the arrow,
 /// page and Home/End keys, plus increment/decrement buttons that keep stepping while held.
 ///
@@ -225,9 +225,9 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
         text_value,
         min_value,
         max_value,
-        disabled,
-        read_only,
-        required,
+        is_disabled: disabled,
+        is_read_only: read_only,
+        is_required: required,
         on_increment,
         on_increment_page,
         on_decrement,
@@ -278,7 +278,7 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
     let UseKeyboardReturn {
         props: keyboard_props,
     } = use_keyboard(UseKeyboardInput {
-        disabled: Signal::derive(move || disabled.get() || read_only.get()),
+        is_disabled: Signal::derive(move || disabled.get() || read_only.get()),
         shortcuts: Some(shortcuts),
         allow_repeats: true,
         ..UseKeyboardInput::default()
@@ -312,13 +312,10 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
 
     // -- Stepper buttons --
     // Window listeners that live for the duration of one touch press.
-    let global_listeners: StoredValue<Vec<CleanupFn>> = StoredValue::new(Vec::new());
+    // (Removed when dropped; empty on the server, where no `SendWrapper` may be created.)
+    let global_listeners: StoredValue<Vec<SendWrapper<Listener>>> = StoredValue::new(Vec::new());
     let remove_global_listeners = move || {
-        global_listeners.update_value(|listeners| {
-            for remove in listeners.drain(..) {
-                remove();
-            }
-        });
+        global_listeners.try_update_value(Vec::clear);
     };
     on_cleanup(remove_global_listeners);
 
@@ -336,14 +333,11 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
                     // Don't step on touch start: wait for the press end, or spin when held.
                     is_up.set_value(false);
                     // A cancelled pointer means the browser took over (e.g. scrolling).
-                    let window = use_window();
-                    let remove = use_event_listener_with_options(
-                        window,
-                        ev::pointercancel,
-                        move |_| spinner.clear(),
-                        UseEventListenerOptions::default().capture(true),
-                    );
-                    global_listeners.update_value(|l| l.push(Box::new(remove)));
+                    if let Some(window) = use_window().as_ref() {
+                        let listener =
+                            listen_to(window, ev::pointercancel, true, move |_| spinner.clear());
+                        global_listeners.update_value(|l| l.push(SendWrapper::new(listener)));
+                    }
                     spinner.start(direction, INITIAL_SPIN_DELAY_TOUCH);
                 } else {
                     if let Some(step) = step {
@@ -352,13 +346,13 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
                     spinner.start(direction, INITIAL_SPIN_DELAY);
                 }
                 // Holding a button with touch would otherwise open the context menu.
-                let remove = use_event_listener_with_options(
-                    use_window(),
-                    ev::contextmenu,
-                    |e| e.prevent_default(),
-                    UseEventListenerOptions::default(),
-                );
-                global_listeners.update_value(|l| l.push(Box::new(remove)));
+                if let Some(window) = use_window().as_ref() {
+                    let listener =
+                        listen_to(window, ev::contextmenu, false, |e: web_sys::MouseEvent| {
+                            e.prevent_default();
+                        });
+                    global_listeners.update_value(|l| l.push(SendWrapper::new(listener)));
+                }
             })),
             on_press_up: Some(Callback::new(move |e: PressEvent| {
                 if e.pointer_type == PointerType::Touch {

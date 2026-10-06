@@ -4,7 +4,10 @@ use time::OffsetDateTime;
 
 #[component]
 pub fn DateSelectorYearFirstDemo() -> impl IntoView {
+    let (date, set_date) = signal(OffsetDateTime::now_utc());
+
     view! {
-        <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
+        <DateSelector value=date.get_untracked() on_change=set_date guide_mode=GuideMode::YearFirst/>
+        <p class="demo-status">"Selected date: "{move || date.get().date().to_string()}</p>
     }
 }

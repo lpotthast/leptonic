@@ -1,76 +1,64 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::typography::TypographyDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageTypography() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="typography" class="anchor">
-                "Typography"
-                <AnchorLink href="#typography" description="Direct link to article header"/>
-            </h1>
+        <DocPage title="Typography">
+            <p>
+                "leptonic\u{2019}s theme styles plain headings and paragraphs, so you write them as regular HTML "
+                "elements. For code, use the "<Code inline=true>"Code"</Code>" component."
+            </p>
 
-            <DemoShell source=include_str!("demos/typography.rs")>
-                <TypographyDemo />
-            </DemoShell>
+            <Demo description="Headings, a paragraph, a code block and inline code" source=include_str!("demos/typography.rs")>
+                <TypographyDemo/>
+            </Demo>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="Code">
+                <p>
+                    <Code inline=true>"Code"</Code>" renders its text as a code block, or inline with "
+                    <Code inline=true>"inline=true"</Code>". With leptonic\u{2019}s "<Code inline=true>"syntax-highlight"</Code>
+                    " feature, code blocks with a "<Code inline=true>"language"</Code>" are highlighted in the browser. "
+                    "Code blocks get a copy button, which requires the "<Code inline=true>"clipboard"</Code>" feature."
+                </p>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+                <ApiTable kind=ApiKind::Props of="Code">
+                    <ApiRow name="children" ty="impl Into<Oco<'static, str>>">"The code. Required."</ApiRow>
+                    <ApiRow name="inline" ty="Option<bool>" default="None">
+                        "Renders the code inline instead of as a block."
+                    </ApiRow>
+                    <ApiRow name="language" ty="Option<Language>" default="None">
+                        "The language to highlight. Languages without highlighting support show plain text; use "
+                        <Code inline=true>"Language::Other"</Code>" for unlisted languages."
+                    </ApiRow>
+                    <ApiRow name="show_copy_button" ty="Option<bool>" default="None">
+                        "Whether to show the copy button. Without a value, code blocks show it and inline code doesn\u{2019}t."
+                    </ApiRow>
+                    <ApiRow name="on_copy" ty="Option<Out<Result<(), ()>>>" default="None">
+                        "Receives whether copying to the clipboard succeeded."
+                    </ApiRow>
+                    <ApiRow name="trusted" ty="Option<bool>" default="None">
+                        "With "<Code inline=true>"Some(false)"</Code>" and the "<Code inline=true>"sanitize"</Code>
+                        " feature, the highlighted HTML is sanitized before rendering. Treated as "
+                        <Code inline=true>"true"</Code>" when not set."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --typography-font-family
-                    --typography-h1-margin
-                    --typography-h1-font-size
-                    --typography-h1-font-weight
-                    --typography-h2-margin
-                    --typography-h2-font-size
-                    --typography-h2-font-weight
-                    --typography-h3-margin
-                    --typography-h3-font-size
-                    --typography-h3-font-weight
-                    --typography-h4-margin
-                    --typography-h4-font-size
-                    --typography-h4-font-weight
-                    --typography-h5-margin
-                    --typography-h5-font-size
-                    --typography-h5-font-weight
-                    --typography-h6-margin
-                    --typography-h6-font-size
-                    --typography-h6-font-weight
-                    --typography-p-margin
-                    --typography-p-font-size
-                    --typography-p-font-weight
-                    --typography-p-line-height
-                    --typography-code-margin
-                    --typography-code-padding
-                    --typography-code-font-size
-                    --typography-code-font-weight
-                    --typography-code-line-height
-                    --typography-code-border-radius
-                    --typography-code-background-color
-                    --typography-code-color
-                    --typography-inline-code-margin
-                    --typography-inline-code-padding
-                    --typography-inline-code-line-height
-                ")}
-            </Code>
-        </Article>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt the typography to your design:"</p>
+                <CssVariables prefix="--typography-" scss=theme_scss!("typography")/>
+            </Section>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Typography", link: "#typography" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Themes.materialize()>"Themes"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

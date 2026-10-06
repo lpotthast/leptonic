@@ -3,59 +3,34 @@ use leptos::prelude::*;
 
 #[component]
 pub fn NumberFieldFractionalDemo() -> impl IntoView {
-    let frac_state = use_number_field_state(UseNumberFieldStateInput {
-        default_value: Some(0.0),
-        min_value: Some(0.0),
-        max_value: Some(1.0),
-        step: 0.1,
-        ..Default::default()
+    let state = use_number_field_state(UseNumberFieldStateInput {
+        default_value: Some(0.0_f64),
+        min_value: Signal::stored(Some(0.0)),
+        max_value: Signal::stored(Some(1.0)),
+        step: Signal::stored(Some(0.1)),
+        ..UseNumberFieldStateInput::default()
     });
 
-    let frac_field = use_number_field(UseNumberFieldInput {
-        state: frac_state,
-        is_disabled: Signal::derive(|| false),
-        is_read_only: Signal::derive(|| false),
-        label: Some("Opacity".to_string()),
-        min_value: Some(0.0),
-        max_value: Some(1.0),
-        step: 0.1,
-        ..Default::default()
+    let field = use_number_field(UseNumberFieldInput {
+        has_label: true,
+        ..UseNumberFieldInput::new(state)
     });
 
-    let (decrement_attrs, decrement_styles) =
-        use_button(frac_field.decrement_button).props.into_parts();
-    let (increment_attrs, increment_styles) =
-        use_button(frac_field.increment_button).props.into_parts();
+    let (decrement_attrs, decrement_styles) = use_button(field.decrement_button).props.into_parts();
+    let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
 
     view! {
-        <div {..frac_field.group_props.into_attrs()}>
-            <label
-                {..frac_field.label_props.into_attrs()}
-                style="display: block; font-weight: 500; margin-bottom: 0.25em;"
-            >
-                "Opacity (0.0\u{2013}1.0, step 0.1)"
-            </label>
-            <div style="display: flex; gap: 0.25em; align-items: center;">
-                <button
-                    {..decrement_attrs}
-                    style=decrement_styles
-                    class="demo-stepper-btn"
-                >
-                    "\u{2212}"
-                </button>
-                <input
-                    prop:value=frac_field.display_value
-                    {..frac_field.input_props.into_attrs()}
-                    style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 80px; text-align: center;"
-                />
-                <button
-                    {..increment_attrs}
-                    style=increment_styles
-                    class="demo-stepper-btn"
-                >
-                    "+"
-                </button>
+        <div class="demo-field" {..field.group_props.into_attrs()}>
+            <label class="demo-field-label" {..field.label_props.into_attrs()}>"Opacity (0.0\u{2013}1.0, step 0.1)"</label>
+            <div class="demo-inline-controls demo-no-margin">
+                <button class="demo-stepper-btn" {..decrement_attrs} style=decrement_styles>"\u{2212}"</button>
+                <input class="demo-input demo-text-input demo-number-input" {..field.input_props.into_attrs()}/>
+                <button class="demo-stepper-btn" {..increment_attrs} style=increment_styles>"+"</button>
             </div>
         </div>
+        <p>
+            "Value: "
+            {move || state.value().get().map_or_else(|| "(empty)".to_owned(), |value| value.to_string())}
+        </p>
     }
 }

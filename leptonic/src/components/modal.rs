@@ -2,10 +2,10 @@ use leptos::prelude::*;
 
 use crate::{
     atoms::{
-        dialog::{Dialog, DialogContext},
+        dialog::{Dialog, DialogTitle},
         modal::{ModalBackdrop, ModalContent},
     },
-    hooks::DialogRole,
+    hooks::{DialogRole, OverlayTriggerState},
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -19,17 +19,17 @@ use crate::{
 /// # Example
 ///
 /// ```ignore
-/// let (show, set_show) = signal(false);
+/// let show = RwSignal::new(false);
 ///
 /// view! {
-///     <Button on_press=move |_| set_show.set(true)>"Open"</Button>
+///     <Button on_press=move |_| show.set(true)>"Open"</Button>
 ///
-///     <Modal show_when=show on_close=move |_| set_show.set(false)>
+///     <Modal state=show>
 ///         <ModalHeader><ModalTitle>"Confirm"</ModalTitle></ModalHeader>
 ///         <ModalBody>"Are you sure?"</ModalBody>
 ///         <ModalFooter>
 ///             <ButtonWrapper>
-///                 <Button on_press=move |_| set_show.set(false)>"Close"</Button>
+///                 <Button on_press=move |_| show.set(false)>"Close"</Button>
 ///             </ButtonWrapper>
 ///         </ModalFooter>
 ///     </Modal>
@@ -38,13 +38,10 @@ use crate::{
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Modal(
-    /// Reactive signal controlling visibility.
+    /// Whether the modal is open: app state (`state=rw_signal`, `state=(read, write)`) or an
+    /// [`OverlayTriggerState`]. Escape and (when dismissable) clicking the backdrop close it.
     #[prop(into)]
-    show_when: Signal<bool>,
-
-    /// Called when the modal should close (Escape, backdrop click if dismissable).
-    #[prop(into)]
-    on_close: Callback<()>,
+    state: OverlayTriggerState,
 
     /// Whether clicking outside / pressing Escape closes the modal.
     /// Defaults to `true` (most modals are dismissable).
@@ -55,17 +52,9 @@ pub fn Modal(
     #[prop(default = false)]
     is_keyboard_dismiss_disabled: bool,
 
-    /// Dialog title for `aria-labelledby`. The [`ModalTitle`] component wires this automatically.
+    /// Names the modal when it has no [`ModalTitle`] (which names it automatically).
     #[prop(into, optional)]
-    title: Option<String>,
-
-    /// Dialog description for `aria-describedby`.
-    #[prop(into, optional)]
-    description: Option<String>,
-
-    /// Accessible label (suppresses `aria-labelledby` when set).
-    #[prop(into, optional)]
-    aria_label: Option<String>,
+    aria_label: MaybeProp<String>,
 
     /// Dialog role. Defaults to `Dialog`.
     #[prop(default = DialogRole::Dialog)]
@@ -81,8 +70,6 @@ pub fn Modal(
 
     children: ChildrenFn,
 ) -> impl IntoView {
-    let title = StoredValue::new(title);
-    let description = StoredValue::new(description);
     let aria_label = StoredValue::new(aria_label);
     let classes = StoredValue::new(classes);
     let styles = StoredValue::new(styles);
@@ -90,16 +77,13 @@ pub fn Modal(
 
     view! {
         <ModalBackdrop
-            is_open=show_when
-            on_close=on_close
+            state=state
             is_dismissable=is_dismissable
             is_keyboard_dismiss_disabled=is_keyboard_dismiss_disabled
         >
             <ModalContent>
                 <Dialog
-                    nostrip:title=title.get_value()
-                    nostrip:description=description.get_value()
-                    nostrip:aria_label=aria_label.get_value()
+                    aria_label=aria_label.get_value()
                     role=role
                 >
                     <div class=classes.get_value().add("leptonic-modal") style=styles.get_value()>
@@ -121,16 +105,18 @@ pub fn ModalHeader(
     view! { <div class=classes.add("leptonic-modal-header") style=styles>{children()}</div> }
 }
 
-/// Modal title that also wires the dialog's `aria-labelledby` ID via [`DialogContext`].
+/// Modal title: a themed [`DialogTitle`], so the modal's dialog is labelled by it (`aria-labelledby`).
 #[component]
 pub fn ModalTitle(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let ctx = use_context::<DialogContext>();
-    let id = ctx.map(|c| c.title_id);
-    view! { <div class=classes.add("leptonic-modal-title") style=styles id=id>{children()}</div> }
+    view! {
+        <DialogTitle classes=classes.add("leptonic-modal-title") styles=styles>
+            {children()}
+        </DialogTitle>
+    }
 }
 
 /// Modal body section.

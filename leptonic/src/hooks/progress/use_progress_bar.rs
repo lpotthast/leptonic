@@ -1,10 +1,9 @@
 // Upstream: react-aria/src/progress/useProgressBar.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{aria::AriaRole, math::percentage_in_range},
+    utils::{aria::AriaRole, id::use_id, math::percentage_in_range},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/progress/useProgressBar.ts

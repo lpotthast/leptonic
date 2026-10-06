@@ -1,0 +1,13 @@
+// Demo styles of the Getting started pages.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+/* Classes & Styles page: `--demo-meter-fill` and the width are set from Rust */
+.demo-meter               { height: 12px; margin: var(--book-space-m) 0; border-radius: var(--book-radius-m); background: var(--book-border-color); overflow: hidden; }
+
+.demo-meter-fill          { height: 100%; background-color: var(--demo-meter-fill, var(--brand-color)); transition: width 150ms ease-out, background-color var(--book-transition); @media (prefers-reduced-motion: reduce) { transition: background-color var(--book-transition); } }
+
+.demo-meter-fill.complete { background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--book-on-brand-color) 30%, transparent) 0 6px, transparent 6px 12px); }
+
+/* Forms: fields stacked above the buttons */
+.demo-form { display: flex; flex-direction: column; gap: var(--book-space-m); max-width: 24em; }

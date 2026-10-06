@@ -7,3 +7,23 @@
 *:focus-visible {
   outline: 3px solid red;
 }
+
+// Table column resizing: 900px wide tables (as in react-aria's resizing tests).
+.test-resizable-container {
+  width: 900px;
+  overflow: auto;
+
+  th {
+    position: relative;
+  }
+
+  [data-column-resizer] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    background: grey;
+  }
+}

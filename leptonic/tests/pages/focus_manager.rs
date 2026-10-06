@@ -44,11 +44,6 @@ impl FocusManagerPage<'_> {
         self.click_element_with_id("test-fm-focus-last").await
     }
 
-    pub async fn get_active_element_id(&self) -> Result<Option<String>, Report> {
-        let active = self.driver.active_element().await?;
-        Ok(active.attr("id").await?)
-    }
-
     // ---- Wrap section ----
 
     pub async fn click_wrap_item(&self, n: u32) -> Result<(), Report> {

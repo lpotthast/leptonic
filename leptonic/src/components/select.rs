@@ -1,42 +1,145 @@
 use std::fmt::Display;
 
 use leptos::prelude::*;
-use web_sys::MouseEvent;
+use web_sys::{MouseEvent, PointerEvent};
 
 use crate::{
     Out,
     atoms::{
+        input::Input,
         listbox::{ListBox, ListBoxItem},
-        select::{HiddenSelect, Select as SelectAtom, SelectPopover, SelectTrigger, SelectValue},
+        search_field::SearchField,
+        select::{
+            HiddenSelect, Select as SelectAtom, SelectCtx, SelectPopover, SelectTrigger,
+            SelectValue,
+        },
     },
     components::{
         chip::{Chip, ChipColor},
         icon::Icon,
-        input::TextInput,
         prelude::Leptonic,
     },
-    hooks::{PlacementX, PlacementY, Selection, SelectionKey, SelectionMode, SelectionSet},
+    hooks::{
+        SelectMode, TextFieldState,
+        collections::{CollectionMemo, Key, use_list_collection},
+    },
     prelude::ViewCallback,
-    utils::{classes::Classes, locale::WritingDirection, styles::Styles},
+    utils::{classes::Classes, styles::Styles},
 };
 
-/// Trait for types that can be used as select options in the component-level
-/// [`Select`], [`OptionalSelect`], and [`Multiselect`] components.
-///
-/// Extends [`SelectionKey`] and may gain select-specific methods in the future.
-/// For custom item types that yield a different key type via [`Keyed`](crate::hooks::Keyed),
-/// use the atom-level [`Select`](crate::atoms::select::Select) directly.
-pub trait SelectOption: SelectionKey {}
+/// Types usable as options of [`Select`], [`OptionalSelect`] and [`Multiselect`]. Options are
+/// identified by their `Display` text, which must be unique among the options.
+pub trait SelectOption: Clone + PartialEq + Display + Send + Sync + 'static {}
 
-impl<T: SelectionKey> SelectOption for T {}
+impl<T: Clone + PartialEq + Display + Send + Sync + 'static> SelectOption for T {}
+
+fn option_key<O: Display>(option: &O) -> Key {
+    Key::from(option.to_string())
+}
+
+/// What the select components share: the searchable options and their collection.
+struct Options<O: SelectOption> {
+    all: Signal<Vec<O>>,
+    filtered: Memo<Vec<O>>,
+    collection: CollectionMemo,
+    search: RwSignal<String>,
+}
+
+// Not derived: that would require `O: Copy`.
+#[allow(clippy::expl_impl_clone_on_copy)]
+impl<O: SelectOption> Clone for Options<O> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<O: SelectOption> Copy for Options<O> {}
+
+impl<O: SelectOption> Options<O> {
+    fn new(
+        all: Signal<Vec<O>>,
+        search_text_provider: Callback<O, String>,
+        search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
+    ) -> Self {
+        let search = RwSignal::new(String::new());
+        let filter = resolve_search_filter(search_text_provider, search_filter_provider);
+        let filtered = Memo::new(move |_| filter.run((search.get(), all.get())));
+        let collection = use_list_collection(filtered.into(), option_key, move |option: &O| {
+            search_text_provider.run(option.clone())
+        });
+        Self {
+            all,
+            filtered,
+            collection,
+            search,
+        }
+    }
+
+    /// The options with the given keys.
+    fn lookup(&self, keys: &[Key]) -> Vec<O> {
+        self.all.with_untracked(|all| {
+            keys.iter()
+                .filter_map(|key| all.iter().find(|o| option_key(*o) == *key).cloned())
+                .collect()
+        })
+    }
+}
+
+/// Keeps the select's value in sync with a value owned by the caller.
+#[component]
+fn SyncValue(#[prop(into)] keys: Signal<Vec<Key>>) -> impl IntoView {
+    let state = expect_context::<SelectCtx>().state;
+    Effect::new(move |_| {
+        let keys = keys.get();
+        if untrack(|| state.value()) != keys {
+            state.set_value(keys);
+        }
+    });
+}
+
+/// The popover with search input and options, shared by the select components.
+#[component]
+fn SelectOptionsPopover<O: SelectOption>(
+    options: Options<O>,
+    render_option: ViewCallback<O>,
+    autofocus_search: Signal<bool>,
+) -> impl IntoView {
+    let has_options = Memo::new(move |_| !options.filtered.with(Vec::is_empty));
+    view! {
+        <SelectPopover classes="leptonic-select-options">
+            <SelectSearchInput search=options.search autofocus_search=autofocus_search />
+            <ListBox classes="leptonic-select-listbox">
+                {move || {
+                    if has_options.get() {
+                        options
+                            .filtered
+                            .get()
+                            .into_iter()
+                            .map(|option| {
+                                view! {
+                                    <ListBoxItem key=option_key(&option) classes="leptonic-select-option">
+                                        {render_option.render(option)}
+                                    </ListBoxItem>
+                                }
+                            })
+                            .collect_view()
+                            .into_any()
+                    } else {
+                        view! {
+                            <div class="leptonic-select-no-search-results">"No options..."</div>
+                        }
+                            .into_any()
+                    }
+                }}
+            </ListBox>
+        </SelectPopover>
+    }
+}
 
 /// Single-select component (required selection).
 ///
 /// Displays a dropdown allowing the user to choose exactly one option.
-/// Uses hook-based ARIA accessibility, keyboard navigation, and
-/// overlay positioning internally via select atoms.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn Select<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
@@ -49,94 +152,33 @@ pub fn Select<O>(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
-    O: SelectOption + 'static,
+    O: SelectOption,
 {
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
-
-    // Search/filter state (component-level concern).
-    let (search, set_search) = signal(String::new());
-
-    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
-    let stored_options = StoredValue::new(options);
-    let filtered_options =
-        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
-    let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
-
-    // Map Signal<O> → Signal<Selection<O>>
-    let selected_keys = Signal::derive(move || {
-        let key = selected.get();
-        Selection::Keys(std::iter::once(key).collect::<SelectionSet<O>>())
-    });
-
-    // Map Selection<O> → O
-    let on_selection_change = Callback::new(move |sel: Selection<O>| {
-        if let Selection::Keys(keys) = sel
-            && let Some(key) = keys.into_iter().next()
-        {
-            set_selected.set(key);
-        }
-    });
+    let options = Options::new(options, search_text_provider, search_filter_provider);
+    let keys = Signal::derive(move || vec![option_key(&selected.get())]);
 
     view! {
-        <SelectAtom<O>
-            items=filtered_options
-            selection_mode=SelectionMode::Single
-            selected_keys=selected_keys
-            on_selection_change=on_selection_change
-            get_text_value=search_text_provider
+        <SelectAtom
+            collection=options.collection
+            default_value=keys.get_untracked()
+            on_change=Callback::new(move |keys: Vec<Key>| {
+                if let Some(option) = options.lookup(&keys).into_iter().next() {
+                    set_selected.set(option);
+                }
+            })
             classes=classes.add("leptonic-select")
             styles=styles
         >
-            <SelectTrigger<O> classes="leptonic-select-selected">
-                <SelectValue<O> />
+            <SyncValue keys=keys />
+            <SelectTrigger classes="leptonic-select-selected">
+                <SelectValue />
                 <SelectShowTriggerIcon />
-            </SelectTrigger<O>>
-
-            <SelectPopover<O>
-                placement_x=Signal::derive(|| PlacementX::Left)
-                placement_y=Signal::derive(|| PlacementY::Below)
-                writing_direction=Signal::derive(|| WritingDirection::Ltr)
-                classes="leptonic-select-options"
-            >
-                <SelectSearchInput
-                    search=search
-                    set_search=set_search
-                    autofocus_search=autofocus_search
-                />
-
-                <ListBox<O> classes="leptonic-select-listbox">
-                    {move || {
-                        if has_options.get() {
-                            filtered_options
-                                .get()
-                                .into_iter()
-                                .map(|option| {
-                                    let render_clone = option.clone();
-                                    view! {
-                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
-                                            {render_option.render(render_clone)}
-                                        </ListBoxItem<O>>
-                                    }
-                                })
-                                .collect_view()
-                                .into_any()
-                        } else {
-                            view! {
-                                <div class="leptonic-select-no-search-results">
-                                    "No options..."
-                                </div>
-                            }
-                            .into_any()
-                        }
-                    }}
-                </ListBox<O>>
-            </SelectPopover<O>>
-
-            <HiddenSelect<O>
-                get_text_value=search_text_provider
-            />
-        </SelectAtom<O>>
+            </SelectTrigger>
+            <SelectOptionsPopover options=options render_option=render_option autofocus_search=autofocus_search />
+            <HiddenSelect />
+        </SelectAtom>
     }
 }
 
@@ -144,7 +186,6 @@ where
 ///
 /// Displays a dropdown allowing the user to choose one option or deselect.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn OptionalSelect<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
@@ -158,33 +199,12 @@ pub fn OptionalSelect<O>(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
-    O: SelectOption + 'static,
+    O: SelectOption,
 {
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
-
-    let (search, set_search) = signal(String::new());
-
-    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
-    let stored_options = StoredValue::new(options);
-    let filtered_options =
-        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
-    let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
-
-    // Map Signal<Option<O>> → Signal<Selection<O>>
-    let selected_keys = Signal::derive(move || match selected.get() {
-        Some(key) => Selection::Keys(std::iter::once(key).collect::<SelectionSet<O>>()),
-        None => Selection::default(),
-    });
-
-    // Map Selection<O> → Option<O>
-    let on_selection_change = Callback::new(move |sel: Selection<O>| {
-        if let Selection::Keys(keys) = sel {
-            set_selected.set(keys.into_iter().next());
-        } else {
-            set_selected.set(None);
-        }
-    });
+    let options = Options::new(options, search_text_provider, search_filter_provider);
+    let keys = Signal::derive(move || selected.get().iter().map(option_key).collect::<Vec<_>>());
 
     let deselect = move |e: MouseEvent| {
         e.prevent_default();
@@ -193,76 +213,38 @@ where
     };
 
     view! {
-        <SelectAtom<O>
-            items=filtered_options
-            selection_mode=SelectionMode::Single
-            selected_keys=selected_keys
-            on_selection_change=on_selection_change
-            get_text_value=search_text_provider
+        <SelectAtom
+            collection=options.collection
+            default_value=keys.get_untracked()
+            on_change=Callback::new(move |keys: Vec<Key>| {
+                set_selected.set(options.lookup(&keys).into_iter().next());
+            })
             classes=classes.add("leptonic-select")
             styles=styles
         >
-            <SelectTrigger<O> classes="leptonic-select-selected">
-                <SelectValue<O> />
+            <SyncValue keys=keys />
+            <SelectTrigger classes="leptonic-select-selected">
+                <SelectValue />
                 {move || {
-                    (allow_deselect.get() && selected.get().is_some()).then(|| {
-                        view! {
-                            <div
-                                class="leptonic-select-deselect-trigger"
-                                on:click=deselect
-                            >
-                                <Icon icon=icondata::BsXCircleFill />
-                            </div>
-                        }
-                    })
-                }}
-                <SelectShowTriggerIcon />
-            </SelectTrigger<O>>
-
-            <SelectPopover<O>
-                placement_x=Signal::derive(|| PlacementX::Left)
-                placement_y=Signal::derive(|| PlacementY::Below)
-                writing_direction=Signal::derive(|| WritingDirection::Ltr)
-                classes="leptonic-select-options"
-            >
-                <SelectSearchInput
-                    search=search
-                    set_search=set_search
-                    autofocus_search=autofocus_search
-                />
-
-                <ListBox<O> classes="leptonic-select-listbox">
-                    {move || {
-                        if has_options.get() {
-                            filtered_options
-                                .get()
-                                .into_iter()
-                                .map(|option| {
-                                    let render_clone = option.clone();
-                                    view! {
-                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
-                                            {render_option.render(render_clone)}
-                                        </ListBoxItem<O>>
-                                    }
-                                })
-                                .collect_view()
-                                .into_any()
-                        } else {
+                    (allow_deselect.get() && selected.get().is_some())
+                        .then(|| {
                             view! {
-                                <div class="leptonic-select-no-search-results">
-                                    "No options..."
+                                // Inside the trigger: keep the press from opening the popover.
+                                <div
+                                    class="leptonic-select-deselect-trigger"
+                                    on:pointerdown=|e: PointerEvent| e.stop_propagation()
+                                    on:click=deselect
+                                >
+                                    <Icon icon=icondata::BsXCircleFill />
                                 </div>
                             }
-                            .into_any()
-                        }
-                    }}
-                </ListBox<O>>
-            </SelectPopover<O>>
-
-            <HiddenSelect<O>
-                get_text_value=search_text_provider
-            />
-        </SelectAtom<O>>
+                        })
+                }}
+                <SelectShowTriggerIcon />
+            </SelectTrigger>
+            <SelectOptionsPopover options=options render_option=render_option autofocus_search=autofocus_search />
+            <HiddenSelect />
+        </SelectAtom>
     }
 }
 
@@ -271,7 +253,6 @@ where
 /// Displays a dropdown allowing the user to select multiple options,
 /// shown as dismissible chips in the trigger area.
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn Multiselect<O>(
     #[prop(optional, default = u64::MAX)] max: u64,
     #[prop(into)] options: Signal<Vec<O>>,
@@ -285,53 +266,35 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
-    O: SelectOption + PartialOrd + Ord + 'static,
+    O: SelectOption + Ord,
 {
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
-
-    let (search, set_search) = signal(String::new());
-
-    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
-    let stored_options = StoredValue::new(options);
-    let filtered_options =
-        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
-    let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
-
-    // Map Signal<Vec<O>> → Signal<Selection<O>>
-    let selected_keys = Signal::derive(move || {
-        Selection::Keys(selected.get().into_iter().collect::<SelectionSet<O>>())
-    });
-
-    // Map Selection<O> → Vec<O> (sorted, with max enforcement)
-    let on_selection_change = Callback::new(move |sel: Selection<O>| {
-        if let Selection::Keys(keys) = sel {
-            let mut vec: Vec<O> = keys.into_iter().collect();
-            vec.sort();
-            vec.truncate(usize::try_from(max).unwrap_or(usize::MAX));
-            set_selected.set(vec);
-        }
-    });
+    let options = Options::new(options, search_text_provider, search_filter_provider);
+    let keys = Signal::derive(move || selected.get().iter().map(option_key).collect::<Vec<_>>());
 
     let deselect = Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
-        if let Some(pos) = vec.iter().position(|it| it == &option) {
-            vec.remove(pos);
-        }
+        vec.retain(|it| it != &option);
         set_selected.set(vec);
     });
 
     view! {
-        <SelectAtom<O>
-            items=filtered_options
+        <SelectAtom
+            collection=options.collection
+            selection_mode=SelectMode::Multiple
+            default_value=keys.get_untracked()
+            on_change=Callback::new(move |keys: Vec<Key>| {
+                let mut vec = options.lookup(&keys);
+                vec.sort();
+                vec.truncate(usize::try_from(max).unwrap_or(usize::MAX));
+                set_selected.set(vec);
+            })
             classes=classes.add("leptonic-select").add("leptonic-multiselect")
             styles=styles
-            selection_mode=SelectionMode::Multiple
-            selected_keys=selected_keys
-            on_selection_change=on_selection_change
-            get_text_value=search_text_provider
         >
-            <SelectTrigger<O> classes="leptonic-select-selected">
+            <SyncValue keys=keys />
+            <SelectTrigger classes="leptonic-select-selected">
                 {move || {
                     selected
                         .get()
@@ -339,7 +302,11 @@ where
                         .map(|item| {
                             let deselect_clone = item.clone();
                             view! {
-                                <div class="leptonic-select-option">
+                                // Inside the trigger: keep presses on chips from opening the popover.
+                                <div
+                                    class="leptonic-select-option"
+                                    on:pointerdown=|e: PointerEvent| e.stop_propagation()
+                                >
                                     <Chip
                                         color=ChipColor::Secondary
                                         on:click=move |e: MouseEvent| {
@@ -358,58 +325,16 @@ where
                         .collect_view()
                 }}
                 <SelectShowTriggerIcon />
-            </SelectTrigger<O>>
-
-            <SelectPopover<O>
-                placement_x=Signal::derive(|| PlacementX::Left)
-                placement_y=Signal::derive(|| PlacementY::Below)
-                writing_direction=Signal::derive(|| WritingDirection::Ltr)
-                classes="leptonic-select-options"
-            >
-                <SelectSearchInput
-                    search=search
-                    set_search=set_search
-                    autofocus_search=autofocus_search
-                />
-
-                <ListBox<O> classes="leptonic-select-listbox">
-                    {move || {
-                        if has_options.get() {
-                            filtered_options
-                                .get()
-                                .into_iter()
-                                .map(|option| {
-                                    let render_clone = option.clone();
-                                    view! {
-                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
-                                            {render_option.render(render_clone)}
-                                        </ListBoxItem<O>>
-                                    }
-                                })
-                                .collect_view()
-                                .into_any()
-                        } else {
-                            view! {
-                                <div class="leptonic-select-no-search-results">
-                                    "No options..."
-                                </div>
-                            }
-                            .into_any()
-                        }
-                    }}
-                </ListBox<O>>
-            </SelectPopover<O>>
-
-            <HiddenSelect<O>
-                get_text_value=search_text_provider
-            />
-        </SelectAtom<O>>
+            </SelectTrigger>
+            <SelectOptionsPopover options=options render_option=render_option autofocus_search=autofocus_search />
+            <HiddenSelect />
+        </SelectAtom>
     }
 }
 
 /// Resolves the search filter callback, using the default lowercase-contains
 /// filter when no custom provider is given.
-fn resolve_search_filter<O: Display + Clone + Send + Sync + 'static>(
+fn resolve_search_filter<O: SelectOption>(
     search_text_provider: Callback<O, String>,
     custom: Option<Callback<(String, Vec<O>), Vec<O>>>,
 ) -> Callback<(String, Vec<O>), Vec<O>> {
@@ -446,16 +371,18 @@ fn SelectShowTriggerIcon() -> impl IntoView {
 /// Internal: the search text input inside the dropdown popover.
 #[component]
 fn SelectSearchInput(
-    #[prop(into)] search: Signal<String>,
-    #[prop(into)] set_search: WriteSignal<String>,
+    search: RwSignal<String>,
     #[prop(into)] autofocus_search: Signal<bool>,
 ) -> impl IntoView {
+    // Mounted with the popover, so focusing on mount focuses on every opening.
     view! {
-        <TextInput
-            get=search
-            set=set_search
-            should_be_focused=autofocus_search
-            attr:class="search"
-        />
+        <SearchField
+            state=TextFieldState::from(search)
+            aria_label="Search"
+            auto_focus=autofocus_search.get_untracked()
+            classes="leptonic-input search"
+        >
+            <Input />
+        </SearchField>
     }
 }

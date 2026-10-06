@@ -3,9 +3,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn CheckboxConceptDemo() -> impl IntoView {
-    let (checked, set_checked) = signal(false);
+    let (subscribed, set_subscribed) = signal(false);
 
     view! {
-        <Checkbox checked=checked set_checked=set_checked />
+        <Checkbox state=(subscribed, set_subscribed) classes="demo-form-row">"Subscribe to the newsletter"</Checkbox>
+        <p>{move || if subscribed.get() { "Subscribed." } else { "Not subscribed." }}</p>
     }
 }

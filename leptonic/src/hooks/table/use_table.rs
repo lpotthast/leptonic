@@ -1,391 +1,204 @@
-// Upstream: react-aria/src/table/useTable.ts @ 569946588e
-// Upstream: react-stately/src/table/useTableState.ts @ 569946588e
-use crate::utils::id::use_id;
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
-use web_sys::KeyboardEvent;
+// Upstream: react-aria/src/table/useTable.ts @ 99e6102368
+// Upstream: react-aria/src/table/utils.ts @ 99e6102368
+use std::sync::Arc;
 
+use leptos::prelude::*;
+
+use super::{TableKeyboardDelegate, TableState};
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{
+        GridData, GridKeyboardDelegate, KeyboardNavigationBehavior, UseGridInput, UseGridProps,
+        UseGridReturn,
+        collections::{CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate},
+        use_grid,
+    },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
-        live_announcer::announce_polite,
+        CapturedElement,
+        filter::{Collator, CollatorOptions},
+        i18n::{use_direction, use_locale},
+        id::use_id,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/table/useTable.ts
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Rows, cells and column headers get the table through the returned `TableData` (react-aria:
+//   `WeakMap`s keyed by the state).
+//
+// ## OMITTED FEATURES
+// - The sort description (`aria-describedby`) and the sort announcement: they need localized
+//   messages. Column headers carry `aria-sort`.
+// - Virtualization (`aria-rowcount`), tree tables (`role="treegrid"`).
+//
+// =============================================================================
 
-// No intentional deviations from the react-aria implementation.
-
-/// The selection mode for table rows.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TableSelectionMode {
-    /// No selection allowed.
-    #[default]
-    None,
-    /// Single row selection.
-    Single,
-    /// Multiple row selection.
-    Multiple,
-}
-
-/// The sort direction for a column.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SortDirection {
-    /// Ascending order.
-    Ascending,
-    /// Descending order.
-    Descending,
-}
-
-impl SortDirection {
-    /// Toggles the sort direction.
-    #[must_use]
-    pub fn toggle(&self) -> Self {
-        match self {
-            Self::Ascending => Self::Descending,
-            Self::Descending => Self::Ascending,
-        }
-    }
-}
-
-/// Input parameters for the `use_table` hook.
-#[derive(Debug, Clone)]
+/// Input of [`use_table`].
+#[derive(Clone)]
 pub struct UseTableInput {
-    /// The label for the table.
-    pub label: Option<String>,
-
-    /// The selection mode.
-    pub selection_mode: TableSelectionMode,
-
-    /// Whether the table is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The currently selected row keys.
-    pub selected_keys: Signal<Vec<String>>,
-
-    /// The currently sorted column key.
-    pub sorted_column: Signal<Option<String>>,
-
-    /// The current sort direction.
-    pub sort_direction: Signal<Option<SortDirection>>,
-
-    /// Callback when selection changes.
-    pub on_selection_change: Option<Callback<Vec<String>>>,
-
-    /// Callback when sort changes.
-    pub on_sort_change: Option<Callback<(String, SortDirection)>>,
-
-    /// Callback when a row is activated (Enter/double-click).
-    pub on_row_action: Option<Callback<String>>,
+    pub state: TableState,
+    /// The table element; the hook's props capture it.
+    pub element: CapturedElement,
+    /// The element id. Generated when `None`.
+    pub id: Option<String>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    /// Replaces the table keyboard delegate.
+    pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Keyboard and focus behavior.
+    pub options: CollectionOptions,
+    pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select when the press ends instead of when it starts.
+    pub should_select_on_press_up: bool,
+    /// Called with the key of an activated row.
+    pub on_row_action: Option<Callback<Key>>,
+    /// Called with the key of an activated cell.
+    pub on_cell_action: Option<Callback<Key>>,
 }
 
-impl Default for UseTableInput {
-    fn default() -> Self {
+impl UseTableInput {
+    /// A table for `state`, with all other settings at their defaults.
+    pub fn new(state: TableState, element: CapturedElement) -> Self {
         Self {
-            label: None,
-            selection_mode: TableSelectionMode::None,
-            is_disabled: Signal::derive(|| false),
-            selected_keys: Signal::derive(Vec::new),
-            sorted_column: Signal::derive(|| None),
-            sort_direction: Signal::derive(|| None),
-            on_selection_change: None,
-            on_sort_change: None,
+            state,
+            element,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            keyboard_delegate: None,
+            options: CollectionOptions::default(),
+            keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+            should_select_on_press_up: false,
             on_row_action: None,
+            on_cell_action: None,
         }
     }
 }
 
-/// The return value of the `use_table` hook.
-pub struct UseTableReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub table_props: UseTableProps,
-
-    /// The ID of the table.
-    pub table_id: String,
-
-    /// The selection mode.
-    pub selection_mode: TableSelectionMode,
-
-    /// Whether the table is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The currently focused row key.
-    pub focused_key: Signal<Option<String>>,
-
-    /// Set the focused row key.
-    pub set_focused_key: Callback<Option<String>>,
-
-    /// Select a row.
-    pub select_row: Callback<String>,
-
-    /// Toggle row selection.
-    pub toggle_row: Callback<String>,
-
-    /// Select all rows.
-    pub select_all: Callback<Vec<String>>,
-
-    /// Clear selection.
-    pub clear_selection: Callback<()>,
-}
-
-/// Props from `use_table` that can be extracted and merged programmatically.
-#[derive(Debug)]
-pub struct UseTableProps {
+/// What rows, cells and column headers need to know about their table. Pass it to
+/// `use_table_row`, `use_table_cell`, `use_table_column_header`, ...
+#[derive(Debug, Clone)]
+pub struct TableData {
+    pub state: TableState,
+    pub grid: GridData,
+    /// The table element's id; cell and column header ids derive from it.
     pub id: String,
-    pub role: AriaRole,
-    pub aria_label: Option<String>,
-    pub aria_rowcount: Option<String>,
-    pub aria_multiselectable: Option<AriaMultiselectable>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl IntoAttrs for UseTableProps {
-    type Attrs = UseTableAttrs;
+impl TableData {
+    /// The id of the column header of `column`.
+    pub fn column_header_id(&self, column: &Key) -> String {
+        format!("{}-{}", self.id, normalize_key(column))
+    }
 
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaRowcount, self.aria_rowcount),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
+    /// The id of the cell of `row` in `column`.
+    pub fn cell_id(&self, row: &Key, column: &Key) -> String {
+        format!(
+            "{}-{}-{}",
+            self.id,
+            normalize_key(row),
+            normalize_key(column)
         )
     }
+
+    /// The ids of the row header cells of `row`: the row's label.
+    pub fn row_labelledby(&self, row: &Key) -> String {
+        self.state.table.with_untracked(|t| {
+            t.row_header_columns()
+                .iter()
+                .map(|column| self.cell_id(row, column))
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+    }
 }
 
-/// Attributes for the table element.
-pub type UseTableAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaRowcount, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
+/// A key as an id fragment: without whitespace.
+fn normalize_key(key: &Key) -> String {
+    key.to_string().split_whitespace().collect()
+}
 
-/// Provides the behavior and accessibility for a table.
-///
-/// A table displays data in rows and columns with support for selection,
-/// sorting, and keyboard navigation.
-///
-/// # Example
-///
-/// ```ignore
-/// let table = use_table(UseTableInput {
-///     label: Some("Users".to_string()),
-///     selection_mode: TableSelectionMode::Multiple,
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <table {..table.table_props.into_attrs()}>
-///         <thead>
-///             // Table header...
-///         </thead>
-///         <tbody>
-///             // Table rows...
-///         </tbody>
-///     </table>
-/// }
-/// ```
-#[allow(clippy::too_many_lines)]
+/// Return value of [`use_table`].
+#[derive(Debug)]
+pub struct UseTableReturn {
+    /// Props for the table element (a grid).
+    pub props: UseGridProps,
+    pub data: TableData,
+}
+
+/// The keyboard delegate of a table: a [`TableKeyboardDelegate`] measuring the rendered rows
+/// in `element`, with the current locale's reading direction and collation.
+pub fn use_table_keyboard_delegate(
+    state: TableState,
+    element: CapturedElement,
+) -> Signal<Arc<dyn KeyboardDelegate>> {
+    let locale = use_locale();
+    let direction = use_direction();
+    let grid = state.grid;
+    let layout_delegate = Arc::new(DomLayoutDelegate::new(element, grid.list.item_elements));
+    Signal::derive(move || {
+        let collator =
+            Arc::new(locale.with(|locale| Collator::new(locale, &CollatorOptions::default())));
+        let direction = direction.get();
+        let grid_delegate = GridKeyboardDelegate::new(
+            grid.list.collection,
+            grid.list.selection,
+            layout_delegate.clone(),
+        )
+        .with_direction(direction)
+        .with_collator(collator.clone())
+        .with_focus_mode(grid.focus_mode);
+        Arc::new(TableKeyboardDelegate::new(
+            grid_delegate,
+            state.table,
+            direction,
+            Some(collator),
+        )) as Arc<dyn KeyboardDelegate>
+    })
+}
+
+/// A table: a grid with column headers (in one or more header rows) above its body rows,
+/// navigated in two dimensions, with sortable columns and selectable rows. Render column headers
+/// with `use_table_column_header`, rows with `use_table_row` and cells with `use_table_cell`.
 pub fn use_table(input: UseTableInput) -> UseTableReturn {
     let UseTableInput {
-        label,
-        selection_mode,
-        is_disabled: disabled,
-        selected_keys,
-        sorted_column,
-        sort_direction,
-        on_selection_change,
-        on_sort_change: _on_sort_change,
+        state,
+        element,
+        id,
+        aria_label,
+        aria_labelledby,
+        keyboard_delegate,
+        options,
+        keyboard_navigation_behavior,
+        should_select_on_press_up,
         on_row_action,
+        on_cell_action,
     } = input;
+    let id = id.unwrap_or_else(|| use_id("table"));
+    let delegate = keyboard_delegate.unwrap_or_else(|| use_table_keyboard_delegate(state, element));
 
-    let table_id = use_id("table");
-
-    // Track focused row
-    let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
-
-    let set_focused_key = Callback::new(move |key: Option<String>| {
-        set_focused_key_signal.set(key);
+    let UseGridReturn { props, data } = use_grid(UseGridInput {
+        state: state.grid,
+        element,
+        id: Some(id.clone()),
+        aria_label,
+        aria_labelledby,
+        keyboard_delegate: Some(delegate),
+        options,
+        keyboard_navigation_behavior,
+        should_select_on_press_up,
+        on_row_action,
+        on_cell_action,
     });
-
-    // Selection helpers
-    let select_row = Callback::new(move |key: String| {
-        if selection_mode == TableSelectionMode::None {
-            return;
-        }
-
-        let new_selection = if selection_mode == TableSelectionMode::Single {
-            vec![key]
-        } else {
-            let mut current = selected_keys.get_untracked();
-            if !current.contains(&key) {
-                current.push(key);
-            }
-            current
-        };
-
-        if let Some(on_change) = on_selection_change {
-            on_change.run(new_selection);
-        }
-    });
-
-    let toggle_row = Callback::new(move |key: String| {
-        if selection_mode == TableSelectionMode::None {
-            return;
-        }
-
-        let mut current = selected_keys.get_untracked();
-        if let Some(pos) = current.iter().position(|k| k == &key) {
-            current.remove(pos);
-        } else if selection_mode == TableSelectionMode::Single {
-            current = vec![key];
-        } else {
-            current.push(key);
-        }
-
-        if let Some(on_change) = on_selection_change {
-            on_change.run(current);
-        }
-    });
-
-    let select_all = Callback::new(move |all_keys: Vec<String>| {
-        if selection_mode != TableSelectionMode::Multiple {
-            return;
-        }
-
-        if let Some(on_change) = on_selection_change {
-            on_change.run(all_keys);
-        }
-    });
-
-    let clear_selection = Callback::new(move |_| {
-        if let Some(on_change) = on_selection_change {
-            on_change.run(vec![]);
-        }
-    });
-
-    // Compute aria-multiselectable
-    let aria_multiselectable = match selection_mode {
-        TableSelectionMode::None => None,
-        TableSelectionMode::Single => Some(AriaMultiselectable::False),
-        TableSelectionMode::Multiple => Some(AriaMultiselectable::True),
-    };
-
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Live-region announcements for sort changes (screen readers).
-    // Skip the initial run so the announcer doesn't fire on mount.
-    let sort_initialized = StoredValue::new(false);
-    let last_sort: StoredValue<Option<(String, SortDirection)>> = StoredValue::new(None);
-    Effect::new(move |_| {
-        let current = sorted_column.get().zip(sort_direction.get());
-
-        if !sort_initialized.get_value() {
-            sort_initialized.set_value(true);
-            last_sort.set_value(current);
-            return;
-        }
-
-        if current == last_sort.get_value() {
-            return;
-        }
-
-        match &current {
-            Some((column, direction)) => {
-                let direction_label = match direction {
-                    SortDirection::Ascending => "ascending",
-                    SortDirection::Descending => "descending",
-                };
-                announce_polite(format!("Sorted by {column}, {direction_label}."));
-            }
-            None => announce_polite("Sorting cleared.".to_string()),
-        }
-
-        last_sort.set_value(current);
-    });
-
-    // Handle keyboard navigation
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-
-        let key = e.key();
-        match key.as_str() {
-            "Enter" => {
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(on_action) = on_row_action
-                {
-                    e.prevent_default();
-                    on_action.run(focused);
-                }
-            }
-            "Escape" => {
-                if selection_mode != TableSelectionMode::None {
-                    e.prevent_default();
-                    if let Some(on_change) = on_selection_change {
-                        on_change.run(vec![]);
-                    }
-                }
-            }
-            " " => {
-                if let Some(focused) = focused_key.get_untracked()
-                    && selection_mode != TableSelectionMode::None
-                {
-                    e.prevent_default();
-                    let mut current = selected_keys.get_untracked();
-                    if let Some(pos) = current.iter().position(|k| k == &focused) {
-                        current.remove(pos);
-                    } else if selection_mode == TableSelectionMode::Single {
-                        current = vec![focused];
-                    } else {
-                        current.push(focused);
-                    }
-                    if let Some(on_change) = on_selection_change {
-                        on_change.run(current);
-                    }
-                }
-            }
-            "a" | "A" if e.ctrl_key() || e.meta_key() => {
-                // Select all - handled at component level with all keys
-            }
-            _ => {}
-        }
-    };
 
     UseTableReturn {
-        table_props: UseTableProps {
-            id: table_id.clone(),
-            role: AriaRole::Grid,
-            aria_label: label,
-            aria_rowcount: None, // Set by component based on data
-            aria_multiselectable,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
+        props,
+        data: TableData {
+            state,
+            grid: data,
+            id,
         },
-        table_id,
-        selection_mode,
-        is_disabled: disabled,
-        focused_key: focused_key.into(),
-        set_focused_key,
-        select_row,
-        toggle_row,
-        select_all,
-        clear_selection,
     }
 }

@@ -2,186 +2,186 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
-
 use super::demos::color_wheel::ColorWheelDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseColorWheel() -> impl IntoView {
     view! {
-        <Article>
-            <p style="margin-bottom: 0.5em;">
-                <Link href=routes::doc::color::Hooks.materialize()>"\u{2190} Color Hooks Overview"</Link>
-            </p>
-
-            <h1 id="use_color_wheel" class="anchor">
-                "use_color_wheel"
-                <AnchorLink href="#use_color_wheel" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_color_wheel">
             <p>
                 "The "<Code inline=true>"use_color_wheel_state"</Code>" and "<Code inline=true>"use_color_wheel"</Code>
-                " hooks provide state management and interaction for a circular hue wheel."
+                " hooks build a circular wheel for one angular channel of a color, typically the hue. They work with any "
+                <Link href=routes::doc::color::Hooks.materialize()>"color type"</Link>". See the "
+                <Link href=routes::doc::Color.materialize()>"Color overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useColorWheel.html" target=LinkTarget::_Blank>
-                    "useColorWheel"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useColorWheel"/>
 
-            <h2 id="overview" class="anchor">
-                "Overview"
-                <AnchorLink href="#overview" description="Direct link to overview"/>
-            </h2>
+            <Section title="Demo">
+                <p>
+                    "The wheel shows a conic gradient of the channel in an annulus (donut) shape. Click or drag anywhere on "
+                    "the ring, drag the thumb, or focus it and use the keyboard. The same hooks drive an HSV and an HSL wheel."
+                </p>
 
-            <p>
-                "The color wheel displays a conic gradient of channel values in an annular (donut) shape. "
-                "Users interact by clicking or dragging on the annulus, dragging the thumb, or using keyboard navigation."
-            </p>
+                <Demo description="Hue wheel for an HSV or HSL color" source=include_str!("demos/color_wheel.rs")>
+                    <ColorWheelDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "The hook is generic over any "<Code inline=true>"ColorValue"</Code>" type and operates on a single "
-                "channel (typically hue). The other channels are preserved from the initial value but are not adjustable "
-                "through this hook."
-            </p>
+            <Section title="use_color_wheel_state">
+                <p>
+                    "Owns the color and maps the wheel\u{2019}s channel to an angle: 0\u{00b0} at the top, increasing "
+                    "clockwise. The other channels keep the values of the initial color; the wheel doesn\u{2019}t change them."
+                </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+                <Section title="Input" id="use-color-wheel-state-input">
+                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
 
-            <DemoShell
-                source=include_str!("demos/color_wheel.rs")
-                description="Circular hue wheel"
-            >
-                <ColorWheelDemo />
-            </DemoShell>
+                    <ApiTable kind=ApiKind::Input of="UseColorWheelStateInput">
+                        <ApiRow name="default_value" ty="C">"The initial color."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the wheel controls, typically the hue."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the wheel is disabled."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<C>>">"Called when the color changes during interaction."</ApiRow>
+                        <ApiRow name="on_change_end" ty="Option<Callback<C>>">"Called when an interaction ends, e.g. a drag is released."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="api" class="anchor">
-                "API"
-                <AnchorLink href="#api" description="Direct link to API section"/>
-            </h2>
+                <Section title="Return" id="use-color-wheel-state-return">
+                    <ApiTable kind=ApiKind::Return of="UseColorWheelStateReturn">
+                        <ApiRow name="value" ty="Signal<C>">"The current color."</ApiRow>
+                        <ApiRow name="set_value" ty="Callback<C>">
+                            "Sets the color programmatically. Does not call "<Code inline=true>"on_change"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the wheel controls."</ApiRow>
+                        <ApiRow name="hue" ty="Signal<f64>">"The channel\u{2019}s value, e.g. the hue in degrees (0\u{2013}360)."</ApiRow>
+                        <ApiRow name="set_hue" ty="Callback<f64>">"Sets the channel\u{2019}s value."</ApiRow>
+                        <ApiRow name="set_hue_from_point" ty="Callback<(f64, f64, f64)>">
+                            "Sets the channel from a point "<Code inline=true>"(x, y, radius)"</Code>" relative to the wheel\u{2019}s center."
+                        </ApiRow>
+                        <ApiRow name="get_thumb_position" ty="Callback<f64, (f64, f64)>">
+                            "The thumb position "<Code inline=true>"(x, y)"</Code>" relative to the center, on a circle of the given radius."
+                        </ApiRow>
+                        <ApiRow name="increment, decrement" ty="Callback<Option<f64>>">
+                            "Change the channel by the given step (at least the channel\u{2019}s step), wrapping around."
+                        </ApiRow>
+                        <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the user is dragging."</ApiRow>
+                        <ApiRow name="set_dragging" ty="Callback<bool>">
+                            "Sets the dragging state. Ending a drag calls "<Code inline=true>"on_change_end"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="display_color" ty="Signal<C>">
+                            "The color at the current channel value with maximum vividness, for gradients and the thumb."
+                        </ApiRow>
+                        <ApiRow name="step, page_step" ty="f64">"The channel\u{2019}s step and page step (1\u{00b0} and 15\u{00b0} for hue)."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the wheel is disabled."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h3>"State Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorWheelStateInput<C: ColorValue> {
-                        pub default_value: C,
-                        pub channel: C::Channel,
-                        pub disabled: Signal<bool>,
-                        pub on_change: Option<Callback<C>>,
-                        pub on_change_end: Option<Callback<C>>,
-                    }
-                ")}
-            </Code>
+            <Section title="use_color_wheel">
+                <p>
+                    "Adds pointer, touch and keyboard interaction and the ARIA semantics. A pointer press on the ring (between "
+                    "the inner and outer radius) jumps to that angle and starts a drag; presses in the hole are ignored. The "
+                    "thumb is dragged with "<Link href=routes::doc::interactions::UseMove.materialize()>"use_move"</Link>
+                    ". A visually hidden range input inside the thumb is the focus target and describes the wheel to screen readers."
+                </p>
 
-            <h3>"State Return"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorWheelStateReturn<C: ColorValue> {
-                        pub value: Signal<C>,
-                        pub set_value: Callback<C>,
-                        pub channel: C::Channel,
-                        pub hue: Signal<f64>,
-                        pub set_hue: Callback<f64>,
-                        pub set_hue_from_point: Callback<(f64, f64, f64)>,
-                        pub get_thumb_position: Callback<f64, (f64, f64)>,
-                        pub increment: Callback<Option<f64>>,
-                        pub decrement: Callback<Option<f64>>,
-                        pub is_dragging: Signal<bool>,
-                        pub set_dragging: Callback<bool>,
-                        pub display_color: Signal<C>,
-                        pub step: f64,
-                        pub page_step: f64,
-                        pub is_disabled: Signal<bool>,
-                    }
-                ")}
-            </Code>
+                <Section title="Input" id="use-color-wheel-input">
+                    <p>"The input has no "<Code inline=true>"Default"</Code>"; set every field."</p>
 
-            <h3>"Hook Input"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorWheelInput<C: ColorValue> {
-                        pub state: UseColorWheelStateReturn<C>,
-                        pub outer_radius: f64,
-                        pub inner_radius: f64,
-                        pub disabled: Signal<bool>,
-                        pub aria_label: Option<&'static str>,
-                    }
-                ")}
-            </Code>
+                    <ApiTable kind=ApiKind::Input of="UseColorWheelInput">
+                        <ApiRow name="state" ty="UseColorWheelStateReturn<C>">"The state from "<Code inline=true>"use_color_wheel_state"</Code>"."</ApiRow>
+                        <ApiRow name="outer_radius" ty="f64">"The outer radius of the wheel, in pixels."</ApiRow>
+                        <ApiRow name="inner_radius" ty="f64">"The inner radius, in pixels. It cuts the hole of the annulus."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the wheel is disabled."</ApiRow>
+                        <ApiRow name="aria_label" ty="Option<&'static str>">"An accessible name for the hidden input."</ApiRow>
+                        <ApiRow name="name" ty="Option<&'static str>">"The form field name of the hidden input."</ApiRow>
+                        <ApiRow name="form" ty="Option<&'static str>">"The id of the form the input belongs to."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3>"Hook Return"</h3>
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    pub struct UseColorWheelReturn {
-                        pub track_props: UseColorWheelTrackProps,
-                        pub thumb_props: UseColorWheelThumbProps,
-                        pub background: Signal<String>,
-                        pub clip_path: String,
-                        pub thumb_x: Signal<f64>,
-                        pub thumb_y: Signal<f64>,
-                        pub track_size: f64,
-                    }
-                ")}
-            </Code>
+                <Section title="Return" id="use-color-wheel-return">
+                    <ApiTable kind=ApiKind::Return of="UseColorWheelReturn">
+                        <ApiRow name="track_props" ty="UseColorWheelTrackProps">
+                            "The pointer handling of the ring. Give the track "<Code inline=true>"touch-action: none"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="thumb_props" ty="UseColorWheelThumbProps">
+                            "Dragging, the "<Keys keys="PageUp"/>", "<Keys keys="PageDown"/>", "<Keys keys="Home"/>" and "<Keys keys="End"/>
+                            " keys, focus handling and "<Code inline=true>"data-focus-visible"</Code>" while the input has keyboard focus."
+                        </ApiRow>
+                        <ApiRow name="input_props" ty="UseColorWheelInputProps">
+                            "For a visually hidden "<Code inline=true>"<input type=\"range\">"</Code>" inside the thumb: range, step and "
+                            "value of the channel, "<Code inline=true>"aria-label"</Code>" and an "<Code inline=true>"aria-valuetext"</Code>
+                            " with the hue name (e.g. \u{201c}120\u{00b0}, green\u{201d})."
+                        </ApiRow>
+                        <ApiRow name="background" ty="Signal<String>">"The conic gradient background of the track."</ApiRow>
+                        <ApiRow name="clip_path" ty="String">"The CSS "<Code inline=true>"clip-path"</Code>" cutting the track into an annulus."</ApiRow>
+                        <ApiRow name="thumb_x, thumb_y" ty="Signal<f64>">
+                            "The thumb\u{2019}s center relative to the track, in pixels, for CSS "<Code inline=true>"left"</Code>" and "
+                            <Code inline=true>"top"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="track_size" ty="f64">"The width and height of the track ("<Code inline=true>"outer_radius * 2"</Code>")."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="keyboard-navigation" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard-navigation" description="Direct link to keyboard navigation"/>
-            </h2>
+                <Section title="Example" id="use-color-wheel-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let state = use_color_wheel_state(UseColorWheelStateInput {
+                                default_value: HSV::new(),
+                                channel: HsvChannel::Hue,
+                                is_disabled: Signal::stored(false),
+                                on_change: None,
+                                on_change_end: None,
+                            });
+                            let wheel = use_color_wheel(UseColorWheelInput {
+                                state,
+                                outer_radius: 100.0,
+                                inner_radius: 70.0,
+                                is_disabled: Signal::stored(false),
+                                aria_label: Some("Hue"),
+                                name: None,
+                                form: None,
+                            });
 
-            <ul>
-                <li><code>"Arrow Left / Arrow Down"</code>" - Decrement hue by step"</li>
-                <li><code>"Arrow Right / Arrow Up"</code>" - Increment hue by step"</li>
-                <li><code>"Shift + Arrow"</code>" - Increment/decrement by page step"</li>
-                <li><code>"Page Up"</code>" - Increment by page step"</li>
-                <li><code>"Page Down"</code>" - Decrement by page step"</li>
-                <li><code>"Home"</code>" - Set to channel minimum"</li>
-                <li><code>"End"</code>" - Set to channel maximum"</li>
-            </ul>
+                            view! {
+                                <div {..wheel.track_props.into_attrs()}>
+                                    <div {..wheel.thumb_props.into_attrs()}>
+                                        <input {..wheel.input_props.into_attrs()} />
+                                    </div>
+                                </div>
+                            }
+                        "#)}
+                    </Code>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                    <p>
+                        "Size the track with "<Code inline=true>"track_size"</Code>", set its "<Code inline=true>"clip-path"</Code>
+                        " and background, position the thumb absolutely at "<Code inline=true>"thumb_x"</Code>"/"
+                        <Code inline=true>"thumb_y"</Code>" (centered with a translate), and hide the input visually. The demo "
+                        "source shows a complete setup."
+                    </p>
+                </Section>
+            </Section>
 
-            <ul>
-                <li>"Circular hue selection (0\u{00b0}\u{2013}360\u{00b0})"</li>
-                <li>"Conic gradient background with 13 stops"</li>
-                <li>"SVG clip-path for annulus shape"</li>
-                <li>"Pointer drag on track and thumb"</li>
-                <li>"Full keyboard navigation"</li>
-                <li>"ARIA slider role with value text including hue name"</li>
-            </ul>
+            <Section title="Keyboard">
+                <p>"With the thumb\u{2019}s input focused:"</p>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowRight / ArrowUp">"Increase the channel by one step, wrapping around."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowDown">"Decrease the channel by one step, wrapping around."</KeyRow>
+                    <KeyRow keys="Shift + Arrow keys / PageUp / PageDown">"Change the channel by its page step."</KeyRow>
+                    <KeyRow keys="Home">"Set the channel to its minimum (0\u{00b0})."</KeyRow>
+                    <KeyRow keys="End">"Set the channel to its maximum minus one step (359\u{00b0})."</KeyRow>
+                </KeyboardTable>
+            </Section>
 
-            <ul>
-                <li><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link>" - 2D color area for two channels"</li>
-                <li><Link href=routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link>" - Single-channel color slider"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_color_wheel", link: "#use_color_wheel" },
-                Toc::Leaf { title: "Overview", link: "#overview" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "API", link: "#api" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
+                <li><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link></li>
+                <li><Link href=routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link></li>
+                <li><Link href=routes::doc::interactions::UseMove.materialize()>"use_move"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -37,7 +37,7 @@ pub fn SliderCallbacksDemo() -> impl IntoView {
             >
                 <SliderTrack classes="demo-slider-track">
                     <SliderTrackFill classes="demo-slider-fill" />
-                    <SliderThumb classes="demo-slider-thumb" />
+                    <SliderThumb aria_label="Value" classes="demo-slider-thumb" />
                 </SliderTrack>
                 <SliderOutput let:attrs let:values>
                     <output {..attrs} class="demo-slider-output">

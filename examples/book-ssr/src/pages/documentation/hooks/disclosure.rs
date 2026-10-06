@@ -1,101 +1,141 @@
+use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::disclosure::DisclosureDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseDisclosure() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_disclosure" class="anchor">
-                "use_disclosure"
-                <AnchorLink href="#use_disclosure" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Hook for creating collapsible/expandable content sections with proper ARIA attributes for accessibility. "
-               "See the "<Link href=crate::routes::doc::Collapsible.materialize()>"Collapsible overview"</Link>" for concept guidance."</p>
-
+        <DocPage title="use_disclosure">
             <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDisclosure.html" target=LinkTarget::_Blank>
-                    "useDisclosure"
-                </LinkExt>
-                "."
+                "The "<Code inline=true>"use_disclosure"</Code>" hook connects a trigger button with a content panel it "
+                "shows and hides, and "<Code inline=true>"use_disclosure_state"</Code>" holds the expanded state. "
+                "See the "<Link href=routes::doc::Collapsible.materialize()>"Collapsible overview"</Link>" for concept guidance."
             </p>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <ReactAria hook="useDisclosure"/>
 
-            <DemoShell
-                source=include_str!("demos/disclosure.rs")
-                description="Collapsible content section"
-            >
-                <DisclosureDemo />
-            </DemoShell>
+            <Section title="use_disclosure">
+                <Section title="Input" id="use-disclosure-input">
+                    <p>
+                        "The hook doesn\u{2019}t own the expanded state: it reads "<Code inline=true>"is_expanded"</Code>
+                        " and reports requested changes through "<Code inline=true>"on_expanded_change"</Code>"."
+                    </p>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+                    <ApiTable kind=ApiKind::Input of="UseDisclosureInput">
+                        <ApiRow name="is_expanded" ty="Signal<bool>" default="false">"Whether the panel is expanded."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                            "Whether the disclosure is disabled. A disabled trigger ignores clicks and keys and gets "
+                            <Code inline=true>"aria-disabled=\"true\""</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<bool>>" default="None">
+                            "Called with the new expanded state when the trigger is activated. Without it, the trigger does nothing."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>"The hook automatically manages:"</p>
-            <ul>
-                <li><code>"aria-expanded"</code> " on the trigger button"</li>
-                <li><code>"aria-controls"</code> " linking trigger to content"</li>
-                <li><code>"id"</code> " on the content panel"</li>
-                <li><code>"hidden"</code> " attribute on collapsed content"</li>
-            </ul>
+                <Section title="Return" id="use-disclosure-return">
+                    <ApiTable kind=ApiKind::Return of="UseDisclosureReturn">
+                        <ApiRow name="trigger_props" ty="UseDisclosureTriggerProps">
+                            "Attributes and event handlers for the trigger button: "<Code inline=true>"id"</Code>", "
+                            <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-controls"</Code>", "
+                            <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"data-focus-visible"</Code>
+                            " and the click, key and focus handlers. Spread with "<Code inline=true>"{..trigger_props.into_attrs()}"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="content_props" ty="UseDisclosureContentProps">
+                            "Attributes for the panel: "<Code inline=true>"id"</Code>", "<Code inline=true>"role=\"region\""</Code>", "
+                            <Code inline=true>"aria-labelledby"</Code>" (the trigger) and "<Code inline=true>"aria-hidden"</Code>
+                            " while collapsed."
+                        </ApiRow>
+                        <ApiRow name="trigger_id, content_id" ty="String">"The generated ids of trigger and panel."</ApiRow>
+                        <ApiRow name="is_expanded" ty="Signal<bool>">"The "<Code inline=true>"is_expanded"</Code>" input, passed through."</ApiRow>
+                        <ApiRow name="toggle" ty="Callback<()>">
+                            "Requests the opposite state through "<Code inline=true>"on_expanded_change"</Code>
+                            ", unless the disclosure is disabled."
+                        </ApiRow>
+                        <ApiRow name="is_focus_visible" ty="Signal<bool>">
+                            "Whether the trigger has keyboard focus and should show a focus ring."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="use-cases" class="anchor">
-                "Use Cases"
-                <AnchorLink href="#use-cases" description="Direct link to use cases"/>
-            </h2>
+                <Section title="Example" id="use-disclosure-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let UseDisclosureStateReturn { is_expanded, expand, collapse, .. } = use_disclosure_state(false);
 
-            <ul>
-                <li>"FAQ accordions"</li>
-                <li>"Collapsible sections"</li>
-                <li>"Expandable cards"</li>
-                <li>"Show more/less content"</li>
-                <li>"Details/summary patterns"</li>
-            </ul>
+                            let disclosure = use_disclosure(UseDisclosureInput {
+                                is_expanded,
+                                on_expanded_change: Some(Callback::new(move |expanded: bool| {
+                                    if expanded { expand.run(()) } else { collapse.run(()) }
+                                })),
+                                ..Default::default()
+                            });
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                            view! {
+                                <button {..disclosure.trigger_props.into_attrs()}>"Details"</button>
+                                <div {..disclosure.content_props.into_attrs()} hidden=move || !is_expanded.get()>
+                                    "Hidden content"
+                                </div>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
 
-            <ul>
-                <li>"Controlled expanded state"</li>
-                <li>"Toggle and explicit open/close methods"</li>
-                <li>"Proper ARIA attributes"</li>
-                <li>"ID association between trigger and content"</li>
-                <li>"Hidden attribute for collapsed state"</li>
-            </ul>
+            <Section title="use_disclosure_state">
+                <p>
+                    <Code inline=true>"use_disclosure_state(default_expanded: bool)"</Code>
+                    " creates the expanded state and the callbacks that change it."
+                </p>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                <ApiTable kind=ApiKind::Return of="UseDisclosureStateReturn">
+                    <ApiRow name="is_expanded" ty="Signal<bool>">"Whether the disclosure is expanded."</ApiRow>
+                    <ApiRow name="expand, collapse" ty="Callback<()>">"Expand or collapse the disclosure."</ApiRow>
+                    <ApiRow name="toggle" ty="Callback<()>">"Flip the expanded state."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <ul>
-                <li><Link href=crate::routes::doc::Collapsible.materialize()>"Collapsible overview"</Link></li>
-                <li><Link href=crate::routes::doc::collapsible::Component.materialize()>"Collapsible component"</Link></li>
-            </ul>
-        </Article>
+            <Section title="Demo">
+                <p>"The panel is hidden with CSS while the hook marks it "<Code inline=true>"aria-hidden"</Code>"."</p>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_disclosure", link: "#use_disclosure" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Use Cases", link: "#use-cases" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+                <Demo description="Disclosure with a toggle button, a collapsible panel and a disabled switch" source=include_str!("demos/disclosure.rs")>
+                    <DisclosureDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Hiding the panel">
+                <p>
+                    "The hook marks a collapsed panel with "<Code inline=true>"aria-hidden=\"true\""</Code>
+                    " but leaves it visible. Hide it yourself, so that it disappears for sighted users and its content can\u{2019}t "
+                    "be reached with "<Code inline=true>"Tab"</Code>": set the "<Code inline=true>"hidden"</Code>
+                    " attribute, select on "<Code inline=true>"[aria-hidden=\"true\"]"</Code>" in CSS, or don\u{2019}t render the content."
+                </p>
+            </Section>
+
+            <Section title="Use Cases">
+                <ul>
+                    <li>"FAQ accordions"</li>
+                    <li>"Collapsible sections"</li>
+                    <li>"Expandable cards"</li>
+                    <li>"Show more/less content"</li>
+                </ul>
+            </Section>
+
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Focus the trigger."</KeyRow>
+                    <KeyRow keys="Enter / Space">"Expand or collapse the panel."</KeyRow>
+                </KeyboardTable>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Collapsible.materialize()>"Collapsible overview"</Link></li>
+                <li><Link href=routes::doc::collapsible::Component.materialize()>"Collapsible component"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

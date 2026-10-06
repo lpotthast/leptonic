@@ -6,22 +6,22 @@ pub fn AlertVariantsDemo() -> impl IntoView {
     view! {
         <Alert variant=AlertVariant::Success>
             <AlertTitle slot>"Success"</AlertTitle>
-            <AlertContent slot>"Action completed."</AlertContent>
+            <AlertContent slot>"Your changes were saved."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Info>
             <AlertTitle slot>"Info"</AlertTitle>
-            <AlertContent slot>"This concept is based on [...]"</AlertContent>
+            <AlertContent slot>"A new version is available."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Warn>
             <AlertTitle slot>"Warn"</AlertTitle>
-            <AlertContent slot>"This is not plausible."</AlertContent>
+            <AlertContent slot>"Your session expires in five minutes."</AlertContent>
         </Alert>
 
         <Alert variant=AlertVariant::Danger>
             <AlertTitle slot>"Danger"</AlertTitle>
-            <AlertContent slot>"There was an error!"</AlertContent>
+            <AlertContent slot>"The file could not be uploaded."</AlertContent>
         </Alert>
     }
 }

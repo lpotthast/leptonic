@@ -59,6 +59,11 @@ pub mod routes {
             page!(crate::pages::documentation::getting_started::classes_and_styles::PageClassesAndStyles);
         }
 
+        #[route("/forms")]
+        mod forms {
+            page!(crate::pages::documentation::getting_started::forms::PageForms);
+        }
+
         // ── Behavioral domains ───────────────────────────────────
 
         #[route("/interactions")]
@@ -72,6 +77,10 @@ pub mod routes {
             #[route("/press-responder")]
             mod press_responder {
                 page!(crate::pages::documentation::atoms::press_responder::PageAtomPressResponder);
+            }
+            #[route("/hoverable")]
+            mod hoverable {
+                page!(crate::pages::documentation::atoms::hoverable::PageAtomHoverable);
             }
             #[route("/use-hover")]
             mod use_hover {
@@ -145,6 +154,10 @@ pub mod routes {
             mod focus_ring {
                 page!(crate::pages::documentation::atoms::focus_ring::PageAtomFocusRing);
             }
+            #[route("/focus-manager")]
+            mod focus_manager {
+                page!(crate::pages::documentation::atoms::focus_manager::PageAtomFocusManager);
+            }
         }
 
         #[route("/overlays")]
@@ -161,9 +174,15 @@ pub mod routes {
             }
         }
 
+        #[route("/collections")]
+        mod collections {
+            page!(crate::pages::documentation::domains::collections::PageCollections);
+        }
+
+        // The selection hooks were merged into the collections; old links land there.
         #[route("/selection")]
         mod selection_domain {
-            page!(crate::pages::documentation::domains::selection::PageSelection);
+            page!(|| view! { <Redirect path=crate::routes::doc::Collections.materialize()/> });
         }
 
         // ── Category overview pages ──────────────────────────────
@@ -202,18 +221,7 @@ pub mod routes {
 
         #[route("/button")]
         mod button {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Button"
-                    tabs=vec![
-                        ("Overview", doc::Button.materialize()),
-                        ("Hook", doc::button::Hook.materialize()),
-                        ("Atom", doc::button::Atom.materialize()),
-                        ("Component", doc::button::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::button::PageButtonOverview);
 
             #[route("/hook")]
@@ -232,22 +240,16 @@ pub mod routes {
 
         #[route("/checkbox")]
         mod checkbox {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Checkbox"
-                    tabs=vec![
-                        ("Overview", doc::Checkbox.materialize()),
-                        ("Hook", doc::checkbox::Hook.materialize()),
-                        ("Component", doc::checkbox::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::checkbox::PageCheckboxOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::checkbox::PageUseCheckboxHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::checkbox::PageAtomCheckbox);
             }
             #[route("/component")]
             mod component {
@@ -257,22 +259,16 @@ pub mod routes {
 
         #[route("/radio")]
         mod radio {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Radio"
-                    tabs=vec![
-                        ("Overview", doc::Radio.materialize()),
-                        ("Hook", doc::radio::Hook.materialize()),
-                        ("Component", doc::radio::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::radio::PageRadioOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::radio::PageUseRadioHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::radio::PageAtomRadio);
             }
             #[route("/component")]
             mod component {
@@ -280,49 +276,69 @@ pub mod routes {
             }
         }
 
-        #[route("/toggle")]
-        mod toggle {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Toggle"
-                    tabs=vec![
-                        ("Overview", doc::Toggle.materialize()),
-                        ("Hook", doc::toggle::Hook.materialize()),
-                        ("Component", doc::toggle::Component.materialize()),
-                    ]
-                />
-            });
-            index!(crate::pages::documentation::concepts::toggle::PageToggleOverview);
+        #[route("/switch")]
+        mod switch {
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::switch::PageSwitchOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::switch::PageUseSwitchHook);
             }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::switch::PageAtomSwitch);
+            }
             #[route("/component")]
             mod component {
-                page!(crate::pages::documentation::components::input::toggle::PageToggle);
+                page!(crate::pages::documentation::components::input::switch::PageSwitch);
+            }
+        }
+
+        // The `Toggle` component became `Switch`; old links land on the Switch concept.
+        #[route("/toggle")]
+        mod toggle {
+            index!(|| view! { <Redirect path=crate::routes::doc::Switch.materialize()/> });
+
+            #[route("/hook")]
+            mod hook {
+                page!(|| view! { <Redirect path=crate::routes::doc::switch::Hook.materialize()/> });
+            }
+            #[route("/component")]
+            mod component {
+                page!(
+                    || view! { <Redirect path=crate::routes::doc::switch::Component.materialize()/> }
+                );
+            }
+        }
+
+        #[route("/toggle-button")]
+        mod toggle_button {
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::toggle_button::PageToggleButtonOverview);
+
+            #[route("/hook")]
+            mod hook {
+                page!(crate::pages::documentation::hooks::toggle_button::PageUseToggleButtonHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::toggle_button::PageAtomToggleButton);
             }
         }
 
         #[route("/color")]
         mod color {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Color"
-                    tabs=vec![
-                        ("Overview", doc::Color.materialize()),
-                        ("Hooks", doc::color::Hooks.materialize()),
-                        ("Component", doc::color::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::color::PageColorOverview);
 
             #[route("/hooks")]
             mod hooks {
                 page!(crate::pages::documentation::hooks::color::PageUseColorHooks);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::color::PageAtomColor);
             }
             #[route("/component")]
             mod component {
@@ -334,18 +350,7 @@ pub mod routes {
 
         #[route("/slider")]
         mod slider {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Slider"
-                    tabs=vec![
-                        ("Overview", doc::Slider.materialize()),
-                        ("Hook", doc::slider::Hook.materialize()),
-                        ("Atom", doc::slider::Atom.materialize()),
-                        ("Component", doc::slider::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::slider::PageSliderOverview);
 
             #[route("/hook")]
@@ -364,22 +369,16 @@ pub mod routes {
 
         #[route("/select")]
         mod select {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Select"
-                    tabs=vec![
-                        ("Overview", doc::Select.materialize()),
-                        ("Hook", doc::select::Hook.materialize()),
-                        ("Component", doc::select::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::select::PageSelectOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::select::PageUseSelectHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::select::PageAtomSelect);
             }
             #[route("/component")]
             mod component {
@@ -389,26 +388,24 @@ pub mod routes {
 
         #[route("/text-field")]
         mod text_field {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Text Field"
-                    tabs=vec![
-                        ("Overview", doc::TextField.materialize()),
-                        ("Hook", doc::text_field::Hook.materialize()),
-                        ("Component", doc::text_field::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::text_field::PageTextFieldOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::text_field::PageUseTextField);
             }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::text_field::PageAtomTextField);
+            }
             #[route("/component")]
             mod component {
-                page!(crate::pages::documentation::components::input::input_field::PageInput);
+                page!(crate::pages::documentation::components::input::text_field::PageTextField);
+            }
+            #[route("/number-field-atom")]
+            mod number_field_atom {
+                page!(crate::pages::documentation::atoms::number_field::PageAtomNumberField);
             }
             #[route("/number-field-hook")]
             mod number_field_hook {
@@ -418,18 +415,7 @@ pub mod routes {
 
         #[route("/popover")]
         mod popover {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Popover"
-                    tabs=vec![
-                        ("Overview", doc::Popover.materialize()),
-                        ("Hook", doc::popover::Hook.materialize()),
-                        ("Atom", doc::popover::Atom.materialize()),
-                        ("Component", doc::popover::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::popover::PagePopoverOverview);
 
             #[route("/hook")]
@@ -448,22 +434,16 @@ pub mod routes {
 
         #[route("/modal")]
         mod modal {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Modal"
-                    tabs=vec![
-                        ("Overview", doc::Modal.materialize()),
-                        ("Hook", doc::modal::Hook.materialize()),
-                        ("Component", doc::modal::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::modal::PageModalOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::modal::PageUseModalHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::modal::PageAtomModal);
             }
             #[route("/component")]
             mod component {
@@ -473,18 +453,7 @@ pub mod routes {
 
         #[route("/grid")]
         mod grid {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Grid"
-                    tabs=vec![
-                        ("Overview", doc::Grid.materialize()),
-                        ("Hook", doc::grid::Hook.materialize()),
-                        ("Atom", doc::grid::Atom.materialize()),
-                        ("Component", doc::grid::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::grid::PageGridOverview);
 
             #[route("/hook")]
@@ -503,22 +472,16 @@ pub mod routes {
 
         #[route("/table")]
         mod table {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Table"
-                    tabs=vec![
-                        ("Overview", doc::Table.materialize()),
-                        ("Hook", doc::table::Hook.materialize()),
-                        ("Component", doc::table::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::table::PageTableOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::table::PageUseTableHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::table::PageAtomTable);
             }
             #[route("/component")]
             mod component {
@@ -526,24 +489,41 @@ pub mod routes {
             }
         }
 
+        #[route("/date-time")]
+        mod date_time {
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::date_time::PageDateTimeOverview);
+
+            #[route("/calendar-hooks")]
+            mod calendar_hooks {
+                page!(crate::pages::documentation::hooks::calendar::PageCalendarHooks);
+            }
+            #[route("/date-field-hooks")]
+            mod date_field_hooks {
+                page!(crate::pages::documentation::hooks::date_field::PageDateFieldHooks);
+            }
+            #[route("/date-picker-hooks")]
+            mod date_picker_hooks {
+                page!(crate::pages::documentation::hooks::date_picker::PageDatePickerHooks);
+            }
+            #[route("/component")]
+            mod component {
+                page!(crate::pages::documentation::components::input::date_time::PageDateTime);
+            }
+        }
+
         #[route("/tabs")]
         mod tabs {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Tabs"
-                    tabs=vec![
-                        ("Overview", doc::Tabs.materialize()),
-                        ("Hook", doc::tabs::Hook.materialize()),
-                        ("Component", doc::tabs::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::tabs::PageTabsOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::tabs::PageUseTabsHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::tabs::PageAtomTabs);
             }
             #[route("/component")]
             mod component {
@@ -553,17 +533,7 @@ pub mod routes {
 
         #[route("/separator")]
         mod separator {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Separator"
-                    tabs=vec![
-                        ("Overview", doc::Separator.materialize()),
-                        ("Hook", doc::separator::Hook.materialize()),
-                        ("Component", doc::separator::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::separator::PageSeparatorOverview);
 
             #[route("/hook")]
@@ -578,17 +548,7 @@ pub mod routes {
 
         #[route("/collapsible")]
         mod collapsible {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Collapsible"
-                    tabs=vec![
-                        ("Overview", doc::Collapsible.materialize()),
-                        ("Hook", doc::collapsible::Hook.materialize()),
-                        ("Component", doc::collapsible::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::collapsible::PageCollapsibleOverview);
 
             #[route("/hook")]
@@ -605,17 +565,7 @@ pub mod routes {
 
         #[route("/progress")]
         mod progress {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Progress"
-                    tabs=vec![
-                        ("Overview", doc::Progress.materialize()),
-                        ("Hook", doc::progress::Hook.materialize()),
-                        ("Component", doc::progress::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::progress::PageProgressOverview);
 
             #[route("/hook")]
@@ -630,17 +580,7 @@ pub mod routes {
 
         #[route("/chip")]
         mod chip {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Chip"
-                    tabs=vec![
-                        ("Overview", doc::Chip.materialize()),
-                        ("Hook", doc::chip::Hook.materialize()),
-                        ("Component", doc::chip::Component.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::chip::PageChipOverview);
 
             #[route("/hook")]
@@ -657,81 +597,61 @@ pub mod routes {
 
         #[route("/combobox")]
         mod combobox {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Combobox"
-                    tabs=vec![
-                        ("Overview", doc::Combobox.materialize()),
-                        ("Hook", doc::combobox::Hook.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::combobox::PageComboboxOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::combobox::PageUseCombobox);
             }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::combobox::PageAtomComboBox);
+            }
         }
 
         #[route("/listbox")]
         mod listbox {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Listbox"
-                    tabs=vec![
-                        ("Overview", doc::Listbox.materialize()),
-                        ("Hook", doc::listbox::Hook.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::listbox::PageListboxOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::listbox::PageUseListbox);
             }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::listbox::PageAtomListBox);
+            }
         }
 
         #[route("/menu")]
         mod menu {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Menu"
-                    tabs=vec![
-                        ("Overview", doc::Menu.materialize()),
-                        ("Hook", doc::menu::Hook.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::menu::PageMenuOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::menu::PageUseMenuHook);
             }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::menu::PageAtomMenu);
+            }
         }
 
         #[route("/tooltip")]
         mod tooltip {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Tooltip"
-                    tabs=vec![
-                        ("Overview", doc::Tooltip.materialize()),
-                        ("Hook", doc::tooltip::Hook.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::tooltip::PageTooltipOverview);
 
             #[route("/hook")]
             mod hook {
                 page!(crate::pages::documentation::hooks::tooltip::PageUseTooltipHook);
+            }
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::tooltip::PageAtomTooltip);
             }
         }
 
@@ -739,19 +659,7 @@ pub mod routes {
 
         #[route("/link")]
         mod link {
-
-            layout!(move || view! {
-                <ConceptLayout
-                    name="Link"
-                    tabs=vec![
-                        ("Overview", doc::Link.materialize()),
-                        ("use_link", doc::link::UseLink.materialize()),
-                        ("use_anchor_link", doc::link::UseAnchorLink.materialize()),
-                        ("Link Atom", doc::link::LinkAtom.materialize()),
-                        ("AnchorLink Atom", doc::link::AnchorLinkAtom.materialize()),
-                    ]
-                />
-            });
+            layout!(ConceptLayout);
             index!(crate::pages::documentation::concepts::link::PageLinkOverview);
 
             #[route("/use-link")]
@@ -776,6 +684,10 @@ pub mod routes {
 
         #[route("/hooks")]
         mod hooks {
+            #[route("/animation")]
+            mod animation {
+                page!(crate::pages::documentation::hooks::animation::PageAnimationHooks);
+            }
             #[route("/use-label")]
             mod use_label {
                 page!(crate::pages::documentation::hooks::label::PageUseLabel);
@@ -826,7 +738,31 @@ pub mod routes {
             }
             #[route("/selection")]
             mod selection {
-                page!(crate::pages::documentation::hooks::selection::PageUseSelection);
+                page!(|| view! { <Redirect path=crate::routes::doc::Collections.materialize()/> });
+            }
+        }
+
+        // ── Standalone atoms ─────────────────────────────────────
+
+        #[route("/atoms")]
+        mod atoms {
+            #[route("/field")]
+            mod field {
+                page!(crate::pages::documentation::atoms::field::PageAtomField);
+            }
+            #[route("/form")]
+            mod form {
+                page!(crate::pages::documentation::atoms::form::PageAtomForm);
+            }
+        }
+
+        // ── Utilities ────────────────────────────────────────────
+
+        #[route("/utils")]
+        mod utils {
+            #[route("/live-announcer")]
+            mod live_announcer {
+                page!(crate::pages::documentation::utils::live_announcer::PageLiveAnnouncer);
             }
         }
 
@@ -834,6 +770,12 @@ pub mod routes {
 
         #[route("/components")]
         mod components {
+            #[route("/transitions")]
+            mod transitions {
+                page!(
+                    crate::pages::documentation::components::general::transitions::PageTransitions
+                );
+            }
             #[route("/stack")]
             mod stack {
                 page!(crate::pages::documentation::components::layout::stack::PageStack);
@@ -850,9 +792,12 @@ pub mod routes {
             mod drawer {
                 page!(crate::pages::documentation::components::layout::drawer::PageDrawer);
             }
+            // Moved into the Date & Time concept; old links land on its component tab.
             #[route("/date-time")]
             mod date_time {
-                page!(crate::pages::documentation::components::input::date_time::PageDateTime);
+                page!(
+                    || view! { <Redirect path=crate::routes::doc::date_time::Component.materialize()/> }
+                );
             }
             #[route("/tiptap-editor")]
             mod tiptap_editor {
@@ -885,11 +830,6 @@ pub mod routes {
                 page!(crate::pages::documentation::components::general::callback::PageCallback);
             }
         }
-    }
-
-    #[route("/theme-editor")]
-    mod theme_editor {
-        page!(crate::pages::editor::ThemeEditor);
     }
 
     #[route("/not-found")]

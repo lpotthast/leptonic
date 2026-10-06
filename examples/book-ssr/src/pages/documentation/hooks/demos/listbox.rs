@@ -1,50 +1,50 @@
 use std::collections::HashSet;
 
-use leptonic::{hooks::*, utils::classes::Classes};
+use leptonic::{
+    hooks::{
+        IntoAttrs, ListBoxData, SelectionMode, UseListBoxInput, UseListBoxReturn, UseOptionInput,
+        UseOptionReturn,
+        collections::{
+            CollectionOptions, Key, SelectionOptions, UseListStateInput, use_list_collection,
+            use_list_state,
+        },
+        use_listbox, use_option,
+    },
+    utils::{CapturedElement, classes::Classes},
+};
 use leptos::prelude::*;
-use leptos_element_capture::CapturedElement;
 
-/// A single option component that uses the `use_option` hook.
+const FRUITS: [(&str, &str); 5] = [
+    ("apple", "Apple"),
+    ("banana", "Banana"),
+    ("cherry", "Cherry"),
+    ("date", "Date"),
+    ("elderberry", "Elderberry"),
+];
+
+/// One option, rendered with `use_option`.
 #[component]
-fn ListboxOption(
-    /// The key/label for this option.
-    item_key: String,
-    /// The display label for this option.
-    label: &'static str,
-    /// The selection state from the parent listbox.
-    state: UseSelectionStateReturn<String>,
-    /// The currently focused key from the parent listbox.
-    focused_key: Signal<Option<String>>,
-) -> impl IntoView {
+fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
-        option_props,
+        props,
         is_selected,
-        is_focused: _,
         is_disabled,
         is_focus_visible,
         ..
     } = use_option(UseOptionInput {
-        key: item_key.clone(),
-        state,
-        is_disabled: Signal::derive(|| false),
-        should_select_on_press_up: false,
-        should_use_virtual_focus: false,
-        should_focus_on_hover: false,
-        on_focus: None,
-        on_press: None,
-        text_value: Some(label.to_string()),
-        focused_key,
+        list,
+        key: Key::from(key),
     });
-    let (option_props, option_styles) = option_props.into_parts();
+    let (attrs, styles) = props.into_parts();
 
     view! {
         <div
-            {..option_props}
+            {..attrs}
             class=Classes::from("demo-listbox-option")
                 .add_reactive("disabled", is_disabled)
                 .add_reactive("selected", is_selected)
                 .add_reactive("focus-visible", is_focus_visible)
-            style=option_styles
+            style=styles
         >
             <span class="demo-listbox-checkbox">
                 <Show when=move || is_selected.get()>"\u{2713}"</Show>
@@ -56,81 +56,51 @@ fn ListboxOption(
 
 #[component]
 pub fn ListboxDemo() -> impl IntoView {
-    let items: Vec<(&'static str, &'static str)> = vec![
-        ("apple", "Apple"),
-        ("banana", "Banana"),
-        ("cherry", "Cherry"),
-        ("date", "Date"),
-        ("elderberry", "Elderberry"),
-    ];
-
-    // Create a signal for the items (just the keys)
-    let item_keys: Vec<String> = items.iter().map(|(k, _)| k.to_string()).collect();
-    let items_signal = Signal::derive({
-        let keys = item_keys.clone();
-        move || keys.clone()
+    // The options, as a collection: keys identify them, texts are used for type-ahead.
+    let collection = use_list_collection(
+        Signal::stored(FRUITS.to_vec()),
+        |(key, _)| Key::from(*key),
+        |(_, label)| (*label).to_owned(),
+    );
+    let state = use_list_state(UseListStateInput {
+        collection,
+        selection: SelectionOptions {
+            selection_mode: Signal::stored(SelectionMode::Multiple),
+            // Disabled options can't be focused or selected.
+            disabled_keys: Signal::stored(HashSet::from([Key::from("date")])),
+            ..SelectionOptions::default()
+        },
     });
 
-    // Set up the listbox with selection
-    let listbox = use_listbox(UseListBoxInput {
-        selection_mode: SelectionMode::Multiple,
-        selection_behavior: SelectionBehavior::Toggle,
-        is_disabled: Signal::derive(|| false),
-        selected_keys: None,
-        default_selected_keys: None,
-        on_selection_change: None,
-        disabled_keys: Signal::derive(HashSet::new),
-        disallow_empty_selection: false,
-        items: items_signal,
-        should_focus_wrap: true,
-        auto_focus: Signal::derive(|| None),
-        select_on_focus: false,
-        aria_label: Some("Fruits"),
-        aria_labelledby: None,
-        get_text_value: Some(Callback::new(|k: String| k)),
-        is_virtualized: false,
-        orientation: ListBoxOrientation::Vertical,
-        collection_ref: CapturedElement::default(),
-        on_close: None,
-        escape_key_behavior: EscapeKeyBehavior::default(),
-        id: None,
+    let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+        aria_label: "Fruits".into(),
+        options: CollectionOptions {
+            should_focus_wrap: true,
+            ..CollectionOptions::default()
+        },
+        ..UseListBoxInput::new(state, CapturedElement::new())
     });
 
-    // Get selection state for displaying and for options
-    let selection_state = listbox.state.collection.selection_state;
-    let selected_keys = selection_state.selected_keys;
-    let focused_key = listbox.state.collection.selection_state.focused_key;
+    let selected = move || {
+        let mut keys: Vec<String> = state
+            .selection
+            .selected_keys()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        keys.sort();
+        keys.join(", ")
+    };
 
     view! {
-        <div {..listbox.listbox_props.into_attrs()} class="demo-listbox">
-            {items
-                .into_iter()
+        <div {..props.into_attrs()} class="demo-listbox">
+            {FRUITS
                 .map(|(key, label)| {
-                    let state = selection_state;
-                    view! {
-                        <ListboxOption
-                            item_key=key.to_string()
-                            label=label
-                            state=state
-                            focused_key=focused_key
-                        />
-                    }
+                    view! { <ListboxOption list=data.clone() key=key label=label /> }
                 })
                 .collect_view()}
         </div>
 
-        <p>
-            "Selected: "
-            {move || {
-                match selected_keys.get() {
-                    Selection::Keys(keys) => {
-                        let mut keys_vec: Vec<_> = keys.into_iter().collect();
-                        keys_vec.sort();
-                        format!("{keys_vec:?}")
-                    }
-                    Selection::All => "All".to_string(),
-                }
-            }}
-        </p>
+        <p>"Selected: " {selected}</p>
     }
 }

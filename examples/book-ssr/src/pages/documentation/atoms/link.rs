@@ -6,95 +6,143 @@ use super::demos::{
     link_button::LinkButtonDemo, link_external::LinkExternalDemo, link_internal::LinkInternalDemo,
     link_rel::LinkRelDemo,
 };
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAtomLink() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="link" class="anchor">
-                "Link"
-                <AnchorLink href="#link" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Links bring your users to a different place of your application."</p>
-
-            <h2 id="internal-links" class="anchor">
-                "Internal links"
-                <AnchorLink href="#internal-links" description="Direct link to section: Internal links"/>
-            </h2>
-
-            <p>"These links, created with the "<Code inline=true>"<Link>"</Code>" component, use the leptos router under the hood and are meant to direct users to a different location inside your app, as the given "<Code inline=true>"href"</Code>" prop is always considered to be relative to your site."</p>
-
-            <DemoShell source=include_str!("demos/link_internal.rs")>
-                <LinkInternalDemo />
-            </DemoShell>
-
-            <h2 id="external-links" class="anchor">
-                "External links"
-                <AnchorLink href="#external-links" description="Direct link to section: External links"/>
-            </h2>
-
-            <p>"These links, created with the "<Code inline=true>"<LinkExt>"</Code>" component, do not use the leptos router and must be used when directing users to external sources."</p>
-
-            <DemoShell source=include_str!("demos/link_external.rs")>
-                <LinkExternalDemo />
-            </DemoShell>
-
-            <h2 id="rel-attribute" class="anchor">
-                "Rel Attribute"
-                <AnchorLink href="#rel-attribute" description="Direct link to section: Rel Attribute"/>
-            </h2>
-
+        <DocPage title="Link atom">
             <p>
-                "The "<Code inline=true>"rel"</Code>" prop accepts a "<Code inline=true>"Vec<LinkRel>"</Code>
-                " to set semantic relationship values on the link. "
-                "When "<Code inline=true>"target=LinkTarget::_Blank"</Code>", "
-                <Code inline=true>"LinkRel::NoOpener"</Code>" is automatically added for security."
+                "The "<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkExt"</Code>" components take users to "
+                "another page of your app or to another site. See the "
+                <Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
             </p>
 
-            <DemoShell source=include_str!("demos/link_rel.rs")>
-                <LinkRelDemo />
-            </DemoShell>
+            <p>
+                "Both exist as unstyled atoms in "<Code inline=true>"leptonic::atoms::link"</Code>" and as themed components "
+                "in "<Code inline=true>"leptonic::components::prelude"</Code>". The components add the "
+                <Code inline=true>"leptonic-link"</Code>" class and take the same props. The demos use the components."
+            </p>
 
-            <h2 id="link-buttons" class="anchor">
-                "Link Buttons"
-                <AnchorLink href="#link-buttons" description="Direct link to section: Link Buttons"/>
-            </h2>
+            <Section title="Hooks Used">
+                <p>
+                    <Link href=routes::doc::link::UseLink.materialize()><Code inline=true>"use_link"</Code></Link>
+                    ", which composes "<Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link>", "
+                    <Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link>" and "
+                    <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>"."
+                </p>
+            </Section>
 
-            <p>"It is likely that you want to render a link in the form of a button. Please respect the HTML standard and do not render a <Button> inside a <Link>."</p>
+            <Section title="Link">
+                <p>
+                    "A link inside your app. It renders leptos_router\u{2019}s "<Code inline=true>"<A>"</Code>
+                    ", so navigation happens on the client and "<Code inline=true>"href"</Code>
+                    " is resolved relative to the current route."
+                </p>
 
-            <p>"Use the "<Code inline=true>"<LinkButton>"</Code>" component, which accepts most props from both the <Link> as well as the <Button> component."</p>
+                <ApiTable kind=ApiKind::Props of="atoms::link::Link">
+                    <ApiRow name="href" ty="impl ToHref">"The link target."</ApiRow>
+                    <ApiRow name="exact" ty="bool" default="false">
+                        "Whether the link is only marked as active ("<Code inline=true>"aria-current=\"page\""</Code>
+                        ") when the location matches exactly, instead of when it starts with the target."
+                    </ApiRow>
+                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called when the link is pressed."</ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<a>"</Code>"."</ApiRow>
+                    <ApiRow name="children" ty="Children">"The link content."</ApiRow>
+                </ApiTable>
 
-            <p>"The \"Read the docs\" button on the welcome page was implemented this way!"</p>
+                <Demo description="Link to the current page" source=include_str!("demos/link_internal.rs")>
+                    <LinkInternalDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/link_button.rs")>
-                <LinkButtonDemo />
-            </DemoShell>
+            <Section title="LinkExt">
+                <p>"A link to another site. It renders a plain "<Code inline=true>"<a>"</Code>" without the router."</p>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+                <ApiTable kind=ApiKind::Props of="atoms::link::LinkExt">
+                    <ApiRow name="href" ty="impl ToHref">"The link target."</ApiRow>
+                    <ApiRow name="target" ty="LinkTarget">
+                        "Where to open the link, e.g. "<Code inline=true>"LinkTarget::_Blank"</Code>" for a new tab. Required."
+                    </ApiRow>
+                    <ApiRow name="rel" ty="Vec<LinkRel>" default="vec![]">
+                        "Values of the "<Code inline=true>"rel"</Code>" attribute. With "<Code inline=true>"LinkTarget::_Blank"</Code>
+                        ", "<Code inline=true>"LinkRel::NoOpener"</Code>" is added automatically."
+                    </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link is disabled."</ApiRow>
+                    <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">"Called when the link is pressed."</ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<a>"</Code>"."</ApiRow>
+                    <ApiRow name="children" ty="Children">"The link content."</ApiRow>
+                </ApiTable>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+                <Demo description="Icon link to GitHub opening in a new tab" source=include_str!("demos/link_external.rs")>
+                    <LinkExternalDemo/>
+                </Demo>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --link-color
-                ")}
-            </Code>
-        </Article>
+                <Section title="Rel Attribute">
+                    <p>
+                        <Code inline=true>"rel"</Code>" describes the relationship to the linked page, for example "
+                        <Code inline=true>"LinkRel::NoFollow"</Code>" for links search engines should not follow:"
+                    </p>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Link", link: "#link" },
-                Toc::Leaf { title: "Internal links", link: "#internal-links" },
-                Toc::Leaf { title: "External links", link: "#external-links" },
-                Toc::Leaf { title: "Rel Attribute", link: "#rel-attribute" },
-                Toc::Leaf { title: "Link buttons", link: "#link-buttons" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+                    <Demo description="External link with nofollow and noreferrer" source=include_str!("demos/link_rel.rs")>
+                        <LinkRelDemo/>
+                    </Demo>
+                </Section>
+            </Section>
+
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::atoms::link::{Link, LinkExt};
+
+                        view! {
+                            <Link href="/settings" classes="my-link">"Settings"</Link>
+                            <LinkExt href="https://leptos.dev" target=LinkTarget::_Blank classes="my-link">
+                                "Leptos"
+                            </LinkExt>
+                        }
+                    "#)}
+                </Code>
+            </Section>
+
+            <Section title="Data Attributes">
+                <ApiTable kind=ApiKind::DataAttributes>
+                    <ApiRow name="data-focus-visible" ty="true">"Present while the link has keyboard focus."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Styling">
+                <p>
+                    "Style the atoms with "<Code inline=true>"classes"</Code>". Target "<Code inline=true>"[data-focus-visible]"</Code>
+                    " for a focus ring, "<Code inline=true>"[aria-current=\"page\"]"</Code>" for the active "
+                    <Code inline=true>"Link"</Code>" and "<Code inline=true>"[aria-disabled=\"true\"]"</Code>" for a disabled "
+                    <Code inline=true>"LinkExt"</Code>". The themed components read these CSS variables:"
+                </p>
+
+                <CssVariables prefix="--link-" scss=theme_scss!("link")/>
+            </Section>
+
+            <Section title="LinkButton">
+                <p>
+                    "A link that looks like a button. Don\u{2019}t put a "<Code inline=true>"Button"</Code>" inside a "
+                    <Code inline=true>"Link"</Code>"; HTML doesn\u{2019}t allow interactive content inside links. Use "
+                    <Code inline=true>"LinkButton"</Code>" instead: it takes "<Code inline=true>"href"</Code>", "
+                    <Code inline=true>"target"</Code>" and "<Code inline=true>"exact"</Code>" like a link and the variant, "
+                    "color, size and disabled props of the "<Link href=routes::doc::button::Component.materialize()>"Button component"</Link>
+                    ". The \u{201c}Read the docs\u{201d} button on the welcome page is one."
+                </p>
+
+                <Demo description="Link styled as a button" source=include_str!("demos/link_button.rs")>
+                    <LinkButtonDemo/>
+                </Demo>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
+                <li><Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
+                <li><Link href=routes::doc::link::AnchorLinkAtom.materialize()>"AnchorLink atom"</Link></li>
+                <li><Link href=routes::doc::button::Atom.materialize()>"Button atom"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

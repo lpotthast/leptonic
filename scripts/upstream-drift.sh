@@ -66,7 +66,7 @@ while IFS= read -r file; do
     report+="$total"$'\t'"${file#"$ROOT"/}"$'\n'
     [[ $verbose -eq 1 ]] && report+="$details"
   fi
-done < <(grep -rlE '^// Upstream: ' "$ROOT/leptonic/src" | sort)
+done < <(grep -rlE '^// Upstream: ' "$ROOT/leptonic/src" "$ROOT/leptonic/tests" | sort)
 
 if [[ -z "$report" ]]; then
   echo "No upstream drift."

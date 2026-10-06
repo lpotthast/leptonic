@@ -1,4 +1,12 @@
-use leptonic::{components::prelude::*, hooks::*, utils::css::em};
+use leptonic::{
+    components::prelude::*,
+    hooks::*,
+    utils::{
+        css::{CssDimension, NonNegativeLengthPercentage, Size, try_pct},
+        style::WidthProperty,
+        styles::Styles,
+    },
+};
 use leptos::prelude::*;
 
 #[component]
@@ -8,6 +16,8 @@ pub fn ProgressDeterminateDemo() -> impl IntoView {
     let UseProgressBarReturn {
         progress_props,
         label_props,
+        percentage,
+        value_label,
         ..
     } = use_progress_bar(UseProgressBarInput {
         label: Some("Loading progress".into()),
@@ -18,36 +28,33 @@ pub fn ProgressDeterminateDemo() -> impl IntoView {
         is_indeterminate: false,
     });
 
+    // The fill width is the only dynamic style; everything else is in CSS classes.
+    let fill_styles = Styles::new()
+        .add_reactive(move || WidthProperty.declare(fill_width(percentage.get().unwrap_or(0.0))));
+
     view! {
-        <div style="margin: 0 0 1em 0; max-width: 400px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5em;">
-                <label id=label_props.id.clone()>"Loading progress"</label>
-                <span>{ move || format!("{:.0}%", value.get()) }</span>
+        <div class="demo-value-bar-container">
+            <div class="demo-value-bar-header">
+                <label id=label_props.id>"Loading progress"</label>
+                <span>{move || value_label.get()}</span>
             </div>
-            <div
-                {..progress_props.into_attrs()}
-                style="height: 8px; background: #ddd; border-radius: 4px; overflow: hidden;"
-            >
-                <div style=move || format!(
-                    "height: 100%; background: var(--brand-color); transition: width 0.3s; width: {}%;",
-                    value.get()
-                )></div>
+            <div {..progress_props.into_attrs()} class="demo-value-bar">
+                <div class="demo-value-bar-fill" style=fill_styles></div>
             </div>
         </div>
 
-        <Stack orientation=StackOrientation::Horizontal spacing=em(0.5)>
-            <button
-                on:click=move |_| set_value.update(|v| *v = (*v - 10.0).max(0.0))
-                style="padding: 0.5em 1em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-            >
-                "-10%"
-            </button>
-            <button
-                on:click=move |_| set_value.update(|v| *v = (*v + 10.0).min(100.0))
-                style="padding: 0.5em 1em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-            >
-                "+10%"
-            </button>
-        </Stack>
+        <div class="demo-inline-controls">
+            <Button on_press=move |_| set_value.update(|v| *v = f64::max(*v - 10.0, 0.0))>"-10%"</Button>
+            <Button on_press=move |_| set_value.update(|v| *v = f64::min(*v + 10.0, 100.0))>"+10%"</Button>
+        </div>
     }
+}
+
+/// The width of a fill covering `percent` of its track. Non-finite or negative input renders as zero width.
+fn fill_width(percent: f64) -> Size {
+    try_pct(percent)
+        .ok()
+        .and_then(|width| NonNegativeLengthPercentage::try_from(width).ok())
+        .unwrap_or_else(|| NonNegativeLengthPercentage::new(CssDimension::Zero))
+        .into()
 }

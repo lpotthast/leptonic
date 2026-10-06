@@ -1,72 +1,68 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::progress_controlled::ProgressControlledDemo;
-use super::demos::progress_indeterminate::ProgressIndeterminateDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    progress_controlled::ProgressControlledDemo, progress_indeterminate::ProgressIndeterminateDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageProgress() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="progress" class="anchor">
-                "Progress"
-                <AnchorLink href="#progress" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Progress component">
             <p>
-                "Display how much work of an operation is already completed using the "<Code inline=true>"<ProgressBar>"</Code>" component."
+                "The themed "<Code inline=true>"ProgressBar"</Code>" shows how much of an operation is already "
+                "completed, as a filled bar and a percentage. See the "
+                <Link href=routes::doc::Progress.materialize()>"Progress overview"</Link>" for concept guidance."
             </p>
 
-            <DemoShell source=include_str!("demos/progress_controlled.rs")>
-                <ProgressControlledDemo />
-            </DemoShell>
+            <Demo
+                description="Progress bar controlled by a number input and a slider"
+                source=include_str!("demos/progress_controlled.rs")
+            >
+                <ProgressControlledDemo/>
+            </Demo>
 
-            <h2 id="indeterminate-state" class="anchor">
-                "Indeterminate state"
-                <AnchorLink href="#indeterminate-state" description="Direct link to section: Indeterminate state"/>
-            </h2>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="ProgressBar">
+                    <ApiRow name="progress" ty="Signal<Option<f64>>">
+                        "The completed amount, between "<Code inline=true>"0"</Code>" and "<Code inline=true>"max"</Code>
+                        ". "<Code inline=true>"None"</Code>" means indeterminate. Required."
+                    </ApiRow>
+                    <ApiRow name="max" ty="Signal<f64>" default="100.0">"The amount at which the bar is full."</ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                </ApiTable>
+                <p>
+                    "Values outside "<Code inline=true>"0..=max"</Code>" are clamped. The bar shows the percentage with "
+                    "two decimal places."
+                </p>
+            </Section>
 
-            <p>
-                "As you have probably spotted in the above example, progress is stored as "<Code inline=true>"Option<T>"</Code>". "
-                "In our earlier example, we always had "<Code inline=true>"Some(progress)"</Code>" which the progress bar displayed for us. "
-                "Whenever the signal stores a "<Code inline=true>"None"</Code>" value, the progress bar is in the "<Code inline=true>"indeterminate"</Code>" state, "
-                "telling the user that something is going on, but we cannot exactly say how much of the total work already completed."
-            </p>
+            <Section title="Indeterminate State">
+                <p>
+                    "Progress is an "<Code inline=true>"Option<f64>"</Code>". As long as it is "<Code inline=true>"Some"</Code>
+                    ", the bar shows that value. When it is "<Code inline=true>"None"</Code>", the bar is "
+                    "indeterminate: it tells your users that something is going on, without saying how much of the work "
+                    "is done. It then hides the percentage and sets "<Code inline=true>"data-indeterminate"</Code>"."
+                </p>
 
-            <DemoShell source=include_str!("demos/progress_indeterminate.rs")>
-                <ProgressIndeterminateDemo />
-            </DemoShell>
+                <Demo description="Indeterminate progress bar" source=include_str!("demos/progress_indeterminate.rs")>
+                    <ProgressIndeterminateDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt progress bars to your design:"</p>
+                <CssVariables prefix="--progress-bar-" scss=theme_scss!("progress_bar")/>
+            </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --progress-bar-height
-                    --progress-bar-border-radius
-                    --progress-bar-background-color
-                    --progress-bar-background-color-transparent
-                    --progress-bar-background-box-shadow
-                    --progress-bar-fill-background-color
-                    --progress-bar-fill-transition
-                    --progress-bar-color
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Progress", link: "#progress" },
-                Toc::Leaf { title: "Indeterminate state", link: "#indeterminate-state" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Progress.materialize()>"Progress overview"</Link></li>
+                <li><Link href=routes::doc::progress::Hook.materialize()>"use_progress_bar"</Link></li>
+                <li><Link href=routes::doc::components::Skeleton.materialize()>"Skeleton"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -12,6 +12,7 @@ use crate::{
     hooks::IntoAttrs,
     utils::{
         EventHandler, EventWrapper, Propagation,
+        key::{KeyboardEventKey, KeyboardKey},
         keyboard_shortcut::KeyboardShortcuts,
         propagation_control::{PropagationControl, Sealed},
     },
@@ -81,8 +82,13 @@ impl KeyboardEventWrapper {
         self.inner.current_target()
     }
 
-    /// Get the key that was pressed.
-    pub fn key(&self) -> String {
+    /// The key that was pressed.
+    pub fn key(&self) -> KeyboardKey {
+        self.inner.event().typed_key()
+    }
+
+    /// The key's DOM value (`KeyboardEvent.key`, e.g. `"Escape"`, `"a"`), e.g. to display it.
+    pub fn key_value(&self) -> String {
         self.inner.event().key()
     }
 
@@ -137,7 +143,7 @@ impl Clone for KeyboardEventWrapper {
 #[derive(Debug, Clone, Default)]
 pub struct UseKeyboardInput {
     /// Whether keyboard events should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Handler called when a key is pressed down.
     pub on_key_down: Option<Callback<KeyboardEventWrapper>>,
@@ -217,7 +223,7 @@ pub type UseKeyboardAttrs = (
 /// ```
 pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
     let UseKeyboardInput {
-        disabled,
+        is_disabled: disabled,
         on_key_down,
         on_key_up,
         shortcuts,

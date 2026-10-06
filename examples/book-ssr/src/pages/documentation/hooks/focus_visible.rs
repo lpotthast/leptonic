@@ -2,236 +2,159 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::focus_visible::FocusVisibleDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseFocusVisible() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_focus_visible" class="anchor">
-                "use_focus_visible"
-                <AnchorLink href="#use_focus_visible" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_focus_visible">
             <p>
-                "The "<code>"use_focus_visible"</code>" hook tracks whether focus should be made visible (e.g., with a focus ring). "
-                "When the user navigates via keyboard or assistive technology, focus is visible. When they use a pointer, focus is hidden. "
-                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_focus_visible"</Code>" hook tracks whether focus should currently be made visible, "
+                "for example with a focus ring. Focus is visible while the user navigates with the keyboard or assistive "
+                "technology, and hidden after pointer interaction. The state is global, not tied to an element; to know whether "
+                "a particular element should show a ring, use "
+                <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>". "
+                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusVisible.html" target=LinkTarget::_Blank>
-                    "useFocusVisible"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useFocusVisible"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Input">
+                <p><Code inline=true>"UseFocusVisibleInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
 
-            <p>"Try tabbing to the button below (keyboard), then clicking it (mouse). The button shows a focus outline only during keyboard navigation:"</p>
+                <ApiTable kind=ApiKind::Input of="UseFocusVisibleInput">
+                    <ApiRow name="auto_focus" ty="bool" default="false">
+                        "The initial value of "<Code inline=true>"focus_should_be_visible"</Code>" during SSR. Set it when the element "
+                        "is focused on mount, so the ring shows right away."
+                    </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                        "Stops following modality changes. While true, the hook unsubscribes and its signals keep their "
+                        "last value. When it turns false again, the signals catch up with the current modality."
+                    </ApiRow>
+                    <ApiRow name="is_text_input" ty="bool" default="false">
+                        "Use text input rules: only Tab and Escape make focus visible, see "<a href="#text-input-rules">"Text Input Rules"</a>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <DemoShell
-                source=include_str!("demos/focus_visible.rs")
-                description="Modality-based focus visibility"
-            >
-                <FocusVisibleDemo />
-            </DemoShell>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseFocusVisibleReturn">
+                    <ApiRow name="focus_should_be_visible" ty="Signal<bool>">
+                        "Whether focus should be visible: true for every modality except "<Code inline=true>"Pointer"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="modality" ty="Signal<Modality>">"The current interaction modality."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="modality" class="anchor">
-                "Modality Detection"
-                <AnchorLink href="#modality" description="Direct link to modality"/>
-            </h2>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let UseFocusVisibleReturn { focus_should_be_visible, .. } =
+                            use_focus_visible(UseFocusVisibleInput::default());
 
-            <p>"The hook tracks the global interaction modality:"</p>
+                        view! {
+                            <button class:focus-visible=focus_should_be_visible>"Button"</button>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <ul>
-                <li><strong>"Keyboard"</strong> " — Navigation keys (Tab, Escape, arrows, Enter, Space) were pressed."</li>
-                <li><strong>"Pointer"</strong> " — Mouse or touch interaction occurred."</li>
-                <li><strong>"Virtual"</strong> " — Screen reader or assistive technology interaction detected."</li>
-                <li><strong>"Unknown"</strong> " — Initial state before any interaction."</li>
-            </ul>
+            <Section title="Demo">
+                <p>"Tab to the button, then click it. Its outline only shows while the modality is not \u{201c}Pointer\u{201d}."</p>
 
-            <p>"Both Keyboard and Virtual modalities make focus visible, while Pointer hides it."</p>
+                <Demo description="Button whose focus outline follows the current interaction modality" source=include_str!("demos/focus_visible.rs")>
+                    <FocusVisibleDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="input-options" class="anchor">
-                "Input Options"
-                <AnchorLink href="#input-options" description="Direct link to input options"/>
-            </h2>
+            <Section title="Modality">
+                <p>"The hook listens to keyboard, pointer and focus events on the window and derives the modality from them:"</p>
 
-            <h3>"enabled"</h3>
+                <DocTable headers=&["Modality", "Set when", "Focus visible"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Keyboard"</Code></TableCell>
+                        <TableCell>"A key is pressed. Modifier keys and shortcuts with Ctrl, Meta (or Alt outside macOS) don\u{2019}t count."</TableCell>
+                        <TableCell>"yes"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Pointer"</Code></TableCell>
+                        <TableCell>"The mouse, a pen or a finger presses down."</TableCell>
+                        <TableCell>"no"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Virtual"</Code></TableCell>
+                        <TableCell>"A screen reader or other assistive technology clicks or moves focus."</TableCell>
+                        <TableCell>"yes"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Unknown"</Code></TableCell>
+                        <TableCell>"No interaction happened yet."</TableCell>
+                        <TableCell>"yes"</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p><code>"enabled: Signal<bool>"</code> " controls whether the hook subscribes to global modality changes. When false, the hook does not update its signals, saving unnecessary reactivity. This is useful when a component is hidden or inactive:"</p>
+            <Section title="Text Input Rules">
+                <p>
+                    "Typing into a text field should not make focus visible. While a text input has focus, only Tab and Escape "
+                    "switch to keyboard modality for subscribers. With "<Code inline=true>"is_text_input: true"</Code>
+                    ", the hook applies this rule regardless of the focused element. Use it for compound components whose focused "
+                    "element is not a text input itself, but which should behave like one, e.g. a date picker."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let focus_visible = use_focus_visible(UseFocusVisibleInput {
-                        enabled: Signal::derive(move || is_panel_visible.get()),
-                        ..Default::default()
-                    });
-                ")}
-            </Code>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let focus_visible = use_focus_visible(UseFocusVisibleInput {
+                            is_text_input: true,
+                            ..Default::default()
+                        });
+                    ")}
+                </Code>
+            </Section>
 
-            <h3>"is_text_input"</h3>
+            <Section title="Disabling">
+                <p>"Set "<Code inline=true>"is_disabled"</Code>" while a component is hidden or inactive, to avoid needless updates:"</p>
 
-            <p><code>"is_text_input: bool"</code> " changes the keyboard filtering logic. When true, only Tab and Escape trigger focus-visible; other keys (arrows, letters, etc.) do not. This is intended for compound components like date pickers where focus sits on a button but the component should use text-input focus rules:"</p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let focus_visible = use_focus_visible(UseFocusVisibleInput {
+                            is_disabled: Signal::derive(move || !is_panel_visible.get()),
+                            ..Default::default()
+                        });
+                    ")}
+                </Code>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let focus_visible = use_focus_visible(UseFocusVisibleInput {
-                        is_text_input: true,
-                        ..Default::default()
-                    });
-                    // Now typing regular characters won't make focus visible,
-                    // only Tab or Escape will.
-                ")}
-            </Code>
+            <Section title="Utility Functions">
+                <DocTable headers=&["Function", "Description"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"get_modality() -> Modality"</Code></TableCell>
+                        <TableCell>"The current modality, read once (not reactive). Always "<Code inline=true>"Unknown"</Code>" during SSR."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"set_modality(Modality)"</Code></TableCell>
+                        <TableCell>"Sets the modality and notifies all subscribers. The next user interaction overrides it again."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"add_window_focus_tracking(Option<&HtmlElement>)"</Code></TableCell>
+                        <TableCell>
+                            "Tracks modality in another window, e.g. an iframe, identified by an element in it. Returns a cleanup "
+                            "function. The main window is tracked automatically."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"tear_down_window_focus_tracking(Option<&HtmlElement>)"</Code></TableCell>
+                        <TableCell>"Stops tracking the window containing the element."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h3>"auto_focus"</h3>
-
-            <p><code>"auto_focus: bool"</code> " sets the initial value of " <code>"focus_should_be_visible"</code> " during SSR and before any user interaction. If the element auto-focuses on mount, set this to " <code>"true"</code> " so the focus ring appears immediately:"</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let focus_visible = use_focus_visible(UseFocusVisibleInput {
-                        auto_focus: true,
-                        ..Default::default()
-                    });
-                    // focus_should_be_visible starts as true.
-                ")}
-            </Code>
-
-            <h2 id="utility-functions" class="anchor">
-                "Utility Functions"
-                <AnchorLink href="#utility-functions" description="Direct link to utility functions"/>
-            </h2>
-
-            <p>"Two companion functions are available for non-reactive modality access:"</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    // Read the current modality (non-reactive).
-                    let modality: Modality = get_modality();
-
-                    // Programmatically set the modality (e.g., for testing).
-                    // Note: will be overwritten on next user interaction.
-                    set_modality(Modality::Keyboard);
-                ")}
-            </Code>
-
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to input"/>
-            </h2>
-
-            <p><code>"UseFocusVisibleInput"</code> " fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"auto_focus"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Initial value of " <code>"focus_should_be_visible"</code> " during SSR."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"enabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell><code>"true"</code></TableCell>
-                            <TableCell>"Whether the hook subscribes to modality changes."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_text_input"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"When true, only Tab/Escape trigger focus-visible."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="return-value" class="anchor">
-                "Return Value"
-                <AnchorLink href="#return-value" description="Direct link to return value"/>
-            </h2>
-
-            <p><code>"UseFocusVisibleReturn"</code> " fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"focus_should_be_visible"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"True when focus should be visually indicated (keyboard/virtual modality)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"modality"</code></TableCell>
-                            <TableCell><code>"Signal<Modality>"</code></TableCell>
-                            <TableCell>"The current interaction modality (Keyboard, Pointer, Virtual, or Unknown)."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Reactive " <code>"Signal<bool>"</code> " for focus visibility."</li>
-                <li>"Global modality tracking (keyboard, pointer, virtual)."</li>
-                <li>"Virtual click detection for screen readers."</li>
-                <li>"SSR-safe (returns " <code>"auto_focus"</code> " value during SSR)."</li>
-                <li>"Subscription control via " <code>"enabled"</code> " signal."</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>" \u{2014} uses use_focus_visible internally"</li>
-                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_focus_visible", link: "#use_focus_visible" },
-                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
-                Toc::Leaf { title: "Modality Detection", link: "#modality" },
-                Toc::Leaf { title: "Input Options", link: "#input-options" },
-                Toc::Leaf { title: "Utility Functions", link: "#utility-functions" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return Value", link: "#return-value" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -1,4 +1,4 @@
-use browser_test::thirtyfour::{TypingData, WebDriver, prelude::*};
+use browser_test::thirtyfour::{WebDriver, prelude::*};
 use rootcause::Report;
 
 use crate::pages::BaseActions;
@@ -40,19 +40,8 @@ impl FocusablePage<'_> {
         Ok(el.attr("tabindex").await?)
     }
 
-    pub async fn get_active_element_id(&self) -> Result<Option<String>, Report> {
-        let active = self.driver.active_element().await?;
-        Ok(active.attr("id").await?)
-    }
-
     pub async fn click_normal(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fcbl-normal").await
-    }
-
-    pub async fn send_key_to_active(&self, key: impl Into<TypingData>) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(key).await?;
-        Ok(())
     }
 
     pub async fn read_keydown_count(&self) -> Result<u32, Report> {
@@ -63,12 +52,6 @@ impl FocusablePage<'_> {
     pub async fn read_keyup_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-fcbl-keyup-count").await?;
         Ok(text.trim().parse()?)
-    }
-
-    pub async fn tab_from_active(&self) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(Key::Tab).await?;
-        Ok(())
     }
 
     pub async fn click_focus_btn(&self) -> Result<(), Report> {

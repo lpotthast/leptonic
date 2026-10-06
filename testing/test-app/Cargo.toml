@@ -12,6 +12,8 @@ js-dir = "public/js"
 
 [package.metadata.leptos]
 output-name = "leptonic-test-app"
+# `--cfg=erase_components` comes from the repository's `.cargo/config.toml` (identical flags for all builds).
+disable-erase-components = true
 site-root = "target/site"
 site-pkg-dir = "pkg"
 style-file = "style/main.scss"
@@ -57,6 +59,11 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 tracing-wasm = "0.2.1"
 wasm-bindgen = "0.2.108"
+
+[profile.dev.package."*"]
+# No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): smaller
+# build directories and faster linking of the server and the wasm bundle.
+debug = false
 
 [profile.wasm-release]
 inherits = "release"

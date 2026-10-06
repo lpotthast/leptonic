@@ -1,231 +1,255 @@
-// Upstream: react-aria/src/toolbar/useToolbar.ts @ 6f664fe911
-use crate::utils::id::use_id;
+// Upstream: react-aria/src/toolbar/useToolbar.ts @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
     ev,
-    ev::{On, SharedEventCallback},
+    ev::{Capture, On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::KeyboardEvent;
+use send_wrapper::SendWrapper;
+use wasm_bindgen::JsCast;
+use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{FocusManager, FocusManagerOptions, IntoAttrs},
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaOrientation, AriaRole},
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
+        aria::{AriaOrientation, AriaRole},
+        i18n::use_direction,
+        key::{KeyboardEventKey, KeyboardKey},
+        locale::WritingDirection,
+        node_contains,
+        orientation::Orientation,
+        shadow_dom::get_active_element,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/toolbar/useToolbar.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Restoring the last focused child when focus re-enters the toolbar happens in a microtask:
+//   focusing inside a `focus` handler would dispatch a nested `focus` event, which Leptos'
+//   handler closures can't take (hooks-implementation.md, "No Nested Dispatch of the Same Event
+//   Type").
 //
+// =============================================================================
 
-/// The orientation of a toolbar.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum ToolbarOrientation {
-    /// Horizontal toolbar.
-    #[default]
-    Horizontal,
-    /// Vertical toolbar.
-    Vertical,
-}
-
-impl From<ToolbarOrientation> for AriaOrientation {
-    fn from(value: ToolbarOrientation) -> Self {
-        match value {
-            ToolbarOrientation::Horizontal => Self::Horizontal,
-            ToolbarOrientation::Vertical => Self::Vertical,
-        }
-    }
-}
-
-/// Input parameters for the `use_toolbar` hook.
+/// Input of [`use_toolbar`].
 #[derive(Debug, Clone)]
 pub struct UseToolbarInput {
-    /// The label for the toolbar.
-    pub label: Option<String>,
-
-    /// The orientation of the toolbar.
-    pub orientation: ToolbarOrientation,
-
-    /// Whether the toolbar is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Callback to navigate to the next item.
-    pub on_focus_next: Option<Callback<()>>,
-
-    /// Callback to navigate to the previous item.
-    pub on_focus_previous: Option<Callback<()>>,
-
-    /// Callback to navigate to the first item.
-    pub on_focus_first: Option<Callback<()>>,
-
-    /// Callback to navigate to the last item.
-    pub on_focus_last: Option<Callback<()>>,
+    /// The axis of the arrow keys (react-aria's default: horizontal).
+    pub orientation: Orientation,
+    pub aria_label: MaybeProp<String>,
+    /// Ignored when `aria_label` is set.
+    pub aria_labelledby: Option<String>,
 }
 
 impl Default for UseToolbarInput {
     fn default() -> Self {
         Self {
-            label: None,
-            orientation: ToolbarOrientation::Horizontal,
-            is_disabled: Signal::derive(|| false),
-            on_focus_next: None,
-            on_focus_previous: None,
-            on_focus_first: None,
-            on_focus_last: None,
+            orientation: Orientation::Horizontal,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
         }
     }
 }
 
-/// The return value of the `use_toolbar` hook.
+/// Output of [`use_toolbar`].
 #[derive(Debug)]
 pub struct UseToolbarReturn {
     /// Props for the toolbar element.
-    pub toolbar_props: UseToolbarProps,
-
-    /// The ID of the toolbar.
-    pub toolbar_id: String,
-
-    /// The orientation.
-    pub orientation: ToolbarOrientation,
+    pub props: UseToolbarProps,
 }
 
-/// Props from `use_toolbar` that can be extracted and merged programmatically.
+/// Props for the toolbar element.
 #[derive(Debug)]
 pub struct UseToolbarProps {
-    pub id: String,
-    pub role: AriaRole,
-    pub aria_label: Option<String>,
+    /// `toolbar`, or `group` inside another toolbar.
+    pub role: Signal<AriaRole>,
     pub aria_orientation: AriaOrientation,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub element_capture: ElementCaptureAttr,
+    pub on_keydown_capture: EventHandler<KeyboardEvent>,
+    pub on_focus_capture: EventHandler<FocusEvent>,
+    pub on_blur_capture: EventHandler<FocusEvent>,
 }
+
+pub type UseToolbarAttrs = (
+    Attr<attr::Role, Signal<AriaRole>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    ElementCaptureAttr,
+    On<Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
+    On<Capture<ev::focus>, SharedEventCallback<FocusEvent>>,
+    On<Capture<ev::blur>, SharedEventCallback<FocusEvent>>,
+);
 
 impl IntoAttrs for UseToolbarProps {
     type Attrs = UseToolbarAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            self.element_capture,
+            self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
+            self.on_focus_capture.into_on(ev::capture(ev::focus)),
+            self.on_blur_capture.into_on(ev::capture(ev::blur)),
         )
     }
 }
 
-/// Attributes for the toolbar element.
-pub type UseToolbarAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Provides the behavior and accessibility for a toolbar.
-///
-/// A toolbar groups related controls (buttons, menus, etc.) together.
-///
-/// # Example
-///
-/// ```ignore
-/// let toolbar = use_toolbar(UseToolbarInput {
-///     label: Some("Formatting".to_string()),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div {..toolbar.toolbar_props}>
-///         <button>"Bold"</button>
-///         <button>"Italic"</button>
-///         <button>"Underline"</button>
-///     </div>
-/// }
-/// ```
+/// Provides the behavior and accessibility of a toolbar: the arrow keys move focus between its
+/// focusable children, and the toolbar is one tab stop (Tab leaves it, re-entering restores
+/// the child focused last). A toolbar inside another toolbar becomes a `group` of it.
+#[allow(clippy::too_many_lines)]
 pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     let UseToolbarInput {
-        label,
         orientation,
-        is_disabled: disabled,
-        on_focus_next,
-        on_focus_previous,
-        on_focus_first,
-        on_focus_last,
+        aria_label,
+        aria_labelledby,
     } = input;
+    let element = CapturedElement::new();
+    let (is_in_toolbar, set_in_toolbar) = signal(false);
+    Effect::new(move || {
+        if let Some(el) = element.get() {
+            set_in_toolbar.set(
+                el.parent_element()
+                    .and_then(|parent| parent.closest("[role=\"toolbar\"]").ok().flatten())
+                    .is_some(),
+            );
+        }
+    });
+    let direction = use_direction();
+    let focus_manager =
+        move || FocusManager::new(move || element.get_untracked().map(|el| (*el).clone()));
+    let last_focused: StoredValue<Option<SendWrapper<web_sys::HtmlElement>>> =
+        StoredValue::new(None);
 
-    let toolbar_id = use_id("toolbar");
-
-    let aria_orientation = AriaOrientation::from(orientation);
-
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
+    let on_keydown_capture = EventHandler::new(move |e: KeyboardEvent| {
+        if is_in_toolbar.get_untracked() {
             return;
         }
-
-        let key = e.key();
-        let is_horizontal = orientation == ToolbarOrientation::Horizontal;
-
-        match key.as_str() {
-            "ArrowRight" if is_horizontal => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowLeft" if is_horizontal => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            "ArrowDown" if !is_horizontal => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowUp" if !is_horizontal => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                if let Some(on_first) = on_focus_first {
-                    on_first.run(());
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                if let Some(on_last) = on_focus_last {
-                    on_last.run(());
-                }
-            }
-            _ => {}
+        let target = e.expect_target();
+        if !node_contains(
+            e.expect_current_target().dyn_ref::<web_sys::Node>(),
+            target.dyn_ref::<web_sys::Node>(),
+        )
+        .unwrap_or(false)
+        {
+            return;
         }
-    };
+        let reverse = direction.get_untracked() == WritingDirection::Rtl
+            && orientation == Orientation::Horizontal;
+        let (next_key, previous_key) = match orientation {
+            Orientation::Horizontal => (KeyboardKey::ArrowRight, KeyboardKey::ArrowLeft),
+            Orientation::Vertical => (KeyboardKey::ArrowDown, KeyboardKey::ArrowUp),
+        };
+        let key = e.typed_key();
+        let manager = focus_manager();
+        if key == next_key {
+            if reverse {
+                manager.focus_previous(FocusManagerOptions::default());
+            } else {
+                manager.focus_next(FocusManagerOptions::default());
+            }
+        } else if key == previous_key {
+            if reverse {
+                manager.focus_next(FocusManagerOptions::default());
+            } else {
+                manager.focus_previous(FocusManagerOptions::default());
+            }
+        } else if key == KeyboardKey::Tab {
+            // Remember where focus was, then let the browser's Tab leave from the toolbar's
+            // first or last element.
+            let active = leptos_use::use_document()
+                .as_ref()
+                .and_then(get_active_element)
+                .and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok());
+            last_focused.set_value(active.map(SendWrapper::new));
+            if e.shift_key() {
+                manager.focus_first(FocusManagerOptions::default());
+            } else {
+                manager.focus_last(FocusManagerOptions::default());
+            }
+            return;
+        } else {
+            return;
+        }
+        e.stop_propagation();
+        e.prevent_default();
+    });
 
+    let on_blur_capture = EventHandler::new(move |e: FocusEvent| {
+        if is_in_toolbar.get_untracked() {
+            return;
+        }
+        let leaves = !node_contains(
+            e.expect_current_target().dyn_ref::<web_sys::Node>(),
+            e.related_target()
+                .as_ref()
+                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
+        )
+        .unwrap_or(false);
+        if leaves && last_focused.with_value(Option::is_none) {
+            let target = e.expect_target().dyn_into::<web_sys::HtmlElement>().ok();
+            last_focused.set_value(target.map(SendWrapper::new));
+        }
+    });
+
+    let on_focus_capture = EventHandler::new(move |e: FocusEvent| {
+        if is_in_toolbar.get_untracked() {
+            return;
+        }
+        let from_outside = !node_contains(
+            e.expect_current_target().dyn_ref::<web_sys::Node>(),
+            e.related_target()
+                .as_ref()
+                .and_then(|t| t.dyn_ref::<web_sys::Node>()),
+        )
+        .unwrap_or(false);
+        let into_toolbar = element.get_untracked().is_some_and(|toolbar| {
+            node_contains(
+                Some(toolbar.unchecked_ref::<web_sys::Node>()),
+                e.expect_target().dyn_ref::<web_sys::Node>(),
+            )
+            .unwrap_or(false)
+        });
+        if from_outside
+            && into_toolbar
+            && let Some(last) = last_focused.get_value()
+        {
+            last_focused.set_value(None);
+            // Not within this `focus` dispatch (see the deviations).
+            queue_microtask(move || {
+                let _ = last.focus();
+            });
+        }
+    });
+
+    let has_label = aria_label.get_untracked().is_some();
     UseToolbarReturn {
-        toolbar_props: UseToolbarProps {
-            id: toolbar_id.clone(),
-            role: AriaRole::Toolbar,
-            aria_label: label,
-            aria_orientation,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
+        props: UseToolbarProps {
+            role: Signal::derive(move || {
+                if is_in_toolbar.get() {
+                    AriaRole::Group
+                } else {
+                    AriaRole::Toolbar
+                }
+            }),
+            aria_orientation: orientation.into(),
+            aria_label,
+            aria_labelledby: aria_labelledby.filter(|_| !has_label),
+            element_capture: element.attr(),
+            on_keydown_capture,
+            on_focus_capture,
+            on_blur_capture,
         },
-        toolbar_id,
-        orientation,
     }
 }

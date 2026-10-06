@@ -2,188 +2,115 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::focus_within::FocusWithinDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseFocusWithin() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_focus_within" class="anchor">
-                "use_focus_within"
-                <AnchorLink href="#use_focus_within" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_focus_within">
             <p>
-                "The "<code>"use_focus_within"</code>" hook tracks when focus is anywhere within an element tree. Unlike "
-                <code>"use_focus"</code>" which only fires when the element itself receives focus, "
-                <code>"use_focus_within"</code>" fires when focus enters or leaves the entire element tree. "
-                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_focus_within"</Code>" hook tracks whether focus is anywhere inside an element. "
+                "Unlike "<Link href=routes::doc::focus::UseFocus.materialize()><Code inline=true>"use_focus"</Code></Link>
+                ", which only reacts to the element itself, it fires when focus enters or leaves the whole element tree. "
+                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusWithin.html" target=LinkTarget::_Blank>
-                    "useFocusWithin"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useFocusWithin"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseFocusWithinInput"</Code>" implements "<Code inline=true>"Default"</Code>
+                    " (enabled, no callbacks)."
+                </p>
 
-            <p>"Click on any element inside the container below. Focus within is tracked even as you move between different focusable children:"</p>
+                <ApiTable kind=ApiKind::Input of="UseFocusWithinInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                        "Ignores focus events while true. Turning it on while focus is inside ends the focus-within state."
+                    </ApiRow>
+                    <ApiRow name="on_focus_within" ty="Option<Callback<FocusWithinEvent>>" default="None">
+                        "Called when focus enters the element or one of its descendants."
+                    </ApiRow>
+                    <ApiRow name="on_blur_within" ty="Option<Callback<FocusWithinEvent>>" default="None">
+                        "Called when focus leaves the element and all of its descendants."
+                    </ApiRow>
+                    <ApiRow name="on_focus_within_change" ty="Option<Callback<bool>>" default="None">
+                        "Called with the new state whenever focus enters or leaves the tree."
+                    </ApiRow>
+                </ApiTable>
 
-            <DemoShell
-                source=include_str!("demos/focus_within.rs")
-                description="Focus within tracking"
-            >
-                <FocusWithinDemo />
-            </DemoShell>
+                <p>
+                    <Code inline=true>"FocusWithinEvent"</Code>" wraps the underlying "<Code inline=true>"web_sys::FocusEvent"</Code>
+                    " in its "<Code inline=true>"event"</Code>" field."
+                </p>
+            </Section>
 
-            <h2 id="is-focus-within" class="anchor">
-                "is_focus_within Signal"
-                <AnchorLink href="#is-focus-within" description="Direct link to is_focus_within signal"/>
-            </h2>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseFocusWithinReturn">
+                    <ApiRow name="props" ty="UseFocusWithinProps">
+                        "The "<Code inline=true>"focusin"</Code>" and "<Code inline=true>"focusout"</Code>
+                        " listeners. Spread them onto the container with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_focus_within" ty="Signal<bool>">"Whether focus is currently inside the container."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p>"The hook returns a reactive " <code>"Signal<bool>"</code> " named " <code>"is_focus_within"</code>
-                " that is true whenever any descendant is focused. Use it for conditional styling:"</p>
+            <Section title="Example">
+                <p>
+                    "Use "<Code inline=true>"is_focus_within"</Code>" for conditional styling, for example to highlight a form group "
+                    "while one of its fields is focused:"
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseFocusWithinReturn { props, is_focus_within } = use_focus_within(input);
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let UseFocusWithinReturn { props, is_focus_within } =
+                            use_focus_within(UseFocusWithinInput::default());
 
-                    view! {
-                        <div
-                            {..props.into_attrs()}
-                            style=move || if is_focus_within.get() {
-                                "border: 2px solid blue; background: lightblue;"
-                            } else {
-                                "border: 2px solid #ccc; background: transparent;"
-                            }
-                        >
-                            <input type="text" />
-                        </div>
-                    }
-                "#)}
-            </Code>
+                        view! {
+                            <div {..props.into_attrs()} class:field-group-active=is_focus_within>
+                                <input type="text"/>
+                                <button>"Submit"</button>
+                            </div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to input"/>
-            </h2>
+            <Section title="Demo">
+                <p>"Click any element inside the container, then tab between them. The container stays focused-within."</p>
 
-            <p><code>"UseFocusWithinInput"</code> " fields:"</p>
+                <Demo
+                    description="Focus-within state and event counts of a container with an input and two buttons"
+                    source=include_str!("demos/focus_within.rs")
+                >
+                    <FocusWithinDemo/>
+                </Demo>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"disabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Disables all focus-within event handling when true."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus_within"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusWithinEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called when focus enters the element tree."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_blur_within"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusWithinEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called when focus leaves the element tree."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus_within_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called on every focus-within state transition."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Behavior">
+                <ul>
+                    <li>
+                        "Listens to "<Code inline=true>"focusin"</Code>" and "<Code inline=true>"focusout"</Code>
+                        ". Moving focus between children does not end the focus-within state."
+                    </li>
+                    <li>"Ignores events that bubble through portals from elements outside the container\u{2019}s DOM tree."</li>
+                    <li>
+                        "While focus is inside, a document-level "<Code inline=true>"focusin"</Code>" listener notices when focus "
+                        "lands outside without a "<Code inline=true>"focusout"</Code>", e.g. because the focused element was removed."
+                    </li>
+                    <li>
+                        "Firefox does not fire "<Code inline=true>"blur"</Code>" when a focused form element becomes disabled. "
+                        "The hook dispatches a synthetic blur in that case."
+                    </li>
+                </ul>
+            </Section>
 
-            <h2 id="return-value" class="anchor">
-                "Return Value"
-                <AnchorLink href="#return-value" description="Direct link to return value"/>
-            </h2>
-
-            <p><code>"UseFocusWithinReturn"</code> " fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"props"</code></TableCell>
-                            <TableCell><code>"UseFocusWithinProps"</code></TableCell>
-                            <TableCell>"Spread onto the container element via " <code>"props.into_attrs()"</code> " to wire up focusin/focusout listeners."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_focus_within"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"True whenever any descendant of the container is focused."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Tracks " <code>"focusin"</code> "/" <code>"focusout"</code> " events for the entire element tree."</li>
-                <li>"Handles focus moving between children without triggering blur."</li>
-                <li>"Ignores events bubbling through portals."</li>
-                <li>"Global focus listener detects DOM-removal edge cases."</li>
-                <li>"Respects disabled state \u{2014} handlers are suppressed when disabled."</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocus.materialize()>"use_focus"</Link>" \u{2014} tracks focus on the element itself (not descendants)"</li>
-                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_focus_within", link: "#use_focus_within" },
-                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
-                Toc::Leaf { title: "is_focus_within Signal", link: "#is-focus-within" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return Value", link: "#return-value" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocus.materialize()>"use_focus"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

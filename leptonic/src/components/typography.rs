@@ -1,10 +1,9 @@
-use crate::utils::data_attributes::ToStaticStrRepr;
 use leptos::prelude::*;
 
 use crate::{
     Out,
     components::prelude::{Button, ButtonVariant, Icon},
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, data_attributes::ToStaticStrRepr, styles::Styles},
 };
 
 /// Programming language for syntax highlighting in the [`Code`] component.
@@ -307,7 +306,5 @@ fn copy_to_clipboard(text: &str, on_success: Callback<(), ()>, on_err: Callback<
 
 #[cfg(not(feature = "clipboard"))]
 fn copy_to_clipboard(_text: &str, _on_success: Callback<()>, _on_err: Callback<()>) {
-    tracing::warn!(
-        "Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'."
-    );
+    tracing::warn!("Clipboard related functionality requires leptonic's 'clipboard' feature.");
 }

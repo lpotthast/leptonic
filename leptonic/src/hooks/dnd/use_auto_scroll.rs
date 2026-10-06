@@ -1,187 +1,125 @@
-// Upstream: react-aria/src/dnd/useAutoScroll.ts @ 6f664fe911
-//! Auto-scroll hook for drag-and-drop operations.
-//!
-//! Scrolls a container element when the pointer is near its edges during
-//! a drag operation.
-//!
-//! Based on react-aria's auto-scroll logic from
-//! `react-aria/src/dnd/useDroppableCollection.ts`.
-
+// Upstream: react-aria/src/dnd/useAutoScroll.ts @ 99e6102368
 use leptos::prelude::*;
+use send_wrapper::SendWrapper;
 
-//
-// ## RUST-NATIVE DESIGN
-//
-// - Uses a `setInterval` timer with stored velocity for scrolling. The
-//   interval fires at ~60fps (16ms). Cleanup via `StoredValue` holding the
-//   interval handle.
-//
-// ## PLATFORM CONSIDERATIONS
-//
-// - Only needed on WebKit macOS where native auto-scroll during drag is
-//   not supported. Other browsers handle this natively.
-//
+use crate::utils::{
+    CapturedElement,
+    platform::{browser::is_webkit, device::is_ios},
+    scroll::{get_scroll_parent, is_scrollable},
+};
 
-/// Distance in pixels from the container edge that triggers auto-scroll.
-const EDGE_SIZE: f64 = 20.0;
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
-/// Maximum scroll speed in pixels per tick.
-const MAX_SPEED: f64 = 15.0;
+/// How close (in px) to the scroll container's edge a drag scrolls it.
+const AUTOSCROLL_AREA_SIZE: f64 = 20.0;
 
-/// Interval in milliseconds for the scroll timer (~60fps).
-#[cfg(not(feature = "ssr"))]
-const SCROLL_INTERVAL_MS: i32 = 16;
-
-/// Input for the [`use_auto_scroll`] hook.
-pub struct UseAutoScrollInput {
-    /// The scrollable container element.
-    pub container: Signal<Option<web_sys::Element>>,
+/// Scrolling a drop target while a drag nears its edges.
+#[derive(Debug, Clone, Copy)]
+pub struct AutoScroll {
+    scrollable: StoredValue<Option<(SendWrapper<web_sys::Element>, bool, bool)>>,
+    state: StoredValue<(f64, f64)>,
+    timer: StoredValue<Option<AnimationFrameRequestHandle>>,
 }
 
-/// Return value of the [`use_auto_scroll`] hook.
-pub struct UseAutoScrollReturn {
-    /// Call with pointer coordinates during drag move to trigger auto-scroll.
-    pub move_to: Callback<(f64, f64)>,
-    /// Call when drag exits or ends to stop auto-scroll.
-    pub stop: Callback<()>,
-}
-
-/// Provides auto-scroll behavior for a container during drag operations.
-///
-/// When the pointer is within `EDGE_SIZE` pixels of the container's edges,
-/// the container scrolls in that direction. The scroll speed is proportional
-/// to how close the pointer is to the edge.
-///
-/// # Example
-///
-/// ```ignore
-/// let auto_scroll = use_auto_scroll(UseAutoScrollInput {
-///     container: container_signal,
-/// });
-///
-/// // In dragover handler:
-/// auto_scroll.move_to.run((e.client_x(), e.client_y()));
-///
-/// // In dragleave/drop handler:
-/// auto_scroll.stop.run(());
-/// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_auto_scroll(input: UseAutoScrollInput) -> UseAutoScrollReturn {
-    let container = input.container;
-
-    // Store the current scroll velocity.
-    let velocity_x: StoredValue<f64> = StoredValue::new(0.0);
-    let velocity_y: StoredValue<f64> = StoredValue::new(0.0);
-
-    // Store the interval handle and its Closure for cancellation.
-    #[cfg(not(feature = "ssr"))]
-    let interval_state: StoredValue<
-        Option<(i32, wasm_bindgen::closure::Closure<dyn FnMut()>)>,
-        LocalStorage,
-    > = StoredValue::new_local(None);
-
-    let stop_scrolling = move || {
-        velocity_x.set_value(0.0);
-        velocity_y.set_value(0.0);
-        #[cfg(not(feature = "ssr"))]
-        interval_state.update_value(|state| {
-            if let Some((id, _closure)) = state.take()
-                && let Some(window) = web_sys::window()
-            {
-                window.clear_interval_with_handle(id);
-            }
-        });
-    };
-
-    let start_scrolling = move || {
-        #[cfg(not(feature = "ssr"))]
-        {
-            // Don't start if already running.
-            let already_running = interval_state.with_value(Option::is_some);
-            if already_running {
-                return;
-            }
-
-            let container_for_scroll = container;
-            let closure: wasm_bindgen::closure::Closure<dyn FnMut()> =
-                wasm_bindgen::closure::Closure::new(move || {
-                    let vx = velocity_x.get_value();
-                    let vy = velocity_y.get_value();
-
-                    if let Some(el) = container_for_scroll.get_untracked() {
-                        let new_left = el.scroll_left() + vx;
-                        let new_top = el.scroll_top() + vy;
-                        el.set_scroll_left(new_left);
-                        el.set_scroll_top(new_top);
-                    }
-                });
-
-            if let Some(window) = web_sys::window() {
-                use wasm_bindgen::JsCast;
-                if let Ok(id) = window.set_interval_with_callback_and_timeout_and_arguments_0(
-                    closure.as_ref().unchecked_ref(),
-                    SCROLL_INTERVAL_MS,
-                ) {
-                    interval_state.set_value(Some((id, closure)));
-                }
-            }
+impl AutoScroll {
+    /// The drag is at `x`, `y` (relative to the drop target): scroll if near an edge.
+    pub fn move_to(&self, x: f64, y: f64) {
+        // Only Safari doesn't scroll during native drags itself.
+        if !is_webkit() || is_ios() {
+            return;
         }
-    };
-
-    let move_to = Callback::new(move |(x, y): (f64, f64)| {
-        let Some(el) = container.get_untracked() else {
+        let Some((element, _, _)) = self.scrollable.get_value() else {
             return;
         };
-
-        let rect = el.get_bounding_client_rect();
-
-        // Compute velocity based on proximity to edges.
-        let mut vx = 0.0;
-        let mut vy = 0.0;
-
-        // Top edge
-        let top_dist = y - rect.top();
-        if (0.0..EDGE_SIZE).contains(&top_dist) {
-            vy = -(1.0 - top_dist / EDGE_SIZE) * MAX_SPEED;
-        }
-
-        // Bottom edge
-        let bottom_dist = rect.bottom() - y;
-        if (0.0..EDGE_SIZE).contains(&bottom_dist) {
-            vy = (1.0 - bottom_dist / EDGE_SIZE) * MAX_SPEED;
-        }
-
-        // Left edge
-        let left_dist = x - rect.left();
-        if (0.0..EDGE_SIZE).contains(&left_dist) {
-            vx = -(1.0 - left_dist / EDGE_SIZE) * MAX_SPEED;
-        }
-
-        // Right edge
-        let right_dist = rect.right() - x;
-        if (0.0..EDGE_SIZE).contains(&right_dist) {
-            vx = (1.0 - right_dist / EDGE_SIZE) * MAX_SPEED;
-        }
-
-        velocity_x.set_value(vx);
-        velocity_y.set_value(vy);
-
-        #[allow(clippy::float_cmp)]
-        if vx != 0.0 || vy != 0.0 {
-            start_scrolling();
+        let rect = element.get_bounding_client_rect();
+        let (left, top) = (AUTOSCROLL_AREA_SIZE, AUTOSCROLL_AREA_SIZE);
+        let bottom = rect.height() - AUTOSCROLL_AREA_SIZE;
+        let right = rect.width() - AUTOSCROLL_AREA_SIZE;
+        if x < left || x > right || y < top || y > bottom {
+            self.state.update_value(|(dx, dy)| {
+                if x < left {
+                    *dx = x - left;
+                } else if x > right {
+                    *dx = x - right;
+                }
+                if y < top {
+                    *dy = y - top;
+                } else if y > bottom {
+                    *dy = y - bottom;
+                }
+            });
+            if self.timer.with_value(Option::is_none) {
+                self.scroll();
+            }
         } else {
-            stop_scrolling();
+            self.stop();
         }
-    });
+    }
 
-    let stop = Callback::new(move |()| {
-        stop_scrolling();
-    });
+    /// Stop scrolling.
+    pub fn stop(&self) {
+        if let Some(timer) = self.timer.try_update_value(Option::take).flatten() {
+            timer.cancel();
+        }
+    }
 
-    // Cleanup on unmount.
-    on_cleanup(move || {
-        stop_scrolling();
-    });
+    fn scroll(self) {
+        // The drop target may have been unmounted during the drag: stop.
+        let (Some(scrollable), Some((dx, dy))) =
+            (self.scrollable.try_get_value(), self.state.try_get_value())
+        else {
+            return;
+        };
+        if let Some((element, scroll_x, scroll_y)) = scrollable {
+            if scroll_x {
+                element.set_scroll_left(element.scroll_left() + dx);
+            }
+            if scroll_y {
+                element.set_scroll_top(element.scroll_top() + dy);
+            }
+        }
+        let handle = request_animation_frame_with_handle(move || self.scroll()).ok();
+        if let Some(Some(handle)) = self.timer.try_set_value(handle) {
+            handle.cancel();
+        }
+    }
+}
 
-    UseAutoScrollReturn { move_to, stop }
+/// Auto scrolling for the drop target `element` (or its scroll parent) during native drags.
+pub fn use_auto_scroll(element: CapturedElement) -> AutoScroll {
+    let scrollable = StoredValue::new(None);
+    Effect::new(move || {
+        let Some(el) = element.get() else {
+            return;
+        };
+        let target: web_sys::Element = if is_scrollable(&el, false) {
+            (*el).clone()
+        } else {
+            get_scroll_parent(&el, false)
+        };
+        let (x, y) = leptos_use::use_window()
+            .as_ref()
+            .and_then(|w| w.get_computed_style(&target).ok().flatten())
+            .map_or((true, true), |style| {
+                let scrolls = |v: String| v.contains("auto") || v.contains("scroll");
+                (
+                    scrolls(style.get_property_value("overflow-x").unwrap_or_default()),
+                    scrolls(style.get_property_value("overflow-y").unwrap_or_default()),
+                )
+            });
+        scrollable.set_value(Some((SendWrapper::new(target), x, y)));
+    });
+    let auto_scroll = AutoScroll {
+        scrollable,
+        state: StoredValue::new((0.0, 0.0)),
+        timer: StoredValue::new(None),
+    };
+    on_cleanup(move || auto_scroll.stop());
+    auto_scroll
 }

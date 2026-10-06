@@ -4,18 +4,16 @@ use leptos::prelude::*;
 #[component]
 pub fn TypographyDemo() -> impl IntoView {
     view! {
-        <Separator />
+        <h1>"Heading 1"</h1>
+        <h2>"Heading 2"</h2>
+        <h3>"Heading 3"</h3>
+        <h4>"Heading 4"</h4>
+        <h5>"Heading 5"</h5>
+        <h6>"Heading 6"</h6>
 
-        <h1>"Typography - H1"</h1>
-        <h2>"Typography - H2"</h2>
-        <h3>"Typography - H3"</h3>
-        <h4>"Typography - H4"</h4>
-        <h5>"Typography - H5"</h5>
-        <h6>"Typography - H6"</h6>
+        <p>"This is a paragraph."</p>
 
-        <p>"This is a paragraph"</p>
-
-        <Code inline=false>"Typography - Code"</Code>
+        <Code language=Language::Rust>"let answer = 42;"</Code>
 
         <p>
             "This is a paragraph containing an "

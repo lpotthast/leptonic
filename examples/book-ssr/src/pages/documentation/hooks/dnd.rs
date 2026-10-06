@@ -2,269 +2,706 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
-use super::demos::{dnd_drag_to_drop, dnd_draggable, dnd_droppable, dnd_reorder};
+use super::demos::{dnd_drag_to_drop::DragToDropDemo, dnd_reorder::ReorderDemo};
+use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseDnd() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="dnd" class="anchor">
-                "Drag and Drop Hooks"
-                <AnchorLink href="#dnd" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Drag and Drop Hooks">
             <p>
-                "Hooks for creating accessible drag and drop interactions with full keyboard support and ARIA announcements. "
-                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                "The drag and drop hooks move data between elements: "<Code inline=true>"use_drag"</Code>" makes an element "
+                "draggable, "<Code inline=true>"use_drop"</Code>" makes one a drop target, and the collection hooks let users "
+                "reorder a list or drop on, between and into its items. Every drag works three ways: with the mouse or touch "
+                "(the browser\u{2019}s native drag and drop), with the keyboard, and with a screen reader, which hears how to "
+                "start, where it can drop and what happened. See the "
+                <Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for related hooks."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDrag.html" target=LinkTarget::_Blank>
-                    "useDrag"
-                </LinkExt>
-                " and "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDrop.html" target=LinkTarget::_Blank>
-                    "useDrop"
-                </LinkExt>
-                "."
-            </p>
+            <Section title="How Drags Work">
+                <p>
+                    "A mouse or touch drag is a native HTML drag: the hooks write the dragged data into the drag\u{2019}s "
+                    <Code inline=true>"DataTransfer"</Code>", so it can also leave the page, and drop targets read data dragged "
+                    "in from other applications (text, links, files and folders)."
+                </p>
+                <p>
+                    "A keyboard or screen reader drag starts a drag session instead. While it lasts, focus moves only between "
+                    "the drop targets that accept the dragged data, everything else is hidden from assistive technology, and "
+                    "the session announces each step. Focusing a drop target is the keyboard\u{2019}s equivalent of dragging "
+                    "over it: it fires the same enter and exit events. The data stays in the page."
+                </p>
+                <p>
+                    "Each drag allows some drop operations ("<Code inline=true>"DropOperation"</Code>": move, copy, link), and "
+                    "each drop target picks one of them, or "<Code inline=true>"Cancel"</Code>" to refuse the drop. The drag source learns "
+                    "the outcome from "<Code inline=true>"on_drag_end"</Code>", for example to remove moved data."
+                </p>
+            </Section>
 
-            <h2 id="use_draggable" class="anchor">
-                "use_draggable"
-                <AnchorLink href="#use_draggable" description="Direct link to use_draggable"/>
-            </h2>
+            <Section title="Demo: Drop Targets">
+                <p>
+                    "Drag the cards onto the drop targets. The inbox takes any data and uses the first operation the drag "
+                    "allows: the note is moved, the link (which can\u{2019}t be moved) is copied. The bookmarks take links only, "
+                    "and link them. With the keyboard, focus a card and press "<Keys keys="Enter"/>": focus moves to the nearest "
+                    "drop target, "<Keys keys="Tab"/>" moves to the next one (the note skips the bookmarks), "<Keys keys="Enter"/>
+                    " drops and "<Keys keys="Escape"/>" cancels. You can also drop text, links or files from other applications "
+                    "onto the inbox."
+                </p>
+                <Demo description="Two draggable cards and two drop targets with different accepted data and operations" source=include_str!("demos/dnd_drag_to_drop.rs")>
+                    <DragToDropDemo/>
+                </Demo>
+            </Section>
 
-            <p>"Makes an element draggable with proper accessibility attributes."</p>
+            <Section title="use_drag">
+                <ReactAria hook="useDrag"/>
+                <p>
+                    "Makes an element draggable. Spread "<Code inline=true>"drag_props"</Code>" on a focusable element: it "
+                    "sets "<Code inline=true>"draggable"</Code>", describes how to start a drag, and starts keyboard drags on "
+                    <Keys keys="Enter"/>" and screen reader drags on a click. With "<Code inline=true>"has_drag_button"</Code>
+                    ", the element only handles pointer drags, and a separate button (built with "
+                    <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" from "
+                    <Code inline=true>"drag_button"</Code>") starts the others."
+                </p>
 
-            <DemoShell source=include_str!("demos/dnd_draggable.rs")>
-                <dnd_draggable::DraggableDemo />
-            </DemoShell>
+                <Section title="Example" id="use-drag-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let UseDragReturn { drag_props, is_dragging, .. } = use_drag(UseDragInput {
+                                on_drag_end: Some(Callback::new(|e: DragEndEvent| {
+                                    if e.drop_operation == DropOperation::Move {
+                                        // Remove the moved data.
+                                    }
+                                })),
+                                ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("Hello")]))
+                            });
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let draggable = use_draggable(UseDraggableInput {
-                        get_items: Callback::new(|_| vec![DragItem::text("Hello")]),
-                        on_drag_start: Some(Callback::new(|e: DragStartEvent| {
-                            // Handle drag start
-                        })),
-                        on_drag_end: Some(Callback::new(|e: DragEndEvent| {
-                            // Handle drag end
-                        })),
-                        ..Default::default()
-                    });
-
-                    view! {
-                        <div {..draggable.drag_props.into_attrs()}>"Drag me"</div>
-                    }
-                "#)}
-            </Code>
-
-            <h3>"Return Value"</h3>
-            <ul>
-                <li><code>"drag_props"</code>" - Props to spread on the draggable element"</li>
-                <li><code>"draggable_id"</code>" - Unique ID for the draggable element"</li>
-                <li><code>"is_dragging"</code>" - Signal indicating if this element is being dragged"</li>
-            </ul>
-
-            <h2 id="use_droppable" class="anchor">
-                "use_droppable"
-                <AnchorLink href="#use_droppable" description="Direct link to use_droppable"/>
-            </h2>
-
-            <p>"Makes an element a drop target that can accept dragged items."</p>
-
-            <DemoShell source=include_str!("demos/dnd_droppable.rs")>
-                <dnd_droppable::DroppableDemo />
-            </DemoShell>
-
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let droppable = use_droppable(UseDroppableInput {
-                        accepted_types: vec!["text/plain".to_string()],
-                        on_drop: Some(Callback::new(|e: DropEvent| {
-                            for item in e.items {
-                                // Handle dropped item
+                            view! {
+                                <div {..drag_props.into_attrs()} role="button" tabindex="0"
+                                    data-dragging=move || is_dragging.get().then_some("")>
+                                    "Drag me"
+                                </div>
                             }
-                        })),
-                        ..Default::default()
-                    });
+                        "#)}
+                    </Code>
+                </Section>
 
-                    view! {
-                        <div
-                            {..droppable.drop_props.into_attrs()}
-                            class:drop-target=move || droppable.is_drop_target.get()
-                        >
-                            "Drop here"
-                        </div>
-                    }
-                "#)}
-            </Code>
+                <Section title="Input" id="use-drag-input">
+                    <p>"Create the input with "<Code inline=true>"UseDragInput::new(get_items)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseDragInput">
+                        <ApiRow name="get_items" ty="Callback<(), Vec<DragItem>>">"The dragged data, read when a drag starts."</ApiRow>
+                        <ApiRow name="get_allowed_drop_operations" ty="Option<Callback<(), Vec<DropOperation>>>" default="None">
+                            "The operations the drag allows, in order of preference. "<Code inline=true>"None"</Code>
+                            " allows move, copy and link."
+                        </ApiRow>
+                        <ApiRow name="preview" ty="Option<Callback<Vec<DragItem>, Option<DragPreview>>>" default="None">
+                            "An element the browser shows under the pointer instead of a snapshot of the dragged element, and "
+                            "the pointer\u{2019}s offset in it. Pointer drags only."
+                        </ApiRow>
+                        <ApiRow name="on_drag_start" ty="Option<Callback<DragStartEvent>>" default="None">
+                            "A drag starts. Viewport coordinates of the pointer (the element\u{2019}s center for keyboard drags)."
+                        </ApiRow>
+                        <ApiRow name="on_drag_move" ty="Option<Callback<DragMoveEvent>>" default="None">"The pointer moves during a pointer drag."</ApiRow>
+                        <ApiRow name="on_drag_end" ty="Option<Callback<DragEndEvent>>" default="None">
+                            "The drag ends, with the "<Code inline=true>"drop_operation"</Code>" the drop target chose, or "
+                            <Code inline=true>"Cancel"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="has_drag_button" ty="bool" default="false">
+                            "Keyboard and screen reader drags start from "<Code inline=true>"drag_button"</Code>" instead of the element."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Prevents all drags."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h3>"Return Value"</h3>
-            <ul>
-                <li><code>"drop_props"</code>" - Props to spread on the drop zone element"</li>
-                <li><code>"droppable_id"</code>" - Unique ID for the drop zone"</li>
-                <li><code>"is_drop_target"</code>" - Signal indicating if something is being dragged over this zone"</li>
-            </ul>
+                <Section title="Return" id="use-drag-return">
+                    <ApiTable kind=ApiKind::Return of="UseDragReturn">
+                        <ApiRow name="drag_props" ty="UseDragProps">
+                            "For the draggable element: "<Code inline=true>"draggable"</Code>", "
+                            <Code inline=true>"aria-describedby"</Code>" (\u{201c}Press Enter to start dragging.\u{201d}), the native "
+                            "drag events, and the key and click handlers starting keyboard and screen reader drags (the latter two "
+                            "only without a drag button)."
+                        </ApiRow>
+                        <ApiRow name="drag_button" ty="UseButtonInput">
+                            "For "<Code inline=true>"use_button"</Code>": starts keyboard and screen reader drags and is described like "
+                            "the element. Give the button a label."
+                        </ApiRow>
+                        <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the element is being dragged."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <h2 id="drag-to-drop" class="anchor">
-                "Drag to Drop"
-                <AnchorLink href="#drag-to-drop" description="Direct link to drag to drop"/>
-            </h2>
+            <Section title="use_drop">
+                <ReactAria hook="useDrop"/>
+                <p>
+                    "Makes an element a drop target. Spread "<Code inline=true>"drop_props"</Code>" on it; they capture the "
+                    "element, which keyboard drags focus, so make it focusable. By default the target accepts any data with "
+                    "the first operation the drag allows; "<Code inline=true>"get_drop_operation"</Code>" decides per drag, "
+                    "and a target returning "<Code inline=true>"Cancel"</Code>" is skipped by keyboard drags."
+                </p>
 
-            <p>"Combine use_draggable and use_droppable to create drag-and-drop interactions."</p>
+                <Section title="Example" id="use-drop-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let UseDropReturn { drop_props, is_drop_target, .. } = use_drop(UseDropInput {
+                                // Accept images only, as copies.
+                                get_drop_operation: Some(Callback::new(|q: DropOperationQuery| {
+                                    if q.types.has(&DragType::from("image/*")) && q.allowed_operations.contains(&DropOperation::Copy) {
+                                        DropOperation::Copy
+                                    } else {
+                                        DropOperation::Cancel
+                                    }
+                                })),
+                                on_drop: Some(Callback::new(|e: DropEvent| {
+                                    for item in e.items {
+                                        if let DropItem::File(file) = item {
+                                            // Upload `file.file()`.
+                                        }
+                                    }
+                                })),
+                                ..UseDropInput::new(CapturedElement::new())
+                            });
 
-            <DemoShell source=include_str!("demos/dnd_drag_to_drop.rs")>
-                <dnd_drag_to_drop::DragToDropDemo />
-            </DemoShell>
+                            view! {
+                                <div {..drop_props.into_attrs()} role="button" tabindex="0"
+                                    data-drop-target=move || is_drop_target.get().then_some("")>
+                                    "Drop images here"
+                                </div>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
 
-            <h2 id="collection-reorder" class="anchor">
-                "Collection Reordering"
-                <AnchorLink href="#collection-reorder" description="Direct link to collection reordering"/>
-            </h2>
+                <Section title="Input" id="use-drop-input">
+                    <p>"Create the input with "<Code inline=true>"UseDropInput::new(element)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseDropInput">
+                        <ApiRow name="element" ty="CapturedElement">"The drop target element. The props capture it."</ApiRow>
+                        <ApiRow name="get_drop_operation" ty="Option<Callback<DropOperationQuery, DropOperation>>" default="None">
+                            "The operation for a drag, from its "<Code inline=true>"types"</Code>" and "
+                            <Code inline=true>"allowed_operations"</Code>". Return one of the allowed operations, or "
+                            <Code inline=true>"Cancel"</Code>" to refuse. "<Code inline=true>"None"</Code>" takes the first allowed operation."
+                        </ApiRow>
+                        <ApiRow name="get_drop_operation_for_point" ty="Option<Callback<DropOperationPointQuery, DropOperation>>" default="None">
+                            "The same at a point (relative to the element), for targets with differing areas. Pointer drags only."
+                        </ApiRow>
+                        <ApiRow name="on_drop_enter, on_drop_exit" ty="Option<Callback<DropEnterEvent>>, Option<Callback<DropExitEvent>>" default="None">
+                            "A drag that the target accepts enters or leaves it (for keyboard drags: the target gains or loses focus)."
+                        </ApiRow>
+                        <ApiRow name="on_drop_move" ty="Option<Callback<DropMoveEvent>>" default="None">"A pointer drag moves over the target."</ApiRow>
+                        <ApiRow name="on_drop_activate" ty="Option<Callback<DropActivateEvent>>" default="None">
+                            "A pointer drag rested on the target for 800 ms, or "<Keys keys="Alt + Enter"/>" was pressed on it during a "
+                            "keyboard drag. Use it to open the target, e.g. a folder or a tab."
+                        </ApiRow>
+                        <ApiRow name="on_drop" ty="Option<Callback<DropEvent>>" default="None">
+                            "Data was dropped: its "<Code inline=true>"items"</Code>" and the "<Code inline=true>"drop_operation"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="has_drop_button" ty="bool" default="false">
+                            "Keyboard and screen reader drops go to a button inside the target (built from "
+                            <Code inline=true>"drop_button"</Code>"), which then carries the description."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Refuses all drops; keyboard drags skip the target."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>
-                "For sortable lists, use the collection API: "
-                <code>"use_draggable_collection_state"</code>", "
-                <code>"use_droppable_collection_state"</code>", "
-                <code>"use_droppable_collection"</code>", "
-                <code>"use_draggable_collection_item"</code>", "
-                <code>"use_collection_droppable_item"</code>", and "
-                <code>"use_drop_indicator"</code>
-                ". This provides cursor-position-aware drop indicators and keyboard navigation."
-            </p>
+                <Section title="Return" id="use-drop-return">
+                    <ApiTable kind=ApiKind::Return of="UseDropReturn">
+                        <ApiRow name="drop_props" ty="UseDropProps">
+                            "For the drop target: the element capture, the native drag events, and during keyboard drags "
+                            <Code inline=true>"aria-describedby"</Code>" (\u{201c}Press Enter to drop. Press Escape to cancel drag.\u{201d})."
+                        </ApiRow>
+                        <ApiRow name="drop_button" ty="UseButtonInput">"For "<Code inline=true>"use_button"</Code>", with "<Code inline=true>"has_drop_button"</Code>"."</ApiRow>
+                        <ApiRow name="is_drop_target" ty="Signal<bool>">"Whether an accepted drag is over the target (or the target has focus during a keyboard drag)."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <DemoShell source=include_str!("demos/dnd_reorder.rs")>
-                <dnd_reorder::ReorderDemo />
-            </DemoShell>
+            <Section title="Collections">
+                <ReactAria hook="useDraggableCollection"/>
+                <ReactAria hook="useDroppableCollection"/>
+                <p>
+                    "The collection hooks add drag and drop to a collection built on a "<Code inline=true>"ListState"</Code>
+                    ", such as a "<Link href=routes::doc::grid::Hook.materialize()>"grid list"</Link>" (see "
+                    <Link href=routes::doc::Collections.materialize()>"Collections"</Link>"). Dragging a selected item drags "
+                    "all selected items. Drops land on the collection itself, on an item, or between two items, shown by drop "
+                    "indicators; during keyboard drags, the collection\u{2019}s navigation keys move between these positions."
+                </p>
+                <DocTable headers=&["Hook", "Called", "Role"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_draggable_collection_state"</Code></TableCell>
+                        <TableCell>"Once"</TableCell>
+                        <TableCell>"The dragged keys and their data, drag events."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_draggable_collection"</Code></TableCell>
+                        <TableCell>"Once"</TableCell>
+                        <TableCell>"Marks the collection element as the source, so drops back into it count as internal (reorders)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_draggable_item"</Code></TableCell>
+                        <TableCell>"Per item"</TableCell>
+                        <TableCell>"Makes an item draggable."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_droppable_collection_state"</Code></TableCell>
+                        <TableCell>"Once"</TableCell>
+                        <TableCell>"The drop handlers and the current drop target; decides which drops are valid."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_droppable_collection"</Code></TableCell>
+                        <TableCell>"Once"</TableCell>
+                        <TableCell>"Native drops on the collection element, keyboard navigation between drop targets, focus after drops."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_droppable_item"</Code></TableCell>
+                        <TableCell>"Per item"</TableCell>
+                        <TableCell>"Makes an item a target of keyboard drags (dropping on it)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"use_drop_indicator"</Code></TableCell>
+                        <TableCell>"Per position"</TableCell>
+                        <TableCell>"A drop position between items (or on the collection), focusable during keyboard drags."</TableCell>
+                    </TableRow>
+                </DocTable>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    // 1. Create collection state
-                    let keys = Signal::derive(move || items.get().iter().map(|(k, _)| k.clone()).collect());
-                    let drag_state = use_draggable_collection_state(DraggableCollectionStateInput {
-                        collection_keys: keys,
-                        get_items: Callback::new(|keys: Vec<String>| keys.into_iter().map(DragItem::text).collect()),
-                        ..  // dummy selection for simple reorder
-                    });
-                    let drop_state = use_droppable_collection_state(DroppableCollectionStateInput {
-                        collection_keys: keys,
-                        on_reorder: Some(Callback::new(|e: CollectionReorderEvent| { /* reorder items */ })),
-                        ..Default::default()
-                    });
+                <Section title="Demo: Reordering a List">
+                    <p>
+                        "Drag the rows to reorder them; a line shows where they land. Click rows (or press "<Keys keys="Space"/>
+                        ") to select several and drag them together. With the keyboard, focus a row and press "<Keys keys="Enter"/>
+                        ": the arrow keys move between the positions between rows, "<Keys keys="Enter"/>" drops and "
+                        <Keys keys="Escape"/>" cancels. The rows only accept reorders, so dropping on a row is not possible."
+                    </p>
+                    <Demo description="A grid list reordered by dragging with the mouse or keyboard, with drop indicators and multiple selection" source=include_str!("demos/dnd_reorder.rs")>
+                        <ReorderDemo/>
+                    </Demo>
+                </Section>
 
-                    // 2. Set up the collection container
-                    let collection_ref = NodeRef::<html::Div>::new();
-                    let collection = use_droppable_collection(UseDroppableCollectionInput {
-                        state: drop_state.clone(),
-                        keyboard_delegate: Box::new(ListKeyboardDelegate::new(keys)),
-                        drop_target_delegate: Box::new(/* DropTargetDelegate impl */),
-                        is_disabled: Signal::derive(|| false),
-                        accepted_types: vec!["text/plain".to_string()],
-                    });
+                <Section title="Setup">
+                    <p>
+                        "The demo\u{2019}s structure, reduced to the drag and drop parts. Rows render a drop indicator before "
+                        "themselves; the last row also one after itself."
+                    </p>
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            // Once, for the collection (`list` from `use_list_state`, `element` captured by the grid list's props):
+                            let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput::new(
+                                list,
+                                Callback::new(|keys: HashSet<Key>| keys.iter().map(|k| DragItem::text(k.to_string())).collect()),
+                            ));
+                            use_draggable_collection(drag_state, element);
+                            let drop_state = use_droppable_collection_state(UseDroppableCollectionStateInput {
+                                list,
+                                options: DroppableCollectionOptions { on_reorder: Some(on_reorder), ..Default::default() },
+                                is_disabled: Signal::stored(false),
+                            });
+                            let UseDroppableCollectionReturn { collection_props, data: drop } =
+                                use_droppable_collection(UseDroppableCollectionInput {
+                                    state: drop_state,
+                                    element,
+                                    collection_id: props.id.clone(),
+                                    keyboard_delegate: use_list_keyboard_delegate(list, element, Orientation::Vertical, ListLayout::Stack),
+                                    drop_target_delegate: Arc::new(ListDropTargetDelegate::new(list.collection, list.item_elements, element)),
+                                    on_key_down: None,
+                                });
+                            // <div {..props.into_attrs()} {..collection_props.into_attrs()}>
 
-                    // 3. Per item: drag + drop + data-key + drop indicators
-                    let drag = use_draggable_collection_item(UseDraggableCollectionItemInput { key, state: drag_state, .. });
-                    let drop_item = use_collection_droppable_item(UseCollectionDroppableItemInput { target, state: drop_state, .. });
-                    view! { <div {..drag.drag_props.into_attrs()} {..drop_item.drop_item_props.into_attrs()} data-key=key>...</div> }
-                "#)}
-            </Code>
+                            // Per item, on the row element:
+                            let drag = use_draggable_item(UseDraggableItemInput { state: drag_state, key: key.clone(), has_drag_button: false, has_action: false });
+                            let row_element = CapturedElement::new();
+                            let drop_item = use_droppable_item(UseDroppableItemInput {
+                                collection: drop.clone(),
+                                target: DropTarget::item(key.clone(), DropPosition::On),
+                                element: row_element,
+                                activate_button: None,
+                            });
 
-            <h3>"Collection Callbacks"</h3>
-            <ul>
-                <li><code>"on_reorder"</code>" - Called when items are reordered within the same collection"</li>
-                <li><code>"on_insert"</code>" - Called when external items are inserted"</li>
-                <li><code>"on_root_drop"</code>" - Called when items are dropped on the collection root"</li>
-                <li><code>"on_item_drop"</code>" - Called when items are dropped on a specific item"</li>
-            </ul>
+                            // Per position between items:
+                            let indicator = use_drop_indicator(UseDropIndicatorInput {
+                                collection: drop.clone(),
+                                target: DropTarget::item(key, DropPosition::Before),
+                                activate_button: None,
+                            });
+                            // <div role="row"><div role="gridcell" {..indicator.drop_indicator_props.into_attrs()}></div></div>
+                        "#)}
+                    </Code>
+                    <p>
+                        "Both "<Code inline=true>"use_draggable_item"</Code>" and "<Code inline=true>"use_droppable_item"</Code>
+                        " describe the row: join their "<Code inline=true>"aria_describedby"</Code>" ids into one attribute, as "
+                        "the demo does. Set the grid list\u{2019}s "<Code inline=true>"should_select_on_press_up"</Code>
+                        " too, so that dragging a row doesn\u{2019}t select it."
+                    </p>
+                </Section>
 
-            <h2 id="drop-positions" class="anchor">
-                "Drop Positions"
-                <AnchorLink href="#drop-positions" description="Direct link to drop positions"/>
-            </h2>
+                <Section title="use_draggable_collection_state">
+                    <Section title="Input" id="use-draggable-collection-state-input">
+                        <p>"Create the input with "<Code inline=true>"UseDraggableCollectionStateInput::new(list, get_items)"</Code>"."</p>
+                        <ApiTable kind=ApiKind::Input of="UseDraggableCollectionStateInput">
+                            <ApiRow name="list" ty="ListState">"The collection and its selection."</ApiRow>
+                            <ApiRow name="get_items" ty="Callback<HashSet<Key>, Vec<DragItem>>">"The data of the dragged items."</ApiRow>
+                            <ApiRow name="get_allowed_drop_operations" ty="Option<Callback<(), Vec<DropOperation>>>" default="None">"As for "<Code inline=true>"use_drag"</Code>"."</ApiRow>
+                            <ApiRow name="preview" ty="Option<Callback<Vec<DragItem>, Option<DragPreview>>>" default="None">"As for "<Code inline=true>"use_drag"</Code>"."</ApiRow>
+                            <ApiRow name="on_drag_start, on_drag_move" ty="Option<Callback<DraggableCollectionStartEvent>>, Option<Callback<DraggableCollectionMoveEvent>>" default="None">
+                                "A drag of items starts or moves, with the dragged "<Code inline=true>"keys"</Code>"."
+                            </ApiRow>
+                            <ApiRow name="on_drag_end" ty="Option<Callback<DraggableCollectionEndEvent>>" default="None">
+                                "The drag ends: the "<Code inline=true>"keys"</Code>", the "<Code inline=true>"drop_operation"</Code>
+                                " and "<Code inline=true>"is_internal"</Code>" (dropped into the same collection). Remove moved items here "
+                                "when they were dropped elsewhere."
+                            </ApiRow>
+                            <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Prevents dragging items."</ApiRow>
+                        </ApiTable>
+                    </Section>
 
-            <p>"When reordering, the drop target includes position information:"</p>
+                    <Section title="Return" id="use-draggable-collection-state-return">
+                        <p>"Returns a "<Code inline=true>"DraggableCollectionState"</Code>" ("<Code inline=true>"Copy"</Code>")."</p>
+                        <ApiTable kind=ApiKind::Fields of="DraggableCollectionState">
+                            <ApiRow name="list" ty="ListState">"The collection."</ApiRow>
+                            <ApiRow name="dragged_key" ty="Signal<Option<Key>>">"The item the drag started from."</ApiRow>
+                            <ApiRow name="dragging_keys" ty="Signal<HashSet<Key>>">"All dragged items."</ApiRow>
+                            <ApiRow name="is_disabled" ty="Signal<bool>">"The input\u{2019}s "<Code inline=true>"is_disabled"</Code>"."</ApiRow>
+                        </ApiTable>
 
-            <ul>
-                <li><code>"DropPosition::Before"</code>" - Insert before the target item"</li>
-                <li><code>"DropPosition::After"</code>" - Insert after the target item"</li>
-                <li><code>"DropPosition::On"</code>" - Drop onto the target item (for nested structures like trees)"</li>
-            </ul>
+                        <DocTable headers=&["Method", "Description"]>
+                            <TableRow>
+                                <TableCell><Code inline=true>"is_dragging(&Key) -> bool"</Code></TableCell>
+                                <TableCell>"Whether an item is being dragged."</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"keys_for_drag(&Key) -> HashSet<Key>"</Code></TableCell>
+                                <TableCell>
+                                    "What a drag starting at an item drags: the selection if the item is selected (without items whose "
+                                    "parent is selected too), else the item alone."
+                                </TableCell>
+                            </TableRow>
+                        </DocTable>
+                    </Section>
+                </Section>
 
-            <h2 id="drop-effects" class="anchor">
-                "Drop Effects"
-                <AnchorLink href="#drop-effects" description="Direct link to drop effects"/>
-            </h2>
+                <Section title="use_draggable_collection">
+                    <p>
+                        <Code inline=true>"use_draggable_collection(state, element)"</Code>" returns nothing. While the "
+                        "collection\u{2019}s items are dragged, it records the collection element as the drag source, so that "
+                        "droppable collections tell reorders and moves (internal drops) from inserts."
+                    </p>
+                </Section>
 
-            <ul>
-                <li><code>"DropEffect::Copy"</code>" - Create a copy of the dragged item"</li>
-                <li><code>"DropEffect::Move"</code>" - Move the item (remove from source)"</li>
-                <li><code>"DropEffect::Link"</code>" - Create a link/reference"</li>
-                <li><code>"DropEffect::All"</code>" - Allow all effects"</li>
-                <li><code>"DropEffect::None"</code>" - Disallow dropping"</li>
-            </ul>
+                <Section title="use_draggable_item">
+                    <Section title="Input" id="use-draggable-item-input">
+                        <ApiTable kind=ApiKind::Input of="UseDraggableItemInput">
+                            <ApiRow name="state" ty="DraggableCollectionState">"From "<Code inline=true>"use_draggable_collection_state"</Code>"."</ApiRow>
+                            <ApiRow name="key" ty="Key">"The item\u{2019}s key."</ApiRow>
+                            <ApiRow name="has_drag_button" ty="bool">"Keyboard and screen reader drags start from a drag button."</ApiRow>
+                            <ApiRow name="has_action" ty="bool">
+                                "The item has an action on "<Keys keys="Enter"/>", so keyboard drags start with "<Keys keys="Alt + Enter"/>"."
+                            </ApiRow>
+                        </ApiTable>
+                    </Section>
 
-            <h2 id="drag-item" class="anchor">
-                "DragItem"
-                <AnchorLink href="#drag-item" description="Direct link to DragItem"/>
-            </h2>
+                    <Section title="Return" id="use-draggable-item-return">
+                        <ApiTable kind=ApiKind::Return of="UseDraggableItemReturn">
+                            <ApiRow name="drag_props" ty="UseDragProps">
+                                "For the item, as for "<Code inline=true>"use_drag"</Code>". In collections with selection (and "
+                                "without drag button) it describes the drag: \u{201c}Press Enter to drag 2 selected items.\u{201d}"
+                            </ApiRow>
+                            <ApiRow name="drag_button" ty="UseButtonInput">"For "<Code inline=true>"use_button"</Code>", with "<Code inline=true>"has_drag_button"</Code>"."</ApiRow>
+                            <ApiRow name="drag_button_label" ty="Signal<String>">
+                                "The drag button\u{2019}s "<Code inline=true>"aria-label"</Code>": \u{201c}Drag Plan\u{201d}, or "
+                                "\u{201c}Drag 3 selected items\u{201d}."
+                            </ApiRow>
+                            <ApiRow name="is_dragging" ty="Signal<bool>">
+                                "Whether a drag started from this item. To mark all dragged items, use the state\u{2019}s "
+                                <Code inline=true>"is_dragging(&key)"</Code>", as the demo does."
+                            </ApiRow>
+                        </ApiTable>
+                        <p>"Disabled items (see the selection options) can\u{2019}t be dragged."</p>
+                    </Section>
+                </Section>
 
-            <p>"Data that can be transferred during a drag operation:"</p>
+                <Section title="use_droppable_collection_state">
+                    <Section title="Input" id="use-droppable-collection-state-input">
+                        <ApiTable kind=ApiKind::Input of="UseDroppableCollectionStateInput">
+                            <ApiRow name="list" ty="ListState">"The collection and its selection."</ApiRow>
+                            <ApiRow name="options" ty="DroppableCollectionOptions">"The drop handlers and accepted data, below."</ApiRow>
+                            <ApiRow name="is_disabled" ty="Signal<bool>">"Refuses all drops."</ApiRow>
+                        </ApiTable>
+                    </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    // Plain text
-                    DragItem::text("Hello, World!")
+                    <Section title="DroppableCollectionOptions">
+                        <p>
+                            "A drop target is valid when a handler takes the drop there; set only the handlers you need. A "
+                            "drag whose data doesn\u{2019}t match "<Code inline=true>"accepted_drag_types"</Code>" is refused."
+                        </p>
+                        <ApiTable kind=ApiKind::Input of="DroppableCollectionOptions">
+                            <ApiRow name="accepted_drag_types" ty="AcceptedDragTypes" default="All">"The data types the collection accepts."</ApiRow>
+                            <ApiRow name="on_reorder" ty="Option<Callback<DroppableCollectionReorderEvent>>" default="None">
+                                "Items of this collection dropped between items with the same parent: the "<Code inline=true>"keys"</Code>
+                                " and the "<Code inline=true>"target"</Code>" position."
+                            </ApiRow>
+                            <ApiRow name="on_move" ty="Option<Callback<DroppableCollectionReorderEvent>>" default="None">
+                                "Items of this collection dropped on or between any of its items, also into other parents."
+                            </ApiRow>
+                            <ApiRow name="on_insert" ty="Option<Callback<DroppableCollectionInsertDropEvent>>" default="None">"Data from elsewhere dropped between items."</ApiRow>
+                            <ApiRow name="on_root_drop" ty="Option<Callback<DroppableCollectionRootDropEvent>>" default="None">"Data from elsewhere dropped on the collection itself."</ApiRow>
+                            <ApiRow name="on_item_drop" ty="Option<Callback<DroppableCollectionOnItemDropEvent>>" default="None">
+                                "Data dropped on an item (not one of the dragged items); "<Code inline=true>"is_internal"</Code>
+                                " tells whether it comes from this collection."
+                            </ApiRow>
+                            <ApiRow name="should_accept_item_drop" ty="Option<Callback<ItemDropQuery, bool>>" default="None">"Whether an item accepts drops on it."</ApiRow>
+                            <ApiRow name="on_drop" ty="Option<Callback<DroppableCollectionDropEvent>>" default="None">
+                                "Handles every drop itself, instead of the handlers above; all targets are valid."
+                            </ApiRow>
+                            <ApiRow name="get_drop_operation" ty="Option<Callback<CollectionDropOperationQuery, DropOperation>>" default="None">
+                                "The operation at a valid target. "<Code inline=true>"None"</Code>" takes the first allowed operation."
+                            </ApiRow>
+                            <ApiRow name="on_drop_enter, on_drop_exit, on_drop_activate" ty="Option<Callback<..>>" default="None">
+                                "A drag enters or leaves a drop target, or activates an item (as for "<Code inline=true>"use_drop"</Code>")."
+                            </ApiRow>
+                        </ApiTable>
+                        <p>
+                            "Items can never be dropped on themselves or into their own children. When a drop changed the "
+                            "collection, inserted items are selected and the first focused; after a drop on an item, the item is focused."
+                        </p>
+                    </Section>
 
-                    // JSON data
-                    DragItem::json("{\"id\": 1, \"name\": \"Item\"}")
+                    <Section title="Return" id="use-droppable-collection-state-return">
+                        <p>"Returns a "<Code inline=true>"DroppableCollectionState"</Code>" ("<Code inline=true>"Copy"</Code>")."</p>
+                        <ApiTable kind=ApiKind::Fields of="DroppableCollectionState">
+                            <ApiRow name="list" ty="ListState">"The collection."</ApiRow>
+                            <ApiRow name="target" ty="Signal<Option<DropTarget>>">"The current drop target."</ApiRow>
+                            <ApiRow name="is_disabled" ty="Signal<bool>">"The input\u{2019}s "<Code inline=true>"is_disabled"</Code>"."</ApiRow>
+                        </ApiTable>
 
-                    // Custom MIME type
-                    DragItem::custom("application/x-my-type", "custom data")
-                "#)}
-            </Code>
+                        <DocTable headers=&["Method", "Description"]>
+                            <TableRow>
+                                <TableCell><Code inline=true>"is_drop_target(Option<&DropTarget>) -> bool"</Code></TableCell>
+                                <TableCell>
+                                    "Whether a target is the current one. \u{201c}After A\u{201d} and \u{201c}before B\u{201d} are the same "
+                                    "position when B follows A."
+                                </TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell><Code inline=true>"set_target(Option<DropTarget>)"</Code></TableCell>
+                                <TableCell>"Changes the drop target, firing exit and enter events."</TableCell>
+                            </TableRow>
+                        </DocTable>
+                    </Section>
+                </Section>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                <Section title="use_droppable_collection">
+                    <Section title="Input" id="use-droppable-collection-input">
+                        <ApiTable kind=ApiKind::Input of="UseDroppableCollectionInput">
+                            <ApiRow name="state" ty="DroppableCollectionState">"From "<Code inline=true>"use_droppable_collection_state"</Code>"."</ApiRow>
+                            <ApiRow name="element" ty="CapturedElement">"The collection element, captured by the collection hook\u{2019}s props."</ApiRow>
+                            <ApiRow name="collection_id" ty="String">"The collection element\u{2019}s id; drop indicators on the collection itself reference it."</ApiRow>
+                            <ApiRow name="keyboard_delegate" ty="Signal<Arc<dyn KeyboardDelegate>>">
+                                "Navigation between items during keyboard drags, e.g. "<Code inline=true>"use_list_keyboard_delegate"</Code>"."
+                            </ApiRow>
+                            <ApiRow name="drop_target_delegate" ty="Arc<dyn DropTargetDelegate>">
+                                "The drop target under the pointer. "<Code inline=true>"ListDropTargetDelegate::new(collection, item_elements, element)"</Code>
+                                " covers lists and grids ("<Code inline=true>"with_layout"</Code>", "<Code inline=true>"with_orientation"</Code>", "
+                                <Code inline=true>"with_direction"</Code>"): before or after an item by the pointer\u{2019}s half, or on "
+                                "it when the item accepts drops, with its edges still before and after."
+                            </ApiRow>
+                            <ApiRow name="on_key_down" ty="Option<Callback<SendWrapper<KeyboardEvent>>>" default="None">"Key presses during keyboard drags, after the collection handled them."</ApiRow>
+                        </ApiTable>
+                    </Section>
 
-            <ul>
-                <li>"Draggable items with custom data (text, JSON, or custom MIME types)"</li>
-                <li>"Drop zones with type filtering"</li>
-                <li>"Collection reordering support"</li>
-                <li>"Insert/remove between collections"</li>
-                <li>"Visual feedback via is_dragging and is_drop_target signals"</li>
-                <li>"ARIA attributes for accessibility (aria-grabbed, aria-dropeffect)"</li>
-            </ul>
+                    <Section title="Return" id="use-droppable-collection-return">
+                        <ApiTable kind=ApiKind::Return of="UseDroppableCollectionReturn">
+                            <ApiRow name="collection_props" ty="UseDropProps">
+                                "For the collection element: native drops, and auto-scrolling when a drag nears the edges. The "
+                                "collection itself isn\u{2019}t described as a drop target; its items and indicators are."
+                            </ApiRow>
+                            <ApiRow name="data" ty="DroppableCollectionData">"Hand this to "<Code inline=true>"use_droppable_item"</Code>" and "<Code inline=true>"use_drop_indicator"</Code>"."</ApiRow>
+                        </ApiTable>
+                        <p>
+                            "A keyboard drag entering the collection starts at the focused item (after it, or around the selection) "
+                            "and falls back to the next valid target."
+                        </p>
+                    </Section>
+                </Section>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                <Section title="use_droppable_item">
+                    <Section title="Input" id="use-droppable-item-input">
+                        <ApiTable kind=ApiKind::Input of="UseDroppableItemInput">
+                            <ApiRow name="collection" ty="DroppableCollectionData">"From "<Code inline=true>"use_droppable_collection"</Code>"."</ApiRow>
+                            <ApiRow name="target" ty="DropTarget">"Usually "<Code inline=true>"DropTarget::item(key, DropPosition::On)"</Code>"."</ApiRow>
+                            <ApiRow name="element" ty="CapturedElement">"The item element; capture it with "<Code inline=true>"element.attr()"</Code>"."</ApiRow>
+                            <ApiRow name="activate_button" ty="Option<CapturedElement>">"A button activating the item (e.g. opening a folder) during keyboard drags."</ApiRow>
+                        </ApiTable>
+                    </Section>
 
-            <ul>
-                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::UseMove.materialize()>"use_move"</Link>" \u{2014} for pointer-based movement without data transfer"</li>
-            </ul>
-        </Article>
+                    <Section title="Return" id="use-droppable-item-return">
+                        <ApiTable kind=ApiKind::Return of="UseDroppableItemReturn">
+                            <ApiRow name="drop_props" ty="UseDroppableItemProps">
+                                <Code inline=true>"aria-describedby"</Code>" (how to drop) and, during keyboard drags, "
+                                <Code inline=true>"aria-hidden"</Code>" on items that can\u{2019}t take the drop."
+                            </ApiRow>
+                            <ApiRow name="is_drop_target" ty="Signal<bool>">"Whether the item is the current drop target. Keyboard drags focus it then."</ApiRow>
+                        </ApiTable>
+                    </Section>
+                </Section>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Drag and Drop", link: "#dnd" },
-                Toc::Leaf { title: "use_draggable", link: "#use_draggable" },
-                Toc::Leaf { title: "use_droppable", link: "#use_droppable" },
-                Toc::Leaf { title: "Drag to Drop", link: "#drag-to-drop" },
-                Toc::Leaf { title: "Collection Reordering", link: "#collection-reorder" },
-                Toc::Leaf { title: "Drop Positions", link: "#drop-positions" },
-                Toc::Leaf { title: "Drop Effects", link: "#drop-effects" },
-                Toc::Leaf { title: "DragItem", link: "#drag-item" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+                <Section title="use_drop_indicator">
+                    <Section title="Input" id="use-drop-indicator-input">
+                        <ApiTable kind=ApiKind::Input of="UseDropIndicatorInput">
+                            <ApiRow name="collection" ty="DroppableCollectionData">"From "<Code inline=true>"use_droppable_collection"</Code>"."</ApiRow>
+                            <ApiRow name="target" ty="DropTarget">
+                                "The position: "<Code inline=true>"DropTarget::item(key, DropPosition::Before)"</Code>" (or "
+                                <Code inline=true>"After"</Code>" for the last item), or "<Code inline=true>"DropTarget::Root"</Code>"."
+                            </ApiRow>
+                            <ApiRow name="activate_button" ty="Option<CapturedElement>">"A button activating the target during keyboard drags."</ApiRow>
+                        </ApiTable>
+                    </Section>
+
+                    <Section title="Return" id="use-drop-indicator-return">
+                        <ApiTable kind=ApiKind::Return of="UseDropIndicatorReturn">
+                            <ApiRow name="drop_indicator_props" ty="UseDropIndicatorProps">
+                                "An id, "<Code inline=true>"aria-roledescription=\"drop indicator\""</Code>", an "
+                                <Code inline=true>"aria-label"</Code>" (\u{201c}Insert between Plan and Design\u{201d}, \u{201c}Insert "
+                                "before Plan\u{201d}, \u{201c}Insert after Release\u{201d}, \u{201c}Drop on Plan\u{201d}), "
+                                <Code inline=true>"tabindex=-1"</Code>", "<Code inline=true>"aria-hidden"</Code>" outside keyboard "
+                                "drags, and the element capture."
+                            </ApiRow>
+                            <ApiRow name="is_drop_target" ty="Signal<bool>">"Whether a drag is over this position: show the indicator."</ApiRow>
+                            <ApiRow name="is_hidden" ty="Signal<bool>">
+                                "Whether to hide the indicator. Keep its element rendered (e.g. with "<Code inline=true>"display: none"</Code>
+                                "), as the hook registers it."
+                            </ApiRow>
+                        </ApiTable>
+                    </Section>
+                </Section>
+            </Section>
+
+            <Section title="use_clipboard">
+                <ReactAria hook="useClipboard"/>
+                <p>
+                    "Cut, copy and paste for an element while it has focus, with the same data as drag and drop: "
+                    <Code inline=true>"DragItem"</Code>"s go to the clipboard, pasted data arrives as "<Code inline=true>"DropItem"</Code>
+                    "s. Spread "<Code inline=true>"clipboard_props"</Code>" (focus tracking) on the element."
+                </p>
+                <ApiTable kind=ApiKind::Input of="UseClipboardInput">
+                    <ApiRow name="get_items" ty="Option<Callback<ClipboardAction, Vec<DragItem>>>" default="None">
+                        "The data to cut or copy. Without it, cut and copy keep the browser\u{2019}s behavior."
+                    </ApiRow>
+                    <ApiRow name="on_copy" ty="Option<Callback<()>>" default="None">"Data was copied."</ApiRow>
+                    <ApiRow name="on_cut" ty="Option<Callback<()>>" default="None">"Remove the cut data. Without it, cut keeps the browser\u{2019}s behavior."</ApiRow>
+                    <ApiRow name="on_paste" ty="Option<Callback<Vec<DropItem>>>" default="None">"Data was pasted. Without it, paste keeps the browser\u{2019}s behavior."</ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Leaves the clipboard events alone."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Data Model">
+                <Section title="DragItem">
+                    <p>
+                        "One dragged item, in one or more representations: (MIME type, data) pairs. Offer several to let "
+                        "different targets (and other applications) pick the one they understand."
+                    </p>
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            DragItem::text("Hello");                         // text/plain
+                            DragItem::new()
+                                .with("text/uri-list", "https://leptos.dev")
+                                .with("text/plain", "https://leptos.dev");
+                            DragItem::new().with("application/x-task-id", "42"); // a custom type
+                        "#)}
+                    </Code>
+                </Section>
+
+                <Section title="DropItem">
+                    <DocTable headers=&["Variant", "Data"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Text(TextDropItem)"</Code></TableCell>
+                            <TableCell>
+                                "The representations of a dragged item: "<Code inline=true>"types()"</Code>", "
+                                <Code inline=true>"has_type(type)"</Code>", "<Code inline=true>"get_text(type)"</Code>" (synchronous)."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"File(FileDropItem)"</Code></TableCell>
+                            <TableCell>
+                                "A dropped file: "<Code inline=true>"kind"</Code>" (MIME type), "<Code inline=true>"name"</Code>", "
+                                <Code inline=true>"file()"</Code>", "<Code inline=true>"get_text().await"</Code>"."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Directory(DirectoryDropItem)"</Code></TableCell>
+                            <TableCell>"A dropped folder: "<Code inline=true>"name"</Code>", "<Code inline=true>"get_entries().await"</Code>" (its files and folders)."</TableCell>
+                        </TableRow>
+                    </DocTable>
+                </Section>
+
+                <Section title="DropOperation">
+                    <p>
+                        <Code inline=true>"Move"</Code>", "<Code inline=true>"Copy"</Code>", "<Code inline=true>"Link"</Code>
+                        " or "<Code inline=true>"Cancel"</Code>" (no drop). Drags list the operations they allow in order of "
+                        "preference; drop targets choose one. During pointer drags, modifier keys restrict the allowed operations: "
+                        "on macOS "<Keys keys="Option"/>" copies, "<Keys keys="Control"/>" links and "<Keys keys="Command"/>" moves; elsewhere "
+                        <Keys keys="Control"/>" copies, "<Keys keys="Alt"/>" links and "<Keys keys="Shift"/>" moves."
+                    </p>
+                </Section>
+
+                <Section title="DragTypes and AcceptedDragTypes">
+                    <p>
+                        "Drop targets see the "<Code inline=true>"DragTypes"</Code>" of a drag before the drop (not its data). "
+                        <Code inline=true>"has(&DragType)"</Code>" checks for a type: "<Code inline=true>"DragType::from(\"text/plain\")"</Code>
+                        ", a wildcard like "<Code inline=true>"\"image/*\""</Code>" or "<Code inline=true>"\"*/*\""</Code>", or "
+                        <Code inline=true>"DragType::Directory"</Code>". Browsers hide the types of dragged files until the drop, so "
+                        "while files are dragged in, "<Code inline=true>"has"</Code>" accepts every type. "
+                        <Code inline=true>"AcceptedDragTypes::All"</Code>" or "<Code inline=true>"AcceptedDragTypes::Types(vec![..])"</Code>
+                        " declares what a collection accepts."
+                    </p>
+                </Section>
+
+                <Section title="DropTarget">
+                    <p>
+                        <Code inline=true>"DropTarget::Root"</Code>" is the collection itself; "
+                        <Code inline=true>"DropTarget::Item(ItemDropTarget { key, drop_position })"</Code>" a position at an item, "
+                        "with "<Code inline=true>"DropPosition::Before"</Code>", "<Code inline=true>"On"</Code>" or "
+                        <Code inline=true>"After"</Code>". "<Code inline=true>"DropTarget::item(key, position)"</Code>" builds one."
+                    </p>
+                </Section>
+            </Section>
+
+            <Section title="Keyboard and Screen Readers">
+                <KeyboardTable>
+                    <KeyRow keys="Enter">
+                        "On a draggable element or drag button: start a drag. Focus moves to the nearest drop target that "
+                        "accepts the data (the one containing the element, if any). Collection items with an action start with "
+                        <Keys keys="Alt + Enter"/>"."
+                    </KeyRow>
+                    <KeyRow keys="Tab / Shift + Tab">"Next or previous drop target; past the last one, back to the drag source."</KeyRow>
+                    <KeyRow keys="Arrow keys / Home / End / PageUp / PageDown">"Inside a droppable collection: move between its drop positions."</KeyRow>
+                    <KeyRow keys="Enter">"Drop on the focused target. On the drag source: cancel the drag."</KeyRow>
+                    <KeyRow keys="Alt + Enter">"Activate the focused target ("<Code inline=true>"on_drop_activate"</Code>")."</KeyRow>
+                    <KeyRow keys="Escape">"Cancel the drag; focus returns to the drag source."</KeyRow>
+                </KeyboardTable>
+                <p>
+                    "Screen reader users start drags by clicking the element (or drag button), and drop by clicking a target. "
+                    "During a drag, mouse and pointer events are blocked, and everything except the drag source, the valid "
+                    "drop targets and their activate buttons is hidden from assistive technology."
+                </p>
+                <DocTable headers=&["When", "Message"]>
+                    <TableRow><TableCell>"Describing a draggable element"</TableCell><TableCell>"Press Enter to start dragging."</TableCell></TableRow>
+                    <TableRow><TableCell>"Describing a dragged element"</TableCell><TableCell>"Dragging. Press Enter to cancel drag."</TableCell></TableRow>
+                    <TableRow><TableCell>"Announced when a drag starts"</TableCell><TableCell>"Started dragging. Press Tab to navigate to a drop target, then press Enter to drop, or press Escape to cancel."</TableCell></TableRow>
+                    <TableRow><TableCell>"Describing a drop target during a drag"</TableCell><TableCell>"Press Enter to drop. Press Escape to cancel drag."</TableCell></TableRow>
+                    <TableRow><TableCell>"Announced after a drop or cancel"</TableCell><TableCell>"Drop complete. / Drop canceled."</TableCell></TableRow>
+                </DocTable>
+                <p>
+                    "The messages follow the last interaction: after a keyboard interaction they mention "<Keys keys="Enter"/>
+                    ", on touch screens double taps (\u{201c}Double tap to start dragging.\u{201d}), otherwise clicks "
+                    "(\u{201c}Click to start dragging.\u{201d}). They are English for now."
+                </p>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link>" \u{2014} collections, list state and selection"</li>
+                <li><Link href=routes::doc::grid::Hook.materialize()>"Grid hooks"</Link>" \u{2014} "<Code inline=true>"use_grid_list"</Code>" and "<Code inline=true>"use_grid_list_item"</Code></li>
+                <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" \u{2014} for drag and drop buttons"</li>
+                <li>
+                    <Link href=routes::doc::interactions::UseMove.materialize()>"use_move"</Link>
+                    " \u{2014} pointer and keyboard movement without data transfer"
+                </li>
+            </SeeAlso>
+        </DocPage>
     }
 }

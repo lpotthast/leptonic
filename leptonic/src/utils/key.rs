@@ -6,7 +6,7 @@ use crate::Language;
 
 /// A keyboard key.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter)]
-pub enum Key {
+pub enum KeyboardKey {
     A,
     B,
     C,
@@ -102,10 +102,38 @@ pub enum Key {
     Other(Cow<'static, str>),
 }
 
-impl Key {
-    pub fn known_keys() -> impl Iterator<Item = Key> {
+impl KeyboardKey {
+    pub fn known_keys() -> impl Iterator<Item = KeyboardKey> {
         Self::iter().filter(|key| {
-            std::mem::discriminant(key) != std::mem::discriminant(&Key::Other(Cow::Borrowed("")))
+            std::mem::discriminant(key)
+                != std::mem::discriminant(&KeyboardKey::Other(Cow::Borrowed("")))
+        })
+    }
+
+    /// The key's name for screen readers, where its display is a glyph or an abbreviation they
+    /// would announce wrongly (e.g. "⇧" or "PgUp"); `None` where the display reads well.
+    pub fn spoken_name(&self) -> Option<&'static str> {
+        Some(match self {
+            Self::ArrowUp => "Up Arrow",
+            Self::ArrowRight => "Right Arrow",
+            Self::ArrowDown => "Down Arrow",
+            Self::ArrowLeft => "Left Arrow",
+            Self::Shift => "Shift",
+            Self::CapsLock => "Caps Lock",
+            Self::Command => "Command",
+            Self::Option => "Option",
+            Self::Tab => "Tab",
+            Self::Escape => "Escape",
+            Self::Control => "Control",
+            Self::Fn => "Function",
+            Self::PageUp => "Page Up",
+            Self::PageDown => "Page Down",
+            Self::Delete => "Delete",
+            Self::Insert => "Insert",
+            Self::NumLock => "Num Lock",
+            Self::PrintScreen => "Print Screen",
+            Self::ScrollLock => "Scroll Lock",
+            _ => return None,
         })
     }
 
@@ -205,104 +233,134 @@ impl Key {
     }
 }
 
-impl FromStr for Key {
+impl FromStr for KeyboardKey {
     type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             // Single letters (lowercase and uppercase map to the same key).
-            "a" | "A" => Key::A,
-            "b" | "B" => Key::B,
-            "c" | "C" => Key::C,
-            "d" | "D" => Key::D,
-            "e" | "E" => Key::E,
-            "f" | "F" => Key::F,
-            "g" | "G" => Key::G,
-            "h" | "H" => Key::H,
-            "i" | "I" => Key::I,
-            "j" | "J" => Key::J,
-            "k" | "K" => Key::K,
-            "l" | "L" => Key::L,
-            "m" | "M" => Key::M,
-            "n" | "N" => Key::N,
-            "o" | "O" => Key::O,
-            "p" | "P" => Key::P,
-            "q" | "Q" => Key::Q,
-            "r" | "R" => Key::R,
-            "s" | "S" => Key::S,
-            "t" | "T" => Key::T,
-            "u" | "U" => Key::U,
-            "v" | "V" => Key::V,
-            "w" | "W" => Key::W,
-            "x" | "X" => Key::X,
-            "y" | "Y" => Key::Y,
-            "z" | "Z" => Key::Z,
+            "a" | "A" => KeyboardKey::A,
+            "b" | "B" => KeyboardKey::B,
+            "c" | "C" => KeyboardKey::C,
+            "d" | "D" => KeyboardKey::D,
+            "e" | "E" => KeyboardKey::E,
+            "f" | "F" => KeyboardKey::F,
+            "g" | "G" => KeyboardKey::G,
+            "h" | "H" => KeyboardKey::H,
+            "i" | "I" => KeyboardKey::I,
+            "j" | "J" => KeyboardKey::J,
+            "k" | "K" => KeyboardKey::K,
+            "l" | "L" => KeyboardKey::L,
+            "m" | "M" => KeyboardKey::M,
+            "n" | "N" => KeyboardKey::N,
+            "o" | "O" => KeyboardKey::O,
+            "p" | "P" => KeyboardKey::P,
+            "q" | "Q" => KeyboardKey::Q,
+            "r" | "R" => KeyboardKey::R,
+            "s" | "S" => KeyboardKey::S,
+            "t" | "T" => KeyboardKey::T,
+            "u" | "U" => KeyboardKey::U,
+            "v" | "V" => KeyboardKey::V,
+            "w" | "W" => KeyboardKey::W,
+            "x" | "X" => KeyboardKey::X,
+            "y" | "Y" => KeyboardKey::Y,
+            "z" | "Z" => KeyboardKey::Z,
             // Digits
-            "0" => Key::N0,
-            "1" => Key::N1,
-            "2" => Key::N2,
-            "3" => Key::N3,
-            "4" => Key::N4,
-            "5" => Key::N5,
-            "6" => Key::N6,
-            "7" => Key::N7,
-            "8" => Key::N8,
-            "9" => Key::N9,
+            "0" => KeyboardKey::N0,
+            "1" => KeyboardKey::N1,
+            "2" => KeyboardKey::N2,
+            "3" => KeyboardKey::N3,
+            "4" => KeyboardKey::N4,
+            "5" => KeyboardKey::N5,
+            "6" => KeyboardKey::N6,
+            "7" => KeyboardKey::N7,
+            "8" => KeyboardKey::N8,
+            "9" => KeyboardKey::N9,
             // Function keys
-            "F1" => Key::F1,
-            "F2" => Key::F2,
-            "F3" => Key::F3,
-            "F4" => Key::F4,
-            "F5" => Key::F5,
-            "F6" => Key::F6,
-            "F7" => Key::F7,
-            "F8" => Key::F8,
-            "F9" => Key::F9,
-            "F10" => Key::F10,
-            "F11" => Key::F11,
-            "F12" => Key::F12,
+            "F1" => KeyboardKey::F1,
+            "F2" => KeyboardKey::F2,
+            "F3" => KeyboardKey::F3,
+            "F4" => KeyboardKey::F4,
+            "F5" => KeyboardKey::F5,
+            "F6" => KeyboardKey::F6,
+            "F7" => KeyboardKey::F7,
+            "F8" => KeyboardKey::F8,
+            "F9" => KeyboardKey::F9,
+            "F10" => KeyboardKey::F10,
+            "F11" => KeyboardKey::F11,
+            "F12" => KeyboardKey::F12,
             // Arrow keys
-            "ArrowUp" => Key::ArrowUp,
-            "ArrowRight" => Key::ArrowRight,
-            "ArrowDown" => Key::ArrowDown,
-            "ArrowLeft" => Key::ArrowLeft,
+            "ArrowUp" => KeyboardKey::ArrowUp,
+            "ArrowRight" => KeyboardKey::ArrowRight,
+            "ArrowDown" => KeyboardKey::ArrowDown,
+            "ArrowLeft" => KeyboardKey::ArrowLeft,
             // Special keys
-            " " | "Spacebar" | "Space" => Key::Space,
-            "Enter" => Key::Enter,
-            "Escape" => Key::Escape,
-            "Tab" => Key::Tab,
-            "Backspace" => Key::Backspace,
-            "Delete" => Key::Delete,
-            "Home" => Key::Home,
-            "End" => Key::End,
-            "PageUp" => Key::PageUp,
-            "PageDown" => Key::PageDown,
-            "Meta" => Key::Meta,
-            "Control" => Key::Control,
-            "Alt" => Key::Alt,
-            "Shift" => Key::Shift,
-            "CapsLock" => Key::CapsLock,
-            "Insert" => Key::Insert,
-            "ContextMenu" => Key::ContextMenu,
-            "NumLock" => Key::NumLock,
-            "PrintScreen" => Key::PrintScreen,
-            "ScrollLock" => Key::ScrollLock,
-            "Pause" => Key::Pause,
+            " " | "Space" => KeyboardKey::Space,
+            "Enter" => KeyboardKey::Enter,
+            "Escape" => KeyboardKey::Escape,
+            "Tab" => KeyboardKey::Tab,
+            "Backspace" => KeyboardKey::Backspace,
+            "Delete" => KeyboardKey::Delete,
+            "Home" => KeyboardKey::Home,
+            "End" => KeyboardKey::End,
+            "PageUp" => KeyboardKey::PageUp,
+            "PageDown" => KeyboardKey::PageDown,
+            "Meta" => KeyboardKey::Meta,
+            "Control" => KeyboardKey::Control,
+            "Alt" => KeyboardKey::Alt,
+            "Shift" => KeyboardKey::Shift,
+            "CapsLock" => KeyboardKey::CapsLock,
+            "Insert" => KeyboardKey::Insert,
+            "ContextMenu" => KeyboardKey::ContextMenu,
+            "NumLock" => KeyboardKey::NumLock,
+            "PrintScreen" => KeyboardKey::PrintScreen,
+            "ScrollLock" => KeyboardKey::ScrollLock,
+            "Pause" => KeyboardKey::Pause,
+            "Fn" => KeyboardKey::Fn,
+            // Display names of macOS modifiers (events report these keys as `Meta` and `Alt`).
+            "Command" => KeyboardKey::Command,
+            "Option" => KeyboardKey::Option,
             // Punctuation
-            "+" => Key::Plus,
-            "*" => Key::Star,
-            "-" => Key::Dash,
-            "_" => Key::Underscore,
-            "/" => Key::Slash,
-            "\\" => Key::Backslash,
-            "." => Key::Dot,
-            "," => Key::Comma,
-            ":" => Key::Colon,
-            ";" => Key::Semicolon,
-            "#" => Key::Hash,
-            "~" => Key::Tilde,
+            "+" => KeyboardKey::Plus,
+            "*" => KeyboardKey::Star,
+            "-" => KeyboardKey::Dash,
+            "_" => KeyboardKey::Underscore,
+            "/" => KeyboardKey::Slash,
+            "\\" => KeyboardKey::Backslash,
+            "." => KeyboardKey::Dot,
+            "," => KeyboardKey::Comma,
+            ":" => KeyboardKey::Colon,
+            ";" => KeyboardKey::Semicolon,
+            "#" => KeyboardKey::Hash,
+            "~" => KeyboardKey::Tilde,
             // Unrecognized
-            other => Key::Other(Cow::Owned(other.to_owned())),
+            other => KeyboardKey::Other(Cow::Owned(other.to_owned())),
         })
+    }
+}
+
+/// The typed [`KeyboardKey`] of a keyboard event, for comparisons without string literals.
+pub trait KeyboardEventKey {
+    fn typed_key(&self) -> KeyboardKey;
+}
+
+impl KeyboardEventKey for web_sys::KeyboardEvent {
+    fn typed_key(&self) -> KeyboardKey {
+        let Ok(key) = self.key().parse();
+        key
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::KeyboardKey;
+
+    #[test]
+    fn parses_mac_modifier_display_names_and_fn() {
+        assert_that!("Command".parse::<KeyboardKey>().ok()).is_equal_to(Some(KeyboardKey::Command));
+        assert_that!("Option".parse::<KeyboardKey>().ok()).is_equal_to(Some(KeyboardKey::Option));
+        assert_that!("Fn".parse::<KeyboardKey>().ok()).is_equal_to(Some(KeyboardKey::Fn));
     }
 }

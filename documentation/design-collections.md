@@ -339,6 +339,18 @@ pub struct TabsKeyboardDelegate { /* wraps, flips left/right in RTL */ }
 
 ### 4.7 ARIA layer
 
+> As implemented (listbox + select): behavior switches live in `CollectionOptions` (shared by
+> `use_selectable_collection`, `use_selectable_list`, `use_listbox`, ...), `auto_focus` is a
+> `Signal<Option<AutoFocus>>` (`Selected | First | Last`, read at mount), keyboard delegates are passed as
+> `Signal<Arc<dyn KeyboardDelegate>>` (they depend on the locale), and the listbox's item context is
+> `ListBoxData`, returned by `use_listbox` and passed to `use_option(UseOptionInput { list, key })`.
+>
+> As implemented (grid): grids are ordinary collections whose rows (`Item` nodes, `CollectionBuilder::row`) have
+> `Cell` children with generated keys (`Key::cell(row, column)`, optional `col_span`; `col_index` is set in rows
+> with spanning cells). There is no separate `GridCollection`. In cell focus mode, the `SelectionManager` maps a
+> focused row to its first/last cell; selection maps cells to their row. `use_grid` returns `GridData` for
+> `use_grid_row`/`use_grid_cell`.
+
 - `use_selectable_collection(UseSelectableCollectionInput { manager, keyboard_delegate: Arc<dyn KeyboardDelegate>, collection_element: CapturedElement, item_elements, auto_focus, should_focus_wrap, select_on_focus, disallow_empty_selection, disallow_select_all, disallow_type_ahead, escape_key_behavior, should_use_virtual_focus, allows_tab_navigation, link_behavior, is_virtualized })`.
   - It is no longer generic, and no longer creates selection state.
   - It gains virtual focus (`aria-activedescendant`) for combobox.

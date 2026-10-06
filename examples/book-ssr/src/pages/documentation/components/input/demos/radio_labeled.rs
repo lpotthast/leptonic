@@ -3,14 +3,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn RadioLabeledDemo() -> impl IntoView {
-    let (checked, set_checked) = signal(false);
-
     view! {
-        <FormControl>
-            <Radio checked=checked set_checked=set_checked />
-            <Label>
-                "Label"
-            </Label>
-        </FormControl>
+        <RadioGroup label="Shipping" description="Express arrives the next day.">
+            <Radio value="standard">"Standard shipping"</Radio>
+            <Radio value="express">"Express shipping"</Radio>
+        </RadioGroup>
     }
 }

@@ -231,9 +231,7 @@ dependencies = [
 
 [[package]]
 name = "browser-test"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c9ef5f3c441f0d3ce26b661d4f37ec5dc1822abf7dd706822532f47368b0e86"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "chrome-for-testing-manager",
@@ -324,17 +322,19 @@ dependencies = [
 
 [[package]]
 name = "chrome-for-testing-manager"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "chrome-for-testing",
  "directories",
  "futures",
  "reqwest",
  "rootcause",
+ "serde_json",
  "thirtyfour",
  "thiserror 2.0.18",
  "tokio",
  "tokio-process-tools",
+ "tokio-util",
  "tracing",
  "typed-builder",
  "unwrap-infallible",
@@ -2034,6 +2034,7 @@ dependencies = [
  "cargo_toml",
  "cfg-if",
  "educe",
+ "fixed_decimal",
  "icondata",
  "icu_calendar",
  "icu_collator",
@@ -4197,6 +4198,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

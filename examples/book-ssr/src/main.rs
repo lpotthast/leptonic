@@ -31,7 +31,8 @@ async fn main() {
     let (shutdown_send, mut shutdown_recv) = tokio::sync::mpsc::unbounded_channel::<()>();
 
     let _app_jh = tokio::spawn(async move {
-        let conf = get_configuration(None).unwrap();
+        let conf =
+            get_configuration(None).expect("Leptos configuration in Cargo.toml or the environment");
         let addr = conf.leptos_options.site_addr;
         let leptos_options = conf.leptos_options;
         // Generate the list of routes in your Leptos App
@@ -46,7 +47,8 @@ async fn main() {
         let md_cache = markdown::MarkdownCache::default();
 
         let md_cache_for_ctx = md_cache.clone();
-        let app = Router::new()
+        let warmup_cache = md_cache.clone();
+        let pages = Router::new()
             .leptos_routes_with_context(
                 &leptos_options,
                 routes,
@@ -57,6 +59,12 @@ async fn main() {
                 },
             )
             .fallback(leptos_axum::file_and_error_handler(shell))
+            .with_state(leptos_options);
+
+        // The Markdown middleware rewrites `/doc/x.md` to `/doc/x`, so it must run before routing. Middleware added to
+        // a router with `layer` runs after routing, therefore the pages are wrapped in an outer router.
+        let app = Router::new()
+            .fallback_service(pages)
             .layer(axum::middleware::from_fn_with_state(
                 md_cache,
                 markdown::markdown_middleware,
@@ -67,12 +75,11 @@ async fn main() {
                     .br(true)
                     .deflate(true)
                     .quality(tower_http::CompressionLevel::Default),
-            )
-            .with_state(leptos_options);
+            );
 
         let warmup_app = app.clone();
         tokio::spawn(async move {
-            markdown::warm_markdown_cache(warmup_app, &doc_paths).await;
+            markdown::warm_markdown_cache(warmup_app, warmup_cache, &doc_paths).await;
         });
 
         tracing::info!("Loading certs...");
@@ -100,7 +107,8 @@ async fn main() {
             .expect("Server to start successfully");
 
         tracing::info!("Exiting...");
-        shutdown_send.send(()).unwrap();
+        // The receiver only goes away once the process shuts down anyway.
+        let _ = shutdown_send.send(());
     });
 
     tracing::info!("Waiting for Ctrl-C...");

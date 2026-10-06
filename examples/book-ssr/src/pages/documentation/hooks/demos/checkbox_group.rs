@@ -1,62 +1,86 @@
-use std::collections::HashSet;
+use std::sync::Arc;
 
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::{collections::Key, *},
+};
 use leptos::prelude::*;
-use leptos_classes::Classes;
+
+const TOPPINGS: [&str; 4] = ["Cheese", "Mushrooms", "Olives", "Peppers"];
 
 #[component]
 pub fn CheckboxGroupDemo() -> impl IntoView {
-    let (group_value, _set_group_value) = signal(HashSet::<String>::new());
-    let UseCheckboxGroupReturn {
-        group_props,
-        label_props: group_label_props,
-        state: group_state,
-        is_invalid: _,
-        validation_errors: _,
-        validation_details: _,
-    } = use_checkbox_group(UseCheckboxGroupInput {
-        value: group_value.into(),
-        label: Some("Fruits".into()),
-        description: None,
-        is_disabled: false.into(),
-        is_read_only: false.into(),
-        is_required: false,
-        orientation: Orientation::Vertical,
-        on_change: None,
-        ..Default::default()
+    let disabled = RwSignal::new(false);
+
+    let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
+        default_value: vec![Key::from("Cheese")],
+        is_required: Signal::stored(true),
+        // Uncheck everything to see the error message.
+        validate: Some(Arc::new(|toppings: &Vec<Key>| {
+            if toppings.is_empty() {
+                Err(vec!["Choose at least one topping.".to_owned()])
+            } else {
+                Ok(())
+            }
+        })),
+        is_disabled: disabled.into(),
+        name: Some("toppings".to_owned()),
+        ..UseCheckboxGroupStateInput::default()
     });
+    let group = use_checkbox_group(UseCheckboxGroupInput {
+        has_label: true,
+        ..UseCheckboxGroupInput::new(state)
+    });
+    let data = group.data;
+    let description_props = group.description_props;
+    let error_message_props = group.error_message_props;
+    let validation_errors = group.validation_errors;
 
     view! {
-        <fieldset
-            role=group_props.role
-            aria-labelledby=group_props.aria_labelledby.clone()
-            style="border: none; padding: 0; margin: 0;"
-        >
-            <legend id=group_label_props.id.clone() style="font-weight: bold; margin-bottom: 0.5em;">
-                "Select your favorite fruits"
-            </legend>
+        <div {..group.props.into_attrs()} class="demo-choice-group">
+            <span {..group.label_props.into_attrs()} class="demo-choice-group-label">"Toppings"</span>
+            {TOPPINGS
+                .into_iter()
+                .map(|topping| view! { <ToppingCheckbox group=data.clone() topping/> })
+                .collect_view()}
+            <p {..description_props.into_attrs()} class="demo-choice-group-description">"Toppings cost one euro each."</p>
+            // Rendered only while invalid, so the checkboxes reference it only then.
+            <Show when=move || group.is_invalid.get()>
+                <p {..error_message_props.clone().into_attrs()} class="demo-choice-group-error">
+                    {move || validation_errors.get().join(" ")}
+                </p>
+            </Show>
+        </div>
 
-            {["Apple", "Banana", "Cherry", "Date"].into_iter().map(|fruit| {
-                let fruit_value = fruit.to_string();
-                let fruit_for_check = fruit_value.clone();
-                let fruit_for_toggle = fruit_value.clone();
-                let state = group_state.clone();
-                let state_for_check = group_state.clone();
-                view! {
-                    <label class=Classes::from("demo-form-row")>
-                        <input
-                            type="checkbox"
-                            checked=move || state_for_check.is_selected.run(fruit_for_check.clone())
-                            on:change=move |_| { state.toggle_value.run(fruit_for_toggle.clone()); }
-                        />
-                        <span>{ fruit }</span>
-                    </label>
-                }
-            }).collect::<Vec<_>>()}
-        </fieldset>
-
-        <p class=Classes::from("demo-mt-1")>
-            "Selected: " { move || format!("{:?}", group_state.value.get()) }
+        <p class="demo-status">
+            {move || {
+                let toppings = state.value.get().iter().map(ToString::to_string).collect::<Vec<_>>();
+                if toppings.is_empty() { "No toppings".to_owned() } else { format!("Toppings: {}", toppings.join(", ")) }
+            }}
         </p>
+
+        <div class="demo-toggle-settings">
+            <Checkbox state=disabled>"Disable the group"</Checkbox>
+        </div>
+    }
+}
+
+#[component]
+fn ToppingCheckbox(group: CheckboxGroupData, topping: &'static str) -> impl IntoView {
+    let checkbox =
+        use_checkbox_group_item(UseCheckboxGroupItemInput::new(group, Key::from(topping)));
+    let (label_attrs, label_styles) = checkbox.label_props.into_parts();
+    let (input_attrs, input_styles) = checkbox.input_props.into_parts();
+    let is_focus_visible = checkbox.is_focus_visible;
+    view! {
+        <label
+            {..label_attrs}
+            style=label_styles
+            class="demo-checkbox-label demo-no-margin"
+            data-focus-visible=move || is_focus_visible.get().then_some("")
+        >
+            <input {..input_attrs} style=input_styles/>
+            {topping}
+        </label>
     }
 }

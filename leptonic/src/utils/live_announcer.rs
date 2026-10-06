@@ -158,12 +158,8 @@ impl LiveAnnouncer {
         let node = document.create_element("div").ok()?;
         node.set_attribute("data-live-announcer", "true").ok()?;
         // Visually hidden, but read by screen readers.
-        node.set_attribute(
-            "style",
-            "border: 0; clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; margin: -1px; \
-             overflow: hidden; padding: 0; position: absolute; width: 1px; white-space: nowrap;",
-        )
-        .ok()?;
+        node.set_attribute("style", super::visually_hidden::VISUALLY_HIDDEN_STYLE)
+            .ok()?;
 
         let create_log = |assertiveness: Assertiveness| -> Option<Element> {
             let log = document.create_element("div").ok()?;

@@ -25,7 +25,7 @@ pub struct ScrollEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct UseScrollWheelInput {
     /// Whether the scroll listener should be disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Handler called when the user scrolls with the mouse wheel.
     pub on_scroll: Option<Callback<ScrollEvent>>,
@@ -95,7 +95,7 @@ pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,)
 /// ```
 pub fn use_scroll_wheel(input: UseScrollWheelInput) -> UseScrollWheelReturn {
     let UseScrollWheelInput {
-        disabled,
+        is_disabled: disabled,
         on_scroll,
     } = input;
 

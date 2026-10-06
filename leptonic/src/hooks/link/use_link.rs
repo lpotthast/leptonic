@@ -7,13 +7,12 @@ use reactive_graph::{
     wrappers::read::Signal,
 };
 
-use crate::hooks::PropsWithStyles;
 use crate::{
     hooks::{
         FocusHandle, IntoAttrs, LinkRel, LinkTarget, MergedFocusablePressFocusRingAttrs,
-        MergedFocusablePressFocusRingProps, PressEvent, UseFocusRingInput, UseFocusRingReturn,
-        UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn, link_rel_to_string,
-        use_focus_ring, use_focusable, use_press,
+        MergedFocusablePressFocusRingProps, PressEvent, PropsWithStyles, UseFocusRingInput,
+        UseFocusRingReturn, UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn,
+        link_rel_to_string, use_focus_ring, use_focusable, use_press,
     },
     utils::{
         MergeWith,
@@ -192,7 +191,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         props: focusable_props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
-        disabled: is_disabled,
+        is_disabled,
         ..UseFocusableInput::default()
     });
 
@@ -200,7 +199,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         props: press_props,
         is_pressed,
     } = use_press(UsePressInput {
-        disabled: is_disabled,
+        is_disabled,
         force_prevent_default: false,
         // Without setting this, Leptos' client-side navigation would not take place.
         force_propagation: true,
@@ -223,6 +222,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_long_press_end: None,
         long_press_threshold: None,
         long_press_accessibility_description: None,
+        long_press_disabled: Signal::stored(false),
     });
 
     let UseFocusRingReturn {
@@ -230,7 +230,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        is_disabled,
         ..UseFocusRingInput::default()
     });
 

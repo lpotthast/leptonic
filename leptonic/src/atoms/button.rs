@@ -1,4 +1,5 @@
 use leptos::{
+    attr::custom::custom_attribute,
     prelude::*,
     tachys::html::{class::class, style::style},
 };
@@ -7,18 +8,23 @@ use leptos_router::components::{A, AProps, ToHref};
 use crate::{
     hooks::{LinkTarget, *},
     utils::{
-        aria::{AriaExpanded, AriaHasPopup, AriaPressed},
+        aria::{AriaCurrent, AriaExpanded, AriaHasPopup, AriaPressed},
         classes::Classes,
+        data_attributes::flag,
         styles::Styles,
     },
 };
 
+/// A button: presses from mouse, touch, keyboard and screen readers through `use_button`.
+///
+/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 #[component]
 pub fn Button(
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     /// The `type` of the button. Defaults to `button`, so that buttons in forms don't submit them
     /// unless asked to.
     #[prop(optional)]
@@ -27,17 +33,37 @@ pub fn Button(
     #[prop(into, optional)] aria_haspopup: Signal<Option<AriaHasPopup>>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] aria_pressed: Signal<Option<AriaPressed>>,
+    /// Labels the button when its content doesn't (icon-only buttons).
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_describedby: Signal<Option<String>>,
+    #[prop(into, optional)] aria_controls: Signal<Option<String>>,
+    /// Marks the button as the current item of a set (e.g. the current page of a pagination).
+    #[prop(into, optional)]
+    aria_current: Signal<Option<AriaCurrent>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        props,
+        is_pressed,
+        is_hovered,
+        is_focused,
+        ..
+    } = use_button(UseButtonInput {
         button_type,
-        disabled,
+        is_disabled,
         exclude_from_tab_order,
         aria_haspopup,
         aria_expanded,
         aria_pressed,
+        aria_label,
+        aria_labelledby: aria_labelledby.map(Into::into),
+        aria_describedby,
+        aria_controls,
+        aria_current,
         on_press,
         on_hover_start,
         on_hover_end,
@@ -48,7 +74,15 @@ pub fn Button(
     let styles = button_styles.merge(styles);
 
     view! {
-        <button {..button_attrs} class=classes style=styles>
+        <button
+            {..button_attrs}
+            class=classes
+            style=styles
+            data-pressed=flag(is_pressed)
+            data-hovered=flag(is_hovered)
+            data-focused=flag(is_focused)
+            data-disabled=flag(is_disabled)
+        >
             {children()}
         </button>
     }
@@ -66,7 +100,7 @@ pub fn LinkButton<H>(
 
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
 
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
 
     #[prop(into, optional)] aria_haspopup: Option<Signal<Option<AriaHasPopup>>>,
 
@@ -86,13 +120,17 @@ pub fn LinkButton<H>(
 where
     H: ToHref + Send + Sync + 'static,
 {
-    let disabled = disabled.unwrap_or(Signal::from(false));
-
     // Navigation is handled by the router's `<A>`. The button hook only adds press, hover and
     // focus behavior; propagation must continue so the router sees the click.
-    let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        props,
+        is_pressed,
+        is_hovered,
+        is_focused,
+        ..
+    } = use_button(UseButtonInput {
         element_type: ButtonElementType::Anchor,
-        disabled,
+        is_disabled,
         aria_haspopup: aria_haspopup.unwrap_or_default(),
         aria_expanded: aria_expanded.unwrap_or_default(),
         on_hover_start,
@@ -121,13 +159,8 @@ where
     .add_any_attr(class(classes))
     .add_any_attr(style(styles))
     .add_any_attr(button_attrs)
-}
-
-#[component]
-pub fn ButtonWrapper(
-    #[prop(into, optional)] classes: Classes,
-    #[prop(into, optional)] styles: Styles,
-    children: Children,
-) -> impl IntoView {
-    view! { <div class=classes.add("leptonic-btn-wrapper") style=styles>{children()}</div> }
+    .add_any_attr(custom_attribute("data-pressed", flag(is_pressed)))
+    .add_any_attr(custom_attribute("data-hovered", flag(is_hovered)))
+    .add_any_attr(custom_attribute("data-focused", flag(is_focused)))
+    .add_any_attr(custom_attribute("data-disabled", flag(is_disabled)))
 }

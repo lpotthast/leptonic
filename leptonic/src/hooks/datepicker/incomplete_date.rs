@@ -248,20 +248,6 @@ impl IncompleteDate {
         Some(date.with_time(time).assume_utc())
     }
 
-    /// Get the value of a specific segment field.
-    pub fn get_field(&self, segment_type: DateSegmentType) -> Option<i32> {
-        match segment_type {
-            DateSegmentType::Year => self.year,
-            DateSegmentType::Month => self.month.map(i32::from),
-            DateSegmentType::Day => self.day.map(i32::from),
-            DateSegmentType::Hour => self.hour.map(i32::from),
-            DateSegmentType::Minute => self.minute.map(i32::from),
-            DateSegmentType::Second => self.second.map(i32::from),
-            DateSegmentType::DayPeriod => self.day_period.map(i32::from),
-            DateSegmentType::Literal => None,
-        }
-    }
-
     /// Get (min, max) for a segment type.
     pub fn get_segment_limits(
         &self,

@@ -1,198 +1,88 @@
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::{
+        IntoAttrs, Key, TabListData, TabListItemData, UseTabInput, UseTabListInput,
+        UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_collection,
+        use_tab, use_tab_list, use_tab_list_state, use_tab_panel,
+    },
+    utils::CapturedElement,
+};
 use leptos::prelude::*;
+
+const TABS: [(&str, &str); 4] = [
+    ("details", "Details"),
+    ("specs", "Specs"),
+    ("reviews", "Reviews"),
+    ("shipping", "Shipping"),
+];
+
+/// One tab, rendered with `use_tab`. Its state shows in `aria-selected` and `aria-disabled`.
+#[component]
+fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
+    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
+    let (attrs, styles) = tab_props.into_parts();
+
+    view! { <div {..attrs} class="demo-tab demo-hook-tab" style=styles>{label}</div> }
+}
 
 #[component]
 pub fn TabsDemo() -> impl IntoView {
-    let (selected_tab, set_selected_tab) = signal(Some("account".to_string()));
-    let (focused_tab_index, set_focused_tab_index) = signal(0usize);
+    let disabled = RwSignal::new(false);
 
-    let tab_labels = ["Account", "Password", "Notifications"];
-
-    let tabs = use_tabs(UseTabsInput {
-        selected_key: selected_tab.into(),
-        default_selected_key: Some("account".to_string()),
-        is_disabled: false.into(),
-        orientation: TabsOrientation::Horizontal,
-        activation_mode: TabsActivationMode::Automatic,
-        on_selection_change: Some(Callback::new(move |key: String| {
-            set_selected_tab.set(Some(key));
-        })),
+    // The tabs, as a collection. "Reviews" is disabled: it can't be selected, and the arrow keys skip it.
+    let collection = use_collection(|b| {
+        for (key, label) in TABS {
+            b.item(key, label).disabled(key == "reviews");
+        }
     });
-
-    let id_base = tabs.id_base.clone();
-    let select_tab = tabs.select_tab;
-    let orientation = tabs.orientation;
-    let activation_mode = tabs.activation_mode;
-
-    let tab_list = use_tab_list(UseTabListInput {
-        id_base: id_base.clone(),
-        orientation,
-        is_disabled: false.into(),
-        label: Some("Settings".to_string()),
-        on_focus_next: Some(Callback::new(move |()| {
-            set_focused_tab_index.update(|i| *i = (*i + 1) % 3);
-        })),
-        on_focus_previous: Some(Callback::new(move |()| {
-            set_focused_tab_index.update(|i| *i = if *i == 0 { 2 } else { *i - 1 });
-        })),
-        on_focus_first: Some(Callback::new(move |()| {
-            set_focused_tab_index.set(0);
-        })),
-        on_focus_last: Some(Callback::new(move |()| {
-            set_focused_tab_index.set(2);
-        })),
+    // Without a `default_selected_key`, the first enabled tab is selected.
+    let state = use_tab_list_state(UseTabListStateInput {
+        is_disabled: disabled.into(),
+        ..UseTabListStateInput::new(collection)
     });
+    let tabs = TabListData::new(state);
 
-    let id_base_for_tab0 = id_base.clone();
-    let tab_account = use_tab(UseTabInput {
-        tab_key: "account".to_string(),
-        id_base: id_base_for_tab0,
-        is_selected: Signal::derive(move || selected_tab.get() == Some("account".to_string())),
-        is_disabled: false.into(),
-        is_focused: Signal::derive(move || focused_tab_index.get() == 0),
-        activation_mode,
-        on_select: Some(Callback::new(move |()| {
-            select_tab.run("account".to_string());
-        })),
-        on_focus: Some(Callback::new(move |()| {
-            set_focused_tab_index.set(0);
-        })),
+    let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
+        aria_label: "Product".into(),
+        ..UseTabListInput::new(tabs.clone(), CapturedElement::new())
     });
+    // `key: None`: one panel that always shows the selected tab.
+    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
 
-    let id_base_for_tab1 = id_base.clone();
-    let tab_password = use_tab(UseTabInput {
-        tab_key: "password".to_string(),
-        id_base: id_base_for_tab1,
-        is_selected: Signal::derive(move || selected_tab.get() == Some("password".to_string())),
-        is_disabled: false.into(),
-        is_focused: Signal::derive(move || focused_tab_index.get() == 1),
-        activation_mode,
-        on_select: Some(Callback::new(move |()| {
-            select_tab.run("password".to_string());
-        })),
-        on_focus: Some(Callback::new(move |()| {
-            set_focused_tab_index.set(1);
-        })),
-    });
-
-    let id_base_for_tab2 = id_base.clone();
-    let tab_notifications = use_tab(UseTabInput {
-        tab_key: "notifications".to_string(),
-        id_base: id_base_for_tab2,
-        is_selected: Signal::derive(move || {
-            selected_tab.get() == Some("notifications".to_string())
-        }),
-        is_disabled: false.into(),
-        is_focused: Signal::derive(move || focused_tab_index.get() == 2),
-        activation_mode,
-        on_select: Some(Callback::new(move |()| {
-            select_tab.run("notifications".to_string());
-        })),
-        on_focus: Some(Callback::new(move |()| {
-            set_focused_tab_index.set(2);
-        })),
-    });
-
-    let id_base_for_panel0 = id_base.clone();
-    let panel0 = use_tab_panel(UseTabPanelInput {
-        panel_key: "account".to_string(),
-        id_base: id_base_for_panel0,
-        is_selected: Signal::derive(move || selected_tab.get() == Some("account".to_string())),
-    });
-
-    let id_base_for_panel1 = id_base.clone();
-    let panel1 = use_tab_panel(UseTabPanelInput {
-        panel_key: "password".to_string(),
-        id_base: id_base_for_panel1,
-        is_selected: Signal::derive(move || selected_tab.get() == Some("password".to_string())),
-    });
-
-    let id_base_for_panel2 = id_base.clone();
-    let panel2 = use_tab_panel(UseTabPanelInput {
-        panel_key: "notifications".to_string(),
-        id_base: id_base_for_panel2,
-        is_selected: Signal::derive(move || {
-            selected_tab.get() == Some("notifications".to_string())
-        }),
-    });
+    let content = move || {
+        match state.selected_key().map(|key| key.to_string()).as_deref() {
+        Some("specs") => view! {
+            <h4>"Specs"</h4>
+            <p>"Aluminium frame, 1.2 kg, USB-C charging."</p>
+        }
+        .into_any(),
+        Some("shipping") => view! {
+            <h4>"Shipping"</h4>
+            <p>"This panel contains a checkbox, so Tab moves to the checkbox instead of the panel."</p>
+            <Checkbox>"Express delivery"</Checkbox>
+        }
+        .into_any(),
+        _ => view! {
+            <h4>"Details"</h4>
+            <p>"A lightweight, foldable reading lamp."</p>
+        }
+        .into_any(),
+    }
+    };
 
     view! {
-        <div {..tabs.props.into_attrs()}>
-            <div
-                {..tab_list.props.into_attrs()}
-                style="display: flex; border-bottom: 2px solid #ddd;"
-            >
-                <button
-                    {..tab_account.props.into_attrs()}
-                    style=move || format!(
-                        "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                        if tab_account.is_selected.get() {
-                            "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
-                        } else {
-                            "color: #666;"
-                        }
-                    )
-                >
-                    {tab_labels[0]}
-                </button>
-                <button
-                    {..tab_password.props.into_attrs()}
-                    style=move || format!(
-                        "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                        if tab_password.is_selected.get() {
-                            "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
-                        } else {
-                            "color: #666;"
-                        }
-                    )
-                >
-                    {tab_labels[1]}
-                </button>
-                <button
-                    {..tab_notifications.props.into_attrs()}
-                    style=move || format!(
-                        "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                        if tab_notifications.is_selected.get() {
-                            "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
-                        } else {
-                            "color: #666;"
-                        }
-                    )
-                >
-                    {tab_labels[2]}
-                </button>
-            </div>
+        <div {..props.into_attrs()} class="demo-tab-list">
+            {TABS
+                .map(|(key, label)| view! { <DemoTab list=data.clone() key=key label=label/> })
+                .collect_view()}
+        </div>
+        <div {..panel.tab_panel_props.into_attrs()} class="demo-tab-panel">{content}</div>
 
-            <div
-                {..panel0.props.into_attrs()}
-                style=move || format!(
-                    "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
-                    if panel0.is_selected.get() { "" } else { "display: none;" }
-                )
-            >
-                <h3 style="margin: 0 0 0.5em 0;">{tab_labels[0]} " Settings"</h3>
-                <p style="margin: 0; color: #666;">"Configure your account settings here."</p>
-            </div>
-            <div
-                {..panel1.props.into_attrs()}
-                style=move || format!(
-                    "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
-                    if panel1.is_selected.get() { "" } else { "display: none;" }
-                )
-            >
-                <h3 style="margin: 0 0 0.5em 0;">{tab_labels[1]} " Settings"</h3>
-                <p style="margin: 0; color: #666;">"Configure your password settings here."</p>
-            </div>
-            <div
-                {..panel2.props.into_attrs()}
-                style=move || format!(
-                    "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
-                    if panel2.is_selected.get() { "" } else { "display: none;" }
-                )
-            >
-                <h3 style="margin: 0 0 0.5em 0;">{tab_labels[2]} " Settings"</h3>
-                <p style="margin: 0; color: #666;">"Configure your notifications settings here."</p>
-            </div>
+        <div class="demo-tabs-controls">
+            <Checkbox state=disabled>"Disable all tabs"</Checkbox>
+            <p class="demo-tabs-status">
+                "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}
+            </p>
         </div>
     }
 }

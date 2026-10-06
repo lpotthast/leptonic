@@ -1,44 +1,61 @@
+use std::collections::HashSet;
+
 use leptonic::{
+    atoms::toggle_button::{ToggleButton, ToggleButtonGroup},
     hooks::*,
-    utils::color::{ColorValue, HSL, HSV, HslChannel, HsvChannel},
+    utils::{
+        color::{ColorValue, HSL, HSV, HslChannel, HsvChannel, RGB8},
+        css::{
+            CssColor, CssDimension, LengthPercentageAuto, NonNegativeLengthPercentage, Size, try_px,
+        },
+        style::{
+            BackgroundColorProperty, HeightProperty, LeftProperty, TopProperty, WidthProperty,
+        },
+        styles::Styles,
+    },
 };
 use leptos::prelude::*;
 
+/// The color model the wheel edits the hue of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColorModel {
+    Hsv,
+    Hsl,
+}
+
 #[component]
 pub fn ColorWheelDemo() -> impl IntoView {
-    let (mode, set_mode) = signal("hsv");
+    let model = RwSignal::new(ColorModel::Hsv);
+    let select_model = move |keys: HashSet<Key>| {
+        model.set(if keys.contains(&Key::from("HSL")) {
+            ColorModel::Hsl
+        } else {
+            ColorModel::Hsv
+        });
+    };
 
     view! {
         <div>
-            <div style="display: flex; gap: 0.5em; margin-bottom: 1em;">
-                <button
-                    on:click=move |_| set_mode.set("hsv")
-                    style=move || format!(
-                        "padding: 0.25em 0.75em; border-radius: 4px; cursor: pointer; \
-                         border: 1px solid #888; {}",
-                        if mode.get() == "hsv" { "background: #555; color: white;" } else { "background: transparent;" }
-                    )
+            <div class="demo-color-wheel-modes">
+                <ToggleButtonGroup
+                    selection_mode=ToggleGroupSelectionMode::Single
+                    disallow_empty_selection=true
+                    default_selected_keys=HashSet::from([Key::from("HSV")])
+                    on_selection_change=select_model
+                    aria_label="Color model"
+                    classes="demo-toggle-group"
                 >
-                    "HSV"
-                </button>
-                <button
-                    on:click=move |_| set_mode.set("hsl")
-                    style=move || format!(
-                        "padding: 0.25em 0.75em; border-radius: 4px; cursor: pointer; \
-                         border: 1px solid #888; {}",
-                        if mode.get() == "hsl" { "background: #555; color: white;" } else { "background: transparent;" }
-                    )
-                >
-                    "HSL"
-                </button>
+                    <ToggleButton value="HSV" classes="demo-toggle-button">"HSV"</ToggleButton>
+                    <ToggleButton value="HSL" classes="demo-toggle-button">"HSL"</ToggleButton>
+                </ToggleButtonGroup>
             </div>
 
-            // Both wheels stay mounted; CSS display toggling preserves state.
-            <div style=move || if mode.get() == "hsv" { "" } else { "display: none;" }>
-                <HsvWheel />
+            // Both wheels stay mounted, so each keeps its value while hidden.
+            <div hidden=move || model.get() != ColorModel::Hsv>
+                <HsvWheel/>
             </div>
-            <div style=move || if mode.get() == "hsl" { "" } else { "display: none;" }>
-                <HslWheel />
+            <div hidden=move || model.get() != ColorModel::Hsl>
+                <HslWheel/>
             </div>
         </div>
     }
@@ -49,7 +66,7 @@ fn HsvWheel() -> impl IntoView {
     let state = use_color_wheel_state(UseColorWheelStateInput {
         default_value: HSV::new(),
         channel: HsvChannel::Hue,
-        disabled: false.into(),
+        is_disabled: false.into(),
         on_change: None,
         on_change_end: None,
     });
@@ -71,7 +88,7 @@ fn HslWheel() -> impl IntoView {
     let state = use_color_wheel_state(UseColorWheelStateInput {
         default_value: HSL::new(),
         channel: HslChannel::Hue,
-        disabled: false.into(),
+        is_disabled: false.into(),
         on_change: None,
         on_change_end: None,
     });
@@ -88,10 +105,24 @@ fn HslWheel() -> impl IntoView {
     wheel_view(state, info)
 }
 
-fn wheel_view<C: ColorValue>(
-    state: UseColorWheelStateReturn<C>,
-    info: Signal<String>,
-) -> impl IntoView {
+/// A pixel size for `width`/`height`. Negative or non-finite values render as `0px`.
+fn px_size(value: f64) -> Size {
+    let dimension = try_px(value).unwrap_or(CssDimension::Zero);
+    NonNegativeLengthPercentage::try_from(dimension)
+        .unwrap_or_else(|_| NonNegativeLengthPercentage::new(CssDimension::Zero))
+        .into()
+}
+
+/// A pixel offset for `left`/`top`. Non-finite values render as `0px`.
+fn px_offset(value: f64) -> LengthPercentageAuto {
+    LengthPercentageAuto::from(try_px(value).unwrap_or(CssDimension::Zero))
+}
+
+fn wheel_view<C>(state: UseColorWheelStateReturn<C>, info: Signal<String>) -> impl IntoView
+where
+    C: ColorValue,
+    RGB8: From<C>,
+{
     let hue = state.hue;
     let display_color = state.display_color;
 
@@ -99,57 +130,53 @@ fn wheel_view<C: ColorValue>(
         state,
         outer_radius: 100.0,
         inner_radius: 70.0,
-        disabled: false.into(),
+        is_disabled: false.into(),
         aria_label: Some("Hue wheel"),
         name: None,
         form: None,
     });
 
-    let track_size = wheel.track_size;
-    let clip_path = wheel.clip_path.clone();
+    let background = wheel.background;
     let thumb_x = wheel.thumb_x;
     let thumb_y = wheel.thumb_y;
 
+    // The size comes from the radii, the annulus shape and the conic gradient are free-form
+    // CSS values that leptos-css does not model, so they go through the unchecked escape hatch.
+    let track_styles = Styles::builder()
+        .with(WidthProperty.declare(px_size(wheel.track_size)))
+        .with(HeightProperty.declare(px_size(wheel.track_size)))
+        .with_unchecked("clip-path", wheel.clip_path)
+        .with_optional_unchecked("background", move || Some(background.get()))
+        .build();
+
+    let thumb_styles = Styles::builder()
+        .with_reactive(move || LeftProperty.declare(px_offset(thumb_x.get())))
+        .with_reactive(move || TopProperty.declare(px_offset(thumb_y.get())))
+        .with_reactive(move || {
+            BackgroundColorProperty.declare(CssColor::from(RGB8::from(display_color.get())))
+        })
+        .build();
+
+    let preview_styles = Styles::new().add_reactive(move || {
+        BackgroundColorProperty.declare(CssColor::from(RGB8::from(display_color.get())))
+    });
+
     view! {
-        <div style="position: relative;">
-            <div
-                {..wheel.track_props.into_attrs()}
-                style=move || format!(
-                    "position: relative; width: {track_size}px; height: {track_size}px; \
-                     border-radius: 50%; touch-action: none; \
-                     background: {}; clip-path: {clip_path};",
-                    wheel.background.get(),
-                )
-            >
-                <div
-                    {..wheel.thumb_props.into_attrs()}
-                    style=move || format!(
-                        "position: absolute; width: 20px; height: 20px; border-radius: 50%; \
-                         border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5); \
-                         transform: translate(-50%, -50%); touch-action: none; cursor: grab; \
-                         left: {}px; top: {}px; background: {};",
-                        thumb_x.get(),
-                        thumb_y.get(),
-                        display_color.get().to_css_string(),
-                    )
-                >
-                    <input
-                        {..wheel.input_props.into_attrs()}
-                        style="opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute; top: 0; left: 0;"
-                    />
+        <div class="demo-color-wheel">
+            <div {..wheel.track_props.into_attrs()} class="demo-color-wheel-track" style=track_styles>
+                <div {..wheel.thumb_props.into_attrs()} class="demo-color-wheel-thumb" style=thumb_styles>
+                    <input {..wheel.input_props.into_attrs()} class="demo-visually-hidden-input"/>
                 </div>
             </div>
 
-            <p style="margin: 0; position: absolute; top: 40%; left: 22%; text-align: center;">
-                <span style=move || format!(
-                    "display: inline-block; width: 1em; height: 1em; vertical-align: middle; \
-                     border-radius: 2px; background: {};",
-                    display_color.get().to_css_string()
-                )></span>
+            <p class="demo-color-wheel-info">
+                <span class="demo-color-preview" style=preview_styles></span>
                 " "
-                <code>{ move || format!("{:.0}\u{00b0}", hue.get()) }</code>
-                <br />
-                <small><code>{ info }</code></small>
+                <code>{move || format!("{:.0}\u{00b0}", hue.get())}</code>
+                <br/>
+                <small>
+                    <code>{info}</code>
+                </small>
             </p>
         </div>
     }

@@ -1,59 +1,42 @@
-// Upstream: react-aria/src/grid/useGridRowGroup.ts @ 6f664fe911
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/grid/useGridRowGroup.ts @ 99e6102368
+use leptos::attr::{self, Attr};
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGridRowGroup.ts
-
-// ## OMITTED FEATURES
-// - `isVirtualized` — no virtualization support.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-// - Returns a props struct with `into_attrs()` instead of React props.
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
-/// Return value for a grid row group.
+/// Return value of [`use_grid_row_group`].
+#[derive(Debug)]
 pub struct UseGridRowGroupReturn {
-    /// Props for the row group element.
-    pub props: UseGridRowGroupProps,
+    pub row_group_props: UseGridRowGroupProps,
 }
 
-/// Props from `use_grid_row_group` that can be extracted and merged programmatically.
-#[derive(Debug, Clone, Copy)]
+/// Props for a group of rows (like `<tbody>`).
+#[derive(Debug)]
 pub struct UseGridRowGroupProps {
     pub role: AriaRole,
 }
+
+pub type UseGridRowGroupAttrs = (Attr<attr::Role, AriaRole>,);
 
 impl IntoAttrs for UseGridRowGroupProps {
     type Attrs = UseGridRowGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        Attr(attr::Role, self.role)
+        (Attr(attr::Role, self.role),)
     }
 }
 
-/// Attributes for a grid row group.
-pub type UseGridRowGroupAttrs = Attr<attr::Role, AriaRole>;
-
-/// Provides the behavior and accessibility for a grid row group.
-///
-/// A grid row group is a structural container (e.g., `<tbody>`) that groups
-/// grid rows together. It sets `role="rowgroup"` for ARIA compliance.
-///
-/// # Example
-///
-/// ```ignore
-/// let row_group = use_grid_row_group();
-///
-/// view! {
-///     <div {..row_group.props.into_attrs()}>
-///         // Grid rows...
-///     </div>
-/// }
-/// ```
-#[must_use]
+/// A group of rows in a grid.
 pub fn use_grid_row_group() -> UseGridRowGroupReturn {
     UseGridRowGroupReturn {
-        props: UseGridRowGroupProps {
+        row_group_props: UseGridRowGroupProps {
             role: AriaRole::Rowgroup,
         },
     }

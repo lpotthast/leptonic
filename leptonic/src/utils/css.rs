@@ -39,17 +39,17 @@ impl From<crate::utils::color::HSL> for leptos_styles::css::CssValue {
 // percentage when `min == max`) into typed CSS values without panicking.
 
 /// A percentage dimension for a computed value. Non-finite input renders as `0px`.
-pub(crate) fn computed_pct(value: f64) -> CssDimension {
+pub fn computed_pct(value: f64) -> CssDimension {
     try_pct(value).unwrap_or(CssDimension::Zero)
 }
 
 /// A pixel dimension for a computed value. Non-finite input renders as `0px`.
-pub(crate) fn computed_px(value: f64) -> CssDimension {
+pub fn computed_px(value: f64) -> CssDimension {
     try_px(value).unwrap_or(CssDimension::Zero)
 }
 
 /// A `width`/`height` value for a computed dimension. Negative input is clamped to `0px`.
-pub(crate) fn computed_size(value: CssDimension) -> Size {
+pub fn computed_size(value: CssDimension) -> Size {
     NonNegativeLengthPercentage::try_from(value)
         .unwrap_or_else(|_| NonNegativeLengthPercentage::new(CssDimension::Zero))
         .into()

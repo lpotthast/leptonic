@@ -4,17 +4,14 @@ use leptos::prelude::*;
 #[component]
 pub fn SeparatorVerticalDemo() -> impl IntoView {
     let vertical_sep = use_separator(UseSeparatorInput {
-        orientation: SeparatorOrientation::Vertical,
+        orientation: Orientation::Vertical,
         element_type: SeparatorElementType::Div,
     });
 
     view! {
-        <div style="display: flex; align-items: center; gap: 1em;">
+        <div class="demo-flex-center-row">
             <span>"Left content"</span>
-            <div
-                {..vertical_sep.separator_props.into_attrs()}
-                style="width: 1px; height: 24px; background: #ccc;"
-            ></div>
+            <div {..vertical_sep.separator_props.into_attrs()} class="demo-separator-vertical"></div>
             <span>"Right content"</span>
         </div>
     }

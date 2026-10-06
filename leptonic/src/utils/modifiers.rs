@@ -30,17 +30,6 @@ impl EventModifiers for web_sys::MouseEvent {
     }
 }
 
-impl EventModifiers for web_sys::TouchEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
 impl EventModifiers for web_sys::KeyboardEvent {
     fn modifiers(&self) -> Modifiers {
         Modifiers {

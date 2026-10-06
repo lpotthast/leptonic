@@ -1,119 +1,154 @@
-use leptonic::hooks::*;
-use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, RingBuffer},
+use leptonic::{
+    components::prelude::*,
+    hooks::{
+        DragEndEvent, DragItem, DragType, DropEvent, DropItem, DropOperation, DropOperationQuery,
+        IntoAttrs, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn, use_drag, use_drop,
+    },
+    utils::CapturedElement,
 };
+use leptos::prelude::*;
 
+const URL: &str = "https://leptos.dev";
+
+/// Two cards and two drop targets. The inbox takes anything; the bookmarks only take links, and link them.
 #[component]
 pub fn DragToDropDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(20));
-    let (dropped_count, set_dropped_count) = signal(0);
+    let disabled = RwSignal::new(false);
+    let last_drag = RwSignal::new(String::from("none"));
 
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
+    // A note: plain text, which may be moved, copied or linked (the default).
+    let note = use_drag(UseDragInput {
+        on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
+            last_drag.set(format!("Note, {:?}", e.drop_operation));
+        })),
+        is_disabled: disabled.into(),
+        ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("Water the plants")]))
     });
-
-    let draggable = use_draggable(UseDraggableInput {
-        get_items: Callback::new(|()| {
-            vec![
-                DragItem::text("Package"),
-                DragItem::json(r#"{"type": "package", "id": 1}"#),
-            ]
-        }),
-        get_allowed_drop_operations: Callback::new(|()| AllowedDropOperations::COPY),
-        on_drag_start: Some(Callback::new(move |_| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("Draggable: DragStart"));
-            });
+    // A link: a URL in two representations. Links can only be copied or linked, not moved.
+    let link = use_drag(UseDragInput {
+        get_allowed_drop_operations: Some(Callback::new(|()| {
+            vec![DropOperation::Copy, DropOperation::Link]
         })),
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Draggable: DragEnd ({:?})",
-                    e.drop_effect
-                )));
-            });
+            last_drag.set(format!("Link, {:?}", e.drop_operation));
         })),
-        ..Default::default()
-    });
-
-    let droppable = use_droppable(UseDroppableInput {
-        accepted_types: vec!["text/plain".to_string(), "application/json".to_string()],
-        on_drop_enter: Some(Callback::new(move |_| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("Droppable: DropEnter"));
-            });
-        })),
-        on_drop_exit: Some(Callback::new(move |_| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("Droppable: DropExit"));
-            });
-        })),
-        on_drop: Some(Callback::new(move |e: DropEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Droppable: Drop ({} items)",
-                    e.items.len()
-                )));
-            });
-            set_dropped_count.update(|c| *c += 1);
-        })),
-        ..Default::default()
+        is_disabled: disabled.into(),
+        ..UseDragInput::new(Callback::new(|()| {
+            vec![
+                DragItem::new()
+                    .with("text/uri-list", URL)
+                    .with("text/plain", URL),
+            ]
+        }))
     });
 
     view! {
-        <div style="display: flex; gap: 2em; margin: 1em 0; align-items: center;">
-            <div
-                {..draggable.drag_props.into_attrs()}
-                style=move || format!(
-                    "padding: 1em 2em; border-radius: 8px; cursor: grab; user-select: none; \
-                    background: {}; color: white; display: flex; align-items: center; gap: 0.5em;",
-                    if draggable.is_dragging.get() { "var(--brand-color)" } else { "#666" }
-                )
-            >
-                <span style="font-size: 1.5em;">"📦"</span>
-                "Package"
+        <div class="demo-dnd-board">
+            <div class="demo-dnd-cards">
+                <Card drag=note title="Note" content="Water the plants"/>
+                <Card drag=link title="Link" content=URL/>
             </div>
-
-            <div style="font-size: 2em; color: #ccc;">"→"</div>
-
-            <div
-                {..droppable.drop_props.into_attrs()}
-                style=move || format!(
-                    "padding: 2em; border-radius: 8px; min-width: 150px; text-align: center; \
-                    border: 2px dashed {}; background: {};",
-                    if droppable.is_drop_target.get() { "var(--brand-color)" } else { "#ccc" },
-                    if droppable.is_drop_target.get() { "rgba(var(--brand-color-rgb), 0.1)" } else { "transparent" }
-                )
-            >
-                <span style="font-size: 2em;">"📥"</span>
-                <p style="margin: 0.5em 0 0 0;">"Inbox"</p>
-                <p style="margin: 0.25em 0 0 0; font-size: 0.9em; color: #666;">
-                    { move || dropped_count.get() } " received"
-                </p>
+            <div class="demo-dnd-targets">
+                // Takes any data, with the first operation the drag allows.
+                <Target title="Inbox" hint="Accepts anything" get_drop_operation=None/>
+                // Takes links only, and links them.
+                <Target
+                    title="Bookmarks"
+                    hint="Accepts links"
+                    get_drop_operation=Some(Callback::new(|q: DropOperationQuery| {
+                        if q.types.has(&DragType::from("text/uri-list"))
+                            && q.allowed_operations.contains(&DropOperation::Link)
+                        {
+                            DropOperation::Link
+                        } else {
+                            DropOperation::Cancel
+                        }
+                    }))
+                />
             </div>
         </div>
 
-        <p>"Events:"</p>
-        <pre style="
-            width: 100%;
-            height: 6em;
-            overflow: auto;
-            padding: var(--typography-code-padding);
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            { move || string.get() }
-        </pre>
+        <Checkbox state=disabled>"Disable dragging"</Checkbox>
+
+        <div class="demo-state-display">
+            <strong>"Last drag ended: "</strong>{last_drag}
+        </div>
+    }
+}
+
+#[component]
+fn Card(drag: UseDragReturn, title: &'static str, content: &'static str) -> impl IntoView {
+    let is_dragging = drag.is_dragging;
+    view! {
+        // Focusable, so that Enter starts a keyboard drag.
+        <div
+            {..drag.drag_props.into_attrs()}
+            role="button"
+            tabindex="0"
+            class="demo-dnd-card"
+            data-dragging=move || is_dragging.get().then_some("")
+        >
+            <strong>{title}</strong>
+            <span>{content}</span>
+        </div>
+    }
+}
+
+#[component]
+fn Target(
+    title: &'static str,
+    hint: &'static str,
+    get_drop_operation: Option<Callback<DropOperationQuery, DropOperation>>,
+) -> impl IntoView {
+    let dropped = RwSignal::new(Vec::<String>::new());
+    let UseDropReturn {
+        drop_props,
+        is_drop_target,
+        ..
+    } = use_drop(UseDropInput {
+        get_drop_operation,
+        on_drop: Some(Callback::new(move |e: DropEvent| {
+            let operation = e.drop_operation;
+            dropped.update(|dropped| {
+                dropped.extend(
+                    e.items
+                        .iter()
+                        .map(|item| format!("{} ({operation:?})", describe(item))),
+                );
+            });
+        })),
+        ..UseDropInput::new(CapturedElement::new())
+    });
+
+    view! {
+        <div class="demo-dnd-target-column">
+            // The props capture the element; keyboard drags focus it.
+            <div
+                {..drop_props.into_attrs()}
+                role="button"
+                tabindex="0"
+                class="demo-dnd-target"
+                data-drop-target=move || is_drop_target.get().then_some("")
+            >
+                <strong>{title}</strong>
+                <span class="demo-caption">{hint}</span>
+            </div>
+            <ul class="demo-dnd-dropped" aria-label=format!("Dropped on {title}")>
+                {move || dropped.get().into_iter().map(|entry| view! { <li>{entry}</li> }).collect_view()}
+            </ul>
+        </div>
+    }
+}
+
+/// What was dropped: the link or text of text items, the names of files and directories.
+fn describe(item: &DropItem) -> String {
+    match item {
+        DropItem::Text(text) => text
+            .get_text("text/uri-list")
+            .or_else(|| text.get_text("text/plain"))
+            .unwrap_or("(other data)")
+            .to_owned(),
+        DropItem::File(file) => format!("File {}", file.name),
+        DropItem::Directory(directory) => format!("Folder {}", directory.name),
     }
 }

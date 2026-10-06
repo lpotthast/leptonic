@@ -41,7 +41,7 @@ pub fn ColorArea<C: ColorValue>(
     y_channel: C::Channel,
     /// Whether the area is disabled.
     #[prop(into, optional)]
-    disabled: Signal<bool>,
+    is_disabled: Signal<bool>,
     /// Callback fired when the color changes.
     #[prop(optional)]
     on_change: Option<Callback<C>>,
@@ -51,9 +51,6 @@ pub fn ColorArea<C: ColorValue>(
     /// Accessibility label.
     #[prop(into, optional)]
     aria_label: Option<&'static str>,
-    /// Whether to use RTL layout.
-    #[prop(optional)]
-    is_rtl: bool,
     /// HTML `name` attribute for the hidden X-axis range input.
     #[prop(optional)]
     x_name: Option<&'static str>,
@@ -81,9 +78,8 @@ pub fn ColorArea<C: ColorValue>(
 
     let area = use_color_area(UseColorAreaInput {
         state: state.clone(),
-        disabled,
+        is_disabled,
         aria_label,
-        is_rtl,
         x_name,
         y_name,
         form,

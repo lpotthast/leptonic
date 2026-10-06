@@ -3,13 +3,11 @@
 //! This module provides hooks for managing modal behaviors including:
 //! - Aria-modal marking (`use_modal`)
 //! - Dismiss behavior and scroll prevention (`use_modal_backdrop`)
-//! - Open/close state management (`use_modal_state`)
 //!
 //! ## Hook Composition
 //!
 //! The modal/dialog system uses composable layers, each handling a specific concern:
 //!
-//! 1. **State Layer** — `use_modal_state` or `use_dialog_state`: Manages open/close state
 //! 2. **Backdrop Layer** — `use_modal_backdrop`: Dismiss behavior (Escape, interact-outside
 //!    via `use_overlay`) + scroll prevention
 //! 3. **Aria-modal Layer** — `use_modal`: Sets `aria-modal="true"` for assistive technology
@@ -35,8 +33,8 @@
 //!
 //! ### Differences
 //!
-//! - **Naming**: React Aria's `useModalOverlay` with `underlayProps` is renamed to
-//!   `use_modal_backdrop` with `backdrop_props` for clarity.
+//! - **Naming**: React Aria's `useModalOverlay` is renamed to `use_modal_backdrop`. Its
+//!   `underlayProps` are empty upstream and omitted here: the backdrop element needs no props.
 //!
 //! - **`use_modal` scope**: React Aria's `useModal` manages `aria-hidden` on sibling
 //!   elements via `ModalProvider` context. Leptonic's `use_modal` simply sets
@@ -44,8 +42,6 @@
 
 pub mod use_modal;
 pub mod use_modal_backdrop;
-pub mod use_modal_state;
 
 pub use use_modal::*;
 pub use use_modal_backdrop::*;
-pub use use_modal_state::*;

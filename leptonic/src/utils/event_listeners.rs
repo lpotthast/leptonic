@@ -1,76 +1,76 @@
-use leptos::{ev::EventDescriptor, typed_builder::TypedBuilder};
-use wasm_bindgen::{closure::Closure, convert::FromWasmAbi};
+use std::borrow::Cow;
 
-#[derive(Debug, Clone, Copy, Default, TypedBuilder)]
-pub struct EventListenerOptions {
-    #[allow(unused)] // May only be used in non-SSR context.
-    once: bool,
+use leptos::ev::EventDescriptor;
+use wasm_bindgen::{JsCast, closure::Closure};
 
-    #[allow(unused)] // May only be used in non-SSR context.
+/// An event listener, removed when dropped.
+///
+/// For listeners that come and go with an interaction (a press, a drag), e.g. on the document
+/// between pointer down and pointer up. Unlike `leptos_use::use_event_listener`, it doesn't
+/// register anything with the reactive owner, so creating one per interaction doesn't
+/// accumulate effects and cleanups until the component unmounts. Its handler is an `Fn`
+/// closure, so it can be re-entered (e.g. a focus listener that moves focus).
+pub(crate) struct Listener {
+    target: web_sys::EventTarget,
+    event: Cow<'static, str>,
     capture: bool,
+    closure: Closure<dyn Fn(web_sys::Event)>,
 }
 
-impl EventListenerOptions {
-    pub fn capturing() -> Self {
-        EventListenerOptions {
-            capture: true,
-            ..EventListenerOptions::default()
-        }
-    }
-    pub fn once() -> Self {
-        EventListenerOptions {
-            once: true,
-            ..EventListenerOptions::default()
-        }
+impl std::fmt::Debug for Listener {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Listener")
+            .field("event", &self.event)
+            .field("capture", &self.capture)
+            .finish_non_exhaustive()
     }
 }
 
-#[allow(unused)] // May only be used in non-SSR context.
-pub(crate) trait ListenExt {
-    /// Adds an event listener for the given event name.
-    #[must_use]
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static;
-}
-
-impl<T: AsRef<web_sys::EventTarget>> ListenExt for T {
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static,
-    {
-        use wasm_bindgen::{JsCast, closure::Closure};
-
-        let target: &web_sys::EventTarget = self.as_ref();
-
-        let closure: Closure<dyn FnMut(E)> = if options.once {
-            let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
-            Closure::once(boxed)
-        } else {
-            let boxed: Box<dyn FnMut(E)> = Box::new(callback);
-            Closure::wrap(boxed)
-        };
-
-        let web_sys_options = web_sys::AddEventListenerOptions::new();
-        web_sys_options.set_once(options.once);
-        web_sys_options.set_capture(options.capture);
-
-        let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
-            event.name().as_ref(),
-            closure.as_ref().unchecked_ref(),
-            &web_sys_options,
+impl Drop for Listener {
+    fn drop(&mut self) {
+        let _ = self.target.remove_event_listener_with_callback_and_bool(
+            &self.event,
+            self.closure.as_ref().unchecked_ref(),
+            self.capture,
         );
-
-        closure
     }
+}
+
+/// Listen for the event named `event` on `target` until the returned [`Listener`] is dropped.
+pub(crate) fn listen(
+    target: &web_sys::EventTarget,
+    event: impl Into<Cow<'static, str>>,
+    capture: bool,
+    handler: impl Fn(web_sys::Event) + 'static,
+) -> Listener {
+    let event = event.into();
+    let closure = Closure::<dyn Fn(web_sys::Event)>::new(handler);
+    let _ = target.add_event_listener_with_callback_and_bool(
+        &event,
+        closure.as_ref().unchecked_ref(),
+        capture,
+    );
+    Listener {
+        target: target.clone(),
+        event,
+        capture,
+        closure,
+    }
+}
+
+/// Listen for `event` (e.g. `ev::pointermove`) on `target` until the returned [`Listener`] is
+/// dropped, with the typed event.
+pub(crate) fn listen_to<D>(
+    target: &web_sys::EventTarget,
+    event: D,
+    capture: bool,
+    handler: impl Fn(D::EventType) + 'static,
+) -> Listener
+where
+    D: EventDescriptor,
+    D::EventType: JsCast,
+{
+    listen(target, event.name(), capture, move |e| {
+        handler(e.unchecked_into());
+    })
 }

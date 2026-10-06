@@ -1,185 +1,161 @@
-// Upstream: react-aria/src/grid/useGrid.ts @ 6f664fe911
-// Upstream: react-stately/src/grid/useGridState.ts @ 6f664fe911
-use std::collections::HashSet;
+// Upstream: react-aria/src/grid/useGrid.ts @ 99e6102368
+use std::sync::Arc;
 
-use crate::utils::id::use_id;
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
     prelude::*,
 };
 use wasm_bindgen::JsCast;
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
+use web_sys::FocusEvent;
 
-use super::{
-    grid_collection::GridCollection,
-    grid_keyboard_delegate::{GridFocusMode, GridKeyboardDelegate},
-};
+use super::{GridKeyboardDelegate, GridState};
 use crate::{
     hooks::{
         IntoAttrs,
-        selection::{
-            SelectionKey,
-            keyboard_delegate::KeyboardDelegate,
-            use_selection_state::{
-                DisabledBehavior, Selection, SelectionBehavior, SelectionMode,
-                UseSelectionStateInput, UseSelectionStateReturn, use_selection_state,
-            },
+        collections::{
+            CollectionOptions, DomLayoutDelegate, Key, KeyboardDelegate, SelectionMode,
+            UseSelectableCollectionAttrs, UseSelectableCollectionInput,
+            UseSelectableCollectionProps, use_selectable_collection,
         },
+        focus::use_has_tabbable_child::{
+            UseHasTabbableChildAttrs, UseHasTabbableChildInput, UseHasTabbableChildProps,
+            use_has_tabbable_child,
+        },
+        gridlist::KeyboardNavigationBehavior,
     },
     utils::{
-        EventAccessors, EventHandler,
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
+        CapturedElement, EventAccessors, EventHandler,
+        aria::{AriaMultiselectable, AriaRole},
+        filter::{Collator, CollatorOptions},
+        i18n::{use_direction, use_locale},
+        id::use_id,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGrid.ts
+/// `handler`, inactive while keyboard navigation is disabled.
+fn unless_navigation_disabled<E: Clone + 'static>(
+    navigation_disabled: RwSignal<bool>,
+    handler: EventHandler<E>,
+) -> EventHandler<E> {
+    EventHandler::new(move |e: E| {
+        if !navigation_disabled.get_untracked() {
+            handler.call(e);
+        }
+    })
+}
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Rows and cells get the grid's settings through the returned `GridData` (react-aria: a
+//   `WeakMap` keyed by the state).
+//
 // ## OMITTED FEATURES
-// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
-// - No selection announcements (`useGridSelectionAnnouncement`).
-// - No RTL direction swapping in keyboard navigation.
-// - Page Up/Down navigation: delegates to `GridKeyboardDelegate` which returns
-//   `None` (requires layout measurement not yet implemented).
-// - Empty-grid focus: simplified — the grid stays tabbable (tabindex 0) when
-//   empty. React-aria additionally checks `useHasTabbableChild` to decide
-//   whether the grid itself or its tabbable children should receive focus.
+// - Selection announcements and the "highlight selection" description: they need localized
+//   messages.
+// - Virtualization (`aria-rowcount`/`aria-colcount`).
 //
-// ## DIFFERENT BEHAVIOR
-// - Selection is delegated to `use_selection_state` instead of react-aria's
-//   `useGridSelectionState` + `useSelectableCollection`.
-// - No `gridMap` `WeakMap` equivalent — child hooks (`use_grid_cell`) receive
-//   a `UseGridState<K>` struct explicitly instead of looking up shared state
-//   from a mutable `WeakMap`.
-//
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-// - Uses `EventHandler` pattern for composable event handlers.
+// =============================================================================
 
-/// Controls Escape key behavior in the grid.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum EscapeKeyBehavior {
-    /// Pressing Escape clears the current selection.
-    #[default]
-    ClearSelection,
-    /// Pressing Escape does nothing.
-    None,
-}
-
-/// Input parameters for the `use_grid` hook.
+/// Input of [`use_grid`].
 #[derive(Clone)]
-pub struct UseGridInput<K>
-where
-    K: SelectionKey,
-{
-    // --- ARIA ---
-    /// An accessible label for the grid.
-    pub label: Option<String>,
-    /// The ID of an element that labels the grid.
-    pub labelled_by: Option<String>,
-
-    // --- Grid structure ---
-    /// The grid collection describing rows and cells.
-    pub collection: Signal<GridCollection<K>>,
-    /// Keys of disabled rows/cells.
-    pub disabled_keys: Signal<HashSet<K>>,
-    /// How focus moves within the grid (Row vs Cell mode).
-    pub focus_mode: GridFocusMode,
-
-    // --- Selection (forwarded to `use_selection_state`) ---
-    /// The selection mode.
-    pub selection_mode: SelectionMode,
-    /// The selection behavior (toggle vs replace).
-    pub selection_behavior: SelectionBehavior,
-    /// Controlled selected keys.
-    pub selected_keys: Option<Signal<Selection<K>>>,
-    /// Default selected keys (uncontrolled).
-    pub default_selected_keys: Option<Selection<K>>,
-    /// Callback when selection changes.
-    pub on_selection_change: Option<Callback<Selection<K>>>,
-    /// Whether to disallow empty selection.
-    pub disallow_empty_selection: bool,
-
-    // --- Behavior ---
-    /// Whether the grid is disabled.
-    pub is_disabled: Signal<bool>,
-    /// Escape key behavior.
-    pub escape_key_behavior: EscapeKeyBehavior,
-    /// Whether arrow key navigation wraps around.
-    pub should_focus_wrap: bool,
-    /// Callback when a row is activated (Enter key on a row key).
-    pub on_row_action: Option<Callback<K>>,
-    /// Callback when a cell is activated (Enter key on a cell key).
-    pub on_cell_action: Option<Callback<K>>,
+pub struct UseGridInput {
+    pub state: GridState,
+    /// The grid element; the hook's props capture it.
+    pub element: CapturedElement,
+    /// The element id. Generated when `None`.
+    pub id: Option<String>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    /// Replaces the grid keyboard delegate.
+    pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Keyboard and focus behavior.
+    pub options: CollectionOptions,
+    pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select when the press ends instead of when it starts.
+    pub should_select_on_press_up: bool,
+    /// Called with the key of an activated row.
+    pub on_row_action: Option<Callback<Key>>,
+    /// Called with the key of an activated cell.
+    pub on_cell_action: Option<Callback<Key>>,
 }
 
-/// Shared grid state passed to dependent hooks like `use_grid_cell`.
-///
-/// Analogous to react-aria's `gridMap` `WeakMap`, but uses an explicit struct
-/// passed from `use_grid` to child hooks instead of a mutable `WeakMap` lookup.
+impl UseGridInput {
+    /// A grid for `state`, with all other settings at their defaults.
+    pub fn new(state: GridState, element: CapturedElement) -> Self {
+        Self {
+            state,
+            element,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            keyboard_delegate: None,
+            options: CollectionOptions::default(),
+            keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+            should_select_on_press_up: false,
+            on_row_action: None,
+            on_cell_action: None,
+        }
+    }
+}
+
+/// What rows and cells need to know about their grid. Pass it to `use_grid_row` and
+/// `use_grid_cell`.
 #[derive(Clone)]
-pub struct UseGridState<K>
-where
-    K: SelectionKey,
-{
-    /// The keyboard delegate for navigation.
-    pub keyboard_delegate: GridKeyboardDelegate<K>,
-    /// The selection state.
-    pub selection: UseSelectionStateReturn<K>,
-    /// The currently focused key.
-    pub focused_key: Signal<Option<K>>,
-    /// Set the focused key.
-    pub set_focused_key: Callback<Option<K>>,
-    /// Whether the grid is disabled.
-    pub is_disabled: Signal<bool>,
-    /// The selection mode.
-    pub selection_mode: SelectionMode,
-    /// The selection behavior (reactive — may change at runtime).
-    pub selection_behavior: Signal<SelectionBehavior>,
-    /// Callback when a cell is activated (Enter key on a cell key).
-    pub on_cell_action: Option<Callback<K>>,
-    /// Callback when a row is activated (Enter key or double-click on a row key).
-    pub on_row_action: Option<Callback<K>>,
+pub struct GridData {
+    pub state: GridState,
+    pub delegate: Signal<Arc<dyn KeyboardDelegate>>,
+    /// See `UseSelectableItemInput::collection_id`.
+    pub collection_id: String,
+    pub on_row_action: Option<Callback<Key>>,
+    pub on_cell_action: Option<Callback<Key>>,
+    pub should_select_on_press_up: bool,
+    pub keyboard_navigation_behavior: KeyboardNavigationBehavior,
 }
 
-// Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
-impl<K: SelectionKey> Copy for UseGridState<K> {}
+impl std::fmt::Debug for GridData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GridData")
+            .field("collection_id", &self.collection_id)
+            .field(
+                "keyboard_navigation_behavior",
+                &self.keyboard_navigation_behavior,
+            )
+            .finish_non_exhaustive()
+    }
+}
 
-/// The return value of the `use_grid` hook.
-pub struct UseGridReturn<K>
-where
-    K: SelectionKey,
-{
-    /// Props for the grid container element. Call `.into_attrs()` for view spreading.
+/// Return value of [`use_grid`].
+#[derive(Debug)]
+pub struct UseGridReturn {
     pub props: UseGridProps,
-    /// Shared state to pass to child hooks (`use_grid_cell`, `use_grid_row`).
-    pub state: UseGridState<K>,
-    /// The selection state, delegated to `use_selection_state`.
-    pub selection: UseSelectionStateReturn<K>,
-    /// The currently focused key.
-    pub focused_key: Signal<Option<K>>,
-    /// Set the focused key.
-    pub set_focused_key: Callback<Option<K>>,
-    /// Whether the grid container has focus.
-    pub is_focused: Signal<bool>,
+    pub data: GridData,
 }
 
-/// Props from `use_grid` that can be extracted and merged programmatically.
+/// Props for the grid element.
 #[derive(Debug)]
 pub struct UseGridProps {
     pub id: String,
-    pub role: AriaRole,
-    pub tabindex: Signal<&'static str>,
-    pub aria_label: Option<String>,
+    pub role: Signal<AriaRole>,
+    pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
-    pub aria_multiselectable: Option<AriaMultiselectable>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_blur: EventHandler<FocusEvent>,
-    pub on_mousedown: EventHandler<MouseEvent>,
+    pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
+    /// Keyboard navigation, type-ahead and focus handling (`use_selectable_collection`).
+    pub collection: UseSelectableCollectionProps,
+    pub tabbable_child: UseHasTabbableChildProps,
 }
+
+pub type UseGridAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, Signal<AriaRole>>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
+    UseSelectableCollectionAttrs,
+    UseHasTabbableChildAttrs,
+);
 
 impl IntoAttrs for UseGridProps {
     type Attrs = UseGridAttrs;
@@ -188,315 +164,141 @@ impl IntoAttrs for UseGridProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
-            // Like React's `onFocus`/`onBlur`, these must see focus moving onto descendants.
-            self.on_focus.into_on(ev::focusin),
-            self.on_blur.into_on(ev::focusout),
-            self.on_mousedown.into_on(ev::mousedown),
+            self.collection.into_attrs(),
+            self.tabbable_child.into_attrs(),
         )
     }
 }
 
-/// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
-pub type UseGridAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
-);
+/// The keyboard delegate of a grid: a [`GridKeyboardDelegate`] measuring the rendered rows and
+/// cells in `element`, with the current locale's reading direction and collation.
+pub fn use_grid_keyboard_delegate(
+    state: GridState,
+    element: CapturedElement,
+) -> Signal<Arc<dyn KeyboardDelegate>> {
+    let locale = use_locale();
+    let direction = use_direction();
+    let layout_delegate = Arc::new(DomLayoutDelegate::new(element, state.list.item_elements));
+    Signal::derive(move || {
+        let collator = locale.with(|locale| Collator::new(locale, &CollatorOptions::default()));
+        Arc::new(
+            GridKeyboardDelegate::new(
+                state.list.collection,
+                state.list.selection,
+                layout_delegate.clone(),
+            )
+            .with_direction(direction.get())
+            .with_collator(Arc::new(collator))
+            .with_focus_mode(state.focus_mode),
+        ) as Arc<dyn KeyboardDelegate>
+    })
+}
 
-/// Provides the behavior and accessibility for a grid.
-///
-/// A grid displays items in a two-dimensional layout with keyboard navigation,
-/// selection, and ARIA accessibility. This hook centralizes ALL keyboard
-/// navigation at the grid container level using a `GridKeyboardDelegate`.
-///
-/// # Example
-///
-/// ```ignore
-/// let collection = Signal::derive(move || {
-///     GridCollection::new(vec![
-///         GridRow { key: "row-0".into(), cells: vec!["0-0".into(), "0-1".into()] },
-///         GridRow { key: "row-1".into(), cells: vec!["1-0".into(), "1-1".into()] },
-///     ])
-/// });
-///
-/// let grid = use_grid(UseGridInput {
-///     label: Some("My Grid".to_string()),
-///     collection,
-///     selection_mode: SelectionMode::Multiple,
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div {..grid.props.into_attrs()}>
-///         // Grid rows and cells...
-///     </div>
-/// }
-/// ```
-#[allow(clippy::too_many_lines)]
-pub fn use_grid<K>(input: UseGridInput<K>) -> UseGridReturn<K>
-where
-    K: SelectionKey,
-{
+/// A grid: rows of cells, navigated in two dimensions with the arrow keys; rows (or cells) can
+/// be selected and activated. Render rows with `use_grid_row` and cells with `use_grid_cell`.
+pub fn use_grid(input: UseGridInput) -> UseGridReturn {
     let UseGridInput {
-        label,
-        labelled_by,
-        collection,
-        disabled_keys,
-        focus_mode,
-        selection_mode,
-        selection_behavior,
-        selected_keys,
-        default_selected_keys,
-        on_selection_change,
-        disallow_empty_selection,
-        is_disabled,
-        escape_key_behavior,
-        should_focus_wrap: _should_focus_wrap,
+        state,
+        element,
+        id,
+        aria_label,
+        aria_labelledby,
+        keyboard_delegate,
+        options,
+        keyboard_navigation_behavior,
+        should_select_on_press_up,
         on_row_action,
         on_cell_action,
     } = input;
 
-    let grid_id = use_id("grid");
+    if aria_label.get_untracked().is_none() && aria_labelledby.is_none() {
+        crate::utils::dev_warn!(
+            "use_grid: an aria_label or aria_labelledby is required for accessibility"
+        );
+    }
+    let id = id.unwrap_or_else(|| use_id("grid"));
+    let delegate = keyboard_delegate.unwrap_or_else(|| use_grid_keyboard_delegate(state, element));
 
-    // --- Keyboard delegate ---
-    let delegate = GridKeyboardDelegate::new(collection, disabled_keys, focus_mode);
+    let mut collection = use_selectable_collection(UseSelectableCollectionInput {
+        selection: state.list.selection,
+        item_elements: state.list.item_elements,
+        delegate,
+        element,
+        options,
+    })
+    .props;
 
-    // --- Selection state (delegated) ---
-    let selection = use_selection_state(UseSelectionStateInput {
-        selection_mode,
-        selection_behavior,
-        disabled: is_disabled,
-        selected_keys,
-        default_selected_keys,
-        on_selection_change,
-        disabled_keys,
-        disallow_empty_selection,
-        disabled_behavior: DisabledBehavior::default(),
-    });
-
-    // --- Focus tracking ---
-    let (focused_key, set_focused_key_signal) = signal::<Option<K>>(None);
-    let (is_focused_rw, set_is_focused) = signal(false);
-    let is_focused: Signal<bool> = is_focused_rw.into();
-
-    let set_focused_key = Callback::new(move |key: Option<K>| {
-        set_focused_key_signal.set(key);
-    });
-
-    // --- Tabindex: -1 when grid has internal focus, 0 otherwise ---
-    // When the collection is empty, the grid itself stays tabbable (tabindex 0)
-    // so keyboard users can reach it and hear its label.
-    let tabindex = Signal::derive(move || if is_focused.get() { "-1" } else { "0" });
-
-    // --- ARIA attributes ---
-    let aria_multiselectable = match selection_mode {
-        SelectionMode::None => None,
-        SelectionMode::Single => Some(AriaMultiselectable::False),
-        SelectionMode::Multiple => Some(AriaMultiselectable::True),
-    };
-
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
-
-    // --- Keyboard handler ---
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+    // While keyboard navigation is disabled (e.g. while a column is resized with the arrow keys),
+    // the grid only tracks whether it is focused.
+    let selection = state.list.selection;
+    let navigation_disabled = state.is_keyboard_navigation_disabled;
+    collection.on_keydown_capture =
+        unless_navigation_disabled(navigation_disabled, collection.on_keydown_capture);
+    collection.on_keydown = unless_navigation_disabled(navigation_disabled, collection.on_keydown);
+    collection.on_keyup = unless_navigation_disabled(navigation_disabled, collection.on_keyup);
+    collection.on_mousedown =
+        unless_navigation_disabled(navigation_disabled, collection.on_mousedown);
+    let on_focusin = collection.on_focusin;
+    collection.on_focusin = EventHandler::new(move |e: FocusEvent| {
+        if !navigation_disabled.get_untracked() {
+            on_focusin.call(e);
             return;
         }
-
-        let key = e.key();
-        let ctrl_or_meta = e.ctrl_key() || e.meta_key();
-        let shift = e.shift_key();
-
-        match key.as_str() {
-            "ArrowDown" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(next) = delegate.get_key_below(&focused)
-                {
-                    if shift && selection_mode == SelectionMode::Multiple {
-                        selection.select.run(next.clone());
-                    }
-                    set_focused_key_signal.set(Some(next));
-                }
+        let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
+        let contains = e
+            .expect_current_target()
+            .dyn_into::<web_sys::Node>()
+            .is_ok_and(|grid| grid.contains(target.as_ref()));
+        if selection.is_focused() {
+            // A focus event bubbled through a portal.
+            if !contains {
+                selection.set_focused(false);
             }
-            "ArrowUp" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(prev) = delegate.get_key_above(&focused)
-                {
-                    if shift && selection_mode == SelectionMode::Multiple {
-                        selection.select.run(prev.clone());
-                    }
-                    set_focused_key_signal.set(Some(prev));
-                }
-            }
-            "ArrowRight" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(next) = delegate.get_key_right_of(&focused)
-                {
-                    set_focused_key_signal.set(Some(next));
-                }
-            }
-            "ArrowLeft" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(prev) = delegate.get_key_left_of(&focused)
-                {
-                    set_focused_key_signal.set(Some(prev));
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                let focused = focused_key.get_untracked();
-                if let Some(first) = delegate.get_first_key(focused.as_ref(), ctrl_or_meta) {
-                    set_focused_key_signal.set(Some(first));
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                let focused = focused_key.get_untracked();
-                if let Some(last) = delegate.get_last_key(focused.as_ref(), ctrl_or_meta) {
-                    set_focused_key_signal.set(Some(last));
-                }
-            }
-            "PageUp" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(target) = delegate.get_key_page_above(&focused)
-                {
-                    set_focused_key_signal.set(Some(target));
-                }
-            }
-            "PageDown" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked()
-                    && let Some(target) = delegate.get_key_page_below(&focused)
-                {
-                    set_focused_key_signal.set(Some(target));
-                }
-            }
-            " " => {
-                if let Some(focused) = focused_key.get_untracked()
-                    && selection_mode != SelectionMode::None
-                {
-                    e.prevent_default();
-                    selection.toggle.run(focused);
-                }
-            }
-            "Enter" => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    let coll = collection.get_untracked();
-                    if coll.is_row_key(&focused) {
-                        if let Some(on_action) = on_row_action {
-                            e.prevent_default();
-                            on_action.run(focused);
-                        }
-                    } else if coll.is_cell_key(&focused)
-                        && let Some(on_action) = on_cell_action
-                    {
-                        e.prevent_default();
-                        on_action.run(focused);
-                    }
-                }
-            }
-            "Escape" => {
-                if escape_key_behavior == EscapeKeyBehavior::ClearSelection
-                    && selection_mode != SelectionMode::None
-                {
-                    e.prevent_default();
-                    selection.clear_selection.run(());
-                }
-            }
-            "a" if ctrl_or_meta && selection_mode == SelectionMode::Multiple => {
-                e.prevent_default();
-                selection.select_all.run(vec![]);
-            }
-            // Tab: don't intercept — let the browser handle single tab-stop exit.
-            _ => {}
+        } else if contains {
+            selection.set_focused(true);
         }
-    };
+    });
 
-    // --- Focus handler ---
-    let handle_focus = move |_e: FocusEvent| {
-        set_is_focused.set(true);
-
-        // If nothing is focused yet, focus the first item.
-        if focused_key.get_untracked().is_none()
-            && let Some(first) = delegate.get_first_key(None, true)
-        {
-            set_focused_key_signal.set(Some(first));
+    // An empty grid is a tab stop itself, unless it has tabbable content.
+    let rows = state.list.collection;
+    let is_empty = Signal::derive(move || rows.with(|c| c.size() == 0));
+    let tabbable_child = use_has_tabbable_child(UseHasTabbableChildInput {
+        is_disabled: Signal::derive(move || !is_empty.get()),
+    });
+    let has_tabbable_child = tabbable_child.has_tabbable_child;
+    let list_tabindex = collection.tabindex;
+    collection.tabindex = Signal::derive(move || {
+        if is_empty.get() {
+            Some(if has_tabbable_child.get() { -1 } else { 0 })
+        } else {
+            list_tabindex.get()
         }
-    };
-
-    // --- Blur handler ---
-    let handle_blur = move |e: FocusEvent| {
-        // Only blur if focus left the grid container entirely.
-        if let Some(related) = e.related_target()
-            && let Ok(el) = related.dyn_into::<web_sys::Element>()
-            && let Some(container) = e
-                .current_target()
-                .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
-            && container.contains(Some(&el))
-        {
-            return;
-        }
-        set_is_focused.set(false);
-    };
-
-    // --- Mousedown handler (prevent scrollbar stealing focus) ---
-    let handle_mousedown = move |e: MouseEvent| {
-        // If the mousedown target is the grid itself (scrollbar area), prevent
-        // default to avoid stealing focus from focused cells.
-        if e.expect_target() == e.expect_current_target() {
-            e.prevent_default();
-        }
-    };
-
-    let state = UseGridState {
-        keyboard_delegate: delegate,
-        selection,
-        focused_key: focused_key.into(),
-        set_focused_key,
-        is_disabled,
-        selection_mode,
-        selection_behavior: selection.selection_behavior,
-        on_cell_action,
-        on_row_action,
-    };
+    });
 
     UseGridReturn {
-        props: UseGridProps {
-            id: grid_id,
-            role: AriaRole::Grid,
-            tabindex,
-            aria_label: label,
-            aria_labelledby: labelled_by,
-            aria_multiselectable,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: EventHandler::new(handle_focus),
-            on_blur: EventHandler::new(handle_blur),
-            on_mousedown: EventHandler::new(handle_mousedown),
+        data: GridData {
+            state,
+            delegate,
+            collection_id: collection.collection_id.clone(),
+            on_row_action,
+            on_cell_action,
+            should_select_on_press_up,
+            keyboard_navigation_behavior,
         },
-        state,
-        selection,
-        focused_key: focused_key.into(),
-        set_focused_key,
-        is_focused,
+        props: UseGridProps {
+            id,
+            role: Signal::stored(AriaRole::Grid),
+            aria_label,
+            aria_labelledby,
+            aria_multiselectable: Signal::derive(move || {
+                (selection.selection_mode() == SelectionMode::Multiple)
+                    .then_some(AriaMultiselectable::True)
+            }),
+            collection,
+            tabbable_child: tabbable_child.props,
+        },
     }
 }

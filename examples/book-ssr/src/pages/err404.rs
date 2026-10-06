@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, utils::css::CssDimension};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::routes;
@@ -6,22 +6,13 @@ use crate::routes;
 #[component]
 pub(crate) fn PageErr404() -> impl IntoView {
     view! {
-        <Grid gap=CssDimension::Zero attr:class="err-404">
-            <Row>
-                <Col sm=6 xs=12 attr:class="info" h_align=ColAlign::Center>
-                    <h1 id="error">"404"</h1>
-                    <h2 id="whoops">"Whoops, this page doesn't exist :-("</h2>
-
-                    <Link href=routes::Root.materialize()>
-                        <Button attr:id="back-btn" on_press=move |_| {} variant=ButtonVariant::Filled>
-                            "Back"
-                        </Button>
-                    </Link>
-                </Col>
-                <Col sm=6 xs=12 h_align=ColAlign::Center>
-                    <img id="ferris" src="/res/icon/ferris-panic_transparent.svg" alt="Ferris (Rust mascot, a crab) panicked" />
-                </Col>
-            </Row>
-        </Grid>
+        <div class="err-404">
+            <div class="info">
+                <h1 id="error">"404"</h1>
+                <h2 id="whoops">"Whoops, this page doesn\u{2019}t exist :-("</h2>
+                <LinkButton href=routes::Root.materialize() size=ButtonSize::Big>"Go to the start page"</LinkButton>
+            </div>
+            <img id="ferris" src="/res/icon/ferris-panic_transparent.svg" alt="Ferris (the Rust mascot, a crab) panicking"/>
+        </div>
     }
 }

@@ -37,34 +37,3 @@
     @include input-field();
   }
 }
-
-[data-input] {
-  position: relative;
-  z-index: 2;
-  line-height: inherit;
-}
-
-textarea.leptonic-input {
-  height: auto;
-  max-height: 25em;
-}
-
-.leptonic-limit {
-  position: relative;
-  float: right;
-  right: 0.5em;
-  top: -2.3em;
-  margin-bottom: -1000px;
-  color: darkgrey;
-  z-index: 3;
-  font-size: 0.9em;
-}
-
-.leptonic-form-group {
-  margin-bottom: 1em;
-}
-
-.leptonic-form-label {
-  padding: 0.4em 0;
-  margin-bottom: 0;
-}

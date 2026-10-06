@@ -1,76 +1,145 @@
-// Upstream: react-aria/src/tabs/useTabList.ts @ 6f664fe911
+// Upstream: react-aria/src/tabs/useTabList.ts @ 99e6102368
+// Upstream: react-aria/src/tabs/utils.ts @ 99e6102368
+use std::sync::Arc;
+
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
     prelude::*,
 };
-use web_sys::KeyboardEvent;
 
-use super::use_tabs::TabsOrientation;
+use super::{TabListState, TabsKeyboardDelegate};
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{
+        IntoAttrs, Orientation,
+        collections::{
+            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, UseSelectableCollectionAttrs,
+            UseSelectableCollectionInput, UseSelectableCollectionProps, use_selectable_collection,
+        },
+    },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaOrientation, AriaRole},
+        CapturedElement,
+        aria::{AriaOrientation, AriaRole},
+        i18n::use_direction,
+        id::use_id,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tabs/useTabList.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Tabs and panels get the tab list through the returned `TabListData` (react-aria: a
+//   `WeakMap` keyed by the state). Create it up front with `TabListData::new` when a panel is
+//   rendered before the tab list.
 //
+// =============================================================================
 
-/// Input parameters for the `use_tab_list` hook.
+/// When arrow keys select tabs.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum KeyboardActivation {
+    /// Moving focus to a tab selects it.
+    #[default]
+    Automatic,
+    /// Enter or Space selects the focused tab.
+    Manual,
+}
+
+/// What tabs and tab panels need to know about their tab list.
+#[derive(Debug, Clone)]
+pub struct TabListData {
+    pub state: TabListState,
+    /// The base of the tab and panel ids.
+    pub id: String,
+}
+
+impl TabListData {
+    /// Tab list data with a generated id.
+    pub fn new(state: TabListState) -> Self {
+        Self {
+            state,
+            id: use_id("tabs"),
+        }
+    }
+
+    /// The id of the tab `key`.
+    pub fn tab_id(&self, key: &Key) -> String {
+        format!("{}-tab-{}", self.id, normalize_key(key))
+    }
+
+    /// The id of the panel of the tab `key`.
+    pub fn tab_panel_id(&self, key: &Key) -> String {
+        format!("{}-tabpanel-{}", self.id, normalize_key(key))
+    }
+}
+
+/// A key as an id fragment: without whitespace.
+fn normalize_key(key: &Key) -> String {
+    key.to_string().split_whitespace().collect()
+}
+
+/// Input of [`use_tab_list`].
 #[derive(Debug, Clone)]
 pub struct UseTabListInput {
-    /// The ID base from the parent tabs.
-    pub id_base: String,
-
-    /// The orientation of the tab list.
-    pub orientation: TabsOrientation,
-
-    /// Whether the tab list is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The label for the tab list.
-    pub label: Option<String>,
-
-    /// Callback to navigate to the next tab.
-    pub on_focus_next: Option<Callback<()>>,
-
-    /// Callback to navigate to the previous tab.
-    pub on_focus_previous: Option<Callback<()>>,
-
-    /// Callback to navigate to the first tab.
-    pub on_focus_first: Option<Callback<()>>,
-
-    /// Callback to navigate to the last tab.
-    pub on_focus_last: Option<Callback<()>>,
+    /// The tab list (see [`TabListData::new`]).
+    pub tabs: TabListData,
+    /// The tab list element; the hook's props capture it.
+    pub element: CapturedElement,
+    pub orientation: Orientation,
+    pub keyboard_activation: KeyboardActivation,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
 }
 
-/// The return value of the `use_tab_list` hook.
+impl UseTabListInput {
+    pub fn new(tabs: TabListData, element: CapturedElement) -> Self {
+        Self {
+            tabs,
+            element,
+            orientation: Orientation::Horizontal,
+            keyboard_activation: KeyboardActivation::Automatic,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+        }
+    }
+}
+
+/// Return value of [`use_tab_list`].
 #[derive(Debug)]
 pub struct UseTabListReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseTabListProps,
-
-    /// The ID of the tab list.
-    pub tab_list_id: String,
+    /// Pass to `use_tab` (and `use_tab_panel`).
+    pub data: TabListItemData,
 }
 
-/// Props from `use_tab_list` that can be extracted and merged programmatically.
+/// What tabs need to know about their tab list (see [`use_tab_list`]).
+#[derive(Debug, Clone)]
+pub struct TabListItemData {
+    pub tabs: TabListData,
+    /// See `UseSelectableItemInput::collection_id`.
+    pub collection_id: String,
+}
+
+/// Props for the tab list element.
 #[derive(Debug)]
 pub struct UseTabListProps {
     pub id: String,
     pub role: AriaRole,
-    pub aria_label: Option<String>,
     pub aria_orientation: AriaOrientation,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    /// Keyboard navigation and focus handling (`use_selectable_collection`).
+    pub collection: UseSelectableCollectionProps,
 }
+
+pub type UseTabListAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    UseSelectableCollectionAttrs,
+);
 
 impl IntoAttrs for UseTabListProps {
     type Attrs = UseTabListAttrs;
@@ -79,121 +148,67 @@ impl IntoAttrs for UseTabListProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
-            Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            self.collection.into_attrs(),
         )
     }
 }
 
-/// Attributes for the tab list element.
-pub type UseTabListAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Provides the behavior and accessibility for a tab list.
-///
-/// A tab list contains the tab buttons that users can interact with to switch panels.
-///
-/// # Example
-///
-/// ```ignore
-/// let tab_list = use_tab_list(UseTabListInput {
-///     id_base: tabs.id_base.clone(),
-///     orientation: TabsOrientation::Horizontal,
-///     is_disabled: Signal::derive(|| false),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div {..tab_list.props.into_attrs()}>
-///         // Tab buttons...
-///     </div>
-/// }
-/// ```
+/// A tab list: arrow keys move between the tabs (selecting them with automatic activation),
+/// one of them is always selected. Render the tabs with `use_tab` and the selected tab's
+/// content with `use_tab_panel`.
 pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     let UseTabListInput {
-        id_base,
+        tabs,
+        element,
         orientation,
-        is_disabled: disabled,
-        label,
-        on_focus_next,
-        on_focus_previous,
-        on_focus_first,
-        on_focus_last,
+        keyboard_activation,
+        aria_label,
+        aria_labelledby,
     } = input;
-
-    let tab_list_id = format!("{id_base}-tablist");
-
-    let aria_orientation = AriaOrientation::from(orientation);
-
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Handle keyboard navigation
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-
-        let key = e.key();
-        let is_horizontal = orientation == TabsOrientation::Horizontal;
-
-        match key.as_str() {
-            "ArrowRight" if is_horizontal => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowLeft" if is_horizontal => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            "ArrowDown" if !is_horizontal => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowUp" if !is_horizontal => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                if let Some(on_first) = on_focus_first {
-                    on_first.run(());
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                if let Some(on_last) = on_focus_last {
-                    on_last.run(());
-                }
-            }
-            _ => {}
-        }
-    };
+    let list = tabs.state.list.list;
+    let direction = use_direction();
+    let delegate = Signal::derive(move || {
+        Arc::new(TabsKeyboardDelegate::new(
+            list.collection,
+            list.selection,
+            direction.get(),
+            orientation,
+        )) as Arc<dyn KeyboardDelegate>
+    });
+    let mut collection = use_selectable_collection(UseSelectableCollectionInput {
+        selection: list.selection,
+        item_elements: list.item_elements,
+        delegate,
+        element,
+        options: CollectionOptions {
+            select_on_focus: Some(keyboard_activation == KeyboardActivation::Automatic),
+            disallow_empty_selection: true,
+            link_behavior: LinkBehavior::Selection,
+            ..CollectionOptions::default()
+        },
+    })
+    .props;
+    // The tabs are the tab stops, not the list.
+    collection.tabindex = Signal::stored(None);
 
     UseTabListReturn {
-        props: UseTabListProps {
-            id: tab_list_id.clone(),
-            role: AriaRole::Tablist,
-            aria_label: label,
-            aria_orientation,
-            aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
+        data: TabListItemData {
+            tabs: tabs.clone(),
+            collection_id: collection.collection_id.clone(),
         },
-        tab_list_id,
+        props: UseTabListProps {
+            id: tabs.id,
+            role: AriaRole::Tablist,
+            aria_orientation: match orientation {
+                Orientation::Horizontal => AriaOrientation::Horizontal,
+                Orientation::Vertical => AriaOrientation::Vertical,
+            },
+            aria_label,
+            aria_labelledby,
+            collection,
+        },
     }
 }

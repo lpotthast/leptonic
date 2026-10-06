@@ -1,60 +1,123 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::tab::TabDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    tab_basic::TabBasicDemo, tab_mounting::TabMountingDemo,
+    tab_reactive_label::TabReactiveLabelDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageTab() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="tab" class="anchor">
-                "Tab"
-                <AnchorLink href="#tab" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Tabs component">
             <p>
-                <Code inline=true>"<Tabs>"</Code>" allow you to spread out your UI components into multiple pages, where only one page is shown at any given time. "
-                "Every "<Code inline=true>"<Tab>"</Code>" inside represents a page with a label to select it. A user can interact with labels to bring the tab associated to it into view."
+                "The themed "<Code inline=true>"Tabs"</Code>" component spreads content over several panels, of which "
+                "only one is shown at a time. Every "<Code inline=true>"Tab"</Code>" inside it is one panel with a label; "
+                "selecting the label brings the panel into view. See the "
+                <Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link>" for concept guidance."
             </p>
 
-            <DemoShell source=include_str!("demos/tab.rs")>
-                <TabDemo />
-            </DemoShell>
+            <Demo description="Three tabs with static labels" source=include_str!("demos/tab_basic.rs")>
+                <TabBasicDemo/>
+            </Demo>
 
-            <h2 id="when-are-tabs-rendered" class="anchor">
-                "When are tabs rendered?"
-                <AnchorLink href="#when-are-tabs-rendered" description="Direct link to section: When are tabs rendered?"/>
-            </h2>
+            <Section title="Props">
+                <Section title="Tabs">
+                    <ApiTable kind=ApiKind::Props of="components::tabs::Tabs">
+                        <ApiRow name="mount" ty="Option<Mount>" default="None">
+                            "Default mount mode of the contained tabs, see "<a href="#mounting">"Mounting"</a>"."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"Tab"</Code>"s."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>
-                "This is where the "<Code inline=true>"mount"</Code>" property comes into play. "
-                "There are two variants to choose from:"
-            </p>
+                <Section title="Tab">
+                    <ApiTable kind=ApiKind::Props of="components::tab::Tab">
+                        <ApiRow name="name" ty="Oco<'static, str>">
+                            "Uniquely identifies the tab within its "<Code inline=true>"Tabs"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="label" ty="ViewFn">
+                            "The label of the tab selector, for example "<Code inline=true>"|| \"Settings\""</Code>
+                            ". The function runs once; return a closure from it ("
+                            <Code inline=true>"move || move || ..."</Code>") to make the label reactive. Required."
+                        </ApiRow>
+                        <ApiRow name="mount" ty="Option<Mount>" default="None">
+                            "Mount mode of this tab. Overrides the mode of the "<Code inline=true>"Tabs"</Code>
+                            "; without either, "<Code inline=true>"Mount::Once"</Code>" applies."
+                        </ApiRow>
+                        <ApiRow name="on_show" ty="Option<Out<()>
+                            >" default="None">"Called whenever the tab comes into view."
+                        </ApiRow>
+                        <ApiRow name="on_hide" ty="Option<Out<()>
+                            >" default="None">"Called whenever the tab gets hidden."
+                        </ApiRow>
+                        <ApiRow name="id" ty="Option<Uuid>" default="None">
+                            "Internal identifier of the tab. A random one is generated if omitted."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles of the panel."
+                        </ApiRow>
+                        <ApiRow name="children" ty="ChildrenFn" default="empty">"The panel content."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <ul>
-                <li>
-                    <Code inline=true>"Mount::Once"</Code>
-                    <p style="margin-top: 0.5em;">
-                        "Tab content is rendered once. Tabs are simply hidden when not shown."
-                    </p>
-                </li>
-                <li>
-                    <Code inline=true>"Mount::WhenShown"</Code>
-                    <p style="margin-top: 0.5em;">
-                        "Tab content is rendered every time a tab is shown. The dom of the tab is unmounted when hidden. "
-                        "This means that there is only ever one tab in the final dom, not requiring any hiding-mechanism as in the "<Code inline=true>"Mount::Once"</Code>" case."
-                    </p>
-                </li>
-            </ul>
-        </Article>
+            <Section title="Reactive Labels">
+                <p>
+                    "The "<Code inline=true>"label"</Code>" function of a tab runs once. To update a label, return a closure "
+                    "from it that reads your signals."
+                </p>
+                <Demo description="A tab label showing the state of a toggle" source=include_str!("demos/tab_reactive_label.rs") source_open=true>
+                    <TabReactiveLabelDemo/>
+                </Demo>
+            </Section>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Tab", link: "#tab" },
-                Toc::Leaf { title: "When are tabs rendered?", link: "#when-are-tabs-rendered" },
-            ]
-        }/>
+            <Section title="Mounting">
+                <p>
+                    "The "<Code inline=true>"mount"</Code>" prop decides when the content of a tab is rendered. "
+                    "The first registered tab is shown initially."
+                </p>
+                <DocTable headers=&["Mount", "Behavior"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Mount::Once"</Code></TableCell>
+                        <TableCell>
+                            "The content is rendered once and hidden while the tab isn\u{2019}t shown. "
+                            "State inside the tab, such as input values or the selection of nested tabs, "
+                            "survives switching tabs."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"Mount::WhenShown"</Code></TableCell>
+                        <TableCell>
+                            "The content is rendered every time the tab is shown and unmounted when it gets hidden, so "
+                            "only the active tab exists in the DOM. State inside the tab is lost when switching away."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+                <p>
+                    "Both tab sets below nest tabs in "<Code inline=true>"Outer 1"</Code>". Select "
+                    <Code inline=true>"Inner 2"</Code>", switch to "<Code inline=true>"Outer 2"</Code>" and back: with "
+                    <Code inline=true>"Mount::Once"</Code>" the inner selection is kept, with "
+                    <Code inline=true>"Mount::WhenShown"</Code>" it starts over."
+                </p>
+                <Demo description="Nested tabs with both mount modes" source=include_str!("demos/tab_mounting.rs")>
+                    <TabMountingDemo/>
+                </Demo>
+            </Section>
+
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt tabs to your design:"</p>
+                <CssVariables prefix="--tab-" scss=theme_scss!("tabs")/>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
+                <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs hooks"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

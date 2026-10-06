@@ -1,156 +1,94 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::collapsible::CollapsibleConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageCollapsibleOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="collapsible" class="anchor">
-                "Collapsible"
-                <AnchorLink href="#collapsible" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Collapsible">
             <p>
                 "Collapsibles let users expand and collapse sections of content. "
                 "They reduce visual clutter by hiding details until the user asks for them. "
                 "Multiple collapsibles can be grouped with "<Code inline=true>"Collapsibles"</Code>
-                ", which optionally enforces accordion behavior "
-                "(opening one closes the others)."
+                ", which optionally enforces accordion behavior (opening one closes the others)."
             </p>
 
             <p>
-                "Leptonic provides collapsibles at two abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "The underlying WAI-ARIA pattern is called \"Disclosure\", hence the hook name "
+                "The underlying WAI-ARIA pattern is called \u{201c}Disclosure\u{201d}, hence the hook name "
                 <Code inline=true>"use_disclosure"</Code>"."
             </p>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Show/hide supplementary content in place"</TableCell><TableCell><b>"Collapsible"</b></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Enforce only one section open at a time (accordion)"</TableCell>
+                        <TableCell><Code inline=true>"Collapsibles"</Code>" with "<Code inline=true>"OnOpen::CloseOthers"</Code></TableCell>
+                    </TableRow>
+                    <TableRow><TableCell>"Switch between parallel content panels"</TableCell><TableCell><Link href=routes::doc::Tabs.materialize()>"Tabs"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Show content in a blocking overlay"</TableCell><TableCell><Link href=routes::doc::Modal.materialize()>"Modal"</Link></TableCell></TableRow>
+                </DocTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Show/hide supplementary content in place"</TableCell>
-                            <TableCell><b>"Collapsible"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Enforce only one section open at a time (accordion)"</TableCell>
-                            <TableCell><Code inline=true>"Collapsibles"</Code>" with "<Code inline=true>"OnOpen::CloseOthers"</Code></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Switch between parallel content panels"</TableCell>
-                            <TableCell>"Tabs"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show content in a blocking overlay"</TableCell>
-                            <TableCell>"Modal"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Collapsibles exist as a hook and as a component. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::collapsible::Hook.materialize()>"use_disclosure"</Link></TableCell>
+                        <TableCell>"ARIA attributes and keyboard handling for a trigger button and the panel it controls."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::collapsible::Component.materialize()>"Collapsible component"</Link></TableCell>
+                        <TableCell>
+                            "A themed collapsible with header and body slots, groupable with "
+                            <Code inline=true>"Collapsibles"</Code>"."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+            <Section title="Quick Start">
+                <p>"The component is the quickest way to a collapsible:"</p>
 
-            <ul>
-                <li><Link href=routes::doc::collapsible::Hook.materialize()>"Hook: use_disclosure"</Link></li>
-                <li><Link href=routes::doc::collapsible::Component.materialize()>"Component: Collapsible"</Link></li>
-            </ul>
+                <Demo description="Collapsible with a header and a body" source=include_str!("demos/collapsible.rs") source_open=true>
+                    <CollapsibleConceptDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>
+                    <Link href=routes::doc::collapsible::Hook.materialize()>"use_disclosure"</Link>" follows the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/" target=LinkTarget::_Blank>"Disclosure pattern"</LinkExt>
+                    ":"
+                </p>
 
-            <p>"The simplest way to use a collapsible (component layer):"</p>
+                <ul>
+                    <li><Code inline=true>"aria-expanded"</Code>" on the trigger tells whether the panel is shown."</li>
+                    <li><Code inline=true>"aria-controls"</Code>" on the trigger points to the panel."</li>
+                    <li>
+                        "The panel is labelled by the trigger ("<Code inline=true>"aria-labelledby"</Code>") and marked "
+                        <Code inline=true>"aria-hidden"</Code>" while collapsed."
+                    </li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Collapsible>
-                        <CollapsibleHeader slot>"Click to expand"</CollapsibleHeader>
-                        <CollapsibleBody slot>"This content is hidden until expanded."</CollapsibleBody>
-                    </Collapsible>
-                "#)}
-            </Code>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Moves focus to the trigger."</KeyRow>
+                    <KeyRow keys="Enter / Space">"Expands or collapses the panel."</KeyRow>
+                </KeyboardTable>
 
-            <DemoShell description="Collapsible content section" source=include_str!("demos/collapsible.rs")>
-                <CollapsibleConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic collapsibles follow the WAI-ARIA Disclosure pattern."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"aria-expanded"</Code>" \u{2014} \"true\" or \"false\" on the trigger"</li>
-                <li><Code inline=true>"aria-controls"</Code>" \u{2014} points to the content panel"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Enter"</Code></TableCell>
-                            <TableCell>"Toggles expanded/collapsed"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Space"</Code></TableCell>
-                            <TableCell>"Toggles expanded/collapsed"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Collapsible", link: "#collapsible" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <p>
+                    "The "<Code inline=true>"Collapsible"</Code>" component is not built on the hook yet: its header reacts to clicks "
+                    "only, can\u{2019}t be focused with the keyboard and doesn\u{2019}t announce its state. Use the hook where "
+                    "keyboard and screen reader support matter."
+                </p>
+            </Section>
+        </DocPage>
     }
 }

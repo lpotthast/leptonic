@@ -4,27 +4,24 @@ use leptos::prelude::*;
 #[component]
 pub fn LabelSpanDemo() -> impl IntoView {
     let UseLabelReturn {
-        label_props: span_label_props,
-        field_props: span_field_props,
+        label_props,
+        field_props,
     } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Span),
+        has_label: true,
+        label_element_type: LabelElementType::Span,
+        ..UseLabelInput::default()
     });
 
+    // A `<span>` can't label a `<div>` natively, so the field references it with `aria-labelledby`.
     view! {
-        <span
-            {..span_label_props.into_attrs()}
-            style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-        >
-            "Non-native control"
-        </span>
-        <div
-            role="slider"
-            tabindex="0"
-            {..span_field_props.into_attrs()}
-            style="width: 200px; height: 20px; background: #ddd; border-radius: 10px; cursor: pointer;"
-        >
-            <div style="width: 50%; height: 100%; background: var(--brand-color); border-radius: 10px;"></div>
+        <div class="demo-field">
+            <span class="demo-field-label" {..label_props.into_attrs()}>"Notes"</span>
+            <div
+                role="textbox"
+                contenteditable="true"
+                class="demo-input demo-text-input"
+                {..field_props.into_attrs()}
+            ></div>
         </div>
     }
 }

@@ -1,178 +1,147 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::text_field::TextFieldConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageTextFieldOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="text-field" class="anchor">
-                "Text Field"
-                <AnchorLink href="#text-field" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Text Field">
             <p>
-                "Text fields capture free-form text input. Leptonic provides three specialized variants: "
-                <Code inline=true>"TextInput"</Code>" for general text, "
-                <Code inline=true>"NumberInput"</Code>" for numeric values with increment/decrement, and "
-                <Code inline=true>"PasswordInput"</Code>" for masked entry."
+                "Text fields let people type a value: a name, an email address, a password, a search query or a number. "
+                "A field connects its input with a label, a description and validation errors, so that screen readers "
+                "announce them together and pressing the label focuses the input."
             </p>
 
             <p>
-                "Leptonic provides text fields at two abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                <Code inline=true>"NumberInput"</Code>" renders a native number input (implicitly "
-                <Code inline=true>"role=\"spinbutton\""</Code>"). For a custom number field with stepper buttons, "
-                "arrow key increment/decrement and min/max constraints, use the "
-                <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
-                " hook, which builds on "
-                <Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link>"."
+                "There are three kinds of field. A "<b>"text field"</b>" takes any text, on one line or several; its input "
+                "type makes it an email, URL, phone number or password field. A "<b>"search field"</b>" submits its query "
+                "on Enter and clears on Escape. A "<b>"number field"</b>" parses and formats numbers for the user\u{2019}s "
+                "locale, keeps them in a range and steps them with buttons or the arrow keys. Each kind exists as a hook, "
+                "as atoms and as a themed component."
             </p>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow>
+                        <TableCell>"Capture free-form text, on one line or several"</TableCell>
+                        <TableCell><b>"TextField"</b></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Enter a password (masked)"</TableCell>
+                        <TableCell><b>"TextField"</b>" with "<Code inline=true>"input_type=InputType::Password"</Code></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Search with submit on Enter and a clear button"</TableCell>
+                        <TableCell><b>"SearchField"</b></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Enter a precise number"</TableCell>
+                        <TableCell><b>"NumberField"</b></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Pick a number from a range by dragging"</TableCell>
+                        <TableCell><Link href=routes::doc::Slider.materialize()>"Slider"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Choose from predefined options"</TableCell>
+                        <TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Search and filter a list of options"</TableCell>
+                        <TableCell><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Capture free-form text"</TableCell>
-                            <TableCell><b>"TextInput"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Enter a precise number with increment/decrement"</TableCell>
-                            <TableCell>"NumberInput"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Enter a password (masked)"</TableCell>
-                            <TableCell>"PasswordInput"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Choose from predefined options"</TableCell>
-                            <TableCell>"Select"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Search and filter a list"</TableCell>
-                            <TableCell>"Combobox"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <p>
-                "All three variants share the same visual styling and form integration. "
-                "Choose based on the input type, not the appearance."
-            </p>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::text_field::Hook.materialize()>"use_text_field & use_search_field"</Link></TableCell>
+                        <TableCell>
+                            "Label, description and error message wiring, validation and the search keys for inputs you "
+                            "render yourself."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link></TableCell>
+                        <TableCell>
+                            "A locale-aware number input with stepper buttons, arrow-key and scroll wheel stepping, built on "
+                            <Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link>"."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::text_field::Atom.materialize()>"Text Field atoms"</Link></TableCell>
+                        <TableCell>
+                            "Unstyled "<Code inline=true>"TextField"</Code>" and "<Code inline=true>"SearchField"</Code>", composed "
+                            "from an "<Code inline=true>"Input"</Code>" (or "<Code inline=true>"TextArea"</Code>") and the "
+                            <Link href=routes::doc::atoms::Field.materialize()>"field atoms"</Link>" "
+                            <Code inline=true>"Label"</Code>", "<Code inline=true>"Description"</Code>" and "
+                            <Code inline=true>"FieldError"</Code>", styled through data attributes. Put them in a "
+                            <Link href=routes::doc::atoms::Form.materialize()>"Form"</Link>" to validate on submission."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::text_field::NumberFieldAtom.materialize()>"Number Field atoms"</Link></TableCell>
+                        <TableCell>
+                            "An unstyled "<Code inline=true>"NumberField"</Code>" for any integer or float type, with stepper "
+                            "buttons, an "<Code inline=true>"Input"</Code>" and the field atoms."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::text_field::Component.materialize()>"Text Field components"</Link></TableCell>
+                        <TableCell>
+                            "Themed "<Code inline=true>"TextField"</Code>", "<Code inline=true>"SearchField"</Code>" and "
+                            <Code inline=true>"NumberField"</Code>", taking label, description and validation as props."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>
+                    "The themed "<Code inline=true>"TextField"</Code>" takes its label and description as props. Bind its "
+                    "value to a signal with "<Code inline=true>"state"</Code>":"
+                </p>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+                <Demo description="Labelled name field greeting the entered name" source=include_str!("demos/text_field.rs") source_open=true>
+                    <TextFieldConceptDemo/>
+                </Demo>
+            </Section>
 
-            <ul>
-                <li><Link href=routes::doc::text_field::Hook.materialize()>"Hook: use_text_field"</Link></li>
-                <li><Link href=routes::doc::text_field::Component.materialize()>"Component: TextInput"</Link></li>
-            </ul>
+            <Section title="Accessibility">
+                <ul>
+                    <li>
+                        "All fields render native "<Code inline=true>"<input>"</Code>" (or "<Code inline=true>"<textarea>"</Code>
+                        ") elements with a "<Code inline=true>"<label>"</Code>". A search field\u{2019}s input has "
+                        <Code inline=true>"type=\"search\""</Code>"; a number field\u{2019}s is a text input, so that it can "
+                        "show formatted numbers, with a virtual keyboard for numbers."
+                    </li>
+                    <li>
+                        "The hooks connect label, description and error message with "<Code inline=true>"aria-labelledby"</Code>
+                        " and "<Code inline=true>"aria-describedby"</Code>", and set "<Code inline=true>"aria-invalid"</Code>
+                        " and "<Code inline=true>"aria-required"</Code>"."
+                    </li>
+                    <li>
+                        "A number field sets "<Code inline=true>"aria-roledescription=\"Number field\""</Code>
+                        " and announces value changes to screen readers."
+                    </li>
+                </ul>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
-
-            <p>"The simplest way to use a text input (component layer):"</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let (value, set_value) = signal(String::new());
-
-                    <TextInput get=value set=set_value />
-                ")}
-            </Code>
-
-            <DemoShell description="Text input with label" source=include_str!("demos/text_field.rs")>
-                <TextFieldConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "TextInput uses native "<Code inline=true>"<input>"</Code>
-                " semantics. NumberInput uses "<Code inline=true>"role=\"spinbutton\""</Code>"."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"aria-invalid"</Code>" \u{2014} \"true\" when validation fails"</li>
-                <li><Code inline=true>"aria-required"</Code>" \u{2014} \"true\" when the field is required"</li>
-                <li><Code inline=true>"aria-disabled"</Code>" \u{2014} \"true\" when disabled"</li>
-                <li><Code inline=true>"aria-valuenow/min/max"</Code>" \u{2014} on NumberInput only"</li>
-            </ul>
-
-            <h3>"Keyboard interaction (NumberInput)"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Up"</Code></TableCell>
-                            <TableCell>"Increment by step"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Down"</Code></TableCell>
-                            <TableCell>"Decrement by step"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Home"</Code></TableCell>
-                            <TableCell>"Set to minimum (if defined)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"End"</Code></TableCell>
-                            <TableCell>"Set to maximum (if defined)"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Text Field", link: "#text-field" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Enter">"Search field: submit the query. Number field: commit the typed value."</KeyRow>
+                    <KeyRow keys="Escape">"Search field: clear the query."</KeyRow>
+                    <KeyRow keys="ArrowUp / ArrowDown">"Number field: increment or decrement by one step."</KeyRow>
+                    <KeyRow keys="Home / End">"Number field: set to the minimum or maximum."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

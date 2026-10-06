@@ -1,209 +1,179 @@
-// Upstream: react-aria/src/dnd/useDropIndicator.ts @ 6f664fe911
-//! Drop indicator hook for visual drop target feedback within collections.
-//!
-//! Provides ARIA labels and visibility state for drop indicator elements
-//! that show users where items will be inserted during drag-and-drop.
-//!
-//! Based on react-aria's `useDropIndicator` from
-//! `react-aria/src/dnd/useDropIndicator.ts`.
-
-use leptos::{attr, attr::Attr, prelude::*};
+// Upstream: react-aria/src/dnd/useDropIndicator.ts @ 99e6102368
+use leptos::{
+    attr::{self, Attr},
+    prelude::*,
+};
 
 use super::{
-    drag_manager,
-    droppable_collection_state::DroppableCollectionState,
+    drag_manager::use_drag_session,
+    messages,
     types::{DropPosition, DropTarget},
+    use_droppable_collection::DroppableCollectionData,
+    use_droppable_item::{UseDroppableItemInput, UseDroppableItemReturn, use_droppable_item},
 };
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        IntoAttrs,
+        collections::{Collection, Key, NodeKind},
+    },
+    utils::{CapturedElement, ElementCaptureAttr, aria::AriaHidden, id::use_id},
+};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## RUST-NATIVE DESIGN
+// No intentional deviations from the react-aria implementation.
 //
-// - Aria-label is a derived `Signal<String>` computed from `DropTarget` and
-//   `get_text_value`, instead of react-aria's imperative string building.
-// - `is_hidden` is a derived `Signal<bool>` instead of an imperative check.
-//
-// ## API DIFFERENCES
-//
-// - `get_text_value` is a `Callback` returning a human-readable label for a
-//   key, used in aria-label computation.
-// - Uses `DroppableCollectionState` directly instead of react-aria's
-//   `DropIndicatorAria` return type.
-//
+// =============================================================================
 
-/// Input for the [`use_drop_indicator`] hook.
+/// Input of [`use_drop_indicator`].
+#[derive(Debug, Clone)]
 pub struct UseDropIndicatorInput {
-    /// The drop target this indicator represents.
+    /// The droppable collection (from `use_droppable_collection`).
+    pub collection: DroppableCollectionData,
+    /// The position the indicator marks.
     pub target: DropTarget,
-    /// The droppable collection state.
-    pub state: DroppableCollectionState,
-    /// Ordered keys in the collection (for adjacent label computation).
-    pub collection_keys: Signal<Vec<String>>,
-    /// Returns human-readable text for a key (used in aria-label).
-    pub get_text_value: Callback<String, String>,
+    /// A button activating the target during keyboard drags.
+    pub activate_button: Option<CapturedElement>,
 }
 
-/// Return value of the [`use_drop_indicator`] hook.
+/// Return value of [`use_drop_indicator`].
+#[derive(Debug)]
 pub struct UseDropIndicatorReturn {
-    /// Props for the drop indicator element.
     pub drop_indicator_props: UseDropIndicatorProps,
-    /// Whether this indicator is the current drop target.
+    /// The drag is over this position.
     pub is_drop_target: Signal<bool>,
-    /// Whether this indicator should be hidden (no active drag session
-    /// and this indicator is not the current drop target).
+    /// Render nothing (but keep the element) while hidden.
     pub is_hidden: Signal<bool>,
 }
 
-/// Props for a drop indicator element.
+/// Props for the drop indicator element.
 #[derive(Debug)]
 pub struct UseDropIndicatorProps {
-    /// The `role` attribute.
-    pub role: &'static str,
-    /// The `aria-roledescription` attribute.
+    pub id: String,
     pub aria_roledescription: &'static str,
-    /// The computed `aria-label` for the indicator.
     pub aria_label: Signal<String>,
-    /// The `aria-hidden` attribute — hides the indicator from screen readers
-    /// when no drag session is active.
-    pub aria_hidden: Signal<Option<&'static str>>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_hidden: Signal<Option<AriaHidden>>,
+    pub tabindex: i32,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseDropIndicatorAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::AriaRoledescription, &'static str>,
+    Attr<attr::AriaLabel, Signal<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
+    Attr<attr::Tabindex, i32>,
+    ElementCaptureAttr,
+);
 
 impl IntoAttrs for UseDropIndicatorProps {
     type Attrs = UseDropIndicatorAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
+            Attr(attr::Id, self.id),
             Attr(attr::AriaRoledescription, self.aria_roledescription),
             Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaHidden, self.aria_hidden),
+            Attr(attr::Tabindex, self.tabindex),
+            self.element_capture,
         )
     }
 }
 
-/// Attributes for a drop indicator element.
-pub type UseDropIndicatorAttrs = (
-    Attr<attr::Role, &'static str>,
-    Attr<attr::AriaRoledescription, &'static str>,
-    Attr<attr::AriaLabel, Signal<String>>,
-    Attr<attr::AriaHidden, Signal<Option<&'static str>>>,
-);
+fn text(collection: &Collection, key: &Key) -> String {
+    collection
+        .get(key)
+        .map(|n| n.text_value.to_string())
+        .unwrap_or_default()
+}
 
-/// Provides accessibility props and visibility state for a drop indicator
-/// within a droppable collection.
-///
-/// Drop indicators are visual elements (typically lines or highlights) that
-/// show where dragged items will be inserted. Each indicator corresponds to
-/// a specific [`DropTarget`] position.
-///
-/// # Example
-///
-/// ```ignore
-/// let indicator = use_drop_indicator(UseDropIndicatorInput {
-///     target: DropTarget::Item { key: "item-1".into(), position: DropPosition::Before },
-///     state: collection_state.clone(),
-///     collection_keys: keys_signal,
-///     get_text_value: Callback::new(|key: String| format!("Item {key}")),
-/// });
-///
-/// view! {
-///     <div
-///         {..indicator.drop_indicator_props.into_attrs()}
-///         class:hidden=move || indicator.is_hidden.get()
-///         class:active=move || indicator.is_drop_target.get()
-///     />
-/// }
-/// ```
-pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorReturn {
-    let UseDropIndicatorInput {
-        target,
-        state,
-        collection_keys,
-        get_text_value,
-    } = input;
-
-    let target_for_active = target.clone();
-    let state_for_active = state.clone();
-
-    // Whether this indicator is the current drop target.
-    let is_drop_target =
-        Signal::derive(move || state_for_active.is_drop_target(&target_for_active));
-
-    // Subscribe to keyboard drag session state.
-    let session_active = drag_manager::use_drag_session_active();
-
-    // Whether to hide the indicator: visible when actively targeted OR
-    // when a keyboard drag session is active (so indicators are navigable).
-    let is_hidden = Signal::derive(move || !is_drop_target.get() && !session_active.get());
-
-    // aria-hidden: hide from screen readers when no session is active.
-    let aria_hidden = Signal::derive(move || {
-        if session_active.get() {
-            None
-        } else {
-            Some("true")
+/// The label of a drop position: "Insert between A and B", "Drop on A", ...
+fn label(collection: &Collection, target: &DropTarget) -> String {
+    let DropTarget::Item(target) = target else {
+        return messages::DROP_ON_ROOT.to_owned();
+    };
+    if target.drop_position == DropPosition::On {
+        return messages::drop_on_item(&text(collection, &target.key));
+    }
+    let item_key = |key: Option<&Key>| {
+        key.and_then(|k| collection.get(k))
+            .filter(|n| n.kind == NodeKind::Item)
+            .map(|n| n.key.clone())
+    };
+    let node = collection.get(&target.key);
+    let before = if target.drop_position == DropPosition::Before {
+        item_key(node.and_then(|n| n.prev_key.as_ref()))
+    } else {
+        Some(target.key.clone())
+    };
+    let after = if target.drop_position == DropPosition::After {
+        item_key(node.and_then(|n| n.next_key.as_ref()))
+    } else {
+        Some(target.key.clone())
+    };
+    match (before, after) {
+        (Some(before), Some(after)) => {
+            messages::insert_between(&text(collection, &before), &text(collection, &after))
         }
-    });
-
-    // Compute the aria-label based on the drop target position.
-    let aria_label =
-        Signal::derive(move || compute_aria_label(&target, &collection_keys, &get_text_value));
-
-    UseDropIndicatorReturn {
-        drop_indicator_props: UseDropIndicatorProps {
-            role: "option",
-            aria_roledescription: "drop indicator",
-            aria_label,
-            aria_hidden,
-        },
-        is_drop_target,
-        is_hidden,
+        (Some(before), None) => messages::insert_after(&text(collection, &before)),
+        (None, Some(after)) => messages::insert_before(&text(collection, &after)),
+        (None, None) => String::new(),
     }
 }
 
-/// Computes the aria-label for a drop indicator based on its position.
-fn compute_aria_label(
-    target: &DropTarget,
-    collection_keys: &Signal<Vec<String>>,
-    get_text_value: &Callback<String, String>,
-) -> String {
-    match target {
-        DropTarget::Root => "Drop on collection".to_owned(),
-        DropTarget::Item { key, position } => {
-            let text = get_text_value.run(key.clone());
-            match position {
-                DropPosition::On => format!("Drop on {text}"),
-                DropPosition::Before => {
-                    let prev_text = collection_keys.with(|keys| {
-                        let idx = keys.iter().position(|k| k == key);
-                        idx.and_then(|i| {
-                            if i > 0 {
-                                Some(get_text_value.run(keys[i - 1].clone()))
-                            } else {
-                                None
-                            }
-                        })
-                    });
-
-                    if let Some(prev) = prev_text {
-                        format!("Insert between {prev} and {text}")
-                    } else {
-                        format!("Insert before {text}")
-                    }
-                }
-                DropPosition::After => {
-                    let next_text = collection_keys.with(|keys| {
-                        let idx = keys.iter().position(|k| k == key);
-                        idx.and_then(|i| keys.get(i + 1).map(|k| get_text_value.run(k.clone())))
-                    });
-
-                    if let Some(next) = next_text {
-                        format!("Insert between {text} and {next}")
-                    } else {
-                        format!("Insert after {text}")
-                    }
-                }
-            }
+/// A drop indicator: a drop position between items (or on the collection), reachable during
+/// keyboard drags, shown while the drag is over it.
+pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorReturn {
+    let UseDropIndicatorInput {
+        collection,
+        target,
+        activate_button,
+    } = input;
+    let id = use_id("drop-indicator");
+    let element = CapturedElement::new();
+    let session = use_drag_session();
+    let labelledby = (target == DropTarget::Root).then(|| format!("{id} {}", collection.id));
+    let items = collection.state.list.collection;
+    let label_target = target.clone();
+    let UseDroppableItemReturn {
+        drop_props,
+        is_drop_target,
+    } = use_droppable_item(UseDroppableItemInput {
+        collection,
+        target,
+        element,
+        activate_button,
+    });
+    let item_hidden = drop_props.aria_hidden;
+    let aria_hidden = Signal::derive(move || {
+        if session.with(Option::is_none) {
+            Some(AriaHidden::True)
+        } else {
+            item_hidden.get()
         }
+    });
+
+    UseDropIndicatorReturn {
+        drop_indicator_props: UseDropIndicatorProps {
+            id,
+            aria_roledescription: messages::DROP_INDICATOR,
+            aria_label: Signal::derive(move || items.with(|c| label(c, &label_target))),
+            aria_labelledby: labelledby,
+            aria_describedby: drop_props.aria_describedby,
+            aria_hidden,
+            tabindex: -1,
+            element_capture: element.attr(),
+        },
+        is_drop_target,
+        is_hidden: Signal::derive(move || !is_drop_target.get() && aria_hidden.get().is_some()),
     }
 }

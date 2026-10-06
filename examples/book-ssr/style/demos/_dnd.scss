@@ -1,0 +1,111 @@
+// Drag and drop demos. The demos set `data-dragging` and `data-drop-target` from the hooks' `is_dragging` and
+// `is_drop_target` signals.
+
+// Cards dragged onto drop targets.
+.demo-dnd-board {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-l);
+    align-items: flex-start;
+}
+
+.demo-dnd-cards,
+.demo-dnd-targets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-m);
+}
+
+.demo-dnd-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    min-width: 9em;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    cursor: grab;
+    user-select: none;
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-dragging] { opacity: 0.5; }
+    &[draggable="false"] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-dnd-target-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-s);
+    width: 12em;
+    max-width: 100%;
+}
+
+.demo-dnd-target {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    min-height: 5em;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px dashed var(--book-border-color);
+    border-radius: var(--book-radius-m);
+
+    .demo-caption { margin-top: 0; }
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-drop-target] { border-color: var(--brand-color); background: var(--brand-color-subtle); }
+}
+
+.demo-dnd-dropped {
+    margin: 0;
+    padding-left: 1.25em;
+    font-size: var(--book-font-size-s);
+    overflow-wrap: anywhere;
+}
+
+// A reorderable grid list.
+.demo-dnd-list {
+    display: flex;
+    flex-direction: column;
+    max-width: 20em;
+}
+
+.demo-dnd-row {
+    margin: 3px 0;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    cursor: grab;
+    user-select: none;
+    outline: none;
+
+    &[aria-selected="true"] { background: var(--brand-color-subtle); border-color: var(--brand-color); }
+    &.focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+    &[data-dragging] { opacity: 0.5; }
+}
+
+.demo-dnd-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--book-space-s);
+}
+
+.demo-dnd-check {
+    width: 1em;
+    color: var(--brand-color);
+}
+
+.demo-dnd-grip { color: var(--book-muted-color); }
+
+// The line between rows. It takes no space, so rows don't move when indicators appear during keyboard drags.
+.demo-dnd-indicator {
+    height: 2px;
+    margin: -1px 0;
+    border-radius: 1px;
+
+    &[data-drop-target] { background: var(--brand-color); }
+    &[data-hidden] { display: none; }
+
+    [role="gridcell"] { height: 100%; outline: none; }
+}

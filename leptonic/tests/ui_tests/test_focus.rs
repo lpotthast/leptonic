@@ -1,10 +1,8 @@
 use std::borrow::Cow;
 
-use browser_test::{BrowserTest, async_trait};
-use rootcause::Report;
-
 use assertr::prelude::*;
-use browser_test::thirtyfour::WebDriver;
+use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use rootcause::Report;
 
 use crate::pages::focus::FocusPage;
 

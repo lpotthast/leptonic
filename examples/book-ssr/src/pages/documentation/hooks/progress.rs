@@ -2,132 +2,128 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
-use super::demos::progress_determinate::ProgressDeterminateDemo;
-use super::demos::progress_indeterminate::ProgressIndeterminateDemo;
+use super::demos::{
+    progress_determinate::ProgressDeterminateDemo,
+    progress_indeterminate::ProgressIndeterminateDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseProgressBar() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_progress_bar" class="anchor">
-                "use_progress_bar"
-                <AnchorLink href="#use_progress_bar" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Hook for creating accessible progress indicators with support for determinate and indeterminate states. "
-               "See the "<Link href=crate::routes::doc::Progress.materialize()>"Progress overview"</Link>" for concept guidance."</p>
-
+        <DocPage title="use_progress_bar">
             <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useProgressBar.html" target=LinkTarget::_Blank>
-                    "useProgressBar"
-                </LinkExt>
-                "."
+                "The "<Code inline=true>"use_progress_bar"</Code>" hook makes an element announce the progress of a task, "
+                "either as a value in a range (determinate) or as ongoing activity (indeterminate). "
+                "See the "<Link href=routes::doc::Progress.materialize()>"Progress overview"</Link>" for concept guidance."
             </p>
 
-            <h2 id="determinate" class="anchor">
-                "Determinate Progress"
-                <AnchorLink href="#determinate" description="Direct link to determinate"/>
-            </h2>
+            <ReactAria hook="useProgressBar"/>
 
-            <p>"Shows a specific progress value:"</p>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseProgressBarInput"</Code>" implements "<Code inline=true>"Default"</Code>
+                    ", so you only name the fields you care about."
+                </p>
 
-            <DemoShell source=include_str!("demos/progress_determinate.rs")>
-                <ProgressDeterminateDemo />
-            </DemoShell>
+                <ApiTable kind=ApiKind::Input of="UseProgressBarInput">
+                    <ApiRow name="value" ty="Signal<Option<f64>>" default="Some(0.0)">
+                        "The current value. "<Code inline=true>"None"</Code>" omits "<Code inline=true>"aria-valuenow"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="min_value" ty="f64" default="0.0">"The value at which no progress has been made."</ApiRow>
+                    <ApiRow name="max_value" ty="f64" default="100.0">"The value at which the task is complete."</ApiRow>
+                    <ApiRow name="label" ty="Option<String>" default="None">
+                        "Whether the progress bar has a visible label. When set, the progress bar gets "
+                        <Code inline=true>"aria-labelledby"</Code>" pointing to "<Code inline=true>"label_props.id"</Code>
+                        "; the text itself is not used, so render it in your label element."
+                    </ApiRow>
+                    <ApiRow name="show_value_label" ty="bool" default="true">
+                        "Currently has no effect: "<Code inline=true>"value_label"</Code>" is always computed."
+                    </ApiRow>
+                    <ApiRow name="is_indeterminate" ty="bool" default="false">
+                        "Whether progress is ongoing without a known value. Removes "<Code inline=true>"aria-valuenow"</Code>
+                        " and "<Code inline=true>"aria-valuetext"</Code>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseProgressBarReturn { progress_props, label_props, .. } = use_progress_bar(
-                        UseProgressBarInput {
-                            label: Some("Loading progress".into()),
-                            value: Signal::derive(|| Some(65.0)),
-                            min_value: 0.0,
-                            max_value: 100.0,
-                            show_value_label: true,
-                            is_indeterminate: false,
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseProgressBarReturn">
+                    <ApiRow name="progress_props" ty="UseProgressBarProps">
+                        "Attributes for the progress bar element, see "<a href="#aria-attributes">"ARIA attributes"</a>
+                        ". Spread with "<Code inline=true>"{..progress_props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="label_props" ty="UseProgressBarLabelProps">
+                        "The "<Code inline=true>"id"</Code>" for your label element."
+                    </ApiRow>
+                    <ApiRow name="percentage" ty="Signal<Option<f64>>">
+                        "The value as a percentage of the range (0 to 100), for sizing a fill. "
+                        <Code inline=true>"None"</Code>" while indeterminate or without a value."
+                    </ApiRow>
+                    <ApiRow name="value_label" ty="Signal<String>">
+                        "The rounded percentage as text, e.g. \u{201c}65%\u{201d}. Empty while indeterminate."
+                    </ApiRow>
+                    <ApiRow name="is_indeterminate" ty="bool">"The "<Code inline=true>"is_indeterminate"</Code>" input."</ApiRow>
+                    <ApiRow name="progress_id" ty="String">"The generated id of the progress bar."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let progress = use_progress_bar(UseProgressBarInput {
+                            value: Signal::derive(|| Some(45.0)),
+                            label: Some("Uploading".to_string()),
+                            ..Default::default()
+                        });
+
+                        view! {
+                            <label id=progress.label_props.id>"Uploading"</label>
+                            <div {..progress.progress_props.into_attrs()} class="track">
+                                // Size the fill from `progress.percentage`.
+                                <div class="fill"></div>
+                            </div>
+                            <span>{move || progress.value_label.get()}</span>
                         }
-                    );
-                "#)}
-            </Code>
+                    "#)}
+                </Code>
+            </Section>
 
-            <h2 id="indeterminate" class="anchor">
-                "Indeterminate Progress"
-                <AnchorLink href="#indeterminate" description="Direct link to indeterminate"/>
-            </h2>
+            <Section title="Determinate Progress">
+                <p>"A known value within a range. The fill width follows "<Code inline=true>"percentage"</Code>":"</p>
 
-            <p>"For unknown progress duration:"</p>
+                <Demo description="Determinate progress bar with buttons to change the value" source=include_str!("demos/progress_determinate.rs")>
+                    <ProgressDeterminateDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/progress_indeterminate.rs")>
-                <ProgressIndeterminateDemo />
-            </DemoShell>
+            <Section title="Indeterminate Progress">
+                <p>"For tasks of unknown duration, set "<Code inline=true>"is_indeterminate"</Code>" and animate the fill with CSS:"</p>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let UseProgressBarReturn { progress_props, .. } = use_progress_bar(
-                        UseProgressBarInput {
-                            label: Some("Loading".into()),
-                            value: Signal::derive(|| None), // No specific value
-                            min_value: 0.0,
-                            max_value: 100.0,
-                            show_value_label: false,
-                            is_indeterminate: true,
-                        }
-                    );
-                "#)}
-            </Code>
+                <Demo description="Indeterminate progress bar with an animated fill" source=include_str!("demos/progress_indeterminate.rs")>
+                    <ProgressIndeterminateDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+            <Section title="ARIA attributes">
+                <p>"The progress bar element gets:"</p>
 
-            <p>"The hook automatically sets:"</p>
-            <ul>
-                <li><code>"role=\"progressbar\""</code></li>
-                <li><code>"aria-valuenow"</code> " (current value)"</li>
-                <li><code>"aria-valuemin"</code> " (minimum value)"</li>
-                <li><code>"aria-valuemax"</code> " (maximum value)"</li>
-                <li><code>"aria-valuetext"</code> " (human-readable value)"</li>
-                <li><code>"aria-label"</code> " or " <code>"aria-labelledby"</code></li>
-            </ul>
+                <ul>
+                    <li><Code inline=true>"role=\"progressbar\""</Code></li>
+                    <li><Code inline=true>"aria-valuenow"</Code>" \u{2014} the current value, absent while indeterminate"</li>
+                    <li><Code inline=true>"aria-valuemin"</Code>" / "<Code inline=true>"aria-valuemax"</Code>" \u{2014} the range"</li>
+                    <li><Code inline=true>"aria-valuetext"</Code>" \u{2014} "<Code inline=true>"value_label"</Code>", absent while indeterminate"</li>
+                    <li><Code inline=true>"aria-labelledby"</Code>" \u{2014} the label, if "<Code inline=true>"label"</Code>" is set"</li>
+                </ul>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                <p>"Without a "<Code inline=true>"label"</Code>", give the element an "<Code inline=true>"aria-label"</Code>" yourself."</p>
+            </Section>
 
-            <ul>
-                <li>"Determinate progress with specific value"</li>
-                <li>"Indeterminate progress for unknown duration"</li>
-                <li>"Customizable min/max values"</li>
-                <li>"Label association"</li>
-                <li>"Proper ARIA progressbar attributes"</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Progress.materialize()>"Progress overview"</Link></li>
-                <li><Link href=crate::routes::doc::progress::Component.materialize()>"Progress component"</Link></li>
-                <li><Link href=crate::routes::doc::hooks::UseMeter.materialize()>"use_meter"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_progress_bar", link: "#use_progress_bar" },
-                Toc::Leaf { title: "Determinate Progress", link: "#determinate" },
-                Toc::Leaf { title: "Indeterminate Progress", link: "#indeterminate" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Progress.materialize()>"Progress overview"</Link></li>
+                <li><Link href=routes::doc::progress::Component.materialize()>"Progress component"</Link></li>
+                <li><Link href=routes::doc::hooks::UseMeter.materialize()>"use_meter"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

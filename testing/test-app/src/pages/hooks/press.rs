@@ -20,7 +20,7 @@ fn press_input(log: EventLog, disabled: Signal<bool>) -> UsePressInput {
         Callback::new(move |e: PressEvent| log.push(format!("{name}:{}", e.pointer_type)))
     };
     UsePressInput {
-        disabled,
+        is_disabled: disabled,
         force_prevent_default: false,
         force_propagation: false,
         allow_text_selection_on_press: false,
@@ -38,6 +38,7 @@ fn press_input(log: EventLog, disabled: Signal<bool>) -> UsePressInput {
         on_long_press_end: None,
         long_press_threshold: None,
         long_press_accessibility_description: None,
+        long_press_disabled: Signal::stored(false),
     }
 }
 

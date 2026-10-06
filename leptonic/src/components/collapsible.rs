@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -78,11 +78,15 @@ pub fn Collapsibles(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    provide_context(CollapsiblesContext {
+    let context = CollapsiblesContext {
         default_on_open,
         collapsibles: Arc::new(RwLock::new(vec![])),
-    });
-    view! { <div class=classes.add("leptonic-collapsibles") style=styles>{children()}</div> }
+    };
+    view! {
+        <Provider value=context>
+            <div class=classes.add("leptonic-collapsibles") style=styles>{children()}</div>
+        </Provider>
+    }
 }
 
 pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContext {

@@ -10,18 +10,9 @@ pub fn FocusRingWithinDemo() -> impl IntoView {
     });
 
     view! {
-        <div
-            {..focus_ring_within.props.into_attrs()}
-            style="padding: 1em; border-radius: 8px; border: 2px solid #ccc; display: flex; gap: 0.5em; align-items: center; transition: all 0.2s;"
-        >
-            <input
-                type="text"
-                placeholder="Tab here..."
-                class=Classes::from("demo-input")
-            />
-            <button class=Classes::from("demo-btn")>
-                "Or here"
-            </button>
+        <div {..focus_ring_within.props.into_attrs()} class=Classes::from("demo-focus-group")>
+            <input type="text" placeholder="Tab here\u{2026}" class=Classes::from(["demo-focus-item", "demo-focus-ring"])/>
+            <button class=Classes::from(["demo-focus-item", "demo-focus-ring"])>"Or here"</button>
         </div>
 
         <p class=Classes::from("demo-mt-1")>

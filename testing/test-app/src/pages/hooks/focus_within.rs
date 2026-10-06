@@ -7,7 +7,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
     let (blur_within_count, set_blur_within_count) = signal(0u32);
 
     let focus_within = use_focus_within(UseFocusWithinInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         on_focus_within: Some(Callback::new(move |_| {
             set_focus_within_count.update(|c| *c += 1);
         })),
@@ -23,7 +23,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
     let (disabled_focus_count, set_disabled_focus_count) = signal(0u32);
 
     let disabled_fw = use_focus_within(UseFocusWithinInput {
-        disabled: Signal::derive(|| true),
+        is_disabled: Signal::derive(|| true),
         on_focus_within: Some(Callback::new(move |_| {
             set_disabled_focus_count.update(|c| *c += 1);
         })),
@@ -38,7 +38,7 @@ pub fn PageHookFocusWithin() -> impl IntoView {
     let (change_count, set_change_count) = signal(0u32);
 
     let change_fw = use_focus_within(UseFocusWithinInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         on_focus_within: None,
         on_blur_within: None,
         on_focus_within_change: Some(Callback::new(move |is_within: bool| {
@@ -115,14 +115,14 @@ pub fn PageHookFocusWithin() -> impl IntoView {
                 <h2>"Nested Containers"</h2>
                 {
                     let nested_outer_fw = use_focus_within(UseFocusWithinInput {
-                        disabled: Signal::derive(|| false),
+                        is_disabled: Signal::derive(|| false),
                         on_focus_within: None,
                         on_blur_within: None,
                         on_focus_within_change: None,
                     });
                     let nested_outer_is_fw = nested_outer_fw.is_focus_within;
                     let nested_inner_fw = use_focus_within(UseFocusWithinInput {
-                        disabled: Signal::derive(|| false),
+                        is_disabled: Signal::derive(|| false),
                         on_focus_within: None,
                         on_blur_within: None,
                         on_focus_within_change: None,

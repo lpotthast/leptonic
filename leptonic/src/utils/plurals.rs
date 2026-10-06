@@ -17,7 +17,7 @@ use super::i18n::Locale;
 ///
 /// ```ignore
 /// use icu_plurals::PluralCategory;
-/// let locale = Locale::new("en-US");
+/// let locale = Locale::from(locale!("en-US"));
 /// assert_eq!(plural_category(&locale, 1), PluralCategory::One);
 /// assert_eq!(plural_category(&locale, 2), PluralCategory::Other);
 /// ```
@@ -36,16 +36,17 @@ mod tests {
     use icu_plurals::PluralCategory;
 
     use super::*;
+    use crate::utils::i18n::locale;
 
     #[test]
     fn test_english_plural_one() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
     }
 
     #[test]
     fn test_english_plural_other() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
         assert_that!(plural_category(&locale, 2)).is_equal_to(PluralCategory::Other);
         assert_that!(plural_category(&locale, 5)).is_equal_to(PluralCategory::Other);
@@ -53,7 +54,7 @@ mod tests {
 
     #[test]
     fn test_arabic_plural_categories() {
-        let locale = Locale::new("ar");
+        let locale = Locale::from(locale!("ar"));
         // Arabic has: zero, one, two, few, many, other
         assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Zero);
         assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
@@ -62,7 +63,7 @@ mod tests {
 
     #[test]
     fn test_japanese_always_other() {
-        let locale = Locale::new("ja-JP");
+        let locale = Locale::from(locale!("ja-JP"));
         // Japanese has no grammatical plural distinctions
         assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
         assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::Other);

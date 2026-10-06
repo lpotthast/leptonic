@@ -8,13 +8,15 @@ pub fn ModalConceptDemo() -> impl IntoView {
     view! {
         <Button on_press=move |_| set_show_modal.set(true)>"Open Modal"</Button>
 
-        <Modal show_when=show_modal on_close=move |()| set_show_modal.set(false)>
-            <ModalHeader><ModalTitle>"Confirm"</ModalTitle></ModalHeader>
+        // The modal is named by its `ModalTitle`.
+        <Modal state=(show_modal, set_show_modal)>
+            <ModalHeader>
+                <ModalTitle>"Confirm"</ModalTitle>
+            </ModalHeader>
             <ModalBody>"Are you sure?"</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| set_show_modal.set(false)
-                        color=ButtonColor::Secondary>
+                    <Button on_press=move |_| set_show_modal.set(false) color=ButtonColor::Secondary>
                         "Close"
                     </Button>
                 </ButtonWrapper>

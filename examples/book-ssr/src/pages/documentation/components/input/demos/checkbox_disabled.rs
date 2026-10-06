@@ -3,10 +3,16 @@ use leptos::prelude::*;
 
 #[component]
 pub fn CheckboxDisabledDemo() -> impl IntoView {
-    let (checked_disabled, set_checked_disabled) = signal(false);
+    let (remember, set_remember) = signal(true);
+    let disabled = RwSignal::new(true);
+    let read_only = RwSignal::new(false);
 
     view! {
-        <Checkbox disabled=true checked=checked_disabled set_checked=set_checked_disabled />
-        <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
+        <Checkbox state=(remember, set_remember) is_disabled=disabled is_read_only=read_only>"Remember me"</Checkbox>
+        <p class="demo-status">{move || if remember.get() { "Remembered" } else { "Not remembered" }}</p>
+        <div class="demo-toggle-settings">
+            <Checkbox state=disabled>"Disabled"</Checkbox>
+            <Checkbox state=read_only>"Read-only"</Checkbox>
+        </div>
     }
 }

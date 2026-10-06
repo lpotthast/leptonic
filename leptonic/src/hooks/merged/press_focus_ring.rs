@@ -47,7 +47,8 @@ pub struct MergedPressFocusRingProps {
     pub on_dragstart: EventHandler<DragEvent>,
     pub on_mousedown: EventHandler<MouseEvent>,
     pub on_pointerup: EventHandler<PointerEvent>,
-    pub aria_describedby: Option<AriaDescribedby>,
+    pub on_dblclick: EventHandler<MouseEvent>,
+    pub aria_describedby: Signal<Option<AriaDescribedby>>,
     // From focus ring.
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -67,7 +68,8 @@ pub type MergedPressFocusRingAttrs = (
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
+    Attr<attr::AriaDescribedby, Signal<Option<AriaDescribedby>>>,
     // From focus ring.
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -87,6 +89,7 @@ impl IntoAttrs for MergedPressFocusRingProps {
             self.on_dragstart.into_on(ev::dragstart),
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
+            self.on_dblclick.into_on(ev::dblclick),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
@@ -110,6 +113,7 @@ impl MergeWith<UseFocusRingProps> for UsePressProps {
             on_dragstart: press.on_dragstart,
             on_mousedown: press.on_mousedown,
             on_pointerup: press.on_pointerup,
+            on_dblclick: press.on_dblclick,
             aria_describedby: press.aria_describedby,
             // From focus ring.
             on_focus: focus_ring.on_focus,

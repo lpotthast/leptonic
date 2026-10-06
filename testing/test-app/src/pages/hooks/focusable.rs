@@ -9,7 +9,7 @@ pub fn PageHookFocusable() -> impl IntoView {
     let (keyup_count, set_keyup_count) = signal(0u32);
 
     let normal = use_focusable(UseFocusableInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         auto_focus: false,
         exclude_from_tab_order: Signal::derive(|| false),
         on_key_down: Some(Callback::new(move |_| {
@@ -24,18 +24,18 @@ pub fn PageHookFocusable() -> impl IntoView {
     let normal_focus_handle = normal.focus_handle;
 
     let disabled = use_focusable(UseFocusableInput {
-        disabled: Signal::derive(|| true),
+        is_disabled: Signal::derive(|| true),
         ..Default::default()
     });
 
     let excluded = use_focusable(UseFocusableInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         exclude_from_tab_order: Signal::derive(|| true),
         ..Default::default()
     });
 
     let autofocus = use_focusable(UseFocusableInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         auto_focus: true,
         ..Default::default()
     });
@@ -86,7 +86,7 @@ pub fn PageHookFocusable() -> impl IntoView {
                 {
                     let (dynamic_disabled, set_dynamic_disabled) = signal(false);
                     let dynamic = use_focusable(UseFocusableInput {
-                        disabled: dynamic_disabled.into(),
+                        is_disabled: dynamic_disabled.into(),
                         ..Default::default()
                     });
 

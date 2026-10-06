@@ -10,7 +10,7 @@ pub fn StackDemo() -> impl IntoView {
             <Skeleton animated=false>"Item 3"</Skeleton>
         </Stack>
 
-        <Stack orientation=StackOrientation::Horizontal spacing=em(0.6)>
+        <Stack orientation=StackOrientation::Horizontal spacing=em(0.6) classes="demo-mt-1">
             <Skeleton animated=false>"Item 1"</Skeleton>
             <Skeleton animated=false>"Item 2"</Skeleton>
             <Skeleton animated=false>"Item 3"</Skeleton>

@@ -1,10 +1,11 @@
-// Upstream: react-aria/src/overlays/ariaHideOutside.ts @ 6f664fe911
+// Upstream: react-aria/src/overlays/ariaHideOutside.ts @ 99e6102368
 //! Hides all elements outside the given targets from assistive technology.
 //!
 //! When a modal or popover is open, content behind it should be hidden from
-//! screen readers. This module sets the `inert` attribute on all sibling
-//! elements outside the target elements, making them non-interactive and
-//! invisible to assistive technology.
+//! screen readers. This module hides all elements outside the target elements:
+//! with `aria-hidden="true"` (the page stays usable, e.g. behind a combo box's
+//! popover or during a drag), or with `inert` (also non-interactive, for modal
+//! overlays), see [`HideMode`].
 //!
 //! Features:
 //! - Reference counting supports nested overlays (e.g., a popover inside a modal)
@@ -15,22 +16,72 @@
 //! Based on react-aria's `ariaHideOutside` from
 //! `react-aria/src/overlays/ariaHideOutside.ts`.
 //!
-//! ## Deviation from react-aria
+//! ## Deviations from react-aria
 //!
-//! Uses the `inert` attribute exclusively instead of `aria-hidden="true"`.
-//! Leptonic targets modern browsers where `inert` is universally supported
-//! and strictly superior: it hides from assistive technology AND prevents
-//! pointer/keyboard interaction.
+//! - `shouldUseInert: boolean` is the [`HideMode`] enum; `inert` is always supported (modern
+//!   browsers only), so there is no `aria-hidden` fallback for it.
+//! - Omitted: watching shadow roots around the targets (react-aria's `shadowDOM` flag, off by
+//!   default).
+
+/// How [`aria_hide_outside`] hides elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HideMode {
+    /// `aria-hidden="true"`: hidden from assistive technology, still usable with a pointer (a
+    /// combo box's popover, a drag).
+    #[default]
+    AriaHidden,
+    /// `inert`: hidden from assistive technology and not interactive (modal overlays).
+    Inert,
+}
+
+impl HideMode {
+    /// The attribute hiding an element in this mode.
+    #[cfg(not(feature = "ssr"))]
+    fn attribute(self) -> &'static str {
+        match self {
+            Self::AriaHidden => "aria-hidden",
+            Self::Inert => "inert",
+        }
+    }
+
+    #[cfg(not(feature = "ssr"))]
+    fn is_hidden(self, element: &web_sys::Element) -> bool {
+        match self {
+            Self::AriaHidden => element.get_attribute("aria-hidden").as_deref() == Some("true"),
+            Self::Inert => element.has_attribute("inert"),
+        }
+    }
+
+    #[cfg(not(feature = "ssr"))]
+    fn hide(self, element: &web_sys::Element) {
+        let value = match self {
+            Self::AriaHidden => "true",
+            Self::Inert => "",
+        };
+        let _ = element.set_attribute(self.attribute(), value);
+    }
+
+    /// Shows an element again. As react-aria, `aria-hidden` mode removes `inert` as well.
+    #[cfg(not(feature = "ssr"))]
+    fn show(self, element: &web_sys::Element) {
+        let _ = element.remove_attribute(self.attribute());
+        if self == Self::AriaHidden {
+            let _ = element.remove_attribute("inert");
+        }
+    }
+}
 
 /// Options for [`aria_hide_outside`].
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct AriaHideOutsideOptions {
     /// The root element to start hiding from. Defaults to `document.body`.
     pub root: Option<web_sys::Element>,
+    /// How elements are hidden. Default: `aria-hidden`.
+    pub mode: HideMode,
 }
 
 /// Hides all elements in the DOM outside the given targets from assistive
-/// technology using the `inert` attribute.
+/// technology, as `options.mode` says.
 ///
 /// Returns a cleanup function that restores all hidden elements. The cleanup
 /// function must be called exactly once when the overlay closes.
@@ -116,7 +167,7 @@ enum WalkAction {
     Reject,
     /// Skip this node but process its children.
     Skip,
-    /// Hide this node (and implicitly its subtree via `inert`).
+    /// Hide this node (and implicitly its subtree: `inert` and `aria-hidden` are recursive).
     Accept,
 }
 
@@ -132,7 +183,7 @@ fn classify(
         return WalkAction::Reject;
     }
 
-    // Parent already hidden (inert is recursive) — skip subtree.
+    // Parent already hidden (hiding is recursive) — skip subtree.
     // Exception: elements with role="row" — VoiceOver on iOS has issues
     // hiding elements with role="row", so we hide cells individually.
     // https://bugs.webkit.org/show_bug.cgi?id=222623
@@ -178,6 +229,7 @@ fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<we
 #[cfg(not(feature = "ssr"))]
 fn walk(
     element: &web_sys::Element,
+    mode: HideMode,
     visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
     hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
 ) {
@@ -189,8 +241,8 @@ fn walk(
 
     match action {
         WalkAction::Reject => {}
-        WalkAction::Skip => walk_children(element, visible_nodes, hidden_nodes),
-        WalkAction::Accept => hide_element(element, hidden_nodes),
+        WalkAction::Skip => walk_children(element, mode, visible_nodes, hidden_nodes),
+        WalkAction::Accept => hide_element(element, mode, hidden_nodes),
     }
 }
 
@@ -198,33 +250,38 @@ fn walk(
 #[cfg(not(feature = "ssr"))]
 fn walk_children(
     element: &web_sys::Element,
+    mode: HideMode,
     visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
     hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
 ) {
     let children = element.children();
     for i in 0..children.length() {
         if let Some(child) = children.item(i) {
-            walk(&child, visible_nodes, hidden_nodes);
+            walk(&child, mode, visible_nodes, hidden_nodes);
         }
     }
 }
 
-/// Hide an element by setting `inert` and updating the reference count.
+/// Hide an element and update the reference count.
 #[cfg(not(feature = "ssr"))]
-fn hide_element(element: &web_sys::Element, hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>) {
+fn hide_element(
+    element: &web_sys::Element,
+    mode: HideMode,
+    hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
+) {
     REF_COUNT_MAP.with_borrow(|map| {
         let key: &js_sys::Object = element.unchecked_ref();
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let count = map.get(key).as_f64().unwrap_or(0.0) as u32;
 
-        // If already inert and ref count is zero, this element was hidden
+        // If already hidden and ref count is zero, this element was hidden
         // before us (by page author or another mechanism). Don't touch it.
-        if count == 0 && element.has_attribute("inert") {
+        if count == 0 && mode.is_hidden(element) {
             return;
         }
 
         if count == 0 {
-            let _ = element.set_attribute("inert", "");
+            mode.hide(element);
         }
 
         hidden_nodes.borrow_mut().push(element.clone());
@@ -232,9 +289,9 @@ fn hide_element(element: &web_sys::Element, hidden_nodes: &Rc<RefCell<Vec<web_sy
     });
 }
 
-/// Restore a hidden element by removing `inert` when its ref count reaches zero.
+/// Show a hidden element again when its ref count reaches zero.
 #[cfg(not(feature = "ssr"))]
-fn show_element(element: &web_sys::Element) {
+fn show_element(element: &web_sys::Element, mode: HideMode) {
     REF_COUNT_MAP.with_borrow(|map| {
         let key: &js_sys::Object = element.unchecked_ref();
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -243,7 +300,7 @@ fn show_element(element: &web_sys::Element) {
         match count {
             None | Some(0) => {}
             Some(1) => {
-                let _ = element.remove_attribute("inert");
+                mode.show(element);
                 let _ = map.delete(key);
             }
             Some(n) => {
@@ -258,6 +315,7 @@ fn show_element(element: &web_sys::Element) {
 #[cfg(not(feature = "ssr"))]
 fn create_mutation_observer(
     root: &web_sys::Element,
+    mode: HideMode,
     visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
     hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
 ) -> Option<(
@@ -269,7 +327,7 @@ fn create_mutation_observer(
 
     let callback: Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)> = Closure::new(
         move |mutations: js_sys::Array, _observer: web_sys::MutationObserver| {
-            handle_mutations(&mutations, &vis_for_cb, &hid_for_cb);
+            handle_mutations(&mutations, mode, &vis_for_cb, &hid_for_cb);
         },
     );
 
@@ -288,6 +346,7 @@ fn create_mutation_observer(
 #[cfg(not(feature = "ssr"))]
 fn handle_mutations(
     mutations: &js_sys::Array,
+    mode: HideMode,
     visible_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
     hidden_nodes: &Rc<RefCell<Vec<web_sys::Element>>>,
 ) {
@@ -339,7 +398,7 @@ fn handle_mutations(
                 visible_nodes.borrow_mut().push(el.clone());
             } else {
                 discover_special_elements(el, &mut visible_nodes.borrow_mut());
-                walk(el, visible_nodes, hidden_nodes);
+                walk(el, mode, visible_nodes, hidden_nodes);
             }
         }
     }
@@ -354,10 +413,11 @@ pub fn aria_hide_outside(
         return Box::new(|| {});
     }
 
-    let root = options.root.or_else(|| {
-        web_sys::window()
-            .and_then(|w| w.document())
-            .and_then(|d| d.body())
+    let AriaHideOutsideOptions { root, mode } = options;
+    let root = root.or_else(|| {
+        leptos_use::use_document()
+            .as_ref()
+            .and_then(web_sys::Document::body)
             .map(JsCast::unchecked_into::<web_sys::Element>)
     });
 
@@ -379,10 +439,11 @@ pub fn aria_hide_outside(
     });
 
     // Walk the DOM and hide elements outside targets.
-    walk_children(&root, &visible_nodes, &hidden_nodes);
+    walk_children(&root, mode, &visible_nodes, &hidden_nodes);
 
     // Set up MutationObserver for dynamically added elements.
-    let Some((observer, callback)) = create_mutation_observer(&root, &visible_nodes, &hidden_nodes)
+    let Some((observer, callback)) =
+        create_mutation_observer(&root, mode, &visible_nodes, &hidden_nodes)
     else {
         return Box::new(|| {});
     };
@@ -421,7 +482,7 @@ pub fn aria_hide_outside(
         });
 
         for node in hidden_for_cleanup.borrow().iter() {
-            show_element(node);
+            show_element(node, mode);
         }
     })
 }

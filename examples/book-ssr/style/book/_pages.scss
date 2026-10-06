@@ -1,0 +1,112 @@
+// Pages outside the documentation: welcome page and 404.
+
+#welcome-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1em;
+  box-sizing: border-box;
+
+  #intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4em 0 3em;
+    text-align: center;
+  }
+
+  #slogan {
+    margin: 0.2em 0;
+    font-size: 8em;
+    font-weight: 900;
+    background: var(--book-brand-gradient);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  #sub-slogan {
+    max-width: 36em;
+    text-wrap: balance;
+    margin: 0 0 1.5em;
+    font-size: 1.75em;
+  }
+
+  .cta {
+    font-size: var(--book-font-size-l);
+  }
+
+  #features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16em, 1fr));
+    gap: 1.5em;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .feature {
+    padding: var(--book-space-l);
+    border: 1px solid var(--book-border-color);
+    border-top: 4px solid var(--brand-color);
+    border-radius: var(--book-radius-m);
+    background-color: var(--book-surface-color);
+
+    h2 {
+      margin: 0 0 var(--book-space-s);
+      font-size: var(--book-font-size-l);
+    }
+
+    p {
+      margin: 0;
+      color: var(--book-muted-color);
+      line-height: 1.5;
+      hyphens: manual;
+    }
+  }
+
+  @media (max-width: 600px) {
+    #slogan {
+      font-size: 3em;
+    }
+
+    #sub-slogan {
+      font-size: 1.3em;
+    }
+  }
+}
+
+.err-404 {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2em;
+  max-width: 60em;
+  margin: 2em auto 0;
+  padding: 1em;
+
+  .info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  #error {
+    margin: 0 0 0.1em;
+    font-size: 6em;
+    font-weight: bold;
+  }
+
+  #whoops {
+    margin: 0 0.5rem 1.5em;
+    font-size: 2.5em;
+    font-weight: 500;
+  }
+
+  #ferris {
+    width: auto;
+    height: 14em;
+  }
+}

@@ -3,41 +3,39 @@ use leptos::prelude::*;
 
 #[component]
 pub fn TextFieldSearchDemo() -> impl IntoView {
-    let (search_value, set_search_value) = signal(String::new());
+    let query = use_text_field_state(UseTextFieldStateInput::default());
+    let (submitted, set_submitted) = signal(None::<String>);
 
-    let UseLabelReturn {
-        label_props: search_label_props,
-        field_props: search_field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
+    let UseSearchFieldReturn {
+        text_field,
+        clear_button,
+    } = use_search_field(UseSearchFieldInput {
+        on_submit: Some(Callback::new(move |value| set_submitted.set(Some(value)))),
+        ..UseSearchFieldInput::new(UseTextFieldInput {
+            has_label: true,
+            placeholder: "Search\u{2026}".into(),
+            ..UseTextFieldInput::new(query)
+        })
     });
+    let clear = use_button(clear_button);
+    let (clear_attrs, clear_styles) = clear.props.into_parts();
+    let is_empty = move || query.value.with(String::is_empty);
 
     view! {
-        <label
-            {..search_label_props.into_attrs()}
-            style="display: block; font-weight: 500; margin-bottom: 0.25em;"
-        >
-            "Search"
-        </label>
-        <div style="display: flex; gap: 0.5em;">
-            <input
-                type="search"
-                {..search_field_props.into_attrs()}
-                placeholder="Search..."
-                prop:value=move || search_value.get()
-                on:input=move |ev| set_search_value.set(event_target_value(&ev))
-                style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 250px;"
-            />
-            <button
-                on:click=move |_| set_search_value.set(String::new())
-                style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;"
-            >
-                "Clear"
-            </button>
+        <div class="demo-field">
+            <label class="demo-field-label" {..text_field.label_props.into_attrs()}>"Search"</label>
+            <div class="demo-inline-controls demo-no-margin">
+                <input class="demo-input demo-text-input" {..text_field.input_props.into_attrs()}/>
+                <button {..clear_attrs} style=clear_styles class="demo-btn" class:demo-invisible=is_empty>
+                    "\u{2715}"
+                </button>
+            </div>
         </div>
-        <p style="margin: 0.5em 0 0 0; font-size: 0.85em;">
-            "Press Enter to submit, Escape to clear"
+
+        <p>
+            "Submitted: "
+            <strong>{move || submitted.get().unwrap_or_else(|| "nothing yet".to_owned())}</strong>
         </p>
+        <p class="demo-caption">"Press Enter to submit, Escape to clear."</p>
     }
 }

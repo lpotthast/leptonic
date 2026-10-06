@@ -1,77 +1,80 @@
-// Upstream: react-aria/src/listbox/useListBoxSection.ts @ 6f664fe911
-use crate::utils::id::use_id;
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/listbox/useListBoxSection.ts @ 99e6102368
+use leptos::{
+    attr::{self, Attr},
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
+use web_sys::MouseEvent;
 
+use super::ListBoxData;
 use crate::{
-    hooks::IntoAttrs,
-    utils::aria::{AriaHidden, AriaRole},
+    hooks::{
+        IntoAttrs,
+        collections::{Key, NodeKind},
+    },
+    utils::{EventHandler, aria::AriaRole, id::use_id},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/listbox/useListBoxSection.ts
-
+// =============================================================================
 // REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - The heading and `aria-label` come from the collection: the section's `Header` child and its
+//   `aria_label`.
+//
+// =============================================================================
 
-/// Input parameters for the `use_listbox_section` hook.
-#[derive(Debug, Clone, Default)]
+/// Input of [`use_listbox_section`].
+#[derive(Debug, Clone)]
 pub struct UseListBoxSectionInput {
-    /// The heading text for the section.
+    pub list: ListBoxData,
+    /// The section's key in the listbox's collection.
+    pub key: Key,
+}
+
+/// Return value of [`use_listbox_section`].
+#[derive(Debug)]
+pub struct UseListBoxSectionReturn {
+    /// For the element wrapping heading and group (e.g. an `<li>` in a `<ul>` listbox).
+    pub item_props: UseListBoxSectionItemProps,
+    /// For the heading element; `None` when the section has no header.
+    pub heading_props: Option<UseListBoxSectionHeadingProps>,
+    /// For the element containing the section's options.
+    pub group_props: UseListBoxSectionGroupProps,
+    /// The header text, if any.
     pub heading: Option<String>,
 }
 
-/// The return value of the `use_listbox_section` hook.
 #[derive(Debug)]
-pub struct UseListBoxSectionReturn {
-    /// Props for the section group element.
-    pub group_props: UseListBoxSectionGroupProps,
-
-    /// Props for the section heading element.
-    pub heading_props: UseListBoxSectionHeadingProps,
-
-    /// Props for section items container.
-    pub items_props: UseListBoxSectionItemsProps,
-}
-
-/// Props for the section group element.
-#[derive(Debug)]
-pub struct UseListBoxSectionGroupProps {
-    /// The role attribute.
+pub struct UseListBoxSectionItemProps {
     pub role: AriaRole,
-
-    /// The aria-labelledby attribute.
-    pub aria_labelledby: Option<String>,
 }
 
-impl IntoAttrs for UseListBoxSectionGroupProps {
-    type Attrs = UseListBoxSectionGroupAttrs;
+pub type UseListBoxSectionItemAttrs = (Attr<attr::Role, AriaRole>,);
+
+impl IntoAttrs for UseListBoxSectionItemProps {
+    type Attrs = UseListBoxSectionItemAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-        )
+        (Attr(attr::Role, self.role),)
     }
 }
 
-/// Attributes for the section group element.
-pub type UseListBoxSectionGroupAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-);
-
-/// Props for the section heading element.
 #[derive(Debug)]
 pub struct UseListBoxSectionHeadingProps {
-    /// The id of the heading element.
     pub id: String,
-
-    /// The role attribute for the heading.
     pub role: AriaRole,
-
-    /// The aria-hidden attribute.
-    pub aria_hidden: AriaHidden,
+    /// Keeps focus in the listbox when the heading is clicked.
+    pub on_mousedown: EventHandler<MouseEvent>,
 }
+
+pub type UseListBoxSectionHeadingAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+);
 
 impl IntoAttrs for UseListBoxSectionHeadingProps {
     type Attrs = UseListBoxSectionHeadingAttrs;
@@ -80,86 +83,68 @@ impl IntoAttrs for UseListBoxSectionHeadingProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
-            Attr(attr::AriaHidden, self.aria_hidden),
+            self.on_mousedown.into_on(ev::mousedown),
         )
     }
 }
 
-/// Attributes for the section heading element.
-pub type UseListBoxSectionHeadingAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaHidden, AriaHidden>,
-);
-
-/// Props for section items container.
 #[derive(Debug)]
-pub struct UseListBoxSectionItemsProps {
-    /// The role attribute.
+pub struct UseListBoxSectionGroupProps {
     pub role: AriaRole,
+    pub aria_label: Option<String>,
+    pub aria_labelledby: Option<String>,
 }
 
-impl IntoAttrs for UseListBoxSectionItemsProps {
-    type Attrs = UseListBoxSectionItemsAttrs;
+pub type UseListBoxSectionGroupAttrs = (
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+);
+
+impl IntoAttrs for UseListBoxSectionGroupProps {
+    type Attrs = UseListBoxSectionGroupAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (Attr(attr::Role, self.role),)
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
     }
 }
 
-/// Attributes for the section items container.
-pub type UseListBoxSectionItemsAttrs = (Attr<attr::Role, AriaRole>,);
-
-/// Provides accessibility attributes for a section within a listbox.
-///
-/// Listbox sections group related options together with an optional heading.
-///
-/// # Example
-///
-/// ```ignore
-/// let section = use_listbox_section(UseListBoxSectionInput {
-///     heading: Some("Fruits".to_string()),
-/// });
-///
-/// view! {
-///     <li role=section.group_props.role aria-labelledby=section.group_props.aria_labelledby>
-///         <span
-///             id=section.heading_props.id
-///             role=section.heading_props.role
-///             aria-hidden=section.heading_props.aria_hidden
-///         >
-///             "Fruits"
-///         </span>
-///         <ul role=section.items_props.role>
-///             // Options here
-///         </ul>
-///     </li>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
+/// A section of a listbox: a group of options with an optional heading.
 pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionReturn {
-    let UseListBoxSectionInput { heading } = input;
-
+    let UseListBoxSectionInput { list, key } = input;
     let heading_id = use_id("listbox-section-heading");
 
-    let aria_labelledby = if heading.is_some() {
-        Some(heading_id.clone())
-    } else {
-        None
-    };
+    let (aria_label, heading) = untrack(|| {
+        list.state.collection.with(|c| {
+            let aria_label = c
+                .get(&key)
+                .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
+            let heading = c
+                .children(&key)
+                .find(|n| n.kind == NodeKind::Header)
+                .map(|n| n.text_value.to_string());
+            (aria_label, heading)
+        })
+    });
 
     UseListBoxSectionReturn {
+        item_props: UseListBoxSectionItemProps {
+            role: AriaRole::Presentation,
+        },
+        heading_props: heading.as_ref().map(|_| UseListBoxSectionHeadingProps {
+            id: heading_id.clone(),
+            role: AriaRole::Presentation,
+            on_mousedown: EventHandler::new(|e: MouseEvent| e.prevent_default()),
+        }),
         group_props: UseListBoxSectionGroupProps {
-            role: AriaRole::Presentation,
-            aria_labelledby,
-        },
-        heading_props: UseListBoxSectionHeadingProps {
-            id: heading_id,
-            role: AriaRole::Presentation,
-            aria_hidden: AriaHidden::True,
-        },
-        items_props: UseListBoxSectionItemsProps {
             role: AriaRole::Group,
+            aria_label,
+            aria_labelledby: heading.as_ref().map(|_| heading_id),
         },
+        heading,
     }
 }

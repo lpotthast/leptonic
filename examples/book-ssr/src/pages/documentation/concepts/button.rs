@@ -1,181 +1,102 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{button_basic::ButtonBasicConceptDemo, button_styled::ButtonStyledConceptDemo};
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageButtonOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="button" class="anchor">
-                "Button"
-                <AnchorLink href="#button" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Button">
             <p>
-                "Buttons are interactive elements that trigger an action when activated. "
-                "They are the primary way users initiate operations like submitting forms, "
-                "opening dialogs, or triggering side effects."
+                "Buttons trigger an action when activated: submitting a form, opening a dialog, deleting an item. "
+                "They can be pressed with a mouse, touch, pen, the keyboard and assistive technology."
             </p>
 
-            <p>
-                "Leptonic provides buttons at three abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "This page covers the button concept; choose a layer below to dive into specifics."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Trigger an action (submit, delete, open)"</TableCell><TableCell><b>"Button"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Navigate to another page or URL"</TableCell><TableCell><Link href=routes::doc::Link.materialize()>"Link"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Toggle a binary state on or off"</TableCell><TableCell><Link href=routes::doc::Switch.materialize()>"Toggle"</Link></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Select from a set of options"</TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link>" / "
+                            <Link href=routes::doc::Radio.materialize()>"Radio"</Link>
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+                <p>
+                    "If an element looks like a button but navigates, use a "<Code inline=true>"LinkButton"</Code>
+                    ". If an element looks like a link but triggers an action, use a button."
+                </p>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Trigger an action (submit, delete, open)"</TableCell>
-                            <TableCell><b>"Button"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Navigate to another page or URL"</TableCell>
-                            <TableCell>"Link"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Toggle a binary state on/off"</TableCell>
-                            <TableCell>"Toggle / Switch"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Select from a set of options"</TableCell>
-                            <TableCell>"Checkbox / Radio"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Buttons exist at all three layers. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <p>
-                "If an element looks like a button but navigates, use "
-                <Code inline=true>"LinkButton"</Code>
-                " (atom) or style a "
-                <Code inline=true>"Link"</Code>
-                " as a button. If an element looks like a link but triggers an action, use a button."
-            </p>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></TableCell>
+                        <TableCell>"Behavior and ARIA attributes for any element you render, e.g. a "<Code inline=true>"<div>"</Code>"."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::button::Atom.materialize()>"Button atom"</Link></TableCell>
+                        <TableCell>"An unstyled "<Code inline=true>"<button>"</Code>" with that behavior, for your own design."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::button::Component.materialize()>"Button component"</Link></TableCell>
+                        <TableCell>"A themed button with colors, variants, sizes and groups."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>"The component is the quickest way to a button:"</p>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+                <Demo description="Basic button" source=include_str!("demos/button_basic.rs") source_open=true>
+                    <ButtonBasicConceptDemo/>
+                </Demo>
 
-            <ul>
-                <li><Link href=routes::doc::button::Hook.materialize()>"Hook: use_button"</Link></li>
-                <li><Link href=routes::doc::button::Atom.materialize()>"Atom: Button"</Link></li>
-                <li><Link href=routes::doc::button::Component.materialize()>"Component: Button"</Link></li>
-            </ul>
+                <p>"Give it a color and a variant:"</p>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+                <Demo description="Primary filled button" source=include_str!("demos/button_styled.rs") source_open=true>
+                    <ButtonStyledConceptDemo/>
+                </Demo>
+            </Section>
 
-            <p>"The simplest way to use a button (component layer):"</p>
+            <Section title="Accessibility">
+                <p>
+                    "All layers follow the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/button/" target=LinkTarget::_Blank>"Button pattern"</LinkExt>
+                    " and behave the same."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Button on_press=move |_| {}>"My Button"</Button>
-                "#)}
-            </Code>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"button\""</Code>
+                        " is set on elements that aren\u{2019}t native buttons; native buttons keep their implicit role."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-disabled"</Code>" marks disabled non-native buttons; native ones use the "
+                        <Code inline=true>"disabled"</Code>" attribute."
+                    </li>
+                    <li>
+                        <Code inline=true>"aria-haspopup"</Code>" and "<Code inline=true>"aria-expanded"</Code>
+                        " describe a popup (menu, dialog, \u{2026}) the button opens."
+                    </li>
+                </ul>
 
-            <DemoShell description="Basic button rendering" source=include_str!("demos/button_basic.rs")>
-                <ButtonBasicConceptDemo />
-            </DemoShell>
-
-            <p>"A button with a color and variant:"</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Button on_press=move |_| {} color=ButtonColor::Primary variant=ButtonVariant::Filled>
-                        "Save"
-                    </Button>
-                "#)}
-            </Code>
-
-            <DemoShell description="Button with variant styling" source=include_str!("demos/button_styled.rs")>
-                <ButtonStyledConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic buttons follow the WAI-ARIA Button pattern. "
-                "All three layers (hook, atom, component) produce the same accessibility behavior."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"button\""</Code>" \u{2014} set automatically when using non-button elements with the hook"</li>
-                <li><Code inline=true>"aria-disabled"</Code>" \u{2014} mirrors the disabled prop as \"true\"/\"false\" (not HTML boolean)"</li>
-                <li><Code inline=true>"aria-haspopup"</Code>" \u{2014} indicates if the button opens a popup (menu, dialog, etc.)"</li>
-                <li><Code inline=true>"aria-expanded"</Code>" \u{2014} indicates if the controlled popup is currently open"</li>
-                <li><Code inline=true>"tabindex=\"0\""</Code>" \u{2014} ensures focusability; set to \"-1\" when disabled"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Enter"</Code></TableCell>
-                            <TableCell>"Activates the button"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Space"</Code></TableCell>
-                            <TableCell>"Activates the button"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Tab"</Code></TableCell>
-                            <TableCell>"Moves focus to the button"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Button", link: "#button" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Moves focus to the button."</KeyRow>
+                    <KeyRow keys="Enter / Space">"Activates the button."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

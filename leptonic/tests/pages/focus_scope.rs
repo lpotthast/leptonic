@@ -1,7 +1,5 @@
+use browser_test::thirtyfour::WebDriver;
 use rootcause::Report;
-use std::time::Duration;
-
-use browser_test::thirtyfour::{WebDriver, prelude::*};
 
 use crate::pages::BaseActions;
 
@@ -24,14 +22,9 @@ impl FocusScopePage<'_> {
     pub async fn goto(&self) -> Result<(), Report> {
         tracing::info!("Navigating to focus-scope atom test page...");
         self.goto_path("/atoms/focus-scope").await?;
-        // Wait for auto-focus effects to settle.
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        // The auto-focus scope takes focus once mounted.
+        self.wait_for_active_id("test-fs-autofocus-btn-1").await?;
         Ok(())
-    }
-
-    pub async fn get_active_element_id(&self) -> Result<Option<String>, Report> {
-        let active = self.driver.active_element().await?;
-        Ok(active.attr("id").await?)
     }
 
     // ---- Containment section ----
@@ -55,12 +48,6 @@ impl FocusScopePage<'_> {
     pub async fn click_nested_inner_btn_1(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-nested-inner-btn-1")
             .await
-    }
-
-    pub async fn tab_from_active(&self) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(Key::Tab).await?;
-        Ok(())
     }
 
     // ---- Nested restore section ----

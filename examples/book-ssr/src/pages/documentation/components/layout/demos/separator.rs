@@ -4,6 +4,8 @@ use leptos::prelude::*;
 #[component]
 pub fn SeparatorDemo() -> impl IntoView {
     view! {
-        <Separator />
+        <p>"Content above the separator."</p>
+        <Separator/>
+        <p>"Content below the separator."</p>
     }
 }

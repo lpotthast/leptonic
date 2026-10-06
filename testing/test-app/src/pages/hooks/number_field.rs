@@ -7,19 +7,14 @@ use leptos::prelude::*;
 #[component]
 pub fn PageHookNumberField() -> impl IntoView {
     let state = use_number_field_state(UseNumberFieldStateInput {
-        default_value: Some(1.0),
-        min_value: Some(0.0),
-        max_value: Some(5.0),
-        step: 1.0,
-        ..Default::default()
+        default_value: Some(1.0_f64),
+        min_value: Signal::stored(Some(0.0)),
+        max_value: Signal::stored(Some(5.0)),
+        ..UseNumberFieldStateInput::default()
     });
     let field = use_number_field(UseNumberFieldInput {
-        state,
-        label: Some("Quantity".to_owned()),
-        min_value: Some(0.0),
-        max_value: Some(5.0),
-        step: 1.0,
-        ..Default::default()
+        has_label: true,
+        ..UseNumberFieldInput::new(state)
     });
     let (dec_attrs, dec_styles) = use_button(field.decrement_button).props.into_parts();
     let (inc_attrs, inc_styles) = use_button(field.increment_button).props.into_parts();
@@ -36,13 +31,9 @@ pub fn PageHookNumberField() -> impl IntoView {
             }>
             <div {..field.group_props.into_attrs()}>
                 <label {..field.label_props.into_attrs()}>"Quantity"</label>
-                <button {..dec_attrs} style=dec_styles id="test-nf-decrement">"-"</button>
-                <input
-                    prop:value=field.display_value
-                    {..field.input_props.into_attrs()}
-                    data-testid="input"
-                />
-                <button {..inc_attrs} style=inc_styles id="test-nf-increment">"+"</button>
+                <button {..dec_attrs} style=dec_styles>"-"</button>
+                <input {..field.input_props.into_attrs()} data-testid="input" />
+                <button {..inc_attrs} style=inc_styles>"+"</button>
             </div>
             </form>
             <button id="test-nf-after">"After"</button>

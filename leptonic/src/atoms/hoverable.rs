@@ -5,7 +5,7 @@ use crate::hooks::*;
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Hoverable(
-    #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     children: ChildrenFn,
@@ -14,7 +14,7 @@ pub fn Hoverable(
         props: hover_props,
         is_hovered: _,
     } = use_hover(UseHoverInput {
-        disabled: disabled.unwrap_or(false.into()),
+        is_disabled,
         on_hover_start,
         on_hover_end,
         on_hover_change: None,

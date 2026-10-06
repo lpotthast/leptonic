@@ -1,3 +1,4 @@
+// Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
 use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;
@@ -33,6 +34,8 @@ impl BrowserTest<str> for NumberFieldTests {
 }
 
 const VALUE: &str = "test-nf-value";
+const INCREMENT: &str = "#test-page-hook-number-field button[aria-label=Increase]";
+const DECREMENT: &str = "#test-page-hook-number-field button[aria-label=Decrease]";
 
 async fn stepper_buttons(page: &Page<'_>) -> Result<(), Report> {
     let input_id = page
@@ -41,12 +44,20 @@ async fn stepper_buttons(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .id()
         .await?;
-    for id in ["test-nf-increment", "test-nf-decrement"] {
-        assert_that!(page.attr_of(id, "aria-controls").await?).is_equal_to(input_id.clone());
-        assert_that!(page.attr_of(id, "tabindex").await?).is_equal_to(Some("-1".to_owned()));
+    for selector in [INCREMENT, DECREMENT] {
+        let button = page.css(selector).await?;
+        assert_that!(button.attr("aria-controls").await?).is_equal_to(input_id.clone());
+        assert_that!(button.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
     }
-    assert_that!(page.attr_of("test-nf-increment", "aria-label").await?)
-        .is_equal_to(Some("Increase Quantity".to_owned()));
+    // "Increase" + the visible label "Quantity" (through `aria-labelledby`).
+    let increment = page.css(INCREMENT).await?;
+    let label_id = page
+        .css("#test-page-hook-number-field label")
+        .await?
+        .attr("id")
+        .await?;
+    let labelled_by = increment.attr("aria-labelledby").await?.unwrap_or_default();
+    assert_that!(labelled_by.split(' ').next_back().map(ToOwned::to_owned)).is_equal_to(label_id);
     Ok(())
 }
 
@@ -54,7 +65,7 @@ async fn stepper_buttons(page: &Page<'_>) -> Result<(), Report> {
 /// when using a mouse.
 async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_text(VALUE, "1").await?;
-    page.click_element_with_id("test-nf-increment").await?;
+    page.css(INCREMENT).await?.click().await?;
     page.wait_for_text(VALUE, "2").await?;
     tokio::time::sleep(Duration::from_millis(600)).await;
     assert_that!(page.read_text_of(VALUE).await?).is_equal_to("2".to_owned());
@@ -62,7 +73,7 @@ async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), Repor
     let active = page.driver.active_element().await?;
     assert_that!(active.attr("data-testid").await?).is_equal_to(Some("input".to_owned()));
 
-    page.click_element_with_id("test-nf-decrement").await?;
+    page.css(DECREMENT).await?.click().await?;
     page.wait_for_text(VALUE, "1").await
 }
 
@@ -70,7 +81,7 @@ async fn click_steps_once_and_focuses_input(page: &Page<'_>) -> Result<(), Repor
 /// maximum is reached. There the button disables itself, which ends the press, so spinning stops
 /// for good (react-spectrum #9813).
 async fn holding_spins_until_the_limit(page: &Page<'_>) -> Result<(), Report> {
-    let increment = page.element("test-nf-increment").await?;
+    let increment = page.css(INCREMENT).await?;
     page.driver
         .action_chain()
         .move_to_element_center(&increment)
@@ -78,12 +89,14 @@ async fn holding_spins_until_the_limit(page: &Page<'_>) -> Result<(), Report> {
         .perform()
         .await?;
     page.wait_for_text(VALUE, "5").await?;
-    page.wait_for_selector("#test-nf-increment[aria-disabled=true], #test-nf-increment[disabled]")
-        .await?;
+    page.wait_for_selector(&format!(
+        "{INCREMENT}[aria-disabled=true], {INCREMENT}[disabled]"
+    ))
+    .await?;
     page.driver.action_chain().release().perform().await?;
 
     // Back down by keyboard; the increment button works again afterwards.
-    page.click_element_with_id("test-nf-decrement").await?;
+    page.css(DECREMENT).await?.click().await?;
     page.wait_for_text(VALUE, "4").await
 }
 

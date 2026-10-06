@@ -1,58 +1,85 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::table::TableDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageTable() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="table" class="anchor">
-                "Table"
-                <AnchorLink href="#table" description="Direct link to article header"/>
-            </h1>
+        <DocPage title="Table component">
+            <p>
+                "The themed table components render a native HTML "<Code inline=true>"<table>"</Code>
+                " from "<Code inline=true>"Table"</Code>", "<Code inline=true>"TableHeader"</Code>", "
+                <Code inline=true>"TableBody"</Code>", "<Code inline=true>"TableRow"</Code>" and cell components. "
+                "They style static tabular data; they add no keyboard navigation or selection. See the "
+                <Link href=routes::doc::Table.materialize()>"Table overview"</Link>" for concept guidance."
+            </p>
 
-            <p>"Tables..."</p>
+            <Demo description="Bordered, hoverable table rendered from a list of rows" source=include_str!("demos/table.rs")>
+                <TableDemo/>
+            </Demo>
 
-            <DemoShell source=include_str!("demos/table.rs")>
-                <TableDemo />
-            </DemoShell>
+            <Section title="Props">
+                <Section title="Table">
+                    <ApiTable kind=ApiKind::Props of="components::table::Table">
+                        <ApiRow name="bordered" ty="Option<bool>" default="None">
+                            "Collapses the cell borders and draws a line below the header cells. "
+                            <Code inline=true>"None"</Code>" means "<Code inline=true>"false"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="hoverable" ty="Option<bool>" default="None">
+                            "Highlights the body row under the mouse pointer. "<Code inline=true>"None"</Code>
+                            " means "<Code inline=true>"false"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles of the "<Code inline=true>"<table>"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="children" ty="Children">
+                            "A "<Code inline=true>"TableHeader"</Code>", "<Code inline=true>"TableBody"</Code>
+                            " and optionally a "<Code inline=true>"TableFooter"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="styling">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+                <Section title="TableHeaderCell">
+                    <ApiTable kind=ApiKind::Props of="TableHeaderCell">
+                        <ApiRow name="min_width" ty="Option<bool>" default="None">
+                            "Shrinks the column to the width of its content. "<Code inline=true>"None"</Code>
+                            " behaves like "<Code inline=true>"true"</Code>"; pass "<Code inline=true>"false"</Code>
+                            " to let the column grow."
+                        </ApiRow>
+                        <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">
+                            "Called when the header cell is pressed, for example to sort by this column."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles of the "<Code inline=true>"<th>"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="children" ty="Children">"The cell content."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+                <Section title="TableContainer, TableHeader, TableBody, TableFooter, TableRow, TableCell">
+                    <p>
+                        "These components take "<Code inline=true>"classes"</Code>", "<Code inline=true>"styles"</Code>
+                        " and children, and render a "<Code inline=true>"<div>"</Code>" wrapper, "
+                        <Code inline=true>"<thead>"</Code>", "<Code inline=true>"<tbody>"</Code>", "
+                        <Code inline=true>"<tfoot>"</Code>", "<Code inline=true>"<tr>"</Code>" and "
+                        <Code inline=true>"<td>"</Code>" respectively. Wrap a table in a "
+                        <Code inline=true>"TableContainer"</Code>" to give it the theme\u{2019}s rounded frame and shadow, "
+                        "and to let it scroll horizontally when it doesn\u{2019}t fit."
+                    </p>
+                </Section>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    // Table wrapper
-                    --table-wrapper-box-shadow-color
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt tables to your design:"</p>
+                <CssVariables prefix="--table-" scss=theme_scss!("table")/>
+            </Section>
 
-                    // Table
-                    --table-color
-                    --table-background-color
-                    --table-background-color-on-hover
-                    --table-background-color-of-striped-rows
-                    --table-header-background-color
-                    --table-border-color
-                    --table-cell-box-shadow-on-hover
-                    --table-column-background-if-ordered
-                    --table-header-cell-padding
-                    --table-body-cell-padding
-                ")}
-            </Code>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Table", link: "#table" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Table.materialize()>"Table overview"</Link></li>
+                <li><Link href=routes::doc::table::Hook.materialize()>"use_table"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

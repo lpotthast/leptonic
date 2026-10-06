@@ -1,113 +1,119 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::color_palette::ColorPaletteDemo;
-use super::demos::color_picker_full::ColorPickerFullDemo;
-use super::demos::color_preview::ColorPreviewDemo;
-use super::demos::hue_slider::HueSliderDemo;
-use crate::pages::documentation::demo_shell::DemoShell;
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    color_palette::ColorPaletteDemo, color_picker_full::ColorPickerFullDemo,
+    color_preview::ColorPreviewDemo, hue_slider::HueSliderDemo,
+};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageColorPicker() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="color-picker" class="anchor">
-                "Color Picker"
-                <AnchorLink href="#color-picker" description="Direct link to article header"/>
-            </h1>
-
-            <p>"Select colors using the "<Code inline=true>"<ColorPicker>"</Code>" component."</p>
-
-            <DemoShell source=include_str!("demos/color_picker_full.rs")>
-                <ColorPickerFullDemo />
-            </DemoShell>
-
-            <h2 id="parts" class="anchor">
-                "Parts"
-                <AnchorLink href="#parts" description="Direct link to section: Parts"/>
-            </h2>
-
-            <p>"The "<Code inline=true>"<ColorPicker>"</Code>" build on top of a few other components build to help work with colors. You may use them directly and build your own color picker."</p>
-
-            <h3 id="part-color-preview" class="anchor">
-                "ColorPreview"
-                <AnchorLink href="#part-color-preview" description="Direct link to section: Part - ColorPreview"/>
-            </h3>
-
-            <p>"The "<Code inline=true>"<ColorPreview>"</Code>" component simply displays a reactive color patch based on the given RGB color signal."</p>
-
-            <DemoShell source=include_str!("demos/color_preview.rs")>
-                <ColorPreviewDemo />
-            </DemoShell>
-
-            <h3 id="part-color-palette" class="anchor">
-                "ColorPalette"
-                <AnchorLink href="#part-color-palette" description="Direct link to section: Part - ColorPalette"/>
-            </h3>
-
+        <DocPage title="ColorPicker component">
             <p>
-                "The "<Code inline=true>"<ColorPalette>"</Code>" component works on an HSV color signal, "
-                "displays the color-gradient field for any given hue value and allows selecting new values for "
-                "saturation (S, x-axis) and value (V, y-axis) of the HSV color by dragging a handle on the displayed surface."
+                "The themed "<Code inline=true>"ColorPicker"</Code>" lets you select a color with a saturation/value "
+                "area, a hue slider and numeric inputs. "
+                "See the "<Link href=routes::doc::Color.materialize()>"Color overview"</Link>" for concept guidance."
             </p>
 
-            <DemoShell source=include_str!("demos/color_palette.rs")>
-                <ColorPaletteDemo />
-            </DemoShell>
+            <Demo description="Full color picker" source=include_str!("demos/color_picker_full.rs")>
+                <ColorPickerFullDemo/>
+            </Demo>
 
-            <h3 id="part-hue-slider" class="anchor">
-                "HueSlider"
-                <AnchorLink href="#part-hue-slider" description="Direct link to section: Part - HueSlider"/>
-            </h3>
+            <Section title="Props">
+                <ApiTable kind=ApiKind::Props of="ColorPicker">
+                    <ApiRow name="hsv" ty="Signal<HSV>">"The selected color. Required."</ApiRow>
+                    <ApiRow name="set_hsv" ty="Out<HSV>">"Receives the new color on every change. Required."</ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                        "Additional classes and styles."
+                    </ApiRow>
+                </ApiTable>
+                <p>
+                    "The picker works on an "<Code inline=true>"HSV"</Code>" color from "
+                    <Code inline=true>"leptonic::utils::color"</Code>". Below the area and the slider, it shows "
+                    "number inputs for hue, saturation and value, read-only inputs for the RGB channels and the hex code."
+                </p>
+            </Section>
 
-            <p>
-                "The "<Code inline=true>"<HueSlider>"</Code>" component renders a specialized "<Code inline=true>"<Slider>"</Code>", "
-                "allowing you to pick a hue, a floating-point value between 0° and 360°. "
-                "The slider background displays the hue range as a color band, the knob displays the currently selected hue value at maximum saturation and value."
-            </p>
+            <Section title="Parts">
+                <p>
+                    <Code inline=true>"ColorPicker"</Code>" is built from three components you can use on their own "
+                    "to build your own color picker."
+                </p>
 
-            <DemoShell source=include_str!("demos/hue_slider.rs")>
-                <HueSliderDemo />
-            </DemoShell>
+                <Section title="ColorPreview">
+                    <p>"Displays a patch of the given RGB color."</p>
 
-            <p>"If you look at the source of Leptonic's <ColorPicker>, you will see that there is not much more to it as what you saw here!"</p>
+                    <ApiTable kind=ApiKind::Props of="ColorPreview">
+                        <ApiRow name="rgb" ty="Signal<RGB8>">"The color to show. Required."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles. Set the size of the patch here."
+                        </ApiRow>
+                    </ApiTable>
 
-            <h2 id="styling" class="anchor">
-                "Styling"
-                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </h2>
+                    <Demo description="Color preview of a fixed color" source=include_str!("demos/color_preview.rs")>
+                        <ColorPreviewDemo/>
+                    </Demo>
+                </Section>
 
-            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
+                <Section title="ColorPalette">
+                    <p>
+                        "Displays the saturation/value gradient of the current hue. Drag the handle, or click anywhere "
+                        "on the area, to choose the saturation (x-axis) and value (y-axis) of the color."
+                    </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    --color-palette-knob-size
-                    --color-palette-knob-border-width
-                    --color-palette-knob-border-color
-                    --color-palette-knob-border-style
-                    --color-palette-knob-background-color
-                    --color-palette-knob-halo-size
-                    --color-palette-knob-halo-size-while-dragged
-                    --color-palette-knob-halo-opacity
-                    --color-palette-knob-halo-background-color
-                    --color-palette-knob-transition-speed
-                    --color-palette-knob-box-shadow
-                ")}
-            </Code>
-        </Article>
+                    <ApiTable kind=ApiKind::Props of="ColorPalette">
+                        <ApiRow name="hsv" ty="Signal<HSV>">
+                            "The current color. Its hue colors the gradient. Required."
+                        </ApiRow>
+                        <ApiRow name="set_saturation" ty="Out<f64>">"Receives the new saturation (0 to 1). Required."</ApiRow>
+                        <ApiRow name="set_value" ty="Out<f64>">"Receives the new value (0 to 1). Required."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles. Set the size of the area here."
+                        </ApiRow>
+                    </ApiTable>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Color picker", link: "#color-picker" },
-                Toc::Group { title: "Parts", link: "#parts", inner: vec![
-                    Toc::Leaf { title: "ColorPreview", link: "#part-color-preview" },
-                    Toc::Leaf { title: "ColorPalette", link: "#part-color-palette" },
-                    Toc::Leaf { title: "HueSlider", link: "#part-hue-slider" },
-                ]},
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+                    <Demo description="Saturation/value area" source=include_str!("demos/color_palette.rs")>
+                        <ColorPaletteDemo/>
+                    </Demo>
+                </Section>
+
+                <Section title="HueSlider">
+                    <p>
+                        "A "<Link href=routes::doc::slider::Component.materialize()>"Slider"</Link>
+                        " for picking a hue between 0\u{b0} and 360\u{b0}. Its track shows the hue range as a color band, "
+                        "its thumb shows the selected hue at full saturation and value."
+                    </p>
+
+                    <ApiTable kind=ApiKind::Props of="HueSlider">
+                        <ApiRow name="hue" ty="Signal<f64>">"The selected hue in degrees. Required."</ApiRow>
+                        <ApiRow name="set_hue" ty="Out<f64>">"Receives the new hue. Required."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Additional classes and styles."
+                        </ApiRow>
+                    </ApiTable>
+
+                    <Demo description="Hue slider" source=include_str!("demos/hue_slider.rs")>
+                        <HueSliderDemo/>
+                    </Demo>
+                </Section>
+            </Section>
+
+            <Section title="Styling">
+                <p>"Override any of these CSS variables to adapt the color palette to your design:"</p>
+                <CssVariables prefix="--color-palette-" scss=theme_scss!("color_picker")/>
+                <p>
+                    "The hue slider is a slider: style it with the "
+                    <Link href=routes::doc::slider::Component.materialize()>"slider variables"</Link>"."
+                </p>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Color.materialize()>"Color overview"</Link></li>
+                <li><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></li>
+                <li><Link href=routes::doc::slider::Component.materialize()>"Slider component"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

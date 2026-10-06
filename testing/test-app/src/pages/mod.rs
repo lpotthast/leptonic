@@ -5,6 +5,7 @@
 //! [`FIXTURES`].
 
 pub mod atoms;
+pub mod components;
 pub mod hooks;
 
 use leptos::{prelude::*, web_sys};
@@ -24,6 +25,102 @@ impl Fixture {
 }
 
 pub const FIXTURES: &[Fixture] = &[
+    Fixture {
+        group: "components",
+        name: "text-field",
+        title: "Text field components",
+        view: || view! { <components::text_field::PageComponentTextField /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "menu",
+        title: "Menu atoms",
+        view: || view! { <atoms::menu::PageAtomMenu /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "tooltip",
+        title: "Tooltip",
+        view: || view! { <atoms::tooltip::PageAtomTooltip /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "popover",
+        title: "Popover",
+        view: || view! { <atoms::popover::PageAtomPopover /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "dialog",
+        title: "Dialog",
+        view: || view! { <atoms::dialog::PageAtomDialog /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "checkbox",
+        title: "Checkbox",
+        view: || view! { <atoms::checkbox::PageAtomCheckbox /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "radio-group",
+        title: "Radio Group",
+        view: || view! { <atoms::radio_group::PageAtomRadioGroup /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "text-field",
+        title: "TextField",
+        view: || view! { <atoms::text_field::PageAtomTextField /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "number-field",
+        title: "NumberField",
+        view: || view! { <atoms::number_field::PageAtomNumberField /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "search-field",
+        title: "SearchField",
+        view: || view! { <atoms::search_field::PageAtomSearchField /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "switch",
+        title: "Switch",
+        view: || view! { <atoms::switch::PageAtomSwitch /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "toggle-button",
+        title: "Toggle Button",
+        view: || view! { <atoms::toggle_button::PageAtomToggleButton /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "tree",
+        title: "Tree",
+        view: || view! { <hooks::tree::PageHookTree /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "tag-group",
+        title: "Tag Group",
+        view: || view! { <hooks::tag_group::PageHookTagGroup /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "combobox",
+        title: "ComboBox",
+        view: || view! { <atoms::combobox::PageAtomComboBox /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "text-field",
+        title: "Text Field",
+        view: || view! { <hooks::text_field::PageHookTextField /> }.into_any(),
+    },
     Fixture {
         group: "atoms",
         name: "button",
@@ -119,6 +216,54 @@ pub const FIXTURES: &[Fixture] = &[
         name: "select",
         title: "Select",
         view: || view! { <atoms::select::PageAtomSelect /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "grid-list",
+        title: "GridList",
+        view: || view! { <atoms::grid_list::PageAtomGridList /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "grid",
+        title: "Grid",
+        view: || view! { <atoms::grid::PageAtomGrid /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "table",
+        title: "Table",
+        view: || view! { <atoms::table::PageAtomTable /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "table-resizing",
+        title: "Table column resizing",
+        view: || view! { <atoms::table_resizing::PageAtomTableResizing /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "tabs",
+        title: "Tabs",
+        view: || view! { <atoms::tabs::PageAtomTabs /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "slider",
+        title: "Slider",
+        view: || view! { <atoms::slider::PageAtomSlider /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "dnd",
+        title: "Drag and drop",
+        view: || view! { <hooks::dnd::PageHookDnd /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "menu",
+        title: "Menu",
+        view: || view! { <hooks::menu::PageHookMenu /> }.into_any(),
     },
 ];
 

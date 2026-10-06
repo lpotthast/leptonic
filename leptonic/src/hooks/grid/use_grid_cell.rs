@@ -1,118 +1,117 @@
-// Upstream: react-aria/src/grid/useGridCell.ts @ 6f664fe911
+// Upstream: react-aria/src/grid/useGridCell.ts @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
+    attr::{self, Attr},
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
 use send_wrapper::SendWrapper;
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
+use wasm_bindgen::JsCast;
+use web_sys::{FocusEvent, KeyboardEvent};
 
-use super::use_grid::UseGridState;
+use super::GridData;
 use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
-        focus::use_focus_manager::{FocusManager, FocusManagerOptions},
-        selection::{
-            SelectionKey,
-            use_selectable_item::{UseSelectableItemInput, use_selectable_item},
-            use_selection_state::SelectionMode,
+        collections::{
+            FocusStrategy, Key, LinkBehavior, NavigationOptions, UseSelectableItemAttrs,
+            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
+            use_selectable_item,
         },
+        focus::use_focus_visible::{Modality, get_modality},
+        gridlist::KeyboardNavigationBehavior,
     },
     utils::{
-        EventAccessors, EventHandler,
-        aria::{AriaDisabled, AriaRole, AriaSelected},
-        element_capture::{CapturedElement, ElementCaptureAttr},
-        focus::focus_element,
+        CapturedElement, EventAccessors, EventHandler,
+        aria::AriaRole,
+        focus::focus_safely,
+        focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
+        i18n::use_direction,
+        locale::WritingDirection,
+        node_contains,
+        owner_alive::OwnerAlive,
         scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
+        shadow_dom::get_active_element,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGridCell.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
 // ## OMITTED FEATURES
-// - `isVirtualized`, `colSpan`, `keyWhenFocused` — no virtualization support.
-// - `onPointerDown` tabindex workaround — no drag support.
-// - RTL direction swapping — `ArrowLeft`/`ArrowRight` don't swap based on locale.
-// - `isPressed` — not tracked; use `use_press` separately if needed.
+// - Virtualization (`aria-colindex` from the cell index).
 //
-// ## DIFFERENT BEHAVIOR
-// - Bubble-phase keydown instead of capture-phase + re-dispatch. ArrowUp/Down
-//   bubble naturally to the grid handler.
-// - Shared state struct (`UseGridState<K>`) instead of `gridMap` `WeakMap`.
-// - `CellFocusMode` default is `Child`, matching react-aria's default behavior
-//   for grids with interactive content.
-//
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-// - `ElementCaptureAttr` instead of React refs for DOM element access.
-// - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
-// - `EventHandler<E>` for composable event handler chaining.
+// =============================================================================
 
-/// Controls how focus behaves when a grid cell receives focus.
-///
-/// Default is `Child`, matching react-aria's default. This is appropriate for
-/// grids with interactive content (inputs, buttons) inside cells.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// What gets focus when a cell is focused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CellFocusMode {
-    /// Focus the cell element itself.
+    /// The cell itself.
     Cell,
-    /// Focus the first focusable child within the cell.
-    #[default]
+    /// The cell's first focusable child (or last, entering from the right), if it has one.
     Child,
 }
 
-/// Input for a grid cell.
-pub struct UseGridCellInput<K>
-where
-    K: SelectionKey,
-{
-    /// Shared grid state from `use_grid`.
-    pub state: UseGridState<K>,
-
-    /// The unique key for this cell.
-    pub key: K,
-
-    /// The row index (0-based; converted to 1-based for ARIA).
-    pub row_index: usize,
-
-    /// The column index (0-based; converted to 1-based for ARIA).
-    pub column_index: usize,
-
-    /// How focus should behave when this cell receives focus.
-    pub focus_mode: CellFocusMode,
-}
-
-/// Return value for a grid cell.
-pub struct UseGridCellReturn {
-    /// Props for the cell element. Call `.into_parts()` for view spreading and styles.
-    pub props: PropsWithStyles<UseGridCellProps>,
-
-    /// Whether the cell is selected.
-    pub is_selected: Signal<bool>,
-
-    /// Whether the cell is focused.
-    pub is_focused: Signal<bool>,
-
-    /// Whether the cell is disabled.
-    pub is_disabled: Signal<bool>,
-}
-
-/// Props from `use_grid_cell` that can be extracted and merged programmatically.
+/// Input of [`use_grid_cell`].
 #[derive(Debug, Clone)]
+pub struct UseGridCellInput {
+    /// The grid (from `use_grid`).
+    pub grid: GridData,
+    /// The cell's key ([`Key::cell`]).
+    pub key: Key,
+    /// The element id. Generated when `None`.
+    pub id: Option<String>,
+    /// `None`: `Cell` with `KeyboardNavigationBehavior::Tab`, else `Child`.
+    pub focus_mode: Option<CellFocusMode>,
+    /// Let ArrowLeft/ArrowRight move between the cell's children even with
+    /// `KeyboardNavigationBehavior::Tab`.
+    pub allows_arrow_navigation: bool,
+    /// Select when the press ends instead of when it starts.
+    pub should_select_on_press_up: bool,
+}
+
+impl UseGridCellInput {
+    pub fn new(grid: GridData, key: Key) -> Self {
+        Self {
+            grid,
+            key,
+            id: None,
+            focus_mode: None,
+            allows_arrow_navigation: false,
+            should_select_on_press_up: false,
+        }
+    }
+}
+
+/// Return value of [`use_grid_cell`].
+pub struct UseGridCellReturn {
+    pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
+    pub is_pressed: Signal<bool>,
+}
+
+/// Props for the cell element.
+#[derive(Debug)]
 pub struct UseGridCellProps {
     pub role: AriaRole,
-    pub tabindex: Signal<&'static str>,
-    pub aria_rowindex: String,
-    pub aria_colindex: String,
-    pub aria_selected: Signal<Option<AriaSelected>>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub element_capture: ElementCaptureAttr,
-    pub on_click: EventHandler<MouseEvent>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_mouseenter: EventHandler<MouseEvent>,
+    pub aria_colspan: Option<usize>,
+    pub aria_colindex: Option<usize>,
+    /// For `<td>`/`<th>` cells.
+    pub colspan: Option<usize>,
+    pub item: UseSelectableItemProps,
+    pub on_keydown_capture: EventHandler<KeyboardEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
 }
+
+pub type UseGridCellAttrs = (
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaColspan, Option<usize>>,
+    Attr<attr::AriaColindex, Option<usize>>,
+    Attr<attr::Colspan, Option<usize>>,
+    UseSelectableItemAttrs,
+    On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+);
 
 impl IntoAttrs for UseGridCellProps {
     type Attrs = UseGridCellAttrs;
@@ -120,240 +119,384 @@ impl IntoAttrs for UseGridCellProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaRowindex, self.aria_rowindex),
+            Attr(attr::AriaColspan, self.aria_colspan),
             Attr(attr::AriaColindex, self.aria_colindex),
-            Attr(attr::AriaSelected, self.aria_selected),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.element_capture,
-            self.on_click.into_on(ev::click),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_mouseenter.into_on(ev::mouseenter),
+            Attr(attr::Colspan, self.colspan),
+            self.item.into_attrs(),
+            self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
+            self.on_focusin.into_on(ev::focusin),
         )
     }
 }
 
-/// Attributes for a grid cell.
-pub type UseGridCellAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaRowindex, String>,
-    Attr<attr::AriaColindex, String>,
-    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    ElementCaptureAttr,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
-);
-
-/// Provides the behavior and accessibility for a grid cell.
-///
-/// Reads shared grid state from `UseGridState<K>` (produced by `use_grid`)
-/// and delegates selection to `use_selectable_item`.
-///
-/// Supports within-cell focusable child navigation via `ArrowLeft`/`ArrowRight` keys and a
-/// configurable `CellFocusMode`.
-///
-/// # Example
-///
-/// ```ignore
-/// let grid = use_grid(UseGridInput { ... });
-///
-/// let cell = use_grid_cell(UseGridCellInput {
-///     state: grid.state,
-///     key: "0-0".to_string(),
-///     row_index: 0,
-///     column_index: 0,
-///     focus_mode: CellFocusMode::Cell,
-/// });
-///
-/// view! {
-///     <div {..cell.props.into_attrs()}>
-///         "Cell content"
-///     </div>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
-pub fn use_grid_cell<K>(input: UseGridCellInput<K>) -> UseGridCellReturn
-where
-    K: SelectionKey,
-{
+/// A cell of a grid: focusable itself or through its interactive children, with arrow keys
+/// moving between the children before moving to the neighboring cell.
+#[allow(clippy::too_many_lines)]
+pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
+    crate::hooks::track_interaction_modality();
     let UseGridCellInput {
-        state,
+        grid,
         key,
-        row_index,
-        column_index,
+        id,
         focus_mode,
+        allows_arrow_navigation,
+        should_select_on_press_up,
     } = input;
+    let GridData {
+        state,
+        delegate,
+        collection_id,
+        on_cell_action,
+        keyboard_navigation_behavior,
+        ..
+    } = grid;
+    let focus_mode = focus_mode.unwrap_or(
+        if keyboard_navigation_behavior == KeyboardNavigationBehavior::Tab {
+            CellFocusMode::Cell
+        } else {
+            CellFocusMode::Child
+        },
+    );
+    let selection = state.list.selection;
+    let direction = use_direction();
+    let (col_span, col_index) = untrack(|| {
+        state.list.collection.with(|c| {
+            c.get(&key)
+                .map(|n| (n.col_span, n.col_index))
+                .unwrap_or_default()
+        })
+    });
 
-    let cell_focus_mode = focus_mode;
-    let selection_mode = state.selection_mode;
+    let element = CapturedElement::new();
+    let cell_key = StoredValue::new(key.clone());
+    let key_when_focused: StoredValue<Option<Key>> = StoredValue::new(None);
+    let last_focused_child: StoredValue<Option<SendWrapper<web_sys::Element>>> =
+        StoredValue::new(None);
 
-    // --- Element capture + FocusManager for within-cell navigation ---
-    let scope_element = CapturedElement::new();
-
-    // --- Focus callback for DOM focus synchronization ---
-    let scope_element_for_focus = scope_element;
-    let focus_fn = Callback::new(move |()| {
-        if let Some(el) = scope_element_for_focus.get_untracked() {
-            let el = SendWrapper::take(el);
-            // Don't move focus if it's already within this cell
-            // (e.g., user clicked a focusable child). Mirrors react-aria's
-            // `!nodeContains(ref.current, document.activeElement)` check.
-            if let Some(active) = web_sys::window()
-                .and_then(|w| w.document())
-                .and_then(|d| d.active_element())
-                && el.contains(Some(&active))
-                && *active != *el
-            {
+    let focus_cell = move || {
+        let Some(cell) = element.get_untracked() else {
+            return;
+        };
+        let cell: web_sys::Element = (*cell).clone();
+        let document = cell.owner_document();
+        let active = document.as_ref().and_then(get_active_element);
+        let focus_within = active
+            .as_ref()
+            .is_some_and(|a| cell.contains(Some(a.unchecked_ref())));
+        if focus_mode == CellFocusMode::Child {
+            if focus_within && active.as_ref() != Some(&cell) {
                 return;
             }
-            focus_element(&el, true);
+            let body = document
+                .as_ref()
+                .and_then(web_sys::Document::body)
+                .map(web_sys::Element::from);
+            let should_restore =
+                active.is_none() || active == body || active.as_ref() == Some(&cell);
+            if should_restore
+                && key_when_focused
+                    .get_value()
+                    .is_some_and(|k| cell_key.with_value(|c| *c == k))
+                && let Some(child) = last_focused_child.get_value()
+                && cell.contains(Some(child.unchecked_ref()))
+            {
+                focus_safely(&child);
+                return;
+            }
+            if let Some(mut walker) =
+                get_focusable_tree_walker(&cell, FocusableTreeWalkerOptions::default())
+            {
+                let target =
+                    if untrack(|| selection.child_focus_strategy()) == Some(FocusStrategy::Last) {
+                        let mut last = None;
+                        while let Some(node) = walker.last_child() {
+                            last = Some(node);
+                        }
+                        last
+                    } else {
+                        walker.first_child()
+                    };
+                if let Some(target) = target.and_then(|n| n.dyn_into::<web_sys::Element>().ok()) {
+                    focus_safely(&target);
+                    return;
+                }
+            }
+        }
+        let moved = key_when_focused
+            .get_value()
+            .is_some_and(|k| cell_key.with_value(|c| *c != k));
+        if moved || !focus_within {
+            focus_safely(&cell);
+        }
+    };
+
+    let rows = state.list.collection;
+    let UseSelectableItemReturn {
+        props: item_props,
+        is_pressed,
+        ..
+    } = use_selectable_item(UseSelectableItemInput {
+        selection,
+        item_elements: state.list.item_elements,
+        key: key.clone(),
+        element,
+        id,
+        collection_id,
+        is_disabled: Signal::derive(move || rows.with(|c| c.size() == 0)),
+        should_select_on_press_up,
+        allows_different_press_origin: false,
+        on_action: on_cell_action.map(|on_cell_action| {
+            let key = key.clone();
+            Callback::new(move |()| on_cell_action.run(key.clone()))
+        }),
+        link_behavior: LinkBehavior::Action,
+        focus: Some(Callback::new(move |()| focus_cell())),
+        should_use_virtual_focus: false,
+    });
+    let (mut item_props, item_styles) = item_props.into_inner();
+
+    let reveal = move |target: &web_sys::Element| {
+        focus_safely(target);
+        if let Some(cell) = element.get_untracked() {
+            let container = get_scroll_parent(&cell, false);
             scroll_into_viewport(
-                Some(&el),
+                Some(target),
                 &ScrollIntoViewportOpts {
-                    containing_element: Some(get_scroll_parent(&el, true)),
+                    containing_element: Some(container),
                 },
             );
         }
-    });
+    };
 
-    // --- Delegate selection to use_selectable_item ---
-    let selectable = use_selectable_item(UseSelectableItemInput {
-        key: key.clone(),
-        selection_mode: state.selection_mode,
-        selection_behavior: state.selection_behavior,
-        selected_keys: state.selection.selected_keys,
-        focused_key: state.focused_key,
-        is_collection_focused: Signal::derive(|| true), // Grid manages focus externally
-        is_disabled: state.is_disabled,
-        disabled_behavior: state.selection.disabled_behavior,
-        disallow_empty_selection: false,
-        on_toggle: state.selection.toggle,
-        on_replace: state.selection.select,
-        on_extend: None, // Grid handles range selection separately
-        on_focus: state.set_focused_key,
-        should_select_on_press_up: false,
-        should_focus_on_hover: false,
-        allow_drag: false,
-        allows_different_press_origin: false,
-        on_action: None,
-        on_double_click: state.on_cell_action,
-        on_selection_behavior_change: None,
-        focus: Some(focus_fn),
-        data_key: None,
-    });
-
-    let is_selected = selectable.is_selected;
-    let is_focused = selectable.is_focused;
-    let is_disabled = selectable.is_disabled;
-
-    let focus_manager =
-        FocusManager::new(move || scope_element.get_untracked().map(SendWrapper::take));
-
-    // --- ARIA attributes ---
-    let aria_selected = Signal::derive(move || {
-        if selection_mode == SelectionMode::None {
-            None
-        } else {
-            Some(AriaSelected::from(is_selected.get()))
-        }
-    });
-
-    let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
-
-    // Indices are 1-based for ARIA.
-    let aria_rowindex = (row_index + 1).to_string();
-    let aria_colindex = (column_index + 1).to_string();
-
-    // --- Keyboard handler (within-cell arrow navigation) ---
-    let focus_manager_for_keydown = focus_manager.clone();
-    let cell_keydown = EventHandler::new(move |e: KeyboardEvent| {
-        if state.is_disabled.get_untracked() {
+    let on_keydown_capture = move |e: KeyboardEvent| {
+        if keyboard_navigation_behavior == KeyboardNavigationBehavior::Tab
+            && !allows_arrow_navigation
+        {
             return;
         }
+        if state.is_keyboard_navigation_disabled.get_untracked() {
+            return;
+        }
+        let Some(cell) = element.get_untracked() else {
+            return;
+        };
+        let cell: web_sys::Element = (*cell).clone();
+        let target = e.expect_target().dyn_into::<web_sys::Node>().ok();
+        if !node_contains(Some(cell.unchecked_ref()), target.as_ref()).unwrap_or(false) {
+            return;
+        }
+        let Some(active) = cell.owner_document().as_ref().and_then(get_active_element) else {
+            return;
+        };
+        let Some(mut walker) =
+            get_focusable_tree_walker(&cell, FocusableTreeWalkerOptions::default())
+        else {
+            return;
+        };
+        walker.set_current_node(active.unchecked_ref());
+        let rtl = direction.get_untracked() == WritingDirection::Rtl;
+        let redispatch = |e: &KeyboardEvent| {
+            if let Some(parent) = cell.parent_element() {
+                let _ = parent.dispatch_event(&clone_keyboard_event(e));
+            }
+        };
 
         let key = e.key();
         match key.as_str() {
-            "ArrowRight" => {
-                // Try to move focus to the next focusable child inside the cell.
-                // If successful, stop propagation so the grid handler doesn't also move to the next cell.
-                if focus_manager_for_keydown
-                    .focus_next(FocusManagerOptions::default())
-                    .is_some()
-                {
-                    e.stop_propagation();
-                    e.prevent_default();
+            "ArrowLeft" | "ArrowRight" => {
+                let right = key == "ArrowRight";
+                // "Forward" in the reading direction.
+                let forward = right != rtl;
+                let mut focusable = if forward {
+                    walker.next_node()
+                } else {
+                    walker.previous_node()
                 }
-                // Otherwise: let the event bubble to the grid's keydown handler for cell-to-cell navigation.
+                .and_then(|n| n.dyn_into::<web_sys::Element>().ok());
+                if focus_mode == CellFocusMode::Child && focusable.as_ref() == Some(&cell) {
+                    focusable = None;
+                }
+                e.prevent_default();
+                e.stop_propagation();
+                if let Some(focusable) = focusable {
+                    reveal(&focusable);
+                    return;
+                }
+                // No child left this way: the grid moves to the neighboring cell, if any.
+                let neighbor = cell_key.with_value(|k| {
+                    let delegate = delegate.get_untracked();
+                    if right {
+                        delegate.key_right_of(k, NavigationOptions::default())
+                    } else {
+                        delegate.key_left_of(k, NavigationOptions::default())
+                    }
+                });
+                if neighbor.as_ref() != Some(&cell_key.get_value()) {
+                    redispatch(&e);
+                    return;
+                }
+                // At the edge: wrap within the cell.
+                if focus_mode == CellFocusMode::Cell && forward {
+                    reveal(&cell);
+                } else {
+                    walker.set_current_node(cell.unchecked_ref());
+                    let target = if forward {
+                        walker.first_child()
+                    } else {
+                        let mut last = None;
+                        while let Some(node) = walker.last_child() {
+                            last = Some(node);
+                        }
+                        last
+                    };
+                    if let Some(target) = target.and_then(|n| n.dyn_into::<web_sys::Element>().ok())
+                    {
+                        reveal(&target);
+                    }
+                }
             }
-            "ArrowLeft"
-                if focus_manager_for_keydown
-                    .focus_previous(FocusManagerOptions::default())
-                    .is_some() =>
-            {
+            "ArrowUp" | "ArrowDown" if !e.alt_key() => {
                 e.stop_propagation();
                 e.prevent_default();
+                redispatch(&e);
             }
-            // ArrowUp, ArrowDown, Space, Enter, Home, End, etc.: let bubble to grid handler.
             _ => {}
+        }
+    };
+
+    // Tab navigation between the cell's children (`KeyboardNavigationBehavior::Tab`), running
+    // before the cell's own key handling.
+    let tab_navigation = move |e: &KeyboardEvent| {
+        if keyboard_navigation_behavior != KeyboardNavigationBehavior::Tab
+            || state.is_keyboard_navigation_disabled.get_untracked()
+        {
+            return;
+        }
+        let Some(cell) = element.get_untracked() else {
+            return;
+        };
+        let cell: web_sys::Element = (*cell).clone();
+        let on_cell = e
+            .target()
+            .is_some_and(|t| t.unchecked_ref::<web_sys::Element>() == &cell);
+        if !on_cell && e.key() != "Tab" {
+            e.stop_propagation();
+            return;
+        }
+        if e.key() == "Tab"
+            && let Some(active) = cell.owner_document().as_ref().and_then(get_active_element)
+            && let Some(mut walker) = get_focusable_tree_walker(
+                &cell,
+                FocusableTreeWalkerOptions {
+                    tabbable: true,
+                    ..FocusableTreeWalkerOptions::default()
+                },
+            )
+        {
+            walker.set_current_node(active.unchecked_ref());
+            let next = if e.shift_key() {
+                walker.previous_node()
+            } else {
+                walker.next_node()
+            };
+            if next.is_some() {
+                e.stop_propagation();
+            }
+        }
+    };
+    let press_keydown = item_props.press.on_keydown;
+    item_props.press.on_keydown = EventHandler::new(move |e: KeyboardEvent| {
+        tab_navigation(&e);
+        if !e.cancel_bubble() {
+            press_keydown.call(e);
         }
     });
 
-    // --- Focus handler ---
-    let focus_manager_for_focus = focus_manager.clone();
-    let key_for_focus = key.clone();
-    let set_focused_key = state.set_focused_key;
-    let cell_focus = EventHandler::new(move |e: FocusEvent| {
-        // If a child element received focus (target != currentTarget), update the grid's
-        // focused key to this cell so the grid knows which cell is active.
-        let target = e.expect_target();
-        let current_target = e.expect_current_target();
-        if target != current_target {
-            set_focused_key.run(Some(key_for_focus.clone()));
+    // `focusin`: the cell also learns about focus moving to its children (react-aria's `onFocus`
+    // bubbles). It runs after the item's own `focus` handler.
+    let alive = OwnerAlive::new();
+    let on_focusin = EventHandler::new(move |e: FocusEvent| {
+        key_when_focused.set_value(Some(cell_key.get_value()));
+        let Some(cell) = element.get_untracked() else {
+            return;
+        };
+        let target = e
+            .target()
+            .and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+        if target.as_ref() != Some(&*cell) {
+            // A child got focus: remember it, and make the cell the focused key.
+            if let Some(target) = &target
+                && cell.contains(Some(target.unchecked_ref()))
+            {
+                last_focused_child.set_value(Some(SendWrapper::new(target.clone())));
+            }
+            if get_modality() == Modality::Pointer {
+                selection.set_focused_key(Some(cell_key.get_value()), None);
+            }
+            return;
         }
-
-        // If the cell itself received focus and focus_mode is Child,
-        // redirect focus to the first focusable child.
-        if target == current_target && cell_focus_mode == CellFocusMode::Child {
-            let fm = focus_manager_for_focus.clone();
-            // Use request_animation_frame to defer, avoiding focus loops during the
-            // current focus event.
+        if focus_mode == CellFocusMode::Child {
+            let from_child = e
+                .related_target()
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
+                .is_some_and(|related| cell.contains(Some(&related)));
+            if from_child {
+                return;
+            }
+            let alive = alive.clone();
             request_animation_frame(move || {
-                fm.focus_first(FocusManagerOptions::default());
+                // The cell may be gone by the next frame (filtering, removal).
+                if !alive.get() {
+                    return;
+                }
+                let still_on_cell = element.get_untracked().is_some_and(|cell| {
+                    cell.owner_document()
+                        .as_ref()
+                        .and_then(get_active_element)
+                        .is_some_and(|a| a == *cell)
+                });
+                if still_on_cell {
+                    focus_cell();
+                }
             });
         }
     });
-
-    // --- Compose handlers: chain selectable_item handlers with cell-specific handlers ---
-    let (selectable_props, selectable_styles) = selectable.props.into_inner();
-    let on_click = selectable_props.press.on_click;
-    // Keydown: chain cell-specific handler with press handler (for Enter/Space selection).
-    let on_keydown = cell_keydown.chain(selectable_props.press.on_keydown);
-    let on_focus = selectable_props.on_focus.chain(cell_focus);
-    let on_mouseenter = selectable_props.on_mouseenter;
-
-    let props = UseGridCellProps {
-        role: AriaRole::Gridcell,
-        tabindex,
-        aria_rowindex,
-        aria_colindex,
-        aria_selected,
-        aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-        element_capture: scope_element.attr(),
-        on_click,
-        on_keydown,
-        on_focus,
-        on_mouseenter,
-    };
+    if focus_mode == CellFocusMode::Child
+        && keyboard_navigation_behavior == KeyboardNavigationBehavior::Tab
+    {
+        item_props.tabindex = Signal::stored(Some(-1));
+    }
 
     UseGridCellReturn {
-        props: PropsWithStyles::new(props, selectable_styles),
-        is_selected,
-        is_focused,
-        is_disabled,
+        grid_cell_props: PropsWithStyles::new(
+            UseGridCellProps {
+                role: AriaRole::Gridcell,
+                aria_colspan: col_span,
+                aria_colindex: col_index.map(|i| i + 1),
+                colspan: col_span,
+                item: item_props,
+                on_keydown_capture: EventHandler::new(on_keydown_capture),
+                on_focusin,
+            },
+            item_styles,
+        ),
+        is_pressed,
     }
+}
+
+/// A copy of `e` (same key and modifiers) that bubbles, for re-dispatching it elsewhere.
+fn clone_keyboard_event(e: &KeyboardEvent) -> KeyboardEvent {
+    let init = web_sys::KeyboardEventInit::new();
+    init.set_key(&e.key());
+    init.set_code(&e.code());
+    init.set_location(e.location());
+    init.set_repeat(e.repeat());
+    init.set_shift_key(e.shift_key());
+    init.set_ctrl_key(e.ctrl_key());
+    init.set_alt_key(e.alt_key());
+    init.set_meta_key(e.meta_key());
+    init.set_bubbles(true);
+    init.set_cancelable(true);
+    KeyboardEvent::new_with_keyboard_event_init_dict(&e.type_(), &init)
+        .expect("KeyboardEvent creation should not fail")
 }

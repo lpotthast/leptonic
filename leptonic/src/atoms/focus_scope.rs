@@ -10,6 +10,7 @@ use crate::{
     utils::{
         classes::Classes,
         focus_scope_tree::{self, FocusScopeParentContext},
+        scoped_context::scoped_view,
         styles::Styles,
     },
 };
@@ -102,18 +103,25 @@ pub fn FocusScope(
     /// The content of the focus scope.
     children: Children,
 ) -> impl IntoView {
+    crate::hooks::track_interaction_modality();
     cfg_if::cfg_if! {
         if #[cfg(feature = "ssr")] {
             let _ = (contain, restore_focus, auto_focus);
             let scope_ref = NodeRef::<html::Div>::new();
-            provide_context(FocusScopeContext {
-                focus_manager: FocusManager::new(|| None),
-            });
-            view! {
-                <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
-                    {children()}
-                </div>
-            }
+            scoped_view(
+                || {
+                    provide_context(FocusScopeContext {
+                        focus_manager: FocusManager::new(|| None),
+                    });
+                },
+                move || {
+                    view! {
+                        <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
+                            {children()}
+                        </div>
+                    }
+                },
+            )
         } else {
             let scope_ref = NodeRef::<html::Div>::new();
 
@@ -121,9 +129,6 @@ pub fn FocusScope(
             // Discover parent scope (if any) via Leptos context.
             let parent_id = use_context::<FocusScopeParentContext>().map(|ctx| ctx.scope_id);
             let scope_id = focus_scope_tree::allocate_id();
-
-    // Provide our scope ID so nested FocusScopes can discover us as parent.
-    provide_context(FocusScopeParentContext { scope_id });
 
     // Capture the currently focused element when the scope mounts (before registration).
     let previously_focused: StoredValue<Option<web_sys::Element>, LocalStorage> =
@@ -143,7 +148,8 @@ pub fn FocusScope(
                 parent_id,
                 move || {
                     scope_ref
-                        .get_untracked()
+                        .try_get_untracked()
+                        .flatten()
                         .map(|el| -> web_sys::Element { el.into() })
                 },
                 contain,
@@ -151,19 +157,22 @@ pub fn FocusScope(
             if restore_focus {
                 focus_scope_tree::set_node_to_restore(scope_id, previously_focused.get_value());
             }
+            // Focus may have moved in before the scope was registered (e.g. a dialog focusing
+            // itself on mount); react-aria tracks the active scope from a layout effect, before
+            // such effects run. Later focus moves are tracked by a document-level listener.
+            focus_scope_tree::ensure_active_scope_tracking();
+            mark_active_if_focus_within(scope_id);
         }
     });
 
     // Create focus manager with a getter that reads from the NodeRef.
+    // The focus manager can outlive the scope (e.g. in pending focus callbacks): a disposed
+    // scope has no element.
     let focus_manager = FocusManager::new(move || {
         scope_ref
-            .get_untracked()
+            .try_get_untracked()
+            .flatten()
             .map(|el| -> web_sys::Element { el.into() })
-    });
-
-    // Provide context so child components can access the focus manager.
-    provide_context(FocusScopeContext {
-        focus_manager: focus_manager.clone(),
     });
 
     // Auto-focus on mount (Issue 6: skip if focus is already within the scope).
@@ -210,28 +219,6 @@ pub fn FocusScope(
             true
         });
     }
-
-    // Scope-level focusin: mark as active scope for ALL scopes (not just containing ones).
-    // React-aria's useActiveScopeTracker runs for every FocusScope.
-    Effect::new(move |_| {
-        let Some(scope_el) = scope_ref.get() else {
-            return;
-        };
-
-        let _scope_focusin_cleanup = use_event_listener(
-            scope_el,
-            leptos::ev::focusin,
-            move |e: web_sys::FocusEvent| {
-                if let Some(target) = e.target() {
-                    // Only set active scope if the target is directly within
-                    // this scope, not within a child scope (focusin bubbles).
-                    if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
-                        focus_scope_tree::set_active_scope_if_deepest(scope_id, target_el);
-                    }
-                }
-            },
-        );
-    });
 
     // Focus containment via keydown handler and focusin listener.
     if contain {
@@ -326,16 +313,26 @@ pub fn FocusScope(
                         }
                 } else {
                     // Focus escaped — recapture. Try the last focused node first,
-                    // falling back to the first focusable element.
-                    let recaptured = focused_node
-                        .get_value()
-                        .is_some_and(|node| node.focus().is_ok());
-                    if !recaptured {
-                        fm_contain.focus_first(FocusManagerOptions {
-                            tabbable: true,
-                            ..Default::default()
-                        });
-                    }
+                    // falling back to the first focusable element. After this `focusin`
+                    // dispatch: refocusing synchronously would dispatch a nested `focusin` into
+                    // this listener's closure, which is still running (and can't be re-entered).
+                    let fm = send_wrapper::SendWrapper::new(fm_contain.clone());
+                    queue_microtask(move || {
+                        // The scope may have been unmounted (or stopped containing focus) since.
+                        if !focus_scope_tree::should_contain_focus(scope_id) {
+                            return;
+                        }
+                        let Some(last_focused) = focused_node.try_get_value() else {
+                            return;
+                        };
+                        let recaptured = last_focused.is_some_and(|node| node.focus().is_ok());
+                        if !recaptured {
+                            fm.focus_first(FocusManagerOptions {
+                                tabbable: true,
+                                ..Default::default()
+                            });
+                        }
+                    });
                 }
             },
         );
@@ -496,36 +493,69 @@ pub fn FocusScope(
             let should_restore = active_in_scope
                 || (active_is_body && focus_scope_tree::should_restore_focus(scope_id));
 
-            // Bug 2 fix: Find a connected node_to_restore, walking up parent
-            // scopes if the direct node_to_restore was removed from the DOM.
-            let node_to_restore = if should_restore {
-                focus_scope_tree::find_connected_node_to_restore(scope_id)
+            // Collect the candidates now (the scope tree forgets this scope below); restore
+            // after the next frame, as react-aria does: by then, effects that ran because of the
+            // unmount (e.g. a popover making the page interactive again) are done. Only restore
+            // if focus fell to the body; otherwise it was moved on purpose.
+            let candidates = if should_restore {
+                focus_scope_tree::nodes_to_restore(scope_id)
             } else {
-                None
+                Vec::new()
             };
 
             focus_scope_tree::unregister_scope(scope_id);
 
-            if let Some(element) = node_to_restore
-                && let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
-                    // Dispatch a cancelable custom event before restoring focus.
-                    // Listeners can call preventDefault() to cancel restoration.
-                    if !dispatch_restore_focus_event(html_el) {
+            if !candidates.is_empty() {
+                request_animation_frame(move || {
+                    let focus_on_body = use_document()
+                        .as_ref()
+                        .and_then(web_sys::Document::active_element)
+                        .is_none_or(|active| active.dyn_ref::<web_sys::HtmlBodyElement>().is_some());
+                    if !focus_on_body {
                         return;
                     }
-                    let _ = html_el.focus();
-                }
+                    if let Some(element) = candidates.iter().find(|el| el.is_connected())
+                        && let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>()
+                        // Listeners can call preventDefault() to cancel restoration.
+                        && dispatch_restore_focus_event(html_el)
+                    {
+                        let _ = html_el.focus();
+                    }
+                });
+            }
         } else {
             focus_scope_tree::unregister_scope(scope_id);
         }
     });
 
-            view! {
-                <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
-                    {children()}
-                </div>
-            }
+            // For the children only: our scope ID, so that nested scopes discover us as parent,
+            // and the focus manager.
+            scoped_view(
+                move || {
+                    provide_context(FocusScopeParentContext { scope_id });
+                    provide_context(FocusScopeContext { focus_manager });
+                },
+                move || {
+                    view! {
+                        <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
+                            {children()}
+                        </div>
+                    }
+                },
+            )
         }
+    }
+}
+
+/// Makes `scope_id` the active scope if focus is already within it.
+#[cfg(not(feature = "ssr"))]
+fn mark_active_if_focus_within(scope_id: focus_scope_tree::ScopeId) {
+    if let Some(active) = use_document()
+        .as_ref()
+        .and_then(web_sys::Document::active_element)
+        && focus_scope_tree::is_element_in_scope_or_descendant(&active, scope_id)
+    {
+        focus_scope_tree::set_active_scope_if_deepest(scope_id, &active);
     }
 }
 

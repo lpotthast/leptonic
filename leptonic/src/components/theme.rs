@@ -2,10 +2,8 @@ use leptos::prelude::*;
 use leptos_use::use_document;
 
 use crate::{
-    components::{
-        prelude::{Toggle, ToggleIcons},
-        toggle::{ToggleProps, ToggleSize, ToggleVariant},
-    },
+    components::switch::{Switch, SwitchIcons, SwitchVariant},
+    hooks::ToggleState,
     utils::{classes::Classes, styles::Styles},
 };
 
@@ -45,10 +43,28 @@ pub trait Theme:
     fn icon(&self) -> icondata::Icon;
 }
 
+/// The current theme of a [`ThemeProvider`] (see [`use_theme`]).
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeContext<T: Theme + 'static> {
     theme: ReadSignal<T>,
     set_theme: WriteSignal<T>,
+}
+
+impl<T: Theme + 'static> ThemeContext<T> {
+    /// The current theme.
+    pub fn theme(&self) -> Signal<T> {
+        self.theme.into()
+    }
+
+    /// Switch to `theme`.
+    pub fn set_theme(&self, theme: T) {
+        self.set_theme.set(theme);
+    }
+}
+
+/// The theme of the closest [`ThemeProvider`] with theme type `T`, to build theme controls.
+pub fn use_theme<T: Theme + 'static>() -> Option<ThemeContext<T>> {
+    use_context::<ThemeContext<T>>()
 }
 
 #[component]
@@ -89,42 +105,44 @@ where
     }
 }
 
+/// A switch between two themes: on selects `on`, off selects `off`. Shows their icons.
 #[component]
 pub fn ThemeToggle<T>(
     off: T,
     on: T,
-    #[prop(optional)] variant: ToggleVariant,
+    #[prop(optional)] variant: SwitchVariant,
+    /// The switch's accessible name. Defaults to "`<on theme name>` theme".
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
     T: Theme + 'static,
 {
-    let theme_context = use_context::<ThemeContext<T>>()
+    let theme = use_theme::<T>()
         .expect("<ThemeToggle/> component should be nested within a <ThemeProvider/>.");
-
-    let toggle = Toggle(ToggleProps {
-        state: Signal::derive(move || theme_context.theme.get() == on),
-        set_state: Some(Into::into(move |val: bool| {
-            theme_context.set_theme.update(|current| {
-                if val {
-                    *current = on;
-                } else {
-                    *current = off;
-                }
-            });
-        })),
-        active: None,
-        disabled: None,
-        size: ToggleSize::default(),
-        variant,
-        icons: Some(ToggleIcons {
-            on: on.icon(),
-            off: off.icon(),
-        }),
-        classes: Classes::default(),
-        styles: Styles::default(),
+    let state = ToggleState::new(
+        Signal::derive(move || theme.theme().get() == on),
+        theme.theme().get_untracked() == on,
+        Callback::new(move |selected: bool| theme.set_theme(if selected { on } else { off })),
+    );
+    let aria_label = MaybeProp::derive(move || {
+        Some(
+            aria_label
+                .get()
+                .unwrap_or_else(|| format!("{} theme", on.name())),
+        )
     });
 
-    view! { <div class=classes.add("leptonic-theme-toggle") style=styles>{toggle}</div> }
+    view! {
+        <Switch
+            state
+            aria_label
+            variant
+            icons=SwitchIcons { on: on.icon(), off: off.icon() }
+            classes=classes.add("leptonic-theme-toggle")
+            styles
+        />
+    }
 }

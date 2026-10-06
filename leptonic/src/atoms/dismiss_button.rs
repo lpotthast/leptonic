@@ -1,23 +1,17 @@
-// Upstream: react-aria/src/overlays/DismissButton.tsx @ 6f664fe911
+// Upstream: react-aria/src/overlays/DismissButton.tsx @ 99e6102368
 use leptos::prelude::*;
 
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/DismissButton.tsx
+use super::visually_hidden::VisuallyHidden;
 
+// =============================================================================
 // REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## STRUCTURAL
+// ## OMITTED FEATURES
+// - Localized default label: "Dismiss" is English until leptonic has a localized string
+//   formatter.
 //
-// - react-aria wraps the button in a `<VisuallyHidden>` component. We apply
-//   visually-hidden styles inline, matching the pattern in
-//   `utils/live_announcer.rs`.
-//
-// ## NOT IMPLEMENTED
-//
-// - `aria-labelledby`: react-aria supports both `aria-label` and
-//   `aria-labelledby`. We only support `aria-label` since `aria-labelledby` is
-//   rarely needed for dismiss buttons.
-// - Localized default label: react-aria uses i18n for the default "Dismiss"
-//   label. We use a static English default with an `aria_label` prop override.
+// =============================================================================
 
 /// A visually hidden button that allows screen reader users to dismiss an overlay.
 ///
@@ -29,13 +23,17 @@ pub fn DismissButton(
     /// Callback invoked when the dismiss button is activated.
     #[prop(into, optional)]
     on_dismiss: Option<Callback<()>>,
-
-    /// Custom accessible label. Defaults to "Dismiss".
+    /// The button's name. Default: "Dismiss" (unless `aria_labelledby` names it).
     #[prop(into, optional)]
-    aria_label: Option<&'static str>,
+    aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
 ) -> impl IntoView {
-    let label = aria_label.unwrap_or("Dismiss");
-
+    let has_labelledby = aria_labelledby.is_some();
+    let label = move || {
+        aria_label
+            .get()
+            .or_else(|| (!has_labelledby).then(|| "Dismiss".to_owned()))
+    };
     let on_click = move |_: web_sys::MouseEvent| {
         if let Some(on_dismiss) = on_dismiss {
             on_dismiss.run(());
@@ -43,11 +41,14 @@ pub fn DismissButton(
     };
 
     view! {
-        <button
-            aria-label=label
-            tabindex="-1"
-            on:click=on_click
-            style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;"
-        />
+        <VisuallyHidden>
+            <button
+                aria-label=label
+                aria-labelledby=aria_labelledby
+                tabindex="-1"
+                on:click=on_click
+                style="width: 1px; height: 1px;"
+            />
+        </VisuallyHidden>
     }
 }

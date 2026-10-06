@@ -5,15 +5,15 @@ pub use crate::hooks::LinkRel;
 use crate::{
     ScrollBehavior,
     atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom},
-    hooks::{LinkTarget, PressEvent},
+    hooks::{Href, LinkTarget, PressEvent},
     utils::{classes::Classes, styles::Styles},
 };
 
 #[component]
 pub fn AnchorLink(
-    /// The anchor link. For example: "#my-anchor".
+    /// The element to link to, by id: `"#my-anchor"` (or `"my-anchor"`).
     #[prop(into)]
-    href: Oco<'static, str>,
+    href: Href,
 
     #[prop(into, optional)] scroll_behavior: Option<ScrollBehavior>,
 
@@ -108,7 +108,7 @@ where
             href
             target
             rel
-            disabled
+            is_disabled=disabled
             nostrip:on_press
             classes=classes.add("leptonic-link")
             styles

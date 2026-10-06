@@ -262,7 +262,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        is_disabled,
         within: false,
         auto_focus: false,
         is_text_input: false,

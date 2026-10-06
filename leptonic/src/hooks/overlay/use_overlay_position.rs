@@ -9,6 +9,7 @@ use crate::{
     utils::{
         CapturedElement, ElementCaptureAttr,
         css::{LengthPercentageAuto, MaxSize, NonNegativeLengthPercentage, ZIndex, try_px},
+        i18n::use_direction,
         locale::WritingDirection,
         style::{LeftProperty, MaxHeightProperty, TopProperty, ZIndexProperty},
         styles::Styles,
@@ -142,8 +143,6 @@ pub struct UseOverlayPositionInput {
     pub placement_x: Signal<PlacementX>,
     pub placement_y: Signal<PlacementY>,
 
-    pub writing_direction: Signal<WritingDirection>,
-
     /// Additional offset along the main axis (pushes the overlay away from the target).
     /// Default: 0.0
     pub offset: Signal<f64>,
@@ -200,7 +199,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         target,
         placement_x,
         placement_y,
-        writing_direction,
         offset,
         cross_offset,
         container_padding,
@@ -208,6 +206,8 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
         max_height: user_max_height,
         is_open,
     } = input;
+    // Logical placements (start/end) resolve against the text direction.
+    let writing_direction = use_direction();
 
     // Capture the overlay element internally.
     let overlay_element = CapturedElement::new();
@@ -241,7 +241,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
             );
 
             // Also listen to visualViewport resize events (virtual keyboard, zoom).
-            #[cfg(web_sys_unstable_apis)]
             let vv_state = window.visual_viewport().map(|vv| {
                 let vv_handler = Closure::<dyn Fn()>::new(move || viewport_resize.notify());
                 let _ = vv.add_event_listener_with_callback(
@@ -256,7 +255,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                     "resize",
                     resize_handler.as_ref().unchecked_ref(),
                 );
-                #[cfg(web_sys_unstable_apis)]
                 if let Some((vv, vv_handler)) = vv_state {
                     let _ = vv.remove_event_listener_with_callback(
                         "resize",
@@ -285,7 +283,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     // scrollable pages.
     let viewport_width = move || {
         viewport_resize.track();
-        #[cfg(web_sys_unstable_apis)]
         if let Some(window) = use_window().as_ref()
             && let Some(vv) = window.visual_viewport()
         {
@@ -302,7 +299,6 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
 
     let viewport_height = move || {
         viewport_resize.track();
-        #[cfg(web_sys_unstable_apis)]
         if let Some(window) = use_window().as_ref()
             && let Some(vv) = window.visual_viewport()
         {

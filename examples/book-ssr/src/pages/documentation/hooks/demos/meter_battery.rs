@@ -1,9 +1,17 @@
-use leptonic::hooks::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::*,
+    utils::{
+        css::{CssDimension, NonNegativeLengthPercentage, Size, try_pct},
+        style::WidthProperty,
+        styles::Styles,
+    },
+};
 use leptos::prelude::*;
 
 #[component]
 pub fn MeterBatteryDemo() -> impl IntoView {
-    let (battery, _set_battery) = signal(45.0);
+    let (battery, set_battery) = signal(45.0);
 
     let battery_meter = use_meter(UseMeterInput {
         value: battery.into(),
@@ -16,25 +24,43 @@ pub fn MeterBatteryDemo() -> impl IntoView {
         }),
         ..Default::default()
     });
+    let percentage = battery_meter.percentage;
+
+    // The fill width is the only dynamic style; the color comes from a class.
+    let fill_styles =
+        Styles::new().add_reactive(move || WidthProperty.declare(fill_width(percentage.get())));
+    let fill_class = move || {
+        let level = match percentage.get() {
+            p if p < 20.0 => "danger",
+            p if p < 50.0 => "warning",
+            _ => "ok",
+        };
+        format!("demo-value-bar-fill {level}")
+    };
 
     view! {
-        <div style="max-width: 300px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5em;">
-                <label id={battery_meter.label_props.id.clone()}>"Battery Level"</label>
-                <span>{ move || battery_meter.value_label.get() }</span>
+        <div class="demo-value-bar-container">
+            <div class="demo-value-bar-header">
+                <label id=battery_meter.label_props.id>"Battery Level"</label>
+                <span>{move || battery_meter.value_label.get()}</span>
             </div>
-            <div
-                {..battery_meter.meter_props.into_attrs()}
-                style="height: 20px; background: #e0e0e0; border-radius: 4px; overflow: hidden;"
-            >
-                <div style=move || format!(
-                    "height: 100%; width: {}%; background: {}; transition: width 0.3s;",
-                    battery_meter.percentage.get(),
-                    if battery_meter.percentage.get() < 20.0 { "#e53935" }
-                    else if battery_meter.percentage.get() < 50.0 { "#fb8c00" }
-                    else { "#43a047" }
-                )></div>
+            <div {..battery_meter.meter_props.into_attrs()} class="demo-value-bar demo-value-bar-thick">
+                <div class=fill_class style=fill_styles></div>
             </div>
         </div>
+
+        <div class="demo-inline-controls">
+            <Button on_press=move |_| set_battery.update(|v| *v = f64::max(*v - 10.0, 0.0))>"Discharge"</Button>
+            <Button on_press=move |_| set_battery.update(|v| *v = f64::min(*v + 10.0, 100.0))>"Charge"</Button>
+        </div>
     }
+}
+
+/// The width of a fill covering `percent` of its track. Non-finite or negative input renders as zero width.
+fn fill_width(percent: f64) -> Size {
+    try_pct(percent)
+        .ok()
+        .and_then(|width| NonNegativeLengthPercentage::try_from(width).ok())
+        .unwrap_or_else(|| NonNegativeLengthPercentage::new(CssDimension::Zero))
+        .into()
 }

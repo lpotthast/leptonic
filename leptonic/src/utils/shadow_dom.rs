@@ -10,12 +10,6 @@
 
 use wasm_bindgen::JsCast;
 
-/// Returns `true` if the given node is a `ShadowRoot`.
-#[allow(dead_code)]
-pub fn is_shadow_root(node: &web_sys::Node) -> bool {
-    node.dyn_ref::<web_sys::ShadowRoot>().is_some()
-}
-
 /// Get the active element, piercing through shadow DOM boundaries.
 ///
 /// Starts with `document.activeElement` and follows the chain of

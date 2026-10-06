@@ -1,8 +1,11 @@
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@internationalized/number/src/NumberParser.ts
 
+use fixed_decimal::Decimal;
+
 use super::{
     i18n::Locale,
     number_formatter::{NumberFormatOptions, NumberFormatter, NumberStyle},
+    number_value::NumberValue,
 };
 
 /// Locale-specific number symbols extracted by formatting probe values.
@@ -27,7 +30,7 @@ struct NumberSymbols {
 ///
 /// The inverse of [`NumberFormatter`]. Discovers locale-specific symbols by formatting
 /// probe values through `NumberFormatter`, then uses those symbols to parse
-/// locale-formatted strings back to `f64`.
+/// locale-formatted strings back to numbers of any [`NumberValue`] type, exactly.
 ///
 /// Based on react-aria's `NumberParser` from `@internationalized/number`.
 #[derive(Debug, Clone)]
@@ -35,6 +38,8 @@ pub struct NumberParser {
     symbols: NumberSymbols,
     style: NumberStyle,
     max_fraction_digits: Option<u32>,
+    /// Whether group separators may be typed.
+    use_grouping: bool,
 }
 
 impl NumberParser {
@@ -46,21 +51,23 @@ impl NumberParser {
             symbols,
             style: options.style,
             max_fraction_digits: options.maximum_fraction_digits,
+            use_grouping: options.use_grouping,
         }
     }
 
-    /// Parse a locale-formatted string into `f64`.
+    /// Parse a locale-formatted string into a number.
     ///
-    /// Returns `None` if the string is empty or cannot be parsed.
+    /// Returns `None` if the string is empty, cannot be parsed, or `T` can't hold the value
+    /// (out of range, or fraction digits for integers).
     ///
     /// # Examples
     ///
     /// ```ignore
-    /// let parser = NumberParser::new(&Locale::new("de-DE"), &NumberFormatOptions::default());
-    /// assert_eq!(parser.parse("1.234,56"), Some(1234.56));
+    /// let parser = NumberParser::new(&Locale::from(locale!("de-DE")), &NumberFormatOptions::default());
+    /// assert_eq!(parser.parse::<f64>("1.234,56"), Some(1234.56));
     /// ```
     #[must_use]
-    pub fn parse(&self, value: &str) -> Option<f64> {
+    pub fn parse<T: NumberValue>(&self, value: &str) -> Option<T> {
         let sanitized = self.sanitize(value);
         if sanitized.is_empty() {
             return None;
@@ -68,8 +75,11 @@ impl NumberParser {
 
         let mut s = sanitized;
 
-        // Remove group separators.
+        // Remove group separators (invalid without grouping).
         if !self.symbols.group.is_empty() {
+            if !self.use_grouping && s.contains(&self.symbols.group) {
+                return None;
+            }
             s = s.replace(&self.symbols.group, "");
         }
 
@@ -94,17 +104,16 @@ impl NumberParser {
         let is_percent = self.style == NumberStyle::Percent || s.contains(&self.symbols.percent);
         s = s.replace(&self.symbols.percent, "");
 
-        // Parse the ASCII number string.
-        let mut result: f64 = s.trim().parse().ok()?;
+        // Parse the ASCII number string, exactly.
+        let s = s.trim();
+        let mut decimal = Decimal::try_from_str(s.strip_prefix('+').unwrap_or(s)).ok()?;
 
         // For percent style: the value represents a percentage, divide by 100.
         if is_percent {
-            // Use string manipulation to avoid floating-point precision loss,
-            // following react-aria's approach.
-            result /= 100.0;
+            decimal.absolute.multiply_pow10(-2);
         }
 
-        Some(result)
+        T::from_decimal(&decimal)
     }
 
     /// Returns `true` if the string is a valid partial number input for this locale.
@@ -112,11 +121,11 @@ impl NumberParser {
     /// This is used by the `beforeinput` handler to filter keystrokes in real-time.
     /// Allows intermediate states like `"-"`, `"1."`, `"1,2"` (German) while typing.
     #[must_use]
-    pub fn is_valid_partial_number(
+    pub fn is_valid_partial_number<T: NumberValue>(
         &self,
         value: &str,
-        min_value: Option<f64>,
-        max_value: Option<f64>,
+        min_value: Option<T>,
+        max_value: Option<T>,
     ) -> bool {
         if value.is_empty() {
             return true;
@@ -131,7 +140,7 @@ impl NumberParser {
         let mut s = sanitized.as_str();
 
         // Allow a leading minus sign if negative values are possible.
-        let allows_negative = min_value.is_none_or(|min| min < 0.0);
+        let allows_negative = T::lower_bound(min_value).is_none_or(|min| min < T::ZERO);
         if allows_negative && s.starts_with(self.symbols.minus.as_str()) {
             s = &s[self.symbols.minus.len()..];
         } else if allows_negative && s.starts_with('-') {
@@ -139,7 +148,7 @@ impl NumberParser {
         }
 
         // Allow a leading plus sign if positive values are possible.
-        let allows_positive = max_value.is_none_or(|max| max > 0.0);
+        let allows_positive = T::upper_bound(max_value).is_none_or(|max| max > T::ZERO);
         if allows_positive && s.starts_with('+') {
             s = &s[1..];
         }
@@ -149,18 +158,16 @@ impl NumberParser {
             return true;
         }
 
-        // Reject if starts with group separator.
-        if !self.symbols.group.is_empty() && s.starts_with(self.symbols.group.as_str()) {
+        // Reject if decimal separator is present but max fraction digits is 0 (or `T` is an
+        // integer type).
+        if (T::IS_INTEGER || self.max_fraction_digits == Some(0))
+            && s.contains(self.symbols.decimal.as_str())
+        {
             return false;
         }
 
-        // Reject if decimal separator is present but max fraction digits is 0.
-        if self.max_fraction_digits == Some(0) && s.contains(self.symbols.decimal.as_str()) {
-            return false;
-        }
-
-        // Remove group separators for validation.
-        let s = if self.symbols.group.is_empty() {
+        // Remove group separators for validation (they remain invalid without grouping).
+        let s = if self.symbols.group.is_empty() || !self.use_grouping {
             s.to_string()
         } else {
             s.replace(&self.symbols.group, "")
@@ -412,12 +419,12 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::utils::number_formatter::NumberFormatOptions;
+    use crate::utils::{i18n::locale, number_formatter::NumberFormatOptions};
 
     #[test]
     #[allow(clippy::approx_constant)]
     fn test_parse_en_us_simple() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
         assert_that!(parser.parse("123")).is_equal_to(Some(123.0));
@@ -428,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_parse_en_us_with_grouping() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let options = NumberFormatOptions {
             use_grouping: true,
             ..Default::default()
@@ -442,7 +449,7 @@ mod tests {
 
     #[test]
     fn test_parse_de_de() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         let options = NumberFormatOptions {
             use_grouping: true,
             minimum_fraction_digits: Some(2),
@@ -459,17 +466,17 @@ mod tests {
 
     #[test]
     fn test_parse_empty_and_invalid() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
-        assert_that!(parser.parse("")).is_equal_to(None);
-        assert_that!(parser.parse("abc")).is_equal_to(None);
-        assert_that!(parser.parse("12.34.56")).is_equal_to(None);
+        assert_that!(parser.parse::<f64>("")).is_equal_to(None);
+        assert_that!(parser.parse::<f64>("abc")).is_equal_to(None);
+        assert_that!(parser.parse::<f64>("12.34.56")).is_equal_to(None);
     }
 
     #[test]
     fn test_parse_percent() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let options = NumberFormatOptions {
             style: NumberStyle::Percent,
             ..Default::default()
@@ -482,27 +489,27 @@ mod tests {
 
     #[test]
     fn test_is_valid_partial_en_us() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
         // Valid partial inputs.
-        assert_that!(parser.is_valid_partial_number("", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("1", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("1.", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("1.2", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("-", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("-1", None, None)).is_true();
-        assert_that!(parser.is_valid_partial_number("-1.", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("1", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("1.", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("1.2", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("-", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("-1", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("-1.", None, None)).is_true();
 
         // Invalid partial inputs.
-        assert_that!(parser.is_valid_partial_number("abc", None, None)).is_false();
-        assert_that!(parser.is_valid_partial_number("1.2.3", None, None)).is_false();
-        assert_that!(parser.is_valid_partial_number("1a", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f64>("abc", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f64>("1.2.3", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f64>("1a", None, None)).is_false();
     }
 
     #[test]
     fn test_is_valid_partial_no_negative() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
         // When min_value >= 0, minus is not allowed.
@@ -513,34 +520,32 @@ mod tests {
 
     #[test]
     fn test_is_valid_partial_no_decimals() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let options = NumberFormatOptions {
             maximum_fraction_digits: Some(0),
             ..Default::default()
         };
         let parser = NumberParser::new(&locale, &options);
 
-        assert_that!(parser.is_valid_partial_number("1.", None, None)).is_false();
-        assert_that!(parser.is_valid_partial_number("1.5", None, None)).is_false();
-        assert_that!(parser.is_valid_partial_number("123", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>("1.", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f64>("1.5", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f64>("123", None, None)).is_true();
     }
 
     #[test]
-    fn test_is_valid_partial_rejects_leading_group_separator() {
-        let locale = Locale::new("en-US");
-        let options = NumberFormatOptions {
-            use_grouping: true,
-            ..Default::default()
-        };
-        let parser = NumberParser::new(&locale, &options);
+    fn leading_group_separators_are_allowed() {
+        // As react-aria: deleting the first digit of "1,024" leaves ",024", which commits as 24.
+        let locale = Locale::from(locale!("en-US"));
+        let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
-        assert_that!(parser.is_valid_partial_number(",123", None, None)).is_false();
-        assert_that!(parser.is_valid_partial_number("1,234", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<f64>(",024", None, None)).is_true();
+        assert_that!(parser.parse::<f64>(",024")).is_equal_to(Some(24.0));
+        assert_that!(parser.is_valid_partial_number::<f64>("1,234", None, None)).is_true();
     }
 
     #[test]
     fn test_roundtrip_en_us() {
-        let locale = Locale::new("en-US");
+        let locale = Locale::from(locale!("en-US"));
         let options = NumberFormatOptions {
             use_grouping: true,
             minimum_fraction_digits: Some(2),
@@ -558,7 +563,7 @@ mod tests {
 
     #[test]
     fn test_roundtrip_de_de() {
-        let locale = Locale::new("de-DE");
+        let locale = Locale::from(locale!("de-DE"));
         let options = NumberFormatOptions {
             use_grouping: true,
             minimum_fraction_digits: Some(2),
@@ -572,5 +577,42 @@ mod tests {
         let formatted = formatter.format(original);
         let parsed = parser.parse(&formatted);
         assert_that!(parsed).is_equal_to(Some(original));
+    }
+
+    #[test]
+    fn integers_parse_exactly() {
+        let parser = NumberParser::new(
+            &Locale::from(locale!("en-US")),
+            &NumberFormatOptions::default(),
+        );
+        assert_that!(parser.parse::<u64>("18,446,744,073,709,551,615")).is_equal_to(Some(u64::MAX));
+        assert_that!(parser.parse::<u8>("256")).is_none();
+        assert_that!(parser.parse::<i32>("1.5")).is_none();
+        assert_that!(parser.parse::<i32>("-7")).is_equal_to(Some(-7));
+        assert_that!(parser.is_valid_partial_number::<u8>("-", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<i8>("-", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number::<i32>("1.", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number::<f32>("1.", None, None)).is_true();
+    }
+
+    #[test]
+    fn group_separators_are_invalid_without_grouping() {
+        let parser = NumberParser::new(
+            &Locale::from(locale!("en-US")),
+            &NumberFormatOptions {
+                use_grouping: false,
+                ..NumberFormatOptions::default()
+            },
+        );
+        assert_that!(parser.is_valid_partial_number::<f64>("102,4", None, None)).is_false();
+        assert_that!(parser.parse::<f64>("1,024")).is_none();
+        let grouping = NumberParser::new(
+            &Locale::from(locale!("en-US")),
+            &NumberFormatOptions {
+                use_grouping: true,
+                ..NumberFormatOptions::default()
+            },
+        );
+        assert_that!(grouping.is_valid_partial_number::<f64>("1,02", None, None)).is_true();
     }
 }

@@ -1,0 +1,111 @@
+@use "input" as input;
+
+// Text, search and number fields: label, input, description and error message.
+.leptonic-text-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  width: 100%;
+
+  .leptonic-text-field-input {
+    @include input.input-field();
+  }
+
+  textarea.leptonic-text-field-input {
+    height: auto;
+    min-height: 5em;
+    max-height: 25em;
+    resize: vertical;
+  }
+
+  &[data-invalid] .leptonic-text-field-input {
+    border-color: var(--danger-color);
+  }
+
+  &[data-disabled] .leptonic-text-field-input {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .leptonic-field-description {
+    font-size: 0.875em;
+    opacity: 0.8;
+  }
+
+  .leptonic-field-error {
+    font-size: 0.875em;
+    color: var(--danger-color);
+  }
+}
+
+// The clear button sits inside the input's right edge, shown while there is a value.
+.leptonic-search-field {
+  .leptonic-search-field-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .leptonic-text-field-input {
+    padding-right: 2.25em;
+  }
+
+  .leptonic-search-field-clear {
+    position: absolute;
+    right: 0.5em;
+    display: inline-flex;
+    padding: 0.25em;
+    border: none;
+    background: none;
+    color: inherit;
+    opacity: 0.6;
+    cursor: pointer;
+
+    &[data-hovered] {
+      opacity: 1;
+    }
+  }
+
+  &[data-empty] .leptonic-search-field-clear {
+    visibility: hidden;
+  }
+}
+
+// The stepper buttons follow the input, joined to it.
+.leptonic-number-field {
+  .leptonic-number-field-group {
+    display: flex;
+  }
+
+  .leptonic-text-field-input {
+    flex: 1;
+    min-width: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  .leptonic-number-field-step {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.6em;
+    color: var(--input-color);
+    background-color: var(--input-background-color);
+    border: var(--input-border);
+    border-left: none;
+    cursor: pointer;
+
+    &:last-child {
+      border-top-right-radius: var(--input-border-radius);
+      border-bottom-right-radius: var(--input-border-radius);
+    }
+
+    &[data-hovered] {
+      border-color: var(--input-focused-border-color);
+    }
+
+    &[data-disabled] {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}

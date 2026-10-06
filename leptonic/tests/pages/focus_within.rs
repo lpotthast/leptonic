@@ -1,4 +1,4 @@
-use browser_test::thirtyfour::{WebDriver, prelude::*};
+use browser_test::thirtyfour::WebDriver;
 use rootcause::Report;
 
 use crate::pages::BaseActions;
@@ -88,12 +88,6 @@ impl FocusWithinPage<'_> {
 
     pub async fn click_before(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fw-before").await
-    }
-
-    pub async fn tab_from_active(&self) -> Result<(), Report> {
-        let active = self.driver.active_element().await?;
-        active.send_keys(Key::Tab).await?;
-        Ok(())
     }
 
     // ---- Nested containers section ----

@@ -3,15 +3,16 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
+use super::use_color_slider_state::UseColorSliderStateReturn;
 use crate::{
     hooks::slider::{
-        SliderOrientation, UseSliderInput, UseSliderReturn, UseSliderThumbInput,
-        UseSliderThumbReturn, use_slider, use_slider_thumb,
+        UseSliderInput, UseSliderReturn, UseSliderThumbInput, UseSliderThumbReturn, use_slider,
+        use_slider_thumb,
     },
-    utils::color::ColorValue,
+    utils::{
+        color::ColorValue, i18n::use_direction, locale::WritingDirection, orientation::Orientation,
+    },
 };
-
-use super::use_color_slider_state::UseColorSliderStateReturn;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorSlider.ts
 
@@ -27,17 +28,14 @@ pub struct UseColorSliderInput<C: ColorValue> {
     pub state: UseColorSliderStateReturn<C>,
 
     /// Whether the slider is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Slider orientation.
-    pub orientation: Signal<SliderOrientation>,
+    pub orientation: Signal<Orientation>,
 
     /// An accessibility label for the slider. When `None`, auto-generates
     /// from the channel name (e.g., "Hue", "Saturation").
     pub aria_label: Option<&'static str>,
-
-    /// Whether to use RTL layout.
-    pub is_rtl: bool,
 
     /// The name attribute for form submission.
     pub name: Option<&'static str>,
@@ -65,10 +63,9 @@ pub struct UseColorSliderReturn {
 pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColorSliderReturn {
     let UseColorSliderInput {
         state,
-        disabled,
+        is_disabled: disabled,
         orientation,
         aria_label,
-        is_rtl,
         name,
     } = input;
 
@@ -81,7 +78,6 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         state: state.slider_state,
         aria_label: Some(effective_label),
         aria_labelledby: None,
-        is_rtl,
     });
 
     // Build enriched ARIA valuetext with hue/color name appended.
@@ -103,11 +99,8 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         name,
         aria_label: Some(Cow::Borrowed(effective_label)),
         aria_labelledby: None,
-        disabled,
-        validation_state: crate::hooks::ValidationState::Valid,
-        is_rtl,
+        is_disabled: disabled,
         decimal_places: None,
-        is_required: false,
         aria_describedby: None,
         aria_details: None,
         aria_errormessage: None,
@@ -116,6 +109,8 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
 
     // Generate gradient background using display_color and channel-specific stops.
     let display_color_signal = state.display_color;
+    // The gradient runs against the text direction in right-to-left layouts.
+    let writing_direction = use_direction();
     let background = Signal::derive(move || {
         let color = display_color_signal.get();
         let range = C::get_channel_range(channel);
@@ -136,15 +131,15 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
             ]
         };
 
-        let direction = match orientation.get_untracked() {
-            SliderOrientation::Horizontal => {
-                if is_rtl {
+        let direction = match orientation.get() {
+            Orientation::Horizontal => {
+                if writing_direction.get() == WritingDirection::Rtl {
                     "to left"
                 } else {
                     "to right"
                 }
             }
-            SliderOrientation::Vertical => "to top",
+            Orientation::Vertical => "to top",
         };
 
         format!("linear-gradient({direction}, {})", stops.join(", "))

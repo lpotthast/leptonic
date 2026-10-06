@@ -1,0 +1,66 @@
+// Frame of interactive demos (`Demo`): the demo area, followed by the "View source" and "View styles" disclosures.
+
+.demo-shell {
+  margin: var(--book-space-m) 0;
+  border: 2px solid var(--brand-color);
+  border-radius: var(--book-radius-m);
+  overflow: hidden;
+
+  .demo {
+    display: block;
+    padding: var(--book-space-l);
+  }
+
+  > .doc-disclosure {
+    border-top: 1px solid var(--brand-color);
+
+    .leptonic-code {
+      max-height: 40em;
+      margin: 0;
+      overflow: auto;
+      border-radius: 0;
+    }
+  }
+}
+
+// `Disclosure` (kit): a trigger button and its panel, hidden while collapsed (the hook sets `aria-hidden`).
+.doc-disclosure-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--book-space-s);
+  width: 100%;
+  padding: var(--book-space-s) var(--book-space-m);
+  border: none;
+  background: none;
+  color: var(--brand-color);
+  font: inherit;
+  font-size: var(--book-font-size-s);
+  text-align: start;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover {
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: -2px;
+  }
+
+  .doc-disclosure-chevron {
+    transition: transform var(--book-transition);
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &[aria-expanded="true"] .doc-disclosure-chevron {
+    transform: rotate(90deg);
+  }
+}
+
+.doc-disclosure-panel[aria-hidden="true"] {
+  display: none;
+}

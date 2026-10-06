@@ -9,9 +9,10 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::use_event_listener;
+use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
+use super::use_color_wheel_state::UseColorWheelStateReturn;
 use crate::{
     hooks::{
         IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, UseFocusRingInput, UseFocusRingReturn,
@@ -21,12 +22,11 @@ use crate::{
         EventHandler,
         color::ColorValue,
         element_capture::{CapturedElement, ElementCaptureAttr},
+        event_listeners::{Listener, listen_to},
         focus::focus_element,
         pointer_type::PointerType,
     },
 };
-
-use super::use_color_wheel_state::UseColorWheelStateReturn;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorWheel.ts
 
@@ -57,7 +57,7 @@ pub struct UseColorWheelInput<C: ColorValue> {
     pub inner_radius: f64,
 
     /// Whether the wheel is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// An accessibility label for the wheel.
     pub aria_label: Option<&'static str>,
@@ -267,7 +267,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         state,
         outer_radius,
         inner_radius,
-        disabled,
+        is_disabled: disabled,
         aria_label,
         name,
         form,
@@ -371,7 +371,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         is_focus_visible: _,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled,
+        is_disabled: disabled,
         within: true,
         auto_focus: false,
         is_text_input: false,
@@ -439,9 +439,8 @@ fn setup_thumb_move<C: ColorValue>(
     let page_step = state.page_step;
 
     use_move(UseMoveInput {
-        disabled,
+        is_disabled: disabled,
         axis: Signal::derive(|| None), // unrestricted — circular movement
-        is_rtl: false,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             current_position.set_value(None);
             set_dragging_start.run(true);
@@ -502,11 +501,9 @@ fn setup_track_interaction<C: ColorValue>(
     let set_dragging_up = state.set_dragging;
     let set_hue_from_point_move = state.set_hue_from_point;
 
-    // Store cleanup functions for global listeners registered during track drag.
-    // Uses `update_value` for access since `Box<dyn Fn()>` is not Clone.
-    let track_drag_cleanup: StoredValue<
-        Option<(Box<dyn Fn() + Send + Sync>, Box<dyn Fn() + Send + Sync>)>,
-    > = StoredValue::new(None);
+    // The global listeners of a track drag (removed when dropped).
+    let track_drag_listeners: StoredValue<Option<SendWrapper<Vec<Listener>>>> =
+        StoredValue::new(None);
 
     EventHandler::new(move |e: PointerEvent| {
         if disabled.get_untracked() || e.button() != 0 {
@@ -545,45 +542,35 @@ fn setup_track_interaction<C: ColorValue>(
         let pointer_id = e.pointer_id();
         let track_el_move = track_el;
 
-        let cleanup_move = use_event_listener(
-            leptos_use::use_document(),
-            ev::pointermove,
-            move |e: PointerEvent| {
-                if e.pointer_id() != pointer_id {
-                    return;
-                }
-                let Some(el) = track_el_move.get_untracked() else {
-                    return;
-                };
-                let rect = el.get_bounding_client_rect();
-                let cx = rect.left() + rect.width() / 2.0;
-                let cy = rect.top() + rect.height() / 2.0;
-                let mx = e.client_x() - cx;
-                let my = e.client_y() - cy;
-                let d = (mx * mx + my * my).sqrt();
-                set_hue_from_point_move.run((mx, my, d));
-            },
-        );
+        let Some(document) = leptos_use::use_document().as_ref().cloned() else {
+            return;
+        };
+        let on_move = listen_to(&document, ev::pointermove, false, move |e: PointerEvent| {
+            if e.pointer_id() != pointer_id {
+                return;
+            }
+            let Some(el) = track_el_move.get_untracked() else {
+                return;
+            };
+            let rect = el.get_bounding_client_rect();
+            let cx = rect.left() + rect.width() / 2.0;
+            let cy = rect.top() + rect.height() / 2.0;
+            let mx = e.client_x() - cx;
+            let my = e.client_y() - cy;
+            let d = (mx * mx + my * my).sqrt();
+            set_hue_from_point_move.run((mx, my, d));
+        });
 
-        let cleanup_up = use_event_listener(
-            leptos_use::use_document(),
-            ev::pointerup,
-            move |e: PointerEvent| {
-                if e.pointer_id() != pointer_id {
-                    return;
-                }
-                set_dragging_up.run(false);
-                // Clean up both global listeners.
-                track_drag_cleanup.update_value(|cleanup| {
-                    if let Some((cm, cu)) = cleanup.take() {
-                        cm();
-                        cu();
-                    }
-                });
-            },
-        );
+        let on_up = listen_to(&document, ev::pointerup, false, move |e: PointerEvent| {
+            if e.pointer_id() != pointer_id {
+                return;
+            }
+            set_dragging_up.run(false);
+            // Remove both global listeners.
+            track_drag_listeners.set_value(None);
+        });
 
-        track_drag_cleanup.set_value(Some((Box::new(cleanup_move), Box::new(cleanup_up))));
+        track_drag_listeners.set_value(Some(SendWrapper::new(vec![on_move, on_up])));
     })
 }
 

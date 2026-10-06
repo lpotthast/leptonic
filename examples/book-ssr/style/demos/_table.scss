@@ -1,0 +1,225 @@
+// Demo styles of the table pages (overview, hook, atom). Theme-aware: use the book tokens (--book-surface-color, ...).
+
+// Wide tables scroll horizontally instead of widening the page.
+.demo-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+// The table layout, shared by all table demos. State styling follows below: through ARIA attributes for the hook
+// demo, through data attributes for the atoms.
+.demo-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--book-surface-color);
+    color: var(--main-color);
+
+    th,
+    td {
+        padding: var(--book-space-s) var(--book-space-m);
+        border-bottom: 1px solid var(--book-border-color);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    th {
+        color: var(--book-muted-color);
+        font-weight: 600;
+    }
+
+    // A column group header spans the columns below it.
+    th[colspan] {
+        text-align: center;
+    }
+
+    thead tr:last-child th {
+        border-bottom: 2px solid var(--book-border-color);
+    }
+
+    // Rows, cells and column headers receive focus themselves (checkbox cells pass it on to their checkbox).
+    tr:focus-visible,
+    th:focus-visible,
+    td:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+
+    input[type="checkbox"] {
+        margin: 0;
+        accent-color: var(--brand-color);
+    }
+
+    tbody tr {
+        cursor: default;
+    }
+
+    // Numbers align right, so their digits line up.
+    .demo-table-number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+// Hook demo: the hooks render `aria-selected` on rows and `aria-sort` ("none", "ascending" or "descending") on
+// sortable column headers. `data-disabled` is set by the demo on rows that can't be selected.
+.demo-hook-table {
+    tbody tr[aria-selected="true"] {
+        background: var(--brand-color-subtle);
+    }
+
+    tbody tr[data-disabled] {
+        color: var(--book-muted-color);
+    }
+
+    th[aria-sort] {
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+            color: var(--main-color);
+        }
+
+        &::after {
+            display: inline-block;
+            width: 1em;
+            margin-left: var(--book-space-xs);
+            content: "\2195";
+            opacity: 0.4;
+        }
+    }
+
+    th[aria-sort="ascending"]::after,
+    th[aria-sort="descending"]::after {
+        color: var(--brand-color);
+        opacity: 1;
+    }
+
+    th[aria-sort="ascending"]::after {
+        content: "\25B2";
+    }
+
+    th[aria-sort="descending"]::after {
+        content: "\25BC";
+    }
+}
+
+// Atom demos: the atoms expose their state as data attributes. `TableHeader` renders the column headers itself, so
+// they are styled as descendants of the table.
+.demo-atom-table {
+    th[data-allows-sorting] {
+        cursor: pointer;
+        user-select: none;
+
+        &:hover,
+        &[data-pressed] {
+            color: var(--main-color);
+        }
+
+        &::after {
+            display: inline-block;
+            width: 1em;
+            margin-left: var(--book-space-xs);
+            content: "\2195";
+            opacity: 0.4;
+        }
+    }
+
+    th[data-sort-direction]::after {
+        color: var(--brand-color);
+        opacity: 1;
+    }
+
+    th[data-sort-direction="ascending"]::after {
+        content: "\25B2";
+    }
+
+    th[data-sort-direction="descending"]::after {
+        content: "\25BC";
+    }
+}
+
+.demo-atom-table-row {
+    &[data-selected] {
+        background: var(--brand-color-subtle);
+    }
+
+    &[data-disabled] {
+        color: var(--book-muted-color);
+        text-decoration: line-through;
+        cursor: not-allowed;
+    }
+}
+
+// Column resizing (hook and atom demos). In a resizable table, the column headers carry pixel widths: a fixed
+// table layout sizes the columns by them, and content that doesn't fit is cut off with an ellipsis.
+.demo-resizable-table {
+    // The `Table` atom sets these itself inside a `ResizableTableContainer`; the hook demo needs them here.
+    table-layout: fixed;
+    width: min-content;
+
+    th,
+    td {
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    // The resizer is positioned at the header's end edge.
+    th {
+        position: relative;
+    }
+
+    th[data-resizing] {
+        color: var(--main-color);
+    }
+
+    // Keyboard focus rests on the resizer's visually hidden input: outline the header around it.
+    th:has(input:focus-visible) {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: -2px;
+    }
+}
+
+// The resizer: the hook demo renders `.demo-column-resizer`, the atoms `[data-column-resizer]`. The handle is 9px
+// wide; a thin line in its middle shows where to grab it.
+.demo-column-resizer,
+.demo-resizable-table [data-column-resizer] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 9px;
+    height: 100%;
+    cursor: col-resize;
+
+    &::after {
+        position: absolute;
+        top: 25%;
+        bottom: 25%;
+        left: 4px;
+        width: 1px;
+        background: var(--book-border-color);
+        content: "";
+    }
+
+    &:hover::after,
+    &[data-resizing]::after,
+    &:has(input:focus-visible)::after {
+        top: 0;
+        bottom: 0;
+        left: 3px;
+        width: 3px;
+        background: var(--brand-color);
+    }
+}
+
+// At a bound, the column can only be resized in one direction: `left` means the column is at its minimum width (it
+// can only grow), `right` at its maximum (it can only shrink).
+.demo-resizable-table [data-column-resizer] {
+    &[data-resizable-direction="left"] {
+        cursor: e-resize;
+    }
+
+    &[data-resizable-direction="right"] {
+        cursor: w-resize;
+    }
+}

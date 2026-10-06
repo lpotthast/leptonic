@@ -1,20 +1,20 @@
 // Upstream: react-aria/src/menu/useMenuTrigger.ts @ 99e6102368
-use crate::utils::id::use_id;
 use leptos::{oco::Oco, prelude::*};
 use web_sys::KeyboardEvent;
 
-use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
+use super::use_menu_trigger_state::MenuTriggerStateApi;
 use crate::{
     hooks::{
         UseButtonInput,
+        collections::{AutoFocus, FocusStrategy},
         interactions::use_press::{LongPressEvent, PressEvent},
         overlay::use_overlay_trigger::{
             OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger,
         },
-        selection::use_selection_state::FocusStrategy,
     },
     utils::{
         focus::focus_event_target,
+        id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         pointer_type::PointerType,
     },
@@ -50,18 +50,18 @@ pub enum MenuTriggerType {
 
 /// Input parameters for the `use_menu_trigger` hook.
 #[derive(Debug, Clone, Copy)]
-pub struct UseMenuTriggerInput {
+pub struct UseMenuTriggerInput<S: MenuTriggerStateApi> {
     /// The type of menu that the menu trigger opens.
     pub menu_type: OverlayTriggerType,
 
     /// Whether the menu trigger is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// How the menu is triggered.
     pub trigger: MenuTriggerType,
 
-    /// The state from `use_menu_trigger_state`.
-    pub state: UseMenuTriggerStateReturn,
+    /// The state from `use_menu_trigger_state`, or a state with a menu (a select's, ...).
+    pub state: S,
 }
 
 /// The return value of the `use_menu_trigger` hook.
@@ -86,8 +86,10 @@ pub struct UseMenuTriggerMenuProps {
     /// The id that labels this menu.
     pub aria_labelledby: Signal<String>,
 
-    /// The focus strategy signal - updates when menu opens.
-    pub auto_focus: Signal<Option<FocusStrategy>>,
+    /// Where focus goes when the menu opens: the first or last item when opened by keyboard,
+    /// else the menu itself (react-aria: `autoFocus: focusStrategy || true`). For
+    /// `CollectionOptions::auto_focus`.
+    pub auto_focus: Signal<Option<AutoFocus>>,
 
     /// Callback to close the menu.
     pub on_close: Callback<()>,
@@ -115,7 +117,7 @@ pub struct UseMenuTriggerMenuProps {
 ///     <button {..menu_trigger.props.into_attrs()}>
 ///         "Open Menu"
 ///     </button>
-///     <Show when=move || state.is_open.get()>
+///     <Show when=move || state.is_open()>
 ///         <Menu
 ///             aria_labelledby=menu_trigger.menu_props.aria_labelledby
 ///             auto_focus=menu_trigger.menu_props.auto_focus
@@ -124,10 +126,12 @@ pub struct UseMenuTriggerMenuProps {
 ///     </Show>
 /// }
 /// ```
-pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
+pub fn use_menu_trigger<S: MenuTriggerStateApi>(
+    input: UseMenuTriggerInput<S>,
+) -> UseMenuTriggerReturn {
     let UseMenuTriggerInput {
         menu_type,
-        disabled,
+        is_disabled: disabled,
         trigger,
         state,
     } = input;
@@ -136,7 +140,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
     let menu_id = use_id("menu");
 
     let overlay_trigger = use_overlay_trigger(UseOverlayTriggerInput {
-        show: state.is_open,
+        show: Signal::derive(move || state.is_open()),
         overlay_id: Oco::Owned(menu_id.clone()),
         overlay_type: menu_type,
     });
@@ -147,7 +151,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         if !should_open || e.default_prevented() {
             return false;
         }
-        state.toggle.run(Some(strategy));
+        state.toggle(Some(strategy));
         true
     };
     let press = trigger == MenuTriggerType::Press;
@@ -192,7 +196,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
                     // Focus the trigger before opening, so FocusScope can restore focus to it.
                     focus_event_target(&e.target, true);
                     // Screen reader users get the first item focused, others the menu itself.
-                    state.open.run(
+                    state.open(
                         (e.pointer_type == PointerType::Virtual).then_some(FocusStrategy::First),
                     );
                 }
@@ -200,19 +204,21 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             on_press: Some(Callback::new(move |e: PressEvent| {
                 if e.pointer_type == PointerType::Touch && !disabled.get_untracked() {
                     focus_event_target(&e.target, true);
-                    state.toggle.run(None);
+                    state.toggle(None);
                 }
             })),
             ..UseButtonInput::default()
         },
         MenuTriggerType::LongPress => UseButtonInput {
             on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
-                state.close.run(());
+                state.close();
             })),
             on_long_press: Some(Callback::new(move |_: LongPressEvent| {
-                state.open.run(Some(FocusStrategy::First));
+                state.open(Some(FocusStrategy::First));
             })),
-            long_press_accessibility_description: Some("Long press to open menu".into()),
+            long_press_accessibility_description: Some(
+                "Long press or press Alt + ArrowDown to open menu".into(),
+            ),
             ..UseButtonInput::default()
         },
     };
@@ -220,7 +226,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
     let aria_haspopup = overlay_trigger.props.aria_haspopup;
     let button = UseButtonInput {
         id: Some(Oco::Owned(menu_trigger_id.clone())),
-        disabled,
+        is_disabled: disabled,
         aria_haspopup: Signal::stored(aria_haspopup),
         aria_expanded: overlay_trigger.props.aria_expanded,
         aria_controls: overlay_trigger.props.aria_controls,
@@ -233,8 +239,14 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         menu_props: UseMenuTriggerMenuProps {
             id: Signal::stored(menu_id),
             aria_labelledby: Signal::stored(menu_trigger_id),
-            auto_focus: state.focus_strategy,
-            on_close: state.close,
+            auto_focus: Signal::derive(move || {
+                Some(match state.focus_strategy() {
+                    Some(FocusStrategy::First) => AutoFocus::First,
+                    Some(FocusStrategy::Last) => AutoFocus::Last,
+                    None => AutoFocus::Selected,
+                })
+            }),
+            on_close: Callback::new(move |()| state.close()),
         },
     }
 }

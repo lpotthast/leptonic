@@ -9,10 +9,33 @@ use crate::pages::{BaseActions, Page};
 /// Pages whose hooks generate element ids. Every page with id-generating hooks should be listed.
 const PAGES: &[&str] = &[
     "/hooks/button",
+    "/hooks/menu",
     "/hooks/menu-trigger",
     "/hooks/number-field",
     "/atoms/listbox",
     "/atoms/select",
+    "/atoms/grid-list",
+    "/atoms/grid",
+    "/atoms/table",
+    "/atoms/table-resizing",
+    "/atoms/tabs",
+    "/hooks/dnd",
+    "/hooks/text-field",
+    "/atoms/text-field",
+    "/atoms/search-field",
+    "/atoms/number-field",
+    "/components/text-field",
+    "/atoms/combobox",
+    "/hooks/tag-group",
+    "/hooks/tree",
+    "/atoms/checkbox",
+    "/atoms/radio-group",
+    "/atoms/switch",
+    "/atoms/toggle-button",
+    "/atoms/dialog",
+    "/atoms/popover",
+    "/atoms/tooltip",
+    "/atoms/menu",
 ];
 
 /// Element ids must be identical in the server-rendered HTML and in the hydrated page, and every
@@ -34,7 +57,9 @@ impl BrowserTest<str> for HydrationIdTests {
             let server_ids = server_rendered_ids(&page).await?;
             let client_ids = string_set(
                 &page,
-                "return [...document.querySelectorAll('body [id]')].map(e => e.id);",
+                // `data-client-only` elements (e.g. `use_description`'s hidden descriptions) are
+                // created after hydration by design.
+                "return [...document.querySelectorAll('body [id]:not([data-client-only])')].map(e => e.id);",
             )
             .await?;
             assert_that!(client_ids)

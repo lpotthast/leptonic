@@ -6,5 +6,7 @@ pub mod grid;
 pub mod separator;
 pub mod skeleton;
 pub mod stack;
-pub mod tab;
+pub mod tab_basic;
+pub mod tab_mounting;
+pub mod tab_reactive_label;
 pub mod table;

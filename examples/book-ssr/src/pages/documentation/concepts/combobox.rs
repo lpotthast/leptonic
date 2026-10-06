@@ -1,163 +1,112 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, toc::Toc},
-    routes,
-};
+use crate::{kit::*, pages::documentation::atoms::demos::combobox::ComboBoxAtomDemo, routes};
 
 #[component]
 pub fn PageComboboxOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="combobox" class="anchor">
-                "Combobox"
-                <AnchorLink href="#combobox" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Combobox">
             <p>
-                "Comboboxes combine a text input with a dropdown listbox, "
-                "letting users filter and select from options by typing. "
-                "They bridge free-text entry with constrained selection \u{2014} "
-                "useful for large option sets where users benefit from search."
+                "A combobox combines a text input with a popover of suggestions. Typing narrows the suggestions down, "
+                "and the user picks one with the mouse or the keyboard. It suits long lists, such as countries or "
+                "contacts, where scrolling through all options would be slow but the user knows what to type."
+            </p>
+            <p>
+                "While the user moves through the suggestions, focus stays in the input: the highlighted option is "
+                "announced to screen readers through "<Code inline=true>"aria-activedescendant"</Code>
+                ", and the user can keep typing at any time."
             </p>
 
-            <p>
-                "Comboboxes are currently available as hooks only. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Pick from many options by typing part of their name"</TableCell><TableCell><b>"Combobox"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Pick from a short list without typing"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Keep the options visible all the time"</TableCell><TableCell><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Enter free-form text without suggestions"</TableCell><TableCell><Link href=routes::doc::TextField.materialize()>"Text field"</Link></TableCell></TableRow>
+                </DocTable>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+                <p>
+                    "A combobox can also accept text that matches no option ("<Code inline=true>"allows_custom_value"</Code>
+                    "), for inputs where the suggestions are only a help."
+                </p>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Search and select from a filterable list"</TableCell>
-                            <TableCell><b>"Combobox"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Choose from a static dropdown"</TableCell>
-                            <TableCell>"Select"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Enter free-form text"</TableCell>
-                            <TableCell>"TextInput"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Choose from a visible list"</TableCell>
-                            <TableCell>"Listbox"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Comboboxes exist as hooks and as atoms. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::combobox::Hook.materialize()>"use_combobox_state, use_combobox"</Link></TableCell>
+                        <TableCell>
+                            "State, filtering, keyboard interaction and ARIA attributes for an input, a button and a listbox "
+                            "you render and position yourself."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></TableCell>
+                        <TableCell>
+                            "Unstyled label, input, button and popover parts with that behavior. The popover is positioned "
+                            "for you; you style the parts through classes and data attributes."
+                        </TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <ul>
-                <li><Link href=routes::doc::combobox::Hook.materialize()>"Hook: use_combobox"</Link></li>
-            </ul>
+            <Section title="Quick Start">
+                <p>
+                    "Build a collection of options, pass it to "<Code inline=true>"ComboBox"</Code>" with a filter, and "
+                    "compose the parts:"
+                </p>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+                <Demo
+                    description="Country combobox built from the atoms, with a disabled option"
+                    source=include_str!("../atoms/demos/combobox.rs")
+                    source_open=true
+                >
+                    <ComboBoxAtomDemo/>
+                </Demo>
+            </Section>
 
-            <p>
-                "Comboboxes are composed from hooks. Here is a brief sketch of the API. "
-                "See the "<Link href=routes::doc::combobox::Hook.materialize()>"hook deep-dive"</Link>
-                " for a full interactive demo."
-            </p>
+            <Section title="Accessibility">
+                <p>
+                    "Comboboxes follow the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/combobox/" target=LinkTarget::_Blank>
+                        "Combobox pattern"
+                    </LinkExt>
+                    " with a listbox popup."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let combobox = use_combobox(UseComboboxInput {
-                        // Provide items, selection mode, etc.
-                        ..
-                    });
+                <ul>
+                    <li>
+                        "The input has "<Code inline=true>"role=\"combobox\""</Code>", "<Code inline=true>"aria-autocomplete=\"list\""</Code>
+                        " and "<Code inline=true>"aria-expanded"</Code>"; while the popover is open, "<Code inline=true>"aria-controls"</Code>
+                        " points to the listbox and "<Code inline=true>"aria-activedescendant"</Code>" to the focused option."
+                    </li>
+                    <li>
+                        "The button is labelled \u{201c}Show suggestions\u{201d} together with the combobox label. It is not in "
+                        "the tab order, as the keyboard opens the popover from the input."
+                    </li>
+                    <li>"While the popover is open, the rest of the page is hidden from assistive technology."</li>
+                    <li>"Disabled options are marked with "<Code inline=true>"aria-disabled"</Code>" and skipped by the arrow keys."</li>
+                </ul>
 
-                    // Spread input attrs on a text input
-                    <input {..combobox.input_attrs} />
-
-                    // Render the listbox overlay
-                    <ul {..combobox.listbox_attrs}>
-                        // Each option uses combobox.option_attrs
-                    </ul>
-                ")}
-            </Code>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Leptonic comboboxes follow the WAI-ARIA Combobox pattern."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"combobox\""</Code>" on the input"</li>
-                <li><Code inline=true>"aria-expanded"</Code>" \u{2014} reflects dropdown state"</li>
-                <li><Code inline=true>"aria-autocomplete=\"list\""</Code>" \u{2014} indicates filtering behavior"</li>
-                <li><Code inline=true>"aria-owns"</Code>" \u{2014} points to the listbox element"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Down"</Code></TableCell>
-                            <TableCell>"Open dropdown / move to next option"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow Up"</Code></TableCell>
-                            <TableCell>"Move to previous option"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Enter"</Code></TableCell>
-                            <TableCell>"Select focused option"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Close dropdown"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Combobox", link: "#combobox" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowDown / ArrowUp">
+                        "Open the popover and focus the selected option (or the first or last one); when open, focus the "
+                        "next or previous option."
+                    </KeyRow>
+                    <KeyRow keys="Home / End">"When open: focus the first or last option."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowRight">"Return to the text: remove the focus from the options."</KeyRow>
+                    <KeyRow keys="Enter">"Select the focused option and close the popover."</KeyRow>
+                    <KeyRow keys="Escape">"Close the popover and restore the selected option\u{2019}s text."</KeyRow>
+                    <KeyRow keys="Tab">"Select the focused option and move focus to the next element."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

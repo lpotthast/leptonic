@@ -1,4 +1,4 @@
-use leptonic::atoms::button::Button;
+use leptonic::{atoms::button::Button, utils::aria::AriaCurrent};
 use leptos::prelude::*;
 
 #[component]
@@ -25,7 +25,7 @@ pub fn PageAtomButton() -> impl IntoView {
                 <h2>"Disabled Button"</h2>
                 <Button
                     on_press=move |_| set_disabled_count.update(|c| *c += 1)
-                    disabled=Signal::from(true)
+                    is_disabled=Signal::from(true)
                     attr:id="test-button-disabled"
                 >
                     "Disabled"
@@ -33,6 +33,18 @@ pub fn PageAtomButton() -> impl IntoView {
                 <div>
                     "Press count: " <span id="test-button-disabled-count">{disabled_count}</span>
                 </div>
+            </section>
+
+            <section>
+                <h2>"Labelled Button"</h2>
+                // Icon-only: named by `aria_label`, marked as the current page.
+                <Button
+                    attr:id="test-button-labelled"
+                    aria_label="Page 2"
+                    aria_current=Some(AriaCurrent::Page)
+                >
+                    "2"
+                </Button>
             </section>
         </div>
     }

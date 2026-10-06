@@ -1,3 +1,4 @@
+use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
@@ -6,222 +7,200 @@ use super::demos::{
     move_constrain_center::ConstrainCenterExample, move_constrained::ConstrainedBasicExample,
     move_container_click::ContainerClickExample, move_programmatic::ProgrammaticExample,
 };
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseMove() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use-move" class="anchor">
-                "use_move"
-                <AnchorLink href="#use-move" description="Direct link to section: use_move"/>
-            </h1>
-
+        <DocPage title="use_move">
             <p>
-                "The "<Code inline=true>"use_move"</Code>" hook tracks pointer and keyboard movement. "
-                "Supports arrow key navigation, text selection management, and optional area-constrained movement via "<Code inline=true>"MoveConstraint"</Code>". "
-                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_move"</Code>" hook reports pointer drags and arrow key presses on an element as "
+                "movement deltas. Optionally, it keeps the element inside a container and tracks its position for you. "
+                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useMove.html" target=LinkTarget::_Blank>
-                    "useMove"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useMove"/>
 
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to section: Input"/>
-            </h2>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseMoveInput"</Code>" has no "<Code inline=true>"Default"</Code>
+                    " implementation, so you set every field."
+                </p>
 
-            <p><Code inline=true>"UseMoveInput"</Code>" fields:"</p>
+                <ApiTable kind=ApiKind::Input of="UseMoveInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>">"Ignore pointer and keyboard movement while "<Code inline=true>"true"</Code>"."</ApiRow>
+                    <ApiRow name="axis" ty="Signal<Option<MoveAxis>>">
+                        "Lock movement to "<Code inline=true>"MoveAxis::Horizontal"</Code>" or "<Code inline=true>"MoveAxis::Vertical"</Code>
+                        ". "<Code inline=true>"None"</Code>" and "<Code inline=true>"MoveAxis::Both"</Code>" allow both directions."
+                    </ApiRow>
+                    <ApiRow name="on_move_start" ty="Option<Callback<MoveStartEvent>>">
+                        "Called when movement starts. The event has "<Code inline=true>"pointer_type"</Code>", "
+                        <Code inline=true>"modifiers"</Code>", "<Code inline=true>"page_x"</Code>" and "<Code inline=true>"page_y"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="on_move" ty="Option<Callback<MoveEvent>>">
+                        "Called for every movement step with "<Code inline=true>"delta_x"</Code>", "<Code inline=true>"delta_y"</Code>", "
+                        <Code inline=true>"pointer_type"</Code>" and "<Code inline=true>"modifiers"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="on_move_end" ty="Option<Callback<MoveEndEvent>>">
+                        "Called when movement ends, with "<Code inline=true>"pointer_type"</Code>" and "<Code inline=true>"modifiers"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="constraint" ty="Option<MoveConstraint>">
+                        "Keep the element inside a container: "<Code inline=true>"MoveConstraint::Bounds"</Code>
+                        " keeps the whole element inside, "<Code inline=true>"MoveConstraint::Center"</Code>" only its center. "
+                        "Enables the "<Code inline=true>"constraint"</Code>" return value."
+                    </ApiRow>
+                    <ApiRow name="on_position_change" ty="Option<Callback<NormalizedPosition>>">
+                        "Called whenever the constrained position changes: by dragging, container clicks, the keyboard or "
+                        <Code inline=true>"set_position"</Code>". Constrained mode only."
+                    </ApiRow>
+                    <ApiRow name="allow_container_click" ty="bool">
+                        "Move the element to where the container is clicked. Constrained mode only."
+                    </ApiRow>
+                    <ApiRow name="initial_position" ty="Option<NormalizedPosition>">
+                        "Starting position in constrained mode. Defaults to the top left corner."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"disabled"</Code></TableCell>
-                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
-                            <TableCell>"Disables movement when true."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"axis"</Code></TableCell>
-                            <TableCell><Code inline=true>"Signal<Option<MoveAxis>>"</Code></TableCell>
-                            <TableCell>"Optional axis constraint: Horizontal, Vertical, or Both (default when None)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_move_start"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<MoveStartEvent>>"</Code></TableCell>
-                            <TableCell>"Called when movement starts. Provides pointer_type, modifiers, page_x, page_y."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_move"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<MoveEvent>>"</Code></TableCell>
-                            <TableCell>"Called during movement. Provides delta_x, delta_y, pointer_type, modifiers."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_move_end"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<MoveEndEvent>>"</Code></TableCell>
-                            <TableCell>"Called when movement ends."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"constraint"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<MoveConstraint>"</Code></TableCell>
-                            <TableCell>"Optional area-bounded movement configuration (is_rtl, constrain_center, allow_container_click, initial_position)."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseMoveReturn">
+                    <ApiRow name="props" ty="UseMoveProps">
+                        "Pointer and key handlers for the movable element. Spread them with "
+                        <Code inline=true>"{..props.into_attrs()}"</Code>". The element needs a "<Code inline=true>"tabindex"</Code>
+                        " to receive arrow keys."
+                    </ApiRow>
+                    <ApiRow name="is_moving" ty="Signal<bool>">"Whether the element is currently being moved."</ApiRow>
+                    <ApiRow name="constraint" ty="Option<UseMoveConstraintReturn>">
+                        <Code inline=true>"Some"</Code>" when "<Code inline=true>"constraint"</Code>" is set, see "
+                        <a href="#constrained-movement">"Constrained movement"</a>"."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="return" class="anchor">
-                "Return"
-                <AnchorLink href="#return" description="Direct link to section: Return"/>
-            </h2>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let UseMoveReturn { props, is_moving, .. } = use_move(UseMoveInput {
+                            is_disabled: false.into(),
+                            axis: None.into(),
+                            on_move_start: None,
+                            on_move: Some(Callback::new(move |e: MoveEvent| {
+                                set_x.update(|x| *x += e.delta_x);
+                                set_y.update(|y| *y += e.delta_y);
+                            })),
+                            on_move_end: None,
+                            on_position_change: None,
+                            constraint: None,
+                            allow_container_click: false,
+                            initial_position: None,
+                        });
 
-            <p><Code inline=true>"UseMoveReturn"</Code>" fields:"</p>
+                        view! {
+                            <div {..props.into_attrs()} tabindex="0">"Drag me"</div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"props"</Code></TableCell>
-                            <TableCell><Code inline=true>"UseMoveProps"</Code></TableCell>
-                            <TableCell>"Spread onto the movable element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"is_moving"</Code></TableCell>
-                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
-                            <TableCell>"Whether the element is currently being moved."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"constraint"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<UseMoveConstraintReturn>"</Code></TableCell>
-                            <TableCell>"Present when constraint was configured. Provides container_props, normalized_position, pixel_position, set_position."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Demo">
+                <p>
+                    "Without a constraint, the hook only reports deltas and you decide what to do with them. This demo adds "
+                    "them to the element\u{2019}s offset and keeps it inside the area itself."
+                </p>
 
-            <h2 id="basic-movement" class="anchor">
-                "Basic Movement"
-                <AnchorLink href="#basic-movement" description="Direct link to section"/>
-            </h2>
+                <Demo description="Unconstrained drag and arrow key movement with an event log" source=include_str!("demos/move_basic.rs")>
+                    <BasicMovementExample/>
+                </Demo>
+            </Section>
 
-            <p>"Unconstrained drag and keyboard movement with event logging."</p>
+            <Section title="Constrained movement">
+                <p>
+                    "With a "<Code inline=true>"constraint"</Code>", the hook also tracks the element\u{2019}s position inside "
+                    "a container. Spread "<Code inline=true>"container_props"</Code>" onto the container (it needs "
+                    <Code inline=true>"position: relative"</Code>") and position the element absolutely at "
+                    <Code inline=true>"pixel_position"</Code>"."
+                </p>
+                <p>
+                    "In a right-to-left layout (the locale of an enclosing "<Code inline=true>"I18nProvider"</Code>
+                    "), the horizontal axis of "<Code inline=true>"normalized_position"</Code>" is reversed: "
+                    <Code inline=true>"x = 0.0"</Code>" is the right edge."
+                </p>
 
-            <DemoShell source=include_str!("demos/move_basic.rs")>
-                <BasicMovementExample />
-            </DemoShell>
+                <ApiTable kind=ApiKind::Return of="UseMoveConstraintReturn">
+                    <ApiRow name="container_props" ty="UseMoveContainerProps">
+                        "Props for the container. Spread them with "<Code inline=true>"{..container_props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="normalized_position" ty="Signal<NormalizedPosition>">
+                        "Position with "<Code inline=true>"x"</Code>" and "<Code inline=true>"y"</Code>" between "
+                        <Code inline=true>"0.0"</Code>" (top left) and "<Code inline=true>"1.0"</Code>" (bottom right)."
+                    </ApiRow>
+                    <ApiRow name="pixel_position" ty="Signal<(f64, f64)>">"Position in pixels relative to the container."</ApiRow>
+                    <ApiRow name="set_position" ty="Callback<NormalizedPosition>">"Moves the element programmatically."</ApiRow>
+                </ApiTable>
 
-            <h2 id="constrained" class="anchor">
-                "Constrained Movement"
-                <AnchorLink href="#constrained" description="Direct link to section"/>
-            </h2>
+                <Demo description="Movement constrained to a container with position readout" source=include_str!("demos/move_constrained.rs")>
+                    <ConstrainedBasicExample/>
+                </Demo>
 
-            <p>"Constrain element movement within a container boundary using a " <code>"MoveConstraint"</code> " configuration."</p>
+                <Section title="Axis">
+                    <p>"Lock movement to one axis with "<Code inline=true>"axis"</Code>"."</p>
 
-            <DemoShell source=include_str!("demos/move_constrained.rs")>
-                <ConstrainedBasicExample />
-            </DemoShell>
+                    <Demo description="Horizontal-only and vertical-only movement" source=include_str!("demos/move_axis.rs")>
+                        <AxisExample/>
+                    </Demo>
+                </Section>
 
-            <h2 id="axis-constraint" class="anchor">
-                "Axis Constraint"
-                <AnchorLink href="#axis-constraint" description="Direct link to section"/>
-            </h2>
+                <Section title="Container click">
+                    <p>"With "<Code inline=true>"allow_container_click"</Code>", clicking the container moves the element there."</p>
 
-            <p>"Constrain movement to horizontal or vertical axis only."</p>
+                    <Demo description="Clicking the container moves the element to the click position" source=include_str!("demos/move_container_click.rs")>
+                        <ContainerClickExample/>
+                    </Demo>
+                </Section>
 
-            <DemoShell source=include_str!("demos/move_axis.rs")>
-                <AxisExample />
-            </DemoShell>
+                <Section title="Bounds or center">
+                    <p>
+                        <Code inline=true>"MoveConstraint::Bounds"</Code>" keeps the whole element inside the container. "
+                        <Code inline=true>"MoveConstraint::Center"</Code>" only keeps its center inside, so the element can "
+                        "reach over the edge, like a slider thumb."
+                    </p>
 
-            <h2 id="container-click" class="anchor">
-                "Container Click"
-                <AnchorLink href="#container-click" description="Direct link to section"/>
-            </h2>
+                    <Demo description="MoveConstraint::Bounds compared with MoveConstraint::Center" source=include_str!("demos/move_constrain_center.rs")>
+                        <ConstrainCenterExample/>
+                    </Demo>
+                </Section>
 
-            <p>"When enabled, clicking the container moves the element to that position."</p>
+                <Section title="Programmatic position">
+                    <p>"Call "<Code inline=true>"set_position"</Code>" to move the element from code."</p>
 
-            <DemoShell source=include_str!("demos/move_container_click.rs")>
-                <ContainerClickExample />
-            </DemoShell>
+                    <Demo description="Buttons moving the element with set_position" source=include_str!("demos/move_programmatic.rs")>
+                        <ProgrammaticExample/>
+                    </Demo>
+                </Section>
+            </Section>
 
-            <h2 id="constrain-center" class="anchor">
-                "Constrain Center"
-                <AnchorLink href="#constrain-center" description="Direct link to section"/>
-            </h2>
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="ArrowLeft / ArrowRight">
+                        "Move by one pixel horizontally (ignored when "<Code inline=true>"axis"</Code>" is vertical)."
+                    </KeyRow>
+                    <KeyRow keys="ArrowUp / ArrowDown">
+                        "Move by one pixel vertically (ignored when "<Code inline=true>"axis"</Code>" is horizontal)."
+                    </KeyRow>
+                </KeyboardTable>
 
-            <p>"Compare constraining element bounds vs element center."</p>
+                <p>
+                    "Each key press fires a complete "<Code inline=true>"on_move_start"</Code>", "<Code inline=true>"on_move"</Code>", "
+                    <Code inline=true>"on_move_end"</Code>" sequence with the pointer type "<Code inline=true>"Keyboard"</Code>"."
+                </p>
+            </Section>
 
-            <DemoShell source=include_str!("demos/move_constrain_center.rs")>
-                <ConstrainCenterExample />
-            </DemoShell>
-
-            <h2 id="programmatic" class="anchor">
-                "Programmatic Control"
-                <AnchorLink href="#programmatic" description="Direct link to section"/>
-            </h2>
-
-            <p>"Use set_position to programmatically move the element."</p>
-
-            <DemoShell source=include_str!("demos/move_programmatic.rs")>
-                <ProgrammaticExample />
-            </DemoShell>
-
-            <h2 id="deviations" class="anchor">
-                "Deviations"
-                <AnchorLink href="#deviations" description="Direct link to section: Deviations"/>
-            </h2>
-
-            <ul>
-                <li><Code inline=true>"axis"</Code>" constraint as "<Code inline=true>"Signal<Option<MoveAxis>>"</Code>" (not in react-aria)"</li>
-                <li><Code inline=true>"page_x"</Code>"/"<Code inline=true>"page_y"</Code>" on MoveStartEvent (not in react-aria)"</li>
-                <li><Code inline=true>"MoveConstraint"</Code>" system for area-bounded movement (leptonic-specific)"</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::Dnd.materialize()>"Drag & Drop"</Link></li>
-                <li><Link href=crate::routes::doc::slider::Hook.materialize()>"use_slider"</Link>" (uses use_move internally)"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_move", link: "#use-move" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return", link: "#return" },
-                Toc::Leaf { title: "Basic Movement", link: "#basic-movement" },
-                Toc::Leaf { title: "Constrained Movement", link: "#constrained" },
-                Toc::Leaf { title: "Axis Constraint", link: "#axis-constraint" },
-                Toc::Leaf { title: "Container Click", link: "#container-click" },
-                Toc::Leaf { title: "Constrain Center", link: "#constrain-center" },
-                Toc::Leaf { title: "Programmatic Control", link: "#programmatic" },
-                Toc::Leaf { title: "Deviations", link: "#deviations" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
+                <li><Link href=routes::doc::interactions::Dnd.materialize()>"Drag and drop"</Link></li>
+                <li><Link href=routes::doc::slider::Hook.materialize()>"use_slider"</Link>" (uses use_move)"</li>
+            </SeeAlso>
+        </DocPage>
     }
 }

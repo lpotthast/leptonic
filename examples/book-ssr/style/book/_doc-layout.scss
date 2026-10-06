@@ -1,0 +1,205 @@
+// Documentation layout: navigation sidebar (left), page, table of contents (right), concept tabs.
+
+$small: 800px;
+$medium: 1200px;
+
+#book-doc-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media (min-width: $small + 1) {
+    margin-left: var(--book-drawer-width);
+  }
+
+  @media (min-width: $medium + 1) {
+    margin-right: var(--book-toc-width);
+  }
+}
+
+// The navigation as a sidebar. Small screens open it as a menu (`Sheet`) instead.
+#book-doc-sidebar {
+  position: fixed;
+  top: var(--book-app-bar-height);
+  bottom: 0;
+  left: 0;
+  width: var(--book-drawer-width);
+  overflow: auto;
+
+  @media (max-width: $small) {
+    display: none;
+  }
+}
+
+// The documentation navigation, in the sidebar and in the menu.
+.book-doc-nav {
+  padding: var(--book-space-m) 0;
+  font-size: 0.9rem;
+
+  .drawer-section {
+    margin: var(--book-space-m) 0;
+    padding-left: var(--book-space-xl);
+
+    ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: var(--book-space-m);
+    margin-bottom: var(--book-space-xs);
+    padding: var(--book-space-xs) 0;
+    color: var(--book-menu-header-color);
+    font-size: 1.1em;
+    font-weight: 900;
+  }
+
+  a.section-header {
+    cursor: pointer;
+
+    &:hover,
+    &[aria-current] {
+      color: var(--brand-color);
+    }
+  }
+
+  a.item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    margin: 0.075em var(--book-space-s) 0.075em var(--book-space-l);
+    padding: var(--book-space-xs) var(--book-space-s);
+    border-radius: var(--book-radius-s);
+    color: var(--book-menu-item-color);
+    font-weight: 400;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--book-transition), color var(--book-transition);
+
+    &:hover {
+      background-color: var(--book-hover-background-color);
+    }
+
+    &[aria-current] {
+      background-color: var(--brand-color);
+      color: var(--book-menu-item-active-color);
+    }
+  }
+
+  .doc-badge {
+    flex-shrink: 0;
+    padding: 0.2em 0.4em;
+    border-radius: var(--book-radius-s);
+    color: var(--book-on-brand-color);
+    font-size: var(--book-font-size-xs);
+    font-weight: 700;
+    line-height: 1;
+
+    &[data-kind="hook"] {
+      background-color: var(--book-badge-hook-color);
+    }
+
+    &[data-kind="atom"] {
+      background-color: var(--book-badge-atom-color);
+    }
+
+    &[data-kind="comp"] {
+      background-color: var(--book-badge-comp-color);
+    }
+  }
+}
+
+.concept-layout {
+  width: 100%;
+
+  .concept-name {
+    padding: 0.5em 1.5rem 0;
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  // Concept pages have the sticky tab bar on top of the app bar.
+  --book-scroll-offset: calc(var(--book-app-bar-height) + 4em);
+}
+
+.concept-tabs {
+  position: sticky;
+  top: var(--book-app-bar-height);
+  z-index: var(--book-z-sticky);
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--book-border-color);
+  background: var(--main-background-color);
+
+  .concept-tab {
+    padding: 0.75em 1em;
+    border-bottom: 2px solid transparent;
+    color: var(--main-color);
+    transition: color var(--book-transition), border-color var(--book-transition);
+
+    &:hover {
+      color: var(--brand-color);
+    }
+
+    &[aria-current] {
+      color: var(--brand-color);
+      border-bottom-color: var(--brand-color);
+    }
+  }
+}
+
+nav#book-toc {
+  position: fixed;
+  top: var(--book-app-bar-height);
+  right: 0;
+  bottom: 0;
+  width: var(--book-toc-width);
+  overflow-y: auto;
+  padding: 1em;
+  border-left: 1px solid var(--book-border-color);
+
+  @media (max-width: $medium) {
+    display: none;
+  }
+
+  h2 {
+    margin: 0 0 1em;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    margin: 0.25em 0;
+
+    @for $level from 1 through 4 {
+      &[data-level="#{$level}"] .leptonic-anchor-link {
+        padding-left: 0.5em * $level;
+      }
+    }
+  }
+
+  .leptonic-anchor-link {
+    display: block;
+    padding: 0.4em 0.5em;
+    overflow-wrap: anywhere;
+    border-radius: var(--book-radius-s);
+
+    &:hover {
+      color: var(--brand-color);
+      background-color: var(--book-hover-background-color);
+    }
+  }
+}

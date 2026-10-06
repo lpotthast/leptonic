@@ -1,9 +1,8 @@
-[build]
-# `leptonic` depends on some `leptos-use` functions requiring this opt-in. This may change in the future.
-rustflags = ["--cfg=web_sys_unstable_apis"]
+# `build.rustflags` come from the repository's `.cargo/config.toml`.
 
 [target.aarch64-apple-darwin]
-rustflags = ["--cfg=web_sys_unstable_apis", "-C", "link-arg=-fuse-ld=lld"]
+# Replaces `build.rustflags` on this target, so it repeats them.
+rustflags = ["--cfg=web_sys_unstable_apis", "--cfg=erase_components", "-C", "link-arg=-fuse-ld=lld"]
 
 [env]
 LEPTOS_OUTPUT_NAME = "book-ssr"

@@ -1,0 +1,104 @@
+// Documentation search (app bar trigger and modal).
+
+.leptonic-btn.doc-search-trigger {
+  gap: var(--book-space-s);
+  min-width: 14em;
+  padding: var(--book-space-s) var(--book-space-m);
+  border-radius: var(--book-radius-pill);
+  color: inherit;
+  font-size: var(--book-font-size-s);
+  text-transform: none;
+
+  .doc-search-trigger-text {
+    flex: 1;
+    color: var(--book-muted-color);
+    text-align: start;
+  }
+
+  .doc-search-trigger-kbd {
+    font-size: var(--book-font-size-xs);
+  }
+
+  @media (max-width: 800px) {
+    min-width: auto;
+
+    .doc-search-trigger-text,
+    .doc-search-trigger-kbd {
+      display: none;
+    }
+  }
+}
+
+.leptonic-modal.doc-search-modal {
+  width: 600px;
+  max-width: 90vw;
+  height: 450px;
+  max-height: 60vh;
+  overflow: hidden;
+
+  .leptonic-modal-header {
+    flex-shrink: 0;
+    align-items: stretch;
+  }
+
+  .leptonic-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+// The search field: leptonic's themed `SearchField`.
+.leptonic-search-field.doc-search-field {
+  margin: 0;
+}
+
+.doc-search-results {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: start;
+
+  li {
+    min-width: 0;
+  }
+}
+
+.leptonic-link.doc-search-result {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  flex-direction: column;
+  gap: var(--book-space-xs);
+  padding: var(--book-space-s) var(--book-space-m);
+  border-radius: var(--book-radius-s);
+  color: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--book-hover-background-color);
+  }
+}
+
+.doc-search-result-title {
+  font-weight: 600;
+}
+
+.doc-search-result-snippet {
+  overflow: hidden;
+  color: var(--book-muted-color);
+  font-size: var(--book-font-size-s);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.doc-search-status {
+  padding: var(--book-space-m);
+  color: var(--book-muted-color);
+  text-align: center;
+}

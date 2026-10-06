@@ -1,134 +1,95 @@
+use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::hover::HoverDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseHover() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use-hover" class="anchor">
-                "use_hover"
-                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>
-            </h1>
-
+        <DocPage title="use_hover">
             <p>
-                "The "<Code inline=true>"use_hover"</Code>" hook tracks pointer hover state on an element. "
-                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_hover"</Code>" hook tracks whether a mouse or pen is over an element. "
+                "See the "<Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useHover.html" target=LinkTarget::_Blank>
-                    "useHover"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useHover"/>
 
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to section: Input"/>
-            </h2>
+            <Section title="Input">
+                <p>
+                    <Code inline=true>"UseHoverInput"</Code>" implements "<Code inline=true>"Default"</Code>" (enabled, no callbacks)."
+                </p>
 
-            <p><Code inline=true>"UseHoverInput"</Code>" fields:"</p>
+                <ApiTable kind=ApiKind::Input of="UseHoverInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                        "Turns hover tracking off. If the element is hovered when this becomes "<Code inline=true>"true"</Code>
+                        ", "<Code inline=true>"on_hover_end"</Code>" fires and "<Code inline=true>"is_hovered"</Code>" resets."
+                    </ApiRow>
+                    <ApiRow name="on_hover_start" ty="Option<Callback<HoverStartEvent>>" default="None">
+                        "Called when a pointer starts hovering the element."
+                    </ApiRow>
+                    <ApiRow name="on_hover_end" ty="Option<Callback<HoverEndEvent>>" default="None">
+                        "Called when a pointer stops hovering the element, or when "<Code inline=true>"is_disabled"</Code>
+                        " becomes "<Code inline=true>"true"</Code>" while it is hovered."
+                    </ApiRow>
+                    <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">
+                        "Called whenever the hover state changes."
+                    </ApiRow>
+                </ApiTable>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"disabled"</Code></TableCell>
-                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
-                            <TableCell>"Disables hover callbacks. If hovered when this becomes true, a programmatic HoverEnd fires and is_hovered resets."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_hover_start"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<HoverStartEvent>>"</Code></TableCell>
-                            <TableCell>"Called when a pointer starts hovering the element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_hover_end"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<HoverEndEvent>>"</Code></TableCell>
-                            <TableCell>"Called when a pointer stops hovering, or when disabled transitions to true while hovered."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"on_hover_change"</Code></TableCell>
-                            <TableCell><Code inline=true>"Option<Callback<bool>>"</Code></TableCell>
-                            <TableCell>"Called on every hover state transition."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <p>
+                    <Code inline=true>"HoverStartEvent"</Code>" and "<Code inline=true>"HoverEndEvent"</Code>" carry the "
+                    <Code inline=true>"pointer_type"</Code>" and the "<Code inline=true>"current_target"</Code>" element."
+                </p>
+            </Section>
 
-            <h2 id="return" class="anchor">
-                "Return"
-                <AnchorLink href="#return" description="Direct link to section: Return"/>
-            </h2>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseHoverReturn">
+                    <ApiRow name="props" ty="UseHoverProps">
+                        "Pointer event handlers. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_hovered" ty="Signal<bool>">"Whether the element is currently hovered."</ApiRow>
+                </ApiTable>
+            </Section>
 
-            <p><Code inline=true>"UseHoverReturn"</Code>" fields:"</p>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput::default());
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"props"</Code></TableCell>
-                            <TableCell><Code inline=true>"UseHoverProps"</Code></TableCell>
-                            <TableCell>"Spread onto the target element via "<Code inline=true>"props.into_attrs()"</Code>"."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"is_hovered"</Code></TableCell>
-                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
-                            <TableCell>"Whether the element is currently hovered."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        view! {
+                            <div {..props.into_attrs()} class:hovered=move || is_hovered.get()>"Hover me"</div>
+                        }
+                    "#)}
+                </Code>
+            </Section>
 
-            <h2 id="demo" class="anchor">
-                "Demo"
-                <AnchorLink href="#demo" description="Direct link to section: Demo"/>
-            </h2>
+            <Section title="Demo">
+                <Demo description="Hover state and hover start/end events with a disabled toggle" source=include_str!("demos/hover.rs")>
+                    <HoverDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/hover.rs")>
-                <HoverDemo />
-            </DemoShell>
+            <Section title="Behavior">
+                <ul>
+                    <li>
+                        "Only mouse and pen pointers hover. Touch input never starts a hover, and the emulated mouse events "
+                        "browsers fire after a touch are ignored for 500 ms, so elements don\u{2019}t get stuck in the hovered state."
+                    </li>
+                    <li>
+                        "If the hovered element is removed from the DOM, the browser fires no "<Code inline=true>"pointerleave"</Code>
+                        ". The hook notices the pointer moving over another element and ends the hover."
+                    </li>
+                </ul>
+            </Section>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
-                <li><Link href=crate::routes::doc::button::Hook.materialize()>"use_button"</Link>" (composes use_hover)"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_hover", link: "#use-hover" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return", link: "#return" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
+                <li><Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
+                <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" (composes use_hover)"</li>
+            </SeeAlso>
+        </DocPage>
     }
 }

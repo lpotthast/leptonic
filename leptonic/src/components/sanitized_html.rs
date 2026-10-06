@@ -61,8 +61,9 @@ pub fn SanitizedHtml(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
+
+    use super::*;
 
     #[test]
     fn strips_script_tags() {

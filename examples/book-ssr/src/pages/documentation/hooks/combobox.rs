@@ -3,232 +3,447 @@ use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::combobox::ComboboxDemo;
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageUseCombobox() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="combobox" class="anchor">
-                "use_combobox"
-                <AnchorLink href="#combobox" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Combobox Hooks">
             <p>
-                "Hook for creating accessible comboboxes - text inputs combined with listboxes for autocomplete functionality. "
-                "See the "<Link href=crate::routes::doc::Combobox.materialize()>"Combobox overview"</Link>" for concept guidance."
+                "Hooks for a combobox: a text input with a popover of suggestions that narrow down as you type. "
+                <Code inline=true>"use_combobox_state"</Code>" holds the options, the selection and the input text; "
+                <Code inline=true>"use_combobox"</Code>" configures the input, the button and the listbox you render. "
+                "See the "<Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link>" for concept guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useComboBox.html" target=LinkTarget::_Blank>
-                    "useComboBox"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useComboBox"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Demo">
+                <p>
+                    "Type to filter the fruits, or open the popover with the button or "<Keys keys="ArrowDown"/>
+                    ". The arrow keys move through the options while the text cursor stays in the input; "<Keys keys="Enter"/>
+                    " selects, "<Keys keys="Escape"/>" restores the input. Durian is disabled. Below the combobox you see "
+                    "its state: the selected key, the input text and whether the popover is open."
+                </p>
 
-            <p>"Type in the input to filter the list of fruits, or click the dropdown button to see all options."</p>
+                <Demo
+                    description="Fruit combobox built from the hooks: filtering, a disabled option and the combobox state"
+                    source=include_str!("demos/combobox.rs")
+                >
+                    <ComboboxDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/combobox.rs")>
-                <ComboboxDemo />
-            </DemoShell>
+            <Section title="use_combobox_state">
+                <p>
+                    "Creates the state of a combobox from a collection of options. It filters the options by the input text, "
+                    "tracks the selection, the input text and whether the popover is open, and keeps them consistent: "
+                    "selecting an option puts its text into the input, and leaving the input restores the selected "
+                    "option\u{2019}s text. Build the collection with "<Code inline=true>"use_collection"</Code>" or "
+                    <Code inline=true>"use_list_collection"</Code>", as for a "
+                    <Link href=routes::doc::listbox::Hook.materialize()>"listbox"</Link>"."
+                </p>
 
-            <h2 id="use_combobox" class="anchor">
-                "use_combobox"
-                <AnchorLink href="#use_combobox" description="Direct link to use_combobox"/>
-            </h2>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let collection = use_collection(|b| {
+                            b.item("apple", "Apple");
+                            b.item("banana", "Banana");
+                            b.item("durian", "Durian").disabled(true);
+                        });
+                        let state = use_combobox_state(UseComboBoxStateInput {
+                            filter: Some(use_contains_filter()),
+                            default_value: vec![Key::from("banana")],
+                            on_change: Some(Callback::new(|keys: Vec<Key>| log!("{keys:?}"))),
+                            ..UseComboBoxStateInput::new(collection)
+                        });
+                    "#)}
+                </Code>
 
-            <p>"The "<code>"use_combobox"</code>" hook manages the combobox state, filtering, and provides props for the input, button, listbox, and popover elements."</p>
+                <Section title="Input">
+                    <p>
+                        "Create the input with "<Code inline=true>"UseComboBoxStateInput::new(collection)"</Code>
+                        " and set further fields with struct update syntax."
+                    </p>
+                    <ApiTable kind=ApiKind::Input of="UseComboBoxStateInput">
+                        <ApiRow name="collection" ty="CollectionMemo">
+                            "All options. Items marked "<Code inline=true>".disabled(true)"</Code>" can\u{2019}t be focused or selected."
+                        </ApiRow>
+                        <ApiRow name="filter" ty="Option<ComboBoxFilter>" default="None">
+                            "Decides which options match the input text: a function of the option text and the input text. "
+                            <Code inline=true>"use_contains_filter()"</Code>" matches options containing the input, ignoring "
+                            "case and accents in the current locale. "<Code inline=true>"None"</Code>" shows the collection as "
+                            "is, e.g. when you filter on the server."
+                        </ApiRow>
+                        <ApiRow name="selection_mode" ty="SelectMode" default="Single">
+                            "Whether one option or several can be selected."
+                        </ApiRow>
+                        <ApiRow name="default_value" ty="Vec<Key>" default="vec![]">
+                            "The initially selected keys (at most one in "<Code inline=true>"Single"</Code>" mode)."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<Vec<Key>>>" default="None">
+                            "The selected keys as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_value"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
+                            "Called with the selected keys, in collection order, when they change."
+                        </ApiRow>
+                        <ApiRow name="default_input_value" ty="Option<String>" default="None">
+                            "The initial input text. "<Code inline=true>"None"</Code>" starts with the selected option\u{2019}s text."
+                        </ApiRow>
+                        <ApiRow name="input_value" ty="Option<ValueBinding<String>>" default="None">
+                            "The input text as app state ("<Code inline=true>"Some(rw_signal.into())"</Code>"), replacing "<Code inline=true>"default_input_value"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_input_change" ty="Option<Callback<String>>" default="None">
+                            "Called when the input text changes."
+                        </ApiRow>
+                        <ApiRow name="disabled_keys" ty="Signal<HashSet<Key>>" default="empty">
+                            "Further options that can\u{2019}t be focused or selected."
+                        </ApiRow>
+                        <ApiRow name="menu_trigger" ty="ComboBoxMenuTrigger" default="Input">
+                            "When the popover opens, see "<a href="#opening-the-popover">"Opening the popover"</a>"."
+                        </ApiRow>
+                        <ApiRow name="allows_empty_collection" ty="bool" default="false">
+                            "Keep the popover open when no option matches, e.g. to show an empty state."
+                        </ApiRow>
+                        <ApiRow name="allows_custom_value" ty="bool" default="false">
+                            "Keep text that matches no option, see "<a href="#custom-values">"Custom values"</a>"."
+                        </ApiRow>
+                        <ApiRow name="should_close_on_blur" ty="bool" default="true">
+                            "Commit the input and close the popover when focus leaves the combobox."
+                        </ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
+                            "Don\u{2019}t open the popover on focus. Pass the same signal to "
+                            <Code inline=true>"use_combobox"</Code>", which blocks editing."
+                        </ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<(bool, Option<MenuTriggerAction>)>>" default="None">
+                            "Called when the popover opens or closes. When it opens, the "<Code inline=true>"MenuTriggerAction"</Code>
+                            " tells what opened it: "<Code inline=true>"Input"</Code>" (typing), "<Code inline=true>"Focus"</Code>
+                            " or "<Code inline=true>"Manual"</Code>" (button or arrow keys)."
+                        </ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
+                            "Marks the combobox invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "
+                            <Code inline=true>"false"</Code>" leaves validation to the other sources."
+                        </ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<ComboBoxValue>>" default="None">
+                            "Validates the input text and the selected keys together ("<Code inline=true>"ComboBoxValue"</Code>
+                            " has the fields "<Code inline=true>"input_value"</Code>" and "<Code inline=true>"value"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">
+                            "Show errors while editing ("<Code inline=true>"Aria"</Code>") or on form submission ("
+                            <Code inline=true>"Native"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="name" ty="Option<String>" default="None">
+                            "The field name that server validation errors are matched by."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    use leptonic::hooks::{use_combobox, UseComboBoxInput, MenuTriggerAction};
+                <Section title="Return">
+                    <p>
+                        <Code inline=true>"use_combobox_state"</Code>" returns a "<Code inline=true>"ComboBoxState"</Code>
+                        ". It is "<Code inline=true>"Copy"</Code>", so you can move it into any number of closures. Its "
+                        "reading methods track their signals, so views and effects using them update."
+                    </p>
+                    <ApiTable kind=ApiKind::Return of="ComboBoxState">
+                        <ApiRow name="list" ty="ListState">
+                            "The options shown in the popover (the filtered collection) with their selection and focus. "
+                            <Code inline=true>"use_combobox"</Code>" hands it to the listbox."
+                        </ApiRow>
+                        <ApiRow name="selection_mode" ty="SelectMode">"The selection mode."</ApiRow>
+                        <ApiRow name="validation" ty="UseFormValidationStateReturn">
+                            "The validation state, e.g. "<Code inline=true>"validation.is_invalid"</Code>" and "
+                            <Code inline=true>"validation.validation_errors"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
 
-                    let items = Signal::derive(|| vec![
-                        "Apple".to_string(),
-                        "Banana".to_string(),
-                        "Cherry".to_string(),
-                    ]);
+                    <DocTable headers=&["Method", "Description"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"value() -> Vec<Key>"</Code></TableCell>
+                            <TableCell>"The selected keys, in collection order."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"selected_key() -> Option<Key>"</Code></TableCell>
+                            <TableCell>
+                                "The selected key in "<Code inline=true>"Single"</Code>" mode ("<Code inline=true>"None"</Code>
+                                " in "<Code inline=true>"Multiple"</Code>" mode)."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"selected_items() -> Vec<Node>"</Code></TableCell>
+                            <TableCell>"The collection nodes of the selected options, e.g. for their text."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_value(Vec<Key>)"</Code></TableCell>
+                            <TableCell>
+                                "Selects these keys (only the first one in "<Code inline=true>"Single"</Code>" mode). The input "
+                                "shows the new option\u{2019}s text."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"input_value() -> String"</Code><br/>
+                                <Code inline=true>"input_value_signal() -> Signal<String>"</Code>
+                            </TableCell>
+                            <TableCell>"The input text."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_input_value(String)"</Code></TableCell>
+                            <TableCell>"Replaces the input text."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"default_value() -> Vec<Key>"</Code><br/>
+                                <Code inline=true>"default_input_value() -> String"</Code>
+                            </TableCell>
+                            <TableCell>"The value and input text the combobox started with. A form reset restores the value."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_open() -> bool"</Code></TableCell>
+                            <TableCell>"Whether the popover is open."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_focused() -> bool"</Code></TableCell>
+                            <TableCell>"Whether focus is in the combobox."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"focus_strategy() -> Option<FocusStrategy>"</Code></TableCell>
+                            <TableCell>
+                                "Which option gets focus when the popover opens: the first, the last, or ("<Code inline=true>"None"</Code>
+                                ") the selected one."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"open(Option<FocusStrategy>, MenuTriggerAction)"</Code><br/>
+                                <Code inline=true>"toggle(Option<FocusStrategy>, MenuTriggerAction)"</Code>
+                            </TableCell>
+                            <TableCell>
+                                "Opens or toggles the popover. Opening needs options to show (or "
+                                <Code inline=true>"allows_empty_collection"</Code>"). Opening with "<Code inline=true>"Manual"</Code>
+                                " shows all options, not only those matching the input."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"close()"</Code></TableCell>
+                            <TableCell>"Commits the input, as when focus leaves the combobox, and closes the popover."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"commit()"</Code></TableCell>
+                            <TableCell>"What "<Keys keys="Enter"/>" does: selects the focused option, or commits the input when no option is focused."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"revert()"</Code></TableCell>
+                            <TableCell>
+                                "What "<Keys keys="Escape"/>" does: restores the selected option\u{2019}s text (or keeps custom text) "
+                                "and closes the popover."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_focused(bool)"</Code></TableCell>
+                            <TableCell>
+                                "Tells the state that focus entered or left the combobox. "<Code inline=true>"use_combobox"</Code>
+                                " calls it for you."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"allows_custom_value() -> bool"</Code></TableCell>
+                            <TableCell>"The setting of the same name."</TableCell>
+                        </TableRow>
+                    </DocTable>
+                </Section>
 
-                    let combobox = use_combobox(UseComboBoxInput {
-                        items,
-                        aria_label: Some("Select a fruit"),
-                        placeholder: Some("Search fruits..."),
-                        get_text_value: Some(Callback::new(|s: String| s)),
-                        menu_trigger: MenuTriggerAction::Focus,
-                        ..Default::default()
-                    });
+                <Section title="Opening the popover">
+                    <p><Code inline=true>"menu_trigger"</Code>" decides when the popover opens:"</p>
+                    <DocTable headers=&["ComboBoxMenuTrigger", "Opens the popover"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Input"</Code>" (default)"</TableCell>
+                            <TableCell>"When the user types, showing the matching options."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Focus"</Code></TableCell>
+                            <TableCell>"Also when the input gets focus, showing all options."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Manual"</Code></TableCell>
+                            <TableCell>"Only with the button or "<Keys keys="ArrowDown"/>" / "<Keys keys="ArrowUp"/>"."</TableCell>
+                        </TableRow>
+                    </DocTable>
+                    <p>
+                        "The button and the arrow keys open the popover with all options, so users can browse them even "
+                        "when the input holds the selected option\u{2019}s text. Typing filters again. When no option "
+                        "matches the text, the popover closes, and it reopens as soon as options match again."
+                    </p>
+                </Section>
 
-                    view! {
-                        <input {..combobox.input_props.into_attrs()} />
-                        <button {..combobox.button_props.into_attrs()}>"▼"</button>
-                        <Show when=move || combobox.is_open.get()>
-                            <div {..combobox.popover_props.into_attrs()}>
-                                <ul
-                                    id=combobox.listbox_props.id.clone()
-                                    role=combobox.listbox_props.role
-                                >
-                                    <For
-                                        each=move || combobox.filtered_items.get()
-                                        key=|item| item.clone()
-                                        children={
-                                            let select = combobox.select;
-                                            let get_option_id = combobox.get_option_id;
-                                            move |item| {
-                                                let id = get_option_id.run(item.clone());
-                                                let item_clone = item.clone();
-                                                view! {
-                                                    <li
-                                                        id=id
-                                                        role="option"
-                                                        on:click=move |_| select.run(item_clone.clone())
-                                                    >
-                                                        {item}
-                                                    </li>
-                                                }
-                                            }
-                                        }
-                                    />
-                                </ul>
-                            </div>
-                        </Show>
-                    }
-                "#)}
-            </Code>
+                <Section title="Custom values">
+                    <p>
+                        "By default, the input only keeps text that belongs to an option: when focus leaves the combobox "
+                        "(or on "<Keys keys="Enter"/>" without a focused option), the input shows the selected option\u{2019}s "
+                        "text again. With "<Code inline=true>"allows_custom_value: true"</Code>", typed text that differs "
+                        "from the selected option stays, and the selection is cleared. Read the text with "
+                        <Code inline=true>"input_value()"</Code>" or "<Code inline=true>"on_input_change"</Code>"."
+                    </p>
+                    <p>
+                        "In "<Code inline=true>"Single"</Code>" mode, clearing the input clears the selection."
+                    </p>
+                </Section>
+            </Section>
 
-            <p>"The hook returns:"</p>
-            <ul>
-                <li><code>"input_props"</code>" - Props to spread onto the input element (handles events and ARIA)"</li>
-                <li><code>"button_props"</code>" - Props for the dropdown toggle button"</li>
-                <li><code>"listbox_props"</code>" - Props for the listbox element (id, role, aria-labelledby)"</li>
-                <li><code>"popover_props"</code>" - Props for the popover container (element capture for ariaHideOutside)"</li>
-                <li><code>"is_open"</code>" - Signal indicating if the listbox is visible"</li>
-                <li><code>"filtered_items"</code>" - Signal with items to display (filtered or all, depending on trigger)"</li>
-                <li><code>"selected_key"</code>" - Signal with the currently selected key"</li>
-                <li><code>"focused_key"</code>" - Signal with the currently focused key in the listbox"</li>
-                <li><code>"select"</code>" - Callback to select an item"</li>
-                <li><code>"get_option_id"</code>" - Callback to generate stable DOM IDs for option elements"</li>
-                <li><code>"open"</code>" / "<code>"close"</code>" / "<code>"toggle"</code>" - Callbacks to control visibility"</li>
-                <li><code>"clear"</code>" - Callback to clear input and selection"</li>
-            </ul>
+            <Section title="use_combobox">
+                <p>
+                    "Configures the parts of a combobox for a "<Code inline=true>"ComboBoxState"</Code>". It doesn\u{2019}t "
+                    "render anything and doesn\u{2019}t return DOM props for the whole combobox. Instead, it returns the inputs "
+                    "of the hooks that make up the parts: "
+                    <Link href=routes::doc::text_field::Hook.materialize()>"use_text_field"</Link>" for the input, "
+                    <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" for the button and "
+                    <Link href=routes::doc::listbox::Hook.materialize()>"use_listbox"</Link>" for the listbox in the popover."
+                </p>
 
-            <h2 id="trigger-actions" class="anchor">
-                "Menu Trigger Actions"
-                <AnchorLink href="#trigger-actions" description="Direct link to trigger actions"/>
-            </h2>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let popover = CapturedElement::new();
+                        let UseComboBoxReturn { label_on_click, input, input_props, button, listbox } =
+                            use_combobox(UseComboBoxInput {
+                                has_label: true,
+                                popover,
+                                ..UseComboBoxInput::new(state)
+                            });
 
-            <p>"The "<code>"menu_trigger"</code>" option controls when the listbox appears:"</p>
+                        let UseTextFieldReturn { label_props, input_props: field_props, .. } = use_text_field(input);
+                        let (button_attrs, button_styles) = use_button(button).props.into_parts();
+                        let label_attrs = (label_on_click.into_on(ev::click),);
+                        let listbox = StoredValue::new(listbox);
 
-            <ul>
-                <li><code>"MenuTriggerAction::Input"</code>" - Open when user types (default)"</li>
-                <li><code>"MenuTriggerAction::Focus"</code>" - Open when input is focused"</li>
-                <li><code>"MenuTriggerAction::Manual"</code>" - Only open via button click"</li>
-            </ul>
+                        view! {
+                            <label {..label_props.into_attrs()} {..label_attrs}>"Fruit"</label>
+                            <input {..field_props.into_attrs()} {..input_props.into_attrs()}/>
+                            <button {..button_attrs} style=button_styles>"\u{25bc}"</button>
+                            <Show when=move || state.is_open()>
+                                <div {..popover.attr()}>
+                                    // `use_listbox(listbox.get_value())` and one `use_option` per item of its
+                                    // collection, see the demo.
+                                </div>
+                            </Show>
+                        }
+                    "#)}
+                </Code>
 
-            <p>"When opened via button click or focus trigger, all items are shown (bypassing the input filter). Typing resumes filtering."</p>
+                <p>
+                    "The listbox shows "<Code inline=true>"state.list"</Code>", the options matching the input. Render one "
+                    "option per item of "<Code inline=true>"data.state.collection"</Code>" (from "<Code inline=true>"use_listbox"</Code>
+                    "), not of the full collection. Options are focused virtually: DOM focus stays in the input, which points "
+                    "at the focused option with "<Code inline=true>"aria-activedescendant"</Code>". Style the focused option "
+                    "with "<Code inline=true>"is_focused"</Code>" of "<Code inline=true>"use_option"</Code>"."
+                </p>
 
-            <h2 id="keyboard" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard" description="Direct link to keyboard"/>
-            </h2>
+                <Section title="Input">
+                    <p>
+                        "Create the input with "<Code inline=true>"UseComboBoxInput::new(state)"</Code>
+                        " and set further fields with struct update syntax."
+                    </p>
+                    <ApiTable kind=ApiKind::Input of="UseComboBoxInput">
+                        <ApiRow name="state" ty="ComboBoxState">"From "<Code inline=true>"use_combobox_state"</Code>"."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                            "Disables the input and the button."
+                        </ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
+                            "Makes the input read-only and disables the button and the keyboard interaction. Pass the same "
+                            "signal to the state."
+                        </ApiRow>
+                        <ApiRow name="is_required" ty="bool" default="false">"Marks the input as required."</ApiRow>
+                        <ApiRow name="has_label" ty="bool" default="false">
+                            "Whether you render a visible label with "<Code inline=true>"label_props"</Code>" of "
+                            <Code inline=true>"use_text_field"</Code>". It then labels the input, the button and the listbox."
+                        </ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby, aria_describedby" ty="MaybeProp<String>, Option<String>, Option<String>" default="None">
+                            "Labels or describes the input when there is no visible label, or in addition to it. "
+                            <Code inline=true>"aria_labelledby"</Code>" also labels the button and the listbox."
+                        </ApiRow>
+                        <ApiRow name="placeholder" ty="Option<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
+                        <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s form field name."</ApiRow>
+                        <ApiRow name="should_focus_wrap" ty="bool" default="false">
+                            "Arrow keys wrap around at the ends of the list."
+                        </ApiRow>
+                        <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
+                            "Replaces the list keyboard navigation."
+                        </ApiRow>
+                        <ApiRow name="popover" ty="CapturedElement" default="CapturedElement::new()">
+                            "The popover element; capture it with "<Code inline=true>"{..popover.attr()}"</Code>". Focus "
+                            "moving into it doesn\u{2019}t count as leaving the combobox, and while it is open, everything "
+                            "but the input and the popover is hidden from assistive technology."
+                        </ApiRow>
+                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">
+                            "Called when focus enters or leaves the combobox. Focus moving between the input, the button and "
+                            "the popover doesn\u{2019}t count."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><strong>"Arrow Down"</strong> " - Open listbox and focus first option / move to next option"</li>
-                <li><strong>"Arrow Up"</strong> " - Open listbox and focus last option / move to previous option"</li>
-                <li><strong>"Arrow Left/Right"</strong> " - Return to input cursor navigation"</li>
-                <li><strong>"Enter"</strong> " - Select focused option and close"</li>
-                <li><strong>"Tab"</strong> " - Commit current selection and move to next field"</li>
-                <li><strong>"Escape"</strong> " - Revert input to selected value and close"</li>
-                <li><strong>"Home/End"</strong> " - Jump to first/last option"</li>
-            </ul>
+                <Section title="Return">
+                    <ApiTable kind=ApiKind::Return of="UseComboBoxReturn">
+                        <ApiRow name="label_on_click" ty="EventHandler<MouseEvent>">
+                            "For the label: clicking it focuses the input and shows its focus ring. Attach it with "
+                            <Code inline=true>"label_on_click.into_on(ev::click)"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="input" ty="UseTextFieldInput">
+                            "The input\u{2019}s configuration, for "<Code inline=true>"use_text_field"</Code>": the text, "
+                            <Code inline=true>"aria-activedescendant"</Code>", "<Code inline=true>"aria-autocomplete=\"list\""</Code>", "
+                            <Code inline=true>"aria-controls"</Code>" (while open), autocomplete and spell checking turned off, "
+                            "and the keyboard interaction."
+                        </ApiRow>
+                        <ApiRow name="input_props" ty="UseComboBoxInputProps">
+                            "Spread onto the input in addition to the text field\u{2019}s props: "<Code inline=true>"role=\"combobox\""</Code>", "
+                            <Code inline=true>"aria-expanded"</Code>", a touch handler (tapping the input\u{2019}s center, as "
+                            "screen readers do, toggles the popover) and the element capture for form reset."
+                        </ApiRow>
+                        <ApiRow name="button" ty="UseButtonInput">
+                            "The button\u{2019}s configuration, for "<Code inline=true>"use_button"</Code>": labelled "
+                            "\u{201c}Show suggestions\u{201d} together with the combobox label, not in the tab order, and not "
+                            "taking focus. Pressing it focuses the input and toggles the popover."
+                        </ApiRow>
+                        <ApiRow name="listbox" ty="UseListBoxInput">
+                            "The popover\u{2019}s listbox, for "<Code inline=true>"use_listbox"</Code>": the id the input\u{2019}s "
+                            <Code inline=true>"aria-controls"</Code>" points to, the label, virtual focus, selection when "
+                            "the press ends, and focus following the pointer."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <p>"Disabled keys are automatically skipped during keyboard navigation."</p>
+            <Section title="Keyboard">
+                <p>"All keys go to the input; the popover never takes focus."</p>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowDown">
+                        "Open the popover with all options and focus the selected option, or the first one; when open, "
+                        "focus the next option."
+                    </KeyRow>
+                    <KeyRow keys="ArrowUp">
+                        "Open the popover with all options and focus the selected option, or the last one; when open, "
+                        "focus the previous option."
+                    </KeyRow>
+                    <KeyRow keys="Home / End">"When open: focus the first or last option."</KeyRow>
+                    <KeyRow keys="PageDown / PageUp">"When open: move the focus by a page of options."</KeyRow>
+                    <KeyRow keys="ArrowLeft / ArrowRight">"Remove the focus from the options and move the text cursor."</KeyRow>
+                    <KeyRow keys="Enter">
+                        "Select the focused option and close the popover. Without a focused option, commit the input as "
+                        "when leaving it. While the popover is closed, the key event isn\u{2019}t prevented, so "
+                        <Keys keys="Enter"/>" also submits the form."
+                    </KeyRow>
+                    <KeyRow keys="Escape">"Close the popover and restore the selected option\u{2019}s text."</KeyRow>
+                    <KeyRow keys="Tab">"Select the focused option, close the popover and move focus to the next element."</KeyRow>
+                </KeyboardTable>
+                <p>"Disabled options are skipped."</p>
+            </Section>
 
-            <h2 id="filtering" class="anchor">
-                "Filtering"
-                <AnchorLink href="#filtering" description="Direct link to filtering"/>
-            </h2>
-
-            <p>"Items are filtered automatically based on the input value. The default filter performs a case-insensitive substring match using the "<code>"get_text_value"</code>" callback."</p>
-
-            <p>"You can provide a custom filter function via the "<code>"filter"</code>" option:"</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let combobox = use_combobox(UseComboBoxInput {
-                        items,
-                        filter: Some(Callback::new(|(query, items): (String, Vec<String>)| {
-                            // Custom filtering logic
-                            items.into_iter()
-                                .filter(|item| item.starts_with(&query))
-                                .collect()
-                        })),
-                        ..Default::default()
-                    });
-                ")}
-            </Code>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to accessibility"/>
-            </h2>
-
-            <ul>
-                <li>"Full keyboard navigation with disabled key skipping"</li>
-                <li>"ARIA combobox pattern with proper roles and attributes"</li>
-                <li><code>"aria-expanded"</code>", "<code>"aria-controls"</code>" (only when open), "<code>"aria-activedescendant"</code>" managed automatically"</li>
-                <li>"Stable option IDs via "<code>"get_option_id"</code>" for correct "<code>"aria-activedescendant"</code>" references"</li>
-                <li>"Screen reader announcements for option count, focused item, and selection changes"</li>
-                <li><code>"ariaHideOutside"</code>" hides background content from assistive technology when the menu is open"</li>
-                <li>"IME composition support (keyboard events ignored during composition)"</li>
-                <li><code>"spellcheck=\"false\""</code>" on input to prevent browser spell-check interference"</li>
-                <li>"Commit/revert semantics: Tab commits, Escape reverts to previous selection"</li>
-                <li>"Blur detection closes the menu when focus leaves the combobox"</li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Text input with dropdown suggestions"</li>
-                <li>"Automatic filtering based on input value"</li>
-                <li>"Multiple trigger modes (Input, Focus, Manual)"</li>
-                <li>"Full keyboard navigation with focus wrapping option"</li>
-                <li>"Controlled and uncontrolled usage"</li>
-                <li>"Custom value support (allows_custom_value option)"</li>
-                <li>"Disabled keys support"</li>
-            </ul>
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
-                <li><Link href=crate::routes::doc::listbox::Hook.materialize()>"use_listbox"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_combobox", link: "#combobox" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "use_combobox API", link: "#use_combobox" },
-                Toc::Leaf { title: "Trigger Actions", link: "#trigger-actions" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
-                Toc::Leaf { title: "Filtering", link: "#filtering" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
+                <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox atoms"</Link></li>
+                <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox hooks"</Link></li>
+                <li><Link href=routes::doc::text_field::Hook.materialize()>"Text field hooks"</Link></li>
+                <li><Link href=routes::doc::select::Hook.materialize()>"Select hooks"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

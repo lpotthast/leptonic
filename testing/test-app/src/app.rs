@@ -14,6 +14,19 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+                // Collects uncaught page errors (and Rust panic messages, which the panic hook
+                // logs before the wasm traps) for `BaseActions::expect_no_page_errors`.
+                <script>
+                    "window.__pageErrors = [];
+                    window.addEventListener('error', e => window.__pageErrors.push(String(e.message)));
+                    window.addEventListener('unhandledrejection', e => window.__pageErrors.push(String(e.reason)));
+                    const consoleError = console.error.bind(console);
+                    console.error = (...args) => {
+                        const message = args.map(String).join(' ');
+                        if (message.includes('panicked at')) window.__pageErrors.push(message);
+                        consoleError(...args);
+                    };"
+                </script>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options />
                 <MetaTags />

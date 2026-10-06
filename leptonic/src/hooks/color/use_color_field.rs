@@ -8,6 +8,7 @@ use leptos::{
 };
 use web_sys::{Event, FocusEvent, KeyboardEvent, WheelEvent};
 
+use super::use_color_field_state::UseColorFieldStateReturn;
 use crate::{
     hooks::{
         IntoAttrs,
@@ -19,8 +20,6 @@ use crate::{
         color::RGB8,
     },
 };
-
-use super::use_color_field_state::UseColorFieldStateReturn;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorField.ts
 
@@ -41,10 +40,10 @@ pub struct UseColorFieldInput {
     pub state: UseColorFieldStateReturn,
 
     /// Whether the field is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Whether the field is read-only.
-    pub read_only: Signal<bool>,
+    pub is_read_only: Signal<bool>,
 
     /// An accessibility label for the field.
     pub aria_label: Option<&'static str>,
@@ -144,8 +143,8 @@ pub type UseColorFieldInputAttrs = (
 pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
     let UseColorFieldInput {
         state,
-        disabled,
-        read_only,
+        is_disabled: disabled,
+        is_read_only: read_only,
         aria_label,
         is_wheel_disabled,
     } = input;
@@ -186,7 +185,7 @@ pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
     let scroll_increment = state.increment;
     let scroll_decrement = state.decrement;
     let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
-        disabled: scroll_disabled,
+        is_disabled: scroll_disabled,
         on_scroll: Some(Callback::new(move |e: ScrollEvent| {
             if e.delta_y.abs() <= e.delta_x.abs() {
                 return;

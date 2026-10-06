@@ -4,8 +4,7 @@
 //! Waits for all active CSS animations/transitions on an element to finish,
 //! then calls a callback. Returns a cancel function.
 
-use std::cell::Cell;
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;

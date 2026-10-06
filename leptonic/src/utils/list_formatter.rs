@@ -64,7 +64,7 @@ pub struct ListFormatOptions {
 /// # Example
 ///
 /// ```ignore
-/// let formatter = ListFormatter::new(&Locale::new("en-US"), &ListFormatOptions::default());
+/// let formatter = ListFormatter::new(&Locale::from(locale!("en-US")), &ListFormatOptions::default());
 /// let result = formatter.format(&["Alice", "Bob", "Charlie"]);
 /// assert_eq!(result, "Alice, Bob, and Charlie");
 /// ```
@@ -118,11 +118,12 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::utils::i18n::locale;
 
     #[test]
     fn test_conjunction_long_en() {
         let formatter = ListFormatter::new(
-            &Locale::new("en-US"),
+            &Locale::from(locale!("en-US")),
             &ListFormatOptions {
                 r#type: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
@@ -135,7 +136,7 @@ mod tests {
     #[test]
     fn test_disjunction_long_en() {
         let formatter = ListFormatter::new(
-            &Locale::new("en-US"),
+            &Locale::from(locale!("en-US")),
             &ListFormatOptions {
                 r#type: ListFormatType::Disjunction,
                 style: ListFormatStyle::Long,
@@ -148,7 +149,7 @@ mod tests {
     #[test]
     fn test_conjunction_long_de() {
         let formatter = ListFormatter::new(
-            &Locale::new("de-DE"),
+            &Locale::from(locale!("de-DE")),
             &ListFormatOptions {
                 r#type: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
@@ -162,7 +163,7 @@ mod tests {
     #[test]
     fn test_conjunction_long_fr() {
         let formatter = ListFormatter::new(
-            &Locale::new("fr-FR"),
+            &Locale::from(locale!("fr-FR")),
             &ListFormatOptions {
                 r#type: ListFormatType::Conjunction,
                 style: ListFormatStyle::Long,
@@ -175,13 +176,19 @@ mod tests {
 
     #[test]
     fn test_single_item() {
-        let formatter = ListFormatter::new(&Locale::new("en-US"), &ListFormatOptions::default());
+        let formatter = ListFormatter::new(
+            &Locale::from(locale!("en-US")),
+            &ListFormatOptions::default(),
+        );
         assert_that!(formatter.format(&["Alice"])).is_equal_to("Alice".to_string());
     }
 
     #[test]
     fn test_two_items() {
-        let formatter = ListFormatter::new(&Locale::new("en-US"), &ListFormatOptions::default());
+        let formatter = ListFormatter::new(
+            &Locale::from(locale!("en-US")),
+            &ListFormatOptions::default(),
+        );
         assert_that!(formatter.format(&["Alice", "Bob"])).is_equal_to("Alice and Bob".to_string());
     }
 }

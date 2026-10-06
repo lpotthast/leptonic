@@ -1,0 +1,173 @@
+// Demo styles of the Interactions pages.
+// Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
+// theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
+
+.demo-my-1            { margin: var(--book-space-m) 0; }
+
+.demo-muted-text { margin: 0; color: var(--book-muted-color); }
+
+.demo-note       { text-align: center; color: var(--book-muted-color); }
+
+// Button driven by a hook's props. Toggle `.pressed` from the hook's `is_pressed` signal.
+.demo-press-button {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: pointer;
+    transition: background var(--book-transition), color var(--book-transition), transform 0.1s;
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: background var(--book-transition), color var(--book-transition);
+    }
+
+    &.pressed {
+        background: var(--brand-color);
+        color: var(--book-on-brand-color);
+        transform: scale(0.97);
+    }
+
+    &:disabled,
+    &[aria-disabled="true"] {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+// Shows every focus (not only keyboard focus) as an outline.
+.demo-interactions-show-focus:focus {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+}
+
+.demo-interactions-log-short {
+    height: 6em;
+}
+
+// Hover target of the use_hover demo. Toggle `.hovered` from `is_hovered`.
+.demo-hover-target {
+    display: inline-block;
+    padding: var(--book-space-m) var(--book-space-xl);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    transition: background var(--book-transition), border-color var(--book-transition);
+
+    &.hovered {
+        border-color: var(--brand-color);
+        background: var(--brand-color-subtle);
+    }
+}
+
+// use_move demos. The handle's `left`/`top` are set from Rust.
+.demo-move-area {
+    position: relative;
+    width: 100%;
+    height: 10em;
+    // Without it, browsers interrupt touch moves after a short delay to scroll instead.
+    touch-action: none;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+}
+
+.demo-move-area-short { height: 4em; }
+
+.demo-move-area-medium { height: 8em; }
+
+.demo-move-area-clickable { cursor: crosshair; }
+
+.demo-move-handle {
+    position: absolute;
+    width: fit-content;
+    padding: var(--book-space-s) var(--book-space-m);
+    border: 2px solid var(--brand-color);
+    border-radius: var(--book-radius-s);
+    background: var(--book-surface-color);
+    color: var(--main-color);
+    white-space: nowrap;
+    cursor: grab;
+    user-select: none;
+
+    &.moving {
+        background: var(--brand-color-subtle);
+        cursor: grabbing;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+.demo-move-handle-small { padding: var(--book-space-xs) var(--book-space-s); }
+
+.demo-move-handle-horizontal { cursor: ew-resize; }
+
+.demo-move-handle-vertical { cursor: ns-resize; }
+
+.demo-move-columns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-m);
+}
+
+.demo-move-column {
+    flex: 1;
+    min-width: 200px;
+}
+
+.demo-move-presets { flex-wrap: wrap; }
+
+// Focusable element receiving key presses in the use_keyboard demos.
+.demo-keyboard-target {
+    display: inline-block;
+    padding: var(--book-space-m) var(--book-space-l);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    cursor: default;
+
+    &:focus-visible,
+    &[data-focus-visible] {
+        border-color: var(--brand-color);
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+// A bordered panel, e.g. the "inside" area of the use_interact_outside demo.
+.demo-interactions-panel {
+    margin-top: var(--book-space-s);
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    box-shadow: var(--book-shadow);
+}
+
+// use_scroll_wheel demo
+.demo-scroll-wheel-target {
+    margin-top: var(--book-space-s);
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    text-align: center;
+    cursor: ns-resize;
+
+    &:focus-visible {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+}
+
+.demo-scroll-wheel-value {
+    font-size: 3em;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.demo-interactions-log-medium { height: 8em; }

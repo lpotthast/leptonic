@@ -11,7 +11,7 @@
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
 
-use crate::utils::platform::{browser, device};
+use crate::utils::platform::device;
 
 /// Alignment position for scrolling along a single axis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -392,12 +392,10 @@ pub fn scroll_into_viewport(target: Option<&Element>, opts: &ScrollIntoViewportO
         .and_then(|s| s.get_property_value("overflow").ok())
         .is_some_and(|o| o == "hidden");
 
-    // When scrolling is not prevented and we're not on Chrome (due to
-    // https://issues.chromium.org/issues/40074749), use native scrollIntoView.
-    if !is_scroll_prevented && !browser::is_chrome() {
-        scroll_into_viewport_native(target, opts);
-    } else {
+    if is_scroll_prevented {
         scroll_into_viewport_manual(target, opts);
+    } else {
+        scroll_into_viewport_native(target, opts);
     }
 }
 

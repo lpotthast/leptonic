@@ -1,88 +1,101 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::breadcrumbs::BreadcrumbsDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseBreadcrumbs() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_breadcrumbs" class="anchor">
-                "use_breadcrumbs"
-                <AnchorLink href="#use_breadcrumbs" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_breadcrumbs">
             <p>
-                "The "<Code inline=true>"use_breadcrumbs"</Code>" hook is a standalone hook that provides accessible breadcrumb navigation trails."
+                "Breadcrumbs show where the current page sits in a hierarchy, as a trail of links from the top level down "
+                "to the current page. "<Code inline=true>"use_breadcrumbs"</Code>" labels the navigation landmark that "
+                "holds the trail, and "<Code inline=true>"use_breadcrumb_item"</Code>" provides the behavior of each link."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useBreadcrumbs.html" target=LinkTarget::_Blank>
-                    "useBreadcrumbs"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useBreadcrumbs"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Demo">
+                <p>"The trail of this page. The last item is the current page and is not a link."</p>
 
-            <DemoShell
-                source=include_str!("demos/breadcrumbs.rs")
-                description="Breadcrumb navigation trail"
-            >
-                <BreadcrumbsDemo />
-            </DemoShell>
+                <Demo description="Breadcrumb trail with a disabled toggle" source=include_str!("demos/breadcrumbs.rs") source_open=true>
+                    <BreadcrumbsDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+            <Section title="use_breadcrumbs">
+                <p>"Spread "<Code inline=true>"nav_props.into_attrs()"</Code>" onto the "<Code inline=true>"<nav>"</Code>" element around the list."</p>
 
-            <p>"The hooks automatically set:"</p>
-            <ul>
-                <li><code>"aria-label"</code> " on the navigation element"</li>
-                <li><code>"aria-current=\"page\""</code> " on the current item"</li>
-                <li><code>"aria-disabled"</code> " for disabled items"</li>
-                <li>"Proper " <code>"tabindex"</code> " management"</li>
-            </ul>
+                <Section title="Input" id="use-breadcrumbs-input">
+                    <ApiTable kind=ApiKind::Input of="UseBreadcrumbsInput">
+                        <ApiRow name="label" ty="Option<String>" default="Some(\"Breadcrumbs\")">
+                            "The accessible name of the navigation ("<Code inline=true>"aria-label"</Code>")."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
+                <Section title="Return" id="use-breadcrumbs-return">
+                    <ApiTable kind=ApiKind::Return of="UseBreadcrumbsReturn">
+                        <ApiRow name="nav_props" ty="UseBreadcrumbsProps">"A generated "<Code inline=true>"id"</Code>" and the "<Code inline=true>"aria-label"</Code>"."</ApiRow>
+                        <ApiRow name="nav_id" ty="String">"The id of the navigation element."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <ul>
-                <li>"Accessible navigation landmark"</li>
-                <li>"Current page indication"</li>
-                <li>"Keyboard navigation support"</li>
-                <li>"Disabled state handling"</li>
-                <li>"Press callback for SPA navigation"</li>
-            </ul>
+            <Section title="use_breadcrumb_item">
+                <p>
+                    "Call it once per item and spread "<Code inline=true>"link_props.into_attrs()"</Code>" onto the link. "
+                    "The current item keeps its element but loses its "<Code inline=true>"href"</Code>"."
+                </p>
 
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
+                <Section title="Input" id="use-breadcrumb-item-input">
+                    <ApiTable kind=ApiKind::Input of="UseBreadcrumbItemInput">
+                        <ApiRow name="href" ty="Option<String>" default="None">"The link target. Ignored for the current item."</ApiRow>
+                        <ApiRow name="is_current" ty="bool" default="false">"Whether this item is the current page, usually the last one."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the item is disabled."</ApiRow>
+                        <ApiRow name="on_press" ty="Option<Callback<()>>" default="None">
+                            "Called when the item is clicked or activated with Enter or Space, unless it is current or disabled."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><Link href=crate::routes::doc::Navigation.materialize()>"Navigation domain"</Link></li>
-                <li><Link href=crate::routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
-            </ul>
-        </Article>
+                <Section title="Return" id="use-breadcrumb-item-return">
+                    <ApiTable kind=ApiKind::Return of="UseBreadcrumbItemReturn">
+                        <ApiRow name="link_props" ty="UseBreadcrumbLinkProps">
+                            <Code inline=true>"href"</Code>", "<Code inline=true>"aria-current"</Code>", "
+                            <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"tabindex"</Code>
+                            " and the click and keyboard handlers of the link."
+                        </ApiRow>
+                        <ApiRow name="item_props" ty="UseBreadcrumbItemProps">
+                            "Props for the list item. They are currently empty."
+                        </ApiRow>
+                        <ApiRow name="is_current" ty="bool">"Whether this is the current item."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_breadcrumbs", link: "#use_breadcrumbs" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <Section title="Accessibility">
+                <ul>
+                    <li>"The "<Code inline=true>"<nav>"</Code>" landmark gets an "<Code inline=true>"aria-label"</Code>" (\u{201c}Breadcrumbs\u{201d} by default)."</li>
+                    <li>
+                        "The current item gets "<Code inline=true>"aria-current=\"page\""</Code>", no "<Code inline=true>"href"</Code>
+                        " and "<Code inline=true>"tabindex=\"-1\""</Code>", so it is skipped when tabbing."
+                    </li>
+                    <li>"Disabled items get "<Code inline=true>"aria-disabled=\"true\""</Code>" and ignore clicks and keys."</li>
+                    <li>"Hide visual separators from assistive technology with "<Code inline=true>"aria-hidden"</Code>", as the demo does."</li>
+                </ul>
+
+                <KeyboardTable>
+                    <KeyRow keys="Tab">"Moves focus to the next breadcrumb link."</KeyRow>
+                    <KeyRow keys="Enter / Space">"Calls "<Code inline=true>"on_press"</Code>" of the focused item."</KeyRow>
+                </KeyboardTable>
+            </Section>
+
+            <SeeAlso>
+                <li><Link href=routes::doc::Navigation.materialize()>"Navigation overview"</Link></li>
+                <li><Link href=routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

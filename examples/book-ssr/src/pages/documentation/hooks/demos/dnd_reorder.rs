@@ -1,300 +1,262 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
-    atoms::focus_ring::{FocusRing, FocusRingContext},
-    hooks::*,
-};
-use leptos::{html, prelude::*};
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, RingBuffer},
-};
-
-/// [`DropTargetDelegate`] that lazily obtains the collection element from a [`NodeRef`].
-///
-/// `ListDropTargetDelegate::new()` requires a `web_sys::Element` that only
-/// exists after mount. This wrapper defers element access to each hit-test call.
-struct NodeRefDropTargetDelegate {
-    node_ref: NodeRef<html::Div>,
-}
-
-impl DropTargetDelegate for NodeRefDropTargetDelegate {
-    fn get_drop_target_from_point(
-        &self,
-        x: f64,
-        y: f64,
-        is_valid_drop_target: &dyn Fn(&DropTarget) -> bool,
-    ) -> Option<DropTarget> {
-        let element: web_sys::HtmlDivElement = self.node_ref.get()?;
-        ListDropTargetDelegate::new(element.into(), false).get_drop_target_from_point(
-            x,
-            y,
-            is_valid_drop_target,
-        )
-    }
-}
-
-/// Reorders `items` by removing `dragged_keys` and re-inserting them at `target`.
-fn reorder_items(
-    items: &mut Vec<(String, String)>,
-    dragged_keys: &[String],
-    target: &ItemDropTarget,
-) {
-    let dragged: Vec<(String, String)> = items
-        .iter()
-        .filter(|(k, _)| dragged_keys.contains(k))
-        .cloned()
-        .collect();
-
-    items.retain(|(k, _)| !dragged_keys.contains(k));
-
-    let insert_idx = items
-        .iter()
-        .position(|(k, _)| k == &target.key)
-        .map_or(items.len(), |idx| match target.position {
-            DropPosition::Before => idx,
-            DropPosition::After | DropPosition::On => idx + 1,
-        });
-
-    for (i, item) in dragged.into_iter().enumerate() {
-        items.insert((insert_idx + i).min(items.len()), item);
-    }
-}
-
-/// Renders a thin horizontal line that becomes visible when a drag hovers
-/// over the corresponding drop position.
-#[component]
-fn DropIndicatorLine(
-    target: DropTarget,
-    state: DroppableCollectionState,
-    keys: Signal<Vec<String>>,
-) -> impl IntoView {
-    let indicator = use_drop_indicator(UseDropIndicatorInput {
-        target,
-        state,
-        collection_keys: keys,
-        get_text_value: Callback::new(|key: String| key),
-    });
-
-    view! {
-        <div
-            {..indicator.drop_indicator_props.into_attrs()}
-            style=move || {
-                if indicator.is_drop_target.get() {
-                    "height: 2px; background: var(--brand-color); margin: 0; transition: background 0.15s;"
-                } else if indicator.is_hidden.get() {
-                    "height: 0; margin: 0;"
-                } else {
-                    "height: 2px; background: transparent; margin: 0;"
-                }
-            }
-        />
-    }
-}
-
-/// Individual reorderable item using the collection drag-and-drop API.
-#[component]
-fn ReorderItem(
-    key: String,
-    label: String,
-    drag_state: DraggableCollectionState,
-    drop_state: DroppableCollectionState,
-) -> impl IntoView {
-    let drag = use_draggable_collection_item(UseDraggableCollectionItemInput {
-        key: key.clone(),
-        state: drag_state,
-        is_disabled: Signal::derive(|| false),
-        has_action: false,
-    });
-
-    let drop_item = use_collection_droppable_item(UseCollectionDroppableItemInput {
-        target: DropTarget::Item {
-            key: key.clone(),
-            position: DropPosition::On,
+    components::prelude::*,
+    hooks::{
+        DragItem, DraggableCollectionState, DropPosition, DropTarget, DroppableCollectionData,
+        DroppableCollectionOptions, DroppableCollectionReorderEvent, GridListData, IntoAttrs,
+        ListDropTargetDelegate, Orientation, SelectionMode, UseDraggableCollectionStateInput,
+        UseDraggableItemInput, UseDraggableItemReturn, UseDropIndicatorInput,
+        UseDropIndicatorReturn, UseDroppableCollectionInput, UseDroppableCollectionReturn,
+        UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
+        UseGridListInput, UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
+        collections::{
+            Key, ListLayout, SelectionOptions, UseListStateInput, use_list_collection,
+            use_list_keyboard_delegate, use_list_state,
         },
-        state: drop_state,
-        is_disabled: Signal::derive(|| false),
-    });
+        use_draggable_collection, use_draggable_collection_state, use_draggable_item,
+        use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
+        use_droppable_item, use_grid_list, use_grid_list_item,
+    },
+    utils::{CapturedElement, classes::Classes},
+};
+use leptos::prelude::*;
 
-    let is_dragging = drag.is_dragging;
+const TASKS: [&str; 5] = ["Plan", "Design", "Build", "Test", "Release"];
 
-    view! {
-        <FocusRing>
-            <div
-                {..drag.drag_props.into_attrs()}
-                {..drop_item.drop_item_props.into_attrs()}
-                data-key=key
-                style=move || {
-                    let focus_visible = use_context::<FocusRingContext>()
-                        .is_some_and(|ctx| ctx.is_focus_visible.get());
-                    format!(
-                        "padding: 0.75em 1em; border-radius: 8px; cursor: grab; user-select: none; \
-                        display: flex; align-items: center; gap: 0.5em; \
-                        background: white; border: 2px solid {}; \
-                        transition: all 0.15s; {}",
-                        if focus_visible { "var(--brand-color)" } else { "#ddd" },
-                        if is_dragging.get() { "opacity: 0.4;" } else { "" }
-                    )
-                }
-            >
-                <span style="color: #999;">"⋮⋮"</span>
-                { label }
-            </div>
-        </FocusRing>
+/// Moves the items with `keys` before or after the target item, keeping their order.
+fn reorder(tasks: &mut Vec<&'static str>, e: &DroppableCollectionReorderEvent) {
+    let Some(target) = tasks
+        .iter()
+        .position(|task| Key::from(*task) == e.target.key)
+    else {
+        return;
+    };
+    let index = if e.target.drop_position == DropPosition::After {
+        target + 1
+    } else {
+        target
+    };
+    let is_moved = |task: &&str| e.keys.contains(&Key::from(*task));
+    // The insertion index once the moved items are taken out.
+    let index = index - tasks[..index].iter().filter(|task| is_moved(task)).count();
+    let (moved, mut rest): (Vec<_>, Vec<_>) = tasks.drain(..).partition(is_moved);
+    rest.splice(index..index, moved);
+    *tasks = rest;
+}
+
+fn sorted(keys: impl IntoIterator<Item = Key>, tasks: &[&str]) -> String {
+    let keys: HashSet<Key> = keys.into_iter().collect();
+    let names: Vec<&str> = tasks
+        .iter()
+        .copied()
+        .filter(|task| keys.contains(&Key::from(*task)))
+        .collect();
+    if names.is_empty() {
+        "none".to_owned()
+    } else {
+        names.join(", ")
     }
 }
 
-/// Demo: List reordering with the collection drag-and-drop API.
+/// A grid list whose rows are reordered by dragging them with the mouse, or with the keyboard: Enter starts a
+/// drag, arrow keys move between the drop positions, Enter drops.
 #[component]
 pub fn ReorderDemo() -> impl IntoView {
-    let (items, set_items) = signal(vec![
-        ("item-1".to_string(), "First Item".to_string()),
-        ("item-2".to_string(), "Second Item".to_string()),
-        ("item-3".to_string(), "Third Item".to_string()),
-        ("item-4".to_string(), "Fourth Item".to_string()),
-        ("item-5".to_string(), "Fifth Item".to_string()),
-    ]);
+    let tasks = RwSignal::new(TASKS.to_vec());
+    let disabled = RwSignal::new(false);
+    let last_drop = RwSignal::new(String::from("none"));
 
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(10));
-
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
+    // The rows and their selection: dragging a selected row drags all selected rows.
+    let collection = use_list_collection(
+        tasks.into(),
+        |task| Key::from(*task),
+        |task| (*task).to_owned(),
+    );
+    let list = use_list_state(UseListStateInput {
+        collection,
+        selection: SelectionOptions {
+            selection_mode: Signal::stored(SelectionMode::Multiple),
+            ..SelectionOptions::default()
+        },
+    });
+    let element = CapturedElement::new();
+    let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+        aria_label: "Tasks".into(),
+        // Select when the press ends, so that dragging a row doesn't select it.
+        should_select_on_press_up: true,
+        ..UseGridListInput::new(list, element)
     });
 
-    let keys = Signal::derive(move || {
-        items
-            .get()
-            .iter()
-            .map(|(k, _)| k.clone())
-            .collect::<Vec<_>>()
+    // Dragging: the dragged rows' data.
+    let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput {
+        is_disabled: disabled.into(),
+        ..UseDraggableCollectionStateInput::new(
+            list,
+            Callback::new(|keys: HashSet<Key>| {
+                keys.iter()
+                    .map(|key| DragItem::text(key.to_string()))
+                    .collect()
+            }),
+        )
     });
+    use_draggable_collection(drag_state, element);
 
-    // Draggable collection state (dummy selection for simple reorder).
-    let collection_ref = NodeRef::<html::Div>::new();
-    let collection_element = Signal::derive(move || {
-        collection_ref.get().map(|el| {
-            let element: web_sys::Element = el.into();
-            element
-        })
+    // Dropping: only reorders (drops between rows) are valid.
+    let drop_state = use_droppable_collection_state(UseDroppableCollectionStateInput {
+        list,
+        options: DroppableCollectionOptions {
+            on_reorder: Some(Callback::new(move |e: DroppableCollectionReorderEvent| {
+                let moved = tasks.with(|tasks| sorted(e.keys.iter().cloned(), tasks));
+                let position = if e.target.drop_position == DropPosition::After {
+                    "after"
+                } else {
+                    "before"
+                };
+                last_drop.set(format!(
+                    "{moved} {position} {} ({:?})",
+                    e.target.key, e.drop_operation
+                ));
+                tasks.update(|tasks| reorder(tasks, &e));
+            })),
+            ..DroppableCollectionOptions::default()
+        },
+        is_disabled: disabled.into(),
     });
-
-    let drag_state = use_draggable_collection_state(DraggableCollectionStateInput {
-        collection_keys: keys,
-        is_selected: Callback::new(|_: String| false),
-        selected_keys: Signal::derive(HashSet::new),
-        get_items: Callback::new(|keys: Vec<String>| {
-            keys.into_iter().map(DragItem::text).collect()
-        }),
-        get_allowed_drop_operations: Some(Callback::new(|()| AllowedDropOperations::MOVE)),
-        preview: None,
-        collection_ref: collection_element,
-        on_drag_start: Some(Callback::new(move |e: DraggableCollectionStartEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("DragStart: {:?}", e.keys)));
-            });
-        })),
-        on_drag_move: None,
-        on_drag_end: Some(Callback::new(move |e: DraggableCollectionEndEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("DragEnd: {:?}", e.drop_effect)));
-            });
-        })),
-    });
-
-    // Droppable collection state with reorder callback.
-    let drop_state = use_droppable_collection_state(DroppableCollectionStateInput {
-        collection_keys: keys,
-        on_reorder: Some(Callback::new(move |e: CollectionReorderEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Reorder: {:?} -> {} ({:?})",
-                    e.keys, e.target.key, e.target.position
-                )));
-            });
-            set_items.update(|items| {
-                reorder_items(items, &e.keys, &e.target);
-            });
-        })),
-        ..Default::default()
-    });
-
-    // Collection container with hit-testing delegate and keyboard navigation.
-    let collection = use_droppable_collection(UseDroppableCollectionInput {
-        state: drop_state.clone(),
-        keyboard_delegate: Box::new(ListKeyboardDelegate::new(
-            keys,
-            Signal::derive(HashSet::new),
+    let UseDroppableCollectionReturn {
+        collection_props,
+        data: drop,
+    } = use_droppable_collection(UseDroppableCollectionInput {
+        state: drop_state,
+        element,
+        collection_id: props.id.clone(),
+        keyboard_delegate: use_list_keyboard_delegate(
+            list,
+            element,
             Orientation::Vertical,
-            Signal::derive(|| leptonic::utils::locale::WritingDirection::Ltr),
+            ListLayout::Stack,
+        ),
+        drop_target_delegate: Arc::new(ListDropTargetDelegate::new(
+            list.collection,
+            list.item_elements,
+            element,
         )),
-        drop_target_delegate: Box::new(NodeRefDropTargetDelegate {
-            node_ref: collection_ref,
-        }),
-        is_disabled: Signal::derive(|| false),
-        accepted_types: vec!["text/plain".to_string()],
-        collection_ref: collection_element,
+        on_key_down: None,
     });
+
+    let last = move || tasks.with(|tasks| tasks.last().copied());
+    view! {
+        <div {..props.into_attrs()} {..collection_props.into_attrs()} class="demo-dnd-list">
+            <For
+                each=move || tasks.get()
+                key=|task| *task
+                children={
+                    let (data, drop) = (data.clone(), drop.clone());
+                    move |task| view! { <TaskRow task list=data.clone() drag_state drop=drop.clone()/> }
+                }
+            />
+            // The position after the last row.
+            {move || last().map(|task| view! { <DropIndicator task position=DropPosition::After drop=drop.clone()/> })}
+        </div>
+
+        <Checkbox state=disabled>"Disable drag and drop"</Checkbox>
+
+        <div class="demo-state-display">
+            <div><strong>"Order: "</strong>{move || tasks.get().join(", ")}</div>
+            <div><strong>"Selected: "</strong>{move || tasks.with(|tasks| sorted(list.selection.selected_keys(), tasks))}</div>
+            <div><strong>"Dragging: "</strong>{move || tasks.with(|tasks| sorted(drag_state.dragging_keys.get(), tasks))}</div>
+            <div><strong>"Last drop: "</strong>{last_drop}</div>
+        </div>
+    }
+}
+
+/// A row with the drop indicator before it.
+#[component]
+fn TaskRow(
+    task: &'static str,
+    list: GridListData,
+    drag_state: DraggableCollectionState,
+    drop: DroppableCollectionData,
+) -> impl IntoView {
+    let key = Key::from(task);
+    let UseGridListItemReturn {
+        row_props,
+        grid_cell_props,
+        is_selected,
+        is_focus_visible,
+        ..
+    } = use_grid_list_item(UseGridListItemInput::new(list, key.clone()));
+    let UseDraggableItemReturn { mut drag_props, .. } = use_draggable_item(UseDraggableItemInput {
+        state: drag_state,
+        key: key.clone(),
+        has_drag_button: false,
+        has_action: false,
+    });
+    // All dragged rows, not only the one the drag started from.
+    let is_dragging = {
+        let key = key.clone();
+        Signal::derive(move || drag_state.is_dragging(&key))
+    };
+    // The row is a drop target of keyboard drags too (rows that can't take the drop are hidden from them).
+    let element = CapturedElement::new();
+    let UseDroppableItemReturn { drop_props, .. } = use_droppable_item(UseDroppableItemInput {
+        collection: drop.clone(),
+        target: DropTarget::item(key, DropPosition::On),
+        element,
+        activate_button: None,
+    });
+    // Both hooks describe the row: join their descriptions.
+    let (drag_description, drop_description) =
+        (drag_props.aria_describedby, drop_props.aria_describedby);
+    drag_props.aria_describedby = Signal::derive(move || {
+        let ids: Vec<String> = [drag_description.get(), drop_description.get()]
+            .into_iter()
+            .flatten()
+            .collect();
+        (!ids.is_empty()).then(|| ids.join(" "))
+    });
+    let aria_hidden = drop_props.aria_hidden;
+    let (row_attrs, row_styles) = row_props.into_parts();
 
     view! {
-        <div style="display: flex; gap: 2em; margin: 1em 0;">
-            <div style="flex: 1;">
-                <p style="margin: 0 0 0.5em 0; font-weight: bold;">"Drag items to reorder:"</p>
-                <div
-                    {..collection.collection_props.drop_props.into_attrs()}
-                    node_ref=collection_ref
-                    style="display: flex; flex-direction: column;"
-                >
-                    {move || {
-                        let current_items = items.get();
-                        let last_idx = current_items.len().saturating_sub(1);
-                        current_items.into_iter().enumerate().map(|(idx, (key, label))| {
-                            let is_last = idx == last_idx;
-                            view! {
-                                <DropIndicatorLine
-                                    target=DropTarget::Item { key: key.clone(), position: DropPosition::Before }
-                                    state=drop_state.clone()
-                                    keys=keys
-                                />
-                                <ReorderItem
-                                    key=key.clone()
-                                    label=label
-                                    drag_state=drag_state.clone()
-                                    drop_state=drop_state.clone()
-                                />
-                                {is_last.then(|| view! {
-                                    <DropIndicatorLine
-                                        target=DropTarget::Item { key, position: DropPosition::After }
-                                        state=drop_state.clone()
-                                        keys=keys
-                                    />
-                                })}
-                            }
-                        }).collect::<Vec<_>>()
-                    }}
-                </div>
+        <DropIndicator task position=DropPosition::Before drop/>
+        <div
+            {..row_attrs}
+            {..drag_props.into_attrs()}
+            {..element.attr()}
+            class=Classes::from("demo-dnd-row").add_reactive("focus-visible", is_focus_visible)
+            style=row_styles
+            aria-hidden=move || aria_hidden.get()
+            data-dragging=move || is_dragging.get().then_some("")
+        >
+            <div {..grid_cell_props.into_attrs()} class="demo-dnd-cell">
+                <span class="demo-dnd-check">{move || if is_selected.get() { "\u{2713}" } else { "" }}</span>
+                <span class="demo-dnd-grip" aria-hidden="true">"\u{2630}"</span>
+                <span>{task}</span>
             </div>
-            <div style="flex: 1;">
-                <p style="margin: 0 0 0.5em 0; font-weight: bold;">"Events:"</p>
-                <pre style="
-                    width: 100%;
-                    height: 10em;
-                    overflow: auto;
-                    padding: var(--typography-code-padding);
-                    border: none;
-                    border-radius: var(--typography-code-border-radius);
-                    background-color: var(--typography-code-background-color);
-                    color: var(--typography-code-color);
-                ">
-                    { move || string.get() }
-                </pre>
-            </div>
+        </div>
+    }
+}
+
+/// A drop position between rows: a line, shown while a drag is over it.
+#[component]
+fn DropIndicator(
+    task: &'static str,
+    position: DropPosition,
+    drop: DroppableCollectionData,
+) -> impl IntoView {
+    let UseDropIndicatorReturn {
+        drop_indicator_props,
+        is_drop_target,
+        is_hidden,
+    } = use_drop_indicator(UseDropIndicatorInput {
+        collection: drop,
+        target: DropTarget::item(task, position),
+        activate_button: None,
+    });
+    view! {
+        <div role="row" class="demo-dnd-indicator" data-drop-target=move || is_drop_target.get().then_some("") data-hidden=move || is_hidden.get().then_some("")>
+            <div role="gridcell" {..drop_indicator_props.into_attrs()}></div>
         </div>
     }
 }

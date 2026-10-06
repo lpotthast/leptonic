@@ -2,147 +2,142 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::tree::TreeDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseTree() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_tree" class="anchor">
-                "use_tree"
-                <AnchorLink href="#use_tree" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Tree Hooks">
             <p>
-                "The "<Code inline=true>"use_tree"</Code>" hook is a standalone hook for creating accessible tree components with expandable/collapsible nodes and selection."
+                "A tree shows hierarchical items, like files and folders, whose children can be expanded and collapsed. "
+                <Code inline=true>"use_tree_state"</Code>", "<Code inline=true>"use_tree"</Code>" and "
+                <Code inline=true>"use_tree_item"</Code>" build it as a "<Code inline=true>"treegrid"</Code>": a "
+                <Link href=routes::doc::grid::Hook.materialize()>"grid list"</Link>" whose rows have levels."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTree.html" target=LinkTarget::_Blank>
-                    "useTree"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useTree"/>
 
-            <h2 id="demo" class="anchor">
-                "Interactive Demo"
-                <AnchorLink href="#demo" description="Direct link to demo"/>
-            </h2>
+            <Section title="Demo">
+                <p>
+                    "Arrow up and down move between the visible items, arrow right expands a folder, arrow left collapses it or "
+                    "moves to its parent. Space or a click selects an item."
+                </p>
+                <Demo description="File tree with expandable folders and single selection" source=include_str!("demos/tree.rs")>
+                    <TreeDemo/>
+                </Demo>
+            </Section>
 
-            <DemoShell source=include_str!("demos/tree.rs")>
-                <TreeDemo />
-            </DemoShell>
+            <Section title="use_tree_state">
+                <p>
+                    "Build the tree as a collection of nested items (see "<Link href=routes::doc::Collections.materialize()>"Collections"</Link>
+                    "). The state holds the selection and which items are expanded; its list shows the visible items, in order."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    let (expanded, set_expanded) = signal(vec!["folder1".to_string()]);
-                    let (selected, set_selected) = signal(Vec::new());
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let collection = use_collection(|b| {
+                            b.item("documents", "Documents").children(|c| {
+                                c.item("resume", "resume.pdf");
+                            });
+                            b.item("notes", "notes.txt");
+                        });
+                        let state = use_tree_state(UseTreeStateInput {
+                            default_expanded_keys: HashSet::from([Key::from("documents")]),
+                            ..UseTreeStateInput::new(collection)
+                        });
 
-                    let tree = use_tree(UseTreeInput {
-                        label: Some("File Browser".to_string()),
-                        selection_mode: TreeSelectionMode::Single,
-                        expanded_keys: expanded.into(),
-                        selected_keys: selected.into(),
-                        on_expanded_change: Some(Callback::new(|keys| set_expanded.set(keys))),
-                        on_selection_change: Some(Callback::new(|keys| set_selected.set(keys))),
-                        ..Default::default()
-                    });
+                        // Render one item per visible entry:
+                        let visible = move || state.list.collection.with(|c| c.items().map(|n| n.key.clone()).collect::<Vec<_>>());
+                    "#)}
+                </Code>
 
-                    view! {
-                        <ul {..tree.tree_props.into_attrs()}>
-                            // Tree items...
-                        </ul>
-                    }
-                "#)}
-            </Code>
+                <Section title="Input" id="use-tree-state-input">
+                    <p>"Create the input with "<Code inline=true>"UseTreeStateInput::new(collection)"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Input of="UseTreeStateInput">
+                        <ApiRow name="collection" ty="CollectionMemo">"The items, nested with "<Code inline=true>".children(..)"</Code>"."</ApiRow>
+                        <ApiRow name="selection" ty="SelectionOptions" default="no selection">"Selection mode, behavior and callback."</ApiRow>
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">"The initially expanded items."</ApiRow>
+                        <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called with the expanded keys whenever they change."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="selection-modes" class="anchor">
-                "Selection Modes"
-                <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
-            </h2>
+                <Section title="Return" id="use-tree-state-return">
+                    <ApiTable kind=ApiKind::Return of="TreeState">
+                        <ApiRow name="list" ty="ListState">"The visible items, their selection and focus."</ApiRow>
+                        <ApiRow name="expansion" ty="TreeExpansion">
+                            <Code inline=true>"is_expanded(&key)"</Code>", "<Code inline=true>"toggle_key(key)"</Code>" and "
+                            <Code inline=true>"set_expanded_keys(keys)"</Code>"."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <ul>
-                <li><code>"TreeSelectionMode::None"</code> " - No selection (default)"</li>
-                <li><code>"TreeSelectionMode::Single"</code> " - Single item selection"</li>
-                <li><code>"TreeSelectionMode::Multiple"</code> " - Multiple item selection"</li>
-            </ul>
+            <Section title="use_tree">
+                <p>"Create the input with "<Code inline=true>"UseTreeInput::new(state, element)"</Code>"."</p>
+                <Section title="Input" id="use-tree-input">
+                    <ApiTable kind=ApiKind::Input of="UseTreeInput">
+                        <ApiRow name="state" ty="TreeState">"From "<Code inline=true>"use_tree_state"</Code>"."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The tree element. The props capture it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The element id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the tree."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the tree."</ApiRow>
+                        <ApiRow name="options" ty="CollectionOptions" default="default">"Keyboard and focus behavior."</ApiRow>
+                        <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated item."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="keyboard-navigation" class="anchor">
-                "Keyboard Navigation"
-                <AnchorLink href="#keyboard-navigation" description="Direct link to keyboard"/>
-            </h2>
+                <Section title="Return" id="use-tree-return">
+                    <ApiTable kind=ApiKind::Return of="UseGridListReturn">
+                        <ApiRow name="props" ty="UseGridListProps">"For the tree element: "<Code inline=true>"role=\"treegrid\""</Code>", labelling, keyboard and focus handling."</ApiRow>
+                        <ApiRow name="data" ty="GridListData">"Hand this to "<Code inline=true>"use_tree_item"</Code>" for every visible item."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <ul>
-                <li><code>"Arrow Down"</code> " - Move to next visible item"</li>
-                <li><code>"Arrow Up"</code> " - Move to previous visible item"</li>
-                <li><code>"Arrow Right"</code> " - Expand node or move to first child"</li>
-                <li><code>"Arrow Left"</code> " - Collapse node or move to parent"</li>
-                <li><code>"Enter"</code> " - Activate item (on_action callback)"</li>
-                <li><code>"Space"</code> " - Toggle selection"</li>
-                <li><code>"Home"</code> " - Move to first visible item"</li>
-                <li><code>"End"</code> " - Move to last visible item"</li>
-            </ul>
+            <Section title="use_tree_item">
+                <Section title="Input" id="use-tree-item-input">
+                    <ApiTable kind=ApiKind::Input of="UseTreeItemInput">
+                        <ApiRow name="tree" ty="GridListData">"From "<Code inline=true>"use_tree"</Code>"."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The item\u{2019}s key."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <h2 id="aria-attributes" class="anchor">
-                "ARIA Attributes"
-                <AnchorLink href="#aria-attributes" description="Direct link to ARIA attributes"/>
-            </h2>
+                <Section title="Return" id="use-tree-item-return">
+                    <ApiTable kind=ApiKind::Return of="UseTreeItemReturn">
+                        <ApiRow name="item" ty="UseGridListItemReturn">
+                            "The row: "<Code inline=true>"row_props"</Code>" (with "<Code inline=true>"aria-level"</Code>", "
+                            <Code inline=true>"aria-expanded"</Code>", "<Code inline=true>"aria-posinset"</Code>", "
+                            <Code inline=true>"aria-setsize"</Code>"), "<Code inline=true>"grid_cell_props"</Code>" and its state, "
+                            "as for a "<Link href=routes::doc::grid::Hook.materialize()>"grid list row"</Link>"."
+                        </ApiRow>
+                        <ApiRow name="expand_button" ty="UseButtonInput">
+                            "Configuration of a button expanding and collapsing the item, for "
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
+                        </ApiRow>
+                        <ApiRow name="expand_button_label" ty="Signal<&'static str>">"\u{201c}Expand\u{201d} or \u{201c}Collapse\u{201d}."</ApiRow>
+                        <ApiRow name="is_expanded" ty="Signal<bool>">"Whether the item is expanded."</ApiRow>
+                        <ApiRow name="has_child_items" ty="bool">"Whether the item has children (render the expand button only then)."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
 
-            <p>"For the tree container:"</p>
-            <ul>
-                <li><code>"role=\"tree\""</code></li>
-                <li><code>"aria-label"</code></li>
-                <li><code>"aria-multiselectable"</code></li>
-            </ul>
+            <Section title="Keyboard">
+                <KeyboardTable>
+                    <KeyRow keys="ArrowDown / ArrowUp">"Focus the next or previous visible item."</KeyRow>
+                    <KeyRow keys="ArrowRight">"Expand the focused item."</KeyRow>
+                    <KeyRow keys="ArrowLeft">"Collapse the focused item, or focus its parent."</KeyRow>
+                    <KeyRow keys="Home / End">"Focus the first or last visible item."</KeyRow>
+                    <KeyRow keys="Space">"Toggle the selection of the focused item."</KeyRow>
+                    <KeyRow keys="Enter">"Activate the focused item."</KeyRow>
+                </KeyboardTable>
+                <p>"Pressing a parent item toggles it when the tree has neither selection nor actions."</p>
+            </Section>
 
-            <p>"For tree items:"</p>
-            <ul>
-                <li><code>"role=\"treeitem\""</code></li>
-                <li><code>"aria-expanded"</code> " (for parent nodes)"</li>
-                <li><code>"aria-selected"</code></li>
-                <li><code>"aria-level"</code> " (nesting depth)"</li>
-                <li><code>"aria-setsize"</code> " and " <code>"aria-posinset"</code></li>
-            </ul>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Hierarchical data display"</li>
-                <li>"Expand/collapse nodes"</li>
-                <li>"Multiple selection modes"</li>
-                <li>"Full keyboard navigation"</li>
-                <li>"Action callbacks"</li>
-                <li>"Complete ARIA tree pattern"</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Navigation.materialize()>"Navigation domain"</Link></li>
-                <li><Link href=crate::routes::doc::Grid.materialize()>"Grid"</Link></li>
-                <li><Link href=crate::routes::doc::hooks::Selection.materialize()>"Selection hooks"</Link></li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_tree", link: "#use_tree" },
-                Toc::Leaf { title: "Demo", link: "#demo" },
-                Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
+                <li><Link href=routes::doc::grid::Hook.materialize()>"Grid list hooks"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

@@ -1,108 +1,158 @@
-// Upstream: react-aria/src/dnd/useDraggableItem.ts @ 6f664fe911
+// Upstream: react-aria/src/dnd/useDraggableItem.ts @ 99e6102368
 use leptos::prelude::*;
 
-use super::draggable_collection_state::DraggableCollectionState;
-use crate::hooks::{
-    DragEndEvent, DragItem, DragMoveEvent, DragStartEvent, UseDraggableInput, UseDraggableReturn,
-    use_draggable,
+use super::{
+    messages,
+    types::{DragEndEvent, DragMoveEvent, DragStartEvent, DropOperation},
+    use_drag::{UseDragInput, UseDragProps, UseDragReturn, use_drag},
+    use_draggable_collection_state::DraggableCollectionState,
+    utils::{
+        DragModality, clear_global_dnd_state, is_internal_drop_operation, set_dragging_keys,
+        use_drag_modality,
+    },
+};
+use crate::{
+    hooks::{SelectionMode, UseButtonInput, collections::Key},
+    utils::{EventHandler, use_description::use_reactive_description},
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
 // ## API DIFFERENCES
+// - The drag button comes back as a `UseButtonInput` for `use_button`; its label (which changes
+//   with the selection) is the separate `drag_button_label` signal.
+// - Whether the item has a drag button or an action is fixed when the hook runs.
 //
-// - Uses `DraggableCollectionState` with selection awareness instead of
-//   react-aria's direct `useDraggableItem` hook.
-// - `has_action` parameter mirrors react-aria's `hasAction`: when true,
-//   keyboard drag requires Alt+Enter to avoid conflicting with item actions.
-//
+// =============================================================================
 
-/// Input for [`use_draggable_collection_item`].
-pub struct UseDraggableCollectionItemInput {
-    /// A unique identifier for this item within the collection.
-    pub key: String,
-    /// The draggable collection state (selection-aware).
+/// Input of [`use_draggable_item`].
+#[derive(Debug, Clone)]
+pub struct UseDraggableItemInput {
     pub state: DraggableCollectionState,
-    /// Whether this item is disabled.
-    pub is_disabled: Signal<bool>,
-    /// Whether this item has a primary action (e.g. navigation, selection).
-    /// When true, keyboard drag requires Alt+Enter instead of Enter.
+    /// The item's key.
+    pub key: Key,
+    /// Keyboard and screen reader drags start from a drag button (`drag_button`).
+    pub has_drag_button: bool,
+    /// The item has an action (Enter), so keyboard drags start with Alt + Enter.
     pub has_action: bool,
 }
 
-/// Creates draggable props for an item within a selection-aware collection.
-///
-/// Creates draggable props for an item within a selection-aware collection.
-///
-/// Supports multi-select drag: when a selected item is dragged, all
-/// selected items are included in the drag.
-///
-/// # Example
-///
-/// ```ignore
-/// #[component]
-/// fn CollectionItem(key: String, state: DraggableCollectionState) -> impl IntoView {
-///     let drag = use_draggable_collection_item(UseDraggableCollectionItemInput {
-///         key,
-///         state,
-///         is_disabled: Signal::derive(|| false),
-///     });
-///
-///     view! { <div {..drag.drag_props.into_attrs()}>"Drag me"</div> }
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_draggable_collection_item(input: UseDraggableCollectionItemInput) -> UseDraggableReturn {
-    let UseDraggableCollectionItemInput {
-        key,
+/// Return value of [`use_draggable_item`].
+pub struct UseDraggableItemReturn {
+    pub drag_props: UseDragProps,
+    /// For `use_button`, with `has_drag_button`.
+    pub drag_button: UseButtonInput,
+    /// The drag button's `aria-label` ("Drag Inbox", "Drag 3 selected items").
+    pub drag_button_label: Signal<String>,
+    pub is_dragging: Signal<bool>,
+}
+
+/// A draggable item of a collection: dragging a selected item drags all selected items.
+pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemReturn {
+    let UseDraggableItemInput {
         state,
-        is_disabled,
+        key,
+        has_drag_button,
         has_action,
     } = input;
+    let selection = state.list.selection;
+    let item_key = StoredValue::new(key.clone());
+    let is_disabled = Signal::derive(move || {
+        state.is_disabled.get() || item_key.with_value(|k| selection.is_disabled(k))
+    });
 
-    let key_for_items = key.clone();
-    let key_for_start = key.clone();
-    let state_for_start = state.clone();
-    let state_for_move = state.clone();
-    let state_for_end = state.clone();
-    let state_for_items = state.clone();
-    let state_for_ops = state.clone();
-    let state_for_preview = state.clone();
-
-    use_draggable(UseDraggableInput {
-        is_disabled,
-        get_items: Callback::new(move |_| {
-            let mut items = state_for_items.get_items(&key_for_items);
-            // Add internal key marker for all dragged keys.
-            let dragging = state_for_items.dragging_keys().get_untracked();
-            if dragging.is_empty() {
-                // Before drag starts, include just this key
-                items.push(DragItem::custom(
-                    "application/x-dnd-key",
-                    key_for_items.clone(),
-                ));
-            } else {
-                for k in &dragging {
-                    items.push(DragItem::custom("application/x-dnd-key", k.clone()));
-                }
-            }
-            items
-        }),
-        get_allowed_drop_operations: Callback::new(move |_| {
-            state_for_ops.get_allowed_drop_operations()
-        }),
-        render_drag_preview: Some(Callback::new(move |items: Vec<DragItem>| {
-            state_for_preview.get_preview(items)
-        })),
+    let UseDragReturn {
+        mut drag_props,
+        drag_button,
+        is_dragging,
+    } = use_drag(UseDragInput {
+        get_items: Callback::new(move |()| item_key.with_value(|k| state.items(k))),
+        get_allowed_drop_operations: state.get_allowed_drop_operations,
+        preview: state.preview,
         on_drag_start: Some(Callback::new(move |e: DragStartEvent| {
-            state_for_start.start_drag(&key_for_start, &e);
+            item_key.with_value(|k| state.start_drag(k, e));
+            set_dragging_keys(state.dragging_keys.get_untracked());
         })),
-        on_drag_move: Some(Callback::new(move |e: DragMoveEvent| {
-            state_for_move.move_drag(e.x, e.y);
-        })),
+        on_drag_move: Some(Callback::new(move |e: DragMoveEvent| state.move_drag(e))),
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
-            state_for_end.end_drag(e.drop_effect, e.x, e.y);
+            let is_internal =
+                e.drop_operation != DropOperation::Cancel && is_internal_drop_operation(None);
+            state.end_drag(e, is_internal);
+            clear_global_dnd_state();
         })),
-        has_drag_button: false,
-        has_action,
-    })
+        has_drag_button,
+        is_disabled,
+    });
+
+    let keys_for_drag = Signal::derive(move || {
+        selection.selected_keys();
+        item_key.with_value(|k| state.keys_for_drag(k).len())
+    });
+    let is_selected = Signal::derive(move || {
+        keys_for_drag.get() > 1 && item_key.with_value(|k| selection.is_selected(k))
+    });
+    let modality = use_drag_modality();
+    let describes =
+        !has_drag_button && untrack(|| selection.selection_mode()) != SelectionMode::None;
+
+    if describes {
+        // The item itself starts drags: describe how (it has no click to start them).
+        let description = use_reactive_description(Signal::derive(move || {
+            let modality = modality.get();
+            let alt = has_action && modality == DragModality::Keyboard;
+            let count = is_selected.get().then(|| keys_for_drag.get());
+            Some(messages::drag_item_description(modality, count, alt))
+        }));
+        drag_props.aria_describedby = Signal::derive(move || {
+            if is_disabled.get() || (has_action && modality.get() == DragModality::Touch) {
+                None
+            } else {
+                description.get()
+            }
+        });
+        drag_props.on_click = EventHandler::empty();
+    }
+    if !has_drag_button && has_action {
+        // Enter performs the action: keyboard drags start with Alt + Enter.
+        let keydown = drag_props.on_keydown_capture;
+        let keyup = drag_props.on_keyup_capture;
+        drag_props.on_keydown_capture = EventHandler::new(move |e: web_sys::KeyboardEvent| {
+            if e.alt_key() {
+                keydown.call(e);
+            }
+        });
+        drag_props.on_keyup_capture = EventHandler::new(move |e: web_sys::KeyboardEvent| {
+            if e.alt_key() {
+                keyup.call(e);
+            }
+        });
+    }
+
+    let collection = state.list.collection;
+    let label = Signal::derive(move || {
+        if is_selected.get() {
+            messages::drag_selected_items(keys_for_drag.get())
+        } else {
+            let text = item_key.with_value(|k| {
+                collection.with(|c| {
+                    c.get(k)
+                        .map(|n| n.text_value.to_string())
+                        .unwrap_or_default()
+                })
+            });
+            messages::drag_item(&text)
+        }
+    });
+
+    UseDraggableItemReturn {
+        drag_props,
+        drag_button: UseButtonInput {
+            is_disabled,
+            ..drag_button
+        },
+        drag_button_label: label,
+        is_dragging,
+    }
 }

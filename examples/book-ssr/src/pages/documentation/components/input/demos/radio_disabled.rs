@@ -3,10 +3,16 @@ use leptos::prelude::*;
 
 #[component]
 pub fn RadioDisabledDemo() -> impl IntoView {
-    let (checked_disabled, set_checked_disabled) = signal(false);
+    let disabled = RwSignal::new(false);
 
     view! {
-        <Radio disabled=true checked=checked_disabled set_checked=set_checked_disabled />
-        <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
+        <RadioGroup label="Plan" default_value="free" is_disabled=disabled>
+            <Radio value="free">"Free"</Radio>
+            <Radio value="pro">"Pro"</Radio>
+            <Radio value="enterprise" is_disabled=true>"Enterprise (contact sales)"</Radio>
+        </RadioGroup>
+        <div class="demo-toggle-settings">
+            <Checkbox state=disabled>"Disable the group"</Checkbox>
+        </div>
     }
 }

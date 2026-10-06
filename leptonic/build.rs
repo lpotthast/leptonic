@@ -32,27 +32,15 @@ pub fn main() -> Result<()> {
         return Ok(());
     }
 
-    let out_dir = get_out_dir().context("Could not find 'out_dir'.")?;
-    let target_dir = get_cargo_target_dir(out_dir).context("Could not find 'target_dir'.")?;
-    let root_dir = target_dir
-        .parent()
-        .context("Expected 'target_dir' to have a parent.")?
-        .to_owned();
+    println!("cargo:rerun-if-env-changed={APP_DIR_ENV}");
+    let Some((root_dir, metadata)) = find_app()? else {
+        return Ok(());
+    };
 
     log(Level::Debug, format!("root_dir is: {}", root_dir.display()));
 
     let cargo_lock_path = root_dir.join("Cargo.lock");
     let cargo_toml_path = root_dir.join("Cargo.toml");
-    assert!(
-        cargo_toml_path.exists(),
-        //.expect("Can't check existence of file Cargo.toml"),
-        "Unable to find '{}'",
-        cargo_toml_path.display()
-    );
-
-    let Some(metadata) = read_leptonic_metadata(&cargo_toml_path)? else {
-        return Ok(());
-    };
 
     println!("cargo:rerun-if-changed={}", cargo_lock_path.display());
     println!("cargo:rerun-if-changed={}", cargo_toml_path.display());
@@ -100,7 +88,7 @@ fn copy_tiptap_files(js_dir: &PathBuf) {
 }
 
 /// Parse the Cargo.toml file! Abort if the Cargo.toml has no config.
-fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMetadata>> {
+fn read_leptonic_metadata(cargo_toml_path: &Path) -> Result<Option<LeptonicMetadata>> {
     let cargo_toml: Manifest<Value> = Manifest::from_path_with_metadata(cargo_toml_path)
         .with_context(|| {
             format!(
@@ -169,30 +157,46 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
     }))
 }
 
-fn get_out_dir() -> Result<PathBuf> {
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-    log(Level::Debug, format!("out_dir is: {:?}", out_dir.display()));
-    Ok(out_dir)
-}
+/// Environment variable naming the consuming app's root directory (the one whose `Cargo.toml` declares
+/// `[package.metadata.leptonic]` or `[workspace.metadata.leptonic]`). Only needed when the target directory lies
+/// outside the app, e.g. with a `CARGO_TARGET_DIR` elsewhere.
+const APP_DIR_ENV: &str = "LEPTONIC_APP_DIR";
 
-// Credits @ssrlive (source: https://github.com/rust-lang/cargo/issues/9661)
-fn get_cargo_target_dir(out_dir: impl AsRef<Path>) -> Result<PathBuf> {
-    let mut target_dir = None;
-    let mut sub_path = out_dir.as_ref();
-    while let Some(parent) = sub_path.parent() {
-        if parent.ends_with("target") {
-            target_dir = Some(parent);
-            break;
-        }
-        sub_path = parent;
+/// Finds the consuming app and its leptonic metadata: the directory given by `LEPTONIC_APP_DIR`, else the nearest
+/// ancestor of `OUT_DIR` whose `Cargo.toml` declares leptonic metadata. `None` when no app declares any (e.g. when
+/// building leptonic itself), in which case nothing is generated.
+fn find_app() -> Result<Option<(PathBuf, LeptonicMetadata)>> {
+    if let Some(app_dir) = std::env::var_os(APP_DIR_ENV) {
+        let app_dir = PathBuf::from(app_dir);
+        let cargo_toml_path = app_dir.join("Cargo.toml");
+        let metadata = read_leptonic_metadata(&cargo_toml_path)?.with_context(|| {
+            format!(
+                "{APP_DIR_ENV} points to '{}', whose Cargo.toml declares no leptonic metadata.",
+                app_dir.display()
+            )
+        })?;
+        return Ok(Some((app_dir, metadata)));
     }
-    let target_dir = target_dir.with_context(|| {
+
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").context("Could not read 'OUT_DIR'.")?);
+    log(Level::Debug, format!("out_dir is: {}", out_dir.display()));
+    for dir in out_dir.ancestors().skip(1) {
+        let cargo_toml_path = dir.join("Cargo.toml");
+        if !cargo_toml_path.is_file() {
+            continue;
+        }
+        if let Some(metadata) = read_leptonic_metadata(&cargo_toml_path)? {
+            return Ok(Some((dir.to_path_buf(), metadata)));
+        }
+    }
+    log(
+        Level::Debug,
         format!(
-            "Could not find `target` dir in parents of {}",
-            out_dir.as_ref().display()
-        )
-    })?;
-    Ok(target_dir.to_path_buf())
+            "No Cargo.toml with leptonic metadata above {}.",
+            out_dir.display()
+        ),
+    );
+    Ok(None)
 }
 
 fn log(level: Level, msg: impl AsRef<str>) {

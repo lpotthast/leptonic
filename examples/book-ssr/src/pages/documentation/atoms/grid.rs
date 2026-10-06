@@ -2,182 +2,214 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{grid_color_palette::GridColorPaletteDemo, grid_file_list::GridFileListDemo};
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+use super::demos::{grid_file_list::GridFileListDemo, grid_messages::GridMessagesDemo};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageAtomGrid() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="grid" class="anchor">
-                "Grid Atoms"
-                <AnchorLink href="#grid" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Grid Atoms">
             <p>
-                "The grid atoms wrap the "
-                <a href="/documentation/hooks/grid">"grid hooks"</a>
+                "The grid atoms wrap the "<Link href=routes::doc::grid::Hook.materialize()>"grid hooks"</Link>
                 " into composable components. Two patterns are supported:"
             </p>
             <ul>
-                <li><strong>"2D Grid"</strong>" — "<code>"Grid > GridRowGroup > GridRow > GridCell"</code>" for multi-column layouts (color pickers, calendars)"</li>
-                <li><strong>"1D Grid List"</strong>" — "<code>"GridList > GridListItem"</code>" for single-column lists with grid keyboard semantics (file lists, card galleries)"</li>
+                <li>
+                    <strong>"2D Grid"</strong>" \u{2014} "<Code inline=true>"Grid > GridRowGroup > GridRow > GridCell"</Code>
+                    " for rows with several cells (message lists, data grids, calendars)"
+                </li>
+                <li>
+                    <strong>"1D Grid List"</strong>" \u{2014} "<Code inline=true>"GridList > GridListItem"</Code>
+                    " for single-column lists with grid keyboard semantics (file lists, card galleries)"
+                </li>
             </ul>
             <p>
-                "Both provide full keyboard navigation, selection, and ARIA accessibility. "
-                "Style via "<code>"data-selected"</code>", "<code>"data-focused"</code>", and "<code>"data-disabled"</code>" data attributes on each row, cell, or list item."
+                "Both provide keyboard navigation, row selection and ARIA semantics. Style them through the "
+                <Code inline=true>"data-selected"</Code>", "<Code inline=true>"data-focused"</Code>", "
+                <Code inline=true>"data-disabled"</Code>" and "<Code inline=true>"data-pressed"</Code>" attributes of rows and list items."
             </p>
 
-            // ---- 2D Grid Demo ----
+            <Section title="2D Grid">
+                <p>
+                    "A message list with replace selection, like a file manager: a click selects a row ("<Keys keys="Control"/>
+                    " + click adds to the selection), Escape clears it, a double click or Enter opens a message. \u{201c}Alan\u{201d} is disabled. Build the rows and cells as a "
+                    "collection with "<Code inline=true>"Collection::build"</Code>" and "<Code inline=true>"b.row(key, text, |r| r.cell(..))"</Code>
+                    "; cell keys derive from their row: "<Code inline=true>"Key::cell(&row, column)"</Code>"."
+                </p>
 
-            <h2 id="grid-2d" class="anchor">
-                "2D Grid"
-                <AnchorLink href="#grid-2d" description="Direct link to 2D grid"/>
-            </h2>
+                <Demo description="Message list grid with row selection, a disabled row and row actions" source=include_str!("demos/grid_messages.rs")>
+                    <GridMessagesDemo/>
+                </Demo>
+            </Section>
 
-            <p>"A color palette grid with multi-selection. Click cells to select, arrow keys to navigate, Space to toggle, Escape to clear, Ctrl+A to select all."</p>
+            <Section title="Grid List">
+                <p>
+                    "A file list with replace selection: a click selects a file ("<Keys keys="Control"/>" + click adds to the "
+                    "selection), arrow keys move, a double click or Enter opens the file."
+                </p>
 
-            <DemoShell source=include_str!("demos/grid_color_palette.rs")>
-                <GridColorPaletteDemo/>
-            </DemoShell>
+                <Demo description="File list with selection and row actions" source=include_str!("demos/grid_file_list.rs")>
+                    <GridFileListDemo/>
+                </Demo>
+            </Section>
 
-            // ---- Grid List Demo ----
+            <Section title="Data Attributes">
+                <p>
+                    "All row, cell, and list item atoms expose data attributes for CSS styling. This is the key advantage of atoms "
+                    "over raw hooks \u{2014} you can target these attributes with standard CSS selectors."
+                </p>
 
-            <h2 id="grid-list" class="anchor">
-                "Grid List"
-                <AnchorLink href="#grid-list" description="Direct link to grid list"/>
-            </h2>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        /* Focused indicator — visible outline */
+                        [data-focused] {
+                            outline: 3px solid #1976d2;
+                            outline-offset: 2px;
+                        }
 
-            <p>
-                "A 1D list with grid keyboard navigation. Arrow Up/Down to navigate, Space to toggle selection, Enter or double-click to trigger the row action."
-            </p>
+                        /* Selected indicator — background highlight */
+                        [data-selected] {
+                            background-color: rgba(25, 118, 210, 0.15);
+                        }
 
-            <DemoShell source=include_str!("demos/grid_file_list.rs")>
-                <GridFileListDemo/>
-            </DemoShell>
+                        /* Disabled items — faded out */
+                        [data-disabled] {
+                            opacity: 0.4;
+                            cursor: not-allowed;
+                        }
+                    ")}
+                </Code>
+            </Section>
 
-            // ---- Data Attributes ----
+            <Section title="Selection Modes">
+                <ul>
+                    <li><Code inline=true>"SelectionMode::None"</Code>" \u{2014} Focus only, no selection"</li>
+                    <li><Code inline=true>"SelectionMode::Single"</Code>" \u{2014} One row at a time"</li>
+                    <li>
+                        <Code inline=true>"SelectionMode::Multiple"</Code>
+                        " \u{2014} Several rows (Shift + arrow keys extend the selection, Ctrl + A selects all)"
+                    </li>
+                </ul>
 
-            <h2 id="data-attributes" class="anchor">
-                "Data Attributes"
-                <AnchorLink href="#data-attributes" description="Direct link to data attributes"/>
-            </h2>
+                <p>"Combined with "<Code inline=true>"SelectionBehavior"</Code>":"</p>
+                <ul>
+                    <li><Code inline=true>"SelectionBehavior::Toggle"</Code>" \u{2014} A click toggles the row"</li>
+                    <li><Code inline=true>"SelectionBehavior::Replace"</Code>" \u{2014} A click replaces the selection (hold Ctrl to toggle)"</li>
+                </ul>
 
-            <p>"All row, cell, and list item atoms expose data attributes for CSS styling. This is the key advantage of atoms over raw hooks — you can target these attributes with standard CSS selectors."</p>
+                <p>
+                    "See the "<Link href=routes::doc::grid::Hook.materialize()>"hooks page"</Link>
+                    " for a detailed reference on keyboard navigation and ARIA attributes."
+                </p>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    /* Focused indicator — visible outline */
-                    [data-focused="true"] {
-                        outline: 3px solid #1976d2;
-                        outline-offset: 2px;
-                    }
+            <Section title="API Reference">
+                <Section title="Grid">
+                    <ApiTable kind=ApiKind::Props of="atoms::grid::Grid">
+                        <ApiRow name="collection" ty="CollectionMemo">"The rows and their cells."</ApiRow>
+                        <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
+                            <Code inline=true>"Row"</Code>": arrow keys move between rows first. "<Code inline=true>"Cell"</Code>
+                            ": they move between cells."
+                        </ApiRow>
+                        <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">"No selection when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">"Whether clicks toggle rows or replace the selection."</ApiRow>
+                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="empty">"The initially selected rows."</ApiRow>
+                        <ApiRow name="selection" ty="Option<ValueBinding<Selection>>" default="None">
+                            "The selection as app state (e.g. an "<Code inline=true>"RwSignal<Selection>"</Code>"), replacing "<Code inline=true>"default_selected_keys"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">"Called with the new selection."</ApiRow>
+                        <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"Rows that can\u{2019}t be selected (or focused)."</ApiRow>
+                        <ApiRow name="disabled_behavior" ty="DisabledBehavior" default="All">"What disabling a row prevents."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
+                        <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">"What Escape does."</ApiRow>
+                        <ApiRow name="should_focus_wrap" ty="bool" default="false">"Arrow keys wrap around at the ends."</ApiRow>
+                        <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">"How the keyboard reaches interactive children of cells."</ApiRow>
+                        <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated row or cell."</ApiRow>
+                        <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">"Names the grid."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The rows, directly or in "<Code inline=true>"GridRowGroup"</Code>"s."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-                    /* Selected indicator — background highlight */
-                    [data-selected="true"] {
-                        background-color: rgba(25, 118, 210, 0.15);
-                    }
+                <Section title="GridRowGroup">
+                    <p>"Groups rows ("<Code inline=true>"role=\"rowgroup\""</Code>"). Props: "<Code inline=true>"classes"</Code>", "<Code inline=true>"styles"</Code>" and the rows as "<Code inline=true>"children"</Code>"."</p>
+                </Section>
 
-                    /* Disabled items — faded out */
-                    [data-disabled="true"] {
-                        opacity: 0.4;
-                        cursor: not-allowed;
-                    }
-                "#)}
-            </Code>
+                <Section title="GridRow">
+                    <ApiTable kind=ApiKind::Props of="GridRow">
+                        <ApiRow name="key" ty="Key">"The row\u{2019}s key in the collection."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the row."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The row\u{2019}s cells."</ApiRow>
+                    </ApiTable>
+                    <p>
+                        "The row exposes "<Code inline=true>"data-selected"</Code>", "<Code inline=true>"data-focused"</Code>", "
+                        <Code inline=true>"data-disabled"</Code>" and "<Code inline=true>"data-pressed"</Code>"."
+                    </p>
+                </Section>
 
-            // ---- Selection Modes ----
+                <Section title="GridCell">
+                    <ApiTable kind=ApiKind::Props of="GridCell">
+                        <ApiRow name="key" ty="Key">"The cell\u{2019}s key: "<Code inline=true>"Key::cell(&row_key, column)"</Code>"."</ApiRow>
+                        <ApiRow name="focus_mode" ty="Option<CellFocusMode>" default="None">
+                            <Code inline=true>"Cell"</Code>": focus the cell. "<Code inline=true>"Child"</Code>": focus its first focusable child."
+                        </ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the cell."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The cell\u{2019}s content."</ApiRow>
+                    </ApiTable>
+                    <p>"The cell exposes "<Code inline=true>"data-pressed"</Code>"; selection and focus state belong to its row."</p>
+                </Section>
 
-            <h2 id="selection-modes" class="anchor">
-                "Selection Modes"
-                <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
-            </h2>
+                <Section title="GridList">
+                    <p>
+                        "Renders a grid list built with "<Link href=routes::doc::grid::Hook.materialize()>"use_grid_list"</Link>
+                        ". Pass the rows as a "<Code inline=true>"collection"</Code>" (e.g. from "
+                        <Code inline=true>"use_list_collection"</Code>") and render a "<Code inline=true>"GridListItem"</Code>
+                        " per row."
+                    </p>
+                    <ApiTable kind=ApiKind::Props of="GridList">
+                        <ApiRow name="collection" ty="Option<CollectionMemo>" default="None">"The rows. Required unless "<Code inline=true>"state"</Code>" is given."</ApiRow>
+                        <ApiRow name="state" ty="Option<ListState>" default="None">"An existing list state, instead of the collection and selection props."</ApiRow>
+                        <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">"No selection when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">"Whether clicks toggle rows or replace the selection."</ApiRow>
+                        <ApiRow name="default_selected_keys" ty="Vec<Key>" default="empty">"The initially selected rows."</ApiRow>
+                        <ApiRow name="selection" ty="Option<ValueBinding<Selection>>" default="None">
+                            "The selection as app state (e.g. an "<Code inline=true>"RwSignal<Selection>"</Code>"), replacing "<Code inline=true>"default_selected_keys"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">"Called with the new selection."</ApiRow>
+                        <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">"Rows that can\u{2019}t be focused or selected."</ApiRow>
+                        <ApiRow name="disabled_behavior" ty="DisabledBehavior" default="All">"What disabling a row prevents."</ApiRow>
+                        <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the grid list."</ApiRow>
+                        <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The id(s) of elements naming the grid list."</ApiRow>
+                        <ApiRow name="layout" ty="ListLayout" default="Stack">"Stacked rows, or rows wrapping like cards."</ApiRow>
+                        <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">"How the keyboard reaches the rows\u{2019} children."</ApiRow>
+                        <ApiRow name="should_focus_wrap" ty="bool" default="false">"Arrow keys wrap around at the ends."</ApiRow>
+                        <ApiRow name="auto_focus" ty="Option<AutoFocus>" default="None">"Focus a row when the grid list mounts."</ApiRow>
+                        <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">"What Escape does."</ApiRow>
+                        <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated row."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The rows: a "<Code inline=true>"GridListItem"</Code>" per row."</ApiRow>
+                    </ApiTable>
+                </Section>
 
-            <ul>
-                <li><code>"SelectionMode::None"</code>" — Focus-only, no selection"</li>
-                <li><code>"SelectionMode::Single"</code>" — One item at a time"</li>
-                <li><code>"SelectionMode::Multiple"</code>" — Multiple items (Shift+Arrow extends, Ctrl+A selects all)"</li>
-            </ul>
+                <Section title="GridListItem">
+                    <ApiTable kind=ApiKind::Props of="GridListItem">
+                        <ApiRow name="key" ty="Key">"The row\u{2019}s key in the grid list\u{2019}s collection."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the row."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The row\u{2019}s content."</ApiRow>
+                    </ApiTable>
+                    <p>
+                        "The row exposes "<Code inline=true>"data-selected"</Code>", "<Code inline=true>"data-focused"</Code>", "
+                        <Code inline=true>"data-focus-visible"</Code>", "<Code inline=true>"data-disabled"</Code>" and "
+                        <Code inline=true>"data-pressed"</Code>" while the state applies."
+                    </p>
+                </Section>
+            </Section>
 
-            <p>"Combined with "<code>"SelectionBehavior"</code>":"</p>
-            <ul>
-                <li><code>"SelectionBehavior::Toggle"</code>" — Click toggles individual items"</li>
-                <li><code>"SelectionBehavior::Replace"</code>" — Click replaces the selection (hold Ctrl to toggle)"</li>
-            </ul>
-
-            <p>"See the "<a href="/documentation/hooks/grid">"hooks page"</a>" for a detailed reference on keyboard navigation and ARIA attributes."</p>
-
-            // ---- API Reference ----
-
-            <h2 id="api" class="anchor">
-                "API Reference"
-                <AnchorLink href="#api" description="Direct link to API"/>
-            </h2>
-
-            <h3 id="api-grid">"Grid"</h3>
-            <ul>
-                <li><code>"collection: Signal<GridCollection<K>>"</code>" — Grid structure (rows and cells)"</li>
-                <li><code>"selection_mode: SelectionMode"</code>" — None, Single, or Multiple"</li>
-                <li><code>"selection_behavior: SelectionBehavior"</code>" — Toggle or Replace"</li>
-                <li><code>"focus_mode: GridFocusMode"</code>" — Row or Cell focus mode"</li>
-                <li><code>"selected_keys: Option<Signal<Selection<K>>>"</code>" — Controlled selection"</li>
-                <li><code>"on_selection_change: Option<Callback<Selection<K>>>"</code>" — Selection callback"</li>
-                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" — Disabled row/cell keys"</li>
-                <li><code>"disabled: Option<Signal<bool>>"</code>" — Disable entire grid"</li>
-                <li><code>"escape_key_behavior: EscapeKeyBehavior"</code>" — ClearSelection or None"</li>
-                <li><code>"should_focus_wrap: bool"</code>" — Wrap arrow key navigation"</li>
-                <li><code>"on_row_action / on_cell_action: Option<Callback<K>>"</code>" — Enter key callbacks"</li>
-                <li><code>"label / labelled_by"</code>" — ARIA labeling"</li>
-                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
-            </ul>
-
-            <h3 id="api-grid-row-group">"GridRowGroup"</h3>
-            <p>"Structural wrapper. Props: "<code>"classes"</code>", "<code>"styles"</code>"."</p>
-
-            <h3 id="api-grid-row">"GridRow"</h3>
-            <ul>
-                <li><code>"item_key: K"</code>" — Row key (must match collection)"</li>
-                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
-                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
-            </ul>
-
-            <h3 id="api-grid-cell">"GridCell"</h3>
-            <ul>
-                <li><code>"item_key: K"</code>" — Cell key (must match collection)"</li>
-                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
-                <li><code>"column_index: usize"</code>" — 0-based column index"</li>
-                <li><code>"focus_mode: CellFocusMode"</code>" — Cell (default) or Child"</li>
-                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
-            </ul>
-
-            <h3 id="api-grid-list">"GridList"</h3>
-            <ul>
-                <li><code>"all_keys: Signal<Vec<K>>"</code>" — Ordered list of all row keys"</li>
-                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" — Disabled keys"</li>
-                <li>"Same selection, ARIA, and behavior props as Grid"</li>
-                <li><code>"on_action: Option<Callback<K>>"</code>" — Enter key / double-click callback"</li>
-            </ul>
-
-            <h3 id="api-grid-list-item">"GridListItem"</h3>
-            <ul>
-                <li><code>"item_key: K"</code>" — Item key"</li>
-                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
-                <li><code>"disabled: Option<Signal<bool>>"</code>" — Per-item disabled state"</li>
-                <li><code>"text_value: Option<String>"</code>" — Accessible text label"</li>
-                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
-            </ul>
-
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Grid Atoms", link: "#grid" },
-                Toc::Leaf { title: "2D Grid", link: "#grid-2d" },
-                Toc::Leaf { title: "Grid List", link: "#grid-list" },
-                Toc::Leaf { title: "Data Attributes", link: "#data-attributes" },
-                Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
-                Toc::Leaf { title: "API Reference", link: "#api" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Grid.materialize()>"Grid overview"</Link></li>
+                <li><Link href=routes::doc::grid::Hook.materialize()>"Grid hooks"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

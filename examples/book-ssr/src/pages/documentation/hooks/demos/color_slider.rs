@@ -1,4 +1,5 @@
 use leptonic::{
+    components::prelude::*,
     hooks::*,
     utils::{
         color::{HSV, HsvChannel},
@@ -11,11 +12,12 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorSliderDemo() -> impl IntoView {
+    let disabled = RwSignal::new(false);
     let state = use_color_slider_state(&UseColorSliderStateInput {
         default_value: HSV::new(),
         channel: HsvChannel::Hue,
-        disabled: false.into(),
-        orientation: Signal::default(),
+        is_disabled: disabled.into(),
+        orientation: Orientation::Horizontal.into(),
         on_change: None,
         on_change_end: None,
     });
@@ -25,10 +27,9 @@ pub fn ColorSliderDemo() -> impl IntoView {
 
     let color_slider = use_color_slider(UseColorSliderInput {
         state,
-        disabled: false.into(),
-        orientation: Signal::default(),
+        is_disabled: disabled.into(),
+        orientation: Orientation::Horizontal.into(),
         aria_label: Some("Hue"),
-        is_rtl: false,
         name: None,
     });
 
@@ -77,6 +78,8 @@ pub fn ColorSliderDemo() -> impl IntoView {
                 "Hue: " <span class="demo-color-preview" style=preview_styles></span> " "
                 <code>{move || thumb_label.get()}</code>
             </p>
+
+            <Checkbox state=disabled>"Disabled"</Checkbox>
         </div>
     }
 }

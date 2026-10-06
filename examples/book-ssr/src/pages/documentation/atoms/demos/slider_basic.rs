@@ -13,7 +13,7 @@ pub fn SliderBasicDemo() -> impl IntoView {
             <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) classes="demo-slider">
                 <SliderTrack classes="demo-slider-track">
                     <SliderTrackFill classes="demo-slider-fill" />
-                    <SliderThumb classes="demo-slider-thumb" />
+                    <SliderThumb aria_label="Volume" classes="demo-slider-thumb" />
                 </SliderTrack>
                 <SliderOutput let:attrs let:values>
                     <output {..attrs} class="demo-slider-output">

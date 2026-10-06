@@ -2,133 +2,65 @@ use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
-    traits::{Consumer, RingBuffer},
+    traits::{Consumer, Observer, RingBuffer},
 };
 
 #[component]
 pub fn PressBasicDemo() -> impl IntoView {
     let (count, set_count) = signal(0);
     let (dbl_count, set_dbl_count) = signal(0);
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
+    let (events, set_events) = signal(HeapRb::<String>::new(50));
     let (disabled, set_disabled) = signal(false);
     let (press_state, set_press_state) = signal(false);
 
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
+    let log = move |name: &'static str, e: &PressEvent| {
+        set_events.update(|events| {
+            events.push_overwrite(format!(
+                "{name}: pointer_type={:?}, key={:?}, x={:?}, y={:?}",
+                e.pointer_type, e.key, e.x, e.y,
+            ));
+        });
+    };
 
     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
-        disabled: disabled.into(),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
+        is_disabled: disabled.into(),
         on_press: Callback::new(move |e: PressEvent| {
             set_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Press: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
+            log("Press", &e);
         }),
-        on_press_up: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressUp: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_press_start: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressStart: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_press_end: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressEnd: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
+        on_press_up: Some(Callback::new(move |e: PressEvent| log("PressUp", &e))),
+        on_press_start: Some(Callback::new(move |e: PressEvent| log("PressStart", &e))),
+        on_press_end: Some(Callback::new(move |e: PressEvent| log("PressEnd", &e))),
         on_press_change: Some(Callback::new(move |pressed: bool| {
             set_press_state.set(pressed);
         })),
         on_double_press: Some(Callback::new(move |e: PressEvent| {
             set_dbl_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "DoublePress: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
+            log("DoublePress", &e);
         })),
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
+        ..Default::default()
     });
+    let (attrs, styles) = props.into_parts();
 
-    let (press_props, press_styles) = props.into_inner();
+    let times = |n: i32| if n == 1 { "time" } else { "times" };
 
     view! {
-        <p>"Try interacting with the button below using mouse, touch, or keyboard (Tab to focus, Enter/Space to press)."</p>
+        <p>"Press the button with mouse, touch or keyboard (Tab to focus, Enter or Space to press)."</p>
 
-        <button
-            {..press_props.into_attrs()}
-            style=press_styles
-            style:background=move || if is_pressed.get() { "var(--brand-color)" } else { "" }
-            style:color=move || if is_pressed.get() { "white" } else { "" }
-            style:transform=move || if is_pressed.get() { "scale(0.97)" } else { "" }
-            style:transition="background 0.1s, color 0.1s, transform 0.1s"
-        >
+        <button {..attrs} style=styles class="demo-press-button" class:pressed=move || is_pressed.get()>
             "Press me"
         </button>
 
-        <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
-            <Checkbox checked=disabled set_checked=set_disabled />
-            <Label>"Disabled"</Label>
-        </FormControl>
+        <Checkbox state=(disabled, set_disabled) classes=["demo-form-row", "demo-mt-1"]>"Disabled"</Checkbox>
 
-        <p>"Is pressed: " { move || is_pressed.get() }</p>
-        <p>"on_press_change: " { move || press_state.get() }</p>
-        <p>"Was pressed: " { move || count.get() } { move || match count.get() {
-            1 => " time",
-            _ => " times",
-        } }</p>
-        <p>"Was double-pressed: " { move || dbl_count.get() } { move || match dbl_count.get() {
-            1 => " time",
-            _ => " times",
-        } }</p>
+        <p>"is_pressed: " {move || is_pressed.get()}</p>
+        <p>"on_press_change: " {move || press_state.get()}</p>
+        <p>"Pressed " {move || count.get()} " " {move || times(count.get())}</p>
+        <p>"Double-pressed " {move || dbl_count.get()} " " {move || times(dbl_count.get())}</p>
 
-        <p>"Last " { move || events.with(ringbuf::traits::Observer::occupied_len) } " events: "</p>
-
-        <pre style="
-            width: 100%;
-            height: 15em;
-            overflow: auto;
-            padding: var(--typography-code-padding);
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            { move || string.get() }
+        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <pre class="demo-event-log">
+            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

@@ -6,7 +6,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::use_event_listener;
 use web_sys::{KeyboardEvent, PointerEvent};
 
 use crate::{
@@ -14,6 +13,9 @@ use crate::{
     utils::{
         EventAccessors, EventHandler, EventTargetExt,
         element_capture::{CapturedElement, ElementCaptureAttr},
+        event_listeners::{Listener, listen_to},
+        i18n::use_direction,
+        locale::WritingDirection,
         modifiers::{EventModifiers, Modifiers},
         pointer_type::PointerType,
         text_selection::{disable_text_selection, restore_text_selection},
@@ -46,10 +48,6 @@ use crate::{
 //   position changes (pointer drag, container click, keyboard, programmatic).
 //   Enables imperative sync without reactive Effects. React-aria has no
 //   equivalent.
-//
-// - `is_rtl` as a top-level `UseMoveInput` field: Affects constrained position
-//   normalization. Kept at the input level (not nested in the constraint) for
-//   separation of concerns.
 //
 // ## OMISSIONS
 //
@@ -118,13 +116,10 @@ pub enum MoveConstraint {
 #[derive(Copy, Clone)]
 pub struct UseMoveInput {
     /// Whether movement is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// Optional axis constraint for movement. When `None`, movement is unrestricted.
     pub axis: Signal<Option<MoveAxis>>,
-
-    /// Whether to use RTL layout (reverses horizontal axis in constrained mode).
-    pub is_rtl: bool,
 
     /// Callback fired when movement starts.
     pub on_move_start: Option<Callback<MoveStartEvent>>,
@@ -226,21 +221,6 @@ pub type UseMoveContainerAttrs = (
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
 );
 
-#[allow(clippy::struct_field_names)]
-struct MoveEventHandlers {
-    global_on_pointer_move_cleanup: Box<dyn Fn() + Send + Sync + 'static>,
-    global_on_pointer_up_cleanup: Box<dyn Fn() + Send + Sync + 'static>,
-    global_on_pointer_cancel_cleanup: Box<dyn Fn() + Send + Sync + 'static>,
-}
-
-impl MoveEventHandlers {
-    fn cleanup(&self) {
-        (self.global_on_pointer_move_cleanup)();
-        (self.global_on_pointer_up_cleanup)();
-        (self.global_on_pointer_cancel_cleanup)();
-    }
-}
-
 struct MoveState {
     pointer_id: i32,
     pointer_type: PointerType,
@@ -249,7 +229,8 @@ struct MoveState {
     last_pos: (f64, f64),
     /// The element on which text selection was disabled.
     text_selection_element: Option<web_sys::Element>,
-    event_handlers: MoveEventHandlers,
+    /// The drag's global listeners (on the document): removed when the state is dropped.
+    _global_listeners: Vec<Listener>,
 }
 
 /// The pixel step size for keyboard-initiated movement.
@@ -293,9 +274,8 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     #[cfg(not(feature = "ssr"))]
     {
         let UseMoveInput {
-            disabled,
+            is_disabled: disabled,
             axis,
-            is_rtl,
             on_move_start,
             on_move,
             on_move_end,
@@ -306,6 +286,9 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         } = input;
 
         let constrain_center = matches!(constraint, Some(MoveConstraint::Center));
+        // Right-to-left layouts mirror the horizontal axis of constrained positions.
+        let direction = use_direction();
+        let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
 
         let (is_moving, set_is_moving) = signal(false);
         let movable_element = CapturedElement::new();
@@ -442,7 +425,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 };
 
                 // Apply RTL for horizontal
-                let norm_x = if is_rtl { 1.0 - norm_x } else { norm_x };
+                let norm_x = if is_rtl() { 1.0 - norm_x } else { norm_x };
 
                 Some((
                     NormalizedPosition {
@@ -536,7 +519,6 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     if let Some(ref el) = s.text_selection_element {
                         restore_text_selection(el);
                     }
-                    s.event_handlers.cleanup();
                     set_is_moving.set(false);
                     return true;
                 }
@@ -563,7 +545,6 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     if let Some(ref el) = s.text_selection_element {
                         restore_text_selection(el);
                     }
-                    s.event_handlers.cleanup();
                     set_is_moving.set(false);
                     return true;
                 }
@@ -640,26 +621,18 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 }
 
                 // Get the document to attach global listeners
-                let doc = current_target.get_owner_document();
 
                 // Attach global event listeners for the duration of the drag
-                let event_handlers = MoveEventHandlers {
-                    global_on_pointer_move_cleanup: Box::new(use_event_listener(
-                        doc.clone(),
-                        ev::pointermove,
-                        handle_pointer_move,
-                    )),
-                    global_on_pointer_up_cleanup: Box::new(use_event_listener(
-                        doc.clone(),
-                        ev::pointerup,
-                        handle_pointer_up,
-                    )),
-                    global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
-                        doc,
-                        ev::pointercancel,
-                        handle_pointer_cancel,
-                    )),
-                };
+                let global_listeners = current_target
+                    .get_owner_document()
+                    .map(|doc| {
+                        vec![
+                            listen_to(&doc, ev::pointermove, false, handle_pointer_move),
+                            listen_to(&doc, ev::pointerup, false, handle_pointer_up),
+                            listen_to(&doc, ev::pointercancel, false, handle_pointer_cancel),
+                        ]
+                    })
+                    .unwrap_or_default();
 
                 let pos = (e.page_x(), e.page_y());
                 state.set_value(Some(MoveState {
@@ -669,7 +642,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     initial_pos: pos,
                     last_pos: pos,
                     text_selection_element: current_target_element,
-                    event_handlers,
+                    _global_listeners: global_listeners,
                 }));
             }
         };
@@ -755,7 +728,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     } else {
                         0.0
                     };
-                    let norm_x = if is_rtl { 1.0 - norm_x } else { norm_x };
+                    let norm_x = if is_rtl() { 1.0 - norm_x } else { norm_x };
 
                     Some((
                         NormalizedPosition {
@@ -782,12 +755,12 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         };
 
         on_cleanup(move || {
-            state.with_value(|s| {
-                if let Some(s) = s.as_ref() {
-                    if let Some(ref el) = s.text_selection_element {
-                        restore_text_selection(el);
-                    }
-                    s.event_handlers.cleanup();
+            // Dropping the state removes its global listeners.
+            state.try_update_value(|s| {
+                if let Some(s) = s.take()
+                    && let Some(ref el) = s.text_selection_element
+                {
+                    restore_text_selection(el);
                 }
             });
         });
@@ -844,7 +817,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                         )
                     };
 
-                    let adjusted_norm_x = if is_rtl { 1.0 - norm_x } else { norm_x };
+                    let adjusted_norm_x = if is_rtl() { 1.0 - norm_x } else { norm_x };
                     let pixel_x = adjusted_norm_x * available_width;
                     let pixel_y = norm_y * available_height;
 

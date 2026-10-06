@@ -64,7 +64,7 @@ pub struct UseDatePickerStateInput {
     pub is_read_only: Signal<bool>,
 
     /// Whether the field is explicitly invalid (controlled).
-    pub is_invalid: Option<Signal<bool>>,
+    pub is_invalid: Signal<bool>,
 
     /// Custom validation function.
     pub validate: Option<ValidateFn<Option<time::OffsetDateTime>>>,
@@ -89,7 +89,7 @@ impl Default for UseDatePickerStateInput {
             on_open_change: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
-            is_invalid: None,
+            is_invalid: Signal::stored(false),
             validate: None,
             validation_behavior: ValidationBehavior::default(),
             name: None,

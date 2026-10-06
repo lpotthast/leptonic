@@ -41,7 +41,6 @@
 //! We use basic string formatting with configurable decimal places.
 //! This avoids `wasm_bindgen` complexity for internationalization.
 
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -49,21 +48,23 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use leptos_use::use_event_listener;
+use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
 use crate::{
     hooks::{
-        IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles, UseMoveInput,
-        interactions::use_move::MoveAxis,
-        slider::{SliderOrientation, UseSliderStateReturn},
-        use_move,
+        IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, Orientation, PropsWithStyles,
+        UseMoveInput, interactions::use_move::MoveAxis, slider::UseSliderStateReturn, use_move,
     },
     utils::{
         EventAccessors, EventHandler, EventTargetExt,
         aria::{AriaDisabled, AriaLive, AriaRole},
         css::TouchAction,
         element_capture::{CapturedElement, ElementCaptureAttr},
+        event_listeners::{Listener, listen_to},
+        i18n::use_direction,
+        id::use_id,
+        locale::WritingDirection,
         style::TouchActionProperty,
         styles::Styles,
     },
@@ -76,7 +77,7 @@ use crate::{
 /// Input parameters for the `use_slider` hook.
 #[derive(Debug, Clone)]
 pub struct UseSliderInput {
-    /// The slider state (from `use_slider_state`). Also provides the `disabled` info.
+    /// The slider state (from `use_slider_state`). Also provides `is_disabled`.
     pub state: UseSliderStateReturn,
 
     /// An accessibility label for the slider group.
@@ -84,9 +85,6 @@ pub struct UseSliderInput {
 
     /// ID of an element that labels the slider group.
     pub aria_labelledby: Option<String>,
-
-    /// Whether to use RTL layout (reverses arrow key direction).
-    pub is_rtl: bool,
 }
 
 /// The return value of the `use_slider` hook.
@@ -273,16 +271,18 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         state,
         aria_label,
         aria_labelledby,
-        is_rtl,
     } = input;
 
     let base_id = use_id("slider");
+    // Right-to-left layouts reverse the horizontal direction.
+    let direction = use_direction();
+    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
     let group_id = format!("slider-group-{base_id}");
     let label_id = format!("slider-label-{base_id}");
     let output_id = format!("slider-output-{base_id}");
 
     let orientation = state.orientation;
-    let disabled = state.disabled;
+    let disabled = state.is_disabled;
 
     let track_element = CapturedElement::new();
 
@@ -300,7 +300,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
 
     // Cleanup functions for the global pointerup/pointercancel listeners registered
     // in on_track_pointerdown. Stored so we can remove them in the handler or on_cleanup.
-    let track_cleanup: StoredValue<Option<Box<dyn Fn() + Send + Sync>>> = StoredValue::new(None);
+    let track_cleanup: StoredValue<Option<SendWrapper<Vec<Listener>>>> = StoredValue::new(None);
 
     // Handle track clicks immediately on pointerdown (before use_move processes the event).
     // This is the react-aria "onDownTrack" pattern: click-to-position happens here,
@@ -313,24 +313,17 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         if let Some(track) = track_element.get_untracked().as_deref().cloned() {
             let rect = track.get_bounding_client_rect();
 
-            // Convert page coordinates to client coordinates relative to track.
-            // page_x/page_y include scroll offset, but getBoundingClientRect uses viewport coords.
-            let scroll_x = web_sys::window()
-                .and_then(|w| w.scroll_x().ok())
-                .unwrap_or(0.0);
-            let scroll_y = web_sys::window()
-                .and_then(|w| w.scroll_y().ok())
-                .unwrap_or(0.0);
-            let client_x = e.page_x() - scroll_x;
-            let client_y = e.page_y() - scroll_y;
+            // Client (viewport) coordinates, as `getBoundingClientRect`.
+            let client_x = e.client_x();
+            let client_y = e.client_y();
 
             let (position, size): (f64, f64) = match orientation.get_untracked() {
-                SliderOrientation::Horizontal => {
+                Orientation::Horizontal => {
                     let pos = client_x - rect.left();
-                    let adjusted_pos = if is_rtl { rect.width() - pos } else { pos };
+                    let adjusted_pos = if is_rtl() { rect.width() - pos } else { pos };
                     (adjusted_pos, rect.width())
                 }
-                SliderOrientation::Vertical => {
+                Orientation::Vertical => {
                     // For vertical, bottom = 0%, top = 100%
                     (rect.bottom() - client_y, rect.height())
                 }
@@ -363,48 +356,37 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             // These always fire (even without pointer movement), ensuring dragging state
             // is cleared for click-without-drag interactions.
             let pointer_id = e.pointer_id();
-            let doc = e.expect_current_target().get_owner_document();
+            let Some(doc) = e.expect_current_target().get_owner_document() else {
+                return;
+            };
 
-            let cleanup_up =
-                use_event_listener(doc.clone(), ev::pointerup, move |e: PointerEvent| {
-                    if e.pointer_id() != pointer_id {
-                        return;
-                    }
-                    if let Some(idx) = dragging_thumb_index.get_value() {
-                        state.set_thumb_dragging.run((idx, false));
-                    }
-                    dragging_thumb_index.set_value(None);
-                    current_position_px.set_value(None);
-                    // Remove our global listeners
-                    track_cleanup.update_value(|c| {
-                        if let Some(cleanup_fn) = c.take() {
-                            cleanup_fn();
-                        }
-                    });
-                });
+            let on_up = listen_to(&doc, ev::pointerup, false, move |e: PointerEvent| {
+                if e.pointer_id() != pointer_id {
+                    return;
+                }
+                if let Some(idx) = dragging_thumb_index.get_value() {
+                    state.set_thumb_dragging.run((idx, false));
+                }
+                dragging_thumb_index.set_value(None);
+                current_position_px.set_value(None);
+                // Remove our global listeners.
+                track_cleanup.set_value(None);
+            });
 
-            let cleanup_cancel =
-                use_event_listener(doc, ev::pointercancel, move |e: PointerEvent| {
-                    if e.pointer_id() != pointer_id {
-                        return;
-                    }
-                    if let Some(idx) = dragging_thumb_index.get_value() {
-                        state.set_thumb_dragging.run((idx, false));
-                    }
-                    dragging_thumb_index.set_value(None);
-                    current_position_px.set_value(None);
-                    // Remove our global listeners
-                    track_cleanup.update_value(|c| {
-                        if let Some(cleanup_fn) = c.take() {
-                            cleanup_fn();
-                        }
-                    });
-                });
+            let on_cancel = listen_to(&doc, ev::pointercancel, false, move |e: PointerEvent| {
+                if e.pointer_id() != pointer_id {
+                    return;
+                }
+                if let Some(idx) = dragging_thumb_index.get_value() {
+                    state.set_thumb_dragging.run((idx, false));
+                }
+                dragging_thumb_index.set_value(None);
+                current_position_px.set_value(None);
+                // Remove our global listeners.
+                track_cleanup.set_value(None);
+            });
 
-            track_cleanup.set_value(Some(Box::new(move || {
-                cleanup_up();
-                cleanup_cancel();
-            })));
+            track_cleanup.set_value(Some(SendWrapper::new(vec![on_up, on_cancel])));
         }
     };
 
@@ -412,12 +394,11 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     // management (pointerdown, pointermove, pointerup, pointercancel) for drag deltas.
     // on_move_start is a no-op because we handle the initial click in on_track_pointerdown.
     let track_move_return = use_move(UseMoveInput {
-        disabled,
+        is_disabled: disabled,
         axis: Signal::derive(move || match orientation.get() {
-            SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
-            SliderOrientation::Vertical => Some(MoveAxis::Vertical),
+            Orientation::Horizontal => Some(MoveAxis::Horizontal),
+            Orientation::Vertical => Some(MoveAxis::Vertical),
         }),
-        is_rtl: false,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {})),
         on_move: Some(Callback::new(move |e: MoveEvent| {
             if let Some(idx) = dragging_thumb_index.get_value()
@@ -427,8 +408,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
 
                 let rect = track.get_bounding_client_rect();
                 let size = match orientation {
-                    SliderOrientation::Horizontal => rect.width(),
-                    SliderOrientation::Vertical => rect.height(),
+                    Orientation::Horizontal => rect.width(),
+                    Orientation::Vertical => rect.height(),
                 };
 
                 // Get current position in pixels (initialized in on_track_pointerdown)
@@ -439,10 +420,10 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
                 // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
                 // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
                 let delta = match orientation {
-                    SliderOrientation::Horizontal => e.delta_x,
-                    SliderOrientation::Vertical => -e.delta_y,
+                    Orientation::Horizontal => e.delta_x,
+                    Orientation::Vertical => -e.delta_y,
                 };
-                let delta = if is_rtl && orientation == SliderOrientation::Horizontal {
+                let delta = if is_rtl() && orientation == Orientation::Horizontal {
                     -delta
                 } else {
                     delta
@@ -472,11 +453,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     });
 
     on_cleanup(move || {
-        track_cleanup.update_value(|c| {
-            if let Some(cleanup_fn) = c.take() {
-                cleanup_fn();
-            }
-        });
+        track_cleanup.try_update_value(Option::take);
     });
 
     UseSliderReturn {

@@ -1,7 +1,9 @@
 use std::sync::LazyLock;
 
-use syntect::html::{ClassStyle, ClassedHTMLGenerator};
-use syntect::parsing::SyntaxSet;
+use syntect::{
+    html::{ClassStyle, ClassedHTMLGenerator},
+    parsing::SyntaxSet,
+};
 
 static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
 

@@ -4,11 +4,8 @@ use std::fmt;
 use leptos::prelude::*;
 
 use crate::{
-    hooks::slider::{
-        SliderOrientation, SliderValues, UseSliderStateInput, UseSliderStateReturn,
-        use_slider_state,
-    },
-    utils::color::ColorValue,
+    hooks::slider::{SliderValues, UseSliderStateInput, UseSliderStateReturn, use_slider_state},
+    utils::{color::ColorValue, orientation::Orientation},
 };
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorSliderState.ts
@@ -31,11 +28,11 @@ pub struct UseColorSliderStateInput<C: ColorValue> {
     pub channel: C::Channel,
 
     /// Whether the slider is disabled.
-    pub disabled: Signal<bool>,
+    pub is_disabled: Signal<bool>,
 
     /// The slider orientation. Affects keyboard navigation and pointer
     /// coordinate interpretation in the underlying slider state.
-    pub orientation: Signal<SliderOrientation>,
+    pub orientation: Signal<Orientation>,
 
     /// Callback fired when the color changes during interaction.
     pub on_change: Option<Callback<C>>,
@@ -102,7 +99,7 @@ pub fn use_color_slider_state<C: ColorValue>(
     let UseColorSliderStateInput {
         default_value,
         channel,
-        disabled,
+        is_disabled: disabled,
         orientation,
         on_change,
         on_change_end,
@@ -146,7 +143,7 @@ pub fn use_color_slider_state<C: ColorValue>(
         min_value: range.min_value,
         max_value: range.max_value,
         step: Some(range.step),
-        disabled,
+        is_disabled: disabled,
         orientation,
         on_change: Some(slider_on_change),
         on_change_end: slider_on_change_end,

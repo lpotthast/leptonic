@@ -1,333 +1,435 @@
-// Upstream: react-aria/src/dnd/DropTargetKeyboardNavigation.ts @ 6f664fe911
-//! Keyboard navigation between drop positions within a collection.
-//!
-//! Based on react-aria's keyboard navigation logic in
-//! `react-aria/src/dnd/useDroppableCollection.ts`.
+// Upstream: react-aria/src/dnd/DropTargetKeyboardNavigation.ts @ 99e6102368
+use super::types::{DropPosition, DropTarget, ItemDropTarget};
+use crate::hooks::collections::{Collection, Key, KeyboardDelegate, NavigationOptions, NodeKind};
 
-use super::types::{DropPosition, DropTarget};
-use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
-/// Navigation direction for keyboard-based drop target movement.
+/// The arrow key moving a keyboard drag's drop target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NavigationDirection {
-    /// Move to the next item (down or right).
-    Next,
-    /// Move to the previous item (up or left).
-    Previous,
-    /// Jump to the first item.
-    First,
-    /// Jump to the last item.
-    Last,
+pub(crate) enum NavigationDirection {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
-/// Navigates to the next drop target position using a keyboard delegate.
-///
-/// Cycles through positions on each key: `Before → On → After`, then moves
-/// to the next/previous key. Falls back to `Root` at collection boundaries.
-///
-/// # Arguments
-///
-/// * `keyboard_delegate` - Provides key ordering.
-/// * `target` - The current drop target (or `None` if no target is focused).
-/// * `direction` - Which direction to navigate.
-/// * `is_valid` - Predicate to filter invalid targets.
-#[must_use]
-pub fn navigate_drop_target(
-    keyboard_delegate: &dyn KeyboardDelegate<String>,
+/// The drop target after `target` when moving in `direction`: through the root, then before,
+/// on and after each item (and into and out of nested items).
+pub(crate) fn navigate(
+    delegate: &dyn KeyboardDelegate,
+    collection: &Collection,
     target: Option<&DropTarget>,
     direction: NavigationDirection,
-    is_valid: &dyn Fn(&DropTarget) -> bool,
+    rtl: bool,
+    wrap: bool,
 ) -> Option<DropTarget> {
+    use NavigationDirection::{Down, Left, Right, Up};
     match direction {
-        NavigationDirection::First => {
-            let first_key = keyboard_delegate.get_first_key(None, true)?;
-            find_valid_position(&first_key, true, is_valid)
-        }
-        NavigationDirection::Last => {
-            let last_key = keyboard_delegate.get_last_key(None, true)?;
-            find_valid_position_reverse(&last_key, is_valid)
-        }
-        NavigationDirection::Next => navigate_next(keyboard_delegate, target, is_valid),
-        NavigationDirection::Previous => navigate_previous(keyboard_delegate, target, is_valid),
+        Left if rtl => next_drop_target(delegate, collection, target, wrap, Some(Left)),
+        Left => previous_drop_target(delegate, collection, target, wrap, Some(Left)),
+        Right if rtl => previous_drop_target(delegate, collection, target, wrap, Some(Right)),
+        Right => next_drop_target(delegate, collection, target, wrap, Some(Right)),
+        Up => previous_drop_target(delegate, collection, target, wrap, None),
+        Down => next_drop_target(delegate, collection, target, wrap, None),
     }
 }
 
-/// Navigate forward: cycles Before → On → After on current key, then moves to next key.
-fn navigate_next(
-    delegate: &dyn KeyboardDelegate<String>,
+const INCLUDE_DISABLED: NavigationOptions = NavigationOptions {
+    include_disabled: true,
+};
+
+fn item(key: Key, drop_position: DropPosition) -> DropTarget {
+    DropTarget::Item(ItemDropTarget { key, drop_position })
+}
+
+fn next_drop_target(
+    delegate: &dyn KeyboardDelegate,
+    collection: &Collection,
     target: Option<&DropTarget>,
-    is_valid: &dyn Fn(&DropTarget) -> bool,
+    wrap: bool,
+    horizontal: Option<NavigationDirection>,
 ) -> Option<DropTarget> {
-    match target {
-        None | Some(DropTarget::Root) => {
-            // Start from the first key
-            let first_key = delegate.get_first_key(None, true)?;
-            find_valid_position(&first_key, true, is_valid)
+    let Some(target) = target else {
+        return Some(DropTarget::Root);
+    };
+    let target = match target {
+        DropTarget::Root => {
+            return delegate
+                .first_key(None, false)
+                .map(|key| item(key, DropPosition::Before));
         }
-        Some(DropTarget::Item { key, position }) => {
-            // Try the next position on the same key
-            let next_positions = match position {
-                DropPosition::Before => vec![DropPosition::On, DropPosition::After],
-                DropPosition::On => vec![DropPosition::After],
-                DropPosition::After => vec![],
-            };
+        DropTarget::Item(target) => target,
+    };
 
-            for pos in next_positions {
-                let candidate = DropTarget::Item {
-                    key: key.clone(),
-                    position: pos,
-                };
-                if is_valid(&candidate) {
-                    return Some(candidate);
+    let next_key = match horizontal {
+        Some(NavigationDirection::Right) => delegate.key_right_of(&target.key, INCLUDE_DISABLED),
+        Some(_) => delegate.key_left_of(&target.key, INCLUDE_DISABLED),
+        None => delegate.key_below(&target.key, INCLUDE_DISABLED),
+    };
+    let next_collection_key = next_item(collection, &target.key, |k| {
+        collection.key_after(k).cloned()
+    });
+    if let Some(next_key) = &next_key
+        && Some(next_key) != next_collection_key.as_ref()
+    {
+        return Some(item(next_key.clone(), target.drop_position));
+    }
+
+    match target.drop_position {
+        DropPosition::Before => return Some(item(target.key.clone(), DropPosition::On)),
+        DropPosition::On => {
+            let target_node = collection.get(&target.key);
+            let next_node = next_key.as_ref().and_then(|k| collection.get(k));
+            if let (Some(target_node), Some(next_node)) = (target_node, next_node)
+                && next_node.level >= target_node.level
+            {
+                return Some(item(next_node.key.clone(), DropPosition::Before));
+            }
+            return Some(item(target.key.clone(), DropPosition::After));
+        }
+        DropPosition::After => {
+            let target_node = collection.get(&target.key);
+            let mut next_in_level = target_node
+                .and_then(|n| n.next_key.as_ref())
+                .and_then(|k| collection.get(k));
+            while let Some(node) = next_in_level
+                && node.kind != NodeKind::Item
+            {
+                next_in_level = node.next_key.as_ref().and_then(|k| collection.get(k));
+            }
+            if let Some(target_node) = target_node
+                && next_in_level.is_none()
+                && let Some(parent) = target_node
+                    .parent_key
+                    .as_ref()
+                    .and_then(|k| collection.get(k))
+            {
+                // After the last child: before the parent's next sibling, or after the parent.
+                if let Some(next) = parent.next_key.as_ref().and_then(|k| collection.get(k))
+                    && next.kind == NodeKind::Item
+                {
+                    return Some(item(next.key.clone(), DropPosition::Before));
+                }
+                if parent.kind == NodeKind::Item {
+                    return Some(item(parent.key.clone(), DropPosition::After));
                 }
             }
-
-            // Move to the next key
-            let mut current_key = key.clone();
-            while let Some(next_key) = delegate.get_key_below(&current_key) {
-                if let Some(target) = find_valid_position(&next_key, true, is_valid) {
-                    return Some(target);
-                }
-                current_key = next_key;
+            if let Some(next) = next_in_level {
+                return Some(item(next.key.clone(), DropPosition::On));
             }
-
-            // Reached the end → try root as a wrap-around target
-            if is_valid(&DropTarget::Root) {
-                return Some(DropTarget::Root);
-            }
-
-            None
         }
     }
+
+    wrap.then_some(DropTarget::Root)
 }
 
-/// Navigate backward: cycles After → On → Before on current key, then moves to previous key.
-fn navigate_previous(
-    delegate: &dyn KeyboardDelegate<String>,
+fn previous_drop_target(
+    delegate: &dyn KeyboardDelegate,
+    collection: &Collection,
     target: Option<&DropTarget>,
-    is_valid: &dyn Fn(&DropTarget) -> bool,
+    wrap: bool,
+    horizontal: Option<NavigationDirection>,
 ) -> Option<DropTarget> {
-    match target {
-        None => {
-            // Start from the last key
-            let last_key = delegate.get_last_key(None, true)?;
-            find_valid_position_reverse(&last_key, is_valid)
-        }
-        Some(DropTarget::Root) => {
-            // Root → go to last key's last position
-            let last_key = delegate.get_last_key(None, true)?;
-            find_valid_position_reverse(&last_key, is_valid)
-        }
-        Some(DropTarget::Item { key, position }) => {
-            // Try the previous position on the same key
-            let prev_positions = match position {
-                DropPosition::After => vec![DropPosition::On, DropPosition::Before],
-                DropPosition::On => vec![DropPosition::Before],
-                DropPosition::Before => vec![],
+    if target.is_none() || (wrap && target == Some(&DropTarget::Root)) {
+        // After the outermost ancestor of the last item.
+        let mut previous_key = None;
+        let mut last_key = delegate.last_key(None, false);
+        while let Some(key) = last_key.take() {
+            let Some(node) = collection.get(&key) else {
+                break;
             };
-
-            for pos in prev_positions {
-                let candidate = DropTarget::Item {
-                    key: key.clone(),
-                    position: pos,
-                };
-                if is_valid(&candidate) {
-                    return Some(candidate);
-                }
+            if node.kind != NodeKind::Item {
+                break;
             }
-
-            // Move to the previous key
-            let mut current_key = key.clone();
-            while let Some(prev_key) = delegate.get_key_above(&current_key) {
-                if let Some(target) = find_valid_position_reverse(&prev_key, is_valid) {
-                    return Some(target);
-                }
-                current_key = prev_key;
-            }
-
-            // Reached the start → try root
-            if is_valid(&DropTarget::Root) {
-                return Some(DropTarget::Root);
-            }
-
-            None
+            last_key.clone_from(&node.parent_key);
+            previous_key = Some(key);
         }
+        return previous_key.map(|key| item(key, DropPosition::After));
+    }
+    let Some(DropTarget::Item(target)) = target else {
+        return None;
+    };
+
+    let previous_key = match horizontal {
+        Some(NavigationDirection::Left) => delegate.key_left_of(&target.key, INCLUDE_DISABLED),
+        Some(_) => delegate.key_right_of(&target.key, INCLUDE_DISABLED),
+        None => delegate.key_above(&target.key, INCLUDE_DISABLED),
+    };
+    let previous_collection_key = next_item(collection, &target.key, |k| {
+        collection.key_before(k).cloned()
+    });
+    if let Some(previous_key) = &previous_key
+        && Some(previous_key) != previous_collection_key.as_ref()
+    {
+        return Some(item(previous_key.clone(), target.drop_position));
+    }
+
+    match target.drop_position {
+        DropPosition::Before => {
+            if let Some(prev) = collection.get(&target.key).and_then(|n| n.prev_key.clone())
+                && let Some(last_child) = last_child(collection, &prev)
+            {
+                return Some(last_child);
+            }
+            Some(match previous_key {
+                Some(key) => item(key, DropPosition::On),
+                None => DropTarget::Root,
+            })
+        }
+        DropPosition::On => Some(item(target.key.clone(), DropPosition::Before)),
+        DropPosition::After => Some(
+            last_child(collection, &target.key)
+                .unwrap_or_else(|| item(target.key.clone(), DropPosition::On)),
+        ),
     }
 }
 
-/// Finds the first valid position on the given key (Before, On, After).
-fn find_valid_position(
-    key: &str,
-    _forward: bool,
-    is_valid: &dyn Fn(&DropTarget) -> bool,
-) -> Option<DropTarget> {
-    for position in [DropPosition::Before, DropPosition::On, DropPosition::After] {
-        let candidate = DropTarget::Item {
-            key: key.to_owned(),
-            position,
-        };
-        if is_valid(&candidate) {
-            return Some(candidate);
-        }
+/// "After the last child" of `key`, if it has (expanded) children.
+fn last_child(collection: &Collection, key: &Key) -> Option<DropTarget> {
+    let target_node = collection.get(key)?;
+    let next_key = next_item(collection, key, |k| collection.key_after(k).cloned())?;
+    let next_node = collection.get(&next_key)?;
+    if next_node.level <= target_node.level {
+        return None;
     }
-    None
+    let mut last = target_node
+        .last_child_key
+        .as_ref()
+        .and_then(|k| collection.get(k));
+    while let Some(node) = last
+        && node.kind != NodeKind::Item
+        && node.prev_key.is_some()
+    {
+        last = node.prev_key.as_ref().and_then(|k| collection.get(k));
+    }
+    last.map(|node| item(node.key.clone(), DropPosition::After))
 }
 
-/// Finds the last valid position on the given key (After, On, Before).
-fn find_valid_position_reverse(
-    key: &str,
-    is_valid: &dyn Fn(&DropTarget) -> bool,
-) -> Option<DropTarget> {
-    for position in [DropPosition::After, DropPosition::On, DropPosition::Before] {
-        let candidate = DropTarget::Item {
-            key: key.to_owned(),
-            position,
-        };
-        if is_valid(&candidate) {
-            return Some(candidate);
+/// The next item (skipping other nodes) in the direction of `step`.
+fn next_item(
+    collection: &Collection,
+    key: &Key,
+    step: impl Fn(&Key) -> Option<Key>,
+) -> Option<Key> {
+    let mut next = step(key);
+    while let Some(k) = &next {
+        match collection.get(k) {
+            Some(node) if node.kind != NodeKind::Item => next = step(k),
+            _ => break,
         }
     }
-    None
+    next
 }
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::HashSet, sync::Arc};
+
+    use assertr::prelude::*;
+    use leptos::prelude::*;
+
     use super::*;
+    use crate::{
+        hooks::{
+            Orientation,
+            collections::{
+                CollectionMemo, LayoutDelegate, ListKeyboardDelegate, Rect, SelectionManager,
+                SelectionOptions, Size,
+            },
+        },
+        utils::locale::WritingDirection,
+    };
 
-    /// A simple test keyboard delegate for a fixed list.
-    struct TestDelegate {
-        keys: Vec<String>,
+    struct NoLayout;
+
+    impl LayoutDelegate for NoLayout {
+        fn item_rect(&self, _key: &Key) -> Option<Rect> {
+            None
+        }
+        fn visible_rect(&self) -> Rect {
+            Rect::default()
+        }
+        fn content_size(&self) -> Size {
+            Size::default()
+        }
     }
 
-    impl KeyboardDelegate<String> for TestDelegate {
-        fn get_key_below(&self, key: &String) -> Option<String> {
-            let idx = self.keys.iter().position(|k| k == key)?;
-            self.keys.get(idx + 1).cloned()
-        }
+    /// react-aria's test tree: projects and reports with nested items, fully expanded.
+    fn collection() -> CollectionMemo {
+        Memo::new(|_| {
+            let tree = Collection::build(|b| {
+                b.item("projects", "Projects").children(|b| {
+                    b.item("project-1", "Project 1");
+                    b.item("project-2", "Project 2").children(|b| {
+                        b.item("project-2A", "Project 2A");
+                        b.item("project-2B", "Project 2B");
+                        b.item("project-2C", "Project 2C");
+                    });
+                    b.item("project-3", "Project 3");
+                    b.item("project-4", "Project 4");
+                    b.item("project-5", "Project 5").children(|b| {
+                        b.item("project-5A", "Project 5A");
+                        b.item("project-5B", "Project 5B");
+                        b.item("project-5C", "Project 5C");
+                    });
+                });
+                b.item("reports", "Reports").children(|b| {
+                    b.item("reports-1", "Reports 1").children(|b| {
+                        b.item("reports-1A", "Reports 1A").children(|b| {
+                            b.item("reports-1AB", "Reports 1AB").children(|b| {
+                                b.item("reports-1ABC", "Reports 1ABC");
+                            });
+                        });
+                        b.item("reports-1B", "Reports 1B");
+                        b.item("reports-1C", "Reports 1C");
+                    });
+                    b.item("reports-2", "Reports 2");
+                });
+            });
+            let parents: HashSet<Key> = [
+                "projects",
+                "project-2",
+                "project-5",
+                "reports",
+                "reports-1",
+                "reports-1A",
+                "reports-1AB",
+            ]
+            .into_iter()
+            .map(Key::from)
+            .collect();
+            Arc::new(tree.with_expanded(&parents))
+        })
+    }
 
-        fn get_key_above(&self, key: &String) -> Option<String> {
-            let idx = self.keys.iter().position(|k| k == key)?;
-            if idx == 0 {
-                return None;
+    fn expected() -> Vec<String> {
+        let mut targets = vec!["root".to_owned()];
+        for (key, positions) in [
+            ("projects", "bo"),
+            ("project-1", "bo"),
+            ("project-2", "bo"),
+            ("project-2A", "bo"),
+            ("project-2B", "bo"),
+            ("project-2C", "boa"),
+            ("project-3", "bo"),
+            ("project-4", "bo"),
+            ("project-5", "bo"),
+            ("project-5A", "bo"),
+            ("project-5B", "bo"),
+            ("project-5C", "boa"),
+            ("project-5", "a"),
+            ("reports", "bo"),
+            ("reports-1", "bo"),
+            ("reports-1A", "bo"),
+            ("reports-1AB", "bo"),
+            ("reports-1ABC", "boa"),
+            ("reports-1AB", "a"),
+            ("reports-1B", "bo"),
+            ("reports-1C", "boa"),
+            ("reports-2", "boa"),
+            ("reports", "a"),
+        ] {
+            for p in positions.chars() {
+                let position = match p {
+                    'b' => "before",
+                    'o' => "on",
+                    _ => "after",
+                };
+                targets.push(format!("{key} {position}"));
             }
-            self.keys.get(idx - 1).cloned()
         }
-
-        fn get_key_left_of(&self, key: &String) -> Option<String> {
-            self.get_key_above(key)
-        }
-
-        fn get_key_right_of(&self, key: &String) -> Option<String> {
-            self.get_key_below(key)
-        }
-
-        fn get_first_key(&self, _from: Option<&String>, _global: bool) -> Option<String> {
-            self.keys.first().cloned()
-        }
-
-        fn get_last_key(&self, _from: Option<&String>, _global: bool) -> Option<String> {
-            self.keys.last().cloned()
-        }
+        targets
     }
 
-    fn accept_before_after(target: &DropTarget) -> bool {
+    fn describe(target: &DropTarget) -> String {
         match target {
-            DropTarget::Root => false,
-            DropTarget::Item { position, .. } => {
-                matches!(position, DropPosition::Before | DropPosition::After)
+            DropTarget::Root => "root".to_owned(),
+            DropTarget::Item(item) => format!(
+                "{} {}",
+                item.key,
+                match item.drop_position {
+                    DropPosition::Before => "before",
+                    DropPosition::On => "on",
+                    DropPosition::After => "after",
+                }
+            ),
+        }
+    }
+
+    fn collect(
+        delegate: &dyn KeyboardDelegate,
+        direction: NavigationDirection,
+        rtl: bool,
+    ) -> Vec<String> {
+        let collection = delegate_collection();
+        let mut results = Vec::new();
+        let mut target = None;
+        loop {
+            target = collection
+                .with_untracked(|c| navigate(delegate, c, target.as_ref(), direction, rtl, false));
+            match &target {
+                Some(t) => results.push(describe(t)),
+                None => return results,
             }
         }
     }
 
-    #[test]
-    fn navigate_next_from_none_goes_to_first_key() {
-        let delegate = TestDelegate {
-            keys: vec!["a".into(), "b".into(), "c".into()],
-        };
-        let result = navigate_drop_target(
-            &delegate,
-            None,
-            NavigationDirection::Next,
-            &accept_before_after,
-        );
-        assert_eq!(
-            result,
-            Some(DropTarget::Item {
-                key: "a".into(),
-                position: DropPosition::Before,
-            })
-        );
+    thread_local! {
+        static COLLECTION: std::cell::Cell<Option<CollectionMemo>> = const { std::cell::Cell::new(None) };
+    }
+
+    fn delegate_collection() -> CollectionMemo {
+        COLLECTION
+            .with(std::cell::Cell::get)
+            .expect("set by the test")
+    }
+
+    fn delegate(orientation: Orientation, direction: WritingDirection) -> ListKeyboardDelegate {
+        let collection = collection();
+        COLLECTION.with(|c| c.set(Some(collection)));
+        let selection = SelectionManager::new(collection, SelectionOptions::default());
+        ListKeyboardDelegate::new(collection, selection, Arc::new(NoLayout))
+            .with_orientation(orientation)
+            .with_direction(direction)
     }
 
     #[test]
-    fn navigate_next_advances_position_then_key() {
-        let delegate = TestDelegate {
-            keys: vec!["a".into(), "b".into()],
-        };
-        let current = DropTarget::Item {
-            key: "a".into(),
-            position: DropPosition::Before,
-        };
-        let result = navigate_drop_target(
-            &delegate,
-            Some(&current),
-            NavigationDirection::Next,
-            &accept_before_after,
-        );
-        assert_eq!(
-            result,
-            Some(DropTarget::Item {
-                key: "a".into(),
-                position: DropPosition::After,
-            })
-        );
+    fn navigates_forward_vertically() {
+        Owner::new().with(|| {
+            let d = delegate(Orientation::Vertical, WritingDirection::Ltr);
+            assert_that!(collect(&d, NavigationDirection::Down, false)).is_equal_to(expected());
+        });
     }
 
     #[test]
-    fn navigate_previous_from_after_goes_to_before() {
-        let delegate = TestDelegate {
-            keys: vec!["a".into(), "b".into()],
-        };
-        let current = DropTarget::Item {
-            key: "a".into(),
-            position: DropPosition::After,
-        };
-        let result = navigate_drop_target(
-            &delegate,
-            Some(&current),
-            NavigationDirection::Previous,
-            &accept_before_after,
-        );
-        assert_eq!(
-            result,
-            Some(DropTarget::Item {
-                key: "a".into(),
-                position: DropPosition::Before,
-            })
-        );
+    fn navigates_backward_vertically() {
+        Owner::new().with(|| {
+            let d = delegate(Orientation::Vertical, WritingDirection::Ltr);
+            let mut results = collect(&d, NavigationDirection::Up, false);
+            results.reverse();
+            assert_that!(results).is_equal_to(expected());
+        });
     }
 
     #[test]
-    fn navigate_first_goes_to_first_key_before() {
-        let delegate = TestDelegate {
-            keys: vec!["a".into(), "b".into(), "c".into()],
-        };
-        let current = DropTarget::Item {
-            key: "c".into(),
-            position: DropPosition::After,
-        };
-        let result = navigate_drop_target(
-            &delegate,
-            Some(&current),
-            NavigationDirection::First,
-            &accept_before_after,
-        );
-        assert_eq!(
-            result,
-            Some(DropTarget::Item {
-                key: "a".into(),
-                position: DropPosition::Before,
-            })
-        );
+    fn navigates_forward_horizontally() {
+        Owner::new().with(|| {
+            let d = delegate(Orientation::Horizontal, WritingDirection::Ltr);
+            assert_that!(collect(&d, NavigationDirection::Right, false)).is_equal_to(expected());
+        });
+    }
+
+    #[test]
+    fn navigates_forward_horizontally_rtl() {
+        Owner::new().with(|| {
+            let d = delegate(Orientation::Horizontal, WritingDirection::Rtl);
+            assert_that!(collect(&d, NavigationDirection::Left, true)).is_equal_to(expected());
+        });
     }
 }

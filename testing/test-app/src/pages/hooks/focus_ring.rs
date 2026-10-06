@@ -4,7 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn PageHookFocusRing() -> impl IntoView {
     let focus_ring = use_focus_ring(UseFocusRingInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         within: false,
         auto_focus: false,
         is_text_input: false,
@@ -17,7 +17,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
     let is_focused = focus_ring.is_focused;
 
     let focus_ring_within = use_focus_ring(UseFocusRingInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         within: true,
         auto_focus: false,
         is_text_input: false,
@@ -30,7 +30,7 @@ pub fn PageHookFocusRing() -> impl IntoView {
     let within_is_focused = focus_ring_within.is_focused;
 
     let disabled_focus_ring = use_focus_ring(UseFocusRingInput {
-        disabled: Signal::derive(|| true),
+        is_disabled: Signal::derive(|| true),
         within: false,
         auto_focus: false,
         is_text_input: false,

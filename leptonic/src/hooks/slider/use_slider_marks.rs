@@ -235,7 +235,7 @@ mod tests {
 
     use super::*;
     use crate::hooks::{
-        SliderOrientation,
+        Orientation,
         slider::use_slider_state::{
             SliderValues, UseSliderStateInput, UseSliderStateReturn, use_slider_state,
         },
@@ -253,8 +253,8 @@ mod tests {
             min_value: min,
             max_value: max,
             step,
-            disabled: false.into(),
-            orientation: SliderOrientation::default().into(),
+            is_disabled: false.into(),
+            orientation: Orientation::Horizontal.into(),
             on_change: None,
             on_change_end: None,
         })

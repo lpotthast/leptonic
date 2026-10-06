@@ -2,179 +2,136 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell},
-    routes,
-};
-
 use super::demos::color::ColorConceptDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageColorOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="color" class="anchor">
-                "Color"
-                <AnchorLink href="#color" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Color">
             <p>
-                "Color components let users view and select colors through various "
-                "interaction patterns: 2D gradient areas, channel sliders, hue wheels, "
-                "hex text fields, and more."
+                "Color controls let users view and choose colors through different interaction patterns: 2D gradient "
+                "areas, channel sliders, hue wheels, hex text fields and swatches. Each pattern suits a different task, "
+                "and a full color picker combines several of them on one shared color."
             </p>
 
-            <p>
-                "Leptonic provides color picking at two abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "This page covers the color concept; choose a layer below to dive into specifics."
-            </p>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow>
+                        <TableCell>"Drop in a complete color picker"</TableCell>
+                        <TableCell><Link href=routes::doc::color::Component.materialize()>"ColorPicker component"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Build a custom color UI with full control over layout and behavior"</TableCell>
+                        <TableCell><Link href=routes::doc::color::Hooks.materialize()>"Color hooks"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Display a color with an accessible name"</TableCell>
+                        <TableCell>
+                            <Link href=routes::doc::color::Atom.materialize()>"ColorSwatch atom"</Link>" or "
+                            <Link href=routes::doc::hooks::UseColorSwatch.materialize()>"use_color_swatch"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Let users enter a hex color code"</TableCell>
+                        <TableCell><Link href=routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link></TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Color picking exists as hooks, as atoms and as a component. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate, and the "<Link href=routes::doc::color::Hooks.materialize()>"color hooks"</Link>
+                    " page for what the hooks share."
+                </p>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Drop in a complete color picker with preview, palette, sliders, and inputs"</TableCell>
-                            <TableCell><b>"ColorPicker component"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Build a custom color UI with full control over layout and behavior"</TableCell>
-                            <TableCell><b>"Color hooks"</b>" (use_color_area, use_color_slider, etc.)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Display a color swatch with proper accessibility"</TableCell>
-                            <TableCell><b>"use_color_swatch"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Let users enter a hex color code"</TableCell>
-                            <TableCell><b>"use_color_field"</b></TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorArea.materialize()>"use_color_area"</Link></TableCell>
+                        <TableCell>"A 2D gradient area for two channels at once (e.g. saturation and brightness)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorSlider.materialize()>"use_color_slider"</Link></TableCell>
+                        <TableCell>"A linear slider for one channel (e.g. hue, red)."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorWheel.materialize()>"use_color_wheel"</Link></TableCell>
+                        <TableCell>"A circular wheel for the hue (0\u{00b0}\u{2013}360\u{00b0})."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorField.materialize()>"use_color_field"</Link></TableCell>
+                        <TableCell>"A text input for hex values ("<Code inline=true>"#RRGGBB"</Code>")."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorChannelField.materialize()>"use_color_channel_field"</Link></TableCell>
+                        <TableCell>"A number input for one channel."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::hooks::UseColorSwatch.materialize()>"use_color_swatch"</Link></TableCell>
+                        <TableCell>"A display-only color preview."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::color::Atom.materialize()>"ColorArea and ColorSwatch atoms"</Link></TableCell>
+                        <TableCell>"The color area and the swatch as unstyled components built on the hooks; you add the size and look."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::color::Component.materialize()>"ColorPicker component"</Link></TableCell>
+                        <TableCell>"A ready-made, themed color picker."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+            <Section title="Quick Start">
+                <p>"The simplest way to add a color picker is the component:"</p>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let (hsv, set_hsv) = signal(HSV::new());
 
-            <ul>
-                <li><Link href=routes::doc::color::Hooks.materialize()>"Hooks: Color hooks overview"</Link>" \u{2014} 6 hook families for building custom color UIs"</li>
-                <li><Link href=routes::doc::color::Component.materialize()>"Component: ColorPicker"</Link>" \u{2014} Full-featured, ready-to-use color picker"</li>
-            </ul>
+                        view! {
+                            <ColorPicker hsv=hsv set_hsv=set_hsv />
+                        }
+                    ")}
+                </Code>
 
-            <h2 id="hooks-overview" class="anchor">
-                "Available Hooks"
-                <AnchorLink href="#hooks-overview" description="Direct link to section: Available Hooks"/>
-            </h2>
+                <p>
+                    "For your own picker layout, start from the "<Link href=routes::doc::color::Atom.materialize()>"color atoms"</Link>
+                    " instead: a "<Code inline=true>"ColorArea"</Code>" for two channels and a "<Code inline=true>"ColorSwatch"</Code>
+                    " showing the result."
+                </p>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"Hook"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_area"</Code></TableCell>
-                            <TableCell>"2D gradient area for two-channel selection (e.g. saturation + brightness)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_slider"</Code></TableCell>
-                            <TableCell>"Linear slider for a single color channel (e.g. hue, red)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_wheel"</Code></TableCell>
-                            <TableCell>"Circular hue wheel for selecting hue (0\u{00b0}\u{2013}360\u{00b0})"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_field"</Code></TableCell>
-                            <TableCell>"Text input for hex color values (#RRGGBB)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_channel_field"</Code></TableCell>
-                            <TableCell>"Numeric input for a single channel value"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"use_color_swatch"</Code></TableCell>
-                            <TableCell>"Display-only color preview with accessibility"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <p>"Color pickers fit well into popovers. Click a swatch to edit its color; the swatch updates as you go."</p>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+                <Demo description="Theme palette with popover color pickers" source=include_str!("demos/color.rs")>
+                    <ColorConceptDemo/>
+                </Demo>
+            </Section>
 
-            <p>"The simplest way to add a color picker (component layer):"</p>
+            <Section title="Accessibility">
+                <ul>
+                    <li>
+                        "Color area: "<Code inline=true>"role=\"group\""</Code>" with a visually hidden range input, announced as "
+                        "a \u{201c}2D slider\u{201d} whose value text names all three channels."
+                    </li>
+                    <li>
+                        "Color slider and wheel: a visually hidden range input whose "<Code inline=true>"aria-valuetext"</Code>
+                        " includes the hue name for hue channels (e.g. \u{201c}120\u{00b0}, green\u{201d})."
+                    </li>
+                    <li>"Color field: "<Code inline=true>"role=\"spinbutton\""</Code>" on the text input."</li>
+                    <li>
+                        "Color swatch: "<Code inline=true>"role=\"img\""</Code>" with "
+                        <Code inline=true>"aria-roledescription=\"color swatch\""</Code>" and the color name as label."
+                    </li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    use leptonic::prelude::*;
-
-                    let (hsv, set_hsv) = signal(HSV::new());
-
-                    view! {
-                        <ColorPicker hsv=hsv set_hsv=set_hsv />
-                    }
-                ")}
-            </Code>
-
-            <h2 id="demo" class="anchor">
-                "Demo"
-                <AnchorLink href="#demo" description="Direct link to section: Demo"/>
-            </h2>
-
-            <p>"Click any swatch to open a color picker. Changes update the swatch in real time."</p>
-
-            <DemoShell
-                description="Theme palette with popover color pickers"
-                source=include_str!("demos/color.rs")
-            >
-                <ColorConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <ul>
-                <li>"Color area: Uses "<Code inline=true>"role=\"group\""</Code>" with keyboard navigation (arrow keys, Page Up/Down, Home/End)"</li>
-                <li>"Color swatch: Uses "<Code inline=true>"role=\"img\""</Code>" with "<Code inline=true>"aria-roledescription=\"color swatch\""</Code></li>
-                <li>"Color wheel: Uses "<Code inline=true>"role=\"slider\""</Code>" with "<Code inline=true>"aria-valuetext"</Code>" including hue name (e.g. \"120\u{00b0}, green\")"</li>
-                <li>"Color slider: Enriched "<Code inline=true>"aria-valuetext"</Code>" with channel name and value"</li>
-            </ul>
-
-            <p>
-                "All color hooks are based on "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useColorArea.html" target=leptonic::hooks::LinkTarget::_Blank>
-                    "react-aria\u{2019}s color hooks"
-                </LinkExt>
-                "."
-            </p>
-        </Article>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowLeft / ArrowRight / ArrowUp / ArrowDown">"Change the value of a slider, wheel or field, or move a color area\u{2019}s thumb."</KeyRow>
+                    <KeyRow keys="PageUp / PageDown">"Change the value in larger steps."</KeyRow>
+                    <KeyRow keys="Home / End">"Jump to the minimum or maximum (in a color area: change the X channel in larger steps)."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

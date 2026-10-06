@@ -3,13 +3,13 @@ use leptos::prelude::*;
 use crate::{
     atoms::color_swatch::ColorSwatch,
     components::{
-        field::{Field, FieldLabel},
-        input::NumberInput,
+        number_field::NumberField,
         prelude::{Slider, SliderMarks},
     },
     hooks::{IntoAttrs, MoveConstraint, NormalizedPosition, UseMoveInput, use_move},
     prelude::*,
     utils::{
+        ValueBinding,
         classes::Classes,
         color::{HSV, RGB8},
         css::{
@@ -62,9 +62,8 @@ pub fn ColorPalette(
     let initial_val = hsv.get_untracked().value;
 
     let move_return = use_move(UseMoveInput {
-        disabled: Signal::derive(|| false),
+        is_disabled: Signal::derive(|| false),
         axis: Signal::derive(|| None),
-        is_rtl: false,
         on_move_start: None,
         on_move: None,
         on_move_end: None,
@@ -192,6 +191,23 @@ pub fn ColorPicker(
     let set_value = move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value));
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
+    // A channel of the color as a number field's value.
+    let channel = |value: Signal<f64>, set: Callback<f64>| {
+        ValueBinding::new(
+            Signal::derive(move || Some(value.get())),
+            Callback::new(move |new: Option<f64>| {
+                if let Some(new) = new {
+                    set.run(new);
+                }
+            }),
+        )
+    };
+    let read_only = |value: Signal<u8>| {
+        ValueBinding::new(
+            Signal::derive(move || Some(value.get())),
+            Callback::new(|_| {}),
+        )
+    };
 
     let flex_row_styles = Styles::builder()
         .with_unchecked("display", "flex")
@@ -234,48 +250,15 @@ pub fn ColorPicker(
             <HueSlider hue=hue set_hue=set_hue />
 
             <div style=flex_row_styles.clone()>
-                <Field styles=field_styles.clone()>
-                    <FieldLabel>"Hue"</FieldLabel>
-                    <NumberInput min=0.0 max=360.0 step=1.0 get=hue set=set_hue />
-                </Field>
-                <Field styles=field_styles.clone()>
-                    <FieldLabel>"Saturation"</FieldLabel>
-                    <NumberInput min=0.0 max=1.0 step=0.01 get=saturation set=set_saturation />
-                </Field>
-                <Field styles=field_styles_last.clone()>
-                    <FieldLabel>"Value"</FieldLabel>
-                    <NumberInput min=0.0 max=1.0 step=0.01 get=value set=set_value />
-                </Field>
+                <NumberField label="Hue" state=channel(hue, Callback::new(set_hue)) min_value=0.0 max_value=360.0 step=1.0 styles=field_styles.clone() />
+                <NumberField label="Saturation" state=channel(saturation, Callback::new(set_saturation)) min_value=0.0 max_value=1.0 step=0.01 styles=field_styles.clone() />
+                <NumberField label="Value" state=channel(value, Callback::new(set_value)) min_value=0.0 max_value=1.0 step=0.01 styles=field_styles_last.clone() />
             </div>
 
             <div style=flex_row_styles>
-                <Field styles=field_styles.clone()>
-                    <FieldLabel>"R"</FieldLabel>
-                    <NumberInput
-                        min=0.0
-                        max=255.0
-                        step=1.0
-                        get=Signal::derive(move || f64::from(rgb.get().r))
-                    />
-                </Field>
-                <Field styles=field_styles>
-                    <FieldLabel>"G"</FieldLabel>
-                    <NumberInput
-                        min=0.0
-                        max=255.0
-                        step=1.0
-                        get=Signal::derive(move || f64::from(rgb.get().g))
-                    />
-                </Field>
-                <Field styles=field_styles_last>
-                    <FieldLabel>"B"</FieldLabel>
-                    <NumberInput
-                        min=0.0
-                        max=255.0
-                        step=1.0
-                        get=Signal::derive(move || f64::from(rgb.get().b))
-                    />
-                </Field>
+                <NumberField label="R" state=read_only(Signal::derive(move || rgb.get().r)) is_read_only=true styles=field_styles.clone() />
+                <NumberField label="G" state=read_only(Signal::derive(move || rgb.get().g)) is_read_only=true styles=field_styles />
+                <NumberField label="B" state=read_only(Signal::derive(move || rgb.get().b)) is_read_only=true styles=field_styles_last />
             </div>
 
             <p>"Hex: #"{move || format!("{:X}", rgb.get())}</p>

@@ -2,143 +2,136 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::kit::*;
 
 #[component]
 pub fn PageCallback() -> impl IntoView {
     view! {
-        <Article>
-            <h1>"Callbacks (deprecated) ..TODO"</h1>
-
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    #[prop(into)] set_value: Callback<u32>,
-                    #[prop(into, optional)] maybe_render: Option<Callback<(Scope, String), View>>
-
-                    ...
-
-                    set_value.call(42);
-
-                    if let Some(render) = maybe_render {
-                        let _view = render.call(("foo".to_owned()));
-                    }
-                "#)}
-            </Code>
-
+        <DocPage title="Callbacks">
             <p>
-                "Easy, isn't it?"
+                "leptonic components accept functions through three prop types: Leptos\u{2019} "
+                <Code inline=true>"Callback"</Code>" for events, leptonic\u{2019}s "<Code inline=true>"Out"</Code>
+                " for values a component hands back to you, and "<Code inline=true>"ViewCallback"</Code>" / "
+                <Code inline=true>"ViewProducer"</Code>" for functions that render views. All of them are "
+                <Code inline=true>"Copy"</Code>", so a component can use them in as many places as it needs, "
+                "and all of them convert from closures, so you rarely name them when you use a component."
             </p>
 
-            <p>
-                "Callbacks can sometimes be tricky in Leptos. When realized with generics, they are easy to use as a component-consumer and fast, "
-                "but hard(er) to write as an author and, because of their generic nature, increase WASM binary size."
-            </p>
+            <Section title="Callback">
+                <p>
+                    <Code inline=true>"Callback<In, Out = ()>"</Code>" (from "<Code inline=true>"leptos::prelude"</Code>
+                    ") wraps a function taking one argument. Event props such as a button\u{2019}s "
+                    <Code inline=true>"on_press"</Code>" use it. Pass a closure; "<Code inline=true>"#[prop(into)]"</Code>
+                    " converts it."
+                </p>
 
-            <p>
-                "If the property of a component specifying a callback should be "<Code inline=true>"Option"</Code>"al, the generic approach is of no help, "
-                "as Rust will have problems inferring unspecified, and not otherwise explicitly nameable, types "
-                "for the properties left out when instantiating such a component."
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        view! {
+                            <Button on_press=move |_| set_count.update(|count| *count += 1)>"Increment"</Button>
+                        }
+                    "#)}
+                </Code>
 
-            <p>
-                "An additional burden with the generic approach: "<Code inline=true>"Copy"</Code>". "
-                "A simple generic "<Code inline=true>"Fn"</Code>" prop can only be moved once inside your component when not specified with an additional "
-                <Code inline=true>"Copy"</Code>" bound. "
-                "But doing so will limit your users ability to write compiling closures for the callback, "
-                "as only closures not taking ownership of non-copyable-values, implicitly making the closure copy, can be used."
-            </p>
+                <p>
+                    "In your own components, declare the prop with "<Code inline=true>"#[prop(into)]"</Code>
+                    " and call it with "<Code inline=true>"run"</Code>". Use a tuple as input to pass several values."
+                </p>
 
-            <p>
-                "If you, as a component author, need to move a callback into more places, you can put it inside a call to "
-                <Code inline=true>"StoredValue::new"</Code>" to get an easily copyable and therefore moveable value. "
-                "Using a generic "<Code inline=true>"Fn"</Code>" in the non-optional case or a "<Code inline=true>"Box<dyn Fn>"</Code>" in "
-                "case the prop is optional and always storing it boxed in a "<Code inline=true>"StoredValue"</Code>" is good solution. "
-                "Arguments could be made that "
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        #[component]
+                        fn Counter(#[prop(into)] on_change: Callback<(u32, u32)>) -> impl IntoView {
+                            // ...
+                            on_change.run((old, new));
+                        }
+                    ")}
+                </Code>
+            </Section>
 
-            <ul>
-                <li>"(a) components are not often recreated, as we always want to reactively updated their content instead"</li>
-                <li>"(b) some callbacks aren't called often, as they are only used to propagate user input and users are incredibly slow compared to machines."</li>
-            </ul>
+            <Section title="Out">
+                <p>
+                    <Code inline=true>"Out<T>"</Code>" (from "<Code inline=true>"leptonic::prelude"</Code>
+                    ") is anything a component can write a value to. Props like "<Code inline=true>"set_value"</Code>" ("
+                    <Code inline=true>"Slider"</Code>") or "<Code inline=true>"set_selected"</Code>" ("<Code inline=true>"Select"</Code>") use it, so you can pass "
+                    "a signal directly instead of wrapping it in a closure."
+                </p>
 
-            <p>
-                "These make both the performance hit of creating a Box<dyn Fn> and calling it later somewhat irrelevant. "
-                "The penalty of managing an extra StoredValue through Leptos should not be overlooked though."
-            </p>
+                <DocTable headers=&["You pass", "The component calls"]>
+                    <TableRow>
+                        <TableCell><Code inline=true>"WriteSignal<T>"</Code>", "<Code inline=true>"RwSignal<T>"</Code></TableCell>
+                        <TableCell>"The signal\u{2019}s "<Code inline=true>"set"</Code>"."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"StoredValue<T>"</Code></TableCell>
+                        <TableCell>"The stored value\u{2019}s "<Code inline=true>"set_value"</Code>"."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"A closure "<Code inline=true>"Fn(T)"</Code>", or a "<Code inline=true>"Callback<T>"</Code></TableCell>
+                        <TableCell>"The function."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"A function pointer, via "<Code inline=true>"Out::new_fn"</Code></TableCell>
+                        <TableCell>"The function."</TableCell>
+                    </TableRow>
+                </DocTable>
 
-            <p>
-                "Because creating boxed closures manually and storing them in is not ergonomic, "
-                "Leptonic provides an easy to use "<Code inline=true>"Callback"</Code>" type, which is defined as"
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let (volume, set_volume) = signal(0.5);
+                        view! {
+                            <Slider min=0.0 max=1.0 value=volume set_value=set_volume/>
+                            <Slider min=0.0 max=1.0 value=volume set_value=move |v| tracing::info!("volume: {v}")/>
+                        }
+                    "#)}
+                </Code>
 
-            <Code language=Language::Rust>
-                "pub struct Callback<T: 'static, R: 'static = ()>(leptos::StoredValue<Box<dyn Fn(T) -> R>>);"
-            </Code>
+                <p>
+                    "In your own components, declare the prop as "<Code inline=true>"#[prop(into)] set_value: Out<T>"</Code>
+                    " and write to it with "<Code inline=true>"set_value.set(value)"</Code>". "
+                    <Code inline=true>"Out"</Code>" implements "<Code inline=true>"Default"</Code>" as a no-op, so "
+                    <Code inline=true>"#[prop(into, optional)]"</Code>" works too."
+                </p>
+            </Section>
 
-            <p>
-                "This callback type is both Clone and Copy and can be used at multiple locations in a component "
-                "without requiring an explicitly Clone/Copy closure to be provided by the user of the component."
-            </p>
+            <Section title="ViewCallback and ViewProducer">
+                <p>
+                    <Code inline=true>"ViewCallback<In>"</Code>" is a "<Code inline=true>"Callback<In, AnyView>"</Code>
+                    ": it renders a view for an input. The select components use it for "
+                    <Code inline=true>"render_option"</Code>". "<Code inline=true>"ViewProducer"</Code>
+                    " renders a view without input. Both convert from closures returning anything that implements "
+                    <Code inline=true>"IntoView"</Code>"; call them with "<Code inline=true>"render"</Code>" and "
+                    <Code inline=true>"produce"</Code>"."
+                </p>
 
-            <p>
-                "Some Leptonic components use this type for some of their callbacks when the generic approach was not ergonomic. "
-                "You can also use the Callback type in your own components props. For example:"
-            </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        view! {
+                            <Select
+                                options=users
+                                selected=selected
+                                set_selected=set_selected
+                                search_text_provider=move |u: User| u.name
+                                render_option=move |u: User| view! { <b>{u.name}</b> }
+                            />
+                        }
+                    ")}
+                </Code>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    #[prop(into, optional)] set_value: Option<Callback<String>>
-                ")}
-            </Code>
-
-            <p>
-                "As seen in the definition. Two generic arguments are available. Use a tuple for T if the callback should receive multiple values. "
-                "Provide the second type, otherwise defaulting to (), when the callback should return a value. "
-            </p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    #[prop(into, optional)] render: Option<Callback<(Scope, MyType), View>>
-                ")}
-            </Code>
-
-            <p>"Create it when instantiating your component using the "<Code inline=true>"create_callback"</Code>" convenience function."</p>
-
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    view! {
-                        <MyComponent set_value=create_callback(move |v| {}) />
-                    }
-                ")}
-            </Code>
-
-            <p>
-                "Calling a callback in a component is as simple as this:"
-            </p>
-
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    set_value.call("foo".to_owned())
-                "#)}
-            </Code>
-
-            <p>"Passing the callback further down to children is no problem."</p>
-
-            <p>"There are two drawbacks though:"</p>
-            <ul>
-                <li>"Callbacks cannot take (non-static) references, only owned values."</li>
-                <li>"If a child requires a callback of slightly changed signature, you have to pay for creating an intermediate callback.."</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Link", link: "#link" },
-                Toc::Leaf { title: "Internal links", link: "#internal-links" },
-                Toc::Leaf { title: "External links", link: "#external-links" },
-                Toc::Leaf { title: "Link buttons", link: "#link-buttons" },
-                Toc::Leaf { title: "Styling", link: "#styling" },
-            ]
-        }/>
+            <Section title="Limitations">
+                <ul>
+                    <li>"Callbacks take owned values, not references."</li>
+                    <li>
+                        "The functions must be "<Code inline=true>"Send + Sync + 'static"</Code>
+                        ", so they can only capture such values, such as signals."
+                    </li>
+                    <li>
+                        "Passing a callback to a child that expects a slightly different signature requires a new "
+                        "callback that adapts it."
+                    </li>
+                </ul>
+            </Section>
+        </DocPage>
     }
 }

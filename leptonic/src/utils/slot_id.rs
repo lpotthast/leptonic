@@ -1,4 +1,57 @@
-use leptos::prelude::*;
+// Upstream: react-aria/src/utils/useId.ts @ 99e6102368 (useSlotId)
+use leptos::{
+    attr::{self, Attr},
+    prelude::*,
+};
+
+use crate::{
+    hooks::IntoAttrs,
+    utils::{CapturedElement, ElementCaptureAttr, id::use_id},
+};
+
+/// An optional element of a component (label, description, error message, ...) that other
+/// elements reference by id. See [`use_slot`].
+#[derive(Debug)]
+pub struct Slot {
+    /// Spread onto the slot element.
+    pub props: SlotProps,
+    /// The slot's id while its element is rendered, else `None`. Use it in ARIA references
+    /// (`aria-describedby`, `aria-labelledby`), so they never point to a missing element.
+    pub referenced_id: Signal<Option<String>>,
+}
+
+/// Props for a slot element.
+#[derive(Debug, Clone)]
+pub struct SlotProps {
+    pub id: String,
+    pub element_capture: ElementCaptureAttr,
+}
+
+pub type SlotAttrs = (Attr<attr::Id, String>, ElementCaptureAttr);
+
+impl IntoAttrs for SlotProps {
+    type Attrs = SlotAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (Attr(attr::Id, self.id), self.element_capture)
+    }
+}
+
+/// An id for an optional element, referenced only while the element is rendered (detected by
+/// capturing it). Like react-aria's `useSlotId`, the reference appears after mount, not in
+/// server-rendered HTML.
+pub fn use_slot(prefix: &str) -> Slot {
+    let id = use_id(prefix);
+    let element = CapturedElement::new();
+    let referenced = id.clone();
+    Slot {
+        props: SlotProps {
+            id,
+            element_capture: element.attr(),
+        },
+        referenced_id: Signal::derive(move || element.get().is_some().then(|| referenced.clone())),
+    }
+}
 
 /// Returns a reactive signal that yields `Some(id)` when the slot element is
 /// rendered, or `None` when it is not.
@@ -22,9 +75,10 @@ pub fn join_slot_ids(ids: &[Signal<Option<String>>]) -> Signal<Option<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
     use leptos::prelude::Owner;
+
+    use super::*;
 
     #[test]
     fn use_slot_id_returns_some_when_rendered() {

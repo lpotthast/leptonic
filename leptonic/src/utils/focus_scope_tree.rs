@@ -52,6 +52,67 @@ impl FocusScopeTree {
 
 thread_local! {
     static TREE: RefCell<FocusScopeTree> = RefCell::new(FocusScopeTree::new());
+    /// Whether the document-level active scope tracking is installed.
+    static TRACKING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Tracks the active scope (react-aria: `useActiveScopeTracker`): on every `focusin`, the deepest
+/// registered scope containing the focused element becomes the active scope; focus outside all
+/// scopes leaves it unchanged. One capturing listener on the document, installed when the first
+/// scope registers, so it never depends on the order of the scopes' effects.
+#[cfg(not(feature = "ssr"))]
+pub fn ensure_active_scope_tracking() {
+    use wasm_bindgen::closure::Closure;
+
+    if TRACKING.with(|tracking| tracking.replace(true)) {
+        return;
+    }
+    let Some(document) = leptos_use::use_document().as_ref().cloned() else {
+        TRACKING.with(|tracking| tracking.set(false));
+        return;
+    };
+    let on_focusin = Closure::<dyn Fn(web_sys::FocusEvent)>::new(|e: web_sys::FocusEvent| {
+        if let Some(target) = e
+            .target()
+            .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+        {
+            set_active_scope_to_deepest_containing(&target);
+        }
+    });
+    let _ = document.add_event_listener_with_callback_and_bool(
+        "focusin",
+        on_focusin.as_ref().unchecked_ref(),
+        true,
+    );
+    // The listener lives as long as the page.
+    on_focusin.forget();
+}
+
+/// Makes the deepest registered scope whose element contains `element` the active scope.
+pub fn set_active_scope_to_deepest_containing(element: &web_sys::Element) {
+    TREE.with_borrow_mut(|tree| {
+        let depth = |mut id: ScopeId| {
+            let mut depth = 0;
+            while let Some(parent) = tree.nodes.get(&id).and_then(|node| node.parent) {
+                depth += 1;
+                id = parent;
+            }
+            depth
+        };
+        let deepest = tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| {
+                (node.get_element)().is_some_and(|scope_el| {
+                    scope_el.contains(Some(element.unchecked_ref::<web_sys::Node>()))
+                })
+            })
+            .map(|(id, _)| *id)
+            .max_by_key(|id| depth(*id));
+        if let Some(deepest) = deepest {
+            tree.active_scope = Some(deepest);
+        }
+    });
 }
 
 /// Allocate a new unique `ScopeId`.
@@ -162,31 +223,17 @@ pub fn get_node_to_restore(id: ScopeId) -> Option<web_sys::Element> {
     })
 }
 
-/// Walk up the scope tree from `scope_id` to find the first `node_to_restore`
-/// that is still connected to the DOM.
-///
-/// If this scope's own `node_to_restore` is connected, returns it. Otherwise,
-/// walks to parent scopes until a connected `node_to_restore` is found.
-/// This handles the case where `node_to_restore` was removed from the DOM
-/// (e.g., a button in a dynamically updated list).
-///
-/// Matches react-aria's connected-node walk in `useRestoreFocus` cleanup.
-pub fn find_connected_node_to_restore(scope_id: ScopeId) -> Option<web_sys::Element> {
+/// The nodes to restore focus to when `scope_id` unmounts: its own `node_to_restore`, then those
+/// of its parent scopes (used when a node was removed from the DOM in the meantime).
+pub fn nodes_to_restore(scope_id: ScopeId) -> Vec<web_sys::Element> {
     TREE.with_borrow(|tree| {
+        let mut nodes = Vec::new();
         let mut current = Some(scope_id);
-        while let Some(id) = current {
-            if let Some(node) = tree.nodes.get(&id) {
-                if let Some(ref el) = node.node_to_restore
-                    && el.is_connected()
-                {
-                    return Some(el.clone());
-                }
-                current = node.parent;
-            } else {
-                break;
-            }
+        while let Some(node) = current.and_then(|id| tree.nodes.get(&id)) {
+            nodes.extend(node.node_to_restore.clone());
+            current = node.parent;
         }
-        None
+        nodes
     })
 }
 

@@ -111,6 +111,24 @@ browser-test:
 browser-test-visible:
   BROWSER_TEST_VISIBLE=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
 
+# Run the book's browser tests (every documentation page: errors, dark theme, links, phone width, Markdown export).
+book-browser-test:
+  cd ./examples/book-ssr && cargo test --test browser_test -- --nocapture
+
+# Run the book's browser tests with visible browser (for debugging)
+book-browser-test-visible:
+  cd ./examples/book-ssr && BROWSER_TEST_VISIBLE=1 cargo test --test browser_test -- --nocapture
+
+# Serve the book on its own port, target directory and site output, next to `just serve` (default port 4300).
+# Builds against the live library sources. The reload port is port + 1.
+book-serve-isolated port="4300":
+  cd ./examples/book-ssr && \
+    CARGO_TARGET_DIR=target/isolated-{{port}} \
+    LEPTOS_SITE_ROOT=target/isolated-{{port}}/site \
+    LEPTOS_SITE_ADDR=127.0.0.1:{{port}} \
+    LEPTOS_RELOAD_PORT=$(({{port}} + 1)) \
+    cargo leptos serve
+
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
 check-port port:
@@ -163,7 +181,8 @@ update:
 test:
   cargo test --manifest-path ./leptonic/Cargo.toml
   cargo test --manifest-path ./leptonic-theme/Cargo.toml
-  cargo test --manifest-path ./examples/book-ssr/Cargo.toml
+  # From the book's directory, so that its `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`) applies.
+  cd ./examples/book-ssr && cargo test
   cargo test --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo test --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
   cargo test --manifest-path ./examples/leptonic-template-tauri/Cargo.toml

@@ -1,14 +1,14 @@
-use leptos::{portal::Portal, prelude::*};
+use leptos::{context::Provider, portal::Portal, prelude::*};
 
+use super::dialog::DialogTriggerContext;
+use super::focus_scope::FocusScope;
 use crate::{
     hooks::{
-        IntoAttrs, UseModalBackdropInput, UseModalBackdropReturn, UseModalInput, UseModalReturn,
-        UseOverlayAttrs, use_modal, use_modal_backdrop,
+        IntoAttrs, OverlayTriggerState, UseModalBackdropInput, UseModalBackdropReturn,
+        UseModalInput, UseModalReturn, UseOverlayAttrs, use_modal, use_modal_backdrop,
     },
     utils::{classes::Classes, styles::Styles},
 };
-
-use super::focus_scope::FocusScope;
 
 /// Context provided by [`ModalBackdrop`] for [`ModalContent`].
 #[derive(Clone, Copy)]
@@ -24,7 +24,8 @@ struct ModalBackdropContext {
 /// # Example
 ///
 /// ```ignore
-/// <ModalBackdrop is_open=is_open on_close=close is_dismissable=true>
+/// let is_open = RwSignal::new(false);
+/// <ModalBackdrop state=is_open is_dismissable=true>
 ///     <ModalContent>
 ///         "Modal content here"
 ///     </ModalContent>
@@ -33,13 +34,11 @@ struct ModalBackdropContext {
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn ModalBackdrop(
-    /// Whether the modal is open.
-    #[prop(into)]
-    is_open: Signal<bool>,
-
-    /// Called when the modal should close.
-    #[prop(into)]
-    on_close: Callback<()>,
+    /// Whether the modal is open: app state (`state=rw_signal`, `state=(read, write)`) or an
+    /// [`OverlayTriggerState`]. Escape and (when dismissable) outside interaction close it.
+    /// Default: the surrounding [`DialogTrigger`](super::dialog::DialogTrigger)'s state.
+    #[prop(into, optional)]
+    state: Option<OverlayTriggerState>,
 
     /// Whether clicking outside or pressing Escape closes the modal.
     #[prop(default = false)]
@@ -59,36 +58,36 @@ pub fn ModalBackdrop(
 
     children: ChildrenFn,
 ) -> impl IntoView {
-    let UseModalBackdropReturn {
-        modal_props,
-        backdrop_props,
-        id: _,
-    } = use_modal_backdrop(UseModalBackdropInput {
-        is_open,
-        on_close,
+    let state = state
+        .or_else(|| use_context::<DialogTriggerContext>().map(|ctx| ctx.state))
+        .expect("a <ModalBackdrop> needs a `state` or a surrounding <DialogTrigger>");
+    let UseModalBackdropReturn { modal_props, id: _ } = use_modal_backdrop(UseModalBackdropInput {
         is_dismissable,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
+        ..UseModalBackdropInput::new(state)
     });
+    let is_open = state.is_open;
 
     let modal_props_attrs = StoredValue::new(modal_props.into_attrs());
-    let backdrop_props_attrs = StoredValue::new(backdrop_props.into_attrs());
-
-    provide_context(ModalBackdropContext { modal_props_attrs });
 
     // Store children, classes, styles in StoredValue (Copy) so Show's Fn closure can call it repeatedly.
     let children = StoredValue::new(children);
     let classes = StoredValue::new(classes);
     let styles = StoredValue::new(styles);
 
+    // The context reaches only this backdrop's content: with several backdrops side by side, each
+    // `ModalContent` gets its own backdrop's props.
     view! {
-        <Portal>
-            <Show when=move || is_open.get()>
-                <div class=classes.get_value().add("leptonic-modal-backdrop") style=styles.get_value() {..backdrop_props_attrs.get_value()}>
-                    {(children.get_value())()}
-                </div>
-            </Show>
-        </Portal>
+        <Provider value=ModalBackdropContext { modal_props_attrs }>
+            <Portal>
+                <Show when=move || is_open.get()>
+                    <div class=classes.get_value().add("leptonic-modal-backdrop") style=styles.get_value()>
+                        {(children.get_value())()}
+                    </div>
+                </Show>
+            </Portal>
+        </Provider>
     }
 }
 

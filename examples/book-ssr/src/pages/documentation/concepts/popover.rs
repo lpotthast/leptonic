@@ -1,167 +1,98 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::popover::PopoverConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PagePopoverOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="popover" class="anchor">
-                "Popover"
-                <AnchorLink href="#popover" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Popover">
             <p>
-                "Popovers are floating overlays anchored to a trigger element. "
-                "They appear on hover or click and display contextual content \u{2014} "
-                "tooltips with rich formatting, mini forms, or previews. "
-                "Unlike modals, popovers don't block the rest of the page."
+                "Popovers are floating overlays anchored to a trigger element. They show contextual content: rich "
+                "descriptions, small forms, previews."
             </p>
 
             <p>
-                "Leptonic provides popovers at three abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "The popover hook combines "<Code inline=true>"use_overlay"</Code>
-                " (dismiss behavior) with "<Code inline=true>"use_overlay_position"</Code>
-                " (viewport-aware placement)."
+                "Under the hood, a popover combines dismissal (Escape, outside interaction, blur) with placement next to "
+                "the trigger that adapts to the available space."
             </p>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Show rich contextual content anchored to an element"</TableCell><TableCell><b>"Popover"</b></TableCell></TableRow>
+                    <TableRow><TableCell>"Block the page and require a decision"</TableCell><TableCell><Link href=routes::doc::Modal.materialize()>"Modal"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Show a short text label on hover or focus"</TableCell><TableCell><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Show a list of actions triggered by a button"</TableCell><TableCell><Link href=routes::doc::Menu.materialize()>"Menu"</Link></TableCell></TableRow>
+                </DocTable>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Show rich contextual content anchored to an element"</TableCell>
-                            <TableCell><b>"Popover"</b></TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Block the page and require a decision"</TableCell>
-                            <TableCell>"Modal"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show a short text label on hover/focus"</TableCell>
-                            <TableCell>"Tooltip"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Show an action list triggered by a button"</TableCell>
-                            <TableCell>"Menu"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                <p>
+                    "Popovers are modal or non-modal. A non-modal popover lets you keep interacting with the page behind "
+                    "it (the Popover component\u{2019}s default). A modal popover traps focus, prevents scrolling and closes "
+                    "on any outside interaction (the atom\u{2019}s default, as for menus and selects)."
+                </p>
+            </Section>
 
-            <p>
-                "Popovers can be modal (blocking) or non-modal. "
-                "Non-modal popovers allow interaction with the page behind them "
-                "and are the more common case."
-            </p>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Popovers exist at all three layers. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></TableCell>
+                        <TableCell>"Positioning and dismiss behavior for elements you render yourself."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::popover::Atom.materialize()>"Popover atom"</Link></TableCell>
+                        <TableCell>
+                            "An unstyled "<Code inline=true>"Popover"</Code>" opened by a "<Code inline=true>"DialogTrigger"</Code>
+                            " around a button, or by your own state."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::popover::Component.materialize()>"Popover component"</Link></TableCell>
+                        <TableCell>"A themed popover that opens when its trigger button is pressed, with dialog semantics."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+            <Section title="Quick Start">
+                <p>
+                    "The component is the quickest way to a popover. A "<Code inline=true>"Button"</Code>
+                    " inside the trigger slot toggles it without any wiring:"
+                </p>
 
-            <ul>
-                <li><Link href=routes::doc::popover::Hook.materialize()>"Hook: use_popover"</Link></li>
-                <li><Link href=routes::doc::popover::Atom.materialize()>"Atom: Popover"</Link></li>
-                <li><Link href=routes::doc::popover::Component.materialize()>"Component: Popover"</Link></li>
-            </ul>
+                <Demo description="Popover component toggled by a button" source=include_str!("demos/popover.rs") source_open=true>
+                    <PopoverConceptDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>"The popover component behaves as follows:"</p>
 
-            <p>"The simplest way to use a popover (component layer, click to toggle):"</p>
+                <ul>
+                    <li>
+                        "The content has "<Code inline=true>"role=\"dialog\""</Code>" (or "<Code inline=true>"\"alertdialog\""</Code>
+                        "). Hidden dismiss buttons at its start and end let screen reader users close it."
+                    </li>
+                    <li>
+                        "The trigger has "<Code inline=true>"aria-expanded"</Code>" and, while the popover is open, "
+                        <Code inline=true>"aria-controls"</Code>" pointing to it."
+                    </li>
+                    <li>
+                        "A modal popover traps focus and hides the rest of the page from assistive technology. A non-modal "
+                        "popover lets focus move freely."
+                    </li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Popover>
-                        <PopoverTrigger slot>
-                            <Button>"Click me"</Button>
-                        </PopoverTrigger>
-                        "Popover content appears here."
-                    </Popover>
-                "#)}
-            </Code>
-
-            <DemoShell description="Popover with trigger button" source=include_str!("demos/popover.rs")>
-                <PopoverConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "Popover accessibility depends on the use case. "
-                "Focus trapping is automatic for modal popovers; "
-                "non-modal popovers allow focus to move freely."
-            </p>
-
-            <h3>"ARIA attributes"</h3>
-
-            <ul>
-                <li><Code inline=true>"aria-haspopup"</Code>" \u{2014} on the trigger, indicates a popup will appear"</li>
-                <li><Code inline=true>"aria-expanded"</Code>" \u{2014} on the trigger, reflects open/closed state"</li>
-            </ul>
-
-            <h3>"Keyboard interaction"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Closes the popover"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Tab"</Code></TableCell>
-                            <TableCell>"Moves focus (non-modal popovers allow focus to leave)"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Popover", link: "#popover" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="Escape">"Closes the popover."</KeyRow>
+                    <KeyRow keys="Tab">"Moves focus. In a modal popover, focus stays inside."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

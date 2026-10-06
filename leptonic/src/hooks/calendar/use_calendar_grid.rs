@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/calendar/useCalendarGrid.ts @ 6f664fe911
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -14,6 +13,7 @@ use crate::{
     utils::{
         EventHandler,
         aria::{AriaDisabled, AriaHidden, AriaMultiselectable, AriaReadonly, AriaRole},
+        id::use_id,
     },
 };
 
@@ -60,7 +60,7 @@ pub struct UseCalendarGridInput {
     pub weekday_labels: Vec<String>,
 
     /// An accessible label for the grid.
-    pub aria_label: Option<String>,
+    pub aria_label: MaybeProp<String>,
 
     /// Whether the grid supports multi-selection (for range calendars).
     pub is_range: bool,
@@ -191,7 +191,7 @@ impl Default for UseCalendarGridInput {
                 "Sat".to_string(),
                 "Sun".to_string(),
             ],
-            aria_label: None,
+            aria_label: MaybeProp::default(),
             is_range: false,
             on_select_focused_date: None,
             on_focus_previous_day: None,
@@ -229,7 +229,7 @@ pub struct UseCalendarGridReturn {
 pub struct UseCalendarGridProps {
     pub id: String,
     pub role: AriaRole,
-    pub aria_label: Option<String>,
+    pub aria_label: MaybeProp<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
@@ -260,7 +260,7 @@ impl IntoAttrs for UseCalendarGridProps {
 pub type UseCalendarGridAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,

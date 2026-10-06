@@ -10,9 +10,9 @@ use crate::{
 
 #[component]
 pub fn AnchorLink(
-    /// The anchor link. For example: "#my-anchor".
+    /// The element to link to, by id: `"#my-anchor"` (or `"my-anchor"`).
     #[prop(into)]
-    href: Oco<'static, str>,
+    href: Href,
 
     #[prop(into, optional)] scroll_behavior: Option<ScrollBehavior>,
 
@@ -36,9 +36,9 @@ pub fn AnchorLink(
         is_focus_visible: _,
         focus_handle: _,
     } = use_anchor_link(UseAnchorLinkInput {
-        href: Href::from_str(href).expect("valid href"),
+        href,
         scroll_behavior: scroll_behavior.or(Some(ScrollBehavior::default())),
-        disabled: false.into(),
+        is_disabled: false.into(),
         element_type: LinkElementType::default(),
         description,
         on_press: None,
@@ -132,13 +132,8 @@ pub fn LinkExt<H>(
     /// added when `target` is `Blank` for security reasons.
     #[prop(optional)]
     rel: Vec<LinkRel>,
-    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
-    // TODO: Impl this prop
-    // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
-    // /// will skip this page.)
-    // #[prop(optional)]
-    // replace: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -164,7 +159,7 @@ where
         href: None,
         target: Some(target),
         rel: effective_rel,
-        is_disabled: disabled,
+        is_disabled,
         element_type: LinkElementType::default(),
         aria_current: None,
         on_press,

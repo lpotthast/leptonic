@@ -1,7 +1,6 @@
 // Upstream: react-aria/src/slider/useSliderThumb.ts @ 569946588e
 use std::borrow::Cow;
 
-use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -16,20 +15,22 @@ use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 use crate::{
     hooks::{
-        IntoAttrs, UseFocusRingInput, UseFocusRingReturn, UseMoveProps, UseMoveReturn,
-        ValidationState,
+        IntoAttrs, Orientation, UseFocusRingInput, UseFocusRingReturn, UseMoveProps, UseMoveReturn,
         interactions::{
             use_hover::{UseHoverInput, UseHoverReturn, use_hover},
             use_move::{MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput, use_move},
         },
-        slider::{SliderOrientation, use_slider_state::UseSliderStateReturn},
+        slider::use_slider_state::UseSliderStateReturn,
         use_focus_ring,
     },
     utils::{
         ElementCaptureAttr, EventHandler,
-        aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired},
+        aria::{AriaDisabled, AriaOrientation},
         element_capture::CapturedElement,
         focus::focus_element,
+        i18n::use_direction,
+        id::use_id,
+        locale::WritingDirection,
         math::percentage_in_range,
     },
 };
@@ -60,19 +61,10 @@ pub struct UseSliderThumbInput {
     pub aria_labelledby: Option<&'static str>,
 
     /// Whether this thumb is disabled.
-    pub disabled: Signal<bool>,
-
-    /// The validation state.
-    pub validation_state: ValidationState,
-
-    /// Whether to use RTL layout (reverses arrow key direction).
-    pub is_rtl: bool,
+    pub is_disabled: Signal<bool>,
 
     /// Number of decimal places for display.
     pub decimal_places: Option<usize>,
-
-    /// Whether the slider value is required for form submission.
-    pub is_required: bool,
 
     /// ID of an element that describes this thumb.
     pub aria_describedby: Option<&'static str>,
@@ -212,11 +204,9 @@ pub struct UseSliderThumbInputProps {
     /// Slider orientation.
     pub aria_orientation: Signal<AriaOrientation>,
     /// Whether the slider value is invalid.
-    pub aria_invalid: Option<AriaInvalid>,
     /// Whether the slider is disabled.
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     /// Whether the slider value is required.
-    pub aria_required: Option<AriaRequired>,
     /// ID of an element that describes this thumb.
     pub aria_describedby: Option<&'static str>,
     /// ID of an element that provides additional details about this thumb.
@@ -254,9 +244,7 @@ impl IntoAttrs for UseSliderThumbInputProps {
             Attr(attr::AriaValuemax, self.aria_valuemax),
             Attr(attr::AriaValuetext, self.aria_valuetext),
             Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaRequired, self.aria_required),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaDetails, self.aria_details),
             Attr(attr::AriaErrormessage, self.aria_errormessage),
@@ -283,9 +271,7 @@ pub type UseSliderThumbInputAttrs = (
     Attr<attr::AriaValuemax, Signal<f64>>,
     Attr<attr::AriaValuetext, Signal<String>>,
     Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaDescribedby, Option<&'static str>>,
     Attr<attr::AriaDetails, Option<&'static str>>,
     Attr<attr::AriaErrormessage, Option<&'static str>>,
@@ -330,11 +316,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         name,
         aria_label,
         aria_labelledby,
-        disabled,
-        validation_state,
-        is_rtl,
+        is_disabled: disabled,
         decimal_places,
-        is_required,
         aria_describedby,
         aria_details,
         aria_errormessage,
@@ -342,6 +325,9 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     } = input;
 
     let base_id = use_id("slider-thumb");
+    // Right-to-left layouts reverse the horizontal direction.
+    let direction = use_direction();
+    let is_rtl = move || direction.get_untracked() == WritingDirection::Rtl;
     let thumb_id = format!("slider-thumb-{base_id}");
 
     let orientation = state.orientation;
@@ -422,18 +408,17 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     let UseMoveReturn {
         props: move_props, ..
     } = use_move(UseMoveInput {
-        disabled: is_disabled,
+        is_disabled,
         axis: Signal::derive(move || match orientation.get() {
-            SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
-            SliderOrientation::Vertical => Some(MoveAxis::Vertical),
+            Orientation::Horizontal => Some(MoveAxis::Horizontal),
+            Orientation::Vertical => Some(MoveAxis::Vertical),
         }),
-        is_rtl: false,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             // Initialize pixel position from current thumb percent
             if let Some(rect) = track.get_bounding_client_rect_untracked() {
-                let size = match orientation.get() {
-                    SliderOrientation::Horizontal => rect.width(),
-                    SliderOrientation::Vertical => rect.height(),
+                let size = match orientation.get_untracked() {
+                    Orientation::Horizontal => rect.width(),
+                    Orientation::Vertical => rect.height(),
                 };
                 let initial_px = state.get_thumb_percent.run(index) * size;
                 current_position_px.set_value(Some(initial_px));
@@ -447,8 +432,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             if let Some(rect) = track.get_bounding_client_rect_untracked() {
                 let orientation = orientation.get_untracked();
                 let size = match orientation {
-                    SliderOrientation::Horizontal => rect.width(),
-                    SliderOrientation::Vertical => rect.height(),
+                    Orientation::Horizontal => rect.width(),
+                    Orientation::Vertical => rect.height(),
                 };
 
                 // Get current position in pixels (should be initialized in on_move_start)
@@ -459,10 +444,10 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
                 // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
                 // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
                 let delta = match orientation {
-                    SliderOrientation::Horizontal => e.delta_x,
-                    SliderOrientation::Vertical => -e.delta_y,
+                    Orientation::Horizontal => e.delta_x,
+                    Orientation::Vertical => -e.delta_y,
                 };
-                let delta = if is_rtl && orientation == SliderOrientation::Horizontal {
+                let delta = if is_rtl() && orientation == Orientation::Horizontal {
                     -delta
                 } else {
                     delta
@@ -538,7 +523,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             state.set_thumb_value.run((index, max_val));
         };
 
-        match (key.as_str(), shift, is_rtl) {
+        match (key.as_str(), shift, is_rtl()) {
             // Right arrow / Up arrow (increment by step)
             ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => {
                 increment(step_amount);
@@ -572,7 +557,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         props: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
-        disabled: is_disabled,
+        is_disabled,
         on_hover_start: None,
         on_hover_end: None,
         on_hover_change: None,
@@ -586,7 +571,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        is_disabled,
         within: true,
         auto_focus: false,
         is_text_input: false,
@@ -604,13 +589,11 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     });
 
     // Compute aria-invalid
-    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-required
-    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Orientation string
     let aria_orientation = Signal::derive(move || AriaOrientation::from(orientation.get()));
@@ -638,9 +621,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             aria_valuemax: thumb_max,
             aria_valuetext: display_value,
             aria_orientation,
-            aria_invalid,
             aria_disabled,
-            aria_required,
             aria_describedby,
             aria_details,
             aria_errormessage,

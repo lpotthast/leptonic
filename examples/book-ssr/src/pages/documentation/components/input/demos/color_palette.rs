@@ -10,7 +10,13 @@ pub fn ColorPaletteDemo() -> impl IntoView {
             hsv=hsv
             set_saturation=move |s| set_hsv.update(|hsv| hsv.saturation = s)
             set_value=move |v| set_hsv.update(|hsv| hsv.value = v)
-            attr:style="width: 10em; height: 5em;"
+            classes="demo-color-palette-small"
         />
+        <p class="demo-status">
+            {move || {
+                let hsv = hsv.get();
+                format!("Saturation: {:.2}, value: {:.2}", hsv.saturation, hsv.value)
+            }}
+        </p>
     }
 }

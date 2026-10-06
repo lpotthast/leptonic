@@ -1,170 +1,90 @@
-use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid::GridConceptDemo;
-use crate::{
-    pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc},
-    routes,
-};
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageGridOverview() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="grid" class="anchor">
-                "Grid"
-                <AnchorLink href="#grid" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="Grid">
             <p>
                 "Grids organize content into rows and columns. "
-                "Leptonic's component-layer Grid is a responsive layout grid with breakpoint support "
+                "Leptonic\u{2019}s component-layer Grid is a responsive layout grid with breakpoint support "
                 "(xs, sm, md, lg, xl). The hook-layer grid ("<Code inline=true>"use_grid"</Code>
                 ") is an interactive ARIA grid with keyboard navigation and selection \u{2014} "
                 "used for data grids, not layout."
             </p>
 
-            <p>
-                "Leptonic provides grids at three abstraction levels. "
-                "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " for a detailed explanation of each layer. "
-                "The layout grid (component) and the interactive ARIA grid (hook) serve different purposes."
-            </p>
+            <p>"The layout grid (component) and the interactive ARIA grid (hook) serve different purposes."</p>
 
-            <h2 id="when-to-use" class="anchor">
-                "When to Use"
-                <AnchorLink href="#when-to-use" description="Direct link to section: When to Use"/>
-            </h2>
+            <Section title="When to Use">
+                <DocTable headers=&["If you want to\u{2026}", "Use"]>
+                    <TableRow><TableCell>"Create a responsive column layout"</TableCell><TableCell><b>"Grid"</b>" component (with Row/Col)"</TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Build an interactive data grid with selection"</TableCell>
+                        <TableCell><b>"Grid"</b>" hook ("<Code inline=true>"use_grid"</Code>" + "<Code inline=true>"use_grid_cell"</Code>")"</TableCell>
+                    </TableRow>
+                    <TableRow><TableCell>"Display tabular data with headers"</TableCell><TableCell><Link href=routes::doc::Table.materialize()>"Table"</Link></TableCell></TableRow>
+                </DocTable>
+            </Section>
 
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell>"If you want to\u{2026}"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Use"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>"Create a responsive column layout"</TableCell>
-                            <TableCell><b>"Grid"</b>" component (with Row/Col)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Build an interactive data grid with selection"</TableCell>
-                            <TableCell><b>"Grid"</b>" hook (use_grid + use_grid_cell)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell>"Display tabular data with headers"</TableCell>
-                            <TableCell>"Table"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <Section title="Choose Your Layer">
+                <p>
+                    "Grids exist at all three layers. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    " for how the layers relate."
+                </p>
 
-            <h2 id="dive-deeper" class="anchor">
-                "Dive Deeper"
-                <AnchorLink href="#dive-deeper" description="Direct link to section: Dive Deeper"/>
-            </h2>
+                <DocTable headers=&["Layer", "What you get"]>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::grid::Hook.materialize()>"use_grid"</Link></TableCell>
+                        <TableCell>"An interactive ARIA grid with keyboard navigation and selection, rendered by you."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::grid::Atom.materialize()>"Grid atoms"</Link></TableCell>
+                        <TableCell>"Unstyled grid and grid list components exposing their state as data attributes."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Link href=routes::doc::grid::Component.materialize()>"Grid component"</Link></TableCell>
+                        <TableCell>"A responsive layout grid with rows and columns."</TableCell>
+                    </TableRow>
+                </DocTable>
+            </Section>
 
-            <p>
-                "Not sure which layer to pick? Read the "
-                <Link href=routes::doc::Architecture.materialize()>"architecture guide"</Link>
-                ". Otherwise, pick a layer:"
-            </p>
+            <Section title="Quick Start">
+                <p>"The simplest way to use a layout grid (component layer):"</p>
 
-            <ul>
-                <li><Link href=routes::doc::grid::Hook.materialize()>"Hook: use_grid"</Link></li>
-                <li><Link href=routes::doc::grid::Atom.materialize()>"Atom: Grid"</Link></li>
-                <li><Link href=routes::doc::grid::Component.materialize()>"Component: Grid"</Link></li>
-            </ul>
+                <Demo description="Responsive grid layout with two columns" source=include_str!("demos/grid.rs") source_open=true>
+                    <GridConceptDemo/>
+                </Demo>
+            </Section>
 
-            <h2 id="quick-start" class="anchor">
-                "Quick Start"
-                <AnchorLink href="#quick-start" description="Direct link to section: Quick Start"/>
-            </h2>
+            <Section title="Accessibility">
+                <p>
+                    "The interactive grid hook implements the WAI-ARIA "
+                    <LinkExt href="https://www.w3.org/WAI/ARIA/apg/patterns/grid/" target=LinkTarget::_Blank>"Grid pattern"</LinkExt>
+                    ". The layout Grid component has no ARIA semantics \u{2014} it is purely CSS layout."
+                </p>
 
-            <p>"The simplest way to use a layout grid (component layer):"</p>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"grid\""</Code>" on the container, "
+                        <Code inline=true>"role=\"row\""</Code>" on rows, "
+                        <Code inline=true>"role=\"gridcell\""</Code>" on cells"
+                    </li>
+                    <li><Code inline=true>"aria-multiselectable"</Code>" \u{2014} when multiple selection is enabled"</li>
+                    <li>"Roving tabindex for focus management"</li>
+                </ul>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    <Grid gap=em(1.0)>
-                        <Row>
-                            <Col xs=6 sm=4>"Column A"</Col>
-                            <Col xs=6 sm=8>"Column B"</Col>
-                        </Row>
-                    </Grid>
-                "#)}
-            </Code>
-
-            <DemoShell description="Responsive grid layout" source=include_str!("demos/grid.rs")>
-                <GridConceptDemo />
-            </DemoShell>
-
-            <h2 id="accessibility" class="anchor">
-                "Accessibility"
-                <AnchorLink href="#accessibility" description="Direct link to section: Accessibility"/>
-            </h2>
-
-            <p>
-                "The interactive grid hook implements the WAI-ARIA Grid pattern. "
-                "The layout Grid component has no ARIA semantics \u{2014} it is purely CSS layout."
-            </p>
-
-            <h3>"ARIA attributes (interactive grid)"</h3>
-
-            <ul>
-                <li><Code inline=true>"role=\"grid\""</Code>" on the container, "
-                    <Code inline=true>"role=\"row\""</Code>" on rows, "
-                    <Code inline=true>"role=\"gridcell\""</Code>" on cells"</li>
-                <li><Code inline=true>"aria-multiselectable"</Code>" \u{2014} when multiple selection is enabled"</li>
-                <li>"Roving tabindex for focus management"</li>
-            </ul>
-
-            <h3>"Keyboard interaction (interactive grid)"</h3>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Key"</TableHeaderCell>
-                            <TableHeaderCell>"Action"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Arrow keys"</Code></TableCell>
-                            <TableCell>"Navigate between cells"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Home / End"</Code></TableCell>
-                            <TableCell>"Jump to first / last item"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Space"</Code></TableCell>
-                            <TableCell>"Toggle selection"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Ctrl+A"</Code></TableCell>
-                            <TableCell>"Select all (multi-select mode)"</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><Code inline=true>"Escape"</Code></TableCell>
-                            <TableCell>"Clear selection"</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "Grid", link: "#grid" },
-                Toc::Leaf { title: "When to Use", link: "#when-to-use" },
-                Toc::Leaf { title: "Dive Deeper", link: "#dive-deeper" },
-                Toc::Leaf { title: "Quick Start", link: "#quick-start" },
-                Toc::Leaf { title: "Accessibility", link: "#accessibility" },
-            ]
-        }/>
+                <KeyboardTable>
+                    <KeyRow keys="ArrowUp / ArrowDown / ArrowLeft / ArrowRight">"Navigate between cells."</KeyRow>
+                    <KeyRow keys="Home / End">"Jump to the first / last item."</KeyRow>
+                    <KeyRow keys="Space">"Toggle selection."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all (multi-select mode)."</KeyRow>
+                    <KeyRow keys="Escape">"Clear selection."</KeyRow>
+                </KeyboardTable>
+            </Section>
+        </DocPage>
     }
 }

@@ -2,244 +2,148 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
-
 use super::demos::{
     focus_ring_keyboard::FocusRingKeyboardDemo, focus_ring_within::FocusRingWithinDemo,
 };
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageUseFocusRing() -> impl IntoView {
     view! {
-        <Article>
-            <h1 id="use_focus_ring" class="anchor">
-                "use_focus_ring"
-                <AnchorLink href="#use_focus_ring" description="Direct link to article header"/>
-            </h1>
-
+        <DocPage title="use_focus_ring">
             <p>
-                "The "<code>"use_focus_ring"</code>" hook determines when to show a focus ring for accessibility. "
-                "The focus ring should only be visible during keyboard navigation, not when using mouse or touch. "
-                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+                "The "<Code inline=true>"use_focus_ring"</Code>" hook decides when an element should show a focus ring: while it "
+                "is focused and the user navigates with the keyboard, but not after a mouse click or a tap. "
+                "See the "<Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
             </p>
 
-            <p>
-                "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusRing.html" target=LinkTarget::_Blank>
-                    "useFocusRing"
-                </LinkExt>
-                "."
-            </p>
+            <ReactAria hook="useFocusRing"/>
 
-            <h2 id="keyboard-vs-mouse" class="anchor">
-                "Keyboard vs Mouse Focus"
-                <AnchorLink href="#keyboard-vs-mouse" description="Direct link to keyboard vs mouse"/>
-            </h2>
+            <Section title="Input">
+                <p><Code inline=true>"UseFocusRingInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
 
-            <p>"Try both clicking and tabbing to the buttons below. The focus ring only appears when using keyboard navigation. The " <code>"data-focus-visible"</code> " attribute is automatically added when the focus ring should be visible, and CSS handles the styling:"</p>
+                <ApiTable kind=ApiKind::Input of="UseFocusRingInput">
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                        "Ignores focus events while true. The element is then never reported as focused."
+                    </ApiRow>
+                    <ApiRow name="within" ty="bool" default="false">
+                        "Track focus anywhere inside the element instead of on the element itself, see "
+                        <a href="#within-mode">"Within Mode"</a>"."
+                    </ApiRow>
+                    <ApiRow name="auto_focus" ty="bool" default="false">
+                        "Set this when the element is focused on mount: the ring then starts out visible. It does not focus the "
+                        "element itself."
+                    </ApiRow>
+                    <ApiRow name="is_text_input" ty="bool" default="false">
+                        "Use text input rules: only Tab and Escape make focus visible, see "<a href="#text-input-mode">"Text Input Mode"</a>"."
+                    </ApiRow>
+                    <ApiRow name="on_focus" ty="Option<Callback<FocusEvent>>" default="None">
+                        "Called when the element (or, in within mode, the subtree) receives focus."
+                    </ApiRow>
+                    <ApiRow name="on_blur" ty="Option<Callback<FocusEvent>>" default="None">
+                        "Called when the element (or, in within mode, the subtree) loses focus."
+                    </ApiRow>
+                    <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
+                        "Called with the new focus state."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <DemoShell
-                source=include_str!("demos/focus_ring_keyboard.rs")
-                description="Keyboard-only focus ring visibility"
-            >
-                <FocusRingKeyboardDemo />
-            </DemoShell>
+            <Section title="Return">
+                <ApiTable kind=ApiKind::Return of="UseFocusRingReturn">
+                    <ApiRow name="props" ty="UseFocusRingProps">
+                        "The focus listeners and the "<Code inline=true>"data-focus-visible"</Code>
+                        " attribute. Spread them onto the element with "<Code inline=true>"{..props.into_attrs()}"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="is_focused" ty="Signal<bool>">
+                        "Whether the element is focused (in within mode: whether focus is inside it)."
+                    </ApiRow>
+                    <ApiRow name="is_focus_visible" ty="Signal<bool>">
+                        "Whether the focus ring should be shown: the element is focused and the last interaction was not a pointer."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
 
-            <h2 id="within-mode" class="anchor">
-                "Within Mode"
-                <AnchorLink href="#within-mode" description="Direct link to within mode"/>
-            </h2>
+            <Section title="Example">
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
-            <p>"With " <code>"within: true"</code> ", the focus ring tracks focus within the element's subtree using " <code>"focusin"</code> "/" <code>"focusout"</code> " events. The " <code>"data-focus-visible"</code> " attribute is set on the container when any descendant is focused via keyboard:"</p>
+                        view! {
+                            <button class="my-button" {..focus_ring.props.into_attrs()}>"Focus me"</button>
+                        }
+                    "#)}
+                </Code>
 
-            <DemoShell
-                source=include_str!("demos/focus_ring_within.rs")
-                description="Focus ring tracking within descendants"
-            >
-                <FocusRingWithinDemo />
-            </DemoShell>
+                <p>
+                    "The hook sets "<Code inline=true>"data-focus-visible=\"true\""</Code>" while the ring should show, so the "
+                    "styling lives in your CSS:"
+                </p>
 
-            <h2 id="text-input-mode" class="anchor">
-                "Text Input Mode"
-                <AnchorLink href="#text-input-mode" description="Direct link to text input mode"/>
-            </h2>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .my-button:focus { outline: none; }
+                        .my-button[data-focus-visible] { outline: 3px solid royalblue; outline-offset: 2px; }
+                    ")}
+                </Code>
 
-            <p>"When " <code>"is_text_input: true"</code> ", only Tab and Escape trigger the focus ring. Other keyboard events (arrow keys, letters) do not make focus visible. This matches the behavior of native text inputs where typing shouldn't trigger a focus ring:"</p>
+                <p>
+                    "You don\u{2019}t compute styles in your components, and all focus rings of your application are styled in one "
+                    "place. "<Code inline=true>"is_focus_visible"</Code>" is still there when you need the state in code."
+                </p>
+            </Section>
 
-            <Code language=Language::Rust>
-                {indoc!(r"
-                    let focus_ring = use_focus_ring(UseFocusRingInput {
-                        is_text_input: true,
-                        ..Default::default()
-                    });
-                ")}
-            </Code>
+            <Section title="Demo">
+                <p>"Click the buttons, then tab to them. The ring only appears when you use the keyboard."</p>
 
-            <h2 id="data-attribute" class="anchor">
-                "Data Attribute Styling"
-                <AnchorLink href="#data-attribute" description="Direct link to data attribute"/>
-            </h2>
+                <Demo
+                    description="Buttons that show a focus ring only for keyboard focus, one with focus callbacks and a disabled toggle"
+                    source=include_str!("demos/focus_ring_keyboard.rs")
+                >
+                    <FocusRingKeyboardDemo/>
+                </Demo>
+            </Section>
 
-            <p>"The hook automatically adds a " <code>"data-focus-visible"</code> " attribute when the focus ring should be visible. This allows centralized CSS styling:"</p>
+            <Section title="Within Mode">
+                <p>
+                    "With "<Code inline=true>"within: true"</Code>", the hook listens to "<Code inline=true>"focusin"</Code>" and "
+                    <Code inline=true>"focusout"</Code>" (via "
+                    <Link href=routes::doc::focus::UseFocusWithin.materialize()>"use_focus_within"</Link>
+                    ") and sets "<Code inline=true>"data-focus-visible"</Code>" on the container while any descendant has keyboard "
+                    "focus. Use it for groups of controls, such as a search field with a button."
+                </p>
 
-            <Code language=Language::Rust>
-                {indoc!(r#"
-                    /* In your CSS */
-                    [data-focus-visible="true"] {
-                        outline: 3px solid var(--brand-color);
-                        outline-offset: 2px;
-                    }
-                "#)}
-            </Code>
+                <Demo
+                    description="Container showing one focus ring while its input or button has keyboard focus"
+                    source=include_str!("demos/focus_ring_within.rs")
+                >
+                    <FocusRingWithinDemo/>
+                </Demo>
+            </Section>
 
-            <p>"This approach has several benefits:"</p>
+            <Section title="Text Input Mode">
+                <p>
+                    "Typing in a text field is keyboard interaction, but it should not make focus visible. With "
+                    <Code inline=true>"is_text_input: true"</Code>", only Tab and Escape do. Use it for compound components whose "
+                    "focused element is not a text input itself, but which should follow text input rules, e.g. a date picker."
+                </p>
 
-            <ul>
-                <li>"No manual style computation in your components"</li>
-                <li>"Consistent focus ring styling across your entire application"</li>
-                <li>"Easy to customize in one place"</li>
-                <li>"The signal " <code>"is_focus_visible"</code> " is still available if you need programmatic access"</li>
-            </ul>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        let focus_ring = use_focus_ring(UseFocusRingInput {
+                            is_text_input: true,
+                            ..Default::default()
+                        });
+                    ")}
+                </Code>
+            </Section>
 
-            <h2 id="input" class="anchor">
-                "Input"
-                <AnchorLink href="#input" description="Direct link to input"/>
-            </h2>
-
-            <p><code>"UseFocusRingInput"</code> " fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"disabled"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Whether the focus ring is disabled."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"within"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Track focus within descendants instead of the element itself."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"auto_focus"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Whether to auto-focus the element."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_text_input"</code></TableCell>
-                            <TableCell><code>"bool"</code></TableCell>
-                            <TableCell><code>"false"</code></TableCell>
-                            <TableCell>"Only Tab/Escape trigger focus-visible."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called on focus."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_blur"</code></TableCell>
-                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called on blur."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"on_focus_change"</code></TableCell>
-                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
-                            <TableCell><code>"None"</code></TableCell>
-                            <TableCell>"Handler called on focus state change."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="return-value" class="anchor">
-                "Return Value"
-                <AnchorLink href="#return-value" description="Direct link to return value"/>
-            </h2>
-
-            <p><code>"UseFocusRingReturn"</code> " fields:"</p>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
-                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
-                            <TableHeaderCell>"Description"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><code>"props"</code></TableCell>
-                            <TableCell><code>"UseFocusRingProps"</code></TableCell>
-                            <TableCell>"Spread onto the target element via " <code>"props.into_attrs()"</code> ". Includes the " <code>"data-focus-visible"</code> " attribute."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_focused"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"True when the element (or a descendant in within mode) is focused."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"is_focus_visible"</code></TableCell>
-                            <TableCell><code>"Signal<bool>"</code></TableCell>
-                            <TableCell>"True when the focus ring should be shown (keyboard/virtual modality)."</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
-            </h2>
-
-            <ul>
-                <li>"Distinguishes between keyboard and pointer focus."</li>
-                <li>"Tracks both focus state and focus visibility separately."</li>
-                <li>"Automatic " <code>"data-focus-visible"</code> " attribute for CSS styling."</li>
-                <li><code>"within"</code> " mode tracks focus within descendants (for containers)."</li>
-                <li>"Optional focus/blur/change callbacks with disabled state support."</li>
-                <li>"Text input mode for compound components."</li>
-            </ul>
-
-            <h2 id="see-also" class="anchor">
-                "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
-            </h2>
-
-            <ul>
-                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
-                <li><Link href=crate::routes::doc::focus::UseFocusVisible.materialize()>"use_focus_visible"</Link>" \u{2014} lower-level modality tracking used internally"</li>
-                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-                <li><Link href=crate::routes::doc::focus::FocusRing.materialize()>"FocusRing atom"</Link>" \u{2014} wraps this hook"</li>
-            </ul>
-        </Article>
-
-        <Toc toc=Toc::List {
-            inner: vec![
-                Toc::Leaf { title: "use_focus_ring", link: "#use_focus_ring" },
-                Toc::Leaf { title: "Keyboard vs Mouse Focus", link: "#keyboard-vs-mouse" },
-                Toc::Leaf { title: "Within Mode", link: "#within-mode" },
-                Toc::Leaf { title: "Text Input Mode", link: "#text-input-mode" },
-                Toc::Leaf { title: "Data Attribute Styling", link: "#data-attribute" },
-                Toc::Leaf { title: "Input", link: "#input" },
-                Toc::Leaf { title: "Return Value", link: "#return-value" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+            <SeeAlso>
+                <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=routes::doc::focus::FocusRing.materialize()>"FocusRing atom"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusVisible.materialize()>"use_focus_visible"</Link></li>
+                <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+            </SeeAlso>
+        </DocPage>
     }
 }

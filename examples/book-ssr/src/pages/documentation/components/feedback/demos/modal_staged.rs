@@ -10,11 +10,10 @@ pub fn ModalStagedDemo() -> impl IntoView {
         <p><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></p>
 
         <Modal
-            show_when=show_staged_modal1
-            on_close=move |()| set_show_staged_modal1.set(false)
+            state=(show_staged_modal1, set_show_staged_modal1)
         >
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
-            <ModalBody>"This is a test modal."</ModalBody>
+            <ModalBody>"Continue to the next step?"</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
                     <Button on_press=move |_| {
@@ -27,14 +26,19 @@ pub fn ModalStagedDemo() -> impl IntoView {
         </Modal>
 
         <Modal
-            show_when=show_staged_modal2
-            on_close=move |()| {
-                set_show_staged_modal2.set(false);
-                set_show_staged_modal1.set(true);
-            }
+            // Closing the second modal goes back to the first.
+            state=ValueBinding::new(
+                show_staged_modal2.into(),
+                Callback::new(move |open| {
+                    set_show_staged_modal2.set(open);
+                    if !open {
+                        set_show_staged_modal1.set(true);
+                    }
+                }),
+            )
         >
             <ModalHeader><ModalTitle>"Next one"</ModalTitle></ModalHeader>
-            <ModalBody>"This overlays..."</ModalBody>
+            <ModalBody>"This modal replaced the first one. Going back reopens it."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
                     <Button on_press=move |_| {

@@ -1,155 +1,153 @@
-use std::collections::HashSet;
+use std::sync::Arc;
 
 use leptonic::{
-    hooks::*,
-    utils::{classes::Classes, css::rgb, style::BackgroundColorProperty},
+    hooks::{
+        GridData, GridFocusMode, IntoAttrs, SelectionMode, UseGridCellInput, UseGridInput,
+        UseGridReturn, UseGridRowInput, UseGridStateInput,
+        collections::{Collection, Key, Selection, SelectionOptions},
+        use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
+    },
+    utils::{
+        CapturedElement,
+        classes::Classes,
+        css::{CssColor, rgb},
+        style::BackgroundColorProperty,
+    },
 };
 use leptos::prelude::*;
 
+/// An RGB color.
+type Rgb = (u8, u8, u8);
+
+/// Color palettes: one grid row each, one cell per color.
+const PALETTES: [(&str, [Rgb; 4]); 3] = [
+    (
+        "Warm",
+        [
+            (0xf4, 0x43, 0x36),
+            (0xe9, 0x1e, 0x63),
+            (0xff, 0x98, 0x00),
+            (0xff, 0xc1, 0x07),
+        ],
+    ),
+    (
+        "Cool",
+        [
+            (0x3f, 0x51, 0xb5),
+            (0x21, 0x96, 0xf3),
+            (0x03, 0xa9, 0xf4),
+            (0x00, 0xbc, 0xd4),
+        ],
+    ),
+    (
+        "Green",
+        [
+            (0x00, 0x96, 0x88),
+            (0x4c, 0xaf, 0x50),
+            (0x8b, 0xc3, 0x4a),
+            (0xcd, 0xdc, 0x39),
+        ],
+    ),
+];
+
 #[component]
 pub fn Grid2dDemo() -> impl IntoView {
-    let colors = [
-        [
-            rgb(0xf4, 0x43, 0x36),
-            rgb(0xe9, 0x1e, 0x63),
-            rgb(0x9c, 0x27, 0xb0),
-            rgb(0x67, 0x3a, 0xb7),
-        ],
-        [
-            rgb(0x3f, 0x51, 0xb5),
-            rgb(0x21, 0x96, 0xf3),
-            rgb(0x03, 0xa9, 0xf4),
-            rgb(0x00, 0xbc, 0xd4),
-        ],
-        [
-            rgb(0x00, 0x96, 0x88),
-            rgb(0x4c, 0xaf, 0x50),
-            rgb(0x8b, 0xc3, 0x4a),
-            rgb(0xcd, 0xdc, 0x39),
-        ],
-    ];
+    let selected = RwSignal::new(String::from("none"));
+    let last_action = RwSignal::new(String::from("none"));
 
-    let collection = Signal::stored(GridCollection::new(
-        colors
-            .iter()
-            .enumerate()
-            .map(|(ri, row)| GridRow {
-                key: format!("row-{ri}"),
-                cells: (0..row.len()).map(|ci| format!("{ri}-{ci}")).collect(),
-            })
-            .collect(),
-    ));
-
-    let (selected, set_selected) = signal(Selection::<String>::default());
-    let (last_row_action, set_last_row_action) = signal::<Option<String>>(None);
-
-    let grid = use_grid(UseGridInput {
-        label: Some("Color Palette".to_string()),
-        labelled_by: None,
-        collection,
-        disabled_keys: Signal::derive(HashSet::new),
-        focus_mode: GridFocusMode::Cell,
-        selection_mode: SelectionMode::Multiple,
-        selection_behavior: SelectionBehavior::Toggle,
-        selected_keys: Some(selected.into()),
-        default_selected_keys: None,
-        on_selection_change: Some(Callback::new(move |sel| set_selected.set(sel))),
-        disallow_empty_selection: false,
-        is_disabled: false.into(),
-        escape_key_behavior: EscapeKeyBehavior::ClearSelection,
-        should_focus_wrap: false,
-        on_row_action: Some(Callback::new(move |key: String| {
-            set_last_row_action.set(Some(key));
-        })),
-        on_cell_action: None,
+    // The grid's rows and cells. Cell keys are derived from the row: `Key::cell(&row, column)`.
+    let collection = Memo::new(|_| {
+        Arc::new(Collection::build(|b| {
+            for (name, colors) in PALETTES {
+                b.row(name, name, |r| {
+                    for (i, _) in colors.iter().enumerate() {
+                        r.cell(format!("{name} {}", i + 1));
+                    }
+                });
+            }
+        }))
     });
-
-    let focused_key = grid.focused_key;
-
+    let state = use_grid_state(UseGridStateInput {
+        collection,
+        selection: SelectionOptions {
+            selection_mode: Signal::stored(SelectionMode::Multiple),
+            on_selection_change: Some(Callback::new(move |selection: Selection| {
+                selected.set(describe(&selection));
+            })),
+            ..SelectionOptions::default()
+        },
+        // Arrow up/down move between rows, arrow right enters the cells. The cells have an action (below), so
+        // presses on a cell run it; palettes are selected on the row.
+        focus_mode: GridFocusMode::Row,
+    });
+    let UseGridReturn { props, data } = use_grid(UseGridInput {
+        aria_label: "Color palettes".into(),
+        on_cell_action: Some(Callback::new(move |key: Key| {
+            last_action.set(key.to_string());
+        })),
+        ..UseGridInput::new(state, CapturedElement::new())
+    });
     let row_group = use_grid_row_group();
 
     view! {
-        <div {..grid.props.into_attrs()} class="demo-my-1">
-            <div {..row_group.props.into_attrs()} class="demo-palette-grid-2d">
-                {colors
-                    .iter()
-                    .enumerate()
-                    .map(|(row_idx, row)| {
-                        let row_hook = use_grid_row(UseGridRowInput {
-                            state: grid.state,
-                            key: format!("row-{row_idx}"),
-                            row_index: row_idx,
-                        });
-                        let (row_props, row_styles) = row_hook.props.into_parts();
-
-                        view! {
-                            <div {..row_props} class="demo-contents" style=row_styles>
-                                {row
-                                    .iter()
-                                    .enumerate()
-                                    .map(|(col_idx, color)| {
-                                        let color = *color;
-                                        let cell = use_grid_cell(UseGridCellInput {
-                                            state: grid.state,
-                                            key: format!("{row_idx}-{col_idx}"),
-                                            row_index: row_idx,
-                                            column_index: col_idx,
-                                            focus_mode: CellFocusMode::Cell,
-                                        });
-                                        let is_selected = cell.is_selected;
-                                        let is_focused = cell.is_focused;
-                                        let (cell_props, cell_styles) = cell.props.into_parts();
-                                        let cell_styles = cell_styles
-                                            .add(BackgroundColorProperty.declare(color));
-
-                                        // The color is per-cell data; everything else lives in `.demo-palette-cell`.
-
-                                        view! {
-                                            <div
-                                                {..cell_props}
-                                                class=Classes::from("demo-palette-cell")
-                                                    .add_reactive("focused", is_focused)
-                                                    .add_reactive("selected", is_selected)
-                                                style=cell_styles
-                                            >
-                                                <div class="demo-palette-check">"\u{2713}"</div>
-                                            </div>
-                                        }
-                                    })
-                                    .collect_view()}
-                            </div>
-                        }
-                    })
-                    .collect_view()}
+        <div {..props.into_attrs()}>
+            <div {..row_group.row_group_props.into_attrs()} class="demo-palette-grid">
+                {PALETTES.map(|(name, colors)| view! { <PaletteRow grid=data.clone() name colors/> }).collect_view()}
             </div>
         </div>
-
-        <div class="demo-mt-1">
-            <strong>"Focused: "</strong>
-            {move || { focused_key.get().unwrap_or_else(|| "None".to_string()) }}
+        <div class="demo-state-display">
+            <div><strong>"Selected palettes: "</strong>{selected}</div>
+            <div><strong>"Last cell action: "</strong>{last_action}</div>
         </div>
+    }
+}
 
-        <div class="demo-mt-half">
-            <strong>"Selected: "</strong>
-            {move || {
-                match selected.get() {
-                    Selection::Keys(keys) => {
-                        if keys.is_empty() {
-                            "None".to_string()
-                        } else {
-                            let mut sorted: Vec<_> = keys.into_iter().collect();
-                            sorted.sort();
-                            sorted.join(", ")
-                        }
-                    }
-                    Selection::All => "All".to_string(),
-                }
-            }}
-        </div>
+#[component]
+fn PaletteRow(grid: GridData, name: &'static str, colors: [Rgb; 4]) -> impl IntoView {
+    let row_key = Key::from(name);
+    let row = use_grid_row(UseGridRowInput {
+        grid: grid.clone(),
+        key: row_key.clone(),
+    });
+    let is_selected = row.is_selected;
+    let (row_attrs, row_styles) = row.row_props.into_parts();
 
-        <div class="demo-mt-half">
-            <strong>"Last row action: "</strong>
-            {move || { last_row_action.get().unwrap_or_else(|| "None".to_string()) }}
+    view! {
+        <div
+            {..row_attrs}
+            class=Classes::from("demo-palette-row").add_reactive("selected", is_selected)
+            style=row_styles
+        >
+            <span class="demo-palette-name">{name}</span>
+            {colors
+                .into_iter()
+                .enumerate()
+                .map(|(column, (r, g, b))| {
+                    view! { <Swatch grid=grid.clone() key=Key::cell(&row_key, column) color=rgb(r, g, b)/> }
+                })
+                .collect_view()}
         </div>
+    }
+}
+
+#[component]
+fn Swatch(grid: GridData, key: Key, color: CssColor) -> impl IntoView {
+    let cell = use_grid_cell(UseGridCellInput::new(grid, key));
+    let (attrs, styles) = cell.grid_cell_props.into_parts();
+    // The color is per-cell data; everything else lives in `.demo-palette-cell`.
+    let styles = styles.add(BackgroundColorProperty.declare(color));
+
+    view! { <div {..attrs} class="demo-palette-cell" style=styles></div> }
+}
+
+fn describe(selection: &Selection) -> String {
+    match selection {
+        Selection::All => "all".to_owned(),
+        Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
+        Selection::Keys(keys) => {
+            let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
+            keys.sort();
+            keys.join(", ")
+        }
     }
 }

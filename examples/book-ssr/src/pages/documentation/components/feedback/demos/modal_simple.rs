@@ -9,8 +9,7 @@ pub fn ModalSimpleDemo() -> impl IntoView {
         <p><Button on_press=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></p>
 
         <Modal
-            show_when=show_simple_modal
-            on_close=move |()| set_show_simple_modal.set(false)
+            state=(show_simple_modal, set_show_simple_modal)
         >
             <ModalHeader><ModalTitle>"Hello"</ModalTitle></ModalHeader>
             <ModalBody>"This is a simple modal."</ModalBody>

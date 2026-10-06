@@ -24,7 +24,7 @@ pub fn FocusDemo() -> impl IntoView {
     });
 
     let UseFocusReturn { props } = use_focus(UseFocusInput {
-        disabled: disabled.into(),
+        is_disabled: disabled.into(),
         on_focus: Some(Callback::new(move |e| {
             set_events.update(|events| {
                 events.push_overwrite(Oco::Owned(format!("Focus: {e:?}")));
@@ -47,9 +47,9 @@ pub fn FocusDemo() -> impl IntoView {
         <div
             tabindex=0
             {..props.into_attrs()}
-            class=Classes::builder().with_toggle(is_focused.get(), "demo-container-active", "demo-container-inactive").build()
+            class=Classes::builder().with_toggle(is_focused, "demo-container-active", "demo-container-inactive").build()
         >
-            <strong class=Classes::builder().with_toggle(is_focused.get(), "demo-state-active", "demo-state-inactive").build()>
+            <strong class=Classes::builder().with_toggle(is_focused, "demo-state-active", "demo-state-inactive").build()>
                 { move || if is_focused.get() { "Focused" } else { "Not focused" } }
             </strong>
             " \u{2014} click here or press Tab"
@@ -61,9 +61,6 @@ pub fn FocusDemo() -> impl IntoView {
             { move || string.get() }
         </pre>
 
-        <FormControl classes="demo-form-row">
-            <Checkbox checked=disabled set_checked=set_disabled />
-            <Label>"Disabled"</Label>
-        </FormControl>
+        <Checkbox state=(disabled, set_disabled) classes="demo-form-row">"Disabled"</Checkbox>
     }
 }

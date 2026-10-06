@@ -1,6 +1,25 @@
 //
 // The following deviations apply to all hooks in this module:
 //
+// ## API DIFFERENCES
+//
+// - API conventions C1–C13 (documentation/hooks-implementation.md, "API Conventions"): typed
+//   enums/newtypes instead of strings and unions, `is_*` state flags as signals, `MaybeProp<String>`
+//   for user-visible text, state structs with methods, `new(required)` + struct update, typed
+//   ARIA values, `Duration`/`Fraction`/`Point` units.
+//   Rationale: react-aria's props objects are JavaScript idioms (stringly-typed values,
+//   `string | number` unions, optional everything); Rust expresses the same with types.
+//
+// - Hook-owned state
+//   Rationale: hooks create and own their state signals and expose read-only signals plus
+//   mutation methods, so callers can't bypass invariants and change callbacks always fire.
+//   React-aria: `useControlledState` accepts controlled (`value`) or uncontrolled
+//   (`defaultValue`) state.
+//
+// - Locale and writing direction from the i18n context
+//   Rationale: one source of truth; hooks read `use_locale()`/`use_direction()` as react-aria's
+//   `useLocale()` does, instead of taking `is_rtl`/`locale` inputs.
+//
 // ## DIFFERENT BEHAVIOR
 //
 // - Combining hooks (`mergeProps` equivalent)
@@ -22,23 +41,27 @@
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
-// - Element reference handling
-//   Rationale: All hooks use `IntoElementMaybeSignal` pattern instead of React
-//   refs. This integrates with leptos_use and handles Send+Sync requirements.
-//   React-aria: Uses React's useRef with RefObject<HTMLElement>.
+// - Element references
+//   Rationale: hooks capture their elements with `CapturedElement` (leptos-element-capture),
+//   spread as an attribute, instead of React refs.
+//   React-aria: `useRef` with `RefObject<HTMLElement>`.
 //
 // - Callback types
 //   Rationale: Uses `Callback<T>` from Leptos instead of React event handlers.
 //   React-aria: Uses React's (event: E) => void function signatures.
 //
+// - Element ids come from `use_id` (hydration-stable), never from random ids.
+//
+
+use std::fmt::Debug;
 
 use crate::utils::{merge::MergeWith, styles::Styles};
-use std::fmt::Debug;
 
 mod animation;
 mod breadcrumbs;
 mod button;
 mod calendar;
+pub mod collections;
 mod color;
 mod combobox;
 mod datepicker;
@@ -48,6 +71,7 @@ mod dnd;
 mod focus;
 mod form;
 mod grid;
+mod gridlist;
 mod interactions;
 mod link;
 mod listbox;
@@ -58,7 +82,6 @@ mod modal;
 mod overlay;
 mod progress;
 mod select;
-mod selection;
 mod separator;
 mod slider;
 mod spinbutton;
@@ -68,20 +91,30 @@ mod tag;
 mod toolbar;
 mod tooltip;
 mod tree;
+mod visually_hidden;
 
 pub use animation::*;
 pub use breadcrumbs::*;
 pub use button::*;
 pub use calendar::*;
+// The collections' most used names; everything else is used via `hooks::collections`.
+pub use collections::{
+    Collection, CollectionBuilder, CollectionMemo, DisabledBehavior, FocusStrategy, ItemBuilder,
+    ItemElements, ItemLink, Key, ListState, Node, NodeKind, SectionBuilder, SelectionBehavior,
+    SelectionMode, SingleSelectListState, ToKey, use_collection, use_list_collection,
+    use_list_state, use_single_select_list_state,
+};
 pub use color::*;
 pub use combobox::*;
 pub use datepicker::*;
 pub use dialog::*;
 pub use disclosure::*;
 pub use dnd::*;
+pub(crate) use focus::use_focus_visible::track_interaction_modality;
 pub use focus::*;
 pub use form::*;
 pub use grid::*;
+pub use gridlist::*;
 pub use interactions::*;
 pub use link::*;
 pub use listbox::*;
@@ -92,7 +125,6 @@ pub use modal::*;
 pub use overlay::*;
 pub use progress::*;
 pub use select::*;
-pub use selection::*;
 pub use separator::*;
 pub use slider::*;
 pub use spinbutton::*;
@@ -102,6 +134,9 @@ pub use tag::*;
 pub use toolbar::*;
 pub use tooltip::*;
 pub use tree::*;
+pub use visually_hidden::*;
+
+pub use crate::utils::orientation::Orientation;
 
 /// Trait for converting hook `*Props` types into spreadable attribute tuples.
 ///
@@ -135,8 +170,8 @@ impl<P: IntoAttrs> PropsWithStyles<P> {
     }
 
     /// Consume self, converting the inner props to spreadable attributes
-    /// and returning them alongside the hook's styles.
-    // TODO: Deprecate this? Remove and rename into_inner to into_parts.
+    /// and returning them alongside the hook's styles. For spreading onto an element; use
+    /// [`into_inner`](Self::into_inner) to compose the props further first (e.g. `merge_with`).
     pub fn into_parts(self) -> (P::Attrs, Styles) {
         (self.props.into_attrs(), self.styles)
     }

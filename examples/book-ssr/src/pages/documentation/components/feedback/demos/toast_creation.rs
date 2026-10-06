@@ -12,38 +12,43 @@ pub fn ToastCreationDemo() -> impl IntoView {
 
     let toasts = expect_context::<Toasts>();
 
+    let create_toast = move |_| {
+        let header = header.get_untracked();
+        let body = body.get_untracked();
+        toasts.push(Toast {
+            id: Uuid::new_v4(),
+            created_at: time::OffsetDateTime::now_utc(),
+            variant: variant.get_untracked(),
+            header: (move || header.clone()).into(),
+            body: (move || body.clone()).into(),
+            timeout: timeout.get_untracked(),
+        });
+    };
+
     view! {
-        <TextInput get=header set=set_header placeholder=Oco::Borrowed("Header text") attr:style="margin-bottom: 1em;"/>
-        <TextInput get=body set=set_body placeholder=Oco::Borrowed("Body text") attr:style="margin-bottom: 1em;"/>
+        <div class="demo-clf-form">
+            <TextField label="Header" state=(header, set_header)/>
+            <TextField label="Body" state=(body, set_body)/>
 
-        <Select
-            options={ToastVariant::iter().collect::<Vec<_>>()}
-            selected=variant
-            set_selected=set_variant
-            search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}").into_view()
-            attr:style="margin-bottom: 1em;"
-        />
+            <Select
+                options={ToastVariant::iter().collect::<Vec<_>>()}
+                selected=variant
+                set_selected=set_variant
+                search_text_provider=move |o| format!("{o}")
+                render_option=move |o| format!("{o:?}").into_view()
+            />
 
-        <Select
-            options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
-            selected=timeout
-            set_selected=set_timeout
-            search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}").into_view()
-            attr:style="margin-bottom: 1em;"
-        />
+            <Select
+                options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
+                selected=timeout
+                set_selected=set_timeout
+                search_text_provider=move |o| format!("{o}")
+                render_option=move |o| format!("{o:?}").into_view()
+            />
 
-        <Button on_press=move |_| { toasts.push(
-            Toast {
-                id: Uuid::new_v4(),
-                created_at: time::OffsetDateTime::now_utc(),
-                variant: variant.get_untracked(),
-                header: (move || header.get()).into(),
-                body: (move || body.get()).into(),
-                timeout: timeout.get_untracked(),
-            }); }>
-            "Create Toast"
-        </Button>
+            <div>
+                <Button on_press=create_toast>"Create Toast"</Button>
+            </div>
+        </div>
     }
 }
