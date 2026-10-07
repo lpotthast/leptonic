@@ -1,4 +1,4 @@
-use leptonic::atoms::prelude::LinkButton;
+use leptonic::atoms::prelude::Link;
 use leptos::prelude::*;
 use leptos_meta::{Meta, Title};
 
@@ -19,10 +19,10 @@ pub(crate) fn PageErr404() -> impl IntoView {
                 <h1 class="book-404-title">"This page doesn\u{2019}t exist"</h1>
                 <p>"The address may be mistyped, or the page has moved."</p>
                 <div class="book-404-actions">
-                    <LinkButton href=routes::Root.materialize() classes="book-button">"Go to the start page"</LinkButton>
-                    <LinkButton href=routes::Doc.materialize() classes="book-button" attr:data-variant="secondary">
+                    <Link href=routes::Root.materialize() classes="book-button">"Go to the start page"</Link>
+                    <Link href=routes::Doc.materialize() classes="book-button" attr:data-variant="secondary">
                         "Browse the docs"
-                    </LinkButton>
+                    </Link>
                 </div>
             </div>
             <img class="book-404-ferris" src="/res/icon/ferris-panic_transparent.svg" alt="Ferris, the Rust crab, panicking"/>

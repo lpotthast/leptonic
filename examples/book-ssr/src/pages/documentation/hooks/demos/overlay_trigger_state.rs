@@ -1,4 +1,7 @@
-use leptonic::{atoms::prelude::FocusScope, components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, focus_scope::FocusScope},
+    hooks::*,
+};
 use leptos::prelude::*;
 
 /// `use_overlay_trigger_state` alone: a button opens a panel, the panel closes itself, and the state counts openings.
@@ -16,7 +19,7 @@ pub fn OverlayTriggerStateDemo() -> impl IntoView {
     });
 
     view! {
-        <Button on_press=move |_| state.toggle()>
+        <Button on_press=move |_| state.toggle() classes="demo-btn">
             {move || if state.is_open.get() { "Hide tips" } else { "Show tips" }}
         </Button>
 
@@ -25,7 +28,7 @@ pub fn OverlayTriggerStateDemo() -> impl IntoView {
                 // Returns focus to the toggle button when the tips close.
                 <FocusScope restore_focus=true>
                     <p class="demo-overlay-text">"Press the button again, or close the tips here."</p>
-                    <Button on_press=move |_| state.close()>"Close"</Button>
+                    <Button on_press=move |_| state.close() classes="demo-btn">"Close"</Button>
                 </FocusScope>
             </div>
         </Show>

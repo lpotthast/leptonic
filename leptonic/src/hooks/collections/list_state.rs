@@ -58,17 +58,6 @@ pub fn use_list_state(input: UseListStateInput) -> ListState {
     }
 }
 
-/// The same list state, viewed through a filter (e.g. a combo box's input text). Selection and
-/// focus are shared with `state`; "select all" still covers the unfiltered collection.
-pub fn use_filtered_list_state(
-    state: ListState,
-    filter: impl Fn(&str, &Node) -> bool + Send + Sync + 'static,
-) -> ListState {
-    let source = state.collection;
-    let collection = Memo::new(move |_| source.with(|c| Arc::new(c.filter(&filter))));
-    use_list_state_view(state, collection)
-}
-
 /// The same list state, showing `collection` (a subset of the state's collection, e.g. its
 /// filtered items). Selection and focus are shared with `state`; when the focused item leaves
 /// the view, focus moves to a neighbor.

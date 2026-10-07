@@ -29,15 +29,14 @@ pub fn PageButtonOverview() -> impl IntoView {
                 </DocTable>
 
                 <p>
-                    "An element that looks like a button but navigates is a link: use a "
-                    <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())><Code inline=true>"LinkButton"</Code></Link>
-                    ". An element that looks like a link but triggers an action is a button."
+                    "An element that looks like a button but navigates is a "<Link href=routes::doc::Link.materialize()>"link"</Link>
+                    ", styled like your buttons. An element that looks like a link but triggers an action is a button."
                 </p>
             </Section>
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Buttons exist at all three layers. See "
+                    "Buttons exist as a hook and an atom. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -56,11 +55,13 @@ pub fn PageButtonOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The component is the quickest way to a button. Pass "<Code inline=true>"on_press"</Code>
-                    " to react to presses and "<Code inline=true>"is_disabled"</Code>" to turn it off:"
+                    "The atom is the quickest way to a button. Pass "<Code inline=true>"on_press"</Code>
+                    " to react to presses and "<Code inline=true>"is_disabled"</Code>" to turn it off, and style it "
+                    "through its data attributes (the demo\u{2019}s CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::button::Atom.materialize())>"Button Atom"</Link>" page):"
                 </p>
 
-                <Demo description="Outlined button counting saves, with a disabled toggle" source=include_str!("demos/button_basic.rs") source_open=true>
+                <Demo description="Button counting saves, with a disabled toggle" source=include_str!("demos/button_basic.rs") source_open=true>
                     <ButtonConceptDemo/>
                 </Demo>
             </Section>

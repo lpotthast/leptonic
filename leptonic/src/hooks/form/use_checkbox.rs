@@ -3,7 +3,7 @@ use leptos::prelude::*;
 use web_sys::MouseEvent;
 
 use super::{
-    use_form_validation_state::UseFormValidationStateReturn,
+    use_form_validation_state::FormValidationState,
     use_toggle::{ToggleOptions, UseToggleInput, UseToggleReturn, use_toggle_with},
     use_toggle_state::ToggleState,
 };
@@ -58,7 +58,7 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
 /// [`use_checkbox`] with a checkbox group's validation (see `use_toggle_with`).
 pub(crate) fn use_checkbox_with(
     input: UseCheckboxInput,
-    group_validation: Option<UseFormValidationStateReturn>,
+    group_validation: Option<FormValidationState>,
 ) -> UseCheckboxReturn {
     let UseCheckboxInput {
         state,

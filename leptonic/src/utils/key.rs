@@ -355,6 +355,31 @@ impl KeyboardEventKey for web_sys::KeyboardEvent {
     }
 }
 
+/// Dispatches a copy of the keyboard event `e` (same type, key, code, location, repeat and
+/// modifiers; bubbling and cancelable) on `target`, e.g. to let a collection handle a key that
+/// one of its cells or rows received (react-aria: `target.dispatchEvent(new KeyboardEvent(e.type,
+/// e))`). Nothing happens if the browser can't create the event.
+///
+/// Called from a handler of `e`, this is a nested dispatch of the same event type: safe only when
+/// no listener still running for `e` is on the copy's path (see hooks-implementation.md, "No
+/// Nested Dispatch of the Same Event Type").
+pub(crate) fn redispatch_keyboard_event(e: &web_sys::KeyboardEvent, target: &web_sys::EventTarget) {
+    let init = web_sys::KeyboardEventInit::new();
+    init.set_key(&e.key());
+    init.set_code(&e.code());
+    init.set_location(e.location());
+    init.set_repeat(e.repeat());
+    init.set_shift_key(e.shift_key());
+    init.set_ctrl_key(e.ctrl_key());
+    init.set_alt_key(e.alt_key());
+    init.set_meta_key(e.meta_key());
+    init.set_bubbles(true);
+    init.set_cancelable(true);
+    if let Ok(copy) = web_sys::KeyboardEvent::new_with_keyboard_event_init_dict(&e.type_(), &init) {
+        let _ = target.dispatch_event(&copy);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;

@@ -62,14 +62,11 @@ pub fn PageFormOverview() -> impl IntoView {
                         <TableCell><Link href=routes::doc::form::Atom.materialize()>"Form Atom"</Link></TableCell>
                         <TableCell>
                             "An unstyled "<Code inline=true>"<form>"</Code>" that sets one validation behavior for the field "
-                            "atoms and components inside it and shows the errors your server returns."
+                            "atoms inside it and shows the errors your server returns."
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>
-                    "There is no styled form component: a form has no look of its own. Give the atom classes, and use the "
-                    "styled field components inside it."
-                </p>
+                <p>"A form has no look of its own: give the atom classes to lay out its fields."</p>
             </Section>
 
             <Section title="Quick Start">

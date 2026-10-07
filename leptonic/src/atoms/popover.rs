@@ -15,8 +15,8 @@ use crate::{
     },
     utils::{
         CapturedElement, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, focus::focus_safely, point::Point,
-        shadow_dom::get_active_element, styles::Styles,
+        default_class::with_default_class, focus::focus_safely, i18n::use_direction,
+        locale::WritingDirection, point::Point, shadow_dom::get_active_element, styles::Styles,
     },
 };
 
@@ -33,8 +33,15 @@ use crate::{
 // - Whether a modal popover is a dialog (no `[role=dialog]` inside) is decided once it is rendered;
 //   its label (an own `aria_labelledby`, else the `DialogTrigger`'s trigger) is set then.
 //
+// - `aria_label`/`aria_labelledby` name the popover only while it is the dialog itself
+//   (react-aria-components passes them on always).
+//
 // ## OMITTED FEATURES
-// - `isEntering`/`isExiting` animations, `UNSTABLE_portalContainer`, submenu triggers.
+// - `isEntering`/`isExiting` props (the entry and exit animations themselves are supported:
+//   `data-entering`/`data-exiting`), `shouldSkipAnimation`, `UNSTABLE_portalContainer`,
+//   `PreviewTrigger`.
+// - Deferring the reveal until an on-screen keyboard the trigger opened finished its transition
+//   (`runAfterKeyboard`): leptonic doesn't track the on-screen keyboard yet.
 //
 // =============================================================================
 
@@ -176,7 +183,7 @@ pub fn Popover(
     });
     // The trigger's `aria-controls`.
     if let Some(context) = context {
-        context.overlay_id.set(Some(id.to_string()));
+        context.overlay_id.set(Some(id));
     }
 
     render_popover(
@@ -296,8 +303,9 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
         trigger,
         trigger_name,
     } = parts;
-    let trigger_width =
-        leptos_use::use_element_bounding(Signal::derive(move || trigger.get())).width;
+    // The trigger's width, measured per opening (see `measure_trigger_width`).
+    let trigger_width = RwSignal::new(None::<f64>);
+    let direction = use_direction();
 
     let (attrs, popover_styles) = props.into_parts();
     let attrs = StoredValue::new(attrs);
@@ -305,8 +313,7 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     // The trigger's width and the anchor point as CSS variables (react-aria-components).
     let variables = Styles::builder()
         .with_optional_unchecked("--trigger-width", move || {
-            let width = trigger_width.get();
-            (width > 0.0).then(|| format!("{width}px"))
+            trigger_width.get().map(|width| format!("{width}px"))
         })
         .with_optional_unchecked("--trigger-anchor-point", move || {
             trigger_anchor_point
@@ -384,6 +391,11 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
                         style=styles.get_value()
                         data-placement=move || placement.get().map(PlacementAxis::as_str)
                         data-trigger=trigger_name
+                        // Portaled out of the locale's subtree (react-aria-components sets it too).
+                        dir=move || match direction.get() {
+                            WritingDirection::Ltr => "ltr",
+                            WritingDirection::Rtl => "rtl",
+                        }
                         role=move || is_dialog.get().then_some("dialog")
                         tabindex=move || is_dialog.get().then_some(-1)
                         aria-label=move || is_dialog.get().then(|| aria_label.get()).flatten()
@@ -425,6 +437,7 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     on_enter: None
                     })
                     .is_entering;
+                    measure_trigger_width(trigger, trigger_width);
                     // A non-modal popover contains focus once a dialog is inside (per opening).
                     let overlay = OverlayFocusContain::new();
                     let contain = Signal::derive(move || {
@@ -458,4 +471,34 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
                 }
             </Show>
         }
+}
+
+/// Measures the trigger's width into `width` now and whenever the trigger resizes, until the
+/// current owner (an opening of the popover) is disposed: a closed popover observes nothing.
+fn measure_trigger_width(trigger: CapturedElement, width: RwSignal<Option<f64>>) {
+    #[cfg(feature = "ssr")]
+    let _ = (trigger, width);
+    #[cfg(not(feature = "ssr"))]
+    {
+        let measure = move || {
+            let measured = trigger
+                .get_bounding_client_rect_untracked()
+                .map(|rect| rect.width())
+                .filter(|width| *width > 0.0);
+            if width
+                .try_get_untracked()
+                .is_some_and(|width| width != measured)
+            {
+                width.set(measured);
+            }
+        };
+        Effect::new(move |_| {
+            let _ = trigger.get();
+            measure();
+        });
+        let _ =
+            leptos_use::use_resize_observer(Signal::derive(move || trigger.get()), move |_, _| {
+                measure();
+            });
+    }
 }

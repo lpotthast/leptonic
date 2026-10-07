@@ -1,5 +1,4 @@
-// Content & Layout: demos of AppBar, Card, Chip, Grid, Icon, Kbd, SanitizedHtml, Separator, Skeleton, Stack, Toolbar
-// and Typography.
+// Content & Layout: demos of Kbd, Separator and Toolbar, and the recipes of the group overview (app bar, skeleton).
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
@@ -16,46 +15,50 @@
     &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
 
-// The theme layers app bars above the page; inside the frame, the bar stays below the book's own app bar.
-.demo-app-bar { z-index: auto; }
+// The `<header>`: sticks to the top of its scrolling parent (here the frame, in an app the page).
+.demo-app-bar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 3em;
+    padding: 0 var(--book-space-s) 0 var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+    background: var(--book-surface-color-raised);
+    box-shadow: var(--book-shadow-s);
 
-.demo-app-bar-title   { margin-left: var(--book-space-m); font-weight: 700; }
+    // While navigated to with F6, the landmark has the focus.
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
 
-.demo-app-bar-actions { display: flex; gap: var(--book-space-xs); margin-right: var(--book-space-s); }
+.demo-app-bar-title   { font-weight: 700; }
+
+.demo-app-bar-actions { display: flex; gap: var(--book-space-xs); }
+
+// Icon-only buttons (the `Button` atom).
+.demo-app-bar-button {
+    display: flex;
+    padding: var(--book-space-s);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: var(--main-color);
+    font-size: var(--book-font-size-l);
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-pressed] { background: var(--brand-color-subtle); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
 
 .demo-app-bar-content { display: flex; flex-direction: column; gap: var(--book-space-s); padding: var(--book-space-m); }
 
-// -- Card --
-
-.demo-card-title { margin: 0 0 var(--book-space-s); font-size: var(--book-font-size-l); }
-
-// -- Chip --
-
-// Wrapping row of chips.
-.demo-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--book-space-s); }
-
-// -- Grid layout --
-
-.demo-grid-item {
-    flex: 1;
-    padding: var(--book-space-s);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-s);
-    background: var(--book-surface-color-raised);
-    text-align: center;
-}
-
-// -- Icon --
-
-// Large icons. The theme sizes icons with width and height; they are filled with `currentColor`.
-.demo-icon-large { width: 2.5em; height: 2.5em; color: var(--brand-color); }
-
-.demo-icon-with-text { display: inline-flex; align-items: center; gap: var(--book-space-s); }
+// Stand-ins for the page's content.
+.demo-app-bar-placeholder { height: 3em; border-radius: var(--book-radius-s); background: var(--book-border-color); }
 
 // -- Kbd --
-
-// Wrapping row of key caps.
-.demo-key-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--book-space-xs); }
 
 // Actions and their shortcuts, side by side.
 .demo-shortcut-list {
@@ -66,16 +69,6 @@
     margin: 0;
 
     dd { margin: 0; }
-}
-
-// -- Sanitized HTML --
-
-// The rendered HTML, framed so that it stands apart from the page.
-.demo-sanitized-output {
-    padding: var(--book-space-s) var(--book-space-m);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color);
 }
 
 // -- Separator --
@@ -90,21 +83,6 @@
 }
 
 .demo-separator-fade { height: 2px; margin: var(--book-space-m) 0; background: linear-gradient(90deg, transparent, var(--book-border-color), transparent); }
-
-// -- Skeleton --
-
-.demo-skeleton-profile { display: flex; flex-direction: column; gap: var(--book-space-s); min-height: 5em; }
-
-.demo-skeleton-name { margin: 0; font-weight: 700; }
-
-// -- Stack --
-
-.demo-stack-item {
-    padding: var(--book-space-xs) var(--book-space-m);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-s);
-    background: var(--book-surface-color-raised);
-}
 
 // -- Toolbar --
 
@@ -154,21 +132,27 @@
     &[data-underline] { text-decoration: underline; }
 }
 
-// -- Typography --
+// -- Skeleton --
 
-// The theme's heading and paragraph styles on list items (real headings would join the page's outline).
-.demo-type-scale {
-    margin: 0;
-    padding: 0;
-    list-style: none;
+// The region that is loading (`aria-busy`).
+.demo-skeleton-profile { display: flex; flex-direction: column; gap: var(--book-space-s); min-height: 5em; }
 
-    > li { margin: var(--book-space-xs) 0; }
+.demo-skeleton-name { margin: 0; font-weight: 700; }
+
+// A placeholder: a highlight sweeps across it, unless the user prefers reduced motion.
+.demo-skeleton {
+    border-radius: var(--book-radius-s);
+    background: linear-gradient(90deg, var(--book-border-color) 40%, var(--book-hover-background-color) 50%, var(--book-border-color) 60%) 0 0 / 300% 100%;
+    animation: demo-skeleton-shimmer 1.5s infinite linear;
+
+    @media (prefers-reduced-motion: reduce) { animation: none; }
 }
 
-.demo-type-h1 { font-size: var(--typography-h1-font-size); font-weight: var(--typography-h1-font-weight); }
-.demo-type-h2 { font-size: var(--typography-h2-font-size); font-weight: var(--typography-h2-font-weight); }
-.demo-type-h3 { font-size: var(--typography-h3-font-size); font-weight: var(--typography-h3-font-weight); }
-.demo-type-h4 { font-size: var(--typography-h4-font-size); font-weight: var(--typography-h4-font-weight); }
-.demo-type-h5 { font-size: var(--typography-h5-font-size); font-weight: var(--typography-h5-font-weight); }
-.demo-type-h6 { font-size: var(--typography-h6-font-size); font-weight: var(--typography-h6-font-weight); }
-.demo-type-p  { font-size: var(--typography-p-font-size); font-weight: var(--typography-p-font-weight); line-height: var(--typography-p-line-height); }
+.demo-skeleton-line  { width: 10em; height: 1.5em; }
+
+.demo-skeleton-block { height: 3em; }
+
+@keyframes demo-skeleton-shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: 0 0; }
+}

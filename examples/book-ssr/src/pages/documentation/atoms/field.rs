@@ -142,20 +142,33 @@ pub fn PageAtomField() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The parts render no data attributes of their own. Give them classes, and select the field\u{2019}s state "
-                    "through the field atom\u{2019}s attributes, e.g. "<Code inline=true>"data-invalid"</Code>":"
+                    "The parts bring no styles and render no data attributes of their own. Their default classes are "
+                    <Code inline=true>"leptonic-Label"</Code>" (a "<Code inline=true>"<label>"</Code>", or a "
+                    <Code inline=true>"<span>"</Code>" inside a group), "<Code inline=true>"leptonic-Description"</Code>" and "
+                    <Code inline=true>"leptonic-FieldError"</Code>" (both inline "<Code inline=true>"<span>"</Code>
+                    "s: display them as blocks, or put them in a flex column, to give them their own line). Their content is "
+                    "their children; a "<Code inline=true>"FieldError"</Code>" without children shows the validation errors."
+                </p>
+                <p>
+                    "Select the field\u{2019}s state through the field atom\u{2019}s attributes, e.g. "
+                    <Code inline=true>"data-invalid"</Code>". The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-label { font-weight: 600; }
-                        .my-description { display: block; font-size: 0.85em; color: var(--muted); }
-                        .my-error { display: block; font-size: 0.85em; color: var(--danger); }
-                        .my-group[data-invalid] .my-label { color: var(--danger); }
+                        .demo-field { display: flex; flex-direction: column; gap: 0.25rem; }
+                        .demo-field-label { font-weight: 600; }
+                        .demo-field-description { font-size: 0.875rem; color: var(--muted); }
+                        .demo-field-error { font-size: 0.875rem; color: var(--danger); }
+
+                        .demo-choice-group { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+                        .demo-choice-group-label { font-weight: 600; }
+                        .demo-choice-group-description { display: block; font-size: 0.875rem; color: var(--muted); }
+                        .demo-choice-group-error { display: block; font-size: 0.875rem; color: var(--danger); }
                     ")}
                 </Code>
                 <p>
-                    <Code inline=true>"Description"</Code>" and "<Code inline=true>"FieldError"</Code>" are inline "
-                    <Code inline=true>"<span>"</Code>"s by default: display them as blocks to put them on their own line."
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
                 </p>
             </Section>
 

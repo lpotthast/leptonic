@@ -26,14 +26,14 @@ pub fn PageProgressBarOverview() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Show a placeholder while content loads"</TableCell>
-                        <TableCell><Link href=routes::doc::Skeleton.materialize()>"Skeleton"</Link></TableCell>
+                        <TableCell>"A "<Link href=format!("{}#skeleton", routes::doc::Layout.materialize())>"skeleton"</Link>" drawn with CSS"</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Progress bars exist at all three layers. See "
+                    "Progress bars exist as a hook and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -55,7 +55,12 @@ pub fn PageProgressBarOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"The component is the quickest way to a progress bar: give it the progress and a label."</p>
+                <p>
+                    "The atoms with the progress and a label; the track around the fill is your own markup. The classes "
+                    "are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::progress_bar::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows their CSS."
+                </p>
 
                 <Demo description="Progress bar at 75 percent with a visible label" source=include_str!("demos/progress_bar.rs") source_open=true>
                     <ProgressBarConceptDemo/>

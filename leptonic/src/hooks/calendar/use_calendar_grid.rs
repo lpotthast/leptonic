@@ -14,7 +14,7 @@ use crate::{
     hooks::{IntoAttrs, UseKeyboardInput, use_keyboard},
     utils::{
         EventAccessors, EventHandler,
-        aria::AriaRole,
+        aria::{AriaDisabled, AriaMultiselectable, AriaReadonly, AriaRole},
         date::{DateDuration, DateExt, DateRange, today},
         date_time_formatter::{DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter},
         focusability::is_focusable,
@@ -74,9 +74,9 @@ pub struct UseCalendarGridProps {
     pub role: AriaRole,
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Option<String>,
-    pub aria_readonly: Signal<Option<&'static str>>,
-    pub aria_disabled: Signal<Option<&'static str>>,
-    pub aria_multiselectable: Option<&'static str>,
+    pub aria_readonly: Signal<Option<AriaReadonly>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_multiselectable: Option<AriaMultiselectable>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -88,9 +88,9 @@ pub type UseCalendarGridAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Signal<Option<String>>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
-    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
-    Attr<attr::AriaMultiselectable, Option<&'static str>>,
+    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -236,7 +236,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     let aria_label = data.aria_label;
     let labelledby = data.aria_labelledby.clone();
     let own_id = id.clone();
-    let label = Signal::derive(move || {
+    let label = Memo::new(move |_| {
         let label = [
             aria_label.get(),
             Some(visible_range_description(range.get(), &locale.get())),
@@ -250,7 +250,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     });
     let (_, aria_labelledby) = labels(&id, Some(String::new()), data.aria_labelledby);
 
-    let week_days = Signal::derive(move || {
+    let week_days = Memo::new(move |_| {
         let formatter = DateTimeFormatter::new(
             &locale.get(),
             DateTimeFormatOptions {
@@ -258,7 +258,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
                 ..DateTimeFormatOptions::default()
             },
         );
-        let days = calendar.visible_duration.days;
+        let days = calendar.visible_duration.get().days;
         let (first, count) = if (1..7).contains(&days) {
             (start_date.get(), days)
         } else {
@@ -268,17 +268,21 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
             .map(|day| formatter.format_date(first.add(DateDuration::days(day))))
             .collect()
     });
-    let weeks_in_month = Signal::derive(move || calendar.weeks_in_month(Some(start_date.get())));
+    let weeks_in_month = Memo::new(move |_| calendar.weeks_in_month(Some(start_date.get())));
 
     UseCalendarGridReturn {
         grid_props: UseCalendarGridProps {
             id,
             role: AriaRole::Grid,
-            aria_label: label,
+            aria_label: label.into(),
             aria_labelledby,
-            aria_readonly: Signal::derive(move || calendar.is_read_only.get().then_some("true")),
-            aria_disabled: Signal::derive(move || calendar.is_disabled.get().then_some("true")),
-            aria_multiselectable: state.range().is_some().then_some("true"),
+            aria_readonly: Signal::derive(move || {
+                calendar.is_read_only.get().then_some(AriaReadonly::True)
+            }),
+            aria_disabled: Signal::derive(move || {
+                calendar.is_disabled.get().then_some(AriaDisabled::True)
+            }),
+            aria_multiselectable: state.range().is_some().then_some(AriaMultiselectable::True),
             on_focusin: EventHandler::new(move |_: FocusEvent| calendar.set_focused(true)),
             on_focusout: EventHandler::new(move |e: FocusEvent| {
                 // After the calendar's disposal (a removed focused cell): nothing to update
@@ -295,7 +299,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
             on_keyup: keyboard.props.on_keyup,
         },
         start_date,
-        week_days,
-        weeks_in_month,
+        week_days: week_days.into(),
+        weeks_in_month: weeks_in_month.into(),
     }
 }

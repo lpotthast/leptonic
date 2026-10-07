@@ -66,8 +66,30 @@ pub enum LinkBehavior {
     None,
 }
 
-/// Input of [`use_selectable_item`].
+/// Moves DOM focus to an item in place of focusing the item element, e.g. to a grid row's cell or
+/// child. Called when the item becomes the focused key.
 #[derive(Clone)]
+pub struct FocusItem(std::sync::Arc<dyn Fn() + Send + Sync>);
+
+impl FocusItem {
+    pub fn new(focus: impl Fn() + Send + Sync + 'static) -> Self {
+        Self(std::sync::Arc::new(focus))
+    }
+
+    /// Moves the focus.
+    pub fn focus(&self) {
+        (self.0)();
+    }
+}
+
+impl std::fmt::Debug for FocusItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("FocusItem(..)")
+    }
+}
+
+/// Input of [`use_selectable_item`].
+#[derive(Clone, Debug)]
 pub struct UseSelectableItemInput {
     pub selection: SelectionManager,
     pub item_elements: ItemElements,
@@ -90,8 +112,8 @@ pub struct UseSelectableItemInput {
     /// it; with one, double-click / Enter does (in `Replace` behavior).
     pub on_action: Option<Callback<()>>,
     pub link_behavior: LinkBehavior,
-    /// Focuses the item when it becomes the focused key. Defaults to focusing the element.
-    pub focus: Option<Callback<()>>,
+    /// Focuses the item when it becomes the focused key. `None`: focusing the element.
+    pub focus: Option<FocusItem>,
     /// DOM focus stays elsewhere (e.g. in a combo box input); the item is focused virtually.
     pub should_use_virtual_focus: bool,
     /// Called when a context menu is requested on the item (right click, Shift+F10, the
@@ -234,8 +256,8 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             if let Some(el) = element.get_untracked() {
                 move_virtual_focus(Some(&el));
             }
-        } else if let Some(focus) = focus {
-            focus.run(());
+        } else if let Some(focus) = &focus {
+            focus.focus();
         } else if let Some(el) = element.get_untracked() {
             let active = el.owner_document().as_ref().and_then(get_active_element);
             if active.as_ref() != Some(&*el) {

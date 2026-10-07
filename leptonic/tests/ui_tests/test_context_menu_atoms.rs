@@ -1,3 +1,7 @@
+// Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
+// Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
+// (Row-level context menus are a leptonic addition; the menu behavior mirrors MenuTrigger
+// trigger="contextMenu" in Menu.test.tsx.)
 use std::borrow::Cow;
 
 use assertr::prelude::*;

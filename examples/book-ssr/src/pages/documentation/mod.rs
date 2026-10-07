@@ -1,5 +1,4 @@
 pub mod atoms;
-pub mod components;
 pub mod concept_layout;
 pub mod concepts;
 pub mod doc_layout;

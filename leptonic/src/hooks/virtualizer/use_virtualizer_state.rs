@@ -38,9 +38,9 @@ pub struct VirtualizerState<L: Layout> {
     /// Counts the item size changes (the render effect compares it with the last run's).
     invalidation: RwSignal<u64>,
     /// The layout infos to render, parents before children.
-    pub visible: RwSignal<Vec<LayoutInfo>>,
+    visible: RwSignal<Vec<LayoutInfo>>,
     /// The size of the scrollable content.
-    pub content_size: RwSignal<Size>,
+    content_size: RwSignal<Size>,
 }
 
 // Derived, they would require `L: Copy`.
@@ -88,6 +88,17 @@ impl<L: Layout> VirtualizerState<L> {
     /// The visible area of the content.
     pub fn visible_rect(&self) -> Signal<Rect> {
         self.visible_rect.into()
+    }
+
+    /// The layout infos to render (the visible ones and the persisted ones), parents before
+    /// children.
+    pub fn visible(&self) -> Signal<Vec<LayoutInfo>> {
+        self.visible.into()
+    }
+
+    /// The size of the scrollable content (for the scroll view's content box).
+    pub fn content_size(&self) -> Signal<Size> {
+        self.content_size.into()
     }
 
     /// The measured size of a rendered item.

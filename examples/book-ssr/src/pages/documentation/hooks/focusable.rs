@@ -72,7 +72,7 @@ pub fn PageUseFocusable() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{components::prelude::Button, hooks::*};
+                        use leptonic::{atoms::button::Button, hooks::*};
                         use leptos::{logging::log, prelude::*};
 
                         // A scrollable region has to be focusable, so keyboard users can scroll it.

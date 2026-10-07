@@ -1,3 +1,4 @@
+// No upstream: leptonic-only (the SSR test app's panic counter; react-aria renders no server).
 use std::borrow::Cow;
 
 use assertr::prelude::*;

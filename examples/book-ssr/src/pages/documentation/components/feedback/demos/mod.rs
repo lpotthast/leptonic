@@ -1,9 +1,0 @@
-pub mod alert_custom;
-pub mod alert_variants;
-pub mod chip_colors;
-pub mod chip_dismissible;
-pub mod kbd_custom;
-pub mod kbd_keys;
-pub mod kbd_manual;
-pub mod kbd_shortcut;
-pub mod kbd_single;

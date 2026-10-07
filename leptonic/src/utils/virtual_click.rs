@@ -60,5 +60,6 @@ pub fn is_virtual_pointer_event(e: &web_sys::PointerEvent) -> bool {
             && height == 1
             && e.pressure() == 0.0
             && e.detail() == 0
-            && e.pointer_type() == "mouse")
+            && crate::utils::pointer_type::PointerType::from(e.pointer_type())
+                == crate::utils::pointer_type::PointerType::Mouse)
 }

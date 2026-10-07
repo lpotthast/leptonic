@@ -13,7 +13,8 @@ use crate::pages::{BaseActions, Page};
 /// A virtualized `ListBox` ("should support virtualizer"): only the visible options (plus
 /// overscan) render, each telling its position and the set size; scrolling renders others; End
 /// reaches and renders the last option. A log anchored to the end stays at the end when lines are
-/// appended, with measured variable heights.
+/// appended, with measured variable heights (rows don't overlap once measured). A list box next to
+/// a `Virtualizer` isn't virtualized.
 pub struct VirtualizerTests {}
 
 #[async_trait]
@@ -71,8 +72,32 @@ impl BrowserTest<str> for VirtualizerTests {
         page.click_element_with_id("test-virt-append").await?;
         wait_until(&page, "!!Array.from(document.querySelectorAll('#test-virt-log [role=option]')).find(o => o.textContent === 'Line 109')").await?;
         wait_until(&page, at_end).await?;
+        // Measured: the rows of variable height don't overlap, at the end and in the middle.
+        wait_until(&page, &no_overlap("#test-virt-log")).await?;
+        page.driver
+            .execute(
+                "const el = document.querySelector('#test-virt-log [role=listbox]'); el.scrollTop = el.scrollHeight / 2;",
+                vec![],
+            )
+            .await?;
+        wait_until(&page, &no_overlap("#test-virt-log")).await?;
+
+        // The `Virtualizer`s' context doesn't reach the list box after them: all its options
+        // render.
+        page.wait_for_count("#test-virt-plain [role=option]", 30)
+            .await?;
         page.expect_no_page_errors().await
     }
+}
+
+/// Whether the rendered options in `container` are stacked without overlapping (each starts at
+/// or after the end of the one before), with at least 5 of them.
+fn no_overlap(container: &str) -> String {
+    format!(
+        "(() => {{ const rects = Array.from(document.querySelectorAll('{container} [role=option]')) \
+         .map(o => o.getBoundingClientRect()).sort((a, b) => a.top - b.top); \
+         return rects.length >= 5 && rects.every((r, i) => i === 0 || rects[i - 1].bottom <= r.top + 0.5); }})()"
+    )
 }
 
 /// The texts of the rendered options of the 50-item list, once the first one is `first`.

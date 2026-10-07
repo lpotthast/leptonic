@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::tabs::{Tab, TabList, TabPanel, Tabs},
-    components::prelude::{Button, ButtonColor, Checkbox},
+    atoms::{
+        button::Button,
+        checkbox::Checkbox,
+        tabs::{Tab, TabList, TabPanel, Tabs},
+    },
     hooks::{Key, use_collection},
 };
 use leptos::prelude::*;
@@ -68,10 +71,16 @@ pub fn TabsAtomDemo() -> impl IntoView {
         </Tabs>
 
         <div class="demo-controls">
-            <Checkbox is_selected=all_disabled set_selected=all_disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=reviews_disabled set_selected=reviews_disabled>"\u{201c}Reviews\u{201d} disabled"</Checkbox>
+            <Checkbox is_selected=all_disabled set_selected=all_disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=reviews_disabled set_selected=reviews_disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "\u{201c}Reviews\u{201d} disabled"
+            </Checkbox>
             // The app changes the selected tab by writing its state.
-            <Button on_press=move |_| selected.set(Key::from("shipping")) color=ButtonColor::Secondary>
+            <Button on_press=move |_| selected.set(Key::from("shipping")) classes="demo-btn">
                 "Show shipping"
             </Button>
         </div>

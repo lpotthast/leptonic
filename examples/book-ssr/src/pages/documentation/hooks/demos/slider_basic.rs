@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         css::{computed_pct, computed_size},
@@ -35,6 +35,7 @@ pub fn SliderBasicDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_details: None,
     });
     let thumb = use_slider_thumb(UseSliderThumbInput {
         state,
@@ -50,6 +51,8 @@ pub fn SliderBasicDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_errormessage: None,
+        aria_details: None,
     });
     // The slider hooks don't track keyboard focus: a focus ring on the thumb sets `data-focus-visible` while its
     // input has keyboard focus.
@@ -78,7 +81,10 @@ pub fn SliderBasicDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -1,5 +1,24 @@
-// Upstream: react-aria/src/utils/openLink.tsx @ 6f664fe911
-use std::sync::atomic::{AtomicBool, Ordering};
+// Upstream: react-aria/src/utils/openLink.tsx @ 99e6102368
+//! Opening links programmatically (react-aria's `openLink`).
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `openLink(target, modifiers, setOpening)` is two functions: [`open_link`] (marks the dispatch as
+//   opening a link) and [`open_link_unmarked`] (react-aria's `setOpening = false`), instead of a
+//   bool parameter. The "opening" mark is read through [`is_opening_link`] (react-aria: the
+//   `openLink.isOpening` property).
+//
+// ## OMITTED FEATURES
+// - `RouterProvider`, `useRouter`, `shouldClientNavigate`, `useLinkProps`, `useSyntheticLinkProps`:
+//   client-side routing is the app's router's job (Leptos' router intercepts link clicks itself).
+//   Collections build their synthetic `<a>` in `Node::open` (react-aria's `getSyntheticLink`).
+//
+// =============================================================================
+
+use std::cell::Cell;
 
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -9,56 +28,47 @@ use crate::utils::{
     platform::{browser, device},
 };
 
-/// Whether a link is currently being programmatically opened.
-static IS_OPENING_LINK: AtomicBool = AtomicBool::new(false);
-
-/// Returns whether a link is currently being programmatically opened.
-/// Used by focus-visible tracking to suppress modality changes during link activation.
-pub(crate) fn is_opening_link() -> bool {
-    IS_OPENING_LINK.load(Ordering::Acquire)
+thread_local! {
+    /// Whether [`open_link`] is dispatching its event (react-aria's `openLink.isOpening`).
+    static IS_OPENING_LINK: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Programmatically open a link element by dispatching a synthetic click event.
+/// Whether [`open_link`] is dispatching its synthetic event right now (react-aria's
+/// `openLink.isOpening`). Focus-visible tracking and selection ignore that event, and press
+/// handlers don't treat its click as a press.
+pub(crate) fn is_opening_link() -> bool {
+    IS_OPENING_LINK.with(Cell::get)
+}
+
+/// Opens the link `element` (an `<a href>`) as if the user clicked it with `modifiers`: focuses it
+/// without scrolling and dispatches a synthetic click (react-aria's `openLink`). The dispatch is
+/// marked as opening a link ([`is_opening_link`]).
 ///
-/// We cannot use the native `HTMLElement.click()` method because:
-/// 1. `click()` does not carry modifier key state (ctrl, meta, alt, shift),
-///    so Ctrl+click / Cmd+click cannot open links in a new tab.
-/// 2. `WebKit` on macOS does not support firing click events with modifier keys.
-///    We dispatch a `KeyboardEvent('keydown')` with `keyIdentifier: 'Enter'`
-///    instead, which `WebKit` recognizes for link activation.
-///
-/// # Deviations from react-aria
-///
-/// - No global router-provider (`LinkProvider`) or `RouterContext`.
-///   React-aria supports a `RouterProvider` that intercepts link clicks for
-///   client-side routing. Leptonic relies on the framework's own routing and
-///   does not replicate this indirection.
-///
-/// Otherwise matches the `openLink` function from
-/// `packages/react-aria/src/utils/openLink.tsx`.
+/// `HTMLElement.click()` can't carry modifiers (Cmd/Ctrl-click opens a new tab). WebKit on macOS
+/// doesn't follow clicks with modifiers at all, but follows a `keydown` with the non-standard
+/// `keyIdentifier: "Enter"`; that is dispatched there instead.
 pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers) {
-    // WebKit on macOS (not iPad) doesn't support MouseEvent click with modifier keys.
-    // Use a KeyboardEvent with the non-standard `keyIdentifier` property instead.
-    let event: web_sys::Event = if browser::is_webkit()
-        && device::is_mac()
-        && !device::is_ipad()
-        && (modifiers.meta_key || modifiers.ctrl_key)
-    {
+    dispatch(element, modifiers, true);
+}
+
+/// Like [`open_link`], without marking the dispatch as opening a link (react-aria's
+/// `openLink(target, modifiers, false)`): `use_press` opens a link pressed with a key other than
+/// Enter this way, and its own click handling then sees the click as usual.
+#[allow(dead_code)] // For `use_press` (react-aria's usePress passes `setOpening = false`).
+pub(crate) fn open_link_unmarked(element: &web_sys::Element, modifiers: Modifiers) {
+    dispatch(element, modifiers, false);
+}
+
+fn dispatch(element: &web_sys::Element, modifiers: Modifiers, mark_opening: bool) {
+    let event = if browser::is_webkit() && device::is_mac() && !device::is_ipad() {
         create_webkit_keyboard_event(modifiers)
     } else {
         create_click_event(modifiers)
     };
-
-    // Set the flag so that focus-visible tracking suppresses modality changes
-    // during the synthetic click dispatch.
-    IS_OPENING_LINK.store(true, Ordering::Release);
-
-    // Focus the element before dispatching, without scrolling the page.
+    IS_OPENING_LINK.with(|opening| opening.set(mark_opening));
     focus_element(element, true);
-
     let _ = element.dispatch_event(&event);
-
-    IS_OPENING_LINK.store(false, Ordering::Release);
+    IS_OPENING_LINK.with(|opening| opening.set(false));
 }
 
 fn create_click_event(modifiers: Modifiers) -> web_sys::Event {
@@ -75,39 +85,19 @@ fn create_click_event(modifiers: Modifiers) -> web_sys::Event {
         .into()
 }
 
-/// Creates a `WebKit`-compatible keyboard event with the non-standard `keyIdentifier` property.
-///
-/// `WebKit` on macOS does not properly handle synthetic mouse click events with modifier keys.
-/// Instead, it responds to a `keydown` event with `keyIdentifier: 'Enter'`, which triggers
-/// the same link activation behavior as a real Enter keypress.
+/// A `keydown` with `keyIdentifier: "Enter"`, which WebKit's anchor element follows (with
+/// modifiers, unlike a synthetic click). `KeyboardEventInit` has no `keyIdentifier`, so the init
+/// dictionary is built by hand.
 fn create_webkit_keyboard_event(modifiers: Modifiers) -> web_sys::Event {
-    // Build the init dict manually using js_sys because web_sys::KeyboardEventInit
-    // does not expose the non-standard `keyIdentifier` property used by WebKit.
     let init = js_sys::Object::new();
-    let _ = js_sys::Reflect::set(&init, &"keyIdentifier".into(), &"Enter".into());
-    let _ = js_sys::Reflect::set(
-        &init,
-        &"metaKey".into(),
-        &JsValue::from_bool(modifiers.meta_key),
-    );
-    let _ = js_sys::Reflect::set(
-        &init,
-        &"ctrlKey".into(),
-        &JsValue::from_bool(modifiers.ctrl_key),
-    );
-    let _ = js_sys::Reflect::set(
-        &init,
-        &"altKey".into(),
-        &JsValue::from_bool(modifiers.alt_key),
-    );
-    let _ = js_sys::Reflect::set(
-        &init,
-        &"shiftKey".into(),
-        &JsValue::from_bool(modifiers.shift_key),
-    );
-    let _ = js_sys::Reflect::set(&init, &"bubbles".into(), &JsValue::from_bool(true));
-    let _ = js_sys::Reflect::set(&init, &"cancelable".into(), &JsValue::from_bool(true));
-
+    let set = |key: &str, value: JsValue| {
+        let _ = js_sys::Reflect::set(&init, &JsValue::from_str(key), &value);
+    };
+    set("keyIdentifier", JsValue::from_str("Enter"));
+    set("metaKey", JsValue::from_bool(modifiers.meta_key));
+    set("ctrlKey", JsValue::from_bool(modifiers.ctrl_key));
+    set("altKey", JsValue::from_bool(modifiers.alt_key));
+    set("shiftKey", JsValue::from_bool(modifiers.shift_key));
     web_sys::KeyboardEvent::new_with_keyboard_event_init_dict(
         "keydown",
         init.unchecked_ref::<web_sys::KeyboardEventInit>(),

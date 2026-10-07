@@ -38,8 +38,6 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/button/useButton.ts
-
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
@@ -65,6 +63,10 @@ use crate::{
 // - Press events on `ButtonElementType::Anchor` always propagate, so that client-side routers
 //   listening on the document (leptos_router) still see link clicks. Leptonic stops event
 //   propagation by default; react-aria has no such default.
+//
+// ## ADDITIONS
+// - For `ButtonElementType::Anchor`, `rel="noopener"` is added for `LinkTarget::Blank`, so that
+//   the new browsing context gets no access to this one. React-aria: `rel` as given.
 //
 // ## OMITTED FEATURES
 // - `onClick` (deprecated in react-aria; use `on_press`).
@@ -114,9 +116,9 @@ impl ButtonType {
 #[derive(Debug, Clone, Default)]
 pub struct ButtonFormAttributes {
     /// The id of the `<form>` the button belongs to, if it is not its ancestor.
-    pub form: Option<Oco<'static, str>>,
+    pub form: Option<String>,
     /// Overrides the form's `action`.
-    pub form_action: Option<Oco<'static, str>>,
+    pub form_action: Option<String>,
     /// Overrides the form's `enctype`.
     pub form_enc_type: Option<FormEncType>,
     /// Overrides the form's `method`.
@@ -126,9 +128,9 @@ pub struct ButtonFormAttributes {
     /// Overrides the form's `target`.
     pub form_target: Option<LinkTarget>,
     /// Name submitted with the form data when this button submits the form.
-    pub name: Option<Oco<'static, str>>,
+    pub name: Option<String>,
     /// Value submitted with the form data when this button submits the form.
-    pub value: Option<Oco<'static, str>>,
+    pub value: Option<String>,
 }
 
 /// How a form's data is encoded when submitted (`enctype`, `formenctype`).
@@ -181,7 +183,7 @@ pub struct UseButtonInput {
     pub button_type: ButtonType,
 
     /// The element's id.
-    pub id: Option<Oco<'static, str>>,
+    pub id: Option<String>,
 
     /// An accessible name, for buttons without visible text (e.g. icon buttons).
     pub aria_label: MaybeProp<String>,
@@ -192,6 +194,12 @@ pub struct UseButtonInput {
 
     /// Whether the button is disabled.
     pub is_disabled: Signal<bool>,
+
+    /// Whether the button is pending (an action it started is in progress): it stays focusable,
+    /// but ignores presses, hover, keyboard handlers and context menu requests, is
+    /// `aria-disabled`, a submit button turns into a plain button (so that the form can't be
+    /// submitted again, also not implicitly) and an anchor loses its `href`.
+    pub is_pending: Signal<bool>,
 
     /// Keep the button focusable (but out of the tab order) while disabled.
     pub allow_focus_when_disabled: bool,
@@ -287,11 +295,11 @@ pub struct UseButtonReturn {
 /// Props from [`use_button`], to be spread onto the button element.
 #[derive(Debug)]
 pub struct UseButtonProps {
-    pub id: Option<Oco<'static, str>>,
+    pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub role: Option<AriaRole>,
-    pub button_type: Option<&'static str>,
+    pub button_type: Signal<Option<&'static str>>,
     pub disabled: Signal<bool>,
     pub tabindex: Signal<Option<i32>>,
     pub href: Signal<Option<String>>,
@@ -328,9 +336,9 @@ pub struct UseButtonProps {
 /// Attributes of [`UseButtonProps`], spreadable with `{..attrs}`.
 pub type UseButtonAttrs = (
     (
-        Attr<attr::Id, Option<Oco<'static, str>>>,
+        Attr<attr::Id, Option<String>>,
         Attr<attr::Role, Option<AriaRole>>,
-        Attr<attr::Type, Option<&'static str>>,
+        Attr<attr::Type, Signal<Option<&'static str>>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::Href, Signal<Option<String>>>,
@@ -338,14 +346,14 @@ pub type UseButtonAttrs = (
         Attr<attr::Rel, Option<String>>,
     ),
     (
-        Attr<attr::Form, Option<Oco<'static, str>>>,
-        Attr<attr::Formaction, Option<Oco<'static, str>>>,
+        Attr<attr::Form, Option<String>>,
+        Attr<attr::Formaction, Option<String>>,
         Attr<attr::Formenctype, Option<&'static str>>,
         Attr<attr::Formmethod, Option<&'static str>>,
         Attr<attr::Formnovalidate, bool>,
         Attr<attr::Formtarget, Option<Oco<'static, str>>>,
-        Attr<attr::Name, Option<Oco<'static, str>>>,
-        Attr<attr::Value, Option<Oco<'static, str>>>,
+        Attr<attr::Name, Option<String>>,
+        Attr<attr::Value, Option<String>>,
     ),
     (
         Attr<attr::AriaLabel, MaybeProp<String>>,
@@ -468,6 +476,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         aria_label,
         aria_labelledby,
         is_disabled: disabled,
+        is_pending,
         allow_focus_when_disabled,
         exclude_from_tab_order,
         auto_focus,
@@ -550,11 +559,15 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         None => (aria_haspopup, aria_expanded, aria_controls),
     };
 
+    // Pending, the button keeps its focus but takes no interactions (react-aria-components'
+    // `useDisableInteractions`).
+    let interactions_disabled = Signal::derive(move || disabled.get() || is_pending.get());
+
     let UsePressReturn {
         props: press_props,
         is_pressed,
     } = use_press(UsePressInput {
-        is_disabled: disabled,
+        is_disabled: interactions_disabled,
         // Client-side routers (like leptos_router) handle link clicks in a document-level
         // listener, so clicks on anchors must bubble.
         propagation: if element_type == ButtonElementType::Anchor {
@@ -598,7 +611,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         props: hover_props,
         is_hovered,
     } = use_hover(UseHoverInput {
-        is_disabled: disabled,
+        is_disabled: interactions_disabled,
         on_hover_start,
         on_hover_end,
         on_hover_change,
@@ -642,13 +655,24 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             ButtonElementType::Button => None,
             _ => Some(AriaRole::Button),
         }),
-        button_type: match element_type {
-            ButtonElementType::Button | ButtonElementType::Input => Some(button_type.as_str()),
+        button_type: Signal::derive(move || match element_type {
+            ButtonElementType::Button | ButtonElementType::Input => {
+                // Pending, a submit button must not submit the form, also not implicitly (Enter
+                // in a text field).
+                let button_type = match button_type {
+                    ButtonType::Submit if is_pending.get() => ButtonType::Button,
+                    button_type => button_type,
+                };
+                Some(button_type.as_str())
+            }
             _ => None,
-        },
+        }),
         disabled: Signal::derive(move || has_disabled_attr && disabled.get()),
         tabindex,
-        href: Signal::derive(move || href.get().filter(|_| is_anchor && !disabled.get())),
+        href: Signal::derive(move || {
+            href.get()
+                .filter(|_| is_anchor && !disabled.get() && !is_pending.get())
+        }),
         target: (is_anchor && target != LinkTarget::Same).then(|| target.to_oco()),
         rel: {
             let mut rel = rel;
@@ -663,7 +687,8 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             ButtonFormAttributes::default()
         },
         aria_disabled: Signal::derive(move || {
-            (!has_disabled_attr && disabled.get()).then_some(AriaDisabled::True)
+            ((!has_disabled_attr && disabled.get()) || is_pending.get())
+                .then_some(AriaDisabled::True)
         }),
         aria_haspopup,
         aria_expanded,
@@ -700,17 +725,20 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         // Keyboard handlers (and shortcuts) run before press handling, as in react-aria's
         // `mergeProps(focusableProps, pressProps)`. Press handling prevents the default action of
         // Enter/Space, which shortcuts check to see whether something else handled the key.
-        on_keydown: focusable_props
-            .on_keydown
-            .chain(press_props.on_keydown)
-            .chain(context_menu.props.on_keydown),
-        on_keyup: focusable_props.on_keyup,
+        on_keydown: unless_pending(
+            is_pending,
+            focusable_props
+                .on_keydown
+                .chain(press_props.on_keydown)
+                .chain(context_menu.props.on_keydown),
+        ),
+        on_keyup: unless_pending(is_pending, focusable_props.on_keyup),
         on_focus: focusable_props.on_focus.chain(focus_ring_props.on_focus),
         on_blur: focusable_props.on_blur.chain(focus_ring_props.on_blur),
         on_click: press_props.on_click,
         on_dblclick: press_props.on_dblclick,
         on_pointerdown: press_props.on_pointerdown,
-        on_contextmenu: context_menu.props.on_contextmenu,
+        on_contextmenu: unless_pending(is_pending, context_menu.props.on_contextmenu),
         on_pointerup: press_props.on_pointerup,
         on_mousedown: press_props.on_mousedown,
         on_dragstart: press_props.on_dragstart,
@@ -728,4 +756,19 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         is_focus_visible,
         focus_handle,
     }
+}
+
+/// `handler`, skipped while the button is pending.
+fn unless_pending<E: Clone + 'static>(
+    is_pending: Signal<bool>,
+    handler: EventHandler<E>,
+) -> EventHandler<E> {
+    if handler.is_empty() {
+        return handler;
+    }
+    EventHandler::new(move |e: E| {
+        if !is_pending.get_untracked() {
+            handler.call(e);
+        }
+    })
 }

@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 6f664fe911
+// Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -14,41 +14,34 @@ use crate::{
         IntoAttrs,
         focus::use_focus_visible::{Modality, get_modality},
     },
-    utils::{EventHandler, aria::AriaRole, id::use_id, pointer_type::PointerType},
+    utils::{EventHandler, id::use_id, pointer_type::PointerType},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tooltip/useTooltipTrigger.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-//
-// - State is passed as a separate parameter (`TooltipTriggerState`)
-//   instead of being embedded in the hook, matching react-aria's
-//   `useTooltipTrigger(props, state, ref)` pattern.
-//
-// - Uses `StoredValue<bool, LocalStorage>` for `is_hovered` and `is_focused`
-//   tracking instead of React refs.
-//
-// - Global Escape handler uses `Effect` + `leptos_use::use_event_listener`
-//   on the document, active only when `state.is_open` is true.
-//
-// - `get_modality()` from `use_focus_visible` is used instead of react-aria's
-//   `getInteractionModality()` for focus-visible checks and hover modality
-//   filtering.
+// ## API DIFFERENCES
+// - The state goes into the input (C8); `trigger` is the `TooltipTriggerMode` enum.
+// - The trigger element isn't passed: the props carry the handlers react-aria's `useFocusable`
+//   and `useHover` would add (pointer enter/leave, focus/blur, pointer and key down).
 //
 // ## DIFFERENT BEHAVIOR
+// - Focus opens the tooltip unless the modality is the pointer's (react-aria: `isFocusVisible()`,
+//   the same test).
 //
-// - No `mousedown` fallback handler: We assume PointerEvent is always available
-//   (per CLAUDE.md).
-//
+// =============================================================================
 
 /// Input parameters for the `use_tooltip_trigger` hook.
 #[derive(Debug, Clone, Copy)]
 pub struct UseTooltipTriggerInput {
-    /// Whether the tooltip is disabled.
+    /// The tooltip's state (from `use_tooltip_trigger_state`).
+    pub state: TooltipTriggerState,
+
+    /// Whether the tooltip is disabled. Default: `false`.
     pub is_disabled: Signal<bool>,
 
-    /// The trigger behavior.
+    /// The trigger behavior. Default: [`TooltipTriggerMode::Hover`].
     pub trigger: TooltipTriggerMode,
 
     /// Whether pressing the trigger should close the tooltip. Default: `true`.
@@ -65,38 +58,18 @@ pub enum TooltipTriggerMode {
     Focus,
 }
 
-impl Default for UseTooltipTriggerInput {
-    fn default() -> Self {
-        Self {
-            is_disabled: Signal::derive(|| false),
-            trigger: TooltipTriggerMode::Hover,
-            should_close_on_press: Signal::stored(true),
-        }
-    }
-}
-
 /// The return value of the `use_tooltip_trigger` hook.
 pub struct UseTooltipTriggerReturn {
     /// Props for the trigger element.
     pub trigger_props: UseTooltipTriggerProps,
 
-    /// Props for the tooltip element.
+    /// Props for the tooltip element (its id; `use_tooltip` adds the rest).
     pub tooltip_props: UseTooltipTriggerTooltipProps,
-
-    /// Whether the tooltip is open.
-    pub is_open: Signal<bool>,
-
-    /// The ID of the trigger element.
-    pub trigger_id: String,
-
-    /// The ID of the tooltip element.
-    pub tooltip_id: String,
 }
 
 /// Props from `use_tooltip_trigger` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTooltipTriggerProps {
-    pub id: String,
     pub aria_describedby: Signal<Option<String>>,
     pub on_pointerenter: EventHandler<web_sys::PointerEvent>,
     pub on_pointerleave: EventHandler<web_sys::PointerEvent>,
@@ -111,7 +84,6 @@ impl IntoAttrs for UseTooltipTriggerProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
@@ -125,7 +97,6 @@ impl IntoAttrs for UseTooltipTriggerProps {
 
 /// Attributes for the tooltip trigger element.
 pub type UseTooltipTriggerAttrs = (
-    Attr<attr::Id, String>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     On<ev::pointerenter, SharedEventCallback<web_sys::PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<web_sys::PointerEvent>>,
@@ -138,57 +109,50 @@ pub type UseTooltipTriggerAttrs = (
 /// Props for the tooltip element.
 #[derive(Debug)]
 pub struct UseTooltipTriggerTooltipProps {
-    /// The id of the tooltip element.
+    /// The id of the tooltip element, which describes the trigger while it is open.
     pub id: String,
-
-    /// The role attribute.
-    pub role: AriaRole,
 }
 
-/// Provides the behavior and accessibility for a tooltip trigger.
-///
-/// A tooltip displays brief helper text or information about an element when
-/// the user hovers over or focuses on the element.
-///
-/// This hook delegates open/close behavior to the `state` parameter, which
-/// implements the warmup/cooldown system via `use_tooltip_trigger_state`.
+/// Provides the behavior and accessibility for a tooltip trigger: the tooltip opens when the
+/// trigger is hovered (after the state's delay; right away once another tooltip was open) or
+/// focused by keyboard, and closes when it is left, blurred or pressed, or on Escape. While open,
+/// the tooltip describes the trigger.
 ///
 /// # Example
 ///
 /// ```ignore
 /// let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput::default());
-/// let tooltip = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
+/// let trigger = use_tooltip_trigger(UseTooltipTriggerInput {
+///     state,
+///     is_disabled: Signal::stored(false),
+///     trigger: TooltipTriggerMode::Hover,
+///     should_close_on_press: Signal::stored(true),
+/// });
+/// let tooltip = use_tooltip(UseTooltipInput {
+///     state: Some(state),
+///     ..UseTooltipInput::default()
+/// });
 ///
 /// view! {
-///     <button {..tooltip.trigger_props.into_attrs()}>
-///         "Hover me"
-///     </button>
-///     <Show when=move || tooltip.is_open.get()>
-///         <div
-///             id=tooltip.tooltip_props.id
-///             role=tooltip.tooltip_props.role
-///             class="tooltip"
-///         >
+///     <button {..trigger.trigger_props.into_attrs()}>"Hover me"</button>
+///     <Show when=move || state.is_open()>
+///         <div id=trigger.tooltip_props.id.clone() {..tooltip.props.into_attrs()}>
 ///             "Helpful tooltip text"
 ///         </div>
 ///     </Show>
 /// }
 /// ```
 #[allow(clippy::too_many_lines)]
-pub fn use_tooltip_trigger(
-    input: UseTooltipTriggerInput,
-    state: TooltipTriggerState,
-) -> UseTooltipTriggerReturn {
+pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerReturn {
     crate::hooks::track_interaction_modality();
     let UseTooltipTriggerInput {
+        state,
         is_disabled,
         trigger: trigger_type,
         should_close_on_press,
     } = input;
 
-    let base_id = use_id("tooltip-trigger");
-    let trigger_id = format!("tooltip-trigger-{base_id}");
-    let tooltip_id = format!("tooltip-{base_id}");
+    let tooltip_id = use_id("tooltip");
 
     let is_open = state.overlay.is_open;
 
@@ -319,7 +283,6 @@ pub fn use_tooltip_trigger(
 
     UseTooltipTriggerReturn {
         trigger_props: UseTooltipTriggerProps {
-            id: trigger_id.clone(),
             aria_describedby,
             on_pointerenter: EventHandler::new(handle_pointer_enter),
             on_pointerleave: EventHandler::new(handle_pointer_leave),
@@ -328,12 +291,6 @@ pub fn use_tooltip_trigger(
             on_keydown: EventHandler::new(handle_keydown),
             on_pointerdown: EventHandler::new(handle_pointer_down),
         },
-        tooltip_props: UseTooltipTriggerTooltipProps {
-            id: tooltip_id.clone(),
-            role: AriaRole::Tooltip,
-        },
-        is_open,
-        trigger_id,
-        tooltip_id,
+        tooltip_props: UseTooltipTriggerTooltipProps { id: tooltip_id },
     }
 }

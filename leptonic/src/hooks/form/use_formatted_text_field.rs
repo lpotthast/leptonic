@@ -2,7 +2,11 @@
 use leptos::prelude::*;
 use web_sys::{CompositionEvent, InputEvent};
 
-use crate::utils::{CapturedElement, EventHandler};
+use super::use_number_field_state::NumberFieldState;
+use crate::{
+    hooks::ColorFieldState,
+    utils::{CapturedElement, EventHandler, NumberValue, color::ColorValue},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -11,8 +15,49 @@ use crate::utils::{CapturedElement, EventHandler};
 // ## API DIFFERENCES
 // - Returns the input's `beforeinput` and composition handlers, to merge with the text field's
 //   props (react-aria: calls `useTextField` and returns its merged result).
+// - The state is any [`FormattedTextState`] (react-aria: an object with `validate` and
+//   `setInputValue`).
 //
 // =============================================================================
+
+/// The text state of a field whose text must stay valid while typing (a number or hex color
+/// field), for [`use_formatted_text_field`].
+pub trait FormattedTextState: Copy + Send + Sync + 'static {
+    /// Whether `text` may be typed: valid, or the beginning of a valid text.
+    fn is_valid_text(&self, text: &str) -> bool;
+
+    /// Sets the text, without committing it.
+    fn set_text(&self, text: String);
+}
+
+impl<T: NumberValue> FormattedTextState for NumberFieldState<T> {
+    fn is_valid_text(&self, text: &str) -> bool {
+        self.validate(text.to_owned())
+    }
+
+    fn set_text(&self, text: String) {
+        self.set_input_value(text);
+    }
+}
+
+impl<C: ColorValue> FormattedTextState for ColorFieldState<C> {
+    fn is_valid_text(&self, text: &str) -> bool {
+        self.validate(text)
+    }
+
+    fn set_text(&self, text: String) {
+        self.set_input_value(text);
+    }
+}
+
+/// Input of [`use_formatted_text_field`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseFormattedTextFieldInput<S: FormattedTextState> {
+    /// The field's `<input>`.
+    pub element: CapturedElement,
+    /// The field's text state.
+    pub state: S,
+}
 
 /// Handlers keeping a text field's text valid while typing, from [`use_formatted_text_field`].
 #[derive(Debug, Clone)]
@@ -26,14 +71,14 @@ pub struct FormattedTextFieldHandlers {
 }
 
 /// Keeps the text of a field (number, hex color, ...) valid while typing: edits are checked with
-/// `validate` before the browser applies them, and composed text (IMEs, autocorrect) is reverted
-/// (through `set_input_value`) when it ends invalid.
-pub fn use_formatted_text_field(
-    element: CapturedElement,
-    validate: Callback<String, bool>,
-    set_input_value: Callback<String>,
+/// the state's [`is_valid_text`](FormattedTextState::is_valid_text) before the browser applies
+/// them, and composed text (IMEs, autocorrect) is reverted when it ends invalid.
+pub fn use_formatted_text_field<S: FormattedTextState>(
+    input: UseFormattedTextFieldInput<S>,
 ) -> FormattedTextFieldHandlers {
     use wasm_bindgen::JsCast;
+
+    let UseFormattedTextFieldInput { element, state } = input;
 
     let input = move || {
         element
@@ -47,7 +92,7 @@ pub fn use_formatted_text_field(
         };
         let allowed = match next_input_value(&input, &e.input_type(), e.data()) {
             NextValue::Allowed => true,
-            NextValue::Text(text) => validate.run(text),
+            NextValue::Text(text) => state.is_valid_text(&text),
             NextValue::Unknown => false,
         };
         if !allowed {
@@ -71,7 +116,7 @@ pub fn use_formatted_text_field(
         let Some(input) = input() else {
             return;
         };
-        if validate.run(input.value()) {
+        if state.is_valid_text(&input.value()) {
             return;
         }
         if let Some((value, start, end)) = composition_start.get_value() {
@@ -81,7 +126,7 @@ pub fn use_formatted_text_field(
                 end.unwrap_or(0),
                 "none",
             );
-            set_input_value.run(value);
+            state.set_text(value);
         }
     });
 

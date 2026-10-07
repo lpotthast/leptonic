@@ -21,24 +21,26 @@
 
 .demo-calendar-title  { margin: 0; font-size: var(--book-font-size-m); font-weight: 600; text-align: center; }
 
-// The page buttons. `data-focus-visible` comes from `use_button`, so the hook demos have it too; `data-hovered` and the
-// other states only the atoms set.
+// The page buttons, with an arrow glyph inside. `data-focus-visible` comes from `use_button`, so the hook demos have it
+// too; `data-hovered` and the other states only the atoms set (the hook demos' buttons are `disabled`).
 .demo-calendar-nav {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25em;
-    height: 2.25em;
+    width: 1.8em;
+    height: 1.8em;
     padding: 0;
     border: none;
     border-radius: 50%;
     background: none;
     color: var(--main-color);
     font: inherit;
+    font-size: 1.25em;
+    line-height: 1;
     cursor: pointer;
 
     &[data-hovered] { background: var(--book-hover-background-color); }
-    &[disabled] { color: var(--book-muted-color); cursor: default; }
+    &[data-disabled], &[disabled] { color: var(--book-muted-color); cursor: default; }
     &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
 }
 
@@ -145,7 +147,8 @@
     cursor: pointer;
 
     &[data-hovered] { background: var(--book-hover-background-color); }
-    &[aria-expanded="true"] { border-color: var(--brand-color); }
+    // Open: the atoms' group has `data-open`, the hook demo's button `aria-expanded`.
+    [data-open] > &, &[aria-expanded="true"] { border-color: var(--brand-color); }
     &[data-disabled] { cursor: not-allowed; }
     &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }

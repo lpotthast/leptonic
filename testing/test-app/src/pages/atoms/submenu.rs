@@ -1,19 +1,25 @@
 use leptonic::{
-    atoms::prelude::{
-        Button, Dialog, Menu, MenuItem, MenuItems, MenuTrigger, Popover, SubmenuTrigger,
+    atoms::{
+        field::Label,
+        input::Input,
+        prelude::{
+            Button, Dialog, Menu, MenuItem, MenuItems, MenuTrigger, Popover, SubmenuTrigger,
+        },
+        text_field::TextField,
     },
-    atoms::{field::Label, input::Input, text_field::TextField},
     hooks::{
         MenuTriggerType, SubmenuKind,
         collections::{Key, use_collection},
     },
+    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
 /// A menu tree (react-aria-components' `Menu.test.tsx` submenu setups): "File"
 /// (`#test-submenu-trigger`) opens Open, Rename, Share… (submenu: Email… (submenu: Work,
 /// Personal), SMS, X) and Delete; "Right click here" (`#test-context-trigger`) opens a context menu
-/// (Cut, Paste). Every action is appended to `#test-submenu-actions`.
+/// (Cut, Paste); "RTL" (`#test-submenu-rtl-trigger`, Arabic locale) opens Open and Share… (submenu:
+/// SMS, X) right to left. Every action is appended to `#test-submenu-actions`.
 #[component]
 pub fn PageAtomSubmenu() -> impl IntoView {
     let actions = RwSignal::new(Vec::<String>::new());
@@ -42,6 +48,11 @@ pub fn PageAtomSubmenu() -> impl IntoView {
         }
     });
 
+    let rtl: Locale = "ar-EG".parse().expect("a valid locale");
+    let rtl_items = use_collection(|b| {
+        b.item("open", "Open");
+        b.item("share", "Share…");
+    });
     let context_items = use_collection(|b| {
         for (key, text) in [("cut", "Cut"), ("paste", "Paste")] {
             b.item(key, text);
@@ -121,6 +132,26 @@ pub fn PageAtomSubmenu() -> impl IntoView {
                     </Menu>
                 </Popover>
             </MenuTrigger>
+
+            // Right to left: ArrowLeft opens a submenu, ArrowRight closes it.
+            <I18nProvider locale=rtl>
+                <MenuTrigger>
+                    <Button attr:id="test-submenu-rtl-trigger">"RTL"</Button>
+                    <Popover classes="test-popover">
+                        <Menu collection=rtl_items on_action=on_action classes="test-menu">
+                            <MenuItem key="open">"Open"</MenuItem>
+                            <SubmenuTrigger key="share">
+                                <MenuItem key="share">"Share…"</MenuItem>
+                                <Popover classes="test-popover test-rtl-submenu-popover">
+                                    <Menu collection=share_items on_action=on_action classes="test-menu">
+                                        <MenuItems let:node>{node.text_value.to_string()}</MenuItems>
+                                    </Menu>
+                                </Popover>
+                            </SubmenuTrigger>
+                        </Menu>
+                    </Popover>
+                </MenuTrigger>
+            </I18nProvider>
         </div>
     }
 }

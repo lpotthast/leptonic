@@ -1,10 +1,9 @@
 // Upstream: react-stately/src/checkbox/useCheckboxGroupState.ts @ 99e6102368
-use std::collections::HashMap;
 
 use leptos::prelude::*;
 
 use super::use_form_validation_state::{
-    UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+    FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
     ValidationResult, merge_validation, use_form_validation_state,
 };
 use crate::hooks::collections::Key;
@@ -80,13 +79,15 @@ pub struct CheckboxGroupState {
     pub is_required: Signal<bool>,
     /// Whether the group's displayed validation is invalid.
     pub is_invalid: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     default_value: StoredValue<Vec<Key>>,
     name: StoredValue<Option<String>>,
     set_value: crate::utils::ValueBinding<Vec<Key>>,
     on_change: Option<Callback<Vec<Key>>>,
-    invalid_values: StoredValue<HashMap<Key, ValidationResult>>,
+    /// The invalid checkboxes' validations, in the order they became invalid (react-aria: a
+    /// `Map`, which keeps insertion order), so the group's errors keep that order.
+    invalid_values: StoredValue<Vec<(Key, ValidationResult)>>,
 }
 
 impl std::fmt::Debug for CheckboxGroupState {
@@ -165,15 +166,21 @@ impl CheckboxGroupState {
     /// those of its checkboxes.
     pub fn set_invalid(&self, value: Key, validation: ValidationResult) {
         let merged = self.invalid_values.try_update_value(|invalid| {
-            if validation.is_invalid {
-                invalid.insert(value, validation);
-            } else {
-                invalid.remove(&value);
+            let existing = invalid.iter_mut().find(|(other, _)| *other == value);
+            match (validation.is_invalid, existing) {
+                (true, Some((_, entry))) => *entry = validation,
+                (true, None) => invalid.push((value, validation)),
+                (false, _) => invalid.retain(|(other, _)| *other != value),
             }
-            merge_validation(&invalid.values().cloned().collect::<Vec<_>>())
+            merge_validation(
+                &invalid
+                    .iter()
+                    .map(|(_, validation)| validation.clone())
+                    .collect::<Vec<_>>(),
+            )
         });
         if let Some(merged) = merged {
-            self.validation.update_validation.run(merged);
+            self.validation.update_validation(merged);
         }
     }
 }
@@ -216,7 +223,7 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
         name: StoredValue::new(name),
         set_value,
         on_change,
-        invalid_values: StoredValue::new(HashMap::new()),
+        invalid_values: StoredValue::new(Vec::new()),
     }
 }
 
@@ -224,7 +231,10 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
 mod tests {
     use assertr::prelude::*;
 
-    use super::*;
+    use super::{
+        super::use_form_validation_state::{DEFAULT_VALIDATION_RESULT, ValidityStateSnapshot},
+        *,
+    };
 
     fn keys(keys: &[&str]) -> Vec<Key> {
         keys.iter().map(|k| Key::from(*k)).collect()
@@ -273,6 +283,27 @@ mod tests {
             assert_that!(state.is_required.get_untracked()).is_true();
             state.add_value(Key::from("a"));
             assert_that!(state.is_required.get_untracked()).is_false();
+        });
+    }
+    #[test]
+    fn errors_keep_the_order_checkboxes_became_invalid() {
+        Owner::new().with(|| {
+            let state = use_checkbox_group_state(UseCheckboxGroupStateInput {
+                validation_behavior: ValidationBehavior::Aria,
+                ..UseCheckboxGroupStateInput::default()
+            });
+            let invalid = |message: &str| ValidationResult {
+                is_invalid: true,
+                validation_errors: vec![message.to_owned()],
+                validation_details: ValidityStateSnapshot::default(),
+            };
+            for key in ["z", "m", "a", "q", "b"] {
+                state.set_invalid(Key::from(key), invalid(key));
+            }
+            state.set_invalid(Key::from("a"), DEFAULT_VALIDATION_RESULT);
+            state.set_invalid(Key::from("m"), invalid("m2"));
+            assert_that!(state.validation.validation_errors.get_untracked())
+                .is_equal_to(["z", "m2", "q", "b"].map(str::to_owned).to_vec());
         });
     }
 }

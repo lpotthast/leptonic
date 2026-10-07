@@ -1,5 +1,5 @@
 // Upstream: react-aria/test/interactions/usePress.test.js @ 99e6102368
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;
 use browser_test::{
@@ -31,9 +31,99 @@ impl BrowserTest<str> for PressTests {
         prevent_focus_on_press_keeps_the_focus(&page).await?;
         nested_press_stops_by_default(&page).await?;
         nested_press_propagates_when_continued(&page).await?;
+        keyboard_press_ends_when_key_up_is_stopped(&page).await?;
+        a_drag_inside_cancels_the_press(&page).await?;
+        a_child_stopping_the_click_cancels_the_press(&page).await?;
+        focus_moving_before_key_up_ends_without_press(&page).await?;
+        repeating_key_downs_are_ignored(&page).await?;
+        dragging_out_and_back_in(&page).await?;
+        cancel_on_pointer_exit(&page).await?;
+        pointer_cancel_cancels_the_press(&page).await?;
+        space_on_a_link_with_button_role(&page).await?;
+        double_press(&page).await?;
+        press_propagation_continue(&page).await?;
+        virtual_click(&page).await?;
+        removed_while_pressed(&page).await?;
 
-        Ok(())
+        page.expect_no_page_errors().await
     }
+}
+
+/// `use_press` on a Mac (emulated: Chrome on Linux fires every key up): macOS fires no key up for
+/// keys released while Meta is held, so releasing Meta ends their presses ("should fire press
+/// events when Meta key is held to work around macOS bug").
+pub struct PressMacTests {}
+
+#[async_trait]
+impl BrowserTest<str> for PressMacTests {
+    fn name(&self) -> Cow<'_, str> {
+        "press_mac_tests".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        // Before the page loads: the platform is detected once.
+        driver
+            .cdp()
+            .send_raw(
+                "Emulation.setUserAgentOverride",
+                serde_json::json!({
+                    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+                                  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 \
+                                  Safari/537.36",
+                    "platform": "MacIntel",
+                    "userAgentMetadata": {
+                        "platform": "macOS",
+                        "platformVersion": "15.0.0",
+                        "architecture": "arm",
+                        "model": "",
+                        "mobile": false,
+                        "brands": [{ "brand": "Chromium", "version": "140" }],
+                    },
+                }),
+            )
+            .await?;
+        let page = Page { driver, base_url };
+        page.goto_path("/hooks/press").await?;
+        let is_mac = driver.execute("return navigator.platform;", vec![]).await?;
+        assert_that!(is_mac.json().as_str()).is_equal_to(Some("MacIntel"));
+
+        clear_log(&page).await?;
+        page.element("test-press-target").await?.focus().await?;
+        page.wait_for_active_id("test-press-target").await?;
+        // Meta held, Enter pressed; Meta released while Enter is still down.
+        page.driver
+            .action_chain()
+            .key_down(Key::Meta)
+            .key_down(Key::Enter)
+            .key_up(Key::Meta)
+            .perform()
+            .await?;
+        page.wait_for_text(
+            LOG,
+            "start:keyboard,up:keyboard,end:keyboard,press:keyboard",
+        )
+        .await?;
+        page.wait_for_text("test-press-is-pressed", "false").await?;
+        page.driver
+            .action_chain()
+            .key_up(Key::Enter)
+            .perform()
+            .await?;
+        expect_stays(
+            &page,
+            LOG,
+            "start:keyboard,up:keyboard,end:keyboard,press:keyboard",
+        )
+        .await?;
+        page.expect_no_page_errors().await
+    }
+}
+
+/// A negative check: give a wrong update time to happen, then check the text again.
+async fn expect_stays(page: &Page<'_>, id: &str, expected: &str) -> Result<(), Report> {
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_that!(page.read_text_of(id).await?).is_equal_to(expected.to_owned());
+    Ok(())
 }
 
 const LOG: &str = "test-press-log";
@@ -87,6 +177,13 @@ async fn keyboard_enter_and_space_press(page: &Page<'_>) -> Result<(), Report> {
 
 async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report> {
     clear_log(page).await?;
+    // DEBUG (temporary): record pointer events reaching the target.
+    page.driver
+        .execute(
+            "window.__dbg = []; for (const t of ['pointerdown','pointerup','pointerleave','pointerenter','pointercancel','click','lostpointercapture','gotpointercapture']) { document.addEventListener(t, e => window.__dbg.push(t + ':' + (e.target.id || e.target.tagName) + ':' + e.pointerType + ':' + window.scrollY), true); }",
+            vec![],
+        )
+        .await?;
     let target = page.element("test-press-target").await?;
     let elsewhere = page.element("test-press-elsewhere").await?;
 
@@ -107,7 +204,11 @@ async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report>
         .await?;
     page.wait_for_text(LOG, "start:mouse,end:mouse").await?;
     assert_that!(page.read_bool("test-press-is-pressed").await?).is_false();
-    Ok(())
+    // No press after all (the click fallback mustn't fire one either).
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    let dbg = page.driver.execute("return window.__dbg.join(' | ');", vec![]).await?;
+    tracing::error!("DEBUG pointer events: {}", dbg.json());
+    expect_stays(page, LOG, "start:mouse,end:mouse").await
 }
 
 async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Report> {
@@ -203,4 +304,248 @@ async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(), R
     page.wait_for_active_id("test-press-keep-input").await?;
     assert_that!(page.read_text_of("test-press-keep-blurs").await?).is_equal_to("0".to_owned());
     Ok(())
+}
+
+/// The document listens to the keyup in the capture phase (as react-aria): a keyup handler on the
+/// pressed element that stops the event (`use_keyboard` with `on_key_up`) doesn't leave the press
+/// stuck.
+async fn keyboard_press_ends_when_key_up_is_stopped(page: &Page<'_>) -> Result<(), Report> {
+    page.driver
+        .execute(
+            "document.getElementById('test-press-keyup').focus();",
+            vec![],
+        )
+        .await?;
+    page.wait_for_active_id("test-press-keyup").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_text("test-press-keyup-presses", "1").await?;
+    page.wait_for_text("test-press-keyup-pressed", "false")
+        .await?;
+    page.wait_for_text("test-press-keyup-key-ups", "1").await?;
+    page.send_keys_to_active(" ").await?;
+    page.wait_for_text("test-press-keyup-presses", "2").await?;
+    page.wait_for_text("test-press-keyup-pressed", "false")
+        .await
+}
+
+/// A drag starting inside the pressable cancels its press (react-aria's `onDragStart`), with the
+/// drag event: press end runs (no panic on a constructed event without a current target), no press.
+async fn a_drag_inside_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    let image = page.element("test-press-drag-image").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&image)
+        .click_and_hold()
+        .perform()
+        .await?;
+    page.wait_for_text("test-press-drag-log", "start").await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-press-drag-image').dispatchEvent(new DragEvent('dragstart', { bubbles: true }));",
+            vec![],
+        )
+        .await?;
+    page.wait_for_text("test-press-drag-log", "start,end")
+        .await?;
+    page.driver.action_chain().release().perform().await?;
+    assert_that!(page.read_text_of("test-press-drag-log").await?)
+        .is_equal_to("start,end".to_owned());
+    page.expect_no_page_errors().await
+}
+
+/// "should cancel press if onClick propagation is stopped": a child stops the click, so the click
+/// fallback (80 ms after pointer up) cancels the press instead of completing it.
+async fn a_child_stopping_the_click_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    let log = "test-press-click-stop-log";
+    page.click_element_with_id("test-press-click-stop-child")
+        .await?;
+    page.wait_for_text(log, "start:mouse,end:mouse").await?;
+    expect_stays(page, log, "start:mouse,end:mouse").await
+}
+
+/// "should handle when focus moves between keydown and keyup": the key up happens on another
+/// element (focus moved there on press start): press end without press up or press.
+async fn focus_moving_before_key_up_ends_without_press(page: &Page<'_>) -> Result<(), Report> {
+    let log = "test-press-focus-move-log";
+    page.element("test-press-focus-move").await?.focus().await?;
+    page.wait_for_active_id("test-press-focus-move").await?;
+    page.send_keys_to_active(" ").await?;
+    page.wait_for_active_id("test-press-focus-move-other")
+        .await?;
+    page.wait_for_text(log, "start:keyboard,end:keyboard")
+        .await?;
+    expect_stays(page, log, "start:keyboard,end:keyboard").await
+}
+
+/// "should ignore repeating keyboard events".
+async fn repeating_key_downs_are_ignored(page: &Page<'_>) -> Result<(), Report> {
+    clear_log(page).await?;
+    page.driver
+        .execute(
+            "const el = document.getElementById('test-press-target');
+             el.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', repeat: true, bubbles: true }));
+             document.body.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));",
+            vec![],
+        )
+        .await?;
+    expect_stays(page, LOG, "").await
+}
+
+/// "should fire press change events when moving pointer outside target", on a `display: contents`
+/// element (no box: the pointer's position can't be compared with its bounds).
+async fn dragging_out_and_back_in(page: &Page<'_>) -> Result<(), Report> {
+    let log = "test-press-contents-log";
+    let child = page.element("test-press-contents-child").await?;
+    let elsewhere = page.element("test-press-elsewhere").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&child)
+        .click_and_hold()
+        .perform()
+        .await?;
+    page.wait_for_text(log, "start:mouse").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&elsewhere)
+        .perform()
+        .await?;
+    page.wait_for_text(log, "start:mouse,end:mouse").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&child)
+        .perform()
+        .await?;
+    page.wait_for_text(log, "start:mouse,end:mouse,start:mouse")
+        .await?;
+    page.driver.action_chain().release().perform().await?;
+    page.wait_for_text(
+        log,
+        "start:mouse,end:mouse,start:mouse,up:mouse,end:mouse,press:mouse",
+    )
+    .await
+}
+
+/// "should cancel press when moving outside and the shouldCancelOnPointerExit option is set".
+async fn cancel_on_pointer_exit(page: &Page<'_>) -> Result<(), Report> {
+    let log = "test-press-cancel-exit-log";
+    let target = page.element("test-press-cancel-exit").await?;
+    let elsewhere = page.element("test-press-elsewhere").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&target)
+        .click_and_hold()
+        .perform()
+        .await?;
+    page.wait_for_text(log, "start:mouse").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&elsewhere)
+        .perform()
+        .await?;
+    page.wait_for_text(log, "start:mouse,end:mouse").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&target)
+        .release()
+        .perform()
+        .await?;
+    expect_stays(page, log, "start:mouse,end:mouse").await
+}
+
+/// "should handle pointer cancel events".
+async fn pointer_cancel_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    clear_log(page).await?;
+    let target = page.element("test-press-target").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&target)
+        .click_and_hold()
+        .perform()
+        .await?;
+    page.wait_for_text(LOG, "start:mouse").await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-press-target').dispatchEvent(\
+             new PointerEvent('pointercancel', { pointerId: 1, pointerType: 'mouse', bubbles: true }));",
+            vec![],
+        )
+        .await?;
+    page.wait_for_text(LOG, "start:mouse,end:mouse").await?;
+    page.driver.action_chain().release().perform().await?;
+    expect_stays(page, LOG, "start:mouse,end:mouse").await
+}
+
+/// "should explicitly call click method when Space key is triggered on a link with href and
+/// role=button": one press (the link's click opened by the press isn't a second, virtual press)
+/// and the link is followed.
+async fn space_on_a_link_with_button_role(page: &Page<'_>) -> Result<(), Report> {
+    let log = "test-press-link-log";
+    page.element("test-press-link").await?.focus().await?;
+    page.wait_for_active_id("test-press-link").await?;
+    page.send_keys_to_active(" ").await?;
+    page.wait_for_text(
+        log,
+        "start:keyboard,up:keyboard,end:keyboard,press:keyboard",
+    )
+    .await?;
+    expect_stays(
+        page,
+        log,
+        "start:keyboard,up:keyboard,end:keyboard,press:keyboard",
+    )
+    .await?;
+    let hash = page.driver.execute("return location.hash;", vec![]).await?;
+    assert_that!(hash.json().as_str()).is_equal_to(Some("#test-press-link-target"));
+    Ok(())
+}
+
+/// `on_double_press` fires on a double click, after both presses.
+async fn double_press(page: &Page<'_>) -> Result<(), Report> {
+    let target = page.element("test-press-double").await?;
+    page.driver
+        .action_chain()
+        .double_click_element(&target)
+        .perform()
+        .await?;
+    page.wait_for_text("test-press-double-log", "press,press,double:mouse")
+        .await
+}
+
+/// `PressPropagation::Continue`: every press event of the inner pressable propagates, so the
+/// outer one is pressed too.
+async fn press_propagation_continue(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-press-continue-inner")
+        .await?;
+    page.wait_for_text("test-press-continue-inner-log", "press")
+        .await?;
+    page.wait_for_text("test-press-continue-outer-log", "press")
+        .await
+}
+
+/// "should fire press events events for virtual click events from screen readers" (a click
+/// without a pointer: `element.click()`).
+async fn virtual_click(page: &Page<'_>) -> Result<(), Report> {
+    clear_log(page).await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-press-target').click();",
+            vec![],
+        )
+        .await?;
+    page.wait_for_text(LOG, "start:virtual,up:virtual,end:virtual,press:virtual")
+        .await
+}
+
+/// A pressable removed while pressed: no press, no panic when the pointer is released.
+async fn removed_while_pressed(page: &Page<'_>) -> Result<(), Report> {
+    let target = page.element("test-press-removed").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&target)
+        .click_and_hold()
+        .perform()
+        .await?;
+    page.wait_for_no_selector("#test-press-removed").await?;
+    page.driver.action_chain().release().perform().await?;
+    expect_stays(page, "test-press-removed-log", "start:mouse").await
 }

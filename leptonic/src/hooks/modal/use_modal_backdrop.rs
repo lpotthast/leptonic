@@ -1,5 +1,5 @@
 // Upstream: react-aria/src/overlays/useModalOverlay.ts @ 99e6102368
-use leptos::{oco::Oco, prelude::*};
+use leptos::prelude::*;
 
 use crate::hooks::{
     IntoAttrs, OverlayTriggerState,
@@ -55,7 +55,7 @@ pub struct UseModalBackdropReturn {
     pub modal_props: UseModalBackdropModalProps,
 
     /// Unique overlay ID. Can be passed to `use_overlay_trigger` if needed.
-    pub id: Oco<'static, str>,
+    pub id: String,
 }
 
 /// Props for the modal content element, delegated from `use_overlay`.
@@ -78,8 +78,8 @@ impl IntoAttrs for UseModalBackdropModalProps {
 /// dismissal, and overlay stacking) with `use_prevent_scroll` (scroll is
 /// always prevented while the modal is open).
 ///
-/// Combine with:
-/// - `use_modal` for `aria-modal="true"`
+/// Everything outside the modal element is inert while it is open, which makes the modal modal
+/// (no `aria-modal` needed, see `use_modal`). Combine with:
 /// - `use_dialog` for ARIA role, labeling, and focus-on-mount
 /// - `FocusScope` atom for focus trapping and restoration
 ///
@@ -99,7 +99,7 @@ impl IntoAttrs for UseModalBackdropModalProps {
 /// view! {
 ///     <Show when=move || state.is_open.get()>
 ///         <div class="backdrop">
-///             <FocusScope contain=true restore_focus=true auto_focus=true>
+///             <FocusScope contain=true restore_focus=true>
 ///                 <div {..modal_props.into_attrs()} class="modal">"Modal content"</div>
 ///             </FocusScope>
 ///         </div>

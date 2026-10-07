@@ -1,11 +1,9 @@
-// Upstream: react-aria/src/utils/animation.ts @ 6f664fe911
-//! Animation lifecycle hooks for CSS enter/exit animations.
+//! Animation lifecycle hooks for CSS enter/exit animations (react-aria's `utils/animation.ts`,
+//! ported in the submodules).
 //!
 //! These hooks use the Web Animations API (`Element.getAnimations()`) to detect
 //! when CSS animations complete, enabling coordinated enter/exit transitions
 //! for overlays, popovers, modals, and other animated elements.
-//!
-//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/animation.ts>
 
 #[cfg(not(feature = "ssr"))]
 mod use_animation;

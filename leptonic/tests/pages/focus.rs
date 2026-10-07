@@ -52,11 +52,6 @@ impl FocusPage<'_> {
         Ok(text.trim() == "true")
     }
 
-    pub async fn read_disabled_focus_count(&self) -> Result<u32, Report> {
-        let text = self.read_text_of("test-disabled-focus-count").await?;
-        Ok(text.trim().parse()?)
-    }
-
     pub async fn click_before(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-before").await
     }
@@ -82,15 +77,5 @@ impl FocusPage<'_> {
 
     pub async fn click_parent(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-parent").await
-    }
-
-    pub async fn read_parent_focus_count(&self) -> Result<u32, Report> {
-        let text = self.read_text_of("test-focus-parent-focus-count").await?;
-        Ok(text.trim().parse()?)
-    }
-
-    pub async fn read_parent_blur_count(&self) -> Result<u32, Report> {
-        let text = self.read_text_of("test-focus-parent-blur-count").await?;
-        Ok(text.trim().parse()?)
     }
 }

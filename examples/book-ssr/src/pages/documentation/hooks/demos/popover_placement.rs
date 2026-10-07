@@ -1,9 +1,9 @@
-use leptonic::utils::CapturedElement;
+use std::collections::HashSet;
+
 use leptonic::{
-    atoms::prelude::FocusScope,
-    components::prelude::*,
+    atoms::prelude::{FocusScope, ToggleButton, ToggleButtonGroup},
     hooks::{collections::Key, *},
-    utils::{css::em, id::use_id},
+    utils::{CapturedElement, id::use_id},
 };
 use leptos::{portal::Portal, prelude::*};
 
@@ -62,7 +62,7 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
     let UseOverlayTriggerReturn {
         props: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open,
+        is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -82,38 +82,48 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
     let title_id = StoredValue::new(title_id);
 
     view! {
-        <Grid gap=em(0.5) classes="demo-mb-1">
-            <Row>
-                <Col xs=6 classes="demo-option-group">
-                    <RadioGroup
-                        label="Side"
-                        classes="demo-radio-list"
-                        default_value="Bottom"
-                        on_change={move |key: Option<Key>| {
-                            if let Some(new_side) = option_for(&SIDES, key) {
-                                side.set(new_side);
-                            }
-                        }}
-                    >
-                        {SIDES.into_iter().map(|(label, _)| view! { <Radio value=label>{label}</Radio> }).collect_view()}
-                    </RadioGroup>
-                </Col>
-                <Col xs=6 classes="demo-option-group">
-                    <RadioGroup
-                        label="Alignment"
-                        classes="demo-radio-list"
-                        default_value="Center"
-                        on_change={move |key: Option<Key>| {
-                            if let Some(new_align) = option_for(&ALIGNMENTS, key) {
-                                align.set(new_align);
-                            }
-                        }}
-                    >
-                        {ALIGNMENTS.into_iter().map(|(label, _)| view! { <Radio value=label>{label}</Radio> }).collect_view()}
-                    </RadioGroup>
-                </Col>
-            </Row>
-        </Grid>
+        <div class="demo-control-stack demo-mb-1">
+            <div class="demo-control-row">
+                <span id="placement-side-label">"Side"</span>
+                <ToggleButtonGroup
+                    selection_mode=ToggleGroupSelectionMode::Single
+                    disallow_empty_selection=true
+                    default_selected_keys=HashSet::from([Key::from("Bottom")])
+                    on_selection_change={move |keys: HashSet<Key>| {
+                        if let Some(new_side) = option_for(&SIDES, &keys) {
+                            side.set(new_side);
+                        }
+                    }}
+                    aria_labelledby="placement-side-label"
+                    classes="demo-toggle-group"
+                >
+                    {SIDES
+                        .into_iter()
+                        .map(|(label, _)| view! { <ToggleButton value=label classes="demo-toggle-button">{label}</ToggleButton> })
+                        .collect_view()}
+                </ToggleButtonGroup>
+            </div>
+            <div class="demo-control-row">
+                <span id="placement-align-label">"Alignment"</span>
+                <ToggleButtonGroup
+                    selection_mode=ToggleGroupSelectionMode::Single
+                    disallow_empty_selection=true
+                    default_selected_keys=HashSet::from([Key::from("Center")])
+                    on_selection_change={move |keys: HashSet<Key>| {
+                        if let Some(new_align) = option_for(&ALIGNMENTS, &keys) {
+                            align.set(new_align);
+                        }
+                    }}
+                    aria_labelledby="placement-align-label"
+                    classes="demo-toggle-group"
+                >
+                    {ALIGNMENTS
+                        .into_iter()
+                        .map(|(label, _)| view! { <ToggleButton value=label classes="demo-toggle-button">{label}</ToggleButton> })
+                        .collect_view()}
+                </ToggleButtonGroup>
+            </div>
+        </div>
 
         <div class="demo-popover-stage">
             <button {..button_attrs} {..trigger_props.into_attrs()} style=button_styles class="demo-btn">
@@ -156,12 +166,11 @@ pub fn PlacementPopoverDemo() -> impl IntoView {
     }
 }
 
-/// The option whose label is `key`.
-fn option_for<T: Copy>(options: &[(&'static str, T)], key: Option<Key>) -> Option<T> {
-    let key = key?;
+/// The option whose label is selected.
+fn option_for<T: Copy>(options: &[(&'static str, T)], keys: &HashSet<Key>) -> Option<T> {
     options
         .iter()
-        .find(|(label, _)| Key::from(*label) == key)
+        .find(|(label, _)| keys.contains(&Key::from(*label)))
         .map(|(_, option)| *option)
 }
 

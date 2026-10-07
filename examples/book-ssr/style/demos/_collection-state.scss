@@ -41,7 +41,7 @@
     background: var(--book-surface-color);
 
     // The listbox takes focus itself only while it has no options.
-    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
 
 .demo-virt-option {

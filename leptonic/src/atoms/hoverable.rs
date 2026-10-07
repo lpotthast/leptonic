@@ -1,3 +1,4 @@
+// No upstream: an atom applying `use_hover` to its child (react-aria-components has no `Hoverable`).
 use leptos::{attr::custom::custom_attribute, prelude::*};
 
 use crate::hooks::*;

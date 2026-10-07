@@ -16,14 +16,19 @@ use crate::{
     hooks::{
         IntoAttrs, Placement, PropsWithStyles, UseButtonInput, UseButtonReturn, UseFocusRingInput,
         UseFocusRingReturn, UseHoverInput, ValidateFn, ValidationBehavior,
+        calendar::DateAvailabilityQuery,
         datepicker::{
-            DateFieldData, DateFieldState, DateSegment, DateSegmentType, DateValue, Granularity,
-            HourCycle, RangePart, RangeValue, TimeValue, UseDateFieldInput, UseDateFieldProps,
-            UseDateFieldReturn, UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
-            UseDatePickerStateInput, UseDateRangePickerStateInput, UseDateSegmentReturn,
-            UseTimeFieldStateInput, use_date_field, use_date_field_state, use_date_picker,
-            use_date_picker_state, use_date_range_picker, use_date_range_picker_state,
-            use_date_segment, use_time_field, use_time_field_state,
+            DateFieldData, DateFieldOptions, DateFieldPicker, DateFieldState, DatePickerOptions,
+            DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, RangePart, RangeValue,
+            TimeValue, UseDateFieldInput, UseDateFieldProps, UseDateFieldReturn,
+            UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
+            UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
+            UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
+            UseHiddenDateInputReturn, UseTimeFieldInput, UseTimeFieldStateInput,
+            use_date_field, use_date_field_state, use_date_picker, use_date_picker_state,
+            use_date_range_picker, use_date_range_picker_state, use_date_segment,
+            use_hidden_date_input, use_time_field,
+            use_time_field_state,
         },
         use_button, use_focus_ring, use_hover,
     },
@@ -46,6 +51,11 @@ use crate::{
 // - State props per C4: `value` + `set_value`, `default_value`, `on_change`.
 //
 // =============================================================================
+
+/// An optional prop as a signal.
+fn maybe<T: Clone + Send + Sync + 'static>(prop: MaybeProp<T>) -> Signal<Option<T>> {
+    Signal::derive(move || prop.get())
+}
 
 /// What a field's `DateInput` and segments need, independent of its value type.
 #[derive(Clone)]
@@ -94,11 +104,14 @@ fn group_state(
 
 fn render_field<V: DateValue>(
     state: &DateFieldState<V>,
-    input: UseDateFieldInput,
+    options: DateFieldOptions,
     // The field's hook: `use_date_field`, or `use_time_field` (its hidden input submits the
     // time).
-    use_field: impl FnOnce(UseDateFieldInput, CapturedElement, CapturedElement) -> UseDateFieldReturn<V>,
+    use_field: impl FnOnce(DateFieldOptions, CapturedElement, CapturedElement) -> UseDateFieldReturn<V>,
     label_presence: LabelPresence,
+    // The hidden date input for autofill (date fields; react-aria-components' time fields have
+    // none).
+    autofill: Option<UseHiddenDateInputReturn>,
     classes: Classes,
     styles: Styles,
     children: Children,
@@ -113,7 +126,7 @@ fn render_field<V: DateValue>(
         description_props,
         error_message_props,
         data,
-    } = use_field(input, element, input_element);
+    } = use_field(options, element, input_element);
     let is_invalid = state.is_invalid;
     let validation = state.validation;
     let provide = move || {
@@ -134,7 +147,13 @@ fn render_field<V: DateValue>(
         provide_context(DateInputContext {
             segments: state.segments,
             field_props: StoredValue::new(Some(field_props)),
-            segment: Arc::new(move |segment, element| use_date_segment(segment, data, element)),
+            segment: Arc::new(move |segment, element| {
+                use_date_segment(UseDateSegmentInput {
+                    segment,
+                    data,
+                    element,
+                })
+            }),
             is_disabled: state.is_disabled,
             is_read_only: state.is_read_only,
             is_invalid,
@@ -152,10 +171,25 @@ fn render_field<V: DateValue>(
             >
                 {children()}
                 <input {..input_props.into_attrs()} />
+                {autofill.map(hidden_date_input)}
             </div>
         }
     })
     .into_any()
+}
+
+/// The visually hidden date input for autofill.
+fn hidden_date_input(autofill: UseHiddenDateInputReturn) -> impl IntoView {
+    let UseHiddenDateInputReturn {
+        container_props,
+        input_props,
+    } = autofill;
+    let styles = container_props.styles.clone();
+    view! {
+        <div {..container_props.into_attrs()} style=styles>
+            <input {..input_props.into_attrs()} />
+        </div>
+    }
 }
 
 /// A date field (react-aria-components' `DateField`): a date edited in segments (month, day,
@@ -178,17 +212,17 @@ pub fn DateField<V: DateValue>(
     set_value: Option<Out<Option<V>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<V>>>,
     /// The value the segments start from when edited. Default: today, midnight.
-    #[prop(optional)]
-    placeholder_value: Option<V>,
+    #[prop(into, optional)]
+    placeholder_value: MaybeProp<V>,
     #[prop(into, optional)] min_value: Signal<Option<V>>,
     #[prop(into, optional)] max_value: Signal<Option<V>>,
     #[prop(into, optional)] is_date_unavailable: Option<Callback<V, bool>>,
     /// The finest unit. Default: the minute for values with a time, else the day.
-    #[prop(optional)]
-    granularity: Option<Granularity>,
-    #[prop(optional)] hour_cycle: Option<HourCycle>,
-    #[prop(optional)] hide_time_zone: bool,
-    #[prop(optional)] should_force_leading_zeros: bool,
+    #[prop(into, optional)]
+    granularity: MaybeProp<Granularity>,
+    #[prop(into, optional)] hour_cycle: MaybeProp<HourCycle>,
+    #[prop(into, optional)] hide_time_zone: Signal<bool>,
+    #[prop(into, optional)] should_force_leading_zeros: Signal<bool>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -199,6 +233,10 @@ pub fn DateField<V: DateValue>(
     validation_behavior: Option<ValidationBehavior>,
     #[prop(into, optional)] name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
+    /// What the browser may autofill (`autocomplete`, e.g. `"bday"`), through a visually hidden
+    /// date input.
+    #[prop(into, optional)]
+    auto_complete: Option<String>,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
@@ -215,12 +253,12 @@ pub fn DateField<V: DateValue>(
         default_value,
         value,
         on_change,
-        placeholder_value,
+        placeholder_value: maybe(placeholder_value),
         min_value,
         max_value,
         is_date_unavailable,
-        granularity,
-        hour_cycle,
+        granularity: maybe(granularity),
+        hour_cycle: maybe(hour_cycle),
         hide_time_zone,
         should_force_leading_zeros,
         is_disabled,
@@ -229,13 +267,22 @@ pub fn DateField<V: DateValue>(
         is_invalid,
         validate,
         validation_behavior: use_validation_behavior(validation_behavior),
-        name,
+        name: name.clone(),
         ..UseDateFieldStateInput::default()
+    });
+    let autofill = use_hidden_date_input(UseHiddenDateInputInput {
+        value: state.value,
+        base: state.date_value,
+        granularity: state.granularity,
+        set_value: Callback::new(move |value| state.set_value(value)),
+        auto_complete,
+        name,
+        is_disabled: state.is_disabled,
     });
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     render_field(
         &state,
-        UseDateFieldInput {
+        DateFieldOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
@@ -244,10 +291,18 @@ pub fn DateField<V: DateValue>(
             auto_focus,
             on_focus_change,
             form,
-            ..UseDateFieldInput::default()
+            ..DateFieldOptions::default()
         },
-        move |input, element, input_element| use_date_field(input, state, element, input_element),
+        move |options, element, input_element| {
+            use_date_field(UseDateFieldInput {
+                state,
+                element,
+                input_element,
+                options,
+            })
+        },
         label_presence,
+        Some(autofill),
         classes,
         styles,
         children,
@@ -268,16 +323,16 @@ pub fn TimeField<T: TimeValue>(
     #[prop(into, optional)] set_value: Option<Out<Option<T>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<T>>>,
     /// The time the segments start from when edited. Default: midnight.
-    #[prop(optional)]
-    placeholder_value: Option<T>,
+    #[prop(into, optional)]
+    placeholder_value: MaybeProp<T>,
     #[prop(into, optional)] min_value: Signal<Option<T>>,
     #[prop(into, optional)] max_value: Signal<Option<T>>,
     /// Hour, minute (default) or second.
-    #[prop(optional)]
-    granularity: Option<Granularity>,
-    #[prop(optional)] hour_cycle: Option<HourCycle>,
-    #[prop(optional)] hide_time_zone: bool,
-    #[prop(optional)] should_force_leading_zeros: bool,
+    #[prop(into, optional)]
+    granularity: MaybeProp<Granularity>,
+    #[prop(into, optional)] hour_cycle: MaybeProp<HourCycle>,
+    #[prop(into, optional)] hide_time_zone: Signal<bool>,
+    #[prop(into, optional)] should_force_leading_zeros: Signal<bool>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_required: Signal<bool>,
@@ -302,11 +357,11 @@ pub fn TimeField<T: TimeValue>(
         default_value,
         value,
         on_change,
-        placeholder_value,
+        placeholder_value: maybe(placeholder_value),
         min_value,
         max_value,
-        granularity,
-        hour_cycle,
+        granularity: maybe(granularity),
+        hour_cycle: maybe(hour_cycle),
         hide_time_zone,
         should_force_leading_zeros,
         is_disabled,
@@ -320,7 +375,7 @@ pub fn TimeField<T: TimeValue>(
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     render_field(
         &state.field,
-        UseDateFieldInput {
+        DateFieldOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
@@ -329,10 +384,18 @@ pub fn TimeField<T: TimeValue>(
             auto_focus,
             on_focus_change,
             form,
-            ..UseDateFieldInput::default()
+            ..DateFieldOptions::default()
         },
-        move |input, element, input_element| use_time_field(input, state, element, input_element),
+        move |options, element, input_element| {
+            use_time_field(UseTimeFieldInput {
+                state,
+                element,
+                input_element,
+                options,
+            })
+        },
         label_presence,
+        None,
         classes,
         styles,
         children,
@@ -524,15 +587,15 @@ pub fn DatePicker<V: DateValue>(
     #[prop(into, optional)] set_value: Option<Out<Option<V>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<V>>>,
     /// The value the segments start from when edited, and the month the calendar opens on.
-    #[prop(optional)]
-    placeholder_value: Option<V>,
+    #[prop(into, optional)]
+    placeholder_value: MaybeProp<V>,
     #[prop(into, optional)] min_value: Signal<Option<V>>,
     #[prop(into, optional)] max_value: Signal<Option<V>>,
     #[prop(into, optional)] is_date_unavailable: Option<Callback<V, bool>>,
-    #[prop(optional)] granularity: Option<Granularity>,
-    #[prop(optional)] hour_cycle: Option<HourCycle>,
-    #[prop(optional)] hide_time_zone: bool,
-    #[prop(optional)] should_force_leading_zeros: bool,
+    #[prop(into, optional)] granularity: MaybeProp<Granularity>,
+    #[prop(into, optional)] hour_cycle: MaybeProp<HourCycle>,
+    #[prop(into, optional)] hide_time_zone: Signal<bool>,
+    #[prop(into, optional)] should_force_leading_zeros: Signal<bool>,
     /// Whether selecting a date closes the popover. Default: `true`.
     #[prop(into, default = Signal::stored(true))]
     should_close_on_select: Signal<bool>,
@@ -550,6 +613,10 @@ pub fn DatePicker<V: DateValue>(
     #[prop(optional)] validation_behavior: Option<ValidationBehavior>,
     #[prop(into, optional)] name: Option<String>,
     #[prop(into, optional)] form: Option<String>,
+    /// What the browser may autofill (`autocomplete`, e.g. `"bday"`), through a visually hidden
+    /// date input.
+    #[prop(into, optional)]
+    auto_complete: Option<String>,
     #[prop(optional)] auto_focus: bool,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
@@ -565,8 +632,9 @@ pub fn DatePicker<V: DateValue>(
     let (is_open, on_open_change) =
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
-    let placeholder_date = placeholder_value.as_ref().map(DateValue::date);
-    let field_placeholder = placeholder_value.clone();
+    let placeholder_date = placeholder_value.get_untracked().map(|value| value.date());
+    let placeholder_value = maybe(placeholder_value);
+    let (granularity, hour_cycle) = (maybe(granularity), maybe(hour_cycle));
     let state = use_date_picker_state(UseDatePickerStateInput {
         default_value,
         value,
@@ -601,8 +669,10 @@ pub fn DatePicker<V: DateValue>(
         labelledby,
         dialog_labelledby,
         ..
-    } = use_date_picker(
-        UseDatePickerInput {
+    } = use_date_picker(UseDatePickerInput {
+        state,
+        group,
+        options: DatePickerOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
@@ -612,19 +682,17 @@ pub fn DatePicker<V: DateValue>(
             is_read_only,
             on_focus_change,
             dialog_id: trigger.overlay_id.into(),
-            ..UseDatePickerInput::default()
+            ..DatePickerOptions::default()
         },
-        state,
-        group,
-    );
+    });
 
     // The field, owned by the picker: its value and validation.
     let field_state = use_date_field_state(UseDateFieldStateInput {
         value: Some(state.binding),
-        placeholder_value: field_placeholder,
+        placeholder_value,
         min_value,
         max_value,
-        granularity: Some(state.granularity),
+        granularity: Signal::derive(move || Some(state.granularity.get())),
         hour_cycle,
         hide_time_zone,
         should_force_leading_zeros,
@@ -632,9 +700,18 @@ pub fn DatePicker<V: DateValue>(
         is_read_only,
         is_required,
         validation_behavior,
-        name,
+        name: name.clone(),
         validation: Some(state.validation),
         ..UseDateFieldStateInput::default()
+    });
+    let autofill = use_hidden_date_input(UseHiddenDateInputInput {
+        value: state.value,
+        base: field_state.date_value,
+        granularity: state.granularity,
+        set_value: Callback::new(move |value| state.set_value(value)),
+        auto_complete,
+        name,
+        is_disabled: field_state.is_disabled,
     });
     let field_element = CapturedElement::new();
     let input_element = CapturedElement::new();
@@ -643,18 +720,20 @@ pub fn DatePicker<V: DateValue>(
         input_props,
         data,
         ..
-    } = use_date_field(
-        UseDateFieldInput {
+    } = use_date_field(UseDateFieldInput {
+        state: field_state,
+        element: field_element,
+        input_element,
+        options: DateFieldOptions {
             auto_focus,
             form,
-            is_in_picker: true,
-            open: Some(Callback::new(move |()| state.set_open(true))),
-            ..UseDateFieldInput::default()
+            picker: Some(DateFieldPicker {
+                overlay: state.overlay,
+                focus_manager: None,
+            }),
+            ..DateFieldOptions::default()
         },
-        field_state,
-        field_element,
-        input_element,
-    );
+    });
     // The segments are labelled and described by the picker (react-aria: `useDatePicker`'s
     // field props).
     let data = DateFieldData {
@@ -689,7 +768,13 @@ pub fn DatePicker<V: DateValue>(
         provide_context(DateInputContext {
             segments: field_state.segments,
             field_props: StoredValue::new(Some(field_props)),
-            segment: Arc::new(move |segment, element| use_date_segment(segment, data, element)),
+            segment: Arc::new(move |segment, element| {
+                use_date_segment(UseDateSegmentInput {
+                    segment,
+                    data,
+                    element,
+                })
+            }),
             is_disabled: field_state.is_disabled,
             is_read_only: field_state.is_read_only,
             is_invalid,
@@ -733,6 +818,7 @@ pub fn DatePicker<V: DateValue>(
             >
                 {children()}
                 <input {..input_props.into_attrs()} />
+                {hidden_date_input(autofill)}
             </div>
         }
     })
@@ -782,7 +868,7 @@ pub fn DatePickerGroup(
 
 /// The button of the [`DatePicker`] opening its popover ("Calendar").
 ///
-/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// Data attributes: `data-pressed` (also while the popover is open), `data-hovered`, `data-focused`, `data-focus-visible`,
 /// `data-disabled`.
 ///
 /// Default class: `leptonic-DatePickerButton`.
@@ -803,8 +889,12 @@ pub fn DatePickerButton(
         is_pressed,
         is_hovered,
         is_focused,
+        is_focus_visible,
         ..
     } = use_button(context.button.get_value());
+    // Pressed while the popover is open (react-aria-components: `isPressed: state.isOpen`).
+    let is_open = context.is_open;
+    let is_pressed = Signal::derive(move || is_pressed.get() || is_open.get());
     let (attrs, button_styles) = props.into_parts();
     view! {
         <button
@@ -814,6 +904,7 @@ pub fn DatePickerButton(
             data-pressed=flag(is_pressed)
             data-hovered=flag(is_hovered)
             data-focused=flag(is_focused)
+            data-focus-visible=flag(is_focus_visible)
             data-disabled=flag(is_disabled)
         >
             {children()}
@@ -851,18 +942,18 @@ pub fn DateRangePicker<V: DateValue>(
     #[prop(into, optional)] set_value: Option<Out<Option<RangeValue<V>>>>,
     #[prop(into, optional)] on_change: Option<Callback<Option<RangeValue<V>>>>,
     /// The value the segments start from when edited, and the month the calendar opens on.
-    #[prop(optional)]
-    placeholder_value: Option<V>,
+    #[prop(into, optional)]
+    placeholder_value: MaybeProp<V>,
     #[prop(into, optional)] min_value: Signal<Option<V>>,
     #[prop(into, optional)] max_value: Signal<Option<V>>,
     #[prop(into, optional)] is_date_unavailable: Option<Callback<V, bool>>,
     /// Whether a range may span unavailable dates.
     #[prop(optional)]
     allows_non_contiguous_ranges: bool,
-    #[prop(optional)] granularity: Option<Granularity>,
-    #[prop(optional)] hour_cycle: Option<HourCycle>,
-    #[prop(optional)] hide_time_zone: bool,
-    #[prop(optional)] should_force_leading_zeros: bool,
+    #[prop(into, optional)] granularity: MaybeProp<Granularity>,
+    #[prop(into, optional)] hour_cycle: MaybeProp<HourCycle>,
+    #[prop(into, optional)] hide_time_zone: Signal<bool>,
+    #[prop(into, optional)] should_force_leading_zeros: Signal<bool>,
     #[prop(into, default = Signal::stored(true))] should_close_on_select: Signal<bool>,
     #[prop(into, optional)] is_open: Option<Signal<bool>>,
     #[prop(into, optional)] set_open: Option<Out<bool>>,
@@ -892,12 +983,14 @@ pub fn DateRangePicker<V: DateValue>(
     let (is_open, on_open_change) =
         ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
-    let placeholder_date = placeholder_value.as_ref().map(DateValue::date);
+    let placeholder_date = placeholder_value.get_untracked().map(|value| value.date());
+    let placeholder_value = maybe(placeholder_value);
+    let (granularity, hour_cycle) = (maybe(granularity), maybe(hour_cycle));
     let state = use_date_range_picker_state(UseDateRangePickerStateInput {
         default_value,
         value,
         on_change,
-        placeholder_value: placeholder_value.clone(),
+        placeholder_value,
         min_value,
         max_value,
         is_date_unavailable,
@@ -929,8 +1022,10 @@ pub fn DateRangePicker<V: DateValue>(
         focus_manager,
         dialog_labelledby,
         ..
-    } = use_date_range_picker(
-        UseDatePickerInput {
+    } = use_date_range_picker(UseDateRangePickerInput {
+        state,
+        group,
+        options: DatePickerOptions {
             id,
             has_label: label_presence.has_label,
             aria_label,
@@ -940,11 +1035,9 @@ pub fn DateRangePicker<V: DateValue>(
             is_read_only,
             on_focus_change,
             dialog_id: trigger.overlay_id.into(),
-            ..UseDatePickerInput::default()
+            ..DatePickerOptions::default()
         },
-        state,
-        group,
-    );
+    });
 
     // The start and end fields, owned by the picker: its ends and validation.
     let field = |part: RangePart, name: Option<String>, auto_focus: bool| {
@@ -957,10 +1050,10 @@ pub fn DateRangePicker<V: DateValue>(
                 value,
                 Callback::new(move |value| state.set_date_time(part, value)),
             )),
-            placeholder_value: placeholder_value.clone(),
+            placeholder_value,
             min_value,
             max_value,
-            granularity: Some(state.granularity),
+            granularity: Signal::derive(move || Some(state.granularity.get())),
             hour_cycle,
             hide_time_zone,
             should_force_leading_zeros,
@@ -978,8 +1071,11 @@ pub fn DateRangePicker<V: DateValue>(
             input_props,
             data,
             ..
-        } = use_date_field(
-            UseDateFieldInput {
+        } = use_date_field(UseDateFieldInput {
+            state: field_state,
+            element: CapturedElement::new(),
+            input_element,
+            options: DateFieldOptions {
                 aria_label: MaybeProp::from(
                     match part {
                         RangePart::Start => "Start Date",
@@ -989,15 +1085,13 @@ pub fn DateRangePicker<V: DateValue>(
                 ),
                 auto_focus,
                 form: form.clone(),
-                is_in_picker: true,
-                focus_manager: Some(focus_manager.clone()),
-                open: Some(Callback::new(move |()| state.set_open(true))),
-                ..UseDateFieldInput::default()
+                picker: Some(DateFieldPicker {
+                    overlay: state.overlay,
+                    focus_manager: Some(focus_manager.clone()),
+                }),
+                ..DateFieldOptions::default()
             },
-            field_state,
-            CapturedElement::new(),
-            input_element,
-        );
+        });
         let data = DateFieldData {
             aria_labelledby: labelledby,
             aria_describedby: field_describedby,
@@ -1007,7 +1101,13 @@ pub fn DateRangePicker<V: DateValue>(
             DateInputContext {
                 segments: field_state.segments,
                 field_props: StoredValue::new(Some(field_props)),
-                segment: Arc::new(move |segment, element| use_date_segment(segment, data, element)),
+                segment: Arc::new(move |segment, element| {
+                    use_date_segment(UseDateSegmentInput {
+                        segment,
+                        data,
+                        element,
+                    })
+                }),
                 is_disabled: field_state.is_disabled,
                 is_read_only: field_state.is_read_only,
                 is_invalid: state.is_invalid,
@@ -1024,11 +1124,9 @@ pub fn DateRangePicker<V: DateValue>(
     let is_disabled_state = start_context.is_disabled;
     let is_read_only_state = start_context.is_read_only;
     let picker_unavailable = is_date_unavailable.map(|unavailable| {
-        Callback::new(
-            move |(date, _): (jiff::civil::Date, Option<jiff::civil::Date>)| {
-                unavailable.run(state.date_to_value(date))
-            },
-        )
+        Callback::new(move |query: DateAvailabilityQuery| {
+            unavailable.run(state.date_to_value(query.date))
+        })
     });
     let provide = move || {
         provide_context(

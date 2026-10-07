@@ -9,7 +9,7 @@ pub fn ColorAreaConceptDemo() -> impl IntoView {
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 0.6,
-        value: 0.8,
+        brightness: 0.8,
     });
 
     view! {
@@ -26,6 +26,6 @@ pub fn ColorAreaConceptDemo() -> impl IntoView {
             </ColorArea>
             <ColorSwatch color=color classes="demo-color-atoms-swatch"/>
         </div>
-        <p class="demo-status">{move || format!("Color: {}, {}", color.get().into_rgb8(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name())}</p>
     }
 }

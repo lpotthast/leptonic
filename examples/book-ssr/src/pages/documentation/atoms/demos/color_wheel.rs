@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::prelude::{ColorSwatch, ColorThumb, ColorWheel, ColorWheelTrack},
-    components::prelude::Checkbox,
+    atoms::prelude::{Checkbox, ColorSwatch, ColorThumb, ColorWheel, ColorWheelTrack},
     utils::color::{ColorValue, HSV, HsvChannel},
 };
 use leptos::prelude::*;
@@ -9,11 +8,12 @@ use leptos::prelude::*;
 const INITIAL: HSV = HSV {
     hue: 210.0,
     saturation: 0.6,
-    value: 0.8,
+    brightness: 0.8,
 };
 
 #[component]
 pub fn ColorWheelAtomDemo() -> impl IntoView {
+    let locale = leptonic::utils::i18n::use_locale();
     // The wheel owns its color (`default_value`). `on_change` reports every change, `on_change_end`
     // only the color at the end of a drag or key press.
     let color = RwSignal::new(INITIAL);
@@ -23,7 +23,6 @@ pub fn ColorWheelAtomDemo() -> impl IntoView {
     view! {
         <div class="demo-color-atoms">
             <ColorWheel
-                channel=HsvChannel::Hue
                 outer_radius=100.0
                 inner_radius=74.0
                 default_value=INITIAL
@@ -39,10 +38,13 @@ pub fn ColorWheelAtomDemo() -> impl IntoView {
         </div>
 
         <p class="demo-status">
-            {move || format!("Committed hue: {}", committed.get().format_channel_value(HsvChannel::Hue))}
+            {move || format!("Committed hue: {}", committed.get().format_channel_value(HsvChannel::Hue, &locale.get()))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

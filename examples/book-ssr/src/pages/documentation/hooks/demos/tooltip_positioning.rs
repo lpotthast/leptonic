@@ -25,7 +25,12 @@ fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView
         delay: Duration::from_millis(500),
         ..Default::default()
     });
-    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
+    let trigger = use_tooltip_trigger(UseTooltipTriggerInput {
+        state,
+        is_disabled: Signal::stored(false),
+        trigger: TooltipTriggerMode::Hover,
+        should_close_on_press: Signal::stored(true),
+    });
     let tooltip = use_tooltip(UseTooltipInput {
         state: Some(state),
         ..Default::default()
@@ -34,7 +39,7 @@ fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView
         placement: Signal::stored(placement),
         offset: Signal::stored(6.0),
         target: trigger_element,
-        is_open: trigger.is_open,
+        is_open: state.overlay.is_open,
         container_padding: Signal::stored(12.0),
         cross_offset: Signal::stored(0.0),
         should_flip: Signal::stored(true),
@@ -48,9 +53,8 @@ fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView
         on_close: None,
     });
 
-    let is_open = trigger.is_open;
+    let is_open = state.overlay.is_open;
     let tooltip_id = StoredValue::new(trigger.tooltip_props.id);
-    let tooltip_role = trigger.tooltip_props.role;
     let (position_attrs, position_styles) = position.props.into_parts();
     let position_attrs = StoredValue::new(position_attrs);
     let position_styles = StoredValue::new(position_styles);
@@ -68,7 +72,6 @@ fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView
                     {..tooltip_attrs.get_value()}
                     style=position_styles.get_value()
                     id=tooltip_id.get_value()
-                    role=tooltip_role
                     class="demo-tooltip"
                 >
                     {format!("Placed {}", label.to_lowercase())}

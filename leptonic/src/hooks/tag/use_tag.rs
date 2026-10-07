@@ -110,7 +110,6 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         grid_cell_props,
         is_selected,
         is_focused,
-        is_disabled,
         is_pressed,
         allows_selection,
         ..
@@ -124,6 +123,9 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     let (mut row, row_styles) = row_props.into_inner();
 
     let key = StoredValue::new(key);
+    // A disabled tag can't be removed or focused by Tab, also with `DisabledBehavior::Selection`
+    // (react-aria: `disabledKeys` or the item's `isDisabled`).
+    let is_disabled = Signal::derive(move || key.with_value(|k| selection.is_item_disabled(k)));
     // The keys to remove: all selected tags if this one is selected, else just this one.
     let keys_to_remove = move || {
         let key = key.get_value();
@@ -177,7 +179,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     }));
 
     let remove_button = on_remove.map(|on_remove| UseButtonInput {
-        id: Some(button_id.clone().into()),
+        id: Some(button_id.clone()),
         aria_label: "Remove".into(),
         aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         is_disabled,

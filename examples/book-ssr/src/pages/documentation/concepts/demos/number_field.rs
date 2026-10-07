@@ -1,4 +1,11 @@
-use leptonic::components::prelude::*;
+use leptonic::atoms::{
+    checkbox::Checkbox,
+    field::{Description, Label},
+    input::Input,
+    number_field::{
+        NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
+    },
+};
 use leptos::prelude::*;
 
 #[component]
@@ -8,15 +15,20 @@ pub fn NumberFieldConceptDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     view! {
-        <NumberField
-            label="Tickets"
-            description="1 to 10 tickets per order."
-            value=tickets
-            set_value=tickets
-            min_value=1_u8
-            max_value=10_u8
-            is_disabled=disabled
-        />
+        <NumberField value=tickets set_value=tickets min_value=1_u8 max_value=10_u8 is_disabled=disabled classes="demo-field">
+            <Label classes="demo-field-label">"Tickets"</Label>
+            // The group draws the border and the focus ring around the input and the steppers.
+            <NumberFieldGroup classes="demo-number-field-group">
+                <NumberFieldDecrementButton classes="demo-number-field-stepper">
+                    <span aria-hidden="true">"\u{2212}"</span>
+                </NumberFieldDecrementButton>
+                <Input classes="demo-number-field-input"/>
+                <NumberFieldIncrementButton classes="demo-number-field-stepper">
+                    <span aria-hidden="true">"+"</span>
+                </NumberFieldIncrementButton>
+            </NumberFieldGroup>
+            <Description classes="demo-field-description">"1 to 10 tickets per order."</Description>
+        </NumberField>
 
         <p class="demo-status">
             {move || match tickets.get() {
@@ -27,7 +39,10 @@ pub fn NumberFieldConceptDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

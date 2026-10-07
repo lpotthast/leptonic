@@ -8,13 +8,23 @@ use crate::utils::CapturedElement;
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Takes the collection element as a `CapturedElement` in its input (react-aria: a ref).
 //
 // =============================================================================
 
+/// Input of [`use_draggable_collection`].
+#[derive(Debug, Clone, Copy)]
+pub struct UseDraggableCollectionInput {
+    pub state: DraggableCollectionState,
+    /// The collection element (captured by the collection hook's props).
+    pub element: CapturedElement,
+}
+
 /// A collection whose items can be dragged: while its items are dragged, it is the collection
 /// drags come from (drops into it are internal: reorders and moves).
-pub fn use_draggable_collection(state: DraggableCollectionState, element: CapturedElement) {
+pub fn use_draggable_collection(input: UseDraggableCollectionInput) {
+    let UseDraggableCollectionInput { state, element } = input;
     Effect::new(move || {
         if state.dragging_keys.with(|keys| !keys.is_empty())
             && let Some(element) = element.get()

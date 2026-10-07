@@ -1,6 +1,5 @@
 use leptonic::{
     atoms::prelude::*,
-    components::prelude::{Button, ButtonVariant},
     hooks::{
         FocusManager as Manager, FocusManagerOptions, IntoAttrs, UseKeyboardInput, use_keyboard,
     },
@@ -58,9 +57,9 @@ fn EditButtons(manager: Manager, set_action: WriteSignal<Option<&'static str>>) 
 
     view! {
         <div role="group" aria-label="Edit" class="demo-focus-row" {..keyboard.props.into_attrs()}>
-            <Button variant=ButtonVariant::Outlined on_press=move |_| set_action.set(Some("cut"))>"Cut"</Button>
-            <Button variant=ButtonVariant::Outlined on_press=move |_| set_action.set(Some("copy"))>"Copy"</Button>
-            <Button variant=ButtonVariant::Outlined on_press=move |_| set_action.set(Some("paste"))>"Paste"</Button>
+            <Button on_press=move |_| set_action.set(Some("cut")) classes="demo-btn">"Cut"</Button>
+            <Button on_press=move |_| set_action.set(Some("copy")) classes="demo-btn">"Copy"</Button>
+            <Button on_press=move |_| set_action.set(Some("paste")) classes="demo-btn">"Paste"</Button>
         </div>
     }
 }

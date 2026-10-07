@@ -54,8 +54,10 @@ pub fn PageSliderOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The component shows "<Code inline=true>"value"</Code>" and reports changes through "
-                    <Code inline=true>"set_value"</Code>":"
+                    "The "<Code inline=true>"Slider"</Code>" atom shows "<Code inline=true>"values"</Code>" (one per thumb) and "
+                    "reports changes through "<Code inline=true>"set_values"</Code>". Its track, fill and thumb position "
+                    "themselves; your CSS sizes and colors them (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::slider::Atom.materialize())>"Slider Atoms"</Link>" page):"
                 </p>
 
                 <Demo description="Volume slider showing its value" source=include_str!("demos/slider.rs") source_open=true>

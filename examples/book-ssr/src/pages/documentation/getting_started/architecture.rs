@@ -83,7 +83,7 @@ pub fn PageArchitecture() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                components::prelude::*,
+                                atoms::prelude::Button,
                                 hooks::{UseToggleStateInput, use_toggle_state},
                             };
 
@@ -242,7 +242,7 @@ pub fn PageArchitecture() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::components::prelude::*;
+                        use leptonic::atoms::prelude::*;
 
                         let accepted = RwSignal::new(false);
 

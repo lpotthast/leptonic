@@ -83,7 +83,7 @@ pub struct UseDialogProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
-    pub tabindex: &'static str,
+    pub tabindex: i32,
     /// Stops focus leaving during the iOS refocus workaround from reaching parent overlays.
     pub on_focusout: EventHandler<FocusEvent>,
     pub element_capture: ElementCaptureAttr,
@@ -113,7 +113,7 @@ pub type UseDialogAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::Tabindex, &'static str>,
+    Attr<attr::Tabindex, i32>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
     ElementCaptureAttr,
 );
@@ -204,13 +204,14 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
 
             let el: &web_sys::Element = &el;
 
-            // Check if the dialog already contains the active element.
+            // Whether the dialog already contains the active element (also inside shadow roots).
             let active_element = || {
                 leptos_use::use_document()
                     .as_ref()
-                    .and_then(web_sys::Document::active_element)
+                    .and_then(crate::utils::shadow_dom::get_active_element)
             };
-            let already_focused = active_element().is_some_and(|active| el.contains(Some(&active)));
+            let already_focused = active_element()
+                .is_some_and(|active| crate::utils::shadow_dom::node_contains(el, &active));
 
             if !already_focused {
                 focus_safely(el);
@@ -289,7 +290,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
             aria_label,
             aria_labelledby,
             aria_describedby,
-            tabindex: "-1",
+            tabindex: -1,
             on_focusout: EventHandler::new(handle_blur),
             element_capture: element.attr(),
         },

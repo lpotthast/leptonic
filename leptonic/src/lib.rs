@@ -15,9 +15,13 @@
 use leptos::prelude::*;
 use leptos_use::use_window;
 
+#[cfg(feature = "atoms")]
 pub mod atoms;
+#[cfg(feature = "components")]
 pub mod components;
 pub mod hooks;
+#[cfg(test)]
+pub(crate) mod testing;
 pub mod utils;
 
 // Let's make some types of our public API more easily accessible.
@@ -27,6 +31,7 @@ pub use jiff;
 
 pub mod prelude {
     // Reexport
+    #[cfg(feature = "components")]
     pub use icondata;
     #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;

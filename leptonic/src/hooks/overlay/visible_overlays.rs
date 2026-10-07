@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/overlays/useOverlay.ts @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code))]
 
 //! Thread-local stack of visible overlays.

@@ -1,25 +1,41 @@
-// Upstream: react-aria/src/utils/scrollIntoView.ts @ 6f664fe911
-// Upstream: react-aria/src/utils/isScrollable.ts @ 6f664fe911
-// Upstream: react-aria/src/utils/getScrollParent.ts @ 6f664fe911
-// Upstream: react-aria/src/utils/getScrollParents.ts @ 6f664fe911
-// Based on:
-// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/scrollIntoView.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/isScrollable.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/getScrollParent.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/getScrollParents.ts
+// Upstream: react-aria/src/utils/scrollIntoView.ts @ 99e6102368
+// Upstream: react-aria/src/utils/isScrollable.ts @ 99e6102368
+// Upstream: react-aria/src/utils/getScrollParent.ts @ 99e6102368
+// Upstream: react-aria/src/utils/getScrollParents.ts @ 99e6102368
+//! Scroll parents and scrolling elements into view (react-aria's `scrollIntoView`,
+//! `scrollIntoViewport`, `getScrollParent(s)` and `isScrollable`).
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Alignments are a `ScrollAlignment` enum (react-aria: `ScrollLogicalPosition` strings).
+// - The document and window are the element's owner's (react-aria: the global ones).
+//
+// ## OMITTED FEATURES
+// - `scrollRectIntoView` is private (`scroll_rect_into_view`): react-aria exports it for its token
+//   field's caret, which leptonic doesn't have yet.
+//
+// =============================================================================
 
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
 
-use crate::utils::platform::device;
+use crate::utils::platform::{browser, device};
 
-/// Alignment position for scrolling along a single axis.
+/// Where to align an element along one axis when scrolling it into view (CSS'
+/// `ScrollLogicalPosition`). An element already fully visible isn't scrolled, whatever the
+/// alignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[allow(dead_code)]
 pub enum ScrollAlignment {
+    /// At the start of the scroll port.
     Start,
+    /// In the center of the scroll port.
     Center,
+    /// At the end of the scroll port.
     End,
+    /// At whichever edge is nearer.
     #[default]
     Nearest,
 }
@@ -122,20 +138,20 @@ pub fn get_scroll_parent(node: &Element, check_for_overflow: bool) -> Element {
         .unwrap_or_else(|| node.clone())
 }
 
-/// Returns all scrollable ancestors of `node`, stopping before the root element.
-///
-/// Includes `node` itself if it is scrollable.
+/// Returns `node` and its ancestors that are scrollable, innermost first, up to and including the
+/// root scrolling element (when it is scrollable: a page whose body has no other scroll parent
+/// scrolls the root).
 pub fn get_scroll_parents(node: &Element, check_for_overflow: bool) -> Vec<Element> {
     let mut parents = Vec::new();
     let root = node.owner_document().and_then(|d| get_root_element(&d));
 
     let mut current: Option<Element> = Some(node.clone());
     while let Some(el) = current {
-        if root.as_ref() == Some(&el) {
-            break;
-        }
         if is_scrollable(&el, check_for_overflow) {
             parents.push(el.clone());
+        }
+        if root.as_ref() == Some(&el) {
+            break;
         }
         current = el.parent_element();
     }
@@ -148,18 +164,29 @@ pub fn get_scroll_parents(node: &Element, check_for_overflow: bool) -> Vec<Eleme
 /// Similar to `element.scrollIntoView({block: 'nearest'})` but doesn't affect
 /// parents above `scroll_view`. Handles scroll margins/padding, borders,
 /// scrollbar widths, and RTL layouts.
-#[allow(clippy::too_many_lines)]
 pub fn scroll_into_view(
     scroll_view: &HtmlElement,
     element: &HtmlElement,
     opts: ScrollIntoViewOpts,
 ) {
-    let scroll_el: &Element = scroll_view;
-    let element_el: &Element = element;
-
-    if scroll_el == element_el {
+    if scroll_view == element {
         return;
     }
+    let target = element.get_bounding_client_rect();
+    scroll_rect_into_view(scroll_view, element, &target, opts);
+}
+
+/// Scrolls `scroll_view` so that `target` (a rectangle of `element`, in client coordinates) is
+/// visible within it (react-aria's `scrollRectIntoView`). `element`'s scroll margins apply.
+#[allow(clippy::too_many_lines)]
+fn scroll_rect_into_view(
+    scroll_view: &HtmlElement,
+    element: &HtmlElement,
+    target: &web_sys::DomRect,
+    opts: ScrollIntoViewOpts,
+) {
+    let scroll_el: &Element = scroll_view;
+    let element_el: &Element = element;
 
     let Some(window) = scroll_view.owner_document().and_then(|d| d.default_view()) else {
         return;
@@ -182,7 +209,6 @@ pub fn scroll_into_view(
     let mut y = scroll_el.scroll_top();
     let mut x = scroll_el.scroll_left();
 
-    let target = element_el.get_bounding_client_rect();
     let view = scroll_el.get_bounding_client_rect();
 
     let is_root = scroll_el == &root;
@@ -271,41 +297,37 @@ pub fn scroll_into_view(
     let scroll_area_left = target.left() - scroll_margin_left;
     let scroll_area_right = target.right() + scroll_margin_right;
 
-    // Scrollbar dimensions.
-    let scrollbar_offset_x = if is_root {
-        0.0
+    // Scrollbar dimensions. The root's client size already excludes its scrollbars, and its view
+    // (0..client size) excludes its borders.
+    let (scrollbar_width, scrollbar_height) = if is_root {
+        (0.0, 0.0)
     } else {
-        border_left_width + border_right_width
+        (
+            f64::from(scroll_view.offset_width())
+                - f64::from(scroll_el.client_width())
+                - (border_left_width + border_right_width),
+            f64::from(scroll_view.offset_height())
+                - f64::from(scroll_el.client_height())
+                - (border_top_width + border_bottom_width),
+        )
     };
-    let scrollbar_offset_y = if is_root {
-        0.0
-    } else {
-        border_top_width + border_bottom_width
-    };
-    let scrollbar_width = f64::from(scroll_view.offset_width())
-        - f64::from(scroll_el.client_width())
-        - scrollbar_offset_x;
-    let scrollbar_height = f64::from(scroll_view.offset_height())
-        - f64::from(scroll_el.client_height())
-        - scrollbar_offset_y;
+    let border = |width: f64| if is_root { 0.0 } else { width };
 
     // Scroll port: the visible content area within the container.
-    let scroll_port_top = view_top + border_top_width + scroll_padding_top;
+    let scroll_port_top = view_top + border(border_top_width) + scroll_padding_top;
     let scroll_port_bottom =
-        view_bottom - border_bottom_width - scroll_padding_bottom - scrollbar_height;
-    let mut scroll_port_left = view_left + border_left_width + scroll_padding_left;
-    let mut scroll_port_right = view_right - border_right_width - scroll_padding_right;
+        view_bottom - border(border_bottom_width) - scroll_padding_bottom - scrollbar_height;
+    let mut scroll_port_left = view_left + border(border_left_width) + scroll_padding_left;
+    let mut scroll_port_right = view_right - border(border_right_width) - scroll_padding_right;
 
-    // iOS always positions the scrollbar on the right.
-    if view_style
+    // WebKit on iOS always positions the scrollbar on the right.
+    let direction = view_style
         .get_property_value("direction")
-        .unwrap_or_default()
-        == "rtl"
-        && !device::is_ios()
-    {
-        scroll_port_left += scrollbar_width;
-    } else {
+        .unwrap_or_default();
+    if (device::is_ios() && browser::is_webkit()) || direction == "ltr" {
         scroll_port_right -= scrollbar_width;
+    } else if direction == "rtl" {
+        scroll_port_left += scrollbar_width;
     }
 
     let should_scroll_block =
@@ -429,16 +451,9 @@ fn scroll_into_viewport_manual(target: &Element, opts: &ScrollIntoViewportOpts) 
     let original_left = original.left();
     let original_top = original.top();
 
-    // Scroll only scroll parents, not the body (would move overlay off-screen).
-    let scroll_parents = get_scroll_parents(target, true);
-    for parent in &scroll_parents {
-        if let (Some(sv), Some(el)) = (
-            parent.dyn_ref::<HtmlElement>(),
-            target.dyn_ref::<HtmlElement>(),
-        ) {
-            scroll_into_view(sv, el, ScrollIntoViewOpts::default());
-        }
-    }
+    // Scroll the scroll parents only, never with the native `scrollIntoView`, which would also
+    // scroll the page and could move the overlay off-screen, out of the user's reach.
+    scroll_parents_to(target);
 
     let after = target.get_bounding_client_rect();
     // Account for sub-pixel rounding differences.
@@ -460,6 +475,20 @@ fn scroll_into_viewport_manual(target: &Element, opts: &ScrollIntoViewportOpts) 
                     },
                 );
             }
+        }
+        // Then scroll the target into view again, as the native path does.
+        scroll_parents_to(target);
+    }
+}
+
+/// Scrolls each scroll parent of `target` (with overflowing content) so that `target` is visible.
+fn scroll_parents_to(target: &Element) {
+    let Some(target_el) = target.dyn_ref::<HtmlElement>() else {
+        return;
+    };
+    for parent in get_scroll_parents(target, true) {
+        if let Some(scroll_view) = parent.dyn_ref::<HtmlElement>() {
+            scroll_into_view(scroll_view, target_el, ScrollIntoViewOpts::default());
         }
     }
 }

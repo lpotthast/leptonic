@@ -322,10 +322,6 @@ fn atoms(href: String) -> NavTab {
     tab(Layer::Atom, true, href)
 }
 
-fn components(href: String) -> NavTab {
-    tab(Layer::Component, true, href)
-}
-
 fn build() -> Nav {
     Nav {
         parts: vec![
@@ -535,12 +531,6 @@ fn fields() -> NavGroup {
                     atoms(doc::radio::Atom.materialize()),
                 ],
             ),
-            page(
-                "Rich Text Editor",
-                "A rich text editor based on Tiptap",
-                doc::RichTextEditor.materialize(),
-                PageKind::Component,
-            ),
             concept(
                 "Search Field",
                 "A text field for search queries, submitted with Enter and cleared with Escape",
@@ -660,11 +650,14 @@ fn collections() -> NavGroup {
                     atoms(doc::table::Atom.materialize()),
                 ],
             ),
-            page(
+            concept(
                 "Tag Group",
                 "A focusable list of tags that can be selected and removed",
                 doc::TagGroup.materialize(),
-                PageKind::Hook,
+                vec![
+                    hooks(doc::tag_group::Hook.materialize()),
+                    atoms(doc::tag_group::Atom.materialize()),
+                ],
             ),
             page(
                 "Tree",
@@ -807,12 +800,6 @@ fn overlays() -> NavGroup {
                     atoms(doc::dialog::Atom.materialize()),
                 ],
             ),
-            page(
-                "Drawer",
-                "A modal panel sliding in from the edge of the screen",
-                doc::Drawer.materialize(),
-                PageKind::Component,
-            ),
             concept(
                 "Modal",
                 "A dialog that blocks the page until the user responds",
@@ -896,12 +883,6 @@ fn status() -> NavGroup {
         icondata::BsInfoCircle,
         Some(doc::Status.materialize()),
         vec![
-            page(
-                "Alert",
-                "A prominent status message",
-                doc::Alert.materialize(),
-                PageKind::Component,
-            ),
             concept(
                 "Meter",
                 "Shows a value within a known range, such as disk usage",
@@ -940,49 +921,10 @@ fn layout() -> NavGroup {
         Some(doc::Layout.materialize()),
         vec![
             page(
-                "App Bar",
-                "The application's top bar",
-                doc::AppBar.materialize(),
-                PageKind::Component,
-            ),
-            page(
-                "Card & Tile",
-                "Containers for related content: a themed card surface and an unstyled tile",
-                doc::CardAndTile.materialize(),
-                PageKind::Component,
-            ),
-            page(
-                "Chip",
-                "Compact labels for tags, filters and states, optionally dismissible",
-                doc::Chip.materialize(),
-                PageKind::Component,
-            ),
-            page(
-                "Grid Layout",
-                "Arranges content in responsive rows and columns",
-                doc::GridLayout.materialize(),
-                PageKind::Component,
-            ),
-            page(
-                "Icon",
-                "Renders icons from the icondata sets",
-                doc::Icon.materialize(),
-                PageKind::Component,
-            ),
-            concept(
                 "Kbd",
                 "Displays keys and keyboard shortcuts",
                 doc::Kbd.materialize(),
-                vec![
-                    atom(doc::kbd::Atom.materialize()),
-                    components(doc::kbd::Component.materialize()),
-                ],
-            ),
-            page(
-                "Sanitized HTML",
-                "Renders HTML from other sources without the scripts it may contain",
-                doc::SanitizedHtml.materialize(),
-                PageKind::Component,
+                PageKind::Atom,
             ),
             concept(
                 "Separator",
@@ -993,18 +935,6 @@ fn layout() -> NavGroup {
                     atom(doc::separator::Atom.materialize()),
                 ],
             ),
-            page(
-                "Skeleton",
-                "Placeholder shapes while content loads",
-                doc::Skeleton.materialize(),
-                PageKind::Component,
-            ),
-            page(
-                "Stack",
-                "Stacks elements vertically or horizontally with even spacing",
-                doc::Stack.materialize(),
-                PageKind::Component,
-            ),
             concept(
                 "Toolbar",
                 "A group of controls navigated with the arrow keys",
@@ -1013,12 +943,6 @@ fn layout() -> NavGroup {
                     hook(doc::toolbar::Hook.materialize()),
                     atom(doc::toolbar::Atom.materialize()),
                 ],
-            ),
-            page(
-                "Typography",
-                "Headings, paragraphs and code with the theme's text styles",
-                doc::Typography.materialize(),
-                PageKind::Component,
             ),
         ],
     )
@@ -1293,12 +1217,7 @@ fn animation() -> NavGroup {
         "Animation",
         icondata::BsPlayCircle,
         Some(doc::Animation.materialize()),
-        vec![page(
-            "Transitions",
-            "Ready-made collapse, fade, grow, slide and zoom transitions",
-            doc::animation::Transitions.materialize(),
-            PageKind::Component,
-        )],
+        Vec::new(),
     )
 }
 

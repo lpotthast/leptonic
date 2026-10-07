@@ -60,7 +60,12 @@ pub fn PageMeterOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"The component is the quickest way to a meter: give it a value and a label, optionally a range and your own value text:"</p>
+                <p>
+                    "The atoms with a value, a label and your own value text; the track around the fill is your own markup. "
+                    "The classes are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::meter::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows their CSS:"
+                </p>
                 <Demo
                     description="A storage meter with its own value text"
                     source=include_str!("demos/meter_storage.rs")

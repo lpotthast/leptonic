@@ -5,6 +5,11 @@
 //! and touch; keyboard and screen reader drags go through the drag manager (Enter starts a drag,
 //! Tab and the collection's keys move between drop targets, Enter drops, Escape cancels).
 //! [`use_clipboard`] adds cut, copy and paste with the same data format.
+//!
+//! The DnD events (`DragStartEvent`, `DropEvent`, ...) don't implement `Propagation`: they are
+//! callbacks of the hooks, not DOM events handed on to the app. The hooks stop the native drag
+//! events' propagation themselves (the innermost drag source and drop target handle a drag, as in
+//! react-aria), and a keyboard drag's key and focus events never reach the page.
 
 pub(crate) mod drag_manager;
 mod drop_target_keyboard_navigation;

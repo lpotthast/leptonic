@@ -236,12 +236,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Return" id="use-tab-return">
                     <ApiTable kind=ApiKind::Return of="UseTabReturn">
-                        <ApiRow name="tab_props" ty="PropsWithStyles<UseTabProps>">
+                        <ApiRow name="props" ty="PropsWithStyles<UseTabProps>">
                             "The id, "<Code inline=true>"role=\"tab\""</Code>", "<Code inline=true>"aria-selected"</Code>", "
                             <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-controls"</Code>" (on the selected "
                             "tab, pointing to its panel), "<Code inline=true>"tabindex"</Code>" ("<Code inline=true>"0"</Code>
                             " on the focused tab, "<Code inline=true>"-1"</Code>" on the others, none on disabled tabs), press and "
-                            "focus handling. Call "<Code inline=true>"tab_props.into_parts()"</Code>" to get "
+                            "focus handling. Call "<Code inline=true>"props.into_parts()"</Code>" to get "
                             <Code inline=true>"(attrs, styles)"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_selected" ty="Signal<bool>">"Whether the tab is selected."</ApiRow>
@@ -270,7 +270,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                                     is_disabled: Signal::stored(false),
                                     should_select_on_press_up: SelectOnPressUp::Auto,
                                 };
-                                let (attrs, styles) = use_tab(input).tab_props.into_parts();
+                                let (attrs, styles) = use_tab(input).props.into_parts();
 
                                 // Style the state through `[aria-selected="true"]` and `[aria-disabled="true"]`.
                                 view! { <div {..attrs} style=styles class="my-tab">{label}</div> }
@@ -296,16 +296,19 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "The panel\u{2019}s tab. "<Code inline=true>"None"</Code>": the selected tab; id and label follow the "
                             "selection. Required."
                         </ApiRow>
+                        <ApiRow name="aria_describedby, aria_details" ty="Option<String>" default="None">
+                            "The ids of elements describing the panel, or holding details about it."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-tab-panel-return">
                     <ApiTable kind=ApiKind::Return of="UseTabPanelReturn">
-                        <ApiRow name="tab_panel_props" ty="UseTabPanelProps">
+                        <ApiRow name="props" ty="UseTabPanelProps">
                             "The id the tab\u{2019}s "<Code inline=true>"aria-controls"</Code>" points to, "
                             <Code inline=true>"role=\"tabpanel\""</Code>", "<Code inline=true>"aria-labelledby"</Code>
                             " (the tab), and "<Code inline=true>"tabindex=\"0\""</Code>" while the panel has no tabbable "
-                            "content. Spread "<Code inline=true>"{..tab_panel_props.into_attrs()}"</Code>"."
+                            "content. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -315,14 +318,14 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::hooks::{IntoAttrs, UseTabPanelInput, use_tab_panel};
 
-                            let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
+                            let panel = use_tab_panel(UseTabPanelInput { tabs, key: None, aria_describedby: None, aria_details: None });
                             let text = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
                                 Some("shipping") => "Ships within two days.",
                                 _ => "A foldable reading lamp.",
                             };
 
                             view! {
-                                <div {..panel.tab_panel_props.into_attrs()}>{text}</div>
+                                <div {..panel.props.into_attrs()}>{text}</div>
                             }
                         "#)}
                     </Code>

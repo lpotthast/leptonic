@@ -15,7 +15,6 @@ use crate::{
         FocusableContextAttr, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
         UseFocusableInput, UseFocusableReturn, UseFormResetInput, UseLabelInput, UseLabelProps,
         UseLabelReturn, UseMoveInput,
-        interactions::use_move::MoveAxis,
         slider::{SliderData, SliderState},
         use_focusable, use_form_reset, use_label, use_move,
     },
@@ -46,6 +45,8 @@ use crate::{
 //   element is captured by its props instead of an `inputRef`.
 // - The thumb's orientation is the slider's (react-aria allows overriding it per thumb).
 // - `isRequired`/`isInvalid` are signals; no `validationState`.
+// - The input's `min`, `max`, `step` and `value` are the values' exact decimals (C15; react-aria:
+//   JS numbers); typed values parse through a decimal too.
 //
 // ## DIFFERENT BEHAVIOR
 // - Thumb presses start on `pointerdown` only (PointerEvent is always available).
@@ -74,7 +75,12 @@ pub struct UseSliderThumbInput<T: NumberValue> {
     /// Names this thumb (next to the slider's label), e.g. "Minimum".
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
+    /// Further elements describing the thumb (next to the slider's description).
     pub aria_describedby: Option<String>,
+    /// The element with the thumb's error message.
+    pub aria_errormessage: Option<String>,
+    /// Further elements with details about the thumb (next to the slider's).
+    pub aria_details: Option<String>,
 }
 
 /// Return value of [`use_slider_thumb`].
@@ -135,6 +141,8 @@ pub struct UseSliderThumbInputProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
+    pub aria_errormessage: Option<String>,
+    pub aria_details: Option<String>,
     pub element_capture: ElementCaptureAttr,
     pub on_input: EventHandler<Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -166,6 +174,8 @@ pub type UseSliderThumbInputAttrs = (
         Attr<attr::AriaLabel, MaybeProp<String>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        Attr<attr::AriaErrormessage, Option<String>>,
+        Attr<attr::AriaDetails, Option<String>>,
         ElementCaptureAttr,
     ),
     (
@@ -205,6 +215,8 @@ impl IntoAttrs for UseSliderThumbInputProps {
                 Attr(attr::AriaLabel, self.aria_label),
                 Attr(attr::AriaLabelledby, self.aria_labelledby),
                 Attr(attr::AriaDescribedby, self.aria_describedby),
+                Attr(attr::AriaErrormessage, self.aria_errormessage),
+                Attr(attr::AriaDetails, self.aria_details),
                 self.element_capture,
             ),
             (
@@ -217,6 +229,14 @@ impl IntoAttrs for UseSliderThumbInputProps {
             ),
         )
     }
+}
+
+/// The value of a range input's text: exact through a decimal (C15), else the closest value.
+fn parse_value<T: NumberValue>(text: &str) -> Option<T> {
+    fixed_decimal::Decimal::try_from_str(text.trim())
+        .ok()
+        .and_then(|decimal| T::from_decimal(&decimal))
+        .or_else(|| text.trim().parse::<f64>().ok().and_then(T::from_f64))
 }
 
 /// A thumb of a slider: drag it, or focus its range input and use the arrow keys (Shift: by a
@@ -237,8 +257,16 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
         aria_label,
         aria_labelledby,
         aria_describedby,
+        aria_errormessage,
+        aria_details,
     } = input;
 
+    if index >= state.values.with_untracked(Vec::len) {
+        crate::utils::dev_warn!(
+            "Slider thumb {index} has no value: the slider has {} values.",
+            state.values.with_untracked(Vec::len)
+        );
+    }
     let is_disabled = Signal::derive(move || is_disabled.get() || state.is_disabled.get());
     let orientation = state.orientation;
     let direction = use_direction();
@@ -325,10 +353,6 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
     let position = StoredValue::new(None::<f64>);
     let thumb_move = use_move(UseMoveInput {
         is_disabled,
-        axis: Signal::derive(move || match orientation.get() {
-            Orientation::Horizontal => MoveAxis::Horizontal,
-            Orientation::Vertical => MoveAxis::Vertical,
-        }),
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             position.set_value(None);
             state.set_thumb_dragging(index, true);
@@ -456,7 +480,12 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
             (side() == "top").then(|| format!("{}%", percent.get() * 100.0))
         });
 
-    let to_string = |value: T| value.to_f64().to_string();
+    // Exact (C15): through the value's decimal, not `f64` (f32 0.1 would be "0.10000000149011612").
+    let to_string = |value: T| {
+        value
+            .to_decimal()
+            .map_or_else(|| value.to_f64().to_string(), |decimal| decimal.to_string())
+    };
     UseSliderThumbReturn {
         thumb_props: PropsWithStyles::new(
             UseSliderThumbProps {
@@ -493,10 +522,18 @@ pub fn use_slider_thumb<T: NumberValue>(input: UseSliderThumbInput<T>) -> UseSli
                     (!ids.is_empty()).then(|| ids.join(" "))
                 })
             },
+            aria_errormessage,
+            aria_details: {
+                let ids: Vec<String> = slider
+                    .aria_details
+                    .into_iter()
+                    .chain(aria_details)
+                    .collect();
+                (!ids.is_empty()).then(|| ids.join(" "))
+            },
             element_capture: focusable_props.element_capture.chain(input_element.attr()),
             on_input: EventHandler::new(move |e: Event| {
-                let value = event_target_value(&e);
-                if let Some(value) = value.parse::<f64>().ok().and_then(T::from_f64) {
+                if let Some(value) = parse_value::<T>(&event_target_value(&e)) {
                     state.set_thumb_value(index, value);
                 }
             }),

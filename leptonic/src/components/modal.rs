@@ -85,6 +85,7 @@ pub fn Modal(
             set_open=set_open
             is_dismissable=is_dismissable
             is_keyboard_dismiss_disabled=is_keyboard_dismiss_disabled
+            classes="leptonic-modal-backdrop"
         >
             <ModalContent>
                 <Dialog

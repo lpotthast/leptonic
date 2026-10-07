@@ -22,9 +22,19 @@ use crate::utils::{
 //   keeping a time part).
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
 // - The calendar state is the `calendar` field (react-aria: spread into the range state).
-// - `is_date_unavailable` takes the date and the anchor date as a tuple.
+// - `is_date_unavailable` takes a `DateAvailabilityQuery`: the date and the anchor date.
+// - The layout props are signals (C11), as in `use_calendar_state`.
 //
 // =============================================================================
+
+/// What `is_date_unavailable` of a range calendar is asked: whether `date` can't be selected,
+/// given the anchor of a range being selected.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DateAvailabilityQuery {
+    pub date: Date,
+    /// The first selected end of a range being selected.
+    pub anchor_date: Option<Date>,
+}
 
 /// Input of [`use_range_calendar_state`].
 #[derive(Clone)]
@@ -38,7 +48,7 @@ pub struct UseRangeCalendarStateInput {
     pub min_value: Signal<Option<Date>>,
     pub max_value: Signal<Option<Date>>,
     /// Whether a date can't be selected, given the anchor date of a selection in progress.
-    pub is_date_unavailable: Option<Callback<(Date, Option<Date>), bool>>,
+    pub is_date_unavailable: Option<Callback<DateAvailabilityQuery, bool>>,
     /// Whether a range may span unavailable dates.
     pub allows_non_contiguous_ranges: bool,
     pub is_disabled: Signal<bool>,
@@ -49,12 +59,13 @@ pub struct UseRangeCalendarStateInput {
     pub focused_value: Option<ValueBinding<Date>>,
     pub on_focus_change: Option<Callback<Date>>,
     /// How much is visible at once. Default: one month.
-    pub visible_duration: DateDuration,
-    pub page_behavior: PageBehavior,
-    /// Default: centered, or the start if the range doesn't fit then.
-    pub selection_alignment: Option<SelectionAlignment>,
-    pub first_day_of_week: Option<Weekday>,
-    pub weeks_in_month: Option<u8>,
+    pub visible_duration: Signal<DateDuration>,
+    pub page_behavior: Signal<PageBehavior>,
+    /// `None`: centered, or the start if the range doesn't fit then.
+    pub selection_alignment: Signal<Option<SelectionAlignment>>,
+    /// The first day of the week. `None`: the locale's.
+    pub first_day_of_week: Signal<Option<Weekday>>,
+    pub weeks_in_month: Signal<Option<u8>>,
 }
 
 impl Default for UseRangeCalendarStateInput {
@@ -74,11 +85,11 @@ impl Default for UseRangeCalendarStateInput {
             default_focused_value: None,
             focused_value: None,
             on_focus_change: None,
-            visible_duration: DateDuration::months(1),
-            page_behavior: PageBehavior::Visible,
-            selection_alignment: None,
-            first_day_of_week: None,
-            weeks_in_month: None,
+            visible_duration: Signal::stored(DateDuration::months(1)),
+            page_behavior: Signal::stored(PageBehavior::Visible),
+            selection_alignment: Signal::stored(None),
+            first_day_of_week: Signal::stored(None),
+            weeks_in_month: Signal::stored(None),
         }
     }
 }
@@ -111,8 +122,8 @@ pub struct RangeCalendarState {
 /// The available range around an anchor (react-aria's `getAvailableRange`).
 #[derive(Clone, Copy)]
 struct AvailableRange {
-    is_date_unavailable: Option<Callback<(Date, Option<Date>), bool>>,
-    visible_duration: DateDuration,
+    is_date_unavailable: Option<Callback<DateAvailabilityQuery, bool>>,
+    visible_duration: Signal<DateDuration>,
     allows_non_contiguous_ranges: bool,
 }
 
@@ -125,10 +136,16 @@ impl AvailableRange {
         if self.allows_non_contiguous_ranges {
             return None;
         }
-        let unavailable = |date: Date| is_unavailable.run((date, Some(anchor)));
+        let unavailable = |date: Date| {
+            is_unavailable.run(DateAvailabilityQuery {
+                date,
+                anchor_date: Some(anchor),
+            })
+        };
+        let visible_duration = self.visible_duration.get();
         Some((
-            next_unavailable_date(anchor, &unavailable, self.visible_duration, -1),
-            next_unavailable_date(anchor, &unavailable, self.visible_duration, 1),
+            next_unavailable_date(anchor, &unavailable, visible_duration, -1),
+            next_unavailable_date(anchor, &unavailable, visible_duration, 1),
         ))
     }
 }
@@ -302,27 +319,29 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
     let dragging = RwSignal::new(false);
 
     // Start-aligned when a centered range wouldn't show the whole value.
-    let alignment = selection_alignment.unwrap_or_else(|| {
-        let Some(range) = binding.value.get_untracked() else {
-            return SelectionAlignment::Center;
-        };
-        let start = align_center(
-            range.start,
-            visible_duration,
-            first_day_of_week.unwrap_or_else(|| {
-                crate::utils::date::first_day_of_week(
-                    &crate::utils::i18n::use_locale().get_untracked(),
-                )
-            }),
-            min_value.get_untracked(),
-            max_value.get_untracked(),
-        );
-        let end = start.add(visible_duration).subtract(DateDuration::days(1));
-        if range.end > end {
-            SelectionAlignment::Start
-        } else {
-            SelectionAlignment::Center
-        }
+    let locale = crate::utils::i18n::use_locale();
+    let alignment = Signal::derive(move || {
+        selection_alignment.get().unwrap_or_else(|| {
+            let Some(range) = binding.value.get_untracked() else {
+                return SelectionAlignment::Center;
+            };
+            let visible_duration = visible_duration.get();
+            let start = align_center(
+                range.start,
+                visible_duration,
+                first_day_of_week.get().unwrap_or_else(|| {
+                    crate::utils::date::first_day_of_week(&locale.get())
+                }),
+                min_value.get_untracked(),
+                max_value.get_untracked(),
+            );
+            let end = start.add(visible_duration).subtract(DateDuration::days(1));
+            if range.end > end {
+                SelectionAlignment::Start
+            } else {
+                SelectionAlignment::Center
+            }
+        })
     });
 
     let available = AvailableRange {
@@ -355,7 +374,12 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
         min_value: min,
         max_value: max,
         is_date_unavailable: is_date_unavailable.map(|is_unavailable| {
-            Callback::new(move |date: Date| is_unavailable.run((date, anchor.get())))
+            Callback::new(move |date: Date| {
+                is_unavailable.run(DateAvailabilityQuery {
+                    date,
+                    anchor_date: anchor.get(),
+                })
+            })
         }),
         is_disabled,
         is_read_only,
@@ -386,7 +410,12 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
             return false;
         }
         let unavailable = |date: Date| {
-            is_date_unavailable.is_some_and(|is_unavailable| is_unavailable.run((date, None)))
+            is_date_unavailable.is_some_and(|is_unavailable| {
+                is_unavailable.run(DateAvailabilityQuery {
+                    date,
+                    anchor_date: None,
+                })
+            })
         };
         unavailable(range.start)
             || unavailable(range.end)
@@ -418,7 +447,7 @@ mod tests {
 
     fn state(input: UseRangeCalendarStateInput) -> RangeCalendarState {
         use_range_calendar_state(UseRangeCalendarStateInput {
-            first_day_of_week: Some(Weekday::Sunday),
+            first_day_of_week: Signal::stored(Some(Weekday::Sunday)),
             ..input
         })
     }
@@ -450,7 +479,7 @@ mod tests {
     #[test]
     fn contiguous_ranges_stop_at_unavailable_dates() {
         Owner::new().with(|| {
-            let booked = Callback::new(|(date, _): (Date, Option<Date>)| date.day() == 25);
+            let booked = Callback::new(|query: DateAvailabilityQuery| query.date.day() == 25);
             let range = state(UseRangeCalendarStateInput {
                 default_focused_value: Some(date(2024, 5, 15)),
                 is_date_unavailable: Some(booked),

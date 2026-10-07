@@ -1,6 +1,9 @@
 use leptonic::{
-    atoms::prelude::{Button, CurrentMatch, Link, Menu, MenuItems, MenuTrigger, Popover},
-    hooks::{LinkTarget, collections::use_collection},
+    ScrollBehavior,
+    atoms::prelude::{
+        AnchorLink, Button, CurrentMatch, Link, Menu, MenuItems, MenuTrigger, Popover,
+    },
+    hooks::{LinkTarget, UseLinkInput, collections::use_collection, use_link},
 };
 use leptos::prelude::*;
 
@@ -12,13 +15,24 @@ use leptos::prelude::*;
 /// - `#test-link-external`: a new tab; `.test-link-disableable`: disabled by
 ///   `#test-link-toggle-disabled`, counting presses in `#test-link-presses`.
 /// - `#test-link-menu`: a link as a menu trigger.
+/// - `#test-link-anchor`: an `AnchorLink` to `#test-link-anchor-target` far below, scrolling
+///   instantly, counting presses in `#test-link-anchor-presses`.
+/// - `#test-link-hook-disabled`: a disabled `use_link` anchor.
 #[component]
 pub fn PageAtomLink() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let presses = RwSignal::new(0u32);
+    let anchor_presses = RwSignal::new(0u32);
     let actions = use_collection(|b| {
         b.item("one", "One");
     });
+    let (hook_disabled_attrs, hook_disabled_styles) = use_link(UseLinkInput {
+        href: Signal::stored(Some("/atoms/toolbar".to_owned())),
+        is_disabled: Signal::stored(true),
+        ..UseLinkInput::default()
+    })
+    .props
+    .into_parts();
 
     view! {
         <div id="test-page-atom-link">
@@ -49,6 +63,20 @@ pub fn PageAtomLink() -> impl IntoView {
                 </Popover>
             </MenuTrigger>
             <Button>"Unused"</Button>
+            <AnchorLink
+                href="#test-link-anchor-target"
+                scroll_behavior=ScrollBehavior::Instant
+                on_press=move |_| anchor_presses.update(|n| *n += 1)
+                attr:id="test-link-anchor"
+            >
+                "To the target"
+            </AnchorLink>
+            <div>"Anchor presses: " <span id="test-link-anchor-presses">{anchor_presses}</span></div>
+            <a {..hook_disabled_attrs} style=hook_disabled_styles id="test-link-hook-disabled">
+                "Disabled hook link"
+            </a>
+            <div style="height: 3000px"></div>
+            <div id="test-link-anchor-target">"Target"</div>
         </div>
     }
 }

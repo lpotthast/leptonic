@@ -184,18 +184,23 @@ pub fn LinkButton<H>(
 where
     H: ToHref + Send + Sync + 'static,
 {
-    atoms::button::LinkButton(atoms::button::LinkButtonProps {
+    // The atom `LinkButton` is gone (the user's decision, 2026-10-07): a `Link` with the button
+    // looks. Links can't carry popup state.
+    let _ = (aria_haspopup, aria_expanded);
+    atoms::link::Link(atoms::link::LinkProps {
         href,
         target,
+        rel: Vec::new(),
         is_disabled,
-        aria_haspopup,
-        aria_expanded,
         current_match,
-        children,
+        replace: false,
+        aria_label: MaybeProp::default(),
+        on_press: None,
         on_hover_start,
         on_hover_end,
         classes: classes.add("leptonic-btn"),
         styles,
+        children,
     })
     .into_view()
     .attr("data-variant", move || {

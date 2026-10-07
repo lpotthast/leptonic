@@ -194,17 +194,31 @@ pub fn PageAtomToast() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes. Place the region and stack the toasts; the newest comes first in the DOM, so "
-                    <Code inline=true>"column-reverse"</Code>" shows it nearest to the bottom edge:"
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-ToastRegion"</Code>", "
+                    <Code inline=true>"leptonic-Toast"</Code>", "<Code inline=true>"leptonic-ToastContent"</Code>", "
+                    <Code inline=true>"leptonic-ToastTitle"</Code>", "<Code inline=true>"leptonic-ToastDescription"</Code>
+                    " and "<Code inline=true>"leptonic-ToastCloseButton"</Code>", each followed by the "
+                    <Code inline=true>"classes"</Code>" you pass. The close button\u{2019}s content (an icon or a glyph) "
+                    "is yours; the button is named \u{201c}Close\u{201d}. Place the region and stack the toasts: the newest "
+                    "comes first in the DOM, so "<Code inline=true>"column-reverse"</Code>" shows it nearest to the bottom "
+                    "edge. The region and the toasts receive focus; show it only through "
+                    <Code inline=true>"data-focus-visible"</Code>". The book\u{2019}s demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .toast-region { position: fixed; bottom: 1em; right: 1em; display: flex; flex-direction: column-reverse; gap: 0.5em; }
-                        .toast { display: flex; gap: 1em; padding: 1em; background: var(--surface); border: 1px solid var(--border); }
-                        .toast[data-focus-visible], .toast-close[data-focus-visible] { outline: 2px solid var(--focus); }
-                        .toast-close[data-hovered] { background: var(--border); }
+                        .my-toast-region { position: fixed; right: 1em; bottom: 1em; display: flex; flex-direction: column-reverse; gap: 0.5em; }
+                        .my-toast { display: flex; gap: 1em; width: 20em; max-width: 100%; padding: 1em; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+                        .my-toast-title { font-weight: 600; }
+                        .my-toast-close { padding: 0.25em; border: none; border-radius: 4px; background: none; }
+                        .my-toast-close[data-hovered] { background: var(--border); }
+                        .my-toast-region:focus, .my-toast:focus, .my-toast-close:focus { outline: none; }
+                        .my-toast-region[data-focus-visible], .my-toast[data-focus-visible], .my-toast-close[data-focus-visible] { outline: 2px solid var(--focus); }
                     ")}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>

@@ -80,16 +80,25 @@ pub fn PageAtomToolbar() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atom adds no classes. Lay the controls out along the toolbar\u{2019}s orientation, and style the "
-                    "controls through their own data attributes:"
+                    "The atom brings no styles. It renders the class "<Code inline=true>"leptonic-Toolbar"</Code>
+                    " followed by the "<Code inline=true>"classes"</Code>" you pass. Lay the controls out along the "
+                    "toolbar\u{2019}s "<Code inline=true>"data-orientation"</Code>", and style the controls through their "
+                    "own data attributes. The book\u{2019}s demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .toolbar { display: flex; gap: 0.5em; }
-                        .toolbar[data-orientation="vertical"] { flex-direction: column; }
-                        .toolbar [role="separator"] { align-self: stretch; border-left: 1px solid var(--border); }
+                        .my-toolbar { display: flex; gap: 0.5em; width: fit-content; padding: 0.5em; border-radius: 4px; background: var(--surface); }
+                        .my-toolbar[data-orientation="vertical"] { flex-direction: column; }
+                        .my-toolbar-separator { align-self: stretch; margin: 0 0.25em; border: none; border-left: 1px solid var(--border); }
+                        .my-toolbar-button { padding: 0.5em 1em; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); }
+                        .my-toolbar-button[data-selected] { border-color: var(--accent); }
+                        .my-toolbar-button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <Section title="Composition">

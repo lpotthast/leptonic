@@ -1,8 +1,10 @@
 // Upstream: react-aria/src/interactions/utils.ts @ 99e6102368
 //! Keeping focus where it is when an element is pressed (react-aria's `preventFocus`).
 
+#[cfg(not(feature = "ssr"))]
 use std::cell::Cell;
 
+#[cfg(not(feature = "ssr"))]
 thread_local! {
     /// Whether focus events are being redirected by [`prevent_focus`] (focus-visible tracking
     /// ignores them meanwhile, as react-aria's `ignoreFocusEvent`).
@@ -10,7 +12,7 @@ thread_local! {
 }
 
 /// Whether focus events are being redirected by [`prevent_focus`].
-#[cfg_attr(feature = "ssr", allow(dead_code))]
+#[cfg(not(feature = "ssr"))]
 pub(crate) fn is_ignoring_focus_events() -> bool {
     IGNORE_FOCUS_EVENT.with(Cell::get)
 }
@@ -168,7 +170,3 @@ pub(crate) fn prevent_focus(target: Option<web_sys::Element>) {
     let after_frame = cleanup.clone();
     frame.set(leptos::prelude::request_animation_frame_with_handle(after_frame).ok());
 }
-
-/// Server-side: nothing to keep.
-#[cfg(feature = "ssr")]
-pub(crate) fn prevent_focus(_target: Option<web_sys::Element>) {}

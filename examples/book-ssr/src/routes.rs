@@ -248,9 +248,12 @@ pub mod routes {
             }
         }
 
+        // The rich text editor is gone: the Content & Layout overview points to leptos-tiptap.
         #[route("/rich-text-editor")]
-        mod rich_text_editor {
-            page!(crate::pages::documentation::components::input::tiptap_editor::PageTiptapEditor);
+        mod moved_rich_text_editor {
+            page!(
+                || view! { <Redirect path=format!("{}#rich-content", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         #[route("/search-field")]
@@ -456,10 +459,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::grid::PageAtomGrid);
             }
 
-            // The layout grid is a concept of its own.
+            // The layout grid is a CSS recipe of the Content & Layout overview.
             #[route("/component")]
             mod moved_component {
-                page!(|| view! { <Redirect path=crate::routes::doc::GridLayout.materialize()/> });
+                page!(
+                    || view! { <Redirect path=format!("{}#grid-layout", crate::routes::doc::Layout.materialize())/> }
+                );
             }
         }
 
@@ -537,7 +542,18 @@ pub mod routes {
 
         #[route("/tag-group")]
         mod tag_group {
-            page!(crate::pages::documentation::hooks::tag::PageUseTag);
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::tag_group::PageTagGroupOverview);
+
+            #[route("/hook")]
+            mod hook {
+                page!(crate::pages::documentation::hooks::tag::PageUseTag);
+            }
+
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::tag_group::PageAtomTagGroup);
+            }
         }
 
         #[route("/tree")]
@@ -844,9 +860,12 @@ pub mod routes {
             }
         }
 
+        // The drawer is a section of the Modal Atoms.
         #[route("/drawer")]
-        mod drawer {
-            page!(crate::pages::documentation::components::layout::drawer::PageDrawer);
+        mod moved_drawer {
+            page!(
+                || view! { <Redirect path=format!("{}#drawer", crate::routes::doc::modal::Atom.materialize())/> }
+            );
         }
 
         #[route("/modal")]
@@ -1073,9 +1092,10 @@ pub mod routes {
             page!(|| view! { <Redirect path=crate::routes::doc::Status.materialize()/> });
         }
 
+        // The alert is a recipe of the Status overview.
         #[route("/alert")]
-        mod alert {
-            page!(crate::pages::documentation::components::feedback::alert::PageAlert);
+        mod moved_alert {
+            page!(|| view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> });
         }
 
         #[route("/meter")]
@@ -1183,61 +1203,70 @@ pub mod routes {
             page!(|| view! { <Redirect path=crate::routes::doc::Layout.materialize()/> });
         }
 
+        // The app bar, cards, grid layouts, icons, sanitized HTML, skeletons, stacks and typography are recipes of the
+        // Content & Layout overview.
         #[route("/app-bar")]
-        mod app_bar {
-            page!(crate::pages::documentation::components::layout::app_bar::PageAppBar);
+        mod moved_app_bar {
+            page!(
+                || view! { <Redirect path=format!("{}#app-bar", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         #[route("/card-and-tile")]
-        mod card_and_tile {
-            page!(crate::pages::documentation::components::layout::card::PageCardAndTile);
+        mod moved_card_and_tile {
+            page!(|| view! { <Redirect path=format!("{}#card", crate::routes::doc::Layout.materialize())/> });
         }
 
+        // The Chip became the Tag Group concept.
         #[route("/chip")]
-        mod chip {
-            index!(crate::pages::documentation::components::feedback::chip::PageChip);
+        mod moved_chip {
+            index!(|| view! { <Redirect path=crate::routes::doc::TagGroup.materialize()/> });
 
             #[route("/hook")]
-            mod moved_hook {
-                page!(|| view! { <Redirect path=crate::routes::doc::TagGroup.materialize()/> });
-            }
-
-            #[route("/component")]
-            mod moved_component {
-                page!(|| view! { <Redirect path=crate::routes::doc::Chip.materialize()/> });
-            }
-        }
-
-        #[route("/grid-layout")]
-        mod grid_layout {
-            page!(crate::pages::documentation::components::layout::grid::PageGridLayout);
-        }
-
-        #[route("/icon")]
-        mod icon {
-            page!(crate::pages::documentation::components::general::icon::PageIcon);
-        }
-
-        #[route("/kbd")]
-        mod kbd {
-            layout!(ConceptLayout);
-            index!(crate::pages::documentation::concepts::kbd::PageKbdOverview);
-
-            #[route("/atom")]
-            mod atom {
-                page!(crate::pages::documentation::atoms::kbd::PageAtomKbd);
+            mod hook {
+                page!(|| view! { <Redirect path=crate::routes::doc::tag_group::Hook.materialize()/> });
             }
 
             #[route("/component")]
             mod component {
-                page!(crate::pages::documentation::components::feedback::kbd::PageKbd);
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::tag_group::Atom.materialize())/> }
+                );
+            }
+        }
+
+        #[route("/grid-layout")]
+        mod moved_grid_layout {
+            page!(
+                || view! { <Redirect path=format!("{}#grid-layout", crate::routes::doc::Layout.materialize())/> }
+            );
+        }
+
+        #[route("/icon")]
+        mod moved_icon {
+            page!(|| view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> });
+        }
+
+        // A single page: the Kbd concept has only atoms.
+        #[route("/kbd")]
+        mod kbd {
+            index!(crate::pages::documentation::atoms::kbd::PageAtomKbd);
+
+            #[route("/atom")]
+            mod moved_atom {
+                page!(|| view! { <Redirect path=crate::routes::doc::Kbd.materialize()/> });
+            }
+
+            #[route("/component")]
+            mod moved_component {
+                page!(|| view! { <Redirect path=format!("{}#styling", crate::routes::doc::Kbd.materialize())/> });
             }
         }
 
         #[route("/sanitized-html")]
-        mod sanitized_html {
+        mod moved_sanitized_html {
             page!(
-                crate::pages::documentation::components::general::sanitized_html::PageSanitizedHtml
+                || view! { <Redirect path=format!("{}#rich-content", crate::routes::doc::Layout.materialize())/> }
             );
         }
 
@@ -1266,13 +1295,15 @@ pub mod routes {
         }
 
         #[route("/skeleton")]
-        mod skeleton {
-            page!(crate::pages::documentation::components::layout::skeleton::PageSkeleton);
+        mod moved_skeleton {
+            page!(
+                || view! { <Redirect path=format!("{}#skeleton", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         #[route("/stack")]
-        mod stack {
-            page!(crate::pages::documentation::components::layout::stack::PageStack);
+        mod moved_stack {
+            page!(|| view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> });
         }
 
         #[route("/toolbar")]
@@ -1292,8 +1323,10 @@ pub mod routes {
         }
 
         #[route("/typography")]
-        mod typography {
-            page!(crate::pages::documentation::components::general::typography::PageTypography);
+        mod moved_typography {
+            page!(
+                || view! { <Redirect path=format!("{}#typography", crate::routes::doc::Layout.materialize())/> }
+            );
         }
 
         // ── Building blocks ─────────────────────────────────────────────
@@ -1536,11 +1569,10 @@ pub mod routes {
         mod animation {
             index!(crate::pages::documentation::hooks::animation::PageAnimationHooks);
 
+            // The transition components are gone: the overview shows how to animate with CSS.
             #[route("/transitions")]
-            mod transitions {
-                page!(
-                    crate::pages::documentation::components::general::transitions::PageTransitions
-                );
+            mod moved_transitions {
+                page!(|| view! { <Redirect path=crate::routes::doc::Animation.materialize()/> });
             }
         }
 
@@ -1749,28 +1781,28 @@ pub mod routes {
             #[route("/transitions")]
             mod transitions {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::animation::Transitions.materialize()/> }
+                    || view! { <Redirect path=crate::routes::doc::Animation.materialize()/> }
                 );
             }
 
             #[route("/stack")]
             mod stack {
-                page!(|| view! { <Redirect path=crate::routes::doc::Stack.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#stack", crate::routes::doc::Layout.materialize())/> });
             }
 
             #[route("/skeleton")]
             mod skeleton {
-                page!(|| view! { <Redirect path=crate::routes::doc::Skeleton.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#skeleton", crate::routes::doc::Layout.materialize())/> });
             }
 
             #[route("/app-bar")]
             mod app_bar {
-                page!(|| view! { <Redirect path=crate::routes::doc::AppBar.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#app-bar", crate::routes::doc::Layout.materialize())/> });
             }
 
             #[route("/drawer")]
             mod drawer {
-                page!(|| view! { <Redirect path=crate::routes::doc::Drawer.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#drawer", crate::routes::doc::modal::Atom.materialize())/> });
             }
 
             #[route("/date-time")]
@@ -1783,13 +1815,13 @@ pub mod routes {
             #[route("/tiptap-editor")]
             mod tiptap_editor {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::RichTextEditor.materialize()/> }
+                    || view! { <Redirect path=format!("{}#rich-content", crate::routes::doc::Layout.materialize())/> }
                 );
             }
 
             #[route("/alert")]
             mod alert {
-                page!(|| view! { <Redirect path=crate::routes::doc::Alert.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#alert", crate::routes::doc::Status.materialize())/> });
             }
 
             #[route("/toast")]
@@ -1800,18 +1832,18 @@ pub mod routes {
             #[route("/kbd")]
             mod kbd {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::kbd::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::Kbd.materialize())/> }
                 );
             }
 
             #[route("/typography")]
             mod typography {
-                page!(|| view! { <Redirect path=crate::routes::doc::Typography.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#typography", crate::routes::doc::Layout.materialize())/> });
             }
 
             #[route("/icon")]
             mod icon {
-                page!(|| view! { <Redirect path=crate::routes::doc::Icon.materialize()/> });
+                page!(|| view! { <Redirect path=format!("{}#icons", crate::routes::doc::Layout.materialize())/> });
             }
 
             #[route("/callback")]

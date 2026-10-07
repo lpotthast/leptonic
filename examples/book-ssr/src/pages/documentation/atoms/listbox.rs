@@ -325,6 +325,11 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <ApiRow name="data-pressed" ty="true">"The option is being pressed."</ApiRow>
                 </ApiTable>
                 <p>
+                    "On "<Code inline=true>"ListBox"</Code>": "<Code inline=true>"data-empty"</Code>" (no options), "<Code inline=true>"data-focused"</Code>" and "<Code inline=true>"data-focus-visible"</Code>
+                    " (the listbox itself has the focus, which it only takes while empty), "<Code inline=true>"data-layout"</Code>" ("<Code inline=true>"stack"</Code>" or "
+                    <Code inline=true>"grid"</Code>") and "<Code inline=true>"data-orientation"</Code>" ("<Code inline=true>"vertical"</Code>" or "<Code inline=true>"horizontal"</Code>")."
+                </p>
+                <p>
                     "The ARIA attributes are there to style as well: "<Code inline=true>"aria-selected"</Code>" and "
                     <Code inline=true>"aria-disabled"</Code>" on options, "<Code inline=true>"aria-multiselectable"</Code>
                     " on the listbox, "<Code inline=true>"role=\"group\""</Code>" on section groups."
@@ -333,20 +338,33 @@ pub fn PageAtomListBox() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. Options receive DOM focus; style keyboard focus through "
-                    <Code inline=true>"[data-focus-visible]"</Code>", which follows leptonic\u{2019}s input modality "
-                    "tracking. The leptonic theme draws a generic outline around every "
-                    <Code inline=true>"[data-focus-visible]"</Code>" element; give your options their own outline, so that "
-                    "a scrolling listbox doesn\u{2019}t clip it:"
+                    "The atoms bring no styles. "<Code inline=true>"ListBox"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-ListBox"</Code>", "
+                    <Code inline=true>"ListBoxItem"</Code>" one with "<Code inline=true>"leptonic-ListBoxItem"</Code>" (its "<Code inline=true>"ListBoxItemLabel"</Code>" and "
+                    <Code inline=true>"ListBoxItemDescription"</Code>" are "<Code inline=true>"<span>"</Code>"s with "<Code inline=true>"leptonic-ListBoxItemLabel"</Code>" and "
+                    <Code inline=true>"leptonic-ListBoxItemDescription"</Code>"), and "<Code inline=true>"ListBoxSection"</Code>" a group with "
+                    <Code inline=true>"leptonic-ListBoxSection"</Code>" after its heading with "<Code inline=true>"leptonic-ListBoxSectionHeading"</Code>" ("
+                    <Code inline=true>"heading_classes"</Code>"). Your "<Code inline=true>"classes"</Code>" follow the default class. Anything else in an option, like the "
+                    "demo\u{2019}s check box, is your own markup: mark it "<Code inline=true>"aria-hidden"</Code>" and style it through the option\u{2019}s "
+                    "data attributes. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-option[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-option[data-selected] { background: var(--surface); font-weight: bold; }
-                        .my-option[data-disabled] { opacity: 0.5; }
+                        .demo-lb-listbox { padding: 0.25rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+                        .demo-lb-listbox[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-lb-heading { padding: 0.5rem 0.5rem 0.25rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+                        .demo-lb-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border-radius: 8px; cursor: pointer; }
+                        .demo-lb-item:hover:not([data-disabled]), .demo-lb-item[data-pressed] { background: var(--border); }
+                        .demo-lb-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-lb-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-lb-check { width: 1em; height: 1em; border: 1px solid var(--muted); border-radius: 4px; }
+                        [data-selected] > .demo-lb-check { border-color: var(--accent); background: var(--accent); }
+                        .demo-lb-price { margin-left: auto; color: var(--muted); }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

@@ -14,15 +14,16 @@ use crate::{
         },
     },
     hooks::calendar::{
-        CalendarHeadingFormat, CalendarPickerItem, CalendarStates, use_calendar_heading,
-        use_calendar_month_picker, use_calendar_year_picker,
+        CalendarHeadingFormat, CalendarPickerItem, CalendarStates, CalendarYearPickerFormat,
+        UseCalendarHeadingInput, UseCalendarMonthPickerInput, UseCalendarYearPickerInput,
+        use_calendar_heading, use_calendar_month_picker, use_calendar_year_picker,
     },
     utils::{
         aria::AriaCurrent,
         classes::Classes,
         data_attributes::flag,
         date::{DateDuration, DateExt, use_today},
-        date_time_formatter::{MonthFormat, NumericFormat},
+        date_time_formatter::MonthFormat,
         styles::Styles,
     },
 };
@@ -73,8 +74,8 @@ pub fn DateSelector(
     #[prop(into, optional)] is_read_only: Signal<bool>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
     /// The first day of the week. Default: the locale's.
-    #[prop(optional)]
-    first_day_of_week: Option<Weekday>,
+    #[prop(into, optional)]
+    first_day_of_week: MaybeProp<Weekday>,
     /// The view shown first. `Years` asks for the year, then the month, then the day (e.g. for
     /// birth dates).
     #[prop(optional)]
@@ -101,7 +102,7 @@ pub fn DateSelector(
             is_disabled=is_disabled
             is_read_only=is_read_only
             is_invalid=is_invalid
-            nostrip:first_day_of_week=first_day_of_week
+            first_day_of_week=first_day_of_week
             aria_label=aria_label
             classes=classes.add("leptonic-date-selector")
             styles=styles
@@ -188,11 +189,11 @@ fn page_button(
 }
 
 fn days_header(states: &CalendarStates, current_view: RwSignal<DateSelectorView>) -> impl IntoView {
-    let heading = use_calendar_heading(
-        states,
-        DateDuration::default(),
-        CalendarHeadingFormat::default(),
-    );
+    let heading = use_calendar_heading(UseCalendarHeadingInput {
+        state: *states,
+        offset: DateDuration::default(),
+        format: CalendarHeadingFormat::default(),
+    });
     view! {
         <CalendarPreviousButton classes="leptonic-date-selector-previous">
             <span class="leptonic-date-selector-arrow" aria-hidden="true"></span>
@@ -238,7 +239,11 @@ fn years_header(
     current_view: RwSignal<DateSelectorView>,
 ) -> impl IntoView {
     let calendar = states.calendar();
-    let picker = use_calendar_year_picker(states, Some(VISIBLE_YEARS), NumericFormat::Numeric);
+    let picker = use_calendar_year_picker(UseCalendarYearPickerInput {
+        state: *states,
+        visible_years: VISIBLE_YEARS,
+        format: CalendarYearPickerFormat::default(),
+    });
     let range = Signal::derive(move || {
         picker
             .items
@@ -392,7 +397,10 @@ fn outside(calendar_states: &CalendarStates, first: Date, last: Date) -> bool {
 
 fn months(states: &CalendarStates, current_view: RwSignal<DateSelectorView>) -> impl IntoView {
     let states = *states;
-    let picker = use_calendar_month_picker(&states, MonthFormat::Short);
+    let picker = use_calendar_month_picker(UseCalendarMonthPickerInput {
+        state: states,
+        format: MonthFormat::Short,
+    });
     let today = use_today();
     view! {
         <div class="leptonic-date-selector-picks" on:keydown=pick_navigation()>
@@ -424,7 +432,11 @@ fn months(states: &CalendarStates, current_view: RwSignal<DateSelectorView>) -> 
 
 fn years(states: &CalendarStates, current_view: RwSignal<DateSelectorView>) -> impl IntoView {
     let states = *states;
-    let picker = use_calendar_year_picker(&states, Some(VISIBLE_YEARS), NumericFormat::Numeric);
+    let picker = use_calendar_year_picker(UseCalendarYearPickerInput {
+        state: states,
+        visible_years: VISIBLE_YEARS,
+        format: CalendarYearPickerFormat::default(),
+    });
     let today = use_today();
     view! {
         <div class="leptonic-date-selector-picks" on:keydown=pick_navigation()>

@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -39,9 +39,18 @@ pub fn HasTabbableChildDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=show_button set_selected=show_button>"Show button"</Checkbox>
-            <Checkbox is_selected=show_input set_selected=show_input>"Show field"</Checkbox>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=show_button set_selected=show_button classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Show button"
+            </Checkbox>
+            <Checkbox is_selected=show_input set_selected=show_input classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Show field"
+            </Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

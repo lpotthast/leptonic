@@ -27,7 +27,7 @@ pub fn PageAtomColorField() -> impl IntoView {
     let hsv = |hue: f64| HSV {
         hue,
         saturation: 0.5,
-        value: 1.0,
+        brightness: 1.0,
     };
     let hue_change = move |c: Option<HSV>| {
         push(

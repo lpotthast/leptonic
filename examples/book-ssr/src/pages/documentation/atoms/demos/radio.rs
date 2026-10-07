@@ -1,9 +1,9 @@
 use leptonic::{
     atoms::{
+        checkbox::Checkbox,
         field::{Description, Label},
         radio::{Radio, RadioGroup},
     },
-    components::prelude::Checkbox,
     hooks::{Key, Orientation},
 };
 use leptos::prelude::*;
@@ -57,9 +57,18 @@ pub fn RadioAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
-            <Checkbox is_selected=team_disabled set_selected=team_disabled>"Team plan disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </Checkbox>
+            <Checkbox is_selected=team_disabled set_selected=team_disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Team plan disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -1,4 +1,7 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, checkbox::Checkbox},
+    hooks::*,
+};
 use leptos::prelude::*;
 
 #[component]
@@ -20,7 +23,7 @@ pub fn InteractOutsideDemo() -> impl IntoView {
     view! {
         <Show
             when=move || is_open.get()
-            fallback=move || view! { <Button on_press=move |_| is_open.set(true)>"Reopen"</Button> }
+            fallback=move || view! { <Button on_press=move |_| is_open.set(true) classes="demo-btn">"Reopen"</Button> }
         >
             <div {..attrs.clone()} class="demo-interactions-panel">
                 <p class="demo-container-title">"Click outside to close"</p>
@@ -29,7 +32,10 @@ pub fn InteractOutsideDemo() -> impl IntoView {
         </Show>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p class="demo-status">

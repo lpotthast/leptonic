@@ -8,7 +8,7 @@ use super::use_toast_state::{QueuedToast, ToastQueue};
 use crate::{
     hooks::{IntoAttrs, UseButtonInput},
     utils::{
-        aria::AriaRole,
+        aria::{AriaHidden, AriaModal, AriaRole},
         id::use_id,
         slot_id::{SlotProps, use_slot},
     },
@@ -19,6 +19,7 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
+// - The queue goes into the input (C8; react-aria: `state`).
 // - Returns the close button's `UseButtonInput` and the title's id (react-aria: props objects).
 //
 // ## OMITTED FEATURES
@@ -28,7 +29,9 @@ use crate::{
 
 /// Input of [`use_toast`].
 #[derive(Clone)]
-pub struct UseToastInput<T> {
+pub struct UseToastInput<T: Clone + Send + Sync + 'static> {
+    /// The queue the toast is in (closing removes it from there).
+    pub queue: ToastQueue<T>,
     pub toast: QueuedToast<T>,
     pub aria_label: MaybeProp<String>,
     /// Default: the toast's title.
@@ -63,7 +66,7 @@ pub struct UseToastProps {
 impl IntoAttrs for UseToastProps {
     type Attrs = (
         Attr<attr::Role, AriaRole>,
-        Attr<attr::AriaModal, &'static str>,
+        Attr<attr::AriaModal, AriaModal>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
         Attr<attr::AriaLabelledby, String>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
@@ -73,7 +76,7 @@ impl IntoAttrs for UseToastProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
-            Attr(attr::AriaModal, "false"),
+            Attr(attr::AriaModal, AriaModal::False),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
@@ -86,14 +89,14 @@ impl IntoAttrs for UseToastProps {
 #[derive(Debug, Clone)]
 pub struct UseToastContentProps {
     /// Hidden until mounted: NVDA announces the alert only when it becomes visible.
-    pub aria_hidden: Signal<Option<&'static str>>,
+    pub aria_hidden: Signal<Option<AriaHidden>>,
 }
 
 impl IntoAttrs for UseToastContentProps {
     type Attrs = (
         Attr<attr::Role, AriaRole>,
         Attr<attr::AriaAtomic, &'static str>,
-        Attr<attr::AriaHidden, Signal<Option<&'static str>>>,
+        Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
     );
 
     fn into_attrs(self) -> Self::Attrs {
@@ -107,11 +110,9 @@ impl IntoAttrs for UseToastContentProps {
 
 /// Behavior and accessibility of a toast (react-aria's `useToast`): a non-modal alert dialog
 /// labelled by its title, whose content is announced; its timeout runs while it is shown.
-pub fn use_toast<T: Clone + Send + Sync + 'static>(
-    input: UseToastInput<T>,
-    queue: ToastQueue<T>,
-) -> UseToastReturn {
+pub fn use_toast<T: Clone + Send + Sync + 'static>(input: UseToastInput<T>) -> UseToastReturn {
     let UseToastInput {
+        queue,
         toast,
         aria_label,
         aria_labelledby,
@@ -147,7 +148,7 @@ pub fn use_toast<T: Clone + Send + Sync + 'static>(
             },
         },
         content_props: UseToastContentProps {
-            aria_hidden: Signal::derive(move || (!is_visible.get()).then_some("true")),
+            aria_hidden: Signal::derive(move || (!is_visible.get()).then_some(AriaHidden::True)),
         },
         title_id,
         description_props: description.props,

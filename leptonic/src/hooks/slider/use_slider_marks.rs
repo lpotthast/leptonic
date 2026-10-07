@@ -1,7 +1,5 @@
 // No upstream: marks along a slider's track (React Spectrum has none; react-aria leaves them to the
 // application).
-use std::borrow::Cow;
-
 use leptos::prelude::*;
 
 /// Which marks a slider shows.
@@ -23,8 +21,8 @@ pub enum SliderMarks {
 #[derive(Debug, Clone)]
 pub struct SliderMark {
     pub value: SliderMarkValue,
-    /// A name shown next to the mark.
-    pub name: Option<Cow<'static, str>>,
+    /// A name shown next to the mark (C2: user-visible text, may change with the locale).
+    pub name: MaybeProp<String>,
 }
 
 /// Where a mark is.
@@ -41,10 +39,33 @@ pub enum SliderMarkValue {
 pub struct ComputedSliderMark {
     /// Position along the track, 0.0 to 1.0.
     pub percentage: f64,
+    /// The value of the range at the mark.
+    pub value: f64,
+    pub name: Option<String>,
+    /// The thumbs' values, for [`is_in_range`](Self::is_in_range).
+    values: Signal<Vec<f64>>,
+}
+
+impl ComputedSliderMark {
     /// Whether the mark lies within the selected range: up to the thumb (one thumb), between the
-    /// first and the last thumb (several).
-    pub in_range: Signal<bool>,
-    pub name: Option<Cow<'static, str>>,
+    /// first and the last thumb (several). Tracked.
+    #[must_use]
+    pub fn is_in_range(&self) -> bool {
+        let value = self.value;
+        self.values.with(|values| match values.as_slice() {
+            [] => false,
+            [thumb] => value <= *thumb,
+            [first, .., last] => *first <= value && value <= *last,
+        })
+    }
+}
+
+impl PartialEq for ComputedSliderMark {
+    fn eq(&self, other: &Self) -> bool {
+        self.percentage.to_bits() == other.percentage.to_bits()
+            && self.value.to_bits() == other.value.to_bits()
+            && self.name == other.name
+    }
 }
 
 /// Input of [`use_slider_marks`].
@@ -71,7 +92,8 @@ fn percent(min: f64, max: f64, value: f64) -> f64 {
     }
 }
 
-/// The marks of a slider, placed on its track.
+/// The marks of a slider, placed on its track. They are recomputed when the range, the step or
+/// a name changes; [`ComputedSliderMark::is_in_range`] follows the thumbs.
 pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSliderMark>> {
     let UseSliderMarksInput {
         min_value,
@@ -82,18 +104,9 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
         format,
     } = input;
 
-    let in_range = move |value: f64| {
-        Signal::derive(move || {
-            values.with(|values| match values.as_slice() {
-                [] => false,
-                [thumb] => value <= *thumb,
-                [first, .., last] => *first <= value && value <= *last,
-            })
-        })
-    };
-
     let marks = StoredValue::new(marks);
-    Signal::derive(move || {
+    // Plain data: allocates no signals per run (a mark's range check reads `values`).
+    Memo::new(move |_| {
         let (min, max, step) = (min_value.get(), max_value.get(), step.get());
         marks.with_value(|marks| match marks {
             SliderMarks::None => Vec::new(),
@@ -112,8 +125,9 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
                         let value = (n as f64 * every).mul_add(step, min).min(max);
                         ComputedSliderMark {
                             percentage: percent(min, max, value),
-                            in_range: in_range(value),
-                            name: create_names.then(|| Cow::Owned(format.run(value))),
+                            value,
+                            name: create_names.then(|| format.run(value)),
+                            values,
                         }
                     })
                     .collect()
@@ -135,13 +149,15 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> Signal<Vec<ComputedSlider
                     }
                     Some(ComputedSliderMark {
                         percentage,
-                        in_range: in_range(value),
-                        name: mark.name.clone(),
+                        value,
+                        name: mark.name.get(),
+                        values,
                     })
                 })
                 .collect(),
         })
     })
+    .into()
 }
 
 #[cfg(test)]
@@ -174,6 +190,7 @@ mod tests {
             let percentages: Vec<f64> = marks.iter().map(|m| m.percentage).collect();
             assert_that!(percentages).is_equal_to(vec![0.0, 0.25, 0.5, 0.75, 1.0]);
             assert_that!(marks[1].name.as_deref()).is_equal_to(Some("2.5"));
+            assert_that!(marks[1].value).is_equal_to(2.5);
         });
     }
 
@@ -209,7 +226,7 @@ mod tests {
             let in_range = || {
                 marks
                     .iter()
-                    .map(|m| m.in_range.get_untracked())
+                    .map(|m| untrack(|| m.is_in_range()))
                     .collect::<Vec<_>>()
             };
             assert_that!(in_range()).is_equal_to(vec![true, true, true, false, false]);
@@ -226,15 +243,15 @@ mod tests {
                 marks: vec![
                     SliderMark {
                         value: SliderMarkValue::Value(5.0),
-                        name: Some("Half".into()),
+                        name: "Half".into(),
                     },
                     SliderMark {
                         value: SliderMarkValue::Percentage(0.1),
-                        name: None,
+                        name: MaybeProp::default(),
                     },
                     SliderMark {
                         value: SliderMarkValue::Value(11.0),
-                        name: None,
+                        name: MaybeProp::default(),
                     },
                 ],
             };
@@ -242,6 +259,7 @@ mod tests {
             assert_that!(marks.len()).is_equal_to(2);
             assert_that!(marks[0].percentage).is_equal_to(0.5);
             assert_that!(marks[1].percentage).is_equal_to(0.1);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("Half"));
         });
     }
 }

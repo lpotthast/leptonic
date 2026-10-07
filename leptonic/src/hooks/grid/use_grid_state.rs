@@ -34,9 +34,39 @@ pub struct UseGridStateInput {
 pub struct GridState {
     pub list: ListState,
     pub focus_mode: GridFocusMode,
-    /// While `true` (e.g. while resizing a table column), the grid doesn't handle navigation
-    /// keys.
-    pub is_keyboard_navigation_disabled: RwSignal<bool>,
+    /// Set while e.g. a table column is resized with the arrow keys.
+    keyboard_navigation_disabled: RwSignal<bool>,
+    /// Whether the grid handles navigation keys: the flag above, for tables also while empty.
+    navigation_disabled: Signal<bool>,
+}
+
+impl GridState {
+    /// Whether the grid ignores navigation keys (react-stately's
+    /// `isKeyboardNavigationDisabled`): while set with
+    /// [`set_keyboard_navigation_disabled`](Self::set_keyboard_navigation_disabled), and for
+    /// tables also while they have no rows.
+    pub fn is_keyboard_navigation_disabled(&self) -> Signal<bool> {
+        self.navigation_disabled
+    }
+
+    /// Let the grid ignore navigation keys (e.g. while the arrow keys resize a table column), or
+    /// handle them again.
+    pub fn set_keyboard_navigation_disabled(&self, disabled: bool) {
+        self.keyboard_navigation_disabled.set(disabled);
+    }
+
+    /// The state, with keyboard navigation also disabled while the grid has no rows (react-stately's
+    /// `useTableState`).
+    pub(crate) fn without_navigation_while_empty(self) -> Self {
+        let flag = self.keyboard_navigation_disabled;
+        let collection = self.list.collection;
+        Self {
+            navigation_disabled: Signal::derive(move || {
+                flag.get() || collection.with(|c| c.size() == 0)
+            }),
+            ..self
+        }
+    }
 }
 
 /// Creates the state of a grid (see [`GridState`]).
@@ -65,6 +95,7 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
         current
     });
 
+    let keyboard_navigation_disabled = RwSignal::new(false);
     GridState {
         list: ListState {
             collection,
@@ -72,7 +103,8 @@ pub fn use_grid_state(input: UseGridStateInput) -> GridState {
             item_elements: ItemElements::new(),
         },
         focus_mode,
-        is_keyboard_navigation_disabled: RwSignal::new(false),
+        keyboard_navigation_disabled,
+        navigation_disabled: keyboard_navigation_disabled.into(),
     }
 }
 
@@ -114,4 +146,151 @@ fn refocus(
         }
     }
     Some(new_row.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        hooks::collections::SelectionMode,
+        testing::{flush_effects, with_owner},
+    };
+
+    /// A grid of `rows`, each with the cells `name` and `role`; rows in `disabled` are disabled.
+    fn grid(
+        rows: RwSignal<Vec<&'static str>>,
+        disabled: &[&'static str],
+        focus_mode: GridFocusMode,
+    ) -> GridState {
+        let collection: CollectionMemo = Memo::new(move |_| {
+            Arc::new(Collection::build(|b| {
+                for row in rows.get() {
+                    b.row(row, row, |r| {
+                        r.cell(row);
+                        r.cell("role");
+                    });
+                }
+            }))
+        });
+        use_grid_state(UseGridStateInput {
+            collection,
+            selection: SelectionOptions {
+                selection_mode: Signal::stored(SelectionMode::Multiple),
+                disabled_keys: Signal::stored(disabled.iter().copied().map(Key::from).collect()),
+                ..Default::default()
+            },
+            focus_mode,
+        })
+    }
+
+    fn focus(state: &GridState, key: Key) {
+        state.list.selection.set_focused_key(Some(key), None);
+        flush_effects();
+    }
+
+    fn focused(state: &GridState) -> Option<Key> {
+        state.list.selection.focused_key()
+    }
+
+    fn remove(rows: RwSignal<Vec<&'static str>>, removed: &[&str]) {
+        let removed: HashSet<&str> = removed.iter().copied().collect();
+        rows.update(|rows| rows.retain(|row| !removed.contains(row)));
+        flush_effects();
+    }
+
+    #[test]
+    fn focus_moves_to_the_row_that_took_the_removed_rows_place() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
+            let state = grid(rows, &[], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("bob"));
+
+            remove(rows, &["bob"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("carol")));
+        });
+    }
+
+    #[test]
+    fn a_removed_cell_moves_focus_to_the_same_column_of_the_next_row() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
+            let state = grid(rows, &[], GridFocusMode::Cell);
+            flush_effects();
+            focus(&state, Key::cell(&Key::from("bob"), 1));
+
+            remove(rows, &["bob"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::cell(&Key::from("carol"), 1)));
+        });
+    }
+
+    #[test]
+    fn removing_the_last_row_moves_focus_back() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
+            let state = grid(rows, &[], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("carol"));
+
+            remove(rows, &["carol"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("bob")));
+        });
+    }
+
+    #[test]
+    fn disabled_rows_are_skipped() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob", "carol", "dave"]);
+            let state = grid(rows, &["carol"], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("bob"));
+
+            remove(rows, &["bob"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("dave")));
+        });
+    }
+
+    #[test]
+    fn removing_several_rows_moves_focus_to_the_first_row_after_them() {
+        // react-stately: `diff > 1 ? max(index - diff + 1, 0) : index`.
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["a", "b", "c", "d", "e"]);
+            let state = grid(rows, &[], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("d"));
+
+            remove(rows, &["b", "c", "d"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("e")));
+        });
+    }
+
+    #[test]
+    fn removing_every_row_clears_the_focus() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob"]);
+            let state = grid(rows, &[], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("bob"));
+
+            remove(rows, &["alice", "bob"]);
+            assert_that!(focused(&state)).is_none();
+        });
+    }
+
+    #[test]
+    fn other_changes_keep_the_focus() {
+        with_owner(|| {
+            let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
+            let state = grid(rows, &[], GridFocusMode::Row);
+            flush_effects();
+            focus(&state, Key::from("bob"));
+
+            remove(rows, &["alice"]);
+            assert_that!(focused(&state)).is_equal_to(Some(Key::from("bob")));
+        });
+    }
 }

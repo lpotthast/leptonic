@@ -1,14 +1,14 @@
 use std::time::Duration;
 
 use leptonic::{
-    atoms::toast::{
-        Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle,
+    atoms::{
+        button::Button,
+        toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},
     },
-    components::prelude::{Button, Icon},
     hooks::{ToastOptions, ToastQueue},
-    prelude::icondata,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn ToastAtomDemo() -> impl IntoView {
@@ -28,7 +28,7 @@ pub fn ToastAtomDemo() -> impl IntoView {
     };
 
     view! {
-        <Button on_press=upload>"Upload report"</Button>
+        <Button on_press=upload classes="demo-btn">"Upload report"</Button>
 
         // Rendered at the end of the page while there are toasts.
         <ToastRegion queue=queue classes="demo-toast-region" let:toast>

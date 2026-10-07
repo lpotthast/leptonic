@@ -285,15 +285,13 @@ pub fn Layout(children: Children) -> impl IntoView {
 #[component]
 fn AppBar(children: Children) -> impl IntoView {
     let element = CapturedElement::new();
-    let landmark = use_landmark(
-        UseLandmarkInput {
-            role: LandmarkRole::Banner,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            focus: None,
-        },
+    let landmark = use_landmark(UseLandmarkInput {
         element,
-    );
+        role: LandmarkRole::Banner,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        focus: None,
+    });
 
     view! {
         <header {..landmark.props.into_attrs()} {..element.attr()} id="book-app-bar">
@@ -432,15 +430,13 @@ fn ThemeToggle() -> impl IntoView {
 #[component]
 pub fn MainLandmark(class: &'static str, children: Children) -> impl IntoView {
     let element = CapturedElement::new();
-    let landmark = use_landmark(
-        UseLandmarkInput {
-            role: LandmarkRole::Main,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            focus: None,
-        },
+    let landmark = use_landmark(UseLandmarkInput {
         element,
-    );
+        role: LandmarkRole::Main,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        focus: None,
+    });
 
     view! {
         <main {..landmark.props.into_attrs()} {..element.attr()} id=MAIN_ID class=class>
@@ -458,15 +454,13 @@ pub fn NavLandmark(
     children: Children,
 ) -> impl IntoView {
     let element = CapturedElement::new();
-    let landmark = use_landmark(
-        UseLandmarkInput {
-            role: LandmarkRole::Navigation,
-            aria_label: label.into(),
-            aria_labelledby: None,
-            focus: None,
-        },
+    let landmark = use_landmark(UseLandmarkInput {
         element,
-    );
+        role: LandmarkRole::Navigation,
+        aria_label: label.into(),
+        aria_labelledby: None,
+        focus: None,
+    });
 
     view! {
         <nav {..landmark.props.into_attrs()} {..element.attr()} id=id class=class>

@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::button::Button, hooks::*};
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 
@@ -24,7 +24,7 @@ pub fn CloseOnScrollDemo() -> impl IntoView {
             <p>"Order 1041"</p>
             <p>"Order 1042"</p>
             <span {..trigger.attr()}>
-                <Button on_press=move |_| set_is_open.update(|open| *open = !*open)>
+                <Button on_press=move |_| set_is_open.update(|open| *open = !*open) classes="demo-btn">
                     {move || if is_open.get() { "Hide details" } else { "Show details" }}
                 </Button>
             </span>

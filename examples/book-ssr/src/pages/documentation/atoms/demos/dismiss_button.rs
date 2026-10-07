@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::prelude::{DismissButton, FocusScope},
-    components::prelude::*,
+    atoms::prelude::{Button, DismissButton, FocusScope},
     hooks::*,
 };
 use leptos::prelude::*;
@@ -30,17 +29,22 @@ pub fn DismissButtonDemo() -> impl IntoView {
     });
 
     view! {
-        <Button on_press=move |_| set_is_open.set(true)>"Open notifications"</Button>
+        <Button on_press=move |_| set_is_open.set(true) classes="demo-btn">"Open notifications"</Button>
 
         <Show when=move || is_open.get()>
             <div {..overlay_attrs.get_value()} role="dialog" aria-label="Notifications" class="demo-overlay-inline-panel">
                 <FocusScope restore_focus=true auto_focus=true>
                     <DismissButton on_dismiss=dismiss/>
                     <p class="demo-overlay-text">"Your export is ready."</p>
-                    <Button on_press=move |_| {
-                        set_closed_by.set(Some("the Download button"));
-                        set_is_open.set(false);
-                    }>"Download"</Button>
+                    <Button
+                        on_press=move |_| {
+                            set_closed_by.set(Some("the Download button"));
+                            set_is_open.set(false);
+                        }
+                        classes="demo-btn-primary"
+                    >
+                        "Download"
+                    </Button>
                     <DismissButton on_dismiss=dismiss/>
                 </FocusScope>
             </div>

@@ -14,12 +14,8 @@ use crate::{
         use_color_wheel_state,
     },
     utils::{
-        ValueBinding,
-        classes::Classes,
-        color::{ColorChannel, ColorValue},
-        data_attributes::flag,
-        default_class::with_default_class,
-        styles::Styles,
+        ValueBinding, classes::Classes, color::ColorValue, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -28,8 +24,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Generic over the color type; `channel` names its hue channel (react-aria-components converts
-//   the color to HSL).
+// - Generic over the color type: the hue channel of HSV and HSL colors, the hue of the HSL form
+//   of others (react-aria-components converts the color to HSL; see `use_color_wheel_state`).
 // - The value is split into `value` (a value or any signal) and `set_value` (an `Out`), plus
 //   `default_value` and `on_change` (C4).
 //
@@ -39,14 +35,15 @@ use crate::{
 #[derive(Clone, Copy)]
 struct ColorWheelTrackContext {
     is_disabled: Signal<bool>,
-    track: StoredValue<Option<(UseColorWheelTrackAttrs, Styles)>>,
+    /// Cloned per render.
+    track: StoredValue<(UseColorWheelTrackAttrs, Styles)>,
 }
 
 /// A color wheel: a [`ColorWheelTrack`] (the ring of hues) and a
 /// [`ColorThumb`](super::color_thumb::ColorThumb) on it.
 ///
 /// ```ignore
-/// <ColorWheel default_value=HSV::default() channel=HsvChannel::Hue outer_radius=100.0 inner_radius=74.0>
+/// <ColorWheel default_value=HSV::default() outer_radius=100.0 inner_radius=74.0>
 ///     <ColorWheelTrack />
 ///     <ColorThumb />
 /// </ColorWheel>
@@ -57,28 +54,26 @@ struct ColorWheelTrackContext {
 /// Default class: `leptonic-ColorWheel`.
 #[component]
 #[allow(clippy::too_many_arguments)]
-pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
-    /// The color type's hue channel.
-    channel: Ch,
+pub fn ColorWheel<C: ColorValue + Default>(
     /// The wheel's outer radius, in pixels.
     outer_radius: f64,
     /// The wheel's inner radius, in pixels.
     inner_radius: f64,
     /// The initial color. Default: the color type's default.
     #[prop(optional)]
-    default_value: Option<Ch::Color>,
+    default_value: Option<C>,
     /// The color (controlled): a value or any signal. Default: the `ColorPicker`'s around it.
     #[prop(into, optional)]
-    value: Option<Signal<Ch::Color>>,
+    value: Option<Signal<C>>,
     /// Receives the new color: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
     #[prop(into, optional)]
-    set_value: Option<Out<Ch::Color>>,
+    set_value: Option<Out<C>>,
     /// Called with the color whenever it changes, also while dragging.
     #[prop(into, optional)]
-    on_change: Option<Callback<Ch::Color>>,
+    on_change: Option<Callback<C>>,
     /// Called with the color when the user stops dragging.
     #[prop(into, optional)]
-    on_change_end: Option<Callback<Ch::Color>>,
+    on_change_end: Option<Callback<C>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     /// Names the wheel. Without any label, the hue channel's name does.
     #[prop(into, optional)]
@@ -96,14 +91,13 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorWheel", classes);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
-    let binding = binding.or_else(ColorPickerContext::binding::<Ch::Color>);
+    let binding = binding.or_else(ColorPickerContext::binding::<C>);
     let state = use_color_wheel_state(UseColorWheelStateInput {
         value: binding,
         is_disabled,
         on_change,
         on_change_end,
         default_value: default_value.unwrap_or_default(),
-        channel,
     });
     let wheel = use_color_wheel(UseColorWheelInput {
         aria_label,
@@ -119,7 +113,7 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
     let (track_attrs, track_styles) = wheel.track_props.into_parts();
     let track = ColorWheelTrackContext {
         is_disabled,
-        track: StoredValue::new(Some((track_attrs, track_styles))),
+        track: StoredValue::new((track_attrs, track_styles)),
     };
     let color = state.display_color();
     let thumb = ColorThumbContext::new(
@@ -150,7 +144,7 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
 ///
 /// # Panics
 ///
-/// Outside a [`ColorWheel`], or as its second track.
+/// Outside a [`ColorWheel`].
 ///
 /// Default class: `leptonic-ColorWheelTrack`.
 #[component]
@@ -160,10 +154,7 @@ pub fn ColorWheelTrack(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ColorWheelTrack", classes);
     let ColorWheelTrackContext { is_disabled, track } = expect_context::<ColorWheelTrackContext>();
-    let (attrs, track_styles) = track
-        .try_update_value(Option::take)
-        .flatten()
-        .expect("a `ColorWheel` has one `ColorWheelTrack`");
+    let (attrs, track_styles) = track.get_value();
     view! {
         <div {..attrs} class=classes style=track_styles.merge(styles) data-disabled=flag(is_disabled) />
     }

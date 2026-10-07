@@ -35,12 +35,8 @@ pub fn PageButtons() -> impl IntoView {
                         "allows only one pressed button is announced as a radio group."
                     </li>
                     <li>
-                        "A button that navigates is a link. "
-                        <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())>
-                            <Code inline=true>"LinkButton"</Code>
-                        </Link>
-                        " renders a "<Link href=routes::doc::Link.materialize()>"link"</Link>
-                        " that looks and presses like a button."
+                        "A button that navigates is a "<Link href=routes::doc::Link.materialize()>"link"</Link>
+                        ": render the "<Code inline=true>"Link"</Code>" atom and style it like your buttons."
                     </li>
                     <li>
                         "Triggers of other concepts hand their behavior to a button: put a button into a "
@@ -73,9 +69,7 @@ pub fn PageButtons() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Navigate to another page, with an element that looks like a button"</TableCell>
                         <TableCell>
-                            <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())>
-                                <Code inline=true>"LinkButton"</Code>
-                            </Link>
+                            <Link href=routes::doc::Link.materialize()>"Link"</Link>" styled as a button"
                         </TableCell>
                     </TableRow>
                     <TableRow>

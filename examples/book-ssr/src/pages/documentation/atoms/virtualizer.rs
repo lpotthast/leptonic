@@ -259,20 +259,32 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Style the listbox and its options as without the virtualizer (see "
-                    <Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link>"), with three differences. "
-                    "The scrolling element needs a height. Its padding is set to 0, as it would shift the positioned rows: "
-                    "use the layout\u{2019}s "<Code inline=true>"padding"</Code>" and "<Code inline=true>"gap"</Code>
-                    ". And each option\u{2019}s wrapper is as large as its row and clips what overflows it, so let the "
-                    "option fill it and draw focus rings inside:"
+                    <Code inline=true>"Virtualizer"</Code>" renders no element: style the listbox and its options as without it, through their classes "
+                    "("<Code inline=true>"leptonic-ListBox"</Code>", "<Code inline=true>"leptonic-ListBoxItem"</Code>"; see "
+                    <Link href=format!("{}#styling", routes::doc::listbox::Atom.materialize())>"Listbox Atoms"</Link>"), with three "
+                    "differences. The scrolling element needs a height. Its padding is set to 0, as it would shift the positioned rows: "
+                    "use the layout\u{2019}s "<Code inline=true>"padding"</Code>" and "<Code inline=true>"gap"</Code>". And each option\u{2019}s wrapper is as large as its "
+                    "row and clips what overflows it, so let the option fill it and draw focus rings inside. "<Code inline=true>"VirtualList"</Code>" "
+                    "renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-VirtualList"</Code>" and your "<Code inline=true>"classes"</Code>"; its rows are "
+                    "your markup. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .orders { height: 20em; border: 1px solid var(--border); }
-                        .orders [role=option] { box-sizing: border-box; height: 100%; padding: 0 1em; }
-                        .orders [role=option][data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-virt-listbox { height: 18em; border: 1px solid var(--border); border-radius: 8px; }
+                        .demo-virt-listbox[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-virt-option { display: flex; align-items: center; box-sizing: border-box; height: 100%; padding: 0 1rem; cursor: pointer; }
+                        .demo-virt-option[data-selected] { background: var(--surface); font-weight: 600; }
+                        .demo-virt-option[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+                        .demo-virt-log { height: 15em; font-family: monospace; }
+                        .demo-virt-log[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-virt-log-line { padding: 0.25rem 0.5rem; white-space: pre-wrap; overflow-wrap: anywhere; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Accessibility">

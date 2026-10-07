@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         css::{LengthPercentageAuto, computed_px},
@@ -25,6 +25,8 @@ pub fn BasicMovementExample() -> impl IntoView {
     let (events, set_events) = signal(HeapRb::<String>::new(50));
     let (left, set_left) = signal(0.0);
     let (top, set_top) = signal(0.0);
+    // Shown to CSS as `data-moving`.
+    let is_moving = RwSignal::new(false);
     let disabled = RwSignal::new(false);
 
     let container: NodeRef<html::Div> = NodeRef::new();
@@ -37,16 +39,12 @@ pub fn BasicMovementExample() -> impl IntoView {
     let max_left = move || (container_bounding.width.get() - handle_bounding.width.get()).max(0.0);
     let max_top = move || (container_bounding.height.get() - handle_bounding.height.get()).max(0.0);
 
-    let UseMoveReturn {
-        props, is_moving, ..
-    } = use_move(UseMoveInput {
+    let UseMoveReturn { props } = use_move(UseMoveInput {
         is_disabled: disabled.into(),
         on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
+            is_moving.set(true);
             set_events.update(|events| {
-                events.push_overwrite(format!(
-                    "MoveStart {{ pointer: {}, page: ({}, {}) }}",
-                    e.pointer_type, e.page_x, e.page_y
-                ));
+                events.push_overwrite(format!("MoveStart {{ pointer: {} }}", e.pointer_type));
             });
         })),
         on_move: Some(Callback::new(move |e: MoveEvent| {
@@ -60,6 +58,7 @@ pub fn BasicMovementExample() -> impl IntoView {
             });
         })),
         on_move_end: Some(Callback::new(move |e: MoveEndEvent| {
+            is_moving.set(false);
             // Drop the overshoot accumulated while dragging past the edge.
             set_left.update(|l| *l = l.clamp(0.0, max_left()));
             set_top.update(|t| *t = t.clamp(0.0, max_top()));
@@ -67,7 +66,6 @@ pub fn BasicMovementExample() -> impl IntoView {
                 events.push_overwrite(format!("MoveEnd {{ pointer: {} }}", e.pointer_type));
             });
         })),
-        ..UseMoveInput::default()
     });
 
     let handle_styles = Styles::builder()
@@ -82,7 +80,7 @@ pub fn BasicMovementExample() -> impl IntoView {
                 node_ref=handle
                 tabindex="0"
                 class="demo-move-handle"
-                data-moving=flag(is_moving)
+                data-moving=flag(is_moving.into())
                 style=handle_styles
             >
                 "Drag me (or use arrow keys)"
@@ -90,7 +88,10 @@ pub fn BasicMovementExample() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>

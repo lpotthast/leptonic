@@ -12,7 +12,9 @@ use crate::pages::{BaseActions, Page};
 
 /// Submenus ("Submenus" in RAC's `Menu.test.tsx`): opening by hover and the arrow key, the trigger
 /// item's ARIA attributes, actions in (nested) submenus closing the whole tree, ArrowLeft and
-/// Escape returning to the trigger, focusing another item and interacting outside closing them.
+/// Escape returning to the trigger, focusing another item and interacting outside closing them;
+/// right to left, the arrow keys swap; moving the pointer towards an open submenu across other
+/// items keeps it open.
 pub struct SubmenuTests {}
 
 async fn item(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
@@ -51,6 +53,8 @@ impl BrowserTest<str> for SubmenuTests {
         context_menu(&page).await?;
         subdialog(&page).await?;
         subdialog_with_dialog(&page).await?;
+        right_to_left_keys(&page).await?;
+        safely_mouse_to_submenu(&page).await?;
 
         page.expect_no_page_errors().await
     }
@@ -138,13 +142,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_active_text("Share…").await?;
     page.wait_for_attr(&share, "aria-expanded", Some("false"))
         .await?;
-    assert_that!(
-        page.driver
-            .find_all(browser_test::thirtyfour::By::Css("[role=menu]"))
-            .await?
-            .len()
-    )
-    .is_equal_to(1);
+    // The submenu is gone once its exit animation ran.
+    page.wait_for_count("[role=menu]", 1).await?;
 
     // Nested: Escape in the nested submenu returns to its trigger ("should restore focus to
     // nested submenu trigger if nested submenu is closed with Escape key").
@@ -229,7 +228,17 @@ async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     page.wait_for_selector("[role=menu]").await?;
     let popover = page.css(".test-popover").await?;
-    let popover_rect = popover.rect().await?;
+    // Where it settles once its entry animation (a slide) ran.
+    let mut popover_rect = popover.rect().await?;
+    for _ in 0..40 {
+        if (popover_rect.x - (rect.x + 10.0)).abs() <= 2.0
+            && (popover_rect.y - (rect.y + 15.0)).abs() <= 2.0
+        {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        popover_rect = popover.rect().await?;
+    }
     assert_that!((popover_rect.x - (rect.x + 10.0)).abs() <= 2.0).is_true();
     assert_that!((popover_rect.y - (rect.y + 15.0)).abs() <= 2.0).is_true();
     assert_that!(trigger.attr("aria-expanded").await?).is_none();
@@ -324,6 +333,81 @@ async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_no_selector("[role=dialog][aria-label=Properties]")
         .await?;
     page.wait_for_active_text("Properties…").await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=menu]").await
+}
+
+/// Right to left (react-aria's `useSubmenuTrigger` key handling, untested upstream): ArrowLeft
+/// opens the submenu focusing its first item, ArrowRight closes it returning to the trigger item;
+/// ArrowRight on the trigger item opens nothing. The submenu's popover keeps the direction.
+async fn right_to_left_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-submenu-before").await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-submenu-rtl-trigger').focus()",
+            vec![],
+        )
+        .await?;
+    page.send_keys_to_active(Key::Down).await?;
+    page.wait_for_focus("menuitem", Some("Open")).await?;
+    page.send_keys_to_active(Key::Down).await?;
+    page.wait_for_focus("menuitem", Some("Share…")).await?;
+    page.send_keys_to_active(Key::Right).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert_that!(page.count_matching("[role=menu]").await?)
+        .with_detail_message("ArrowRight opens no submenu right to left")
+        .is_equal_to(1);
+    page.send_keys_to_active(Key::Left).await?;
+    page.wait_for_focus("menuitem", Some("SMS")).await?;
+    let popover = page.css(".test-rtl-submenu-popover").await?;
+    assert_that!(popover.attr("dir").await?).is_equal_to(Some("rtl".to_owned()));
+    page.send_keys_to_active(Key::Right).await?;
+    page.wait_for_count("[role=menu]", 1).await?;
+    page.wait_for_focus("menuitem", Some("Share…")).await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=menu]").await?;
+    page.wait_for_active_id("test-submenu-rtl-trigger").await
+}
+
+/// `use_safely_mouse_to_submenu` ("Menu.test.tsx" submenus, useSafelyMouseToSubmenu): while the
+/// pointer moves from the trigger item towards the open submenu across the items below, the menu
+/// ignores pointer events, so the submenu stays open; once the pointer rests, the item under it
+/// takes over.
+async fn safely_mouse_to_submenu(page: &Page<'_>) -> Result<(), Report> {
+    open_root(page).await?;
+    let share = item(page, "Share…").await?;
+    hover(page, &share).await?;
+    page.wait_for_attr(&share, "aria-expanded", Some("true"))
+        .await?;
+    // From the trigger item's center, down and right: across "Sign up…" towards the submenu.
+    for _ in 0..6 {
+        page.driver
+            .action_chain()
+            .move_by_offset(12, 5)
+            .perform()
+            .await?;
+        tokio::time::sleep(std::time::Duration::from_millis(70)).await;
+    }
+    let pointer_events: String = page
+        .driver
+        .execute(
+            "return document.querySelector('.test-menu').style.pointerEvents;",
+            vec![],
+        )
+        .await?
+        .convert()?;
+    assert_that!(pointer_events)
+        .with_detail_message(
+            "the menu ignores pointer events while the pointer heads for the submenu",
+        )
+        .is_equal_to("none".to_owned());
+    assert_that!(share.attr("aria-expanded").await?)
+        .with_detail_message("the submenu stays open")
+        .is_equal_to(Some("true".to_owned()));
+    // Resting, the menu takes pointer events again.
+    page.wait_for_selector(".test-menu:not([style*=pointer-events])")
+        .await?;
+    page.send_keys_to_active(Key::Escape).await?;
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_no_selector("[role=menu]").await
 }

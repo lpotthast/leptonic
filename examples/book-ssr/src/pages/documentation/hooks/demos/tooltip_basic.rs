@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use leptonic::{components::prelude::Checkbox, hooks::*, utils::CapturedElement};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::CapturedElement};
 use leptos::{portal::Portal, prelude::*};
 
 /// A tooltip built from the three tooltip hooks, positioned with `use_overlay_position`.
@@ -15,24 +15,22 @@ pub fn TooltipDemo() -> impl IntoView {
         delay: Duration::from_millis(500),
         ..Default::default()
     });
-    let trigger = use_tooltip_trigger(
-        UseTooltipTriggerInput {
-            is_disabled: disabled.into(),
-            ..Default::default()
-        },
+    let trigger = use_tooltip_trigger(UseTooltipTriggerInput {
         state,
-    );
+        is_disabled: disabled.into(),
+        trigger: TooltipTriggerMode::Hover,
+        should_close_on_press: Signal::stored(true),
+    });
     // Keeps the tooltip open while the pointer is over the tooltip itself.
     let tooltip = use_tooltip(UseTooltipInput {
         is_disabled: Signal::derive(move || disabled.get() || !keep_open.get()),
         state: Some(state),
-        ..Default::default()
     });
     let position = use_overlay_position(UseOverlayPositionInput {
         placement: Signal::stored(Placement::Top),
         offset: Signal::stored(6.0),
         target: trigger_element,
-        is_open: trigger.is_open,
+        is_open: state.overlay.is_open,
         container_padding: Signal::stored(12.0),
         cross_offset: Signal::stored(0.0),
         should_flip: Signal::stored(true),
@@ -46,9 +44,8 @@ pub fn TooltipDemo() -> impl IntoView {
         on_close: None,
     });
 
-    let is_open = trigger.is_open;
+    let is_open = state.overlay.is_open;
     let tooltip_id = StoredValue::new(trigger.tooltip_props.id);
-    let tooltip_role = trigger.tooltip_props.role;
     let (position_attrs, position_styles) = position.props.into_parts();
     let position_attrs = StoredValue::new(position_attrs);
     let position_styles = StoredValue::new(position_styles);
@@ -64,8 +61,14 @@ pub fn TooltipDemo() -> impl IntoView {
             {move || if is_open.get() { "The tooltip is open." } else { "The tooltip is closed." }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=keep_open set_selected=keep_open>"Keep open while hovered"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=keep_open set_selected=keep_open classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Keep open while hovered"
+            </Checkbox>
         </div>
 
         <Portal>
@@ -75,7 +78,6 @@ pub fn TooltipDemo() -> impl IntoView {
                     {..tooltip_attrs.get_value()}
                     style=position_styles.get_value()
                     id=tooltip_id.get_value()
-                    role=tooltip_role
                     class="demo-tooltip"
                 >
                     "Make the post visible to everyone"

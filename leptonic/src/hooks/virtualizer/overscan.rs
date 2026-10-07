@@ -42,3 +42,43 @@ impl OverscanManager {
         overscanned
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+
+    #[test]
+    fn extends_downwards_and_to_the_right_at_rest() {
+        let mut overscan = OverscanManager::default();
+        overscan.set_visible_rect(Rect::new(0.0, 300.0, 90.0, 300.0), 1000.0);
+        // A third of the size, after the visible rectangle.
+        assert_that!(overscan.overscanned_rect()).is_equal_to(Rect::new(0.0, 300.0, 120.0, 400.0));
+    }
+
+    #[test]
+    fn extends_towards_where_the_user_scrolls() {
+        let mut overscan = OverscanManager::default();
+        overscan.set_visible_rect(Rect::new(0.0, 600.0, 90.0, 300.0), 1000.0);
+        // Scrolling up (and left) within 500ms: the overscan goes before the visible rectangle.
+        overscan.set_visible_rect(Rect::new(0.0, 500.0, 90.0, 300.0), 1100.0);
+        assert_that!(overscan.overscanned_rect()).is_equal_to(Rect::new(0.0, 400.0, 120.0, 400.0));
+        overscan.set_visible_rect(Rect::new(-30.0, 500.0, 90.0, 300.0), 1200.0);
+        assert_that!(overscan.overscanned_rect().x).is_equal_to(-60.0);
+
+        // Scrolling down again: after it.
+        overscan.set_visible_rect(Rect::new(-30.0, 550.0, 90.0, 300.0), 1300.0);
+        assert_that!(overscan.overscanned_rect().y).is_equal_to(550.0);
+    }
+
+    #[test]
+    fn keeps_the_direction_after_a_pause() {
+        let mut overscan = OverscanManager::default();
+        overscan.set_visible_rect(Rect::new(0.0, 600.0, 90.0, 300.0), 1000.0);
+        overscan.set_visible_rect(Rect::new(0.0, 500.0, 90.0, 300.0), 1100.0);
+        // More than 500ms later, the velocity isn't updated (as upstream): still upwards.
+        overscan.set_visible_rect(Rect::new(0.0, 700.0, 90.0, 300.0), 2000.0);
+        assert_that!(overscan.overscanned_rect().y).is_equal_to(600.0);
+    }
+}

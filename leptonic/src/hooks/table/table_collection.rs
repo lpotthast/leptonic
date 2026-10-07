@@ -18,8 +18,14 @@ use crate::hooks::collections::{
 //   selection checkbox column) get keys that never equal keys created from user values.
 // - Rows need a text value (react-aria derives one from the row header cells when missing).
 //
+// ## DIFFERENT BEHAVIOR
+// - A group shared with a column whose top is below the group still counts that column for its
+//   outer groups: react-stately's `buildHeaderRows` stops counting there, so outer groups three
+//   or more levels up span too few columns.
+//
 // ## OMITTED FEATURES
-// - Drag button columns (`showDragButtons`): with drag and drop (PLAN.md, step 11).
+// - Drag button columns (`showDragButtons`): not built yet (drag and drop exists; the table atoms
+//   don't support dragging rows yet).
 //
 // =============================================================================
 
@@ -237,11 +243,48 @@ impl TableBuilder {
             flatten(def, &mut Vec::new(), &mut leaves, &mut column_info);
         }
 
-        let header_row_count = leaves
-            .iter()
-            .map(|(_, ancestors)| ancestors.len() + 1)
-            .max()
-            .unwrap_or(0);
+        // Each data column's stack of header cells, bottom to top: the column, then its groups
+        // (innermost first), `None` where it has no header cell. A group shared with a later,
+        // taller column moves up to that column's level (react-stately's `buildHeaderRows`).
+        let mut stacks: Vec<Vec<Option<Key>>> = Vec::with_capacity(leaves.len());
+        // Where each group's header cell is: its stack and position in it.
+        let mut seen: HashMap<Key, (usize, usize)> = HashMap::new();
+        for (def, ancestors) in &leaves {
+            let mut stack = vec![Some(def.key.clone())];
+            // Once a shared group is above this column's top, its outer groups are too: they only
+            // span this column as well (react-stately stops there and doesn't count them).
+            let mut above = false;
+            for parent in ancestors {
+                if let Some(&(earlier, position)) = seen.get(parent) {
+                    if let Some(group) = column_info.get_mut(parent) {
+                        group.col_span += 1;
+                    }
+                    if above || position > stack.len() {
+                        above = true;
+                        continue;
+                    }
+                    // Shift the group (and what is above it) up to this column's level.
+                    let shift = stack.len() - position;
+                    let earlier_stack = &mut stacks[earlier];
+                    earlier_stack.splice(position..position, std::iter::repeat_n(None, shift));
+                    for (moved, entry) in earlier_stack.iter().enumerate().skip(stack.len()) {
+                        if let Some(key) = entry
+                            && let Some(place) = seen.get_mut(key)
+                        {
+                            place.1 = moved;
+                        }
+                    }
+                } else {
+                    if let Some(group) = column_info.get_mut(parent) {
+                        group.col_span = 1;
+                    }
+                    stack.push(Some(parent.clone()));
+                    seen.insert(parent.clone(), (stacks.len(), stack.len() - 1));
+                }
+            }
+            stacks.push(stack);
+        }
+        let header_row_count = stacks.iter().map(Vec::len).max().unwrap_or(0);
 
         let mut columns = Vec::with_capacity(leaves.len());
         for (index, (def, ancestors)) in leaves.iter().enumerate() {
@@ -267,59 +310,49 @@ impl TableBuilder {
             );
         }
 
-        // Header rows, top to bottom: data columns are in the bottom row, each group in the row
-        // above its columns. Where a column has no group, a placeholder fills the gap (adjacent
-        // gaps are one placeholder).
+        // Header rows, top to bottom: data columns are in the bottom row, each group above its
+        // columns. Placeholders fill the gaps (adjacent gaps are one placeholder).
+        let mut cells: Vec<Vec<HeaderCell>> = (0..header_row_count).map(|_| Vec::new()).collect();
+        // The number of columns each row covers so far.
+        let mut covered = vec![0_usize; header_row_count];
+        let mut placeholders = 0;
+        let mut placeholder = |col_span: usize| {
+            let cell = HeaderCell {
+                key: Key::generated("placeholder", placeholders),
+                kind: NodeKind::Placeholder,
+                text_value: Arc::from(""),
+                col_span: (col_span > 1).then_some(col_span),
+            };
+            placeholders += 1;
+            cell
+        };
+        for (index, stack) in stacks.iter().enumerate() {
+            for (height, entry) in stack.iter().enumerate() {
+                let Some(key) = entry else {
+                    continue;
+                };
+                let level = header_row_count - 1 - height;
+                if covered[level] < index {
+                    cells[level].push(placeholder(index - covered[level]));
+                    covered[level] = index;
+                }
+                let column = column_info.get_mut(key).expect("flattened above");
+                column.level = level;
+                column.index = index;
+                cells[level].push(HeaderCell {
+                    key: key.clone(),
+                    kind: NodeKind::Column,
+                    text_value: column.text_value.clone(),
+                    col_span: (column.col_span > 1).then_some(column.col_span),
+                });
+                covered[level] += column.col_span;
+            }
+        }
         let mut rows = CollectionBuilder::default();
         let mut header_rows = Vec::with_capacity(header_row_count);
-        let mut placeholders = 0;
-        for level in 0..header_row_count {
-            let from_bottom = header_row_count - 1 - level;
-            let mut cells: Vec<HeaderCell> = Vec::new();
-            let mut previous: Option<Option<Key>> = None;
-            for (index, (def, ancestors)) in leaves.iter().enumerate() {
-                let here = match from_bottom {
-                    0 => Some(def.key.clone()),
-                    n => ancestors.get(n - 1).cloned(),
-                };
-                let same_group = here.is_some() && previous.as_ref() == Some(&here);
-                let same_gap = here.is_none() && previous == Some(None);
-                if same_group || same_gap {
-                    if let Some(last) = cells.last_mut() {
-                        last.col_span = Some(last.col_span.unwrap_or(1) + 1);
-                    }
-                    if let Some(group) = here.as_ref().and_then(|k| column_info.get_mut(k)) {
-                        group.col_span += 1;
-                    }
-                } else if let Some(key) = &here {
-                    let column = column_info.get_mut(key).expect("flattened above");
-                    column.level = level;
-                    if column.kind == ColumnKind::Group {
-                        column.index = index;
-                        column.col_span = 1;
-                    }
-                    cells.push(HeaderCell {
-                        key: key.clone(),
-                        kind: NodeKind::Column,
-                        text_value: column.text_value.clone(),
-                        col_span: None,
-                    });
-                } else {
-                    cells.push(HeaderCell {
-                        key: Key::generated("placeholder", placeholders),
-                        kind: NodeKind::Placeholder,
-                        text_value: Arc::from(""),
-                        col_span: None,
-                    });
-                    placeholders += 1;
-                }
-                previous = Some(here);
-            }
-            // Only spans of more than one column are spans.
-            for cell in &mut cells {
-                if cell.col_span == Some(1) {
-                    cell.col_span = None;
-                }
+        for (level, mut cells) in cells.into_iter().enumerate() {
+            if covered[level] < leaves.len() {
+                cells.push(placeholder(leaves.len() - covered[level]));
             }
             let key = Key::generated("headerrow", level);
             header_rows.push(key.clone());
@@ -584,6 +617,105 @@ mod tests {
         )
         .is_equal_to(Some(3));
         assert_that!(table.column_count()).is_equal_to(4);
+    }
+
+    fn header_rows(table: &TableCollection) -> Vec<Vec<(String, NodeKind, Option<usize>)>> {
+        (0..table.header_rows().len())
+            .map(|level| header_row(table, level))
+            .collect()
+    }
+
+    fn column(key: &str) -> (String, NodeKind, Option<usize>) {
+        (key.to_owned(), NodeKind::Column, None)
+    }
+
+    fn group(key: &str, span: usize) -> (String, NodeKind, Option<usize>) {
+        (key.to_owned(), NodeKind::Column, Some(span))
+    }
+
+    fn placeholder(n: usize, span: Option<usize>) -> (String, NodeKind, Option<usize>) {
+        (format!("placeholder-{n}"), NodeKind::Placeholder, span)
+    }
+
+    #[test]
+    fn a_group_shared_with_a_shorter_column_keeps_its_level() {
+        // |      Group 1      |
+        // | Group 2 |         |
+        // |    A    |    B    |
+        let table = TableCollection::build(|t| {
+            t.column_group("g1", "Group 1", |g| {
+                g.column_group("g2", "Group 2", |g| {
+                    g.column("a", "A");
+                });
+                g.column("b", "B");
+            });
+        });
+        assert_that!(header_rows(&table)).is_equal_to(vec![
+            vec![group("g1", 2)],
+            vec![column("g2"), placeholder(0, None)],
+            vec![column("a"), column("b")],
+        ]);
+        let g1 = table.column(&k("g1")).expect("group");
+        assert_that!((g1.index, g1.col_span, g1.level)).is_equal_to((0, 2, 0));
+        let g2 = table.column(&k("g2")).expect("group");
+        assert_that!((g2.index, g2.col_span, g2.level)).is_equal_to((0, 1, 1));
+    }
+
+    #[test]
+    fn a_group_shared_with_a_taller_column_moves_up() {
+        // |      Group 1      |
+        // |         | Group 2 |
+        // |    A    |    B    |
+        let table = TableCollection::build(|t| {
+            t.column_group("g1", "Group 1", |g| {
+                g.column("a", "A");
+                g.column_group("g2", "Group 2", |g| {
+                    g.column("b", "B");
+                });
+            });
+            t.column("c", "C");
+        });
+        assert_that!(header_rows(&table)).is_equal_to(vec![
+            vec![group("g1", 2), placeholder(1, None)],
+            vec![placeholder(0, None), column("g2"), placeholder(2, None)],
+            vec![column("a"), column("b"), column("c")],
+        ]);
+        let g1 = table.column(&k("g1")).expect("group");
+        assert_that!((g1.index, g1.col_span, g1.level)).is_equal_to((0, 2, 0));
+        let g2 = table.column(&k("g2")).expect("group");
+        assert_that!((g2.index, g2.col_span, g2.level)).is_equal_to((1, 1, 1));
+        // Header cells know their column.
+        assert_that!(
+            table
+                .collection()
+                .get(&k("g2"))
+                .and_then(|n| n.col_index)
+        )
+        .is_equal_to(Some(1));
+    }
+
+    #[test]
+    fn outer_groups_span_every_column_under_them() {
+        // |        Group 0        |
+        // |        Group 1        |
+        // | Group 2 |             |
+        // |    A    |      B      |
+        let table = TableCollection::build(|t| {
+            t.column_group("g0", "Group 0", |g| {
+                g.column_group("g1", "Group 1", |g| {
+                    g.column_group("g2", "Group 2", |g| {
+                        g.column("a", "A");
+                    });
+                    g.column("b", "B");
+                });
+            });
+        });
+        assert_that!(header_rows(&table)).is_equal_to(vec![
+            vec![group("g0", 2)],
+            vec![group("g1", 2)],
+            vec![column("g2"), placeholder(0, None)],
+            vec![column("a"), column("b")],
+        ]);
     }
 
     #[test]

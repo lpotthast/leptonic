@@ -93,6 +93,7 @@ verify:
   cargo fmt --all --check
   cargo clippy -p leptonic --tests
   cargo clippy -p leptonic --features full --tests
+  cargo clippy -p leptonic --no-default-features --features atoms,clipboard --tests
   cargo clippy -p leptonic --features full,ssr --tests
   cargo clippy -p leptonic --features full,hydrate --tests
   cargo clippy -p leptonic-theme --tests
@@ -210,6 +211,9 @@ upgrade: # "-" prefixes allow for non-zero status codes!
 # Run `cargo clippy --tests` for every crate. Lint levels are configured in each crate's [lints.clippy] section.
 clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml
+  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --features full
+  # The atoms without the components layer: what consumers like agnite dev-ui build (consumers.md).
+  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
   -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
   -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml
   -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml

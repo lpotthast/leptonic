@@ -14,9 +14,8 @@ use super::{
     use_checkbox_group_state::CheckboxGroupState,
     use_field::{UseFieldInput, UseFieldReturn, use_field},
     use_form_validation_state::{
-        DEFAULT_VALIDATION_RESULT, UseFormValidationStateInput, UseFormValidationStateReturn,
-        ValidateFn, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
-        use_form_validation_state,
+        DEFAULT_VALIDATION_RESULT, FormValidationState, UseFormValidationStateInput,
+        ValidationBehavior, ValidationResult, ValidityStateSnapshot, use_form_validation_state,
     },
     use_label::{LabelElementType, UseLabelProps},
     use_toggle::ToggleOptions,
@@ -37,7 +36,8 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The group hands its items a `CheckboxGroupData` (react-aria: a `WeakMap` keyed by the state).
-// - Items take the group's validation behavior (react-aria: an item may override it).
+// - Items take the group's validation behavior (react-aria: an item may override it), so that
+//   the group decides when errors show.
 // - An item is required when it or its group is (react-aria: the item's `isRequired` replaces
 //   the group's when given).
 //
@@ -205,10 +205,9 @@ pub struct UseCheckboxGroupItemInput {
     pub is_indeterminate: Signal<bool>,
     /// Called when the checkbox is checked or unchecked.
     pub on_change: Option<Callback<bool>>,
-    /// Validates the checkbox on its own (its errors join the group's).
-    pub validate: Option<ValidateFn<bool>>,
     /// Further settings. `name` and `form` default to the group's; the input's `value` is
-    /// `value`; the group's validation behavior applies.
+    /// `value`; the group's validation behavior applies. `validate` and `is_invalid` validate
+    /// the checkbox on its own: its errors join the group's.
     pub options: ToggleOptions,
 }
 
@@ -228,7 +227,6 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         value,
         is_indeterminate,
         on_change,
-        validate,
         mut options,
     } = input;
     let state = group.state;
@@ -265,16 +263,18 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
         }),
     );
 
-    // The checkbox's own validation, merged into the group's.
+    // The checkbox's own validation, merged into the group's (server errors are the group's).
     let realtime_validation = use_form_validation_state(UseFormValidationStateInput {
         builtin_validation: Signal::default(),
-        is_invalid: Signal::stored(false),
+        is_invalid: options.is_invalid,
         value: toggle_state.is_selected,
-        validate,
+        validate: options.validate.take(),
         validation_behavior: ValidationBehavior::Aria,
         name: None,
     })
     .realtime_validation;
+    // Shown through the group's validation.
+    options.is_invalid = Signal::stored(false);
     let native_validation = StoredValue::new(DEFAULT_VALIDATION_RESULT);
     let update_validation = {
         let value = value.clone();
@@ -309,20 +309,16 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
     } else {
         combined_realtime
     };
-    let item_validation = UseFormValidationStateReturn {
-        realtime_validation: combined_realtime,
+    // The group's commit and reset (its commit reads every checkbox's native validity).
+    let item_validation = FormValidationState::from_parts(
+        combined_realtime,
         display_validation,
-        is_invalid: Signal::derive(move || display_validation.get().is_invalid),
-        validation_errors: Signal::derive(move || display_validation.get().validation_errors),
-        update_validation: Callback::new(move |validation: ValidationResult| {
+        Callback::new(move |validation: ValidationResult| {
             native_validation.set_value(validation);
             update_validation();
         }),
-        reset_validation: group_validation.reset_validation,
-        commit_validation: group_validation.commit_validation,
-        // The group's commit reads every checkbox's native validity.
-        native_validity_readers: group_validation.native_validity_readers,
-    };
+        group_validation,
+    );
 
     let mut checkbox = use_checkbox_with(
         UseCheckboxInput {

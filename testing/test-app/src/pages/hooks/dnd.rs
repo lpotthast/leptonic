@@ -8,7 +8,8 @@ use leptonic::{
         DragEndEvent, DragItem, DropEnterEvent, DropEvent, DropExitEvent, DropItem, DropPosition,
         DropTarget, DroppableCollectionData, DroppableCollectionOptions,
         DroppableCollectionReorderEvent, GridListData, IntoAttrs, ListDropTargetDelegate,
-        Orientation, UseDragInput, UseDragReturn, UseDraggableCollectionStateInput,
+        Orientation, UseDragInput, UseDragReturn, UseDraggableCollectionInput,
+        UseDraggableCollectionStateInput,
         UseDraggableItemInput, UseDraggableItemReturn, UseDropIndicatorInput,
         UseDropIndicatorReturn, UseDropInput, UseDropReturn, UseDroppableCollectionInput,
         UseDroppableCollectionReturn, UseDroppableCollectionStateInput, UseDroppableItemInput,
@@ -16,7 +17,7 @@ use leptonic::{
         UseGridListReturn,
         collections::{
             Key, ListLayout, ListState, SelectionOptions, UseListStateInput, use_list_collection,
-            use_list_keyboard_delegate, use_list_state,
+            UseListKeyboardDelegateInput, use_list_keyboard_delegate, use_list_state,
         },
         use_drag, use_draggable_collection, use_draggable_collection_state, use_draggable_item,
         use_drop, use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
@@ -59,8 +60,8 @@ fn Draggable(log: impl Fn(String) + Copy + Send + Sync + 'static) -> impl IntoVi
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
             log(format!("dragend {:?}", e.drop_operation));
         })),
-        get_items: Callback::new(|()| vec![DragItem::text("hello world")]),
-        get_allowed_drop_operations: None,
+        items: Signal::stored(vec![DragItem::text("hello world")]),
+        allowed_drop_operations: None,
         preview: None,
         on_drag_move: None,
         has_drag_button: false,
@@ -173,13 +174,16 @@ fn ReorderableList() -> impl IntoView {
             keys.iter().map(|k| DragItem::text(k.to_string())).collect()
         }),
         preview: None,
-        get_allowed_drop_operations: None,
+        allowed_drop_operations: None,
         on_drag_start: None,
         on_drag_move: None,
         on_drag_end: None,
         is_disabled: Signal::stored(false),
     });
-    use_draggable_collection(drag_state, element);
+    use_draggable_collection(UseDraggableCollectionInput {
+        state: drag_state,
+        element,
+    });
 
     let on_reorder = Callback::new(move |e: DroppableCollectionReorderEvent| {
         letters.update(|letters| {
@@ -219,12 +223,13 @@ fn ReorderableList() -> impl IntoView {
         state: drop_state,
         element,
         collection_id: props.id.clone(),
-        keyboard_delegate: use_list_keyboard_delegate(
-            list,
-            element,
-            Orientation::Vertical,
-            ListLayout::Stack,
-        ),
+        keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+            state: list,
+            element: element,
+            orientation: Orientation::Vertical,
+            layout: ListLayout::Stack,
+            layout_delegate: None,
+        }),
         drop_target_delegate: Arc::new(ListDropTargetDelegate::new(
             list.collection,
             list.item_elements,
@@ -286,7 +291,7 @@ fn Row(letter: &'static str) -> impl IntoView {
     let element = CapturedElement::new();
     let UseDroppableItemReturn { drop_props, .. } = use_droppable_item(UseDroppableItemInput {
         collection: drop,
-        target: DropTarget::item(key, DropPosition::On),
+        target: DropTarget::item(key, DropPosition::On).into(),
         element,
         activate_button: None,
     });
@@ -327,7 +332,7 @@ fn DropIndicator(letter: &'static str, position: DropPosition) -> impl IntoView 
         is_hidden,
     } = use_drop_indicator(UseDropIndicatorInput {
         collection: drop,
-        target: DropTarget::item(letter, position),
+        target: DropTarget::item(letter, position).into(),
         activate_button: None,
     });
     view! {

@@ -79,8 +79,11 @@ pub fn PageTextFieldOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The themed "<Code inline=true>"TextField"</Code>" takes its label and description as props. Pass it a "
-                    "signal as "<Code inline=true>"value"</Code>" and its setter as "<Code inline=true>"set_value"</Code>":"
+                    "Compose the "<Code inline=true>"TextField"</Code>" atom from a "<Code inline=true>"Label"</Code>", an "
+                    <Code inline=true>"Input"</Code>" and a "<Code inline=true>"Description"</Code>", and pass it a signal as "
+                    <Code inline=true>"value"</Code>" and its setter as "<Code inline=true>"set_value"</Code>". The parts are "
+                    "styled through their data attributes (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::text_field::Atom.materialize())>"Text Field Atoms"</Link>" page):"
                 </p>
 
                 <Demo description="Labelled name field greeting the entered name" source=include_str!("demos/text_field.rs") source_open=true>

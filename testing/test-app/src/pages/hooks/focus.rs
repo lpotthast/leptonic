@@ -112,6 +112,34 @@ pub fn PageHookFocus() -> impl IntoView {
                     }
                 }
             </section>
+
+            <section>
+                <h2>"Disabled While Focused"</h2>
+                {
+                    // useFocus.test.js, "should fire onBlur when a focused element is disabled".
+                    let disabled = RwSignal::new(false);
+                    let blur_count = RwSignal::new(0u32);
+                    let focus = use_focus(UseFocusInput {
+                        is_disabled: Signal::derive(|| false),
+                        on_focus: None,
+                        on_blur: Some(Callback::new(move |_| blur_count.update(|c| *c += 1))),
+                        on_focus_change: None,
+                    });
+                    view! {
+                        <button
+                            id="test-focus-disable-me"
+                            disabled=move || disabled.get()
+                            on:click=move |_| disabled.set(true)
+                            {..focus.props.into_attrs()}
+                        >
+                            "Disable me"
+                        </button>
+                        <div>
+                            "Blur count: " <span id="test-focus-disable-me-blur-count">{blur_count}</span>
+                        </div>
+                    }
+                }
+            </section>
         </div>
     }
 }

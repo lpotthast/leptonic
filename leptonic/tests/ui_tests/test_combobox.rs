@@ -220,6 +220,12 @@ async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), Repo
     let input = input(page).await?;
     input.send_keys(Key::Control + "a").await?;
     input.send_keys(Key::Backspace).await?;
+    page.wait_for_text("test-cb-value", "").await?;
+    // The changed input opens the options (react-stately opens on every input change while
+    // focused); closing them keeps the cleared value.
+    page.wait_for_selector(LISTBOX).await?;
+    input.send_keys(Key::Escape).await?;
+    page.wait_for_no_selector(LISTBOX).await?;
     page.wait_for_text("test-cb-value", "").await
 }
 

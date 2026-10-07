@@ -162,34 +162,27 @@ enum CopyState {
 /// Copies the Markdown export of the current page (`<path>.md`) to the clipboard, and confirms it (or the failure)
 /// visibly and to screen readers.
 ///
-/// The export is fetched ahead, when the button mounts: Safari only allows writing to the clipboard while handling the
-/// press, not after awaiting a download.
+/// The export is downloaded only when the button is pressed, never on navigation, and kept for
+/// [`MARKDOWN_CACHE_TTL`], so pressing again (or coming back to the page) copies without downloading.
 #[component]
 fn CopyAsMarkdownButton() -> impl IntoView {
     let md_url = StoredValue::new(format!("{}.md", use_location().pathname.get_untracked()));
-    let markdown = StoredValue::new(None::<String>);
     let state = RwSignal::new(CopyState::Idle);
 
-    // Effects only run in the browser.
-    Effect::new(move |_| {
-        leptos::task::spawn_local(async move {
-            if let Some(text) = fetch_text(&md_url.get_value()).await {
-                markdown.set_value(Some(text));
-            }
-        });
-    });
-
     let copy = move |_| {
-        let (prefetched, url) = (markdown.get_value(), md_url.get_value());
-        // Spawned right away, so that the clipboard write still belongs to the press when the Markdown was prefetched.
+        let url = md_url.get_value();
         leptos::task::spawn_local(async move {
-            let text = match prefetched {
-                Some(text) => Some(text),
-                None => fetch_text(&url).await,
-            };
-            let copied = match text {
-                Some(text) => write_text(&text).await.is_ok(),
-                None => false,
+            let mut text = cached_markdown(&url);
+            if text.is_none() {
+                text = fetch_text(&url).await;
+                if let Some(text) = &text {
+                    cache_markdown(&url, text.clone());
+                }
+            }
+            let copied = if let Some(text) = text {
+                write_text(&text).await.is_ok()
+            } else {
+                false
             };
             state.set(if copied {
                 CopyState::Copied
@@ -219,32 +212,36 @@ fn CopyAsMarkdownButton() -> impl IntoView {
     }
 }
 
-/// Fetches `url` as text. `None` if any step fails.
-#[cfg(not(feature = "ssr"))]
-async fn fetch_text(url: &str) -> Option<String> {
-    use wasm_bindgen::JsCast;
-    use wasm_bindgen_futures::JsFuture;
+/// How long a downloaded Markdown export is reused.
+const MARKDOWN_CACHE_TTL: std::time::Duration = std::time::Duration::from_mins(5);
 
-    let window = leptos_use::use_window();
-    let window = window.as_ref()?;
-    let response: web_sys::Response = JsFuture::from(window.fetch_with_str(url))
-        .await
-        .ok()?
-        .unchecked_into();
-    if !response.ok() {
-        return None;
-    }
-    JsFuture::from(response.text().ok()?)
-        .await
-        .ok()?
-        .as_string()
+thread_local! {
+    /// Downloaded Markdown exports by URL. An entry is removed [`MARKDOWN_CACHE_TTL`] after its download.
+    static MARKDOWN_CACHE: std::cell::RefCell<std::collections::HashMap<String, String>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
-/// Effects never run on the server.
-#[cfg(feature = "ssr")]
-#[allow(clippy::unused_async)]
-async fn fetch_text(_url: &str) -> Option<String> {
-    None
+fn cached_markdown(url: &str) -> Option<String> {
+    MARKDOWN_CACHE.with_borrow(|cache| cache.get(url).cloned())
+}
+
+fn cache_markdown(url: &str, text: String) {
+    MARKDOWN_CACHE.with_borrow_mut(|cache| cache.insert(url.to_owned(), text));
+    let url = url.to_owned();
+    set_timeout(
+        move || {
+            MARKDOWN_CACHE.with_borrow_mut(|cache| cache.remove(&url));
+        },
+        MARKDOWN_CACHE_TTL,
+    );
+}
+
+/// Downloads `path` (a path of this site) as text. `None` if the request fails.
+async fn fetch_text(path: &str) -> Option<String> {
+    // `reqwest` needs an absolute URL; in the browser, this page's origin.
+    let origin = leptos_use::use_window().as_ref()?.location().origin().ok()?;
+    let response = reqwest::get(format!("{origin}{path}")).await.ok()?.error_for_status().ok()?;
+    response.text().await.ok()
 }
 
 #[cfg(test)]

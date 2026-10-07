@@ -1,8 +1,10 @@
 use std::{collections::HashSet, sync::Arc};
 
 use leptonic::{
-    atoms::table::{Table, TableBody, TableCell, TableHeader, TableRow},
-    components::prelude::{Button, ButtonColor},
+    atoms::{
+        button::Button,
+        table::{Table, TableBody, TableCell, TableHeader, TableRow},
+    },
     hooks::{
         DisabledBehavior, SelectionMode, SortDescriptor, SortDirection, TableCollection,
         TableOptions,
@@ -138,8 +140,8 @@ pub fn TableAtomDemo() -> impl IntoView {
         </p>
         <div class="demo-controls">
             // The app changes sorting and selection by writing its state. `None` clears the sorting.
-            <Button on_press=move |_| sort.set(None) color=ButtonColor::Secondary>"Clear sorting"</Button>
-            <Button on_press=move |_| selection.set(Selection::default()) color=ButtonColor::Secondary>
+            <Button on_press=move |_| sort.set(None) classes="demo-btn">"Clear sorting"</Button>
+            <Button on_press=move |_| selection.set(Selection::default()) classes="demo-btn">
                 "Clear selection"
             </Button>
         </div>

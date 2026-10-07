@@ -1,9 +1,14 @@
+use std::collections::HashSet;
+
 use leptonic::{
     atoms::prelude::{
         Button, Disclosure, DisclosureGroup, DisclosurePanel, DisclosurePanelRole,
         DisclosureTrigger, Menu, MenuItems, MenuTrigger, Popover,
     },
-    hooks::{DisclosureGroupExpansion, collections::use_collection},
+    hooks::{
+        DisclosureGroupExpansion,
+        collections::{Key, use_collection},
+    },
 };
 use leptos::prelude::*;
 
@@ -14,9 +19,19 @@ use leptos::prelude::*;
 /// - Nested: "Outer" with a panel holding the "Inner" disclosure ("Inner content").
 /// - A single-expansion group ("Group A", "Group B"), a multiple-expansion group ("Multi C",
 ///   "Multi D") and a disabled group ("Disabled E").
+/// - Controlled: "Controlled" (expanded, without a setter; changes in `#test-disc-controlled-changes`),
+///   "Disabled expanded", "Closed controlled" (collapsed without a setter; the requested states in
+///   `#test-disc-closed-requests`).
+/// - A group reporting its expanded keys (`#test-disc-group-keys`) with "Report 1"/"Report 2", a
+///   controlled group ("Controlled 1"/"Controlled 2", `#test-disc-expand-2` expands the second)
+///   and nested groups ("Nested 1" holding "Nested 2").
 #[component]
 pub fn PageAtomDisclosure() -> impl IntoView {
     let changes = RwSignal::new(0u32);
+    let controlled_changes = RwSignal::new(String::new());
+    let closed_requests = RwSignal::new(String::new());
+    let group_keys = RwSignal::new(String::new());
+    let controlled_keys = RwSignal::new(HashSet::from([Key::from("item1")]));
     let actions = use_collection(|b| {
         b.item("rename", "Rename");
         b.item("delete", "Delete");
@@ -80,6 +95,74 @@ pub fn PageAtomDisclosure() -> impl IntoView {
                 <DisclosureTrigger><Button>"Region"</Button></DisclosureTrigger>
                 <DisclosurePanel role=DisclosurePanelRole::Region><p>"Region content"</p></DisclosurePanel>
             </Disclosure>
+
+            <Disclosure
+                is_expanded=true
+                on_expanded_change=move |expanded: bool| controlled_changes.update(|c| c.push_str(&expanded.to_string()))
+                classes="test-disc-controlled"
+            >
+                <DisclosureTrigger><Button>"Controlled"</Button></DisclosureTrigger>
+                <DisclosurePanel><p>"Controlled content"</p></DisclosurePanel>
+            </Disclosure>
+            <div>"Controlled changes: " <span id="test-disc-controlled-changes">{controlled_changes}</span></div>
+
+            <Disclosure is_disabled=true is_expanded=true classes="test-disc-disabled-expanded">
+                <DisclosureTrigger><Button>"Disabled expanded"</Button></DisclosureTrigger>
+                <DisclosurePanel><p>"Disabled expanded content"</p></DisclosurePanel>
+            </Disclosure>
+
+            <Disclosure
+                is_expanded=false
+                on_expanded_change=move |expanded: bool| closed_requests.update(|c| c.push_str(&expanded.to_string()))
+            >
+                <DisclosureTrigger><Button>"Closed controlled"</Button></DisclosureTrigger>
+                <DisclosurePanel><p>"Closed controlled content"</p></DisclosurePanel>
+            </Disclosure>
+            <div>"Closed requests: " <span id="test-disc-closed-requests">{closed_requests}</span></div>
+
+            <DisclosureGroup on_expanded_change={move |keys: HashSet<Key>| {
+                let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
+                keys.sort();
+                group_keys.set(keys.join(","));
+            }}>
+                <Disclosure id="report1">
+                    <DisclosureTrigger><Button>"Report 1"</Button></DisclosureTrigger>
+                    <DisclosurePanel><p>"Report 1 content"</p></DisclosurePanel>
+                </Disclosure>
+                <Disclosure id="report2">
+                    <DisclosureTrigger><Button>"Report 2"</Button></DisclosureTrigger>
+                    <DisclosurePanel><p>"Report 2 content"</p></DisclosurePanel>
+                </Disclosure>
+            </DisclosureGroup>
+            <div>"Group keys: " <span id="test-disc-group-keys">{group_keys}</span></div>
+
+            <button id="test-disc-expand-2" on:click=move |_| controlled_keys.set(HashSet::from([Key::from("item2")]))>
+                "Expand item2"
+            </button>
+            <DisclosureGroup expanded_keys=controlled_keys>
+                <Disclosure id="item1">
+                    <DisclosureTrigger><Button>"Controlled 1"</Button></DisclosureTrigger>
+                    <DisclosurePanel><p>"Controlled 1 content"</p></DisclosurePanel>
+                </Disclosure>
+                <Disclosure id="item2">
+                    <DisclosureTrigger><Button>"Controlled 2"</Button></DisclosureTrigger>
+                    <DisclosurePanel><p>"Controlled 2 content"</p></DisclosurePanel>
+                </Disclosure>
+            </DisclosureGroup>
+
+            <DisclosureGroup>
+                <Disclosure id="nested1">
+                    <DisclosureTrigger><Button>"Nested 1"</Button></DisclosureTrigger>
+                    <DisclosurePanel>
+                        <DisclosureGroup>
+                            <Disclosure id="nested2">
+                                <DisclosureTrigger><Button>"Nested 2"</Button></DisclosureTrigger>
+                                <DisclosurePanel><p>"Nested 2 content"</p></DisclosurePanel>
+                            </Disclosure>
+                        </DisclosureGroup>
+                    </DisclosurePanel>
+                </Disclosure>
+            </DisclosureGroup>
 
             <DisclosureGroup is_disabled=true>
                 <Disclosure id="e">

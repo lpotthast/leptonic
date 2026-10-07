@@ -12,7 +12,8 @@ use crate::pages::{BaseActions, Page};
 
 /// The toolbar atom ("supports keyboard navigation"): one tab stop, arrow keys along its
 /// orientation across nested toolbars and dividers without wrapping, Tab leaving and re-entering
-/// at the control focused last; nested toolbars are groups.
+/// at the control focused last; nested toolbars are groups; vertical and right-to-left toolbars;
+/// toolbars of toggle buttons, checkboxes and links.
 pub struct ToolbarTests {}
 
 #[async_trait]
@@ -97,6 +98,60 @@ impl BrowserTest<str> for ToolbarTests {
         page.wait_for_active_text("RTL 2").await?;
         page.send_keys_to_active(Key::Right).await?;
         page.wait_for_active_text("RTL 1").await?;
+
+        // "supports RTL with orientation vertical": up and down move; left and right don't.
+        page.by_role_and_text("button", "RV 1")
+            .await?
+            .click()
+            .await?;
+        page.send_keys_to_active(Key::Down).await?;
+        page.wait_for_active_text("RV 2").await?;
+        page.send_keys_to_active(Key::Up).await?;
+        page.wait_for_active_text("RV 1").await?;
+        page.send_keys_to_active(Key::Left).await?;
+        page.send_keys_to_active(Key::Right).await?;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        page.wait_for_active_text("RV 1").await?;
+
+        // "supports all the aria example children": toggle buttons, a checkbox and a link, without
+        // wrapping at the end.
+        page.element("test-toolbar-input-before")
+            .await?
+            .click()
+            .await?;
+        page.press_tab().await?;
+        page.wait_for_active_text("B").await?;
+        page.send_keys_to_active(Key::Right).await?;
+        page.wait_for_active_text("U").await?;
+        page.send_keys_to_active(Key::Right).await?;
+        page.wait_for_active_text("I").await?;
+        page.send_keys_to_active(Key::Right).await?;
+        let checkbox_focused = || async {
+            let focused: bool = page
+                .driver
+                .execute(
+                    "const el = document.activeElement;
+                     return el.type === 'checkbox' && el.closest('label').innerText.includes('Night Mode');",
+                    vec![],
+                )
+                .await?
+                .convert()?;
+            Ok::<bool, Report>(focused)
+        };
+        for _ in 0..100 {
+            if checkbox_focused().await? {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert_that!(checkbox_focused().await?)
+            .with_detail_message("the Night Mode checkbox is focused")
+            .is_true();
+        page.send_keys_to_active(Key::Right).await?;
+        page.wait_for_active_text("Help").await?;
+        page.send_keys_to_active(Key::Right).await?;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        page.wait_for_active_text("Help").await?;
 
         page.expect_no_page_errors().await
     }

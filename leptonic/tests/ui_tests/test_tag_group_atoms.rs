@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use assertr::prelude::*;
 use browser_test::{
     BrowserTest, async_trait,
-    thirtyfour::{By, Key, WebDriver},
+    thirtyfour::{By, Key, WebDriver, WebElement},
 };
 use rootcause::Report;
 
@@ -39,12 +39,16 @@ impl BrowserTest<str> for TagGroupAtomTests {
         let description_id = description.attr("id").await?.unwrap_or_default();
         assert_that!(describedby.split(' ').any(|id| id == description_id)).is_true();
 
-        // "should support focus ring": Tab focuses the first tag, focus visible. (A tag's text
-        // includes its remove button's "x".)
+        // The group's label context ends with the group: a label after it is a plain one.
+        let outside = page.css("#test-tg-after-group label").await?;
+        assert_that!(outside.attr("id").await?).is_none();
+        assert_that!(page.count_matching(&format!("[id='{labelledby}']")).await?).is_equal_to(1);
+
+        // "should support focus ring": Tab focuses the first tag, focus visible.
         page.click_element_with_id("test-tg-before").await?;
         page.press_tab().await?;
-        page.wait_for_focus("row", Some("Catx")).await?;
-        let cat = page.by_role_and_text("row", "Catx").await?;
+        focus_on_tag(&page, "Cat").await?;
+        let cat = tag(&page, "Cat").await?;
         assert_that!(cat.attr("data-focus-visible").await?).is_equal_to(Some("true".to_owned()));
         // "should support removing items": removable tags, the button named "Remove".
         assert_that!(cat.attr("data-allows-removing").await?).is_equal_to(Some("true".to_owned()));
@@ -61,23 +65,23 @@ impl BrowserTest<str> for TagGroupAtomTests {
         page.wait_for_text("test-tg-remove-count", "2").await?;
         assert_that!(page.read_text_of("test-tg-removed").await?).is_equal_to("cat".to_owned());
         page.send_keys_to_active(Key::Shift + Key::Tab).await?;
-        page.wait_for_focus("row", Some("Catx")).await?;
+        focus_on_tag(&page, "Cat").await?;
         page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus("row", Some("Dogx")).await?;
+        focus_on_tag(&page, "Dog").await?;
         page.send_keys_to_active(Key::Delete).await?;
         page.wait_for_text("test-tg-remove-count", "3").await?;
         assert_that!(page.read_text_of("test-tg-removed").await?).is_equal_to("dog".to_owned());
 
         // "should support selection state": selecting, and removing the selected tags together.
         page.send_keys_to_active(" ").await?;
-        let dog = page.by_role_and_text("row", "Dogx").await?;
+        let dog = tag(&page, "Dog").await?;
         page.wait_for_selector("#test-tg-main .leptonic-Tag[data-selected]")
             .await?;
         assert_that!(dog.attr("data-selected").await?).is_equal_to(Some("true".to_owned()));
         assert_that!(dog.attr("data-selection-mode").await?)
             .is_equal_to(Some("multiple".to_owned()));
         page.send_keys_to_active(Key::Right).await?;
-        page.wait_for_focus("row", Some("Kangaroox")).await?;
+        focus_on_tag(&page, "Kangaroo").await?;
         page.send_keys_to_active(" ").await?;
         page.send_keys_to_active(Key::Backspace).await?;
         page.wait_for_text("test-tg-remove-count", "4").await?;
@@ -114,4 +118,16 @@ impl BrowserTest<str> for TagGroupAtomTests {
         assert_that!(fruits.find_all(By::Css(".leptonic-Tag")).await?.len()).is_equal_to(2);
         page.expect_no_page_errors().await
     }
+}
+
+/// The tag named `name` (its accessible name: its text also holds its remove button's).
+async fn tag(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
+    page.css(&format!("#test-tg-main [role=row][aria-label='{name}']"))
+        .await
+}
+
+/// Waits until the tag named `name` has the focus.
+async fn focus_on_tag(page: &Page<'_>, name: &str) -> Result<(), Report> {
+    let tag = tag(page, name).await?;
+    page.wait_for_focus_on(&tag, name).await
 }

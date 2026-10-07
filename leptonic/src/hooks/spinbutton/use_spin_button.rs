@@ -19,15 +19,13 @@ use crate::{
     },
     utils::{
         EventHandler,
-        aria::AriaRole,
+        aria::{AriaDisabled, AriaReadonly, AriaRequired, AriaRole},
         event_listeners::{Listener, listen_to},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         live_announcer::{Assertiveness, announce, clear_announcer},
         pointer_type::PointerType,
     },
 };
-
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/spinbutton/useSpinButton.ts
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -105,9 +103,9 @@ pub struct UseSpinButtonProps {
     pub aria_valuetext: Signal<String>,
     pub aria_valuemin: Signal<Option<String>>,
     pub aria_valuemax: Signal<Option<String>>,
-    pub aria_disabled: Signal<Option<&'static str>>,
-    pub aria_readonly: Signal<Option<&'static str>>,
-    pub aria_required: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_readonly: Signal<Option<AriaReadonly>>,
+    pub aria_required: Signal<Option<AriaRequired>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -120,9 +118,9 @@ pub type UseSpinButtonAttrs = (
     Attr<attr::AriaValuetext, Signal<String>>,
     Attr<attr::AriaValuemin, Signal<Option<String>>>,
     Attr<attr::AriaValuemax, Signal<Option<String>>>,
-    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
-    Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
-    Attr<attr::AriaRequired, Signal<Option<&'static str>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
+    Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -396,9 +394,9 @@ pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
             aria_valuetext: aria_text_value.into(),
             aria_valuemin: format_bound(min_value),
             aria_valuemax: format_bound(max_value),
-            aria_disabled: Signal::derive(move || disabled.get().then_some("true")),
-            aria_readonly: Signal::derive(move || read_only.get().then_some("true")),
-            aria_required: Signal::derive(move || required.get().then_some("true")),
+            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
+            aria_readonly: Signal::derive(move || read_only.get().then_some(AriaReadonly::True)),
+            aria_required: Signal::derive(move || required.get().then_some(AriaRequired::True)),
             on_keydown: keyboard_props.on_keydown,
             on_keyup: keyboard_props.on_keyup,
             on_focus: EventHandler::new(move |e: FocusEvent| on_focus.run(e)),

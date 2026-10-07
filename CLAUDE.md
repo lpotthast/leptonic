@@ -34,9 +34,14 @@ components with theming capabilities, built on a layered architecture of hooks, 
   `Some`. Use the `EventAccessors` extension trait (`expect_target()`, `expect_current_target()`) from `utils/mod.rs`
   instead of `.unwrap()`, `.expect()`, or `.and_then()`. **Exception:** `current_target` becomes `null` after the
   handler returns (per DOM spec), so stored/deferred events must use `if let Some(...)` for `.current_target()`.
-- **Event propagation**: Leptonic events stop propagation by default. User handlers call `continue_propagation()` to
-  opt in to bubbling. Implemented via the sealed `Propagation` trait and `PropagationControl` from
-  `utils/propagation_control.rs`. All user-facing event types must implement `Propagation`.
+- **Event propagation** (the user's decision, 2026-10-07): exactly the event types whose react-aria counterpart has
+  `continuePropagation()` implement the sealed `Propagation` trait (`utils/propagation_control.rs`): press events
+  (`PressEvent`) and keyboard events (`KeyboardEventWrapper`; react-aria's `BaseEvent<KeyboardEvent>`). They stop
+  propagation by default; user handlers call `continue_propagation()` to let the event bubble. Every other event type
+  (hover, move, long press, focus, focus within, scroll wheel, DnD) has no `Propagation` and keeps upstream's fixed
+  behavior: hover and focus events never stop propagation (stopping `focusin`/`focusout` would break nested
+  focus-within containers and collection listeners), move/scroll-wheel/DnD stop the native events they handle
+  unconditionally. Details: `documentation/hooks-implementation.md`, "Event Propagation Control".
 
 ## Working in Parallel
 
@@ -129,8 +134,9 @@ becomes hooks + atoms + an optional CSS theme for the atoms (`documentation/conv
    react-aria supports environments not supporting modern PointerEvent's. We DO NOT support these. Any hook we
    implement may assume that PointerEvent is available.
 
-2. **Atoms** (`leptonic/src/atoms/`) - Headless/unstyled single-element components built on hooks (Button, Link,
-   Popover). Easy to style.
+2. **Atoms** (`leptonic/src/atoms/`) - Unstyled single-element components built on hooks (Button, Link,
+   Popover), ported from react-aria-components. Styled through their default class (`leptonic-<AtomName>`) and data
+   attributes; `leptonic-theme` has an optional atom theme.
 
 3. **Components** (`leptonic/src/components/`) - Pre-built, feature-rich components built on atoms. Include styling and
    complex behavior (Modal, Select, DateSelector, Table, Toast, Tabs, etc.).
@@ -179,9 +185,10 @@ See [documentation/hooks-implementation.md](documentation/hooks-implementation.m
 - Element capture pattern (`ElementCaptureAttr`)
 - Event handler patterns (Copy requirements, cleanup, dynamic listeners)
 - React-aria deviation documentation format
-- Hook-owned state: Hooks always create and own their `WriteSignal` internally. Callers get
-  read-only `Signal<T>` output and must use the hook's mutation callbacks. This is an intentional
-  deviation from React Aria's `useControlledState` pattern. See `documentation/hooks-implementation.md`.
+- Hook-owned state (C4): a state hook takes `default_*` + `on_*_change`, or a `ValueBinding` to app state (the
+  atoms build it from their `x` + `set_x` props). Callers read `Signal`s and change the state only through the
+  state's methods, so the hook's invariants and change callbacks always apply. This replaces React Aria's
+  `useControlledState` value/defaultValue pair. See `documentation/hooks-implementation.md`.
 - Book-SSR documentation page structure
 
 ## Book-SSR (Documentation App)
@@ -214,14 +221,15 @@ manual testing during development. It is named "book" following Rust ecosystem c
 
 ## Feature Flags
 
-Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `components`
+Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `components` (each gates its module). Every
+dependency is declared with `default-features = false` and only the features it needs.
 
 - `hooks` - Low-level interaction hooks
 - `atoms` - Headless base components (requires hooks)
 - `components` - Full pre-built components (requires atoms)
 - `clipboard` - Clipboard support
 - `tiptap` - Rich text editor (leptos-tiptap; its JS ships as wasm-bindgen snippets, nothing to copy)
-- `syntax-highlight` (syntect) / `sanitize` (ammonia) - Optional component extras
+- `syntax-highlight` (syntect, `utils::syntax_highlight`) / `sanitize` (ammonia, components) - Optional extras
 - `ssr` / `hydrate` - Server-side rendering support
 - `nightly` - Enables `leptos/nightly`
 - `full` - hooks, atoms, components, clipboard, tiptap, syntax-highlight, sanitize (not ssr/hydrate/nightly)
@@ -279,17 +287,19 @@ Browser tests live in `leptonic/tests/` and drive the test-app in `testing/test-
 WebDriver session per test, 4 tests in parallel by default, `thirtyfour` re-exported as `browser_test::thirtyfour`).
 Tests must not depend on each other or on shared server state; checks of the whole run go into `ui_tests::after_all()`.
 
-- **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks,components}/`
+- **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks}/`
   and is registered in `FIXTURES` (`testing/test-app/src/pages/mod.rs`). It is served at `/{group}/{name}`.
 - **Hydration**: the test-app sets `data-hydrated` on `<body>` once hydration finished. `BaseActions::goto_path`
   waits for it, so tests never interact with a page whose event handlers aren't attached yet.
 - **Tests**: page objects in `tests/pages/` (implement `BaseActions` to get shared helpers: clicking, reading text,
   focus/active-element queries, keyboard input, waiting), test implementations in `tests/ui_tests/test_*.rs`
   (implement `BrowserTest<str>`; the context is the app's base URL). Register new tests in `ui_tests::all()`.
-- **Failures fail `cargo test`**: the runner uses `BrowserTestFailurePolicy::RunAll` and reports every failing test.
+- **Failures fail `cargo test`**: the runner uses `FailurePolicy::RunAll` and reports every failing test.
   Assertions use `assertr` (panics are reported as test failures); helpers return `Result<_, rootcause::Report>`.
 - **Prefer waiting over sleeping**: use the polling helpers (`wait_for_selector`, `wait_for_text`,
-  `wait_for_active_text`) instead of fixed sleeps; focus and state often change in effects after the event.
+  `wait_for_active_text`, `wait_for_attr`, `wait_for_prop`, generic `wait_for_value`/`wait_until`) instead of fixed
+  sleeps or hand-rolled loops; focus and state often change in effects after the event. Negative checks ("nothing
+  changed") use `assert_stays` (settle, re-checked over 300 ms), not a single read.
 - **Find elements as users do**: by role and text (`by_role_and_text`, `css("[role=listbox]")`). Atoms generate
   their own ids.
 - **Derive tests from react-aria**: react-aria's own tests (`../react-spectrum/packages/react-aria/test/`,

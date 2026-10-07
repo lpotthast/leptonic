@@ -1,4 +1,4 @@
-// Overlays: demos of Dialog, Drawer, Modal, Popover and Tooltip (backdrops, popovers and tooltips: `_shared.scss`).
+// Overlays: demos of Dialog, Modal (with the drawer), Popover and Tooltip (backdrops, popovers and tooltips: `_shared.scss`).
 // Not part of leptonic: when copying a demo, replace these classes with your own styles. Colors use the book's
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
@@ -168,8 +168,84 @@
 
 // -- Drawer --
 
-// The drawer's content (`classes` reach the dialog, which fills the theme's panel): stacked, with room to the edges.
-.demo-drawer { gap: var(--book-space-s); padding: var(--book-space-m); }
+// A drawer built from the modal atoms: the backdrop covers the page and holds the panel at its left edge.
+.demo-drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--book-z-backdrop);
+    display: flex;
+    background: var(--book-backdrop-color);
+
+    &[data-entering] { animation: demo-backdrop-fade var(--book-transition); }
+    &[data-exiting] { animation: demo-backdrop-fade var(--book-transition) reverse forwards; }
+}
+
+// The panel (`ModalContent`): slides in from the left while `data-entering`, out while `data-exiting`.
+.demo-drawer {
+    display: flex;
+    width: 17em;
+    max-width: 85vw;
+    height: 100%;
+    overflow: auto;
+    background: var(--book-surface-color-raised);
+    box-shadow: var(--book-shadow);
+
+    &[data-entering] { animation: demo-drawer-slide var(--book-transition); }
+    &[data-exiting] { animation: demo-drawer-slide var(--book-transition) reverse forwards; }
+}
+
+@keyframes demo-drawer-slide {
+    from { transform: translateX(-100%); }
+}
+
+// Without motion, the panel doesn't slide. The backdrop still fades, so the atoms still see an animation end.
+@media (prefers-reduced-motion: reduce) {
+    @keyframes demo-drawer-slide {
+        from { transform: none; }
+    }
+}
+
+// The dialog fills the panel. It receives focus when it opens through the keyboard.
+.demo-drawer-dialog {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--book-space-xs);
+    padding: var(--book-space-m);
+
+    &:focus { outline: none; }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
 
 // The close button at the top end of the drawer.
-.demo-drawer-header { display: flex; justify-content: flex-end; }
+.demo-drawer-close {
+    display: flex;
+    align-self: flex-end;
+    padding: var(--book-space-s);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: inherit;
+    font-size: var(--book-font-size-l);
+    cursor: pointer;
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); }
+}
+
+// The folders: full-width rows.
+.demo-drawer-item {
+    padding: var(--book-space-s) var(--book-space-m);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: var(--main-color);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-pressed] { background: var(--brand-color-subtle); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}

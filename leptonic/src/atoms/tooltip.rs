@@ -29,12 +29,13 @@ use crate::{
 //   `FocusableContext`, as react-aria-components' `FocusableProvider`.
 // - Open state (C4): `default_open` + `on_open_change`, or `is_open` + `set_open` (react-aria:
 //   `isOpen` + `onOpenChange`).
-// - `placement` is the typed `Placement` enum; render props become `data-placement` plus plain
-//   children.
+// - `placement` is the typed `Placement` enum; render props become `data-placement`,
+//   `data-entering` and `data-exiting` plus plain children.
+// - A `Tooltip` must be inside a `TooltipTrigger` (react-aria-components: a standalone tooltip
+//   can have its own `isOpen`/`defaultOpen`).
 //
 // ## OMITTED FEATURES
-// - Entry/exit animations (`should_skip_animation` is exposed on the state),
-//   `UNSTABLE_portalContainer`.
+// - `isEntering`/`isExiting` props, `UNSTABLE_portalContainer`.
 //
 // =============================================================================
 
@@ -88,14 +89,12 @@ pub fn TooltipTrigger(
         trigger_props,
         tooltip_props,
         ..
-    } = use_tooltip_trigger(
-        UseTooltipTriggerInput {
-            is_disabled,
-            trigger,
-            should_close_on_press,
-        },
+    } = use_tooltip_trigger(UseTooltipTriggerInput {
         state,
-    );
+        is_disabled,
+        trigger,
+        should_close_on_press,
+    });
     let trigger_element = CapturedElement::new();
     let pointer_handlers = StoredValue::new((
         trigger_props.on_pointerenter,
@@ -223,14 +222,17 @@ pub fn Tooltip(
     let styles = StoredValue::new(position_styles.merge(anchor_point).merge(styles));
     let children = StoredValue::new(children);
     let tooltip_id = StoredValue::new(tooltip_id);
-    // The tooltip stays rendered while its exit animations run (`data-exiting`).
+    // The tooltip stays rendered while its exit animations run (`data-exiting`), unless it closes
+    // instantly (another tooltip replaces it during the warm-up).
     let element = CapturedElement::new();
-    let is_exiting = use_exit_animation(UseExitAnimationInput {
+    let exit_animation = use_exit_animation(UseExitAnimationInput {
         element,
         is_open,
         on_exit: None,
     })
     .is_exiting;
+    let skip_animation = state.should_skip_animation;
+    let is_exiting = Signal::derive(move || !skip_animation.get() && exit_animation.get());
 
     view! {
         // No portal container while closed: a modal would make it inert.
@@ -238,12 +240,15 @@ pub fn Tooltip(
             {
                 // Entering (per opening) once the placement is known (react-aria-components).
                 let entering = CapturedElement::new();
-                let is_entering = use_enter_animation(UseEnterAnimationInput {
+                let enter_animation = use_enter_animation(UseEnterAnimationInput {
                     is_ready: Signal::derive(move || resolved_placement.get().is_some()),
                     element: entering,
-on_enter: None
+                    on_enter: None,
                 })
                 .is_entering;
+                // Not when opening instantly (replacing another tooltip during the warm-up).
+                let is_entering =
+                    Signal::derive(move || !skip_animation.get() && enter_animation.get());
                 view! {
             <Portal>
                 <div
@@ -253,7 +258,6 @@ on_enter: None
                     data-entering=flag(is_entering)
                     data-exiting=flag(is_exiting)
                     id=tooltip_id.get_value()
-                    role="tooltip"
                     class=classes.get_value()
                     style=styles.get_value()
                     data-placement=move || resolved_placement.get().map(PlacementAxis::as_str)

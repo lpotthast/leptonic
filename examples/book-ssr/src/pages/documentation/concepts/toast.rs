@@ -28,7 +28,7 @@ pub fn PageToastOverview() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Show a lasting message in the page, such as a warning above a form"</TableCell>
-                        <TableCell><Link href=routes::doc::Alert.materialize()>"Alert"</Link></TableCell>
+                        <TableCell>"An "<Link href=format!("{}#alert", routes::doc::Status.materialize())>"alert"</Link>" in the page"</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Require a decision before the user continues"</TableCell>
@@ -71,8 +71,11 @@ pub fn PageToastOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "With "<Code inline=true>"Root"</Code>" around your app, push a "<Code inline=true>"Toast"</Code>" to the "
-                    <Code inline=true>"Toasts"</Code>" context:"
+                    "Add toasts to a "<Code inline=true>"ToastQueue"</Code>" and render them with a "
+                    <Code inline=true>"ToastRegion"</Code>" from the atoms. An app creates one queue near its root and "
+                    "provides it as context, so that any code can add toasts. The classes are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::toast::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows their CSS."
                 </p>
                 <Demo
                     description="Save button showing a success toast"
@@ -117,7 +120,7 @@ pub fn PageToastOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::toast::Hook.materialize()>"Toast Hooks"</Link></li>
                 <li><Link href=routes::doc::toast::Atom.materialize()>"Toast Atoms"</Link></li>
-                <li><Link href=routes::doc::Alert.materialize()>"Alert"</Link></li>
+                <li><Link href=format!("{}#alert", routes::doc::Status.materialize())>"Alert"</Link></li>
                 <li><Link href=routes::doc::focus::UseLandmark.materialize()>"use_landmark"</Link></li>
                 <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
             </SeeAlso>

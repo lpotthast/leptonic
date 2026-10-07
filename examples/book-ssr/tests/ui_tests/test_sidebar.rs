@@ -51,14 +51,14 @@ impl BrowserTest<str> for SidebarTests {
         page.wait_until("other concept groups are collapsed", &collapsed("Fields"))
             .await?;
 
-        // Button exists at all three layers.
+        // Button exists as hooks and atoms.
         let present = page
             .strings(
                 "return [...document.querySelectorAll('#book-doc-sidebar a.book-nav-item[href=\"/doc/button\"] \
                  .book-layer-marks [data-present=true]')].map(mark => mark.textContent);",
             )
             .await?;
-        assert_that!(present).is_equal_to(vec!["H".to_owned(), "A".to_owned(), "C".to_owned()]);
+        assert_that!(present).is_equal_to(vec!["H".to_owned(), "A".to_owned()]);
 
         // A building block carries the badge of its kind.
         let badges = page

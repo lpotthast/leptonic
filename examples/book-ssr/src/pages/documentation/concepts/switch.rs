@@ -60,8 +60,11 @@ pub fn PageSwitchOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "Pass the component an "<Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"is_selected"</Code>
-                    " and "<Code inline=true>"set_selected"</Code>", and the label as children:"
+                    "Pass the "<Code inline=true>"Switch"</Code>" atom an "<Code inline=true>"RwSignal"</Code>" as "
+                    <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>", and the label as "
+                    "children. The track and thumb are your own markup, styled through the atom\u{2019}s data attributes "
+                    "(the CSS is on the "<Link href=format!("{}#styling", routes::doc::switch::Atom.materialize())>"Switch Atom"</Link>
+                    " page):"
                 </p>
                 <Demo description="Wi-Fi switch kept in a signal, showing its state, with a disabled toggle" source=include_str!("demos/switch.rs") source_open=true>
                     <SwitchConceptDemo/>

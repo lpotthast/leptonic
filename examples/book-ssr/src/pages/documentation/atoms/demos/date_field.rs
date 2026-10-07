@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::{
+        checkbox::Checkbox,
         datepicker::{DateField, DateInput, DateSegment},
         field::{Description, FieldError, Label},
     },
-    components::prelude::Checkbox,
     hooks::ValidationBehavior,
     jiff::civil::{Date, Weekday},
 };
@@ -53,7 +53,10 @@ pub fn DateFieldAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

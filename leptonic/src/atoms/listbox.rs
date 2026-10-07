@@ -2,12 +2,14 @@ use std::collections::HashSet;
 
 use leptos::{context::Provider, prelude::*};
 
+use super::separator::SeparatorContext;
 use crate::{
     Out,
     hooks::{
         DisabledBehavior, IntoAttrs, ListBoxData, Orientation, SelectionBehavior, SelectionMode,
-        UseFocusRingInput, UseListBoxInput, UseListBoxReturn, UseListBoxSectionInput,
-        UseListBoxSectionReturn, UseOptionInput, UseOptionReturn,
+        SeparatorElementType, UseFocusRingInput, UseListBoxInput, UseListBoxReturn,
+        UseListBoxSectionHeadingProps, UseListBoxSectionInput, UseListBoxSectionReturn,
+        UseOptionInput, UseOptionReturn,
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout, Node,
             Selection, SelectionOptions, UseListStateInput, use_list_state,
@@ -48,7 +50,12 @@ pub struct ListBoxItemCtx {
 /// collection entry, in collection order. Inside a [`Select`](super::select::Select) or
 /// [`ComboBox`](super::combobox::ComboBox) (see [`ListBoxParent`]), the
 /// listbox shows the parent's options with the parent's settings; the props below are then
-/// ignored.
+/// ignored. A [`Separator`](super::separator::Separator) between options renders a
+/// `<div role="separator">` (an `<hr>` can't be inside a listbox).
+///
+/// # Panics
+///
+/// Without a `collection` outside of a `Select` or `ComboBox`.
 ///
 /// ```ignore
 /// let fruits = use_list_collection(Signal::stored(vec!["Apple", "Banana"]), |f| Key::from(*f), |f| f.to_string());
@@ -72,7 +79,9 @@ pub fn ListBox(
     #[prop(into, optional)]
     collection: Option<CollectionMemo>,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
-    #[prop(optional)] selection_behavior: SelectionBehavior,
+    /// How pressing an item changes the selection; a change applies right away.
+    #[prop(into, optional)]
+    selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
@@ -100,6 +109,10 @@ pub fn ListBox(
     /// Called with the key of an activated option.
     #[prop(into, optional)]
     on_action: Option<Callback<Key>>,
+    /// Shown while there are no options (also inside a `Select` or `ComboBox`), in a
+    /// `role="option"` element with `display: contents` (react-aria-components).
+    #[prop(into, optional)]
+    empty_state: Option<ViewFn>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -112,10 +125,8 @@ pub fn ListBox(
         parent.input.get_value()
     } else {
         let state = {
-            let collection = collection.unwrap_or_else(|| {
-                crate::utils::dev_warn!("ListBox: no `collection` given (and not inside a Select)");
-                Memo::new(|_| std::sync::Arc::default())
-            });
+            let collection =
+                collection.expect("a ListBox outside of a Select or ComboBox needs a `collection`");
             use_list_state(UseListStateInput {
                 collection,
                 selection: SelectionOptions {
@@ -186,6 +197,16 @@ pub fn ListBox(
     let collection = state.collection;
     let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
     let focus_ring = use_focus_ring(UseFocusRingInput::default());
+    let empty = move || {
+        let empty_state = empty_state.clone()?;
+        is_empty.get().then(|| {
+            view! {
+                <div role="option" style="display: contents">
+                    {empty_state.run()}
+                </div>
+            }
+        })
+    };
 
     let UseListBoxReturn { props, data } = use_listbox(input);
     let styles = match root {
@@ -196,6 +217,10 @@ pub fn ListBox(
     view! {
         <Provider value=data>
             <Provider value=root>
+            // Separators between the options are `<div role="separator">`s (react-aria-components).
+            <Provider value=SeparatorContext {
+                element_type: SeparatorElementType::Div,
+            }>
                 <div
                     {..props.into_attrs()}
                     {..focus_ring.props.into_attrs()}
@@ -208,7 +233,9 @@ pub fn ListBox(
                     data-orientation=data_orientation
                 >
                     {children()}
+                    {empty}
                 </div>
+            </Provider>
             </Provider>
         </Provider>
     }
@@ -396,8 +423,24 @@ fn slot(
     }
 }
 
-/// A group of options in a [`ListBox`], for the collection section `key`. Renders the
-/// section's header (if the collection has one) followed by the children.
+/// What a [`ListBoxSection`] provides to its [`ListBoxSectionHeading`].
+#[derive(Clone, Copy)]
+struct ListBoxSectionCtx {
+    heading_props: StoredValue<Option<UseListBoxSectionHeadingProps>>,
+    /// The collection's header text.
+    heading: StoredValue<Option<String>>,
+}
+
+/// A group of options in a [`ListBox`], for the collection section `key`: one `role="group"`
+/// element holding a [`ListBoxSectionHeading`] (when the section has a header in the
+/// collection) and the section's options.
+///
+/// ```ignore
+/// <ListBoxSection key="fruit">
+///     <ListBoxSectionHeading />
+///     <ListBoxItem key="apple">"Apple"</ListBoxItem>
+/// </ListBoxSection>
+/// ```
 ///
 /// Default class: `leptonic-ListBoxSection`.
 #[component]
@@ -407,32 +450,62 @@ pub fn ListBoxSection(
     key: Key,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    #[prop(into, optional)] heading_classes: Classes,
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ListBoxSection", classes);
-    let heading_classes = with_default_class("leptonic-ListBoxSectionHeading", heading_classes);
     let list = expect_context::<ListBoxData>();
     let UseListBoxSectionReturn {
-        item_props,
         heading_props,
         group_props,
         heading,
+        ..
     } = use_listbox_section(UseListBoxSectionInput { list, key });
+    let ctx = ListBoxSectionCtx {
+        heading_props: StoredValue::new(heading_props),
+        heading: StoredValue::new(heading),
+    };
 
     view! {
-        <div {..item_props.into_attrs()}>
-            {heading_props
-                .map(|props| {
-                    view! {
-                        <div {..props.into_attrs()} class=heading_classes>
-                            {heading}
-                        </div>
-                    }
-                })}
-            <div {..group_props.into_attrs()} class=classes style=styles>
-                {children()}
-            </div>
-        </div>
+        <section {..group_props.into_attrs()} class=classes style=styles>
+            <Provider value=ctx>{children()}</Provider>
+        </section>
+    }
+}
+
+/// The heading of a [`ListBoxSection`] (react-aria-components: `Header`), labelling the section.
+/// Shows `children`, or else the section's header text from the collection. Hidden from
+/// assistive technology as a heading (a listbox can't contain headings): it names the group.
+///
+/// Default class: `leptonic-ListBoxSectionHeading`.
+#[component]
+pub fn ListBoxSectionHeading(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-ListBoxSectionHeading", classes);
+    let ctx = expect_context::<ListBoxSectionCtx>();
+    let content = match children {
+        Some(children) => children().into_any(),
+        None => ctx.heading.get_value().into_any(),
+    };
+    if let Some(props) = ctx.heading_props.try_update_value(Option::take).flatten() {
+        view! {
+            <header {..props.into_attrs()} class=classes style=styles>
+                {content}
+            </header>
+        }
+        .into_any()
+    } else {
+        crate::utils::dev_warn!(
+            "ListBoxSectionHeading: one per section, and only for sections with a header in \
+                 the collection"
+        );
+        view! {
+            <header class=classes style=styles>
+                {content}
+            </header>
+        }
+        .into_any()
     }
 }

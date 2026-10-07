@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
 use std::sync::Arc;
 
 use send_wrapper::SendWrapper;
@@ -16,31 +16,22 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/FocusScope.tsx
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## React-aria deviation
+// ## API DIFFERENCES
+// - `use_focus_manager(input)` returns the manager plus an `ElementCaptureAttr` to spread onto the
+//   scope element: no `RefObject` to create and pass. React-aria: `createFocusManager(ref)`, or
+//   `useFocusManager()` reading the manager of the enclosing `FocusScope` (here: the
+//   `FocusScopeContext` of the `FocusScope` atom).
+// - The default options of `createFocusManager(ref, defaultOptions)` are a default filter only
+//   (`FocusManager::with_default_accept`): `from`, `wrap` and `tabbable` describe a single call,
+//   and `FocusManagerOptions` names them all in each call (struct literal or `Default`).
+// - `find_first`/`find_last` return the element without focusing it, for callers with their own
+//   focus strategy (e.g. `focus_safely` without scrolling). React-aria has no such methods.
 //
-// **React-aria pattern**: `useFocusManager()` is used within a `FocusScopeContext` provider,
-// and `createFocusManager(scopeRef)` is used elsewhere with an explicit ref.
-//
-// **Leptonic pattern**: `use_focus_manager(input)` returns props with `ElementCaptureAttr` that
-// automatically captures the element when spread. This is a deliberate deviation for better
-// ergonomics. Users don't need to manually create and wire up NodeRefs. The element is captured
-// automatically when attributes are spread.
-
-// ## DIFFERENT BEHAVIOR
-//
-// - Element capture pattern vs scope context
-//   React-aria: `useFocusManager()` reads from `FocusContext` provided by a parent
-//   `FocusScope`. `createFocusManager(ref)` takes an explicit ref.
-//   Leptonic: `use_focus_manager(input)` returns `ElementCaptureAttr` that auto-
-//   captures the element when spread. No wrapper or manual NodeRef needed.
-//
-// ## OMITTED FUNCTIONALITY
-//
-// - No `defaultOptions` merging
-//   React-aria's `createFocusManager(ref, defaultOptions)` merges defaults with
-//   per-call options. Leptonic requires full options on each method call.
+// =============================================================================
 
 /// Options for focus movement.
 #[derive(Clone, Default)]

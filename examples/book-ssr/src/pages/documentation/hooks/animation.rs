@@ -26,44 +26,16 @@ pub fn PageAnimationHooks() -> impl IntoView {
             </p>
             <ReactAriaSource path="utils/animation.ts"/>
 
-            <Section title="Pages">
-                <SectionMembers overview=routes::doc::Animation.materialize()/>
-            </Section>
-
             <Section title="Relationships">
                 <p>
-                    "Use the "<Link href=routes::doc::animation::Transitions.materialize()>"Transitions"</Link>
-                    " components when content stays mounted and only animates between shown and hidden: an expandable "
-                    "details panel, a sidebar that slides away, a hint that fades out. You pick a component, pass a signal, "
-                    "and the theme or your CSS does the rest."
+                    "Content that stays mounted and only changes between shown and hidden, such as an expandable details "
+                    "panel or a sidebar that slides away, needs no hook: transition it with CSS on the attribute that holds "
+                    "its state ("<Code inline=true>"aria-expanded"</Code>", an atom\u{2019}s "<Code inline=true>"data-expanded"</Code>
+                    ", or one of your own), and make the hidden content "<Code inline=true>"inert"</Code>" so that it "
+                    "can\u{2019}t be focused or read. Use the animation hooks when the element is added to and removed from "
+                    "the DOM, as overlays, popovers and modals are: CSS alone can\u{2019}t animate an element that is already "
+                    "gone."
                 </p>
-                <p>
-                    "Use the animation hooks when the element is added to and removed from the DOM, as overlays, popovers "
-                    "and modals are. Transitions can\u{2019}t do that: they never unmount their children and don\u{2019}t "
-                    "tell you when an animation ended."
-                </p>
-                <DocTable headers=&["", "Transitions", "Animation hooks"]>
-                    <TableRow>
-                        <TableCell>"Children"</TableCell>
-                        <TableCell>"Always mounted"</TableCell>
-                        <TableCell>"Mounted while open or exiting; you unmount them afterwards"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"State"</TableCell>
-                        <TableCell><Code inline=true>"data-shown"</Code>" attribute; hidden content is "<Code inline=true>"inert"</Code></TableCell>
-                        <TableCell><Code inline=true>"data-entering"</Code>", "<Code inline=true>"data-exiting"</Code>", "<Code inline=true>"ExitState"</Code></TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Animation"</TableCell>
-                        <TableCell>"CSS transitions of the wrapper element"</TableCell>
-                        <TableCell>"Any CSS animation or transition on your element"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Layer"</TableCell>
-                        <TableCell>"Components with a wrapper "<Code inline=true>"<div>"</Code></TableCell>
-                        <TableCell>"Hooks; you render the element"</TableCell>
-                    </TableRow>
-                </DocTable>
                 <p>
                     "The two hooks split the work: "<Code inline=true>"use_exit_animation"</Code>" decides how long the "
                     "element stays rendered, so you create it next to the "<Code inline=true>"is_open"</Code>" state, "

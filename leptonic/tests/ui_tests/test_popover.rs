@@ -13,7 +13,9 @@ use crate::pages::{BaseActions, Page};
 
 /// `DialogTrigger` + `Popover` atoms: the trigger opens a dialog in the popover and controls it,
 /// focus moves into the dialog and back, Escape and outside clicks close it, presses inside don't
-/// toggle the trigger, and a non-modal popover closes when focus moves out.
+/// toggle the trigger, and a non-modal popover closes when focus moves out (it contains the focus
+/// only while a dialog is inside, decided per opening). A popover keeps the direction of the
+/// subtree its trigger is in.
 pub struct PopoverTests {}
 
 #[async_trait]
@@ -164,6 +166,67 @@ impl BrowserTest<str> for PopoverTests {
             .execute("document.body.dispatchEvent(new Event('scroll'));", vec![])
             .await?;
         page.wait_for_no_selector("[role=dialog]").await?;
+
+        containment_per_opening(&page).await?;
+        direction(&page).await?;
         page.expect_no_page_errors().await
     }
+}
+
+/// A non-modal popover contains the focus while a dialog is inside; reopened without one, it
+/// doesn't (the containment starts over with each opening): Tab leaves it, which closes it.
+async fn containment_per_opening(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-popover-toggled-trigger")
+        .await?;
+    page.wait_for_selector("[role=dialog][aria-label=Toggled]")
+        .await?;
+    page.driver
+        .execute(
+            "document.getElementById('test-popover-toggled-second').focus()",
+            vec![],
+        )
+        .await?;
+    page.send_keys_to_active(Key::Tab).await?;
+    page.wait_for_active_id("test-popover-toggled-first")
+        .await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("#test-popover-toggled-first")
+        .await?;
+
+    // Without the dialog.
+    page.click_element_with_id("test-popover-with-dialog")
+        .await?;
+    page.click_element_with_id("test-popover-toggled-trigger")
+        .await?;
+    page.wait_for_selector("#test-popover-toggled-second")
+        .await?;
+    assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(0);
+    page.driver
+        .execute(
+            "document.getElementById('test-popover-toggled-second').focus()",
+            vec![],
+        )
+        .await?;
+    page.wait_for_active_id("test-popover-toggled-second")
+        .await?;
+    page.send_keys_to_active(Key::Tab).await?;
+    page.wait_for_no_selector("#test-popover-toggled-second")
+        .await
+}
+
+/// The portalled popover renders `dir` from its trigger's locale (react-aria-components).
+async fn direction(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-popover-rtl-trigger")
+        .await?;
+    page.wait_for_selector(".test-popover-rtl").await?;
+    let popover = page.css(".test-popover-rtl").await?;
+    assert_that!(popover.attr("dir").await?).is_equal_to(Some("rtl".to_owned()));
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector(".test-popover-rtl").await?;
+    page.click_element_with_id("test-popover-trigger").await?;
+    page.wait_for_selector(".leptonic-Popover").await?;
+    assert_that!(page.css(".leptonic-Popover").await?.attr("dir").await?)
+        .is_equal_to(Some("ltr".to_owned()));
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector(".leptonic-Popover").await
 }

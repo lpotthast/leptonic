@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptos::prelude::*;
 
 use super::demos::{
-    anchor_link::AnchorLinkAtomDemo, link::LinkAtomDemo, link_button::LinkButtonAtomDemo,
+    anchor_link::AnchorLinkAtomDemo, link::LinkAtomDemo, link_button::LinkStyledAsButtonDemo,
     link_external::LinkExternalAtomDemo,
 };
 use crate::{kit::*, routes};
@@ -14,8 +14,8 @@ pub fn PageAtomLink() -> impl IntoView {
         <DocPage title="Link Atoms">
             <p>
                 "The unstyled "<AnchorLink href="#link">"Link"</AnchorLink>" takes users to another page of your app or "
-                "another site, "<AnchorLink href="#linkbutton">"LinkButton"</AnchorLink>" does the same with the look of a "
-                "button, and "<AnchorLink href="#anchorlink">"AnchorLink"</AnchorLink>" scrolls to an element on the current "
+                "another site, also "<AnchorLink href="#links-that-look-like-buttons">"styled as a button"</AnchorLink>
+                ", and "<AnchorLink href="#anchorlink">"AnchorLink"</AnchorLink>" scrolls to an element on the current "
                 "page. See the "<Link href=routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
             </p>
 
@@ -29,12 +29,6 @@ pub fn PageAtomLink() -> impl IntoView {
                             <Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link>", "
                             <Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link>" and "
                             <Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Code inline=true>"LinkButton"</Code></TableCell>
-                        <TableCell>
-                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" on an anchor element"
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -123,40 +117,16 @@ pub fn PageAtomLink() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="LinkButton">
+            <Section title="Links That Look Like Buttons">
                 <p>
-                    "A link that looks like a button. HTML doesn\u{2019}t allow a button inside a link; use "
-                    <Code inline=true>"LinkButton"</Code>" instead. Like "<Code inline=true>"Link"</Code>", it renders "
-                    "leptos_router\u{2019}s "<Code inline=true>"<A>"</Code>" and has "<Code inline=true>"aria-current=\"page\""</Code>
-                    " on the current page; disabled, it renders an "<Code inline=true>"<a>"</Code>" without "
-                    <Code inline=true>"href"</Code>". The demo reuses the styles of the "
-                    <Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link>" demo."
+                    "A link that navigates but looks like a button, e.g. \u{201c}Get started\u{201d}, is a "
+                    <Code inline=true>"Link"</Code>" with the styles of your buttons: it stays a link for assistive "
+                    "technology and keeps "<Code inline=true>"aria-current"</Code>" and the link\u{2019}s data attributes. "
+                    "HTML doesn\u{2019}t allow a button inside a link. The demo reuses the book\u{2019}s button styles."
                 </p>
-
                 <Demo description="A link styled as a button, with a Disabled checkbox" source=include_str!("demos/link_button.rs")>
-                    <LinkButtonAtomDemo/>
+                    <LinkStyledAsButtonDemo/>
                 </Demo>
-
-                <Section title="Props" id="link-button-props">
-                    <ApiTable kind=ApiKind::Props of="atoms::button::LinkButton">
-                        <ApiRow name="href" ty="impl ToHref">"A route of your app or a URL. Required."</ApiRow>
-                        <ApiRow name="target" ty="LinkTarget" default="Same">"Where to open the link."</ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the link can\u{2019}t be followed."</ApiRow>
-                        <ApiRow name="current_match" ty="CurrentMatch" default="Prefix">
-                            "When the link is the current page, as for "<AnchorLink href="#link-props">"Link"</AnchorLink>"."
-                        </ApiRow>
-                        <ApiRow name="aria_haspopup, aria_expanded" ty="Option<Signal<Option<AriaHasPopup>>>, Option<Signal<Option<AriaExpanded>>>" default="None">
-                            "Popup attributes, for a link that opens something."
-                        </ApiRow>
-                        <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
-                            "Called when a pointer starts or stops hovering the link."
-                        </ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the link element."</ApiRow>
-                        <ApiRow name="children" ty="ChildrenFn">
-                            "The content, rendered again when the link is disabled or enabled. Required."
-                        </ApiRow>
-                    </ApiTable>
-                </Section>
             </Section>
 
             <Section title="AnchorLink">
@@ -199,29 +169,36 @@ pub fn PageAtomLink() -> impl IntoView {
                     <ApiRow name="data-focused" ty="true">"While the link has focus."</ApiRow>
                     <ApiRow name="data-focus-visible" ty="true">"While the link has keyboard focus."</ApiRow>
                     <ApiRow name="data-disabled" ty="true">
-                        "While the link is disabled ("<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>")."
+                        "While the link is disabled ("<Code inline=true>"Link"</Code>")."
                     </ApiRow>
                 </ApiTable>
                 <p>
-                    "The current page\u{2019}s "<Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>" have "
+                    "The current page\u{2019}s "<Code inline=true>"Link"</Code>" has "
                     <Code inline=true>"aria-current=\"page\""</Code>", set by the router."
                 </p>
             </Section>
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors:"
+                    "The atoms bring no styles. "<Code inline=true>"Link"</Code>" renders the class "
+                    <Code inline=true>"leptonic-Link"</Code>" and "<Code inline=true>"AnchorLink"</Code>" the class "
+                    <Code inline=true>"leptonic-AnchorLink"</Code>", each followed by the "<Code inline=true>"classes"</Code>
+                    " you pass. Target the state with the data attributes above, and the current page with "
+                    <Code inline=true>"aria-current"</Code>". The book\u{2019}s demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-link { color: var(--accent); }
+                        .my-link { color: var(--accent); text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
                         .my-link[data-hovered] { text-decoration-thickness: 2px; }
-                        .my-link[aria-current="page"] { font-weight: 600; text-decoration: none; }
-                        .my-link[data-disabled] { color: var(--muted); cursor: not-allowed; }
-                        .my-link[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .my-link[aria-current="page"] { font-weight: 600; text-decoration: none; cursor: default; }
+                        .my-link[data-disabled] { color: var(--muted); text-decoration: none; cursor: not-allowed; }
+                        .my-link[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <Section title="Composition">

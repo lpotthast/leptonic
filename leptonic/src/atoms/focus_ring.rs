@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/focus/FocusRing.tsx @ 99e6102368
 use leptos::{attr::custom::custom_attribute, ev, prelude::*};
 use web_sys::FocusEvent;
 

@@ -46,7 +46,9 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `on_resize_*` get the column sizes as a `HashMap<Key, ColumnSize>`.
+// - `on_resize_*` get the column sizes as a `HashMap<Key, ColumnSize>` (react-aria: a JS `Map`
+//   of keys to `number | string` widths): a map keyed by column, with typed sizes (pixels or
+//   fractions) instead of number-or-string values.
 // - The input's `value` is set as attribute and DOM property (React sets both).
 //
 // =============================================================================
@@ -59,8 +61,8 @@ pub struct UseTableColumnResizeInput {
     pub table: TableData,
     /// The column this resizer resizes.
     pub column: Key,
-    /// The resizer's label.
-    pub aria_label: String,
+    /// The resizer's label (e.g. "Resizer").
+    pub aria_label: MaybeProp<String>,
     /// The resizer's (visually hidden) range input.
     pub element: CapturedElement,
     /// The element that started the resizing (e.g. the column header), focused again when the
@@ -136,7 +138,7 @@ pub type UseTableColumnResizerAttrs = (
 #[derive(Debug)]
 pub struct UseTableColumnResizeInputProps {
     pub id: String,
-    pub aria_label: String,
+    pub aria_label: MaybeProp<String>,
     pub aria_labelledby: String,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_valuetext: Signal<String>,
@@ -177,7 +179,7 @@ impl IntoAttrs for UseTableColumnResizeInputProps {
 pub type UseTableColumnResizeInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
-    Attr<attr::AriaLabel, String>,
+    Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaLabelledby, String>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
@@ -215,7 +217,7 @@ impl Resizer {
         self.state
             .table_state
             .grid
-            .is_keyboard_navigation_disabled
+            .is_keyboard_navigation_disabled()
             .get_untracked()
     }
 
@@ -229,8 +231,7 @@ impl Resizer {
             self.state
                 .table_state
                 .grid
-                .is_keyboard_navigation_disabled
-                .set(true);
+                .set_keyboard_navigation_disabled(true);
             if let Some(on_resize_start) = self.on_resize_start {
                 on_resize_start.run(sizes);
             }
@@ -256,8 +257,7 @@ impl Resizer {
             self.state
                 .table_state
                 .grid
-                .is_keyboard_navigation_disabled
-                .set(false);
+                .set_keyboard_navigation_disabled(false);
             if let Some(on_resize_end) = self.on_resize_end {
                 on_resize_end.run(sizes);
             }
@@ -365,7 +365,6 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
         let end = resizer.clone();
         use_move(UseMoveInput {
             is_disabled: Signal::stored(false),
-            axis: Signal::stored(crate::hooks::MoveAxis::Both),
             on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
                 column_resize_width.set_value(start.current_width());
                 if e.pointer_type == PointerType::Mouse {

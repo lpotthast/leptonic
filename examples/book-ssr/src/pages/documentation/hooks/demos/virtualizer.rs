@@ -4,7 +4,7 @@ use leptonic::{
     hooks::{
         collections::{CollectionMemo, Key, use_list_collection},
         virtualizer::{
-            LayoutInfo, ListLayout, ListLayoutOptions, ScrollDirection, UseScrollViewInput,
+            ItemSizeChange, LayoutInfo, ListLayout, ListLayoutOptions, ScrollDirection, UseScrollViewInput,
             UseVirtualizerItemInput, UseVirtualizerStateInput, VirtualizerState, use_scroll_view,
             use_virtualizer_item, use_virtualizer_state,
         },
@@ -39,18 +39,16 @@ pub fn VirtualizerHooksDemo() -> impl IntoView {
 
     // The scrolling element reports what is visible to the state.
     let element = CapturedElement::new();
-    let scroll_view = use_scroll_view(
-        UseScrollViewInput {
-            content_size: state.content_size.into(),
-            on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
-            on_size_change: Some(Callback::new(move |size| state.set_size(size))),
-            on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
-            on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
-            scroll_direction: ScrollDirection::Vertical,
-            allows_window_scrolling: false,
-        },
+    let scroll_view = use_scroll_view(UseScrollViewInput {
         element,
-    );
+        content_size: state.content_size(),
+        on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
+        on_size_change: Some(Callback::new(move |size| state.set_size(size))),
+        on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
+        on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
+        scroll_direction: Signal::stored(ScrollDirection::Vertical),
+        allows_window_scrolling: Signal::stored(false),
+    });
 
     view! {
         <div
@@ -63,13 +61,13 @@ pub fn VirtualizerHooksDemo() -> impl IntoView {
         >
             <div style=scroll_view.content_styles>
                 // Only the visible rows (and a few more in the scroll direction).
-                <For each=move || state.visible.get() key=|info| info.key.clone() let:info>
+                <For each=move || state.visible().get() key=|info| info.key.clone() let:info>
                     <VirtualRow info=info state=state rows=rows/>
                 </For>
             </div>
         </div>
         <p class="demo-status">
-            {move || format!("{} of {ROWS} rows rendered.", state.visible.with(Vec::len))}
+            {move || format!("{} of {ROWS} rows rendered.", state.visible().with(Vec::len))}
         </p>
     }
 }
@@ -89,20 +87,20 @@ fn VirtualRow(
     });
     let layout_info = Signal::derive(move || {
         state
-            .visible
+            .visible()
             .with(|visible| visible.iter().find(|visible| visible.key == key).cloned())
             .unwrap_or_else(|| info.clone())
     });
     let element = CapturedElement::new();
-    let styles = use_virtualizer_item(
-        UseVirtualizerItemInput {
-            layout_info,
-            parent: Signal::stored(None),
-            update_item_size: Callback::new(move |(key, size)| state.update_item_size(&key, size)),
-            should_observe_item_size: false,
-        },
+    let styles = use_virtualizer_item(UseVirtualizerItemInput {
         element,
-    )
+        layout_info,
+        parent: Signal::stored(None),
+        update_item_size: Callback::new(move |change: ItemSizeChange| {
+            state.update_item_size(&change.key, change.size);
+        }),
+        should_observe_item_size: false,
+    })
     .styles;
 
     view! {

@@ -13,8 +13,8 @@ use web_sys::{MouseEvent, PointerEvent};
 use crate::{
     hooks::{
         IntoAttrs, LabelElementType, Modality, MoveEndEvent, MoveEvent, MoveStartEvent,
-        PropsWithStyles, UseFieldInput, UseFieldReturn, UseMoveInput,
-        interactions::use_move::MoveAxis, set_modality, slider::SliderState, use_field, use_move,
+        PropsWithStyles, UseFieldInput, UseFieldReturn, UseMoveInput, set_modality,
+        slider::SliderState, use_field, use_move,
     },
     utils::{
         EventAccessors, EventHandler, EventTargetExt, SlotProps,
@@ -26,6 +26,7 @@ use crate::{
         locale::WritingDirection,
         number_value::NumberValue,
         orientation::Orientation,
+        pointer_type::PointerType,
         style::TouchActionProperty,
         styles::Styles,
     },
@@ -64,6 +65,8 @@ pub struct UseSliderInput<T: NumberValue> {
     pub aria_labelledby: Option<String>,
     /// Further elements describing every thumb (next to a rendered description).
     pub aria_describedby: Option<String>,
+    /// Elements with details about every thumb (`aria-details`).
+    pub aria_details: Option<String>,
 }
 
 /// What the thumbs need from their slider.
@@ -76,6 +79,8 @@ pub struct SliderData {
     pub labelled_by: Signal<String>,
     /// What describes every thumb: the description while rendered, and `aria_describedby`.
     pub aria_describedby: Signal<Option<String>>,
+    /// What details every thumb (`aria_details`).
+    pub aria_details: Option<String>,
 }
 
 impl SliderData {
@@ -228,6 +233,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
         aria_label,
         aria_labelledby,
         aria_describedby,
+        aria_details,
     } = input;
 
     let UseFieldReturn {
@@ -258,6 +264,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
             })
         },
         aria_describedby: field_props.aria_describedby,
+        aria_details,
     };
 
     let direction = use_direction();
@@ -280,7 +287,7 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
     };
 
     let on_track_down = move |e: PointerEvent| {
-        if e.pointer_type() == "mouse"
+        if PointerType::from(e.pointer_type()) == PointerType::Mouse
             && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
         {
             return;
@@ -336,10 +343,6 @@ pub fn use_slider<T: NumberValue>(input: UseSliderInput<T>) -> UseSliderReturn {
 
     let track_move = use_move(UseMoveInput {
         is_disabled: state.is_disabled,
-        axis: Signal::derive(move || match orientation.get() {
-            Orientation::Horizontal => MoveAxis::Horizontal,
-            Orientation::Vertical => MoveAxis::Vertical,
-        }),
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             position.set_value(None);
         })),

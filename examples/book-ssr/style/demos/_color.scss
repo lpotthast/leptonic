@@ -399,7 +399,9 @@
 
 // The swatch inside the button that opens a color picker (color overview).
 .demo-color-trigger-swatch {
+    display: inline-block;
     width: 1.25em;
+    vertical-align: middle;
     height: 1.25em;
     margin-right: var(--book-space-s);
     border-radius: var(--book-radius-s);

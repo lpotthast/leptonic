@@ -1,31 +1,55 @@
 // Upstream: react-aria/src/interactions/focusSafely.ts @ 99e6102368
+// Upstream: react-aria/src/utils/focusWithoutScrolling.ts @ 99e6102368
 //! Focus utilities for managing element focus without side effects.
 //!
 //! This module provides utilities for focusing elements without triggering scroll,
 //! and for safely focusing elements during screen reader interactions.
 
-use std::fmt::Debug;
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## OMITTED FEATURES
+// - `focusWithoutScrolling`'s fallback for browsers without `focus({preventScroll})` (saving and
+//   restoring the scroll positions of every scroll parent): every supported browser has it.
+//
+// =============================================================================
 
 use wasm_bindgen::JsCast;
 
+/// Focuses `target` if it is an HTML or SVG element (see [`focus_element`]).
 pub fn focus_event_target(target: &web_sys::EventTarget, prevent_scroll: bool) {
-    if let Some(html_element) = try_downcast_to_html_element(target) {
-        focus_html_element(html_element, prevent_scroll);
+    if let Some(element) = target.dyn_ref::<web_sys::Element>() {
+        focus_element(element, prevent_scroll);
+    } else {
+        tracing::warn!(?target, "Not an element, can't focus it.");
     }
 }
 
+/// Focuses an HTML or SVG element (both can take focus), optionally without scrolling it into
+/// view (react-aria's `focusWithoutScrolling`).
 pub fn focus_element(element: &web_sys::Element, prevent_scroll: bool) {
-    if let Some(html_element) = try_downcast_to_html_element(element) {
-        focus_html_element(html_element, prevent_scroll);
-    }
-}
-
-pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: bool) {
     let options = web_sys::FocusOptions::new();
     options.set_prevent_scroll(prevent_scroll);
-    if let Err(err) = html_element.focus_with_options(&options) {
-        tracing::warn!(?html_element, "Failed to focus element: {err:?}");
+    let result = if let Some(html_element) = element.dyn_ref::<web_sys::HtmlElement>() {
+        html_element.focus_with_options(&options)
+    } else if let Some(svg_element) = element.dyn_ref::<web_sys::SvgElement>() {
+        svg_element.focus_with_options(&options)
+    } else {
+        tracing::warn!(
+            ?element,
+            "Neither an HTML nor an SVG element, can't focus it."
+        );
+        return;
+    };
+    if let Err(err) = result {
+        tracing::warn!(?element, "Failed to focus element: {err:?}");
     }
+}
+
+/// Focuses an HTML element (see [`focus_element`]).
+pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: bool) {
+    focus_element(html_element, prevent_scroll);
 }
 
 /// Focus an element while avoiding undesired side effects such as page scrolling
@@ -36,9 +60,6 @@ pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: b
 /// scrolling the page when the focused element is transitioning from off-screen.
 ///
 /// In all other modalities, the element is focused immediately without scrolling.
-///
-/// Based on react-aria's `focusSafely` from
-/// `packages/react-aria/src/interactions/focusSafely.ts`.
 pub fn focus_safely(element: &web_sys::Element) {
     #[cfg(feature = "ssr")]
     {
@@ -79,14 +100,5 @@ pub fn focus_safely(element: &web_sys::Element) {
         } else {
             focus_element(element, true);
         }
-    }
-}
-
-fn try_downcast_to_html_element<T: JsCast + Debug>(value: &T) -> Option<&web_sys::HtmlElement> {
-    if let Some(html_element) = value.dyn_ref::<web_sys::HtmlElement>() {
-        Some(html_element)
-    } else {
-        tracing::warn!(?value, "Not an HTML element.");
-        None
     }
 }

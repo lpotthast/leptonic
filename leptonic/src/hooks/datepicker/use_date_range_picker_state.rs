@@ -7,15 +7,15 @@ use leptos::prelude::*;
 use super::{
     format::{DateFormatter, FormatOptions},
     types::{DateValue, Era, Granularity, HourCycle, MaxGranularity, RangeValue},
-    use_date_field_state::validation_result,
+    use_date_field_state::{resolve_granularity, validation_result},
 };
 use crate::{
     hooks::{
         OverlayTriggerState, UseOverlayTriggerStateInput,
         form::{
-            UseFormValidationStateInput, UseFormValidationStateReturn, VALID_VALIDITY_STATE,
-            ValidateFn, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
-            merge_validation, use_form_validation_state,
+            FormValidationState, UseFormValidationStateInput, VALID_VALIDITY_STATE, ValidateFn,
+            ValidationBehavior, ValidationResult, ValidityStateSnapshot, merge_validation,
+            use_form_validation_state,
         },
         use_overlay_trigger_state,
     },
@@ -34,6 +34,7 @@ use crate::{
 // - Generic over the value type (`V: DateValue`); the calendar's range is a `DateRange` of
 //   `civil::Date`s and the times `civil::Time`s.
 // - Closing commits a selected range through the overlay state's `on_open_change`.
+// - The format options and the placeholder are signals (C11).
 // - `is_date_unavailable` takes the date only (react-aria: also the anchor date, always `null`
 //   for the validation).
 //
@@ -58,14 +59,18 @@ pub struct UseDateRangePickerStateInput<V: DateValue> {
     pub default_value: Option<RangeValue<V>>,
     pub value: Option<ValueBinding<Option<RangeValue<V>>>>,
     pub on_change: Option<Callback<Option<RangeValue<V>>>>,
-    pub placeholder_value: Option<V>,
+    /// The value the fields start from when edited, the time of ranges selected in the
+    /// calendar, and the month the calendar opens on.
+    pub placeholder_value: Signal<Option<V>>,
     pub min_value: Signal<Option<V>>,
     pub max_value: Signal<Option<V>>,
     pub is_date_unavailable: Option<Callback<V, bool>>,
-    pub granularity: Option<Granularity>,
-    pub hour_cycle: Option<HourCycle>,
-    pub hide_time_zone: bool,
-    pub should_force_leading_zeros: bool,
+    /// The finest unit. Default: the minute for values with a time, else the day.
+    pub granularity: Signal<Option<Granularity>>,
+    /// 12 or 24 hours. Default: the locale's.
+    pub hour_cycle: Signal<Option<HourCycle>>,
+    pub hide_time_zone: Signal<bool>,
+    pub should_force_leading_zeros: Signal<bool>,
     /// Whether selecting a range closes the popover. Default: `true`.
     pub should_close_on_select: Signal<bool>,
     pub default_open: bool,
@@ -85,14 +90,14 @@ impl<V: DateValue> Default for UseDateRangePickerStateInput<V> {
             default_value: None,
             value: None,
             on_change: None,
-            placeholder_value: None,
+            placeholder_value: Signal::stored(None),
             min_value: Signal::stored(None),
             max_value: Signal::stored(None),
             is_date_unavailable: None,
-            granularity: None,
-            hour_cycle: None,
-            hide_time_zone: false,
-            should_force_leading_zeros: false,
+            granularity: Signal::stored(None),
+            hour_cycle: Signal::stored(None),
+            hide_time_zone: Signal::stored(false),
+            should_force_leading_zeros: Signal::stored(false),
             should_close_on_select: Signal::stored(true),
             default_open: false,
             is_open: None,
@@ -115,19 +120,20 @@ pub struct DateRangePickerState<V: DateValue> {
     pub start: Signal<Option<V>>,
     /// The end shown.
     pub end: Signal<Option<V>>,
-    /// The calendar's range: the one selected in the popover, else the value's.
+    /// The calendar's range: the value's, else the one selected in the popover (react-aria: a
+    /// complete value replaces the selection).
     pub date_range: Signal<Option<DateRange>>,
-    pub granularity: Granularity,
-    pub has_time: bool,
+    pub granularity: Signal<Granularity>,
+    pub has_time: Signal<bool>,
     pub overlay: OverlayTriggerState,
     pub is_invalid: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     binding: ValueBinding<Option<RangeValue<V>>>,
     partial: RwSignal<(Option<V>, Option<V>)>,
     selected_range: RwSignal<Option<DateRange>>,
     selected_times: RwSignal<(Option<Time>, Option<Time>)>,
     placeholder: Memo<V>,
-    placeholder_time: Time,
+    placeholder_time: Signal<Time>,
     should_close_on_select: Signal<bool>,
     format_options: Memo<FormatOptions>,
     locale: Signal<Locale>,
@@ -169,20 +175,21 @@ impl<V: DateValue> DateRangePickerState<V> {
         self.set_value(Some(start), Some(end));
         self.selected_range.set(None);
         self.selected_times.set((None, None));
-        self.validation.commit_validation.run(());
+        self.validation.commit_validation();
     }
 
     /// Selects a range in the calendar (keeping the times).
     pub fn select_range(&self, range: DateRange) {
         let should_close = self.should_close_on_select.get_untracked();
-        if self.has_time {
+        if self.has_time.get_untracked() {
             let (start_time, end_time) = self.times();
             if should_close || (start_time.is_some() && end_time.is_some()) {
+                let placeholder_time = self.placeholder_time.get_untracked();
                 self.commit(
                     range,
                     (
-                        start_time.unwrap_or(self.placeholder_time),
-                        end_time.unwrap_or(self.placeholder_time),
+                        start_time.unwrap_or(placeholder_time),
+                        end_time.unwrap_or(placeholder_time),
                     ),
                 );
             } else {
@@ -196,14 +203,15 @@ impl<V: DateValue> DateRangePickerState<V> {
         }
     }
 
-    /// The times: selected in the popover, else the value's.
+    /// The times: a complete value's, else the ones selected in the popover (react-aria: a
+    /// complete value replaces the selection).
     fn times(&self) -> (Option<Time>, Option<Time>) {
-        let (selected_start, selected_end) = self.selected_times.get_untracked();
-        let value_time = |value: Option<V>| value.filter(|_| V::HAS_TIME).map(|value| value.time());
-        (
-            selected_start.or_else(|| value_time(self.start.get_untracked())),
-            selected_end.or_else(|| value_time(self.end.get_untracked())),
-        )
+        if V::HAS_TIME
+            && let Some(RangeValue { start, end }) = self.value.get_untracked()
+        {
+            return (Some(start.time()), Some(end.time()));
+        }
+        self.selected_times.get_untracked()
     }
 
     /// Selects a time of one end (committed with a selected range).
@@ -356,18 +364,15 @@ pub fn use_date_range_picker_state<V: DateValue>(
             .or_else(|| partial.with(|(_, end)| end.clone()))
     });
 
-    let granularity = match granularity {
-        Some(granularity) if granularity.has_time() && !V::HAS_TIME => Granularity::Day,
-        Some(granularity) => granularity,
-        None if V::HAS_TIME => Granularity::Minute,
-        None => Granularity::Day,
-    };
-    let has_time = granularity.has_time();
-    let placeholder_time = placeholder_value
-        .as_ref()
-        .filter(|_| V::HAS_TIME)
-        .map_or(Time::midnight(), DateValue::time);
-    let placeholder_value = StoredValue::new(placeholder_value);
+    let granularity = Signal::derive(move || resolve_granularity::<V>(granularity.get()));
+    let has_time = Signal::derive(move || granularity.get().has_time());
+    // The time of ranges selected without one (react-aria's `getPlaceholderTime`).
+    let placeholder_time = Signal::derive(move || {
+        placeholder_value
+            .get()
+            .filter(|_| V::HAS_TIME)
+            .map_or(Time::midnight(), |value| value.time())
+    });
     let time_zone = Memo::new(move |_| {
         start
             .get()
@@ -375,37 +380,39 @@ pub fn use_date_range_picker_state<V: DateValue>(
             .and_then(|value| value.time_zone().cloned())
             .or_else(|| {
                 placeholder_value
-                    .with_value(|value| value.as_ref().and_then(|value| value.time_zone().cloned()))
+                    .with(|value| value.as_ref().and_then(|value| value.time_zone().cloned()))
             })
     });
     let placeholder = Memo::new(move |_| {
         placeholder_value
-            .get_value()
+            .get()
             .unwrap_or_else(|| V::today(time_zone.get().as_ref()))
     });
 
     let selected_range = RwSignal::new(None::<DateRange>);
     let selected_times = RwSignal::new((None::<Time>, None::<Time>));
     let date_range = Signal::derive(move || {
-        selected_range.get().or_else(|| {
-            binding.value.get().map(|range| DateRange {
+        binding
+            .value
+            .get()
+            .map(|range| DateRange {
                 start: range.start.date(),
                 end: range.end.date(),
             })
-        })
+            .or_else(|| selected_range.get())
     });
 
     let format_options = Memo::new(move |_| FormatOptions {
-        granularity,
+        granularity: granularity.get(),
         max_granularity: MaxGranularity::Year,
         time_zone: time_zone.get(),
-        hide_time_zone,
-        hour_cycle,
+        hide_time_zone: hide_time_zone.get(),
+        hour_cycle: hour_cycle.get(),
         show_era: [start.get(), end.get()]
             .into_iter()
             .flatten()
             .any(|value| Era::of(value.date().year()).0 == Era::Bc),
-        should_force_leading_zeros,
+        should_force_leading_zeros: should_force_leading_zeros.get(),
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let builtin_validation = Signal::derive(move || {
@@ -433,11 +440,12 @@ pub fn use_date_range_picker_state<V: DateValue>(
 
     // Closing commits a range selected without times, with the placeholder time.
     let commit_on_close: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
-        if has_time
+        if has_time.get_untracked()
             && binding.value.get_untracked().is_none()
             && let Some(range) = selected_range.get_untracked()
         {
             let (start_time, end_time) = selected_times.get_untracked();
+            let placeholder_time = placeholder_time.get_untracked();
             let base = placeholder.get_untracked();
             binding.set(Some(RangeValue {
                 start: base.with_fields(range.start, start_time.unwrap_or(placeholder_time), None),
@@ -445,7 +453,7 @@ pub fn use_date_range_picker_state<V: DateValue>(
             }));
             selected_range.set(None);
             selected_times.set((None, None));
-            validation.commit_validation.run(());
+            validation.commit_validation();
         }
     });
     let overlay = use_overlay_trigger_state(UseOverlayTriggerStateInput {
@@ -486,7 +494,7 @@ pub fn use_date_range_picker_state<V: DateValue>(
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
-    use jiff::civil::date;
+    use jiff::civil::{DateTime, date, time};
 
     use super::*;
 
@@ -503,6 +511,65 @@ mod tests {
             assert_that!(state.value.get_untracked()).is_equal_to(Some(RangeValue {
                 start: date(2024, 6, 1),
                 end: date(2024, 6, 5),
+            }));
+        });
+    }
+
+    /// react-stately's `useDateRangePickerState`: a complete value replaces a range (and times)
+    /// selected in the popover.
+    #[test]
+    fn a_complete_value_replaces_the_selection() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let state = use_date_range_picker_state(UseDateRangePickerStateInput::<DateTime> {
+                should_close_on_select: Signal::stored(false),
+                ..UseDateRangePickerStateInput::default()
+            });
+            state.set_open(true);
+            // Waits for times.
+            state.select_range(DateRange {
+                start: date(2024, 6, 10),
+                end: date(2024, 6, 12),
+            });
+            assert_that!(state.value.get_untracked()).is_none();
+            state.set_value(
+                Some(date(2024, 7, 1).at(8, 0, 0, 0)),
+                Some(date(2024, 7, 3).at(9, 0, 0, 0)),
+            );
+            assert_that!(state.date_range.get_untracked()).is_equal_to(Some(DateRange {
+                start: date(2024, 7, 1),
+                end: date(2024, 7, 3),
+            }));
+            // A time selected now goes with the value's range and other time.
+            state.select_time(RangePart::End, time(18, 0, 0, 0));
+            assert_that!(state.value.get_untracked()).is_equal_to(Some(RangeValue {
+                start: date(2024, 7, 1).at(8, 0, 0, 0),
+                end: date(2024, 7, 3).at(18, 0, 0, 0),
+            }));
+        });
+    }
+
+    /// RAC `DateRangePicker.test.js`: closing with a range selected but no times commits it with
+    /// the placeholder's time.
+    #[test]
+    fn closing_commits_the_placeholder_time() {
+        let owner = Owner::new();
+        owner.with(|| {
+            let state = use_date_range_picker_state(UseDateRangePickerStateInput::<DateTime> {
+                should_close_on_select: Signal::stored(false),
+                placeholder_value: Signal::stored(Some(date(2024, 6, 1).at(10, 30, 0, 0))),
+                ..UseDateRangePickerStateInput::default()
+            });
+            state.set_open(true);
+            state.select_range(DateRange {
+                start: date(2024, 6, 10),
+                end: date(2024, 6, 12),
+            });
+            assert_that!(state.value.get_untracked()).is_none();
+            state.set_open(false);
+            assert_that!(state.value.get_untracked()).is_equal_to(Some(RangeValue {
+                start: date(2024, 6, 10).at(10, 30, 0, 0),
+                end: date(2024, 6, 12).at(10, 30, 0, 0),
             }));
         });
     }

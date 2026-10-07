@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 const MIN: i32 = 0;
@@ -74,7 +74,10 @@ pub fn SpinButtonDemo() -> impl IntoView {
         </div>
         <p class="demo-status">"Value: "{cups_text}"."</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

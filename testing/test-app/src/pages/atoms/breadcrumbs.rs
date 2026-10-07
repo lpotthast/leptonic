@@ -1,6 +1,9 @@
 use leptonic::{
     atoms::prelude::{Breadcrumb, Breadcrumbs, Link},
-    hooks::collections::Key,
+    hooks::{
+        IntoAttrs, LinkElementType, UseBreadcrumbItemInput, UseBreadcrumbsInput, UseLinkInput,
+        collections::Key, use_breadcrumb_item, use_breadcrumbs,
+    },
 };
 use leptos::prelude::*;
 
@@ -10,11 +13,38 @@ use leptos::prelude::*;
 ///   `#test-bc-disable` disables all.
 /// - An "Actions" trail of in-page links ("Action 1", "Action 2"), reporting the pressed item's
 ///   id in `#test-bc-action`.
+/// - Hook breadcrumbs (`use_breadcrumbs` on a `<nav id="test-bc-hook">`, `use_breadcrumb_item`):
+///   "Hook home" (an `<a>`), "Hook section" (a `<span>`, disabled) and "Hook current" (an `<a>`,
+///   current).
 #[component]
 pub fn PageAtomBreadcrumbs() -> impl IntoView {
     let count = RwSignal::new(3usize);
     let action = RwSignal::new(String::new());
     let disabled = RwSignal::new(false);
+    let item = |href: Option<&str>, element_type, is_disabled: bool, is_current: bool| {
+        let (attrs, styles) = use_breadcrumb_item(UseBreadcrumbItemInput {
+            link: UseLinkInput {
+                href: Signal::stored(href.map(str::to_owned)),
+                element_type,
+                is_disabled: Signal::stored(is_disabled),
+                ..UseLinkInput::default()
+            },
+            is_current: Signal::stored(is_current),
+            ..UseBreadcrumbItemInput::default()
+        })
+        .props
+        .into_parts();
+        (attrs, styles)
+    };
+    let (home, home_styles) = item(Some("/atoms"), LinkElementType::Anchor, false, false);
+    let (section, section_styles) = item(None, LinkElementType::Other, true, false);
+    let (current, current_styles) = item(
+        Some("/atoms/breadcrumbs"),
+        LinkElementType::Anchor,
+        false,
+        true,
+    );
+    let nav = use_breadcrumbs(UseBreadcrumbsInput::default()).props;
 
     view! {
         <div id="test-page-atom-breadcrumbs">
@@ -43,6 +73,14 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
                 </Breadcrumbs>
             </nav>
             <div>"Action: " <span id="test-bc-action">{action}</span></div>
+
+            <nav {..nav.into_attrs()} id="test-bc-hook">
+                <ol>
+                    <li><a {..home} style=home_styles>"Hook home"</a></li>
+                    <li><span {..section} style=section_styles>"Hook section"</span></li>
+                    <li><a {..current} style=current_styles>"Hook current"</a></li>
+                </ol>
+            </nav>
         </div>
     }
 }

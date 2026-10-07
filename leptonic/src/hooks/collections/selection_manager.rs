@@ -23,7 +23,8 @@ use crate::{
 // - `Selection` is an enum (`All` / `Keys`) instead of `'all' | Set<Key>`.
 //
 // ## OMITTED FEATURES
-// - `allowsCellSelection` and layout-delegate key ranges: added with the grid/table migration.
+// - `allowsCellSelection` and range selection through a layout delegate's `getKeyRange`: not yet
+//   (no grid layout delegate; ranges follow collection order).
 // - `isSelectionEqual`, `getItemProps`: React-specific helpers.
 //
 // =============================================================================
@@ -34,7 +35,8 @@ pub struct SelectionOptions {
     /// Whether nothing, one or many items can be selected. Defaults to `None`.
     pub selection_mode: Signal<SelectionMode>,
     /// How pointer presses change the selection (toggle the item, or replace the selection).
-    pub selection_behavior: SelectionBehavior,
+    /// A change applies right away (also ending the touch selection mode a long press entered).
+    pub selection_behavior: Signal<SelectionBehavior>,
     /// The initial selection. Ignored when `selection` is bound.
     pub default_selection: Selection,
     /// The selection as app state, replacing `default_selection`: the collection shows it, and
@@ -55,7 +57,7 @@ impl Default for SelectionOptions {
     fn default() -> Self {
         Self {
             selection_mode: Signal::stored(SelectionMode::None),
-            selection_behavior: SelectionBehavior::Toggle,
+            selection_behavior: Signal::stored(SelectionBehavior::Toggle),
             default_selection: Selection::default(),
             selection: None,
             on_selection_change: None,
@@ -116,7 +118,7 @@ impl SelectionManager {
             selection.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_selection)));
         let state = SelectionStateSignals {
             selection_mode,
-            selection_behavior: RwSignal::new(selection_behavior),
+            selection_behavior: RwSignal::new(selection_behavior.get_untracked()),
             disallow_empty_selection,
             disabled_keys,
             disabled_behavior,
@@ -129,17 +131,24 @@ impl SelectionManager {
             is_focused: RwSignal::new(false),
         };
 
+        // A changed `selection_behavior` applies (react-aria: `useMultipleSelectionState`).
+        Effect::new(move |previous: Option<SelectionBehavior>| {
+            let behavior = selection_behavior.get();
+            if previous.is_some_and(|previous| previous != behavior) {
+                state.selection_behavior.set(behavior);
+            }
+            behavior
+        });
         // With `Replace` behavior, a long press switches to `Toggle` (touch selection mode); once
         // the selection is empty again, go back to `Replace`.
-        if selection_behavior == SelectionBehavior::Replace {
-            Effect::new(move |_| {
-                if state.selection.with(Selection::is_empty)
-                    && state.selection_behavior.get_untracked() == SelectionBehavior::Toggle
-                {
-                    state.selection_behavior.set(SelectionBehavior::Replace);
-                }
-            });
-        }
+        Effect::new(move |_| {
+            if selection_behavior.get() == SelectionBehavior::Replace
+                && state.selection.with(Selection::is_empty)
+                && state.selection_behavior.get_untracked() == SelectionBehavior::Toggle
+            {
+                state.selection_behavior.set(SelectionBehavior::Replace);
+            }
+        });
 
         Self {
             collection,
@@ -159,6 +168,29 @@ impl SelectionManager {
             state: self.state,
             cell_focus: self.cell_focus,
         }
+    }
+
+    /// A selection of its own over the same collection, sharing this manager's focus state (the
+    /// focused key, whether the collection is focused) and disabled keys: for a group of items with
+    /// a selection mode of its own, e.g. a menu section (react-aria-components'
+    /// `GroupSelectionManager`). `options.disabled_keys` and `options.disabled_behavior` are
+    /// ignored.
+    #[must_use]
+    pub fn with_own_selection(&self, options: SelectionOptions) -> Self {
+        let mut group = Self::new(
+            self.collection,
+            SelectionOptions {
+                disabled_keys: self.state.disabled_keys,
+                disabled_behavior: self.state.disabled_behavior,
+                ..options
+            },
+        );
+        group.state.focused_key = self.state.focused_key;
+        group.state.child_focus_strategy = self.state.child_focus_strategy;
+        group.state.is_focused = self.state.is_focused;
+        group.full_collection = self.full_collection;
+        group.cell_focus = self.cell_focus;
+        group
     }
 
     /// This manager, for a grid in cell focus mode (see [`SelectionManager::set_focused_key`]).
@@ -245,11 +277,19 @@ impl SelectionManager {
         {
             return;
         }
-        self.state.child_focus_strategy.set(child_focus_strategy);
-        self.state.focused_key.set(key);
+        // Setting the same values again notifies no one (React bails out of equal state
+        // updates): items refocus only when their focus actually changes.
+        if self.state.child_focus_strategy.get_untracked() != child_focus_strategy {
+            self.state.child_focus_strategy.set(child_focus_strategy);
+        }
+        if self.state.focused_key.with_untracked(|focused| *focused != key) {
+            self.state.focused_key.set(key);
+        }
     }
 
-    /// Whether `key` is the focused item. Notifies only when this item's focus changes.
+    /// Whether `key` is the focused item. Tracks the focused key: a reader re-runs whenever the
+    /// focused key changes, also for other items (a per-key `Selector` would update
+    /// asynchronously, so a read right after `set_focused_key` would be stale).
     pub fn is_focused_key(&self, key: &Key) -> bool {
         self.state
             .focused_key
@@ -343,12 +383,26 @@ impl SelectionManager {
     /// Whether `key` is disabled for interaction: with `DisabledBehavior::All`, disabled items
     /// can't be focused or used. With `DisabledBehavior::Selection`, they only can't be
     /// selected, so this is `false`.
+    /// Whether `key` is disabled (in `disabled_keys`, or the item itself), whatever the
+    /// disabled behavior.
+    pub fn is_item_disabled(&self, key: &Key) -> bool {
+        self.state.disabled_keys.with(|keys| keys.contains(key))
+            || self
+                .collection
+                .with(|c| c.get(key).is_some_and(|node| node.is_disabled))
+    }
+
+    /// An item's own `disabled_behavior` overrides the collection's.
     pub fn is_disabled(&self, key: &Key) -> bool {
-        self.state.disabled_behavior == DisabledBehavior::All
-            && (self.state.disabled_keys.with(|keys| keys.contains(key))
-                || self
-                    .collection
-                    .with(|c| c.get(key).is_some_and(|node| node.is_disabled)))
+        if self.state.disabled_behavior != DisabledBehavior::All {
+            return false;
+        }
+        let (item_disabled, item_behavior) = self.collection.with(|c| {
+            c.get(key)
+                .map_or((false, None), |node| (node.is_disabled, node.disabled_behavior))
+        });
+        (self.state.disabled_keys.with(|keys| keys.contains(key)) || item_disabled)
+            && item_behavior != Some(DisabledBehavior::Selection)
     }
 
     /// Whether `key` is an item that navigates somewhere.
@@ -614,6 +668,29 @@ mod tests {
     }
 
     #[test]
+    fn a_group_has_its_own_selection_and_shares_focus_and_disabled_keys() {
+        Owner::new().with(|| {
+            let menu = manager(multiple());
+            let group = menu.with_own_selection(SelectionOptions {
+                selection_mode: Signal::stored(SelectionMode::Single),
+                ..Default::default()
+            });
+            group.select(&k("banana"), None);
+            assert_that!(selected(&group)).is_equal_to(vec!["banana".to_owned()]);
+            assert_that!(menu.is_empty()).is_true();
+            assert_that!(group.selection_mode()).is_equal_to(SelectionMode::Single);
+            assert_that!(menu.selection_mode()).is_equal_to(SelectionMode::Multiple);
+            // Focus is shared.
+            group.set_focused_key(Some(k("durian")), None);
+            assert_that!(menu.focused_key()).is_equal_to(Some(k("durian")));
+            menu.set_focused(true);
+            assert_that!(group.is_focused()).is_true();
+            // The disabled item stays disabled in the group.
+            assert_that!(group.is_disabled(&k("cherry"))).is_true();
+        });
+    }
+
+    #[test]
     fn nothing_is_selectable_in_selection_mode_none() {
         Owner::new().with(|| {
             let m = manager(SelectionOptions::default());
@@ -661,7 +738,7 @@ mod tests {
             assert_that!(selected(&m)).is_equal_to(vec!["apple".to_owned(), "banana".to_owned()]);
 
             let m = manager(SelectionOptions {
-                selection_behavior: SelectionBehavior::Replace,
+                selection_behavior: Signal::stored(SelectionBehavior::Replace),
                 ..multiple()
             });
             m.select(&k("apple"), None);
@@ -781,6 +858,53 @@ mod tests {
             m.replace_selection(&k("apple"));
             m.replace_selection(&k("apple"));
             assert_that!(events.get_untracked()).is_equal_to(3);
+        });
+    }
+
+    // Upstream: useMultipleSelectionState ("If the selectionBehavior prop changes, update the
+    // state as well").
+    #[test]
+    fn a_changed_selection_behavior_applies() {
+        crate::testing::with_owner(|| {
+            let behavior = RwSignal::new(SelectionBehavior::Toggle);
+            let m = manager(SelectionOptions {
+                selection_behavior: behavior.into(),
+                ..multiple()
+            });
+            crate::testing::flush_effects();
+            assert_that!(m.selection_behavior()).is_equal_to(SelectionBehavior::Toggle);
+            behavior.set(SelectionBehavior::Replace);
+            crate::testing::flush_effects();
+            assert_that!(m.selection_behavior()).is_equal_to(SelectionBehavior::Replace);
+            m.select(&k("apple"), None);
+            m.select(&k("banana"), None);
+            assert_that!(selected(&m)).is_equal_to(vec!["banana".to_owned()]);
+            // Touch selection mode (a long press) ends once the selection is empty again.
+            m.set_selection_behavior(SelectionBehavior::Toggle);
+            m.clear_selection();
+            crate::testing::flush_effects();
+            assert_that!(m.selection_behavior()).is_equal_to(SelectionBehavior::Replace);
+        });
+    }
+
+    // Upstream: SelectionManager.isDisabled (an item's `disabledBehavior: 'selection'`).
+    #[test]
+    fn an_item_can_stay_focusable_while_disabled() {
+        Owner::new().with(|| {
+            let collection = Memo::new(|_| {
+                Arc::new(Collection::build(|b| {
+                    b.item("apple", "Apple").disabled(true);
+                    b.item("banana", "Banana")
+                        .disabled(true)
+                        .disabled_behavior(DisabledBehavior::Selection);
+                }))
+            });
+            let m = SelectionManager::new(collection, multiple());
+            assert_that!(m.is_disabled(&k("apple"))).is_true();
+            assert_that!(m.is_disabled(&k("banana"))).is_false();
+            // Neither can be selected.
+            assert_that!(m.can_select_item(&k("apple"))).is_false();
+            assert_that!(m.can_select_item(&k("banana"))).is_false();
         });
     }
 

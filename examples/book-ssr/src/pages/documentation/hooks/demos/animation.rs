@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::button::Button,
     hooks::{
         UseEnterAnimationInput, UseEnterAnimationReturn, UseExitAnimationInput,
         UseExitAnimationReturn, use_enter_animation, use_exit_animation,
@@ -24,7 +24,7 @@ pub fn AnimationDemo() -> impl IntoView {
     });
 
     view! {
-        <Button on_press=move |_| is_open.update(|open| *open = !*open)>
+        <Button on_press=move |_| is_open.update(|open| *open = !*open) classes="demo-btn">
             {move || if is_open.get() { "Hide panel" } else { "Show panel" }}
         </Button>
         <Show when=move || is_open.get() || is_exiting.get()>

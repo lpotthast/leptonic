@@ -58,7 +58,7 @@
     background: var(--book-surface-color);
     color: var(--main-color);
 
-    &:focus-visible {
+    &[data-focus-visible] {
         outline: 2px solid var(--book-focus-color);
         outline-offset: 2px;
     }
@@ -92,8 +92,6 @@
     &:hover:not([data-disabled]) {
         background: var(--brand-color-subtle);
     }
-
-    // Replaces the theme's generic focus ring, which would be clipped by the scroll container.
 
     &[data-focus-visible] {
         outline: 2px solid var(--book-focus-color);
@@ -178,6 +176,20 @@
 
 .demo-grid-list-name { flex: 1; }
 
+// A button in a row (atom and hook demos): the `Button` atom, styled through its data attributes.
+.demo-grid-list-action {
+    padding: var(--book-space-xs) var(--book-space-s);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
 
 // -- Grid --
 
@@ -220,7 +232,7 @@
 // ArrowRight, on a cell: both render `data-focus-visible`.
 .demo-messages      { display: table; width: 100%; max-width: 32em; border-collapse: collapse; }
 
-.demo-messages > *  { display: table-row-group; }
+.demo-messages > .leptonic-GridRowGroup { display: table-row-group; }
 
 .demo-messages-row {
     display: table-row;
@@ -433,6 +445,57 @@
     &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
 }
 
+// Tag group atoms (the Tag Group overview and atoms page), styled through the atoms' data attributes. The label
+// is `.demo-tag-group-label` above.
+.demo-tag-atom-group { display: flex; flex-direction: column; }
+
+.demo-tag-atom-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--book-space-s);
+
+    &[data-empty] { color: var(--book-muted-color); font-style: italic; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-tag-atom {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-xs);
+    padding: var(--book-space-xs) var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-pill);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    outline: none;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    &[data-selection-mode] { cursor: pointer; }
+    &[data-hovered] { border-color: var(--brand-color); }
+    &[data-selected] { border-color: var(--brand-color); background: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible] { box-shadow: 0 0 0 2px var(--book-focus-color); }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+}
+
+.demo-tag-atom-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25em;
+    height: 1.25em;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: inherit;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+
+    &[data-hovered] { background: var(--book-hover-background-color); color: var(--main-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
+}
+
 // The Listbox overview's Quick Start, styled through the data attributes of `ListBoxItem`.
 .demo-fruit-listbox {
     max-width: 14em;
@@ -442,7 +505,7 @@
     background: var(--book-surface-color);
 
     // The listbox takes focus itself only while it has no options.
-    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
 
 .demo-fruit-option {

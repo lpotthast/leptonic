@@ -35,20 +35,11 @@ async fn browser_tests() -> Result<(), Report> {
     common::tracing::init_subscriber();
 
     let app_start = Instant::now();
+    // The test app uses no leptonic theme: it declares no `[package.metadata.leptonic]`, so
+    // leptonic's build script generates none.
     let app_dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../testing/test-app");
-    // The current theme, before `cargo leptos` compiles the app's styles: it may compile them
-    // before leptonic's build script writes the theme (which then writes the same files).
-    if let Err(err) = leptonic_theme::generate(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../testing/test-app/style/leptonic"
-    )) {
-        leptos_browser_test::bail!("writing the theme failed: {err:#}");
-    }
     let app = LeptosTestAppConfig::new(app_dir)
         .with_app_name("leptonic test app")
-        // Leptonic's build script writes the theme into the app it finds above its `OUT_DIR`:
-        // with a `CARGO_TARGET_DIR` outside the app (inherited by `cargo leptos`), it finds none.
-        .with_env("LEPTONIC_APP_DIR", app_dir)
         .start()
         .await
         .map_err(Report::into_dynamic)?;

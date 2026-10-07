@@ -85,7 +85,10 @@ pub struct UseTabListInput {
     pub tabs: TabListData,
     /// The tab list element; the hook's props capture it.
     pub element: CapturedElement,
-    pub orientation: Orientation,
+    /// The axis of the arrow keys (react-aria's default: horizontal).
+    pub orientation: Signal<Orientation>,
+    /// Whether focusing a tab with the arrow keys selects it. Not a signal yet: the collection's
+    /// `select_on_focus` it configures is fixed when the collection is created.
     pub keyboard_activation: KeyboardActivation,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
@@ -112,7 +115,7 @@ pub struct TabListItemData {
 pub struct UseTabListProps {
     pub id: String,
     pub role: AriaRole,
-    pub aria_orientation: AriaOrientation,
+    pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     /// Keyboard navigation and focus handling (`use_selectable_collection`).
@@ -122,7 +125,7 @@ pub struct UseTabListProps {
 pub type UseTabListAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     UseSelectableCollectionAttrs,
@@ -162,7 +165,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
             list.collection,
             list.selection,
             direction.get(),
-            orientation,
+            orientation.get(),
         )) as Arc<dyn KeyboardDelegate>
     });
     let mut collection = use_selectable_collection(UseSelectableCollectionInput {
@@ -189,10 +192,10 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
         props: UseTabListProps {
             id: tabs.id,
             role: AriaRole::Tablist,
-            aria_orientation: match orientation {
+            aria_orientation: Signal::derive(move || match orientation.get() {
                 Orientation::Horizontal => AriaOrientation::Horizontal,
                 Orientation::Vertical => AriaOrientation::Vertical,
-            },
+            }),
             aria_label,
             aria_labelledby,
             collection,

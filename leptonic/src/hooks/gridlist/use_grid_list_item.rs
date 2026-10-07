@@ -13,7 +13,8 @@ use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
         collections::{
-            Key, Node, NodeKind, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
+            FocusItem, Key, NodeKind, SelectionMode, UseSelectableItemAttrs,
+            UseSelectableItemInput,
             UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
         },
         focus::use_focus_visible::{
@@ -191,6 +192,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         keyboard_navigation_behavior,
         should_select_on_press_up,
         tree,
+        tree_positions,
     } = list;
     let selection = state.selection;
     let direction = use_direction();
@@ -232,19 +234,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         toggles.then(|| Callback::new(move |()| tree.toggle_key(tree_key.get_value())))
     });
     let position = Signal::derive(move || {
-        tree?;
-        state.collection.with(|c| {
-            let node = c.get(&tree_key.get_value())?;
-            let siblings: Vec<&Key> = match &node.parent_key {
-                Some(parent) => Box::new(c.children(parent)) as Box<dyn Iterator<Item = &Node>>,
-                None => Box::new(c.iter()),
-            }
-            .filter(|n| n.kind == NodeKind::Item)
-            .map(|n| &n.key)
-            .collect::<Vec<_>>();
-            let index = siblings.iter().position(|k| **k == node.key)?;
-            Some((node.level + 1, index + 1, siblings.len()))
-        })
+        tree_positions?.with(|positions| tree_key.with_value(|key| positions.get(key).copied()))
     });
 
     let element = CapturedElement::new();
@@ -314,11 +304,19 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         allows_different_press_origin: false,
         on_action,
         link_behavior,
-        focus: Some(Callback::new(move |()| focus_row())),
+        focus: Some(FocusItem::new(focus_row)),
         should_use_virtual_focus: false,
         on_context_menu,
     });
     let (mut item_props, item_styles) = item_props.into_inner();
+    // A row whose child takes focus and is reached with arrow keys inside a Tab-navigated list is
+    // no tab stop itself (react-aria).
+    if focus_mode == FocusMode::Child
+        && allows_arrow_navigation
+        && keyboard_navigation_behavior == KeyboardNavigationBehavior::Tab
+    {
+        item_props.tabindex = Signal::stored(Some(-1));
+    }
 
     // Moves focus to `target` and scrolls it into view.
     let focus_and_reveal = move |target: &web_sys::Element| {
@@ -350,11 +348,11 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         }
         let rtl = direction.get_untracked() == WritingDirection::Rtl;
         let (expand_key, collapse_key) = if rtl {
-            ("ArrowLeft", "ArrowRight")
+            (KeyboardKey::ArrowLeft, KeyboardKey::ArrowRight)
         } else {
-            ("ArrowRight", "ArrowLeft")
+            (KeyboardKey::ArrowRight, KeyboardKey::ArrowLeft)
         };
-        let key = e.key();
+        let key = e.typed_key();
         let expanded = untrack(is_expanded);
         if key == expand_key && has_child_rows && !expanded {
             tree.toggle_key(tree_key.get_value());
@@ -410,14 +408,14 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         }
         let rtl = direction.get_untracked() == WritingDirection::Rtl;
 
-        let key = e.key();
-        match key.as_str() {
-            "ArrowLeft" | "ArrowRight" => {
+        let key = e.typed_key();
+        match key {
+            KeyboardKey::ArrowLeft | KeyboardKey::ArrowRight => {
                 if keyboard_navigation_behavior != KeyboardNavigationBehavior::Arrow {
                     return;
                 }
                 // "Forward" is the reading direction.
-                let forward = (key == "ArrowRight") != rtl;
+                let forward = (key == KeyboardKey::ArrowRight) != rtl;
                 let next = if forward {
                     walker.next_node()
                 } else {
@@ -443,14 +441,16 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                 }
             }
             // Up/down from a child: let the grid move to the neighboring row.
-            "ArrowUp" | "ArrowDown" if !e.alt_key() => {
+            KeyboardKey::ArrowUp | KeyboardKey::ArrowDown if !e.alt_key() => {
                 if active == row {
                     return;
                 }
                 e.stop_propagation();
                 e.prevent_default();
+                // The copy's path (the grid and its ancestors) has no listener still running for
+                // `e`: the row's own keydown listener is below it.
                 if let Some(grid) = row.parent_element() {
-                    let _ = grid.dispatch_event(&clone_keyboard_event(&e));
+                    crate::utils::key::redispatch_keyboard_event(&e, &grid);
                 }
             }
             _ => {}
@@ -573,9 +573,9 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                 aria_expanded: Signal::derive(move || {
                     has_child_rows.then(|| AriaExpanded::from(is_expanded()))
                 }),
-                aria_level: Signal::derive(move || position.get().map(|(level, _, _)| level)),
-                aria_posinset: Signal::derive(move || position.get().map(|(_, index, _)| index)),
-                aria_setsize: Signal::derive(move || position.get().map(|(_, _, size)| size)),
+                aria_level: Signal::derive(move || position.get().map(|p| p.level)),
+                aria_posinset: Signal::derive(move || position.get().map(|p| p.index)),
+                aria_setsize: Signal::derive(move || position.get().map(|p| p.set_size)),
                 aria_disabled: Signal::derive(move || {
                     key.with_value(|k| selection.is_disabled(k))
                         .then_some(AriaDisabled::True)
@@ -599,21 +599,4 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         allows_selection,
         has_action,
     }
-}
-
-/// A copy of `e` (same key and modifiers) that bubbles, for re-dispatching it elsewhere.
-fn clone_keyboard_event(e: &KeyboardEvent) -> KeyboardEvent {
-    let init = web_sys::KeyboardEventInit::new();
-    init.set_key(&e.key());
-    init.set_code(&e.code());
-    init.set_location(e.location());
-    init.set_repeat(e.repeat());
-    init.set_shift_key(e.shift_key());
-    init.set_ctrl_key(e.ctrl_key());
-    init.set_alt_key(e.alt_key());
-    init.set_meta_key(e.meta_key());
-    init.set_bubbles(true);
-    init.set_cancelable(true);
-    KeyboardEvent::new_with_keyboard_event_init_dict(&e.type_(), &init)
-        .expect("KeyboardEvent creation should not fail")
 }

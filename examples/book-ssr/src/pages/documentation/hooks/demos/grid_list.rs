@@ -3,14 +3,13 @@ use leptonic::hooks::KeyboardNavigationBehavior;
 use leptonic::hooks::collections::CollectionOptions;
 use leptonic::hooks::collections::ListLayout;
 use leptonic::{
-    components::prelude::{Button, ButtonVariant, Icon},
+    atoms::button::Button,
     hooks::{
         GridListData, IntoAttrs, Key, SelectionBehavior, SelectionMode, UseGridListInput,
         UseGridListItemInput, UseGridListReturn,
         collections::{Selection, SelectionOptions, UseListStateInput},
         use_grid_list, use_grid_list_item, use_list_collection, use_list_state,
     },
-    prelude::icondata,
     utils::CapturedElement,
 };
 use leptos::prelude::*;
@@ -40,7 +39,7 @@ pub fn GridListDemo() -> impl IntoView {
         collection,
         selection: SelectionOptions {
             selection_mode: Signal::stored(SelectionMode::Multiple),
-            selection_behavior: SelectionBehavior::Replace,
+            selection_behavior: Signal::stored(SelectionBehavior::Replace),
             selection: Some(selection.into()),
             ..SelectionOptions::default()
         },
@@ -87,7 +86,7 @@ pub fn GridListDemo() -> impl IntoView {
         </div>
         <p class="demo-status">{status}</p>
         <div class="demo-controls">
-            <Button on_press=move |_| files.set(FILES.to_vec())>"Restore files"</Button>
+            <Button on_press=move |_| files.set(FILES.to_vec()) classes="demo-btn">"Restore files"</Button>
         </div>
     }
 }
@@ -115,11 +114,11 @@ fn FileRow(
             <div {..row.grid_cell_props.into_attrs()} class="demo-grid-list-cell">
                 <span class="demo-grid-list-name">{name}</span>
                 <Button
-                    variant=ButtonVariant::Flat
                     on_press=move |_| remove.run(key)
-                    attr:aria-label=format!("Remove {name}")
+                    aria_label=format!("Remove {name}")
+                    classes="demo-grid-list-action"
                 >
-                    <Icon icon=icondata::BsTrash/>
+                    <span aria-hidden="true">"\u{2715}"</span>
                 </Button>
             </div>
         </div>

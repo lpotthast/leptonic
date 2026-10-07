@@ -13,7 +13,7 @@ pub fn ColorAlphaDemo() -> impl IntoView {
         Alpha::new(HSV {
             hue: 0.0,
             saturation: 0.9,
-            value: 0.9,
+            brightness: 0.9,
         })
         .with_alpha(0.6),
     );
@@ -23,7 +23,7 @@ pub fn ColorAlphaDemo() -> impl IntoView {
         .map(|channel| {
             view! {
                 <ColorSlider channel value=color set_value=color classes="demo-color-atoms-slider">
-                    <Label>{Alpha::<HSV>::get_channel_name(channel)}</Label>
+                    <Label>{Alpha::<HSV>::channel_name(channel)}</Label>
                     <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
                     <ColorSliderTrack classes="demo-color-atoms-slider-track">
                         <ColorThumb classes="demo-color-atoms-thumb"/>

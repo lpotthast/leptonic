@@ -10,8 +10,7 @@ pub fn PageLinkOverview() -> impl IntoView {
         <DocPage title="Link">
             <p>
                 "Links take users to another page, another site or another place on the current page. Leptonic has "
-                <Code inline=true>"Link"</Code>" for pages of your app and other sites, "<Code inline=true>"LinkButton"</Code>
-                " for a link that looks like a button, and "<Code inline=true>"AnchorLink"</Code>" for scrolling to a "
+                <Code inline=true>"Link"</Code>" for pages of your app and other sites (also styled as a button) and "<Code inline=true>"AnchorLink"</Code>" for scrolling to a "
                 "section of the current page."
             </p>
 
@@ -25,7 +24,7 @@ pub fn PageLinkOverview() -> impl IntoView {
                     <TableRow><TableCell>"Scroll to a section of the current page"</TableCell><TableCell><b>"AnchorLink"</b></TableCell></TableRow>
                     <TableRow>
                         <TableCell>"Navigate with an element that looks like a button"</TableCell>
-                        <TableCell><b>"LinkButton"</b></TableCell>
+                        <TableCell><b>"Link"</b>" with the styles of your buttons"</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Trigger an action (submit, delete)"</TableCell>
@@ -41,7 +40,7 @@ pub fn PageLinkOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Links exist at all three layers. See "
+                    "Links exist as hooks and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -58,16 +57,19 @@ pub fn PageLinkOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></TableCell>
                         <TableCell>
-                            "Unstyled "<Code inline=true>"Link"</Code>", "<Code inline=true>"LinkButton"</Code>" and "
-                            <Code inline=true>"AnchorLink"</Code>", styled through data attributes. "<Code inline=true>"Link"</Code>
-                            " and "<Code inline=true>"LinkButton"</Code>" navigate with leptos_router and mark the current page."
+                            "Unstyled "<Code inline=true>"Link"</Code>" and "<Code inline=true>"AnchorLink"</Code>", styled through "
+                            "data attributes. "<Code inline=true>"Link"</Code>" navigates with leptos_router and marks the current page."
                         </TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
 
             <Section title="Quick Start">
-                <p>"The themed "<Code inline=true>"Link"</Code>" to another site, opening in a new tab:"</p>
+                <p>
+                    "The "<Code inline=true>"Link"</Code>" atom to another site, opening in a new tab. Its class is the "
+                    "book\u{2019}s own; the "<Link href=format!("{}#styling", routes::doc::link::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows its CSS:"
+                </p>
 
                 <Demo description="External link to the leptonic repository" source=include_str!("demos/link.rs") source_open=true>
                     <LinkConceptDemo/>
@@ -91,7 +93,7 @@ pub fn PageLinkOverview() -> impl IntoView {
                     </li>
                     <li>
                         <Code inline=true>"aria-current=\"page\""</Code>" on the link to the current page ("
-                        <Code inline=true>"Link"</Code>" and "<Code inline=true>"LinkButton"</Code>")."
+                        <Code inline=true>"Link"</Code>")."
                     </li>
                     <li>
                         <Code inline=true>"rel=\"noopener\""</Code>" on links opening a new tab, so the opened page can\u{2019}t "

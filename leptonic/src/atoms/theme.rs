@@ -1,8 +1,11 @@
 //! Themes: a theme type, the provider applying it (`data-theme`) and access to it.
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 use leptos_use::use_document;
 
-use crate::Out;
+use crate::{
+    Out,
+    utils::{classes::Classes, default_class::with_default_class},
+};
 
 /// Marker indicating that a `ThemeProvider` has already claimed the
 /// document-element `data-theme` attribute. Nested providers skip it.
@@ -62,6 +65,10 @@ pub fn use_theme<T: Theme + 'static>() -> Option<ThemeContext<T>> {
 ///
 /// State props (C4): `theme` + `set_theme` (controlled, e.g. from `signal_ls`), or
 /// `default_theme`; `on_theme_change` observes.
+///
+/// Renders a `<div style="display: contents">` carrying `data-theme`.
+///
+/// Default class: `leptonic-ThemeProvider`.
 #[component]
 pub fn ThemeProvider<T>(
     /// The theme (controlled): a value or any signal.
@@ -74,11 +81,13 @@ pub fn ThemeProvider<T>(
     #[prop(optional)]
     default_theme: Option<T>,
     #[prop(into, optional)] on_theme_change: Option<Callback<T>>,
+    #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView
 where
     T: Theme + 'static,
 {
+    let classes = with_default_class("leptonic-ThemeProvider", classes);
     let owned = RwSignal::new(default_theme.unwrap_or_default());
     let theme = theme.unwrap_or_else(|| owned.into());
     let set_theme = Callback::new(move |new: T| {
@@ -91,14 +100,14 @@ where
         }
     });
 
-    provide_context(ThemeContext { theme, set_theme });
+    // Provided around the children only (`<Provider>`): `provide_context` in the body would also
+    // reach the provider's later siblings.
+    let context = ThemeContext { theme, set_theme };
 
     // If no parent ThemeProvider has claimed the document element,
     // mirror data-theme onto <html> so Portal content inherits CSS variables.
     let is_root = use_context::<RootThemeApplied>().is_none();
     if is_root {
-        provide_context(RootThemeApplied);
-
         Effect::new(move |_| {
             if let Some(doc) = use_document().as_ref()
                 && let Some(el) = doc.document_element()
@@ -109,12 +118,16 @@ where
     }
 
     view! {
-        <div
-            class="leptonic-theme-provider"
-            data-theme=move || theme.get().name()
-            style="display: contents;"
-        >
-            {children()}
-        </div>
+        <Provider value=context>
+            <Provider value=RootThemeApplied>
+                <div
+                    class=classes
+                    data-theme=move || theme.get().name()
+                    style="display: contents;"
+                >
+                    {children()}
+                </div>
+            </Provider>
+        </Provider>
     }
 }

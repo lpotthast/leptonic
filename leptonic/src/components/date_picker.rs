@@ -120,10 +120,10 @@ pub fn DatePicker<V: DateValue>(
     props.value = value;
     props.set_value = set_value;
     props.on_change = on_change;
-    props.placeholder_value = placeholder_value;
+    props.placeholder_value = placeholder_value.into();
     props.is_date_unavailable = is_date_unavailable;
-    props.granularity = granularity;
-    props.hour_cycle = hour_cycle;
+    props.granularity = granularity.into();
+    props.hour_cycle = hour_cycle.into();
     props.validate = validate;
     props.validation_behavior = validation_behavior;
     props.name = name;

@@ -22,7 +22,7 @@ use crate::{
         UseKeyboardInput, collections::Key, use_focus_within, use_keyboard,
     },
     utils::{
-        CapturedElement, ElementCaptureAttr, EventHandler, SlotProps,
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler, SlotProps,
         aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaReadonly, AriaRequired, AriaRole},
         i18n::use_direction,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
@@ -209,9 +209,7 @@ pub fn use_radio_group(input: UseRadioGroupInput) -> UseRadioGroupReturn {
     let select_next = move |e: &KeyboardEvent, next: bool| -> bool {
         let focus_manager = FocusManager::new(move || group.get_untracked().map(|g| (*g).clone()));
         let options = FocusManagerOptions {
-            from: e
-                .target()
-                .and_then(|t| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(t).ok()),
+            from: wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target()).ok(),
             wrap: true,
             tabbable: false,
             accept: Some(Arc::new(|el: &web_sys::Element| {

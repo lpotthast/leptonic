@@ -120,11 +120,8 @@ pub fn PageAtomTooltip() -> impl IntoView {
                     </ul>
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{
-                                atoms::prelude::{Focusable, Tooltip, TooltipTrigger},
-                                components::prelude::Icon,
-                                prelude::icondata,
-                            };
+                            use leptonic::atoms::prelude::{Focusable, Tooltip, TooltipTrigger};
+                            use leptos_icons::Icon;
 
                             view! {
                                 <TooltipTrigger>
@@ -188,31 +185,41 @@ pub fn PageAtomTooltip() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes: style the tooltip through "<Code inline=true>"classes"</Code>" and the data "
-                    "attributes. The tooltip also sets "<Code inline=true>"--trigger-anchor-point"</Code>", the point closest "
-                    "to the trigger, e.g. as the "<Code inline=true>"transform-origin"</Code>" of an animation."
+                    "The atoms bring no styles. "<Code inline=true>"Tooltip"</Code>" renders the class "
+                    <Code inline=true>"leptonic-Tooltip"</Code>", an "<Code inline=true>"OverlayArrow"</Code>" inside it the "
+                    "class "<Code inline=true>"leptonic-OverlayArrow"</Code>", each followed by the "
+                    <Code inline=true>"classes"</Code>" you pass; target their state with the data attributes above. "
+                    "Positioning and layering come from the atom. The tooltip also sets "
+                    <Code inline=true>"--trigger-anchor-point"</Code>", the point closest to the trigger, e.g. as the "
+                    <Code inline=true>"transform-origin"</Code>" of an animation."
                 </p>
                 <p>
-                    "An "<Code inline=true>"OverlayArrow"</Code>" sits at the tooltip\u{2019}s edge facing the trigger; turn "
-                    "its shape with "<Code inline=true>"data-placement"</Code>", and give the tooltip an "
+                    "The arrow\u{2019}s shape is yours: render it inside "<Code inline=true>"OverlayArrow"</Code>
+                    ", turn it with "<Code inline=true>"data-placement"</Code>", and give the tooltip an "
                     <Code inline=true>"offset"</Code>" that leaves room for it. Fade the tooltip in and out with "
                     <Code inline=true>"data-entering"</Code>" and "<Code inline=true>"data-exiting"</Code>
-                    "; a fade doesn\u{2019}t move, so it needs no reduced-motion rule."
+                    "; a fade doesn\u{2019}t move, so it needs no reduced-motion rule. The book\u{2019}s demos use these "
+                    "rules, with the accent color so that the tooltip stands out:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-tooltip { padding: 4px 8px; border-radius: 4px; background: var(--surface); }
-                        .my-tooltip[data-entering] { animation: fade 100ms ease-out; }
-                        .my-tooltip[data-exiting] { animation: fade 100ms ease-in reverse forwards; }
+                        .my-tooltip { padding: 0.5em 1em; border-radius: 4px; background: var(--accent); color: var(--surface); }
+                        .my-tooltip[data-entering] { animation: fade 150ms ease-out; }
+                        .my-tooltip[data-exiting] { animation: fade 150ms ease-in reverse forwards; }
                         @keyframes fade { from { opacity: 0; } }
 
-                        /* An SVG arrow pointing down, at a trigger below the tooltip. */
-                        .my-tooltip-arrow path { fill: var(--surface); }
-                        .my-tooltip-arrow[data-placement="bottom"] svg { transform: rotate(180deg); }
-                        .my-tooltip-arrow[data-placement="left"] svg { transform: rotate(-90deg); }
-                        .my-tooltip-arrow[data-placement="right"] svg { transform: rotate(90deg); }
+                        /* A triangle pointing down, at a trigger below the tooltip; turned for the other sides. */
+                        .my-arrow { display: flex; width: 12px; height: 6px; }
+                        .my-arrow-shape { border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 6px solid var(--accent); }
+                        .my-arrow[data-placement="bottom"] .my-arrow-shape { transform: rotate(180deg); }
+                        .my-arrow[data-placement="left"] .my-arrow-shape { transform: rotate(-90deg); }
+                        .my-arrow[data-placement="right"] .my-arrow-shape { transform: rotate(90deg); }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <Section title="Composition">

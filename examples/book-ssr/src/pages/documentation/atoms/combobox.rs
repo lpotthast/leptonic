@@ -269,7 +269,11 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         "On "<Code inline=true>"ComboBox"</Code>" and "<Code inline=true>"ComboBoxButton"</Code>": the popover is open."
                     </ApiRow>
                     <ApiRow name="data-disabled" ty="true">
-                        "On "<Code inline=true>"ComboBox"</Code>": the combobox is disabled. On an item: the option is disabled."
+                        "On "<Code inline=true>"ComboBox"</Code>" and "<Code inline=true>"ComboBoxButton"</Code>": the combobox "
+                        "is disabled. On an item: the option is disabled."
+                    </ApiRow>
+                    <ApiRow name="data-hovered" ty="true">
+                        "On "<Code inline=true>"ComboBoxButton"</Code>": a mouse or pen is over the button."
                     </ApiRow>
                     <ApiRow name="data-invalid" ty="true">
                         "On "<Code inline=true>"ComboBox"</Code>" and the "<Code inline=true>"Input"</Code>": the value is invalid."
@@ -290,21 +294,47 @@ pub fn PageAtomComboBox() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. The options are focused virtually, so style the focused option with "
-                    <Code inline=true>"[data-focused]"</Code>", not "<Code inline=true>":focus"</Code>":"
+                    "The atoms bring no styles. Their default classes are "<Code inline=true>"leptonic-ComboBox"</Code>
+                    " (the "<Code inline=true>"<div>"</Code>" around the parts), "<Code inline=true>"leptonic-Input"</Code>", "
+                    <Code inline=true>"leptonic-ComboBoxButton"</Code>" and "<Code inline=true>"leptonic-ComboBoxPopover"</Code>
+                    "; the options are "<Code inline=true>"leptonic-ListBoxItem"</Code>"s in a "<Code inline=true>"leptonic-ListBox"</Code>
+                    ". The button is named for assistive technology; its content is yours, e.g. an "
+                    <Code inline=true>"aria-hidden"</Code>" caret. Wrap the input and the button in your own element to "
+                    "draw them as one control."
+                </p>
+                <p>
+                    "Target the state with the data attributes. The options are focused virtually (the focus stays in the "
+                    "input), so style the focused option with "<Code inline=true>"[data-focused]"</Code>", not "
+                    <Code inline=true>":focus"</Code>". The popover is rendered into the document body, so style it "
+                    "through its own classes, not as a descendant of the combobox. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-input[data-focus-visible] { outline: 2px solid var(--focus); }
-                        .my-option[data-focused] { background: var(--surface); }
-                        .my-option[data-selected] { font-weight: bold; }
-                        .my-option[data-disabled] { opacity: 0.5; }
+                        .demo-combo { display: inline-flex; flex-direction: column; gap: 0.25rem; width: 16em; }
+                        .demo-combo-field { display: flex; }
+
+                        .demo-combo-atom-input { flex: 1; min-width: 0; padding: 0.5rem 1rem; border: 1px solid var(--border); border-right: none; border-radius: 6px 0 0 6px; }
+                        .demo-combo-atom-input[data-hovered],
+                        .demo-combo-atom-input[data-focused] { border-color: var(--accent); }
+                        .demo-combo-atom-input[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 1px; }
+                        .demo-combo-atom-input[data-disabled] { opacity: 0.5; }
+
+                        .demo-combo-atom-button { padding: 0 1rem; border: 1px solid var(--border); border-radius: 0 6px 6px 0; background: var(--surface); color: var(--muted); }
+                        .demo-combo-atom-button[data-hovered] { color: var(--accent); }
+                        .demo-combo-atom-button[data-open] span { display: inline-block; transform: rotate(180deg); }
+                        .demo-combo-atom-button[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-combo-popover { min-width: 16em; max-height: 15em; overflow-y: auto; padding: 0.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+
+                        .demo-combo-item { padding: 0.5rem; border-radius: 6px; cursor: pointer; }
+                        .demo-combo-item[data-focused] { background: var(--border); }
+                        .demo-combo-item[data-selected] { color: var(--accent); font-weight: 600; }
+                        .demo-combo-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
                     ")}
                 </Code>
                 <p>
-                    "The popover is rendered into the document body, so style it through its own classes, not as a "
-                    "descendant of the combobox."
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
                 </p>
             </Section>
 

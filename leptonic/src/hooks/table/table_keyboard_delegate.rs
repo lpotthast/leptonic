@@ -209,12 +209,16 @@ impl KeyboardDelegate for TableKeyboardDelegate {
         self.grid.last_key(from, global)
     }
 
+    // Paging steps with the table's own `key_above`/`key_below` (react-aria's base class calls
+    // the overridden methods), so PageUp reaches the column headers.
     fn key_page_above(&self, key: &Key) -> Option<Key> {
-        self.grid.key_page_above(key)
+        self.grid
+            .key_page_above_with(key, |k| self.key_above(k, NavigationOptions::default()))
     }
 
     fn key_page_below(&self, key: &Key) -> Option<Key> {
-        self.grid.key_page_below(key)
+        self.grid
+            .key_page_below_with(key, |k| self.key_below(k, NavigationOptions::default()))
     }
 
     /// Matches the rows' text, then the text of their row header cells.
@@ -300,6 +304,14 @@ mod tests {
     /// | Alice| a@... | 555-01 |
     /// | Bob  | b@... | 555-02 |
     fn delegate(focus_mode: GridFocusMode, direction: WritingDirection) -> TableKeyboardDelegate {
+        delegate_with_layout(focus_mode, direction, Arc::new(NoLayout))
+    }
+
+    fn delegate_with_layout(
+        focus_mode: GridFocusMode,
+        direction: WritingDirection,
+        layout: Arc<dyn LayoutDelegate>,
+    ) -> TableKeyboardDelegate {
         let table = Memo::new(|_| {
             Arc::new(TableCollection::build(|t| {
                 t.column("name", "Name");
@@ -328,7 +340,7 @@ mod tests {
             &Locale::default(),
             &CollatorOptions::default(),
         ));
-        let grid = GridKeyboardDelegate::new(collection, selection, Arc::new(NoLayout))
+        let grid = GridKeyboardDelegate::new(collection, selection, layout)
             .with_direction(direction)
             .with_collator(collator.clone())
             .with_focus_mode(focus_mode);
@@ -377,6 +389,47 @@ mod tests {
             assert_that!(d.last_key(Some(&k("name")), true)).is_equal_to(Some(cell("bob", 2)));
             let rtl = delegate(GridFocusMode::Row, WritingDirection::Rtl);
             assert_that!(rtl.key_left_of(&k("name"), NAV)).is_equal_to(Some(k("email")));
+        });
+    }
+
+    /// Rows of 20px: the group header row, the column header row, then Alice and Bob; a page
+    /// is 100px.
+    struct RowsLayout;
+
+    impl LayoutDelegate for RowsLayout {
+        fn item_rect(&self, key: &Key) -> Option<Rect> {
+            // Cells (`row-index`) are in their row.
+            let key = key.to_string();
+            let y = match key.split('-').next().unwrap_or_default() {
+                "contact" => 0.0,
+                "name" | "email" | "phone" => 20.0,
+                "alice" => 40.0,
+                "bob" => 60.0,
+                _ => return None,
+            };
+            Some(Rect::new(0.0, y, 300.0, 20.0))
+        }
+        fn visible_rect(&self) -> Rect {
+            Rect::new(0.0, 0.0, 300.0, 100.0)
+        }
+        fn content_size(&self) -> Size {
+            Size::new(300.0, 80.0)
+        }
+    }
+
+    #[test]
+    fn page_up_and_down_reach_the_column_headers() {
+        Owner::new().with(|| {
+            let d = delegate_with_layout(
+                GridFocusMode::Row,
+                WritingDirection::Ltr,
+                Arc::new(RowsLayout),
+            );
+            // Up through the rows into the header row (react-aria's paging steps with the
+            // table's own `getKeyAbove`).
+            assert_that!(d.key_page_above(&k("bob"))).is_equal_to(Some(k("name")));
+            // Down from a column header: its cells.
+            assert_that!(d.key_page_below(&k("name"))).is_equal_to(Some(cell("bob", 0)));
         });
     }
 

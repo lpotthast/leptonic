@@ -356,27 +356,67 @@ pub fn PageAtomSelect() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. Hovering an option focuses it, so "<Code inline=true>"[data-focused]"</Code>" highlights "
-                    "the option under the pointer and the arrow keys alike; "<Code inline=true>"[data-focus-visible]"</Code>
-                    " is added while the keyboard is in use. The leptonic theme draws a generic outline around every "
-                    <Code inline=true>"[data-focus-visible]"</Code>" element; give the trigger and the options their own "
-                    "outline, so that the popover doesn\u{2019}t clip it:"
+                    "The atoms bring no styles. Their default classes are "<Code inline=true>"leptonic-Select"</Code>
+                    " (the "<Code inline=true>"<div>"</Code>" around the parts), "<Code inline=true>"leptonic-SelectTrigger"</Code>
+                    " (a "<Code inline=true>"<button>"</Code>"), "<Code inline=true>"leptonic-SelectValue"</Code>" and "
+                    <Code inline=true>"leptonic-SelectPopover"</Code>"; the options are "<Code inline=true>"leptonic-ListBoxItem"</Code>
+                    "s in a "<Code inline=true>"leptonic-ListBox"</Code>", and section headings "
+                    <Code inline=true>"leptonic-ListBoxSectionHeading"</Code>". Put the "<Code inline=true>"SelectValue"</Code>
+                    " and your own caret, hidden from assistive technology, into the trigger:"
                 </p>
-                <Code language=Language::Css>
-                    {indoc!(r"
-                        .my-trigger[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-trigger[data-open] .my-caret { transform: rotate(180deg); }
-                        .my-value[data-placeholder] { color: var(--muted); }
-                        .my-option[data-focused] { background: var(--surface); }
-                        .my-option[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-option[data-selected] { color: var(--accent); font-weight: bold; }
-                        .my-option[data-disabled] { opacity: 0.5; }
-                    ")}
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <SelectTrigger classes="demo-sel-trigger">
+                            <SelectValue placeholder="Choose an office" classes="demo-sel-value"/>
+                            <span class="demo-sel-caret" aria-hidden="true">"\u{25bc}"</span>
+                        </SelectTrigger>
+                    "#)}
                 </Code>
                 <p>
-                    "The popover is rendered into the document body, so style it through its own classes, not as a "
-                    "descendant of the select. It sets no width: give it a "<Code inline=true>"min-width"</Code>"."
+                    "Target the state with the data attributes. Hovering an option focuses it, so "
+                    <Code inline=true>"[data-focused]"</Code>" highlights the option under the pointer and the arrow keys "
+                    "alike; "<Code inline=true>"[data-focus-visible]"</Code>" is added while the keyboard is in use. Draw the "
+                    "options\u{2019} focus ring inside them, so that the popover doesn\u{2019}t clip it. The trigger renders "
+                    "no hover attribute yet, so "<Code inline=true>":hover"</Code>" stands in. The popover is rendered into "
+                    "the document body, so style it through its own classes, not as a descendant of the select; it sets no "
+                    "width, so give it a "<Code inline=true>"min-width"</Code>". The demos above use this CSS:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r#"
+                        .demo-sel { display: inline-flex; flex-direction: column; gap: 0.25rem; width: 16em; }
+
+                        .demo-sel-trigger {
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            padding: 0.5rem 1rem;
+                            border: 1px solid var(--border);
+                            border-radius: 6px;
+                            background: var(--surface);
+                            font: inherit;
+                        }
+                        .demo-sel-trigger:hover:not([data-disabled]),
+                        .demo-sel-trigger[data-open] { border-color: var(--accent); }
+                        .demo-sel-trigger[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-sel-trigger[data-invalid] { border-color: var(--danger); }
+                        .demo-sel-trigger[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-sel-value[data-placeholder] { color: var(--muted); }
+                        [data-open] > .demo-sel-caret { transform: rotate(180deg); }
+
+                        .demo-sel-popover { min-width: 16em; max-height: 18em; overflow-y: auto; padding: 0.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+
+                        .demo-sel-item { display: flex; justify-content: space-between; padding: 0.5rem; border-radius: 6px; cursor: pointer; }
+                        .demo-sel-item[data-focused] { background: var(--border); }
+                        .demo-sel-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-sel-item[data-selected] { color: var(--accent); font-weight: 600; }
+                        .demo-sel-item[data-selected]::after { content: "\2713"; }
+                        .demo-sel-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                    "#)}
+                </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
                 </p>
             </Section>
 

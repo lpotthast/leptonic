@@ -47,6 +47,22 @@ async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report
         .is_equal_to(Some("button".to_owned()));
     assert_that!(page.attr_of("test-btn-anchor", "href").await?)
         .is_equal_to(Some("#anchor-target".to_owned()));
+    // "handles input elements": `type="button"`, no role.
+    assert_that!(page.attr_of("test-btn-input", "type").await?)
+        .is_equal_to(Some("button".to_owned()));
+    assert_that!(page.attr_of("test-btn-input", "role").await?).is_none();
+    // "handles target and rel": a new tab also gets `noopener` (a leptonic addition).
+    assert_that!(page.attr_of("test-btn-blank", "target").await?)
+        .is_equal_to(Some("_blank".to_owned()));
+    assert_that!(page.attr_of("test-btn-blank", "rel").await?)
+        .is_equal_to(Some("nofollow noopener".to_owned()));
+    // RAC Button.test.js "removes href attribute from anchor element when isPending is true".
+    assert_that!(page.attr_of("test-btn-pending-anchor", "href").await?).is_none();
+    assert_that!(
+        page.attr_of("test-btn-pending-anchor", "aria-disabled")
+            .await?
+    )
+    .is_equal_to(Some("true".to_owned()));
     Ok(())
 }
 
@@ -85,7 +101,8 @@ async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
         .await?;
     page.wait_for_selector("#test-btn-native[disabled]").await?;
 
-    // Native buttons use the `disabled` attribute, everything else `aria-disabled`.
+    // Native buttons and inputs use the `disabled` attribute, everything else `aria-disabled`.
+    page.wait_for_selector("#test-btn-input[disabled]").await?;
     assert_that!(page.attr_of("test-btn-div", "aria-disabled").await?)
         .is_equal_to(Some("true".to_owned()));
     assert_that!(page.attr_of("test-btn-div", "disabled").await?).is_none();

@@ -45,7 +45,7 @@ pub fn PageAtomColorField() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let accent = RwSignal::new(Some(RGB8 { r: 30, g: 110, b: 200 }));
-                        let tint = RwSignal::new(Some(HSV { hue: 210.0, saturation: 0.6, value: 0.8 }));
+                        let tint = RwSignal::new(Some(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 }));
 
                         view! {
                             <ColorField value=accent set_value=accent name="accent">
@@ -202,16 +202,27 @@ pub fn PageAtomColorField() -> impl IntoView {
             </Section>
 
             <Section title="Styling">
-                <p>"Style the input through its data attributes, and the field through its own:"</p>
+                <p>
+                    "The atoms bring no styles. "<Code inline=true>"ColorField"</Code>" and "<Code inline=true>"ColorChannelField"</Code>" render a "<Code inline=true>"<div>"</Code>" with the "
+                    "class "<Code inline=true>"leptonic-ColorField"</Code>" or "<Code inline=true>"leptonic-ColorChannelField"</Code>" and the "<Code inline=true>"classes"</Code>" you pass, around "
+                    "the "<Code inline=true>"Label"</Code>" and "<Code inline=true>"Input"</Code>" atoms you render inside. Style the input through its data attributes, and "
+                    "the field through its own. The demo above uses this CSS:"
+                </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-color-input { width: 8em; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; }
-                        .my-color-input[data-hovered] { border-color: var(--accent); }
-                        .my-color-input[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 1px; }
-                        .my-color-input[data-invalid] { border-color: var(--danger); }
-                        .my-color-field[data-disabled] { opacity: 0.5; }
+                        .demo-field { display: flex; flex-direction: column; gap: 0.25rem; }
+                        .demo-field-label { font-weight: 600; }
+                        .demo-color-atoms-input { box-sizing: border-box; width: 8em; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; }
+                        .demo-color-atoms-input[data-hovered] { border-color: var(--accent); }
+                        .demo-color-atoms-input[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 1px; }
+                        .demo-color-atoms-input[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-color-atoms-channel-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 6em)); gap: 0.5rem; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

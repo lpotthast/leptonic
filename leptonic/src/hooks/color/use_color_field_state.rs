@@ -3,10 +3,13 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::form::use_form_validation_state::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+        FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
         use_form_validation_state,
     },
-    utils::{ValueBinding, color::RGB8},
+    utils::{
+        ValueBinding,
+        color::{Color, ColorValue, RGB8},
+    },
 };
 
 // =============================================================================
@@ -14,7 +17,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The color is an `RGB8` (hex input is always RGB; react-aria: any `Color`).
+// - Generic over the color type (`ColorValue`, default `RGB8`), as react-aria's field takes any
+//   color: the text is the color's hex form, and typed hex is converted into the type.
 // - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
 // - A `Copy` struct with signals and methods (C3).
 //
@@ -24,49 +28,68 @@ const MIN_COLOR: RGB8 = RGB8::from_hex_int(0x00_00_00);
 const MAX_COLOR: RGB8 = RGB8::from_hex_int(0xFF_FF_FF);
 
 /// Input of [`use_color_field_state`].
-#[derive(Clone, Default)]
-pub struct UseColorFieldStateInput {
+#[derive(Clone)]
+pub struct UseColorFieldStateInput<C: ColorValue = RGB8> {
     /// The initial color (`None`: empty).
-    pub default_value: Option<RGB8>,
+    pub default_value: Option<C>,
     /// The color as app state, replacing `default_value`.
-    pub value: Option<ValueBinding<Option<RGB8>>>,
+    pub value: Option<ValueBinding<Option<C>>>,
     pub is_invalid: Signal<bool>,
-    pub validate: Option<ValidateFn<Option<RGB8>>>,
+    pub validate: Option<ValidateFn<Option<C>>>,
     pub validation_behavior: ValidationBehavior,
     /// The field's name, matching server errors.
     pub name: Option<String>,
     /// Called with the committed color.
-    pub on_change: Option<Callback<Option<RGB8>>>,
+    pub on_change: Option<Callback<Option<C>>>,
+}
+
+impl<C: ColorValue> Default for UseColorFieldStateInput<C> {
+    fn default() -> Self {
+        Self {
+            default_value: None,
+            value: None,
+            is_invalid: Signal::default(),
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            name: None,
+            on_change: None,
+        }
+    }
 }
 
 /// The state of a hex color field: the typed text and the committed color.
 #[derive(Clone, Copy)]
-pub struct ColorFieldState {
+pub struct ColorFieldState<C: ColorValue = RGB8> {
     /// The text in the field.
     pub input_value: Signal<String>,
     /// The committed color.
-    pub color_value: Signal<Option<RGB8>>,
-    pub validation: UseFormValidationStateReturn,
+    pub color_value: Signal<Option<C>>,
+    pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     text: RwSignal<String>,
-    binding: ValueBinding<Option<RGB8>>,
+    binding: ValueBinding<Option<C>>,
     is_bound: bool,
-    default_color_value: StoredValue<Option<RGB8>>,
+    default_color_value: StoredValue<Option<C>>,
 }
 
 /// The `#RRGGBB` text of a color.
-fn hex(color: Option<RGB8>) -> String {
-    color.map_or_else(String::new, |color| format!("#{color:X}"))
+fn hex<C: ColorValue>(color: Option<C>) -> String {
+    color.map_or_else(String::new, |color| color.to_rgb8().to_string())
 }
 
-impl ColorFieldState {
+/// The color of type `C` of an RGB color.
+fn from_rgb<C: ColorValue>(color: RGB8) -> C {
+    C::from(Color::from(color))
+}
+
+impl<C: ColorValue> ColorFieldState<C> {
     /// The color to reset to (for form resets).
-    pub fn default_color_value(&self) -> Option<RGB8> {
+    pub fn default_color_value(&self) -> Option<C> {
         self.default_color_value.get_value()
     }
 
     /// Sets the committed color (the text follows).
-    pub fn set_color_value(&self, color: Option<RGB8>) {
+    pub fn set_color_value(&self, color: Option<C>) {
         self.binding.set(color);
     }
 
@@ -83,14 +106,16 @@ impl ColorFieldState {
 
     /// The color of the typed text.
     fn parsed_value(&self) -> Option<RGB8> {
-        self.text.with_untracked(|text| RGB8::from_hex(text))
+        self.text.with_untracked(|text| text.parse::<RGB8>().ok())
     }
 
-    /// Sets the color only if it is a different one.
-    fn safely_set_color_value(&self, color: Option<RGB8>) {
+    /// Sets the color only if it is a different one (by its hex value).
+    fn safely_set_color_value(&self, color: Option<C>) {
         let current = self.color_value.get_untracked();
         let changed = match (current, color) {
-            (Some(current), Some(color)) => current.to_hex_int() != color.to_hex_int(),
+            (Some(current), Some(color)) => {
+                current.to_rgb8().to_hex_int() != color.to_rgb8().to_hex_int()
+            }
             _ => true,
         };
         if changed {
@@ -116,10 +141,10 @@ impl ColorFieldState {
             self.text.set(hex(current));
             return;
         };
-        self.safely_set_color_value(Some(parsed));
+        self.safely_set_color_value(Some(from_rgb(parsed)));
         // Bound app state may keep its color: show what it holds.
         self.text.set(hex(self.color_value.get_untracked()));
-        self.validation.commit_validation.run(());
+        self.validation.commit_validation();
     }
 
     fn step(&self, delta: i64) {
@@ -131,11 +156,16 @@ impl ColorFieldState {
         );
         let new_color = u32::try_from(clamped).map_or(color, RGB8::from_hex_int);
         // The same color as before: the text may show something else (react-aria).
-        if Some(new_color) == self.color_value.get_untracked() {
+        if self
+            .color_value
+            .get_untracked()
+            .map(|color| color.to_rgb8())
+            == Some(new_color)
+        {
             self.text.set(hex(Some(new_color)));
         }
-        self.safely_set_color_value(Some(new_color));
-        self.validation.commit_validation.run(());
+        self.safely_set_color_value(Some(from_rgb(new_color)));
+        self.validation.commit_validation();
     }
 
     /// The typed color plus one.
@@ -150,17 +180,19 @@ impl ColorFieldState {
 
     /// White.
     pub fn increment_to_max(&self) {
-        self.safely_set_color_value(Some(MAX_COLOR));
+        self.safely_set_color_value(Some(from_rgb(MAX_COLOR)));
     }
 
     /// Black.
     pub fn decrement_to_min(&self) {
-        self.safely_set_color_value(Some(MIN_COLOR));
+        self.safely_set_color_value(Some(from_rgb(MIN_COLOR)));
     }
 }
 
 /// Creates the state of a field for a color as hex text.
-pub fn use_color_field_state(input: UseColorFieldStateInput) -> ColorFieldState {
+pub fn use_color_field_state<C: ColorValue>(
+    input: UseColorFieldStateInput<C>,
+) -> ColorFieldState<C> {
     let UseColorFieldStateInput {
         default_value,
         value,
@@ -177,7 +209,7 @@ pub fn use_color_field_state(input: UseColorFieldStateInput) -> ColorFieldState 
     let color_value = binding.value;
     let binding = ValueBinding::new(
         color_value,
-        Callback::new(move |color: Option<RGB8>| {
+        Callback::new(move |color: Option<C>| {
             binding.set(color);
             if let Some(on_change) = on_change {
                 on_change.run(color);
@@ -220,6 +252,7 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::utils::color::HSV;
 
     fn field(color: Option<RGB8>) -> ColorFieldState {
         use_color_field_state(UseColorFieldStateInput {
@@ -275,6 +308,24 @@ mod tests {
             assert_that!(state.validate("#12345")).is_true();
             assert_that!(state.validate("#1234567")).is_false();
             assert_that!(state.validate("xyz")).is_false();
+        });
+    }
+
+    #[test]
+    fn other_color_types_take_typed_hex_converted() {
+        Owner::new().with(|| {
+            let state = use_color_field_state(UseColorFieldStateInput {
+                default_value: Some(HSV::new()),
+                ..UseColorFieldStateInput::default()
+            });
+            assert_that!(state.input_value.get_untracked()).is_equal_to("#FF0000".to_owned());
+            state.set_input_value("#00FF00".to_owned());
+            state.commit();
+            assert_that!(state.color_value.get_untracked()).is_equal_to(Some(HSV {
+                hue: 120.0,
+                saturation: 1.0,
+                brightness: 1.0,
+            }));
         });
     }
 }

@@ -1,12 +1,11 @@
-use leptonic::hooks::ComboBoxMenuTrigger;
-use leptonic::hooks::SelectMode;
-use leptonic::hooks::ValidationBehavior;
+use std::collections::HashSet;
+
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
-        ComboBoxState, IntoAttrs, ListBoxData, UseComboBoxInput, UseComboBoxReturn,
-        UseComboBoxStateInput, UseListBoxInput, UseListBoxReturn, UseOptionInput, UseOptionReturn,
-        UseTextFieldReturn,
+        ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxState, IntoAttrs, ListBoxData, SelectMode, UseComboBoxInput,
+        UseComboBoxReturn, UseComboBoxStateInput, UseListBoxInput, UseListBoxReturn,
+        UseOptionInput, UseOptionReturn, UseTextFieldReturn, ValidationBehavior,
         collections::{Node, use_collection},
         use_button, use_combobox, use_combobox_state, use_contains_filter, use_listbox, use_option,
         use_text_field,
@@ -14,7 +13,6 @@ use leptonic::{
     utils::CapturedElement,
 };
 use leptos::prelude::*;
-use std::collections::HashSet;
 
 const FRUITS: [(&str, &str); 8] = [
     ("apple", "Apple"),
@@ -63,24 +61,24 @@ pub fn ComboboxDemo() -> impl IntoView {
     // The popover element: focus moving into it doesn't count as leaving the combobox.
     let popover = CapturedElement::new();
     let UseComboBoxReturn {
-        label_on_click,
         input,
         input_props,
         button,
         listbox,
+        ..
     } = use_combobox(UseComboBoxInput {
         has_label: true.into(),
-        placeholder: Some("Search fruits\u{2026}".to_owned()),
+        placeholder: "Search fruits\u{2026}".into(),
         is_disabled: disabled.into(),
         popover,
         state,
         id: None,
-        is_read_only: Signal::stored(false),
-        is_required: false,
+        is_required: Signal::stored(false),
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
-        name: None,
+        form_value: ComboBoxFormValue::Key,
+        form: None,
         should_focus_wrap: false,
         keyboard_delegate: None,
         on_focus: None,
@@ -94,12 +92,11 @@ pub fn ComboboxDemo() -> impl IntoView {
         ..
     } = use_text_field(input);
     let (button_attrs, button_styles) = use_button(button).props.into_parts();
-    let label_attrs = (label_on_click.into_on(leptos::ev::click),);
     let listbox = StoredValue::new(listbox);
 
     view! {
         <div class="demo-combo">
-            <label {..label_props.into_attrs()} {..label_attrs} class="demo-combo-label">
+            <label {..label_props.into_attrs()} class="demo-combo-label">
                 "Fruit"
             </label>
             <div class="demo-combo-field">
@@ -118,7 +115,10 @@ pub fn ComboboxDemo() -> impl IntoView {
 
         <DemoState state/>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

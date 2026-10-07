@@ -31,7 +31,7 @@ pub fn PageI18nProvider() -> impl IntoView {
             </Section>
 
             <Section title="Example">
-                <p>"Wrap your app, usually right inside "<Code inline=true>"Root"</Code>":"</p>
+                <p>"Wrap your app in it:"</p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::utils::i18n::{I18nProvider, Locale, locale};

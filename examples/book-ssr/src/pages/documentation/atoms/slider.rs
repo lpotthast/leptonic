@@ -302,23 +302,56 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms set only what they compute: the track is "<Code inline=true>"relative"</Code>"; the fill, thumbs "
-                    "and marks are "<Code inline=true>"absolute"</Code>", positioned along the track (a thumb is centered on its "
-                    "value with "<Code inline=true>"translate(-50%, -50%)"</Code>"). Give the track a size, size the fill and "
-                    "center the thumbs across the track, and style the state through the data attributes:"
+                    "The atoms bring no look, and set only what they compute: the track is "<Code inline=true>"relative"</Code>
+                    "; the fill, thumbs and marks are "<Code inline=true>"absolute"</Code>", positioned along the track (a thumb "
+                    "is centered on its value with "<Code inline=true>"translate(-50%, -50%)"</Code>"). Their default classes "
+                    "are "<Code inline=true>"leptonic-Slider"</Code>", "<Code inline=true>"leptonic-SliderTrack"</Code>", "
+                    <Code inline=true>"leptonic-SliderFill"</Code>", "<Code inline=true>"leptonic-SliderThumb"</Code>", "
+                    <Code inline=true>"leptonic-SliderThumbTooltip"</Code>", "<Code inline=true>"leptonic-SliderOutput"</Code>", "
+                    <Code inline=true>"leptonic-SliderMarks"</Code>" and "<Code inline=true>"leptonic-SliderMark"</Code>
+                    ". A thumb renders its visually hidden range input itself; a thumb\u{2019}s children (a "
+                    <Code inline=true>"SliderThumbTooltip"</Code>") and a mark\u{2019}s children (its name) are yours."
                 </p>
-
+                <p>
+                    "Give the track a size, let the fill span its height, center the thumbs across the track, and style "
+                    "the state through the data attributes. The demos above use this CSS:"
+                </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-track { height: 8px; background: var(--border); }
-                        .my-fill { top: 0; height: 100%; background: var(--accent); }
-                        .my-thumb { top: 50%; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); }
-                        .my-thumb[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-thumb[data-dragging] { cursor: grabbing; }
-                        .my-slider[data-disabled] { opacity: 0.5; }
-                        .my-fill[data-orientation="vertical"] { left: 0; width: 100%; }
+                        .demo-slider { display: flex; align-items: center; gap: 1rem; }
+                        .demo-slider[data-disabled] { opacity: 0.5; }
+
+                        .demo-slider-track { flex: 1; height: 8px; border-radius: 4px; background: var(--border); cursor: pointer; }
+                        .demo-slider-fill { inset: 0 auto 0 0; border-radius: 4px; background: var(--accent); }
+
+                        .demo-slider-thumb {
+                            top: 50%;
+                            left: 50%;
+                            width: 20px;
+                            height: 20px;
+                            border: 2px solid var(--surface);
+                            border-radius: 50%;
+                            background: var(--accent);
+                            cursor: grab;
+                        }
+                        .demo-slider-thumb[data-dragging] { cursor: grabbing; }
+                        .demo-slider-thumb[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+                        .demo-slider[data-orientation="vertical"] { height: 150px; }
+                        .demo-slider-track[data-orientation="vertical"] { flex: none; width: 8px; height: 100%; }
+                        .demo-slider-fill[data-orientation="vertical"] { inset: auto 0 0 0; }
+
+                        .demo-slider-tooltip { display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); }
+                        .demo-slider-tooltip[data-visible] { display: block; }
+
+                        .demo-slider-mark { transform: translateX(-50%); color: var(--muted); }
+                        .demo-slider-mark[data-in-range] { color: inherit; font-weight: 600; }
                     "#)}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

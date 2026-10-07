@@ -22,6 +22,7 @@ use crate::{
 //   min, max and the placeholder have that type as well. The date field state it is built on
 //   is `field` (react-aria: one merged state).
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
+// - The format options are signals (C11), as in `use_date_field_state`.
 //
 // =============================================================================
 
@@ -32,14 +33,15 @@ pub struct UseTimeFieldStateInput<T: TimeValue> {
     pub value: Option<ValueBinding<Option<T>>>,
     pub on_change: Option<Callback<Option<T>>>,
     /// The time the segments start from when edited. Default: midnight.
-    pub placeholder_value: Option<T>,
+    pub placeholder_value: Signal<Option<T>>,
     pub min_value: Signal<Option<T>>,
     pub max_value: Signal<Option<T>>,
     /// The finest unit: hour, minute (default) or second.
-    pub granularity: Option<Granularity>,
-    pub hour_cycle: Option<HourCycle>,
-    pub hide_time_zone: bool,
-    pub should_force_leading_zeros: bool,
+    pub granularity: Signal<Option<Granularity>>,
+    /// 12 or 24 hours. Default: the locale's.
+    pub hour_cycle: Signal<Option<HourCycle>>,
+    pub hide_time_zone: Signal<bool>,
+    pub should_force_leading_zeros: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
@@ -55,13 +57,13 @@ impl<T: TimeValue> Default for UseTimeFieldStateInput<T> {
             default_value: None,
             value: None,
             on_change: None,
-            placeholder_value: None,
+            placeholder_value: Signal::stored(None),
             min_value: Signal::stored(None),
             max_value: Signal::stored(None),
-            granularity: None,
-            hour_cycle: None,
-            hide_time_zone: false,
-            should_force_leading_zeros: false,
+            granularity: Signal::stored(None),
+            hour_cycle: Signal::stored(None),
+            hide_time_zone: Signal::stored(false),
+            should_force_leading_zeros: Signal::stored(false),
             is_disabled: Signal::stored(false),
             is_read_only: Signal::stored(false),
             is_required: Signal::stored(false),
@@ -150,15 +152,17 @@ pub fn use_time_field_state<T: TimeValue>(input: UseTimeFieldStateInput<T>) -> T
         default_value: None,
         value: Some(field_binding),
         on_change: None,
-        placeholder_value: Some(placeholder_value.map_or_else(
-            || T::Field::today(time_zone.as_ref()).with_fields(day, Time::midnight(), None),
-            |placeholder| placeholder.to_field(day),
-        )),
+        placeholder_value: Signal::derive(move || {
+            Some(placeholder_value.get().map_or_else(
+                || T::Field::today(time_zone.as_ref()).with_fields(day, Time::midnight(), None),
+                |placeholder| placeholder.to_field(day),
+            ))
+        }),
         min_value: Signal::derive(move || to_field(min_value.get())),
         max_value: Signal::derive(move || to_field(max_value.get())),
         is_date_unavailable: None,
-        granularity: Some(granularity.unwrap_or(Granularity::Minute)),
-        max_granularity: MaxGranularity::Hour,
+        granularity: Signal::derive(move || Some(granularity.get().unwrap_or(Granularity::Minute))),
+        max_granularity: Signal::stored(MaxGranularity::Hour),
         hour_cycle,
         hide_time_zone,
         should_force_leading_zeros,
@@ -197,7 +201,7 @@ mod tests {
         let owner = Owner::new();
         owner.with(|| {
             let state = use_time_field_state(UseTimeFieldStateInput::<Time> {
-                hour_cycle: Some(HourCycle::H24),
+                hour_cycle: Signal::stored(Some(HourCycle::H24)),
                 ..UseTimeFieldStateInput::default()
             });
             let texts = || -> Vec<String> {

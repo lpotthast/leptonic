@@ -1,4 +1,6 @@
-use leptonic::hooks::{ButtonElementType, ButtonType, UseButtonInput, UseButtonReturn, use_button};
+use leptonic::hooks::{
+    ButtonElementType, ButtonType, LinkRel, LinkTarget, UseButtonInput, UseButtonReturn, use_button,
+};
 use leptos::prelude::*;
 
 #[component]
@@ -61,6 +63,37 @@ pub fn PageHookButton() -> impl IntoView {
     .props
     .into_parts();
 
+    let (input_attrs, input_styles) = use_button(UseButtonInput {
+        id: Some("test-btn-input".into()),
+        element_type: ButtonElementType::Input,
+        on_press: Some(Callback::new(count)),
+        is_disabled: disabled.into(),
+        ..Default::default()
+    })
+    .props
+    .into_parts();
+
+    let (blank_attrs, blank_styles) = use_button(UseButtonInput {
+        id: Some("test-btn-blank".into()),
+        element_type: ButtonElementType::Anchor,
+        href: Signal::stored(Some("https://example.com".to_owned())),
+        target: LinkTarget::Blank,
+        rel: vec![LinkRel::NoFollow],
+        ..Default::default()
+    })
+    .props
+    .into_parts();
+
+    let (pending_attrs, pending_styles) = use_button(UseButtonInput {
+        id: Some("test-btn-pending-anchor".into()),
+        element_type: ButtonElementType::Anchor,
+        href: Signal::stored(Some("#pending".to_owned())),
+        is_pending: Signal::stored(true),
+        ..Default::default()
+    })
+    .props
+    .into_parts();
+
     let UseButtonReturn {
         props: hover_props,
         is_hovered,
@@ -85,6 +118,7 @@ pub fn PageHookButton() -> impl IntoView {
                 "Toggle disabled"
             </button>
             <div>"Presses: " <span id="test-btn-presses">{presses}</span></div>
+            <input {..input_attrs} style=input_styles value="Input" />
 
             <form on:submit=move |e| {
                 e.prevent_default();
@@ -95,6 +129,8 @@ pub fn PageHookButton() -> impl IntoView {
             </form>
             <div>"Submits: " <span id="test-btn-submits">{submits}</span></div>
 
+            <a {..blank_attrs} style=blank_styles>"New tab"</a>
+            <a {..pending_attrs} style=pending_styles>"Pending anchor"</a>
             <button {..hover_attrs} style=hover_styles>"State"</button>
             <div>"Hovered: " <span id="test-btn-is-hovered">{move || is_hovered.get().to_string()}</span></div>
             <div>

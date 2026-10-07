@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/test/Select.test.js @ 99e6102368
+// Upstream: react-aria/test/select/HiddenSelect.test.tsx @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -51,6 +52,13 @@ async fn hidden_select_value(page: &Page<'_>) -> Result<String, Report> {
 async fn initial_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(page.css(TRIGGER).await?.text().await?).is_equal_to("Banana".to_owned());
     assert_that!(hidden_select_value(page).await?).is_equal_to("Banana".to_owned());
+    // Focus walks skip the hidden select (HiddenSelect.test.tsx, "should always add a data
+    // attribute data-react-aria-prevent-focus"; here `data-leptonic-prevent-focus`).
+    assert_that!(
+        page.count_matching("#test-sel-form [data-leptonic-prevent-focus] select")
+            .await?
+    )
+    .is_equal_to(1);
     assert_that!(trigger_attr(page, "aria-expanded").await?).is_equal_to(Some("false".to_owned()));
     // `aria-controls` may only reference the listbox while it exists (i.e. while open).
     assert_that!(trigger_attr(page, "aria-controls").await?).is_none();
@@ -87,7 +95,8 @@ async fn escape_closes_and_restores_focus(page: &Page<'_>) -> Result<(), Report>
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_selector("[aria-haspopup=listbox][aria-expanded=false]")
         .await?;
-    assert_that!(page.count_matching("[role=listbox]").await?).is_equal_to(0);
+    // Gone once its exit animation ran.
+    page.wait_for_no_selector("[role=listbox]").await?;
     // Closed, nothing stays inert.
     page.wait_for_no_selector("[inert]").await?;
     let trigger = page.css(TRIGGER).await?;

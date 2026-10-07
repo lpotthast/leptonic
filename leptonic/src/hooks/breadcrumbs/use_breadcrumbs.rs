@@ -25,11 +25,13 @@ pub struct UseBreadcrumbsInput {
 /// Return value of [`use_breadcrumbs`].
 #[derive(Debug)]
 pub struct UseBreadcrumbsReturn {
-    /// For the breadcrumbs' list (an `<ol>`, as react-aria-components); wrap it in a `<nav>`.
+    /// For the breadcrumbs' navigation element: a `<nav>` around the list of items (react-aria's
+    /// `navProps`). React-aria-components (and the `Breadcrumbs` atom) spread them onto the
+    /// `<ol>` itself.
     pub props: UseBreadcrumbsProps,
 }
 
-/// The navigation element's props from [`use_breadcrumbs`].
+/// The navigation element's props from [`use_breadcrumbs`]: its name.
 #[derive(Debug)]
 pub struct UseBreadcrumbsProps {
     pub aria_label: Signal<String>,
@@ -43,11 +45,12 @@ impl IntoAttrs for UseBreadcrumbsProps {
     }
 }
 
-/// Spread onto the list: `<ol {..attrs}/>`.
+/// Spread onto the navigation element: `<nav {..attrs}>`.
 pub type UseBreadcrumbsAttrs = Attr<attr::AriaLabel, Signal<String>>;
 
-/// Breadcrumbs: the trail of links to the current page, a list named "Breadcrumbs" inside a
-/// navigation landmark. Render each item with [`use_breadcrumb_item`](super::use_breadcrumb_item).
+/// Breadcrumbs: the trail of links to the current page, a navigation landmark (named
+/// "Breadcrumbs" by default) around a list of items. Render each item with
+/// [`use_breadcrumb_item`](super::use_breadcrumb_item).
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
     let UseBreadcrumbsInput { aria_label } = input;
     UseBreadcrumbsReturn {

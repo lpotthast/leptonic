@@ -385,7 +385,14 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
             arrow_size.track();
             arrow_boundary_offset.track();
             target_rect.track();
-            let _ = overlay_element.get();
+            // The overlay of a closed opening is gone: the next opening starts unpositioned (as
+            // react-aria, whose overlay unmounts with the hook), not at this one's position.
+            if overlay_element.get().is_none() {
+                if position.with_untracked(Option::is_some) {
+                    position.set(None);
+                }
+                return;
+            }
             let _ = target.get();
             let _ = arrow_element.get();
             if let Some(boundary) = boundary {
@@ -397,15 +404,30 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
             update_position();
         });
 
+        // The observers and listeners below only run while the overlay is open: their targets are
+        // `None` while it is closed (react-aria: the overlay unmounts with the hook).
+        let window = Signal::derive(move || {
+            is_open
+                .get()
+                .then(|| {
+                    use_window()
+                        .as_ref()
+                        .cloned()
+                        .map(send_wrapper::SendWrapper::new)
+                })
+                .flatten()
+        });
+
         // Window resizes, and size changes of the overlay or the target (may need a flip).
-        let _ = use_event_listener(use_window(), ev::resize, move |_| update.notify());
+        let _ = use_event_listener(window, ev::resize, move |_| update.notify());
         let _ = use_resize_observer(
             Signal::derive(move || overlay_element.get()),
             move |_, _| update.notify(),
         );
-        let _ = use_resize_observer(Signal::derive(move || target.get()), move |_, _| {
-            update.notify();
-        });
+        let _ = use_resize_observer(
+            Signal::derive(move || is_open.get().then(|| target.get()).flatten()),
+            move |_, _| update.notify(),
+        );
 
         // The visual viewport resizing (e.g. a virtual keyboard): reposition, and for a moment
         // also on the scrolling it causes.
@@ -431,15 +453,20 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                 on_viewport_resize();
             }
         };
-        let visual_viewport = Signal::derive(|| {
-            use_window()
-                .as_ref()
-                .and_then(web_sys::Window::visual_viewport)
+        let visual_viewport = Signal::derive(move || {
+            is_open
+                .get()
+                .then(|| {
+                    use_window()
+                        .as_ref()
+                        .and_then(web_sys::Window::visual_viewport)
+                })
+                .flatten()
                 .map(send_wrapper::SendWrapper::new)
         });
         let _ = use_event_listener(visual_viewport, ev::resize, move |_| on_viewport_resize());
         let _ = use_event_listener(visual_viewport, ev::scroll, move |_| on_scroll());
-        let _ = use_event_listener(use_window(), ev::scroll, move |_| on_scroll());
+        let _ = use_event_listener(window, ev::scroll, move |_| on_scroll());
         on_cleanup(move || {
             if let Some(Some(handle)) = resize_timeout.try_get_value() {
                 handle.clear();

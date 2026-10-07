@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     hooks::{
         GridListData, IntoAttrs, SelectionMode, UseTreeInput, UseTreeItemInput, UseTreeItemReturn,
         UseTreeStateInput,
-        collections::{Key, Selection, SelectionOptions, use_collection},
+        collections::{CollectionOptions, Key, Selection, SelectionOptions, use_collection},
         use_button, use_tree, use_tree_item, use_tree_state,
     },
     utils::CapturedElement,
@@ -47,6 +46,7 @@ pub fn TreeDemo() -> impl IntoView {
         },
         default_expanded_keys: HashSet::from([Key::from("documents")]),
         collection,
+        expanded_keys: None,
         on_expanded_change: None,
     });
     let tree = use_tree(UseTreeInput {
@@ -86,16 +86,16 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
     let UseTreeItemReturn {
         item,
         expand_button,
-        expand_button_label,
+        expand_button_attrs,
         is_expanded,
         has_child_items,
     } = use_tree_item(UseTreeItemInput { tree, key });
     let (attrs, styles) = item.row_props.into_parts();
     // Parents get a button expanding or collapsing them; leaves an empty spacer of the same width.
-    let toggle = if has_child_items {
+    let toggle = if has_child_items.get_untracked() {
         let (attrs, styles) = use_button(expand_button).props.into_parts();
         view! {
-            <button {..attrs} aria-label=expand_button_label class="demo-tree-item-toggle" style=styles>
+            <button {..attrs} {..expand_button_attrs} class="demo-tree-item-toggle" style=styles>
                 <span aria-hidden="true">{move || if is_expanded.get() { "\u{25be}" } else { "\u{25b8}" }}</span>
             </button>
         }

@@ -24,7 +24,7 @@ use crate::utils::{
 const TYPEAHEAD_DEBOUNCE_WAIT: Duration = Duration::from_secs(1);
 
 /// Input of [`use_type_select`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseTypeSelectInput {
     /// Finds items by their text (`KeyboardDelegate::key_for_search`).
     pub delegate: Signal<Arc<dyn KeyboardDelegate>>,

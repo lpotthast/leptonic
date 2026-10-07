@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude::LinkButton, components::prelude as components, jiff::civil::Date};
+use leptonic::{atoms::prelude::Link as AtomLink, jiff::civil::Date};
 use leptos::prelude::*;
 use leptos_meta::{Meta, Title};
 
@@ -21,16 +21,16 @@ pub fn PageWelcome() -> impl IntoView {
                     "Accessible UI building blocks for Leptos: hooks, atoms and themed components."
                 </p>
                 <div class="book-welcome-actions">
-                    <LinkButton href=routes::doc::Installation.materialize() classes="book-button">
+                    <AtomLink href=routes::doc::Installation.materialize() classes="book-button">
                         "Get started"
-                    </LinkButton>
-                    <LinkButton
+                    </AtomLink>
+                    <AtomLink
                         href=routes::doc::Overview.materialize()
                         classes="book-button"
                         attr:data-variant="secondary"
                     >
                         "Read the overview"
-                    </LinkButton>
+                    </AtomLink>
                 </div>
                 <Code language=Language::Shell classes="book-welcome-install">"cargo add leptonic --features full"</Code>
             </div>
@@ -72,16 +72,31 @@ fn Feature(
     }
 }
 
-/// A few of leptonic's themed components in a small form, live: the save button shows a toast.
+/// A few of leptonic's atoms in a small form, live, styled by the book (`_pages.scss`): the save button shows a toast.
 #[component]
 fn Showcase() -> impl IntoView {
-    use components::{Button, ButtonColor, ButtonVariant, DatePicker, Slider, Switch, TextField};
+    use leptonic::atoms::{
+        button::Button,
+        calendar::{
+            Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
+            CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
+            CalendarNextButton, CalendarPreviousButton, CalendarWeek,
+        },
+        datepicker::{DateInput, DatePicker, DatePickerButton, DatePickerGroup, DateSegment},
+        dialog::Dialog,
+        field::Label,
+        input::Input,
+        popover::Popover,
+        slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
+        switch::Switch,
+        text_field::TextField,
+    };
 
     let toasts = expect_context::<BookToasts>();
     let project = RwSignal::new("Rocket".to_owned());
     let launch = RwSignal::new(None::<Date>);
     let notify = RwSignal::new(true);
-    let volume = RwSignal::new(60_u8);
+    let volume = RwSignal::new(vec![60_u8]);
 
     let save = move |_| {
         let name = project.get_untracked();
@@ -97,35 +112,82 @@ fn Showcase() -> impl IntoView {
             description: body,
         });
     };
+    let reset = move |_| {
+        project.set("Rocket".to_owned());
+        launch.set(None);
+        notify.set(true);
+        volume.set(vec![60]);
+    };
 
     view! {
         <section class="book-welcome-showcase" aria-labelledby="book-welcome-showcase-title">
             <h2 id="book-welcome-showcase-title" class="book-welcome-showcase-title">
-                "Try them: these are leptonic\u{2019}s components"
+                "Try them: leptonic\u{2019}s atoms, styled by this book"
             </h2>
             <div class="book-welcome-showcase-form">
-                <TextField label="Project" value=project set_value=project/>
-                <DatePicker<Date> label="Launch date" value=launch set_value=launch/>
-                <div class="book-welcome-showcase-volume">
-                    <span aria-hidden="true">{move || format!("Volume: {}%", volume.get())}</span>
-                    <Slider value=volume set_value=volume min_value=0 max_value=100 aria_label="Volume"/>
-                </div>
-                <Switch is_selected=notify set_selected=notify>"Email me before the launch"</Switch>
+                <TextField value=project set_value=project classes="book-welcome-field">
+                    <Label classes="book-welcome-label">"Project"</Label>
+                    <Input classes="book-welcome-input"/>
+                </TextField>
+                <DatePicker<Date> value=launch set_value=launch classes="book-welcome-field">
+                    <Label classes="book-welcome-label">"Launch date"</Label>
+                    <DatePickerGroup classes="book-welcome-date">
+                        <DateInput
+                            classes="book-welcome-date-segments"
+                            children=|segment| view! { <DateSegment segment classes="book-welcome-date-segment"/> }
+                        />
+                        <DatePickerButton classes="book-welcome-date-button">
+                            <Icon icon=icondata::BsCalendar3/>
+                        </DatePickerButton>
+                    </DatePickerGroup>
+                    <Popover classes="book-welcome-popover">
+                        <Dialog>
+                            <Calendar classes="book-welcome-calendar">
+                                <header class="book-welcome-calendar-header">
+                                    <CalendarPreviousButton classes="book-welcome-calendar-nav">
+                                        <Icon icon=icondata::BsChevronLeft/>
+                                    </CalendarPreviousButton>
+                                    <CalendarHeading classes="book-welcome-calendar-title"/>
+                                    <CalendarNextButton classes="book-welcome-calendar-nav">
+                                        <Icon icon=icondata::BsChevronRight/>
+                                    </CalendarNextButton>
+                                </header>
+                                <CalendarGrid classes="book-welcome-calendar-grid">
+                                    <CalendarGridHeader>
+                                        <CalendarHeaderRow children=|day| view! { <CalendarHeaderCell>{day}</CalendarHeaderCell> }/>
+                                    </CalendarGridHeader>
+                                    <CalendarGridBody children=|week| view! {
+                                        <CalendarWeek week children=|date| view! {
+                                            <CalendarCell date>
+                                                <CalendarCellButton classes="book-welcome-calendar-day"/>
+                                            </CalendarCell>
+                                        }/>
+                                    }/>
+                                </CalendarGrid>
+                            </Calendar>
+                        </Dialog>
+                    </Popover>
+                </DatePicker<Date>>
+                <Slider values=volume set_values=volume min_value=0 max_value=100 classes="book-welcome-slider">
+                    <div class="book-welcome-slider-header">
+                        <Label classes="book-welcome-label">"Volume"</Label>
+                        <SliderOutput classes="book-welcome-slider-output"/>
+                    </div>
+                    <SliderTrack classes="book-welcome-slider-track">
+                        <SliderFill classes="book-welcome-slider-fill"/>
+                        <SliderThumb classes="book-welcome-slider-thumb"/>
+                    </SliderTrack>
+                </Slider>
+                <Switch is_selected=notify set_selected=notify classes="book-welcome-switch">
+                    <span class="book-welcome-switch-track" aria-hidden="true">
+                        <span class="book-welcome-switch-thumb"></span>
+                    </span>
+                    "Email me before the launch"
+                </Switch>
             </div>
             <div class="book-welcome-showcase-actions">
-                <Button on_press=save>"Save"</Button>
-                <Button
-                    variant=ButtonVariant::Outlined
-                    color=ButtonColor::Secondary
-                    on_press=move |_| {
-                        project.set("Rocket".to_owned());
-                        launch.set(None);
-                        notify.set(true);
-                        volume.set(60);
-                    }
-                >
-                    "Reset"
-                </Button>
+                <Button on_press=save classes="book-welcome-button">"Save"</Button>
+                <Button on_press=reset classes="book-welcome-button" attr:data-variant="secondary">"Reset"</Button>
             </div>
         </section>
     }

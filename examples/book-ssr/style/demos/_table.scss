@@ -106,9 +106,9 @@
 }
 
 // Atom demos: the atoms expose their state as data attributes. `TableHeader` renders the column headers itself, so
-// they are styled as descendants of the table.
+// they are styled through their default class. They render no hover attribute: `:hover` stands in.
 .demo-atom-table {
-    th[data-allows-sorting] {
+    .leptonic-TableColumnHeader[data-allows-sorting] {
         cursor: pointer;
         user-select: none;
 
@@ -126,16 +126,16 @@
         }
     }
 
-    th[data-sort-direction]::after {
+    .leptonic-TableColumnHeader[data-sort-direction]::after {
         color: var(--book-brand-text-color);
         opacity: 1;
     }
 
-    th[data-sort-direction="ascending"]::after {
+    .leptonic-TableColumnHeader[data-sort-direction="ascending"]::after {
         content: "\25B2";
     }
 
-    th[data-sort-direction="descending"]::after {
+    .leptonic-TableColumnHeader[data-sort-direction="descending"]::after {
         content: "\25BC";
     }
 }
@@ -182,10 +182,10 @@
     }
 }
 
-// The resizer: the hook demo renders `.demo-column-resizer`, the atoms `[data-column-resizer]`. The handle is 9px
+// The resizer: the hook demo renders `.demo-column-resizer`, the atoms `.leptonic-ColumnResizer`. The handle is 9px
 // wide; a thin line in its middle shows where to grab it.
 .demo-column-resizer,
-.demo-resizable-table [data-column-resizer] {
+.demo-resizable-table .leptonic-ColumnResizer {
     position: absolute;
     top: 0;
     right: 0;
@@ -216,7 +216,7 @@
 
 // At a bound, the column can only be resized in one direction: `left` means the column is at its minimum width (it
 // can only grow), `right` at its maximum (it can only shrink).
-.demo-resizable-table [data-column-resizer] {
+.demo-resizable-table .leptonic-ColumnResizer {
     &[data-resizable-direction="left"] {
         cursor: e-resize;
     }

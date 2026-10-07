@@ -1,3 +1,4 @@
+// No upstream: react-aria has no tests of `useHasTabbableChild` (a private hook).
 use std::borrow::Cow;
 
 use assertr::prelude::*;

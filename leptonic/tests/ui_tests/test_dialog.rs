@@ -11,8 +11,10 @@ use rootcause::Report;
 use crate::pages::{BaseActions, Page};
 
 /// Behavior of the dialog hook (through the `Dialog` atom in a modal): `role="dialog"` named by
-/// `aria_label`, closing with Escape (the focused dialog's removal must not fail), restoring focus
-/// to the opener, and sibling modals.
+/// `aria_label`, focused when the modal opens (the first button with `auto_focus`), closing with
+/// Escape (the focused dialog's removal must not fail) or the dismiss button of a dismissable
+/// modal, restoring focus to the opener, sibling modals, and no `aria-modal` (react-aria-components:
+/// the inert page makes the modal modal).
 /// Spec: react-aria-components `Dialog.test.js`.
 pub struct DialogTests {}
 
@@ -32,8 +34,36 @@ impl BrowserTest<str> for DialogTests {
         assert_that!(dialog.attr("aria-label").await?).is_equal_to(Some("Settings".to_owned()));
         assert_that!(dialog.attr("aria-labelledby").await?).is_none();
 
-        // Focus moves into the dialog; Escape closes it and focus returns to the opener.
-        page.wait_for_active_text("Inside").await?;
+        // As react-aria-components' `useDialog`: the dialog itself takes the focus ("Dialog.test.js
+        // should be focused when opened").
+        page.wait_for_focus_on(&dialog, "the dialog").await?;
+        // No `aria-modal` on the modal (WebKit bug 211934).
+        assert_that!(
+            page.count_matching(".leptonic-ModalContent[aria-modal]")
+                .await?
+        )
+        .is_equal_to(0);
+        // A dismissable modal starts with a (visually hidden) dismiss button for screen reader
+        // users (react-aria-components' `Modal`).
+        assert_that!(
+            page.count_matching(".leptonic-ModalContent button[aria-label=Dismiss]")
+                .await?
+        )
+        .is_equal_to(1);
+        page.driver
+            .execute(
+                "document.querySelector('.leptonic-ModalContent button[aria-label=Dismiss]').click()",
+                vec![],
+            )
+            .await?;
+        page.wait_for_no_selector("[role=dialog]").await?;
+        page.wait_for_text("test-dialog-is-open", "false").await?;
+        page.wait_for_active_id("test-dialog-open").await?;
+
+        // Escape closes it and focus returns to the opener.
+        page.click_element_with_id("test-dialog-open").await?;
+        let dialog = page.css("[role=dialog]").await?;
+        page.wait_for_focus_on(&dialog, "the dialog").await?;
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector("[role=dialog]").await?;
         page.wait_for_text("test-dialog-is-open", "false").await?;
@@ -44,7 +74,14 @@ impl BrowserTest<str> for DialogTests {
         // closes it.
         page.click_element_with_id("test-dialog-open-other").await?;
         page.wait_for_selector("[role=alertdialog]").await?;
-        page.wait_for_active_id("test-dialog-other-close").await?;
+        // The alert dialog takes the focus, not its first (maybe destructive) button.
+        page.wait_for_focus("alertdialog", None).await?;
+        // Not dismissable: no dismiss button.
+        assert_that!(
+            page.count_matching("[role=alertdialog] button[aria-label=Dismiss]")
+                .await?
+        )
+        .is_equal_to(0);
         // Named by its `DialogTitle` (an `<h2>`) and, as an alert dialog, described by its
         // `DialogDescription`.
         let alert = page.css("[role=alertdialog]").await?;
@@ -62,6 +99,8 @@ impl BrowserTest<str> for DialogTests {
 
         // Opened with the keyboard, closed from inside (a button calling `on_close`).
         page.send_keys_to_active(Key::Enter).await?;
+        page.wait_for_focus("alertdialog", None).await?;
+        page.press_tab().await?;
         page.wait_for_active_id("test-dialog-other-close").await?;
         page.send_keys_to_active(Key::Enter).await?;
         page.wait_for_no_selector("[role=alertdialog]").await?;
@@ -69,7 +108,7 @@ impl BrowserTest<str> for DialogTests {
 
         // Opened and closed with the keyboard.
         page.send_keys_to_active(Key::Enter).await?;
-        page.wait_for_active_id("test-dialog-other-close").await?;
+        page.wait_for_focus("alertdialog", None).await?;
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector("[role=alertdialog]").await?;
         page.wait_for_active_id("test-dialog-open-other").await?;
@@ -105,6 +144,19 @@ impl BrowserTest<str> for DialogTests {
             .await?;
         page.wait_for_no_selector(".test-animated-backdrop").await?;
         page.wait_for_active_id("test-dialog-open-animated").await?;
+
+        // Opting into `auto_focus`: the first button takes the focus instead of the dialog.
+        page.click_element_with_id("test-dialog-open-autofocus")
+            .await?;
+        page.wait_for_selector("[role=dialog][aria-label='Auto focus']")
+            .await?;
+        page.wait_for_active_id("test-dialog-autofocus-first")
+            .await?;
+        page.send_keys_to_active(Key::Escape).await?;
+        page.wait_for_no_selector("[role=dialog][aria-label='Auto focus']")
+            .await?;
+        page.wait_for_active_id("test-dialog-open-autofocus")
+            .await?;
 
         page.expect_no_page_errors().await
     }

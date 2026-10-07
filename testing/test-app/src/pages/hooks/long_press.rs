@@ -14,7 +14,7 @@ pub fn PageHookLongPress() -> impl IntoView {
             <style>".test-long-pressable { display: inline-block; padding: 8px; border: 1px solid }"</style>
             <LongPressable log name="basic" />
             <LongPressable log name="with-press" with_press=true />
-            <LongPressable log name="threshold" threshold=Duration::from_millis(800) />
+            <LongPressable log name="threshold" threshold=Duration::from_millis(1500) />
             <LongPressable log name="description" description="Long press to open a menu" />
             <LongPressable
                 log

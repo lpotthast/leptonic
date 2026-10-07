@@ -358,40 +358,48 @@ pub fn PageAtomTable() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. "<Code inline=true>"TableHeader"</Code>" renders the "<Code inline=true>"<th>"</Code>" elements "
-                    "itself, so style column headers as descendants of the table. Rows, cells and headers receive DOM focus, "
-                    "so "<Code inline=true>":focus-visible"</Code>" shows keyboard focus:"
+                    "The atoms bring no styles. They render a plain table, each element with its default class and the "<Code inline=true>"classes"</Code>" you "
+                    "pass: "<Code inline=true>"Table"</Code>" a "<Code inline=true>"<table>"</Code>" ("<Code inline=true>"leptonic-Table"</Code>"), "<Code inline=true>"TableHeader"</Code>" a "<Code inline=true>"<thead>"</Code>" ("
+                    <Code inline=true>"leptonic-TableHeader"</Code>") with the column headers, "<Code inline=true>"<th>"</Code>" elements with "<Code inline=true>"leptonic-TableColumnHeader"</Code>", "
+                    <Code inline=true>"TableBody"</Code>" a "<Code inline=true>"<tbody>"</Code>" ("<Code inline=true>"leptonic-TableBody"</Code>"), "<Code inline=true>"TableRow"</Code>" a "<Code inline=true>"<tr>"</Code>" ("
+                    <Code inline=true>"leptonic-TableRow"</Code>") and "<Code inline=true>"TableCell"</Code>" a "<Code inline=true>"<td>"</Code>" ("<Code inline=true>"leptonic-TableCell"</Code>"). "
+                    <Code inline=true>"TableHeader"</Code>" renders the column headers itself, so style them through their default class. Rows, cells and "
+                    "column headers receive DOM focus: "<Code inline=true>":focus-visible"</Code>" shows keyboard focus. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-table th[data-allows-sorting] { cursor: pointer; }
-                        .my-table th[data-sort-direction="ascending"]::after { content: "▲"; }
-                        .my-table th[data-sort-direction="descending"]::after { content: "▼"; }
-                        .my-table :is(tr, th, td):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-row[data-selected] { background: var(--surface); }
-                        .my-row[data-disabled] { opacity: 0.5; }
+                        .demo-table { width: 100%; border-collapse: collapse; background: var(--surface); }
+                        .demo-table :is(th, td) { padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); text-align: left; }
+                        .demo-table :is(tr, th, td):focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-atom-table .leptonic-TableColumnHeader[data-allows-sorting] { cursor: pointer; user-select: none; }
+                        .demo-atom-table .leptonic-TableColumnHeader[data-allows-sorting]::after { content: "\2195"; opacity: 0.4; }
+                        .demo-atom-table .leptonic-TableColumnHeader[data-sort-direction]::after { color: var(--accent); opacity: 1; }
+                        .demo-atom-table .leptonic-TableColumnHeader[data-sort-direction="ascending"]::after { content: "\25B2"; }
+                        .demo-atom-table .leptonic-TableColumnHeader[data-sort-direction="descending"]::after { content: "\25BC"; }
+                        .demo-atom-table-row[data-selected] { background: var(--border); }
+                        .demo-atom-table-row[data-disabled] { color: var(--muted); text-decoration: line-through; cursor: not-allowed; }
                     "#)}
                 </Code>
                 <p>
-                    "In a "<Code inline=true>"ResizableTableContainer"</Code>", position the resizers yourself. Keyboard focus "
+                    "In a "<Code inline=true>"ResizableTableContainer"</Code>" ("<Code inline=true>"leptonic-ResizableTableContainer"</Code>"), the table lays out its columns "
+                    "by the pixel widths of their headers. Position the resizers ("<Code inline=true>"leptonic-ColumnResizer"</Code>") yourself. Keyboard focus "
                     "rests on the resizer\u{2019}s visually hidden input, so show it with "<Code inline=true>":has()"</Code>":"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-table-scroll { overflow: auto; }
-                        .my-table th { position: relative; overflow: hidden; text-overflow: ellipsis; }
-                        .my-table [data-column-resizer] {
-                            position: absolute; top: 0; right: 0; width: 8px; height: 100%;
-                            cursor: col-resize;
-                        }
-                        .my-table [data-column-resizer][data-resizable-direction="left"] { cursor: e-resize; }
-                        .my-table [data-column-resizer][data-resizable-direction="right"] { cursor: w-resize; }
-                        .my-table [data-column-resizer]:is(:hover, [data-resizing], :has(input:focus-visible)) {
-                            background: var(--accent);
-                        }
+                        .demo-table-scroll { max-width: 100%; overflow-x: auto; }
+                        .demo-resizable-table :is(th, td) { box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; }
+                        .demo-resizable-table .leptonic-TableColumnHeader { position: relative; }
+                        .demo-resizable-table .leptonic-ColumnResizer { position: absolute; top: 0; right: 0; width: 9px; height: 100%; cursor: col-resize; }
+                        .demo-resizable-table .leptonic-ColumnResizer[data-resizable-direction="left"] { cursor: e-resize; }
+                        .demo-resizable-table .leptonic-ColumnResizer[data-resizable-direction="right"] { cursor: w-resize; }
+                        .demo-resizable-table .leptonic-ColumnResizer:is(:hover, [data-resizing], :has(input:focus-visible)) { background: var(--accent); }
                     "#)}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

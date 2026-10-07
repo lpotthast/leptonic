@@ -1,5 +1,10 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{
+        field::Label,
+        input::Input,
+        radio::{Radio, RadioGroup},
+        text_field::TextField,
+    },
     hooks::{Orientation, collections::Key},
     utils::{
         i18n::Locale,
@@ -37,13 +42,31 @@ pub fn NumberFormatterDemo() -> impl IntoView {
     };
 
     view! {
-        <RadioGroup label="Locale" orientation=Orientation::Horizontal default_value="en-US" on_change=on_locale_change>
-            <Radio value="en-US">"English (US)"</Radio>
-            <Radio value="de-DE">"German"</Radio>
-            <Radio value="hi-IN">"Hindi"</Radio>
-            <Radio value="ar-EG">"Arabic (Egypt)"</Radio>
+        <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change=on_locale_change classes="demo-choice-group">
+            <Label classes="demo-choice-group-label">"Locale"</Label>
+            <div class="demo-choice-group-items">
+                <Radio value="en-US" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "English (US)"
+                </Radio>
+                <Radio value="de-DE" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "German"
+                </Radio>
+                <Radio value="hi-IN" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Hindi"
+                </Radio>
+                <Radio value="ar-EG" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Arabic (Egypt)"
+                </Radio>
+            </div>
         </RadioGroup>
-        <TextField label="Amount" value=text set_value=text/>
+        <TextField value=text set_value=text classes=["demo-field", "demo-mt-1"]>
+            <Label classes="demo-field-label">"Amount"</Label>
+            <Input classes="demo-atom-input"/>
+        </TextField>
         <p class="demo-status">
             {move || match value.get() {
                 Some(value) => format!("Parsed as {value}."),

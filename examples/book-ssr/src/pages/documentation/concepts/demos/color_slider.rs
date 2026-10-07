@@ -9,7 +9,7 @@ pub fn ColorSliderConceptDemo() -> impl IntoView {
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 0.6,
-        value: 0.8,
+        brightness: 0.8,
     });
 
     view! {
@@ -20,6 +20,6 @@ pub fn ColorSliderConceptDemo() -> impl IntoView {
                 <ColorThumb classes="demo-color-atoms-thumb"/>
             </ColorSliderTrack>
         </ColorSlider>
-        <p class="demo-status">{move || format!("Color: {}, hue: {}", color.get().into_rgb8(), color.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, hue: {}", color.get().to_rgb8(), color.get().hue_name())}</p>
     }
 }

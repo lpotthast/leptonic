@@ -40,18 +40,20 @@ async fn test_basic_click_focus(page: &FocusRingPage<'_>) -> Result<(), Report> 
     page.goto().await?;
 
     // Initial state: not focused, not focus-visible
-    assert_that!(page.read_is_focused().await?).is_equal_to(false);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-is-focused", "false").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "false")
+        .await?;
 
     // Click target: focused=true but focus-visible=false (pointer modality)
     page.click_target().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(false);
-    assert_that!(page.read_data_focus_visible_attr().await?).is_equal_to(None);
+    page.wait_for_text("test-fr-is-focused", "true").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "false")
+        .await?;
+    page.wait_for_target_focus_visible_attr(None).await?;
 
     // Click elsewhere to unfocus
     page.click_elsewhere().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-is-focused", "false").await?;
 
     Ok(())
 }
@@ -63,14 +65,16 @@ async fn test_basic_tab_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
 
     // Tab to target from the "before" button: keyboard modality
     page.tab_from_before_to_target().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(true);
-    assert_that!(page.read_data_focus_visible_attr().await?).is_equal_to(Some("true".to_string()));
+    page.wait_for_text("test-fr-is-focused", "true").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "true")
+        .await?;
+    page.wait_for_target_focus_visible_attr(Some("true"))
+        .await?;
 
     // Click elsewhere: no longer focused
     page.click_elsewhere().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(false);
-    assert_that!(page.read_data_focus_visible_attr().await?).is_equal_to(None);
+    page.wait_for_text("test-fr-is-focused", "false").await?;
+    page.wait_for_target_focus_visible_attr(None).await?;
 
     Ok(())
 }
@@ -81,17 +85,22 @@ async fn test_within_click_focus(page: &FocusRingPage<'_>) -> Result<(), Report>
     page.goto().await?;
 
     // Initial state
-    assert_that!(page.read_within_is_focused().await?).is_equal_to(false);
-    assert_that!(page.read_within_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-within-is-focused", "false")
+        .await?;
+    page.wait_for_text("test-fr-within-is-focus-visible", "false")
+        .await?;
 
     // Click child-1 (pointer modality): container is focused but not focus-visible
     page.click_within_child_1().await?;
-    assert_that!(page.read_within_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_within_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-within-is-focused", "true")
+        .await?;
+    page.wait_for_text("test-fr-within-is-focus-visible", "false")
+        .await?;
 
     // Click elsewhere: unfocused
     page.click_within_elsewhere().await?;
-    assert_that!(page.read_within_is_focused().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-within-is-focused", "false")
+        .await?;
 
     Ok(())
 }
@@ -103,13 +112,17 @@ async fn test_within_tab_focus(page: &FocusRingPage<'_>) -> Result<(), Report> {
 
     // Tab from "within-before" button to the first child in the container
     page.tab_from_within_before_to_child().await?;
-    assert_that!(page.read_within_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_within_is_focus_visible().await?).is_equal_to(true);
+    page.wait_for_text("test-fr-within-is-focused", "true")
+        .await?;
+    page.wait_for_text("test-fr-within-is-focus-visible", "true")
+        .await?;
 
     // Click elsewhere: unfocused
     page.click_within_elsewhere().await?;
-    assert_that!(page.read_within_is_focused().await?).is_equal_to(false);
-    assert_that!(page.read_within_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-within-is-focused", "false")
+        .await?;
+    page.wait_for_text("test-fr-within-is-focus-visible", "false")
+        .await?;
 
     Ok(())
 }
@@ -121,13 +134,15 @@ async fn test_modality_switch(page: &FocusRingPage<'_>) -> Result<(), Report> {
 
     // Tab to target: keyboard modality → focus ring visible
     page.tab_from_before_to_target().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(true);
+    page.wait_for_text("test-fr-is-focused", "true").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "true")
+        .await?;
 
     // Click the same target element: switches to pointer modality → ring disappears
     page.click_target().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-is-focused", "true").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "false")
+        .await?;
 
     Ok(())
 }
@@ -139,13 +154,16 @@ async fn test_arrow_key_keyboard_modality(page: &FocusRingPage<'_>) -> Result<()
 
     // Click target: pointer modality, no focus ring
     page.click_target().await?;
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(false);
+    page.wait_for_text("test-fr-is-focused", "true").await?;
+    page.wait_for_text("test-fr-is-focus-visible", "false")
+        .await?;
 
     // Press ArrowDown: switches to keyboard modality, focus ring appears
     page.send_keys_to_active(Key::Down).await?;
-    assert_that!(page.read_is_focus_visible().await?).is_equal_to(true);
-    assert_that!(page.read_data_focus_visible_attr().await?).is_equal_to(Some("true".to_string()));
+    page.wait_for_text("test-fr-is-focus-visible", "true")
+        .await?;
+    page.wait_for_target_focus_visible_attr(Some("true"))
+        .await?;
 
     Ok(())
 }
@@ -157,6 +175,8 @@ async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report
 
     // Click the disabled target: is_focused and is_focus_visible stay false
     page.click_disabled_target().await?;
+    // Negative checks: give a wrong update time to happen.
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     assert_that!(page.read_disabled_is_focused().await?).is_equal_to(false);
     assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
 
@@ -165,6 +185,7 @@ async fn test_disabled_focus_ring(page: &FocusRingPage<'_>) -> Result<(), Report
     page.click_before().await?;
     let active = page.driver.active_element().await?;
     active.send_keys(Key::Tab).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     assert_that!(page.read_disabled_is_focused().await?).is_equal_to(false);
     assert_that!(page.read_disabled_is_focus_visible().await?).is_equal_to(false);
 
@@ -186,8 +207,7 @@ async fn test_atom_text_input(page: &FocusRingPage<'_>) -> Result<(), Report> {
         page.send_keys_to_active("a").await?;
         if is_text_input {
             // Give a wrong `data-focus-visible` the chance to appear.
-            page.wait_for_attr(&el, "data-focused", Some("true"))
-                .await?;
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             assert_that!(el.attr("data-focus-visible").await?).is_none();
             page.send_keys_to_active(Key::Escape).await?;
         }

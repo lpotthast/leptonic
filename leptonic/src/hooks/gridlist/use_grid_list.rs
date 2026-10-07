@@ -1,6 +1,6 @@
 // Upstream: react-aria/src/gridlist/useGridList.ts @ 99e6102368
 // Upstream: react-aria/src/gridlist/utils.ts @ 99e6102368
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use leptos::{
     attr::{self, Attr},
@@ -11,8 +11,8 @@ use crate::{
     hooks::{
         IntoAttrs, Orientation,
         collections::{
-            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
-            SelectionMode, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
+            Collection, CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout,
+            ListState, Node, SelectionMode, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
             UseSelectableListInput, use_selectable_list,
         },
         focus::use_has_tabbable_child::{
@@ -55,7 +55,7 @@ pub enum KeyboardNavigationBehavior {
 }
 
 /// Input of [`use_grid_list`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseGridListInput {
     pub state: ListState,
     /// The grid element; the hook's props capture it.
@@ -94,6 +94,49 @@ pub struct GridListData {
     pub should_select_on_press_up: bool,
     /// Expansion of tree rows (`None` for flat lists).
     pub tree: Option<TreeExpansion>,
+    /// Tree rows: every visible row's position, computed once per collection (`None` for flat
+    /// lists).
+    pub tree_positions: Option<Memo<Arc<HashMap<Key, TreeRowPosition>>>>,
+}
+
+/// Where a tree row is: `aria-level`, `aria-posinset` and `aria-setsize`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TreeRowPosition {
+    /// The level, from 1 for top-level rows.
+    pub level: usize,
+    /// The position among the sibling rows, from 1.
+    pub index: usize,
+    /// The number of sibling rows.
+    pub set_size: usize,
+}
+
+/// The position of every row of a tree collection, in one pass (react-aria computes each row's
+/// separately, counting its siblings: quadratic in the number of rows).
+pub fn tree_row_positions(collection: &Collection) -> HashMap<Key, TreeRowPosition> {
+    fn visit<'a>(
+        collection: &'a Collection,
+        siblings: impl Iterator<Item = &'a Node>,
+        positions: &mut HashMap<Key, TreeRowPosition>,
+    ) {
+        let rows: Vec<&Node> = siblings.filter(|node| node.is_item()).collect();
+        let set_size = rows.len();
+        for (index, row) in rows.into_iter().enumerate() {
+            positions.insert(
+                row.key.clone(),
+                TreeRowPosition {
+                    level: row.level + 1,
+                    index: index + 1,
+                    set_size,
+                },
+            );
+            if row.first_child_key.is_some() {
+                visit(collection, collection.children(&row.key), positions);
+            }
+        }
+    }
+    let mut positions = HashMap::with_capacity(collection.size());
+    visit(collection, collection.iter(), &mut positions);
+    positions
 }
 
 /// The element id of the row `key` in the grid list `list_id` (whitespace removed from the
@@ -219,6 +262,13 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
             keyboard_navigation_behavior,
             should_select_on_press_up,
             tree,
+            tree_positions: tree.map(|_| {
+                // Recomputed only when the collection changes, and then always a change.
+                Memo::new_with_compare(
+                    move |_| state.collection.with(|c| Arc::new(tree_row_positions(c))),
+                    |_, _| true,
+                )
+            }),
         },
         props: UseGridListProps {
             id,

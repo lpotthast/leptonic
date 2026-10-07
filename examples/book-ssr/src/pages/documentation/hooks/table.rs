@@ -890,7 +890,7 @@ fn TableResizingSections() -> impl IntoView {
                             state: resize,
                             table: data,
                             column,
-                            aria_label: "Resizer".to_owned(),
+                            aria_label: "Resizer".into(),
                             element: CapturedElement::new(),
                             trigger: None,
                             is_disabled: Signal::stored(false),

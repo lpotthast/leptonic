@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/tooltip/useTooltipTriggerState.ts @ 99e6102368
 //! Thread-local global state for the tooltip warmup/cooldown system.
 //!
 //! This mirrors react-aria's module-level state in `useTooltipTriggerState.ts`.

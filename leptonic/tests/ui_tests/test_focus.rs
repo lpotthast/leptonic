@@ -1,11 +1,14 @@
-use std::borrow::Cow;
+// Upstream: react-aria/test/interactions/useFocus.test.js @ 99e6102368
+use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;
 use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
 use rootcause::Report;
 
-use crate::pages::focus::FocusPage;
+use crate::pages::{BaseActions, focus::FocusPage};
 
+/// `use_focus`: focus and blur of the element itself (not its children), disabled, and a blur
+/// when the focused element becomes disabled.
 pub struct FocusTests {}
 
 #[async_trait]
@@ -21,99 +24,97 @@ impl BrowserTest<str> for FocusTests {
         test_tab_focus(&page).await?;
         test_focus_change_count(&page).await?;
         test_child_focus_does_not_trigger_parent(&page).await?;
+        test_blur_when_disabled_while_focused(&page).await?;
 
         Ok(())
     }
 }
 
-/// Basic click focus/blur behavior and disabled target.
+/// A negative check: give a wrong update time to happen, then check the value again.
+async fn expect_stays(page: &FocusPage<'_>, id: &str, expected: &str) -> Result<(), Report> {
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_that!(page.read_text_of(id).await?.trim().to_owned()).is_equal_to(expected.to_owned());
+    Ok(())
+}
+
+/// "handles focus events on the immediate target", "does not handle focus events if disabled".
 async fn test_basic_focus(page: &FocusPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: basic click focus");
     page.goto().await?;
 
-    // Initial state: nothing focused
     assert_that!(page.read_focus_count().await?).is_equal_to(0);
     assert_that!(page.read_blur_count().await?).is_equal_to(0);
     assert_that!(page.read_is_focused().await?).is_equal_to(false);
 
-    // Click target: focus count increments, is_focused becomes true
     page.click_target().await?;
-    assert_that!(page.read_focus_count().await?).is_equal_to(1);
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
+    page.wait_for_text("test-focus-count", "1").await?;
+    page.wait_for_text("test-is-focused", "true").await?;
 
-    // Click elsewhere: blur count increments, is_focused becomes false
     page.click_elsewhere().await?;
-    assert_that!(page.read_blur_count().await?).is_equal_to(1);
-    assert_that!(page.read_is_focused().await?).is_equal_to(false);
+    page.wait_for_text("test-blur-count", "1").await?;
+    page.wait_for_text("test-is-focused", "false").await?;
 
-    // Click target again: focus count increments to 2
     page.click_target().await?;
-    assert_that!(page.read_focus_count().await?).is_equal_to(2);
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
+    page.wait_for_text("test-focus-count", "2").await?;
+    page.wait_for_text("test-is-focused", "true").await?;
 
-    // Disabled target: click doesn't increment disabled focus count
-    assert_that!(page.read_disabled_focus_count().await?).is_equal_to(0);
     page.click_disabled_target().await?;
-    assert_that!(page.read_disabled_focus_count().await?).is_equal_to(0);
-
-    Ok(())
+    page.wait_for_active_id("test-focus-disabled").await?;
+    expect_stays(page, "test-disabled-focus-count", "0").await
 }
 
-/// Tab key triggers focus on the target element.
+/// The Tab key focuses the target.
 async fn test_tab_focus(page: &FocusPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: tab key focus");
     page.goto().await?;
 
-    // Tab from "before" button to focus target
     page.tab_from_before_to_target().await?;
-    assert_that!(page.read_focus_count().await?).is_equal_to(1);
-    assert_that!(page.read_is_focused().await?).is_equal_to(true);
-
-    Ok(())
+    page.wait_for_text("test-focus-count", "1").await?;
+    page.wait_for_text("test-is-focused", "true").await
 }
 
-/// Child focus events should NOT fire parent's use_focus callbacks.
+/// "does not handle focus events on children".
 async fn test_child_focus_does_not_trigger_parent(page: &FocusPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: child focus does not trigger parent");
     page.goto().await?;
 
-    // Initial state: parent focus count is 0
-    assert_that!(page.read_parent_focus_count().await?).is_equal_to(0);
-
-    // Click the child button: parent focus count should stay 0
     page.click_child().await?;
-    assert_that!(page.read_parent_focus_count().await?).is_equal_to(0);
+    page.wait_for_active_id("test-focus-child").await?;
+    expect_stays(page, "test-focus-parent-focus-count", "0").await?;
 
-    // Click the parent div directly: parent focus count becomes 1
     page.click_parent().await?;
-    assert_that!(page.read_parent_focus_count().await?).is_equal_to(1);
+    page.wait_for_text("test-focus-parent-focus-count", "1")
+        .await?;
 
-    // Click child again: parent receives blur (target != current_target for focus, so no parent focus callback)
+    // Focus moving to the child blurs the parent, but focusing the child isn't the parent's focus.
     page.click_child().await?;
-    assert_that!(page.read_parent_blur_count().await?).is_equal_to(1);
-    assert_that!(page.read_parent_focus_count().await?).is_equal_to(1);
-
-    Ok(())
+    page.wait_for_text("test-focus-parent-blur-count", "1")
+        .await?;
+    expect_stays(page, "test-focus-parent-focus-count", "1").await
 }
 
-/// on_focus_change callback count tracks focus/blur transitions.
+/// `on_focus_change` tracks focus/blur transitions.
 async fn test_focus_change_count(page: &FocusPage<'_>) -> Result<(), Report> {
-    tracing::info!("Test: on_focus_change callback count");
     page.goto().await?;
 
     assert_that!(page.read_focus_change_count().await?).is_equal_to(0);
 
-    // Click target: focus change fires (true)
     page.click_target().await?;
-    assert_that!(page.read_focus_change_count().await?).is_equal_to(1);
+    page.wait_for_text("test-focus-change-count", "1").await?;
 
-    // Click elsewhere: focus change fires (false)
     page.click_elsewhere().await?;
-    assert_that!(page.read_focus_change_count().await?).is_equal_to(2);
+    page.wait_for_text("test-focus-change-count", "2").await?;
 
-    // Re-focus: focus change fires (true)
     page.click_target().await?;
-    assert_that!(page.read_focus_change_count().await?).is_equal_to(3);
+    page.wait_for_text("test-focus-change-count", "3").await
+}
 
-    Ok(())
+/// "should fire onBlur when a focused element is disabled" (Firefox fires no blur then; the
+/// synthetic blur observer dispatches one), exactly once.
+async fn test_blur_when_disabled_while_focused(page: &FocusPage<'_>) -> Result<(), Report> {
+    page.goto().await?;
+
+    page.click_element_with_id("test-focus-disable-me").await?;
+    page.wait_for_selector("#test-focus-disable-me[disabled]")
+        .await?;
+    page.wait_for_text("test-focus-disable-me-blur-count", "1")
+        .await?;
+    expect_stays(page, "test-focus-disable-me-blur-count", "1").await
 }

@@ -1,16 +1,16 @@
 use std::time::Duration;
 
 use leptonic::{
-    components::prelude::{Button, ButtonVariant, Icon},
+    atoms::button::Button,
     hooks::{
         IntoAttrs, QueuedToast, ToastOptions, ToastQueue, UseToastInput, UseToastRegionInput,
         UseToastRegionReturn, UseToastReturn, use_button, use_toast, use_toast_region,
         use_toast_state,
     },
-    prelude::icondata,
     utils::CapturedElement,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 /// What a toast of this demo shows.
 #[derive(Clone)]
@@ -29,15 +29,13 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
         title_id,
         description_props,
         close_button,
-    } = use_toast(
-        UseToastInput {
-            toast,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-        },
+    } = use_toast(UseToastInput {
         queue,
-    );
+        toast,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+    });
     let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
 
     view! {
@@ -58,7 +56,12 @@ fn NoticeToast(toast: QueuedToast<Notice>, queue: ToastQueue<Notice>) -> impl In
 fn NoticeRegion(queue: ToastQueue<Notice>) -> impl IntoView {
     let element = CapturedElement::new();
     let UseToastRegionReturn { region_props } =
-        use_toast_region(UseToastRegionInput::default(), queue, element);
+        use_toast_region(UseToastRegionInput {
+            queue,
+            element,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+        });
 
     view! {
         <div {..region_props.into_attrs()} {..element.attr()} class="demo-hook-toast-region">
@@ -96,8 +99,8 @@ pub fn ToastHooksDemo() -> impl IntoView {
 
     view! {
         <div class="demo-inline-controls">
-            <Button on_press=move |_| add(Some(Duration::from_secs(5)))>"Send"</Button>
-            <Button variant=ButtonVariant::Outlined on_press=move |_| add(None)>"Send (toast stays)"</Button>
+            <Button on_press=move |_| add(Some(Duration::from_secs(5))) classes="demo-btn">"Send"</Button>
+            <Button on_press=move |_| add(None) classes="demo-btn">"Send (toast stays)"</Button>
         </div>
 
         // The region is rendered only while there are toasts.

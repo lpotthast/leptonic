@@ -39,8 +39,7 @@ pub fn use_color_channel_field<C: ColorValue>(
         state: state.number,
         aria_label: MaybeProp::derive(move || {
             aria_label.get().or_else(|| {
-                (!has_label.get() && !has_labelledby)
-                    .then(|| C::get_channel_name(channel).to_owned())
+                (!has_label.get() && !has_labelledby).then(|| C::channel_name(channel).to_owned())
             })
         }),
         ..field

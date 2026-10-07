@@ -154,7 +154,7 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                         </li>
                         <li>
                             "A disabled responder fully disables a descendant built on "<Code inline=true>"use_button"</Code>
-                            " (the "<Code inline=true>"Button"</Code>" atom and the components): its "<Code inline=true>"disabled"</Code>
+                            " (such as the "<Code inline=true>"Button"</Code>" atom): its "<Code inline=true>"disabled"</Code>
                             " attribute, focus, hover and shortcuts. A "<Code inline=true>"Pressable"</Code>" or a plain "
                             <Code inline=true>"use_press"</Code>" element only stops pressing: it keeps its focusability and its ARIA "
                             "attributes, so mark it disabled yourself when it should look and be announced disabled (the demo sets "

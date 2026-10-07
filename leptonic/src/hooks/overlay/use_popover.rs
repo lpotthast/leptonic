@@ -15,7 +15,7 @@
 //
 // =============================================================================
 
-use leptos::{oco::Oco, prelude::*};
+use leptos::prelude::*;
 
 use super::{
     use_overlay::{UseOverlayInput, use_overlay},
@@ -130,7 +130,7 @@ pub struct UsePopoverReturn {
     pub trigger_props: UsePopoverTriggerProps,
 
     /// Unique ID for the overlay. Pass to `use_overlay_trigger` as `overlay_id`.
-    pub id: Oco<'static, str>,
+    pub id: String,
 
     /// The popover element, once rendered.
     pub popover_element: CapturedElement,
@@ -214,26 +214,21 @@ pub type UsePopoverAttrs = MergedOverlayOverlayPositionAttrs;
 ///     is_submenu: false,
 /// });
 ///
-/// let trigger_attrs = StoredValue::new(popover.trigger_props.into_attrs());
-/// let popover_props = StoredValue::new(popover.props.into_attrs());
+/// let trigger_attrs = popover.trigger_props.into_attrs();
+/// let (popover_attrs, popover_styles) = popover.props.into_parts();
+/// let popover_attrs = StoredValue::new(popover_attrs);
 ///
 /// view! {
-///     <button
-///         {..trigger_attrs.get_value()}
-///         on:click=move |_| set_is_open.set(!is_open.get())
-///     >
+///     <button {..trigger_attrs} on:click=move |_| state.toggle()>
 ///         "Toggle Popover"
 ///     </button>
 ///
 ///     <Portal>
-///         <Show when=move || is_open.get()>
+///         <Show when=move || state.is_open.get()>
 ///             // A modal popover's underlay covers the page (an outside press lands on it)
 ///             <div style="position: fixed; inset: 0; z-index: 999;" />
 ///             // Popover content — positioned automatically
-///             <div
-///                 {..popover_props.get_value()}
-///                 style="z-index: 1000;"
-///             >
+///             <div {..popover_attrs.get_value()} style=popover_styles.clone()>
 ///                 "Popover content"
 ///             </div>
 ///         </Show>

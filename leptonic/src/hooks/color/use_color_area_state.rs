@@ -3,8 +3,8 @@ use leptos::prelude::*;
 
 use crate::utils::{
     ValueBinding,
-    color::ColorValue,
-    math::{decimal_precision, snap_value_to_step},
+    color::{ColorChannelRange, ColorSpaceAxes, ColorValue},
+    math::snap_value_to_step,
 };
 
 // =============================================================================
@@ -91,7 +91,7 @@ impl<C: ColorValue> ColorAreaState<C> {
     /// Sets the x channel's value.
     pub fn set_x_value(&self, value: f64) {
         let color = self.latest.get_value();
-        if value != color.get_channel_value(self.x_channel) {
+        if value != color.channel_value(self.x_channel) {
             self.set_value(color.with_channel_value(self.x_channel, value));
         }
     }
@@ -99,7 +99,7 @@ impl<C: ColorValue> ColorAreaState<C> {
     /// Sets the y channel's value.
     pub fn set_y_value(&self, value: f64) {
         let color = self.latest.get_value();
-        if value != color.get_channel_value(self.y_channel) {
+        if value != color.channel_value(self.y_channel) {
             self.set_value(color.with_channel_value(self.y_channel, value));
         }
     }
@@ -108,17 +108,17 @@ impl<C: ColorValue> ColorAreaState<C> {
     /// The values snap to the steps.
     pub fn set_color_from_point(&self, x: f64, y: f64) {
         let color = self.latest.get_value();
-        let x_range = C::get_channel_range(self.x_channel);
-        let y_range = C::get_channel_range(self.y_channel);
+        let x_range = C::channel_range(self.x_channel);
+        let y_range = C::channel_range(self.y_channel);
         let new_x = x_range.min_value + x.clamp(0.0, 1.0) * (x_range.max_value - x_range.min_value);
         let new_y =
             y_range.min_value + (1.0 - y.clamp(0.0, 1.0)) * (y_range.max_value - y_range.min_value);
         let mut new_color = None;
-        if new_x != color.get_channel_value(self.x_channel) {
+        if new_x != color.channel_value(self.x_channel) {
             let snapped = snap(new_x, self.x_channel_step, &x_range);
             new_color = Some(color.with_channel_value(self.x_channel, snapped));
         }
-        if new_y != color.get_channel_value(self.y_channel) {
+        if new_y != color.channel_value(self.y_channel) {
             let snapped = snap(new_y, self.y_channel_step, &y_range);
             new_color = Some(
                 new_color
@@ -133,8 +133,8 @@ impl<C: ColorValue> ColorAreaState<C> {
 
     /// The thumb's position, each coordinate from 0 to 1 (`y` from the top). Tracked.
     pub fn thumb_position(&self) -> (f64, f64) {
-        let x_range = C::get_channel_range(self.x_channel);
-        let y_range = C::get_channel_range(self.y_channel);
+        let x_range = C::channel_range(self.x_channel);
+        let y_range = C::channel_range(self.y_channel);
         (
             (self.x_value.get() - x_range.min_value) / (x_range.max_value - x_range.min_value),
             1.0 - (self.y_value.get() - y_range.min_value)
@@ -166,14 +166,14 @@ impl<C: ColorValue> ColorAreaState<C> {
     /// the maximum lands on the maximum, which may be off the step grid).
     fn step_channel(&self, channel: C::Channel, step: f64, delta: f64) {
         let color = self.latest.get_value();
-        let range = C::get_channel_range(channel);
-        let target = color.get_channel_value(channel) + delta;
+        let range = C::channel_range(channel);
+        let target = color.channel_value(channel) + delta;
         let value = if delta > 0.0 && target > range.max_value {
             range.max_value
         } else {
             snap(target, step, &range)
         };
-        if value != color.get_channel_value(channel) {
+        if value != color.channel_value(channel) {
             self.set_value(color.with_channel_value(channel, value));
         }
     }
@@ -190,20 +190,15 @@ impl<C: ColorValue> ColorAreaState<C> {
         }
     }
 
-    /// The color to show (react-aria: without alpha; our color spaces have none).
+    /// The color to show: without alpha (react-aria's `getDisplayColor`).
     pub fn display_color(&self) -> Signal<C> {
-        self.value
+        let value = self.value;
+        Signal::derive(move || value.get().opaque())
     }
 }
 
-fn snap(value: f64, step: f64, range: &crate::utils::color::ColorChannelRange) -> f64 {
-    snap_value_to_step(
-        value,
-        range.min_value,
-        range.max_value,
-        step,
-        decimal_precision(step),
-    )
+fn snap(value: f64, step: f64, range: &ColorChannelRange) -> f64 {
+    snap_value_to_step(value, Some(range.min_value), Some(range.max_value), step)
 }
 
 /// Creates the state of a 2D color area.
@@ -219,9 +214,13 @@ pub fn use_color_area_state<C: ColorValue>(input: UseColorAreaStateInput<C>) -> 
         on_change_end,
     } = input;
 
-    let (x_channel, y_channel, z_channel) = C::get_color_space_axes(x_channel, y_channel);
-    let x_range = C::get_channel_range(x_channel);
-    let y_range = C::get_channel_range(y_channel);
+    let ColorSpaceAxes {
+        x: x_channel,
+        y: y_channel,
+        z: z_channel,
+    } = C::color_space_axes(x_channel, y_channel);
+    let x_range = C::channel_range(x_channel);
+    let y_range = C::channel_range(y_channel);
 
     let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
     // With app state, the color it holds at first is the one to reset to (react-aria).
@@ -244,8 +243,8 @@ pub fn use_color_area_state<C: ColorValue>(input: UseColorAreaStateInput<C>) -> 
     let value = binding.value;
     ColorAreaState {
         value,
-        x_value: Signal::derive(move || value.get().get_channel_value(x_channel)),
-        y_value: Signal::derive(move || value.get().get_channel_value(y_channel)),
+        x_value: Signal::derive(move || value.get().channel_value(x_channel)),
+        y_value: Signal::derive(move || value.get().channel_value(y_channel)),
         x_channel,
         y_channel,
         z_channel,
@@ -288,7 +287,7 @@ mod tests {
             let area = state(HSV {
                 hue: 0.0,
                 saturation: 0.5,
-                value: 0.5,
+                brightness: 0.5,
             });
             area.increment_x(area.x_channel_page_step);
             assert_that!(area.x_value.get_untracked()).is_equal_to(0.6);
@@ -307,7 +306,7 @@ mod tests {
             let area = state(HSV {
                 hue: 0.0,
                 saturation: 0.0,
-                value: 0.0,
+                brightness: 0.0,
             });
             area.set_color_from_point(0.25, 0.25);
             assert_that!(area.x_value.get_untracked()).is_equal_to(0.25);
@@ -325,7 +324,7 @@ mod tests {
                 default_value: HSV {
                     hue: 0.0,
                     saturation: 0.5,
-                    value: 0.5,
+                    brightness: 0.5,
                 },
                 value: None,
                 x_channel: None,

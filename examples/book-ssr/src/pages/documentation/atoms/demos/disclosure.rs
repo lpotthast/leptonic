@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::prelude::{Button, Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
-    components::prelude::{Checkbox, Icon},
+    atoms::prelude::{Button, Checkbox, Disclosure, DisclosureGroup, DisclosurePanel, DisclosureTrigger},
     hooks::Key,
-    prelude::icondata,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn DisclosureAtomDemo() -> impl IntoView {
@@ -22,7 +21,7 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
                     <DisclosureTrigger>
                         <Button classes="demo-disclosure-trigger">
                             "Shipping"
-                            <Icon icon=icondata::BsChevronDown classes="demo-disclosure-chevron"/>
+                            <span class="demo-disclosure-chevron" aria-hidden="true"><Icon icon=icondata::BsChevronDown/></span>
                         </Button>
                     </DisclosureTrigger>
                 </h4>
@@ -35,7 +34,7 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
                     <DisclosureTrigger>
                         <Button classes="demo-disclosure-trigger">
                             "Returns"
-                            <Icon icon=icondata::BsChevronDown classes="demo-disclosure-chevron"/>
+                            <span class="demo-disclosure-chevron" aria-hidden="true"><Icon icon=icondata::BsChevronDown/></span>
                         </Button>
                     </DisclosureTrigger>
                 </h4>
@@ -46,7 +45,10 @@ pub fn DisclosureAtomDemo() -> impl IntoView {
         </DisclosureGroup>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
         <p class="demo-status">
             "Expanded: "

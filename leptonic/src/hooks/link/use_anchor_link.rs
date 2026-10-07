@@ -7,7 +7,7 @@ use web_sys::{MouseEvent, ScrollIntoViewOptions};
 
 use crate::{
     hooks::{PressEvent, UseLinkInput, UseLinkReturn, use_link},
-    utils::{EventHandler, scroll_behavior::ScrollBehavior},
+    utils::{EventHandler, modifiers::Modifiers, scroll_behavior::ScrollBehavior},
 };
 
 /// The target of an anchor link: an element on the current page, addressed by the URL fragment
@@ -120,21 +120,36 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseLinkReturn {
     let mut anchor = use_link(UseLinkInput {
         href: Signal::stored(Some(href.as_str().to_owned())),
         on_press: Some(Callback::new(move |e: PressEvent| {
-            target.with_value(|href| {
-                if let Some(behavior) = scroll_behavior {
-                    scroll_to_anchor(href, behavior);
-                }
-                update_url(href);
-            });
+            // A modified click opens the link elsewhere (a new tab or window): the browser does,
+            // this page neither scrolls nor changes its URL.
+            if !is_modified(e.modifiers) {
+                target.with_value(|href| {
+                    if let Some(behavior) = scroll_behavior {
+                        scroll_to_anchor(href, behavior);
+                    }
+                    update_url(href);
+                });
+            }
             if let Some(on_press) = user_on_press {
                 on_press.run(e);
             }
         })),
         ..link
     });
-    // The press scrolls: no jump by the browser, no navigation by a router.
+    // The press scrolls: no jump by the browser, no navigation by a router. Modified clicks
+    // (Ctrl/Cmd/Shift/Alt) keep the browser's default: opening the link in a new tab or window.
     let on_click = std::mem::take(&mut anchor.props.props.on_click);
-    anchor.props.props.on_click =
-        EventHandler::new(|e: MouseEvent| e.prevent_default()).chain(on_click);
+    anchor.props.props.on_click = EventHandler::new(|e: MouseEvent| {
+        if !(e.ctrl_key() || e.meta_key() || e.shift_key() || e.alt_key()) {
+            e.prevent_default();
+        }
+    })
+    .chain(on_click);
     anchor
+}
+
+/// Whether a press was made with a modifier that opens a link elsewhere (as react-aria's
+/// `shouldClientNavigate`).
+fn is_modified(modifiers: Modifiers) -> bool {
+    modifiers.ctrl_key || modifiers.meta_key || modifiers.shift_key || modifiers.alt_key
 }

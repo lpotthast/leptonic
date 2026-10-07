@@ -15,8 +15,8 @@ use crate::hooks::{
 // =============================================================================
 //
 // ## OMITTED FEATURES
-// - Tree tables (expansion keys, `aria-expanded`/`aria-level`/..., the expand button): trees are
-//   grid lists (`hooks::tree`).
+// - Tree tables (expansion keys, `aria-expanded`/`aria-level`/..., the expand button): not built
+//   yet (planned; trees are grid lists meanwhile, `hooks::tree`).
 // - Virtualization (`aria-rowindex`), synthetic link props.
 //
 // =============================================================================
@@ -49,10 +49,10 @@ pub struct UseTableRowReturn {
 pub struct UseTableRowProps {
     pub row: UseGridRowProps,
     /// The row header cells label the row.
-    pub aria_labelledby: String,
+    pub aria_labelledby: Signal<String>,
 }
 
-pub type UseTableRowAttrs = (UseGridRowAttrs, Attr<attr::AriaLabelledby, String>);
+pub type UseTableRowAttrs = (UseGridRowAttrs, Attr<attr::AriaLabelledby, Signal<String>>);
 
 impl IntoAttrs for UseTableRowProps {
     type Attrs = UseTableRowAttrs;
@@ -72,7 +72,11 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         key,
         on_context_menu,
     } = input;
-    let aria_labelledby = table.row_labelledby(&key);
+    let aria_labelledby = {
+        let table = table.clone();
+        let key = key.clone();
+        Signal::derive(move || table.row_labelledby(&key))
+    };
     let UseGridRowReturn {
         row_props,
         is_selected,

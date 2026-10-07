@@ -12,8 +12,8 @@ use crate::{
     Out,
     hooks::{
         IntoAttrs, UseColorSliderInput, UseColorSliderReturn, UseColorSliderStateInput,
-        UseHoverInput, UseLabelProps, UseSliderOutputAttrs, UseSliderTrackAttrs, use_color_slider,
-        use_color_slider_state, use_hover,
+        UseHoverInput, UseLabelProps, UseSliderGroupAttrs, UseSliderOutputAttrs,
+        UseSliderTrackAttrs, use_color_slider, use_color_slider_state, use_hover,
     },
     utils::{
         ValueBinding,
@@ -32,7 +32,9 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Its own track and output atoms (`ColorSliderTrack`, `ColorSliderOutput`; react-aria-
-//   components reuses `SliderTrack`/`SliderOutput` through their contexts).
+//   components reuses `SliderTrack`/`SliderOutput` through their contexts). As upstream, the
+//   track is the slider's group (`role="group"`, labelled by the `Label`), and a `Label` without
+//   children shows the channel's name.
 // - The value is split into `value` (a value or any signal) and `set_value` (an `Out`), plus
 //   `default_value` and `on_change` (C4).
 //
@@ -43,8 +45,9 @@ use crate::{
 struct ColorSliderContext {
     orientation: Signal<Orientation>,
     is_disabled: Signal<bool>,
-    track: StoredValue<Option<(UseSliderTrackAttrs, Styles)>>,
-    output: StoredValue<Option<UseSliderOutputAttrs>>,
+    /// The track's attributes (with the group's) and styles, cloned per render.
+    track: StoredValue<(UseSliderGroupAttrs, UseSliderTrackAttrs, Styles)>,
+    output: StoredValue<UseSliderOutputAttrs>,
     formatted: Signal<String>,
 }
 
@@ -135,13 +138,20 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
         html_for: None,
     })
     .with_on_click(slider.label_props.on_click)
-    .with_presence(label_presence);
+    .with_presence(label_presence)
+    .with_default_text(Signal::derive(move || {
+        <Ch::Color as ColorValue>::channel_name(channel).to_owned()
+    }));
     let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
     let context = ColorSliderContext {
         orientation,
         is_disabled,
-        track: StoredValue::new(Some((track_attrs, slider_track_styles.merge(track_styles)))),
-        output: StoredValue::new(Some(slider.output_props.into_attrs())),
+        track: StoredValue::new((
+            slider.group_props.into_attrs(),
+            track_attrs,
+            slider_track_styles.merge(track_styles),
+        )),
+        output: StoredValue::new(slider.output_props.into_attrs()),
         formatted: state.formatted_value(),
     };
     let color = state.display_color();
@@ -161,7 +171,6 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
             <Provider value=thumb_context>
                 <Provider value=label>
                     <div
-                        {..slider.group_props.into_attrs()}
                         class=classes
                         style=styles
                         data-orientation=move || orientation.get().as_str()
@@ -176,13 +185,14 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
 }
 
 /// The track of the [`ColorSlider`] around it, drawn with the channel's gradient; put the
-/// [`ColorThumb`](super::color_thumb::ColorThumb) in it.
+/// [`ColorThumb`](super::color_thumb::ColorThumb) in it. It is the slider's group
+/// (`role="group"`, named by the slider's label).
 ///
 /// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
 ///
 /// # Panics
 ///
-/// Outside a [`ColorSlider`], or as its second track.
+/// Outside a [`ColorSlider`].
 ///
 /// Default class: `leptonic-ColorSliderTrack`.
 #[component]
@@ -198,16 +208,14 @@ pub fn ColorSliderTrack(
         track,
         ..
     } = expect_context::<ColorSliderContext>();
-    let (attrs, track_styles) = track
-        .try_update_value(Option::take)
-        .flatten()
-        .expect("a `ColorSlider` has one `ColorSliderTrack`");
+    let (group_attrs, attrs, track_styles) = track.get_value();
     let hover = use_hover(UseHoverInput {
         is_disabled,
         ..UseHoverInput::default()
     });
     view! {
         <div
+            {..group_attrs}
             {..attrs}
             {..hover.props.into_attrs()}
             class=classes
@@ -227,7 +235,7 @@ pub fn ColorSliderTrack(
 ///
 /// # Panics
 ///
-/// Outside a [`ColorSlider`], or as its second output.
+/// Outside a [`ColorSlider`].
 ///
 /// Default class: `leptonic-ColorSliderOutput`.
 #[component]
@@ -243,10 +251,7 @@ pub fn ColorSliderOutput(
         formatted,
         ..
     } = expect_context::<ColorSliderContext>();
-    let attrs = output
-        .try_update_value(Option::take)
-        .flatten()
-        .expect("a `ColorSlider` has one `ColorSliderOutput`");
+    let attrs = output.get_value();
     view! {
         <output
             {..attrs}

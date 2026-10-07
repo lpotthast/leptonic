@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude as atoms, components::prelude::*};
+use leptonic::atoms::prelude as atoms;
 use leptos::prelude::*;
 
 const TOTAL_BYTES: u32 = 4_000;
@@ -21,13 +21,16 @@ pub fn ProgressBarAtomDemo() -> impl IntoView {
             </div>
         </atoms::ProgressBar>
         <div class="demo-inline-controls">
-            <Button on_press=move |_| uploaded.update(|bytes| *bytes = (*bytes + 400).min(TOTAL_BYTES))>
+            <atoms::Button on_press=move |_| uploaded.update(|bytes| *bytes = (*bytes + 400).min(TOTAL_BYTES)) classes="demo-btn">
                 "Upload 400 bytes"
-            </Button>
-            <Button on_press=move |_| uploaded.set(0)>"Restart"</Button>
+            </atoms::Button>
+            <atoms::Button on_press=move |_| uploaded.set(0) classes="demo-btn">"Restart"</atoms::Button>
         </div>
         <div class="demo-controls">
-            <Checkbox is_selected=size_unknown set_selected=size_unknown>"Size unknown"</Checkbox>
+            <atoms::Checkbox is_selected=size_unknown set_selected=size_unknown classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Size unknown"
+            </atoms::Checkbox>
         </div>
     }
 }

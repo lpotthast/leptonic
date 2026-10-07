@@ -31,8 +31,7 @@ pub fn PageAtomSearchField() -> impl IntoView {
 
             <Section title="Example">
                 <p>
-                    "Import the atoms from their modules or from "<Code inline=true>"leptonic::atoms::prelude"</Code>
-                    " (the components prelude has the styled "<Code inline=true>"SearchField"</Code>" of the same name):"
+                    "Import the atoms from their modules or from "<Code inline=true>"leptonic::atoms::prelude"</Code>":"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -186,17 +185,30 @@ pub fn PageAtomSearchField() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Select the states with attribute selectors on your classes. Hide the clear button while there is nothing "
-                    "to clear:"
+                    "The atoms bring no styles. "<Code inline=true>"SearchField"</Code>" renders a "<Code inline=true>"<div>"</Code>
+                    " (default class "<Code inline=true>"leptonic-SearchField"</Code>") around its children: a "
+                    <Code inline=true>"Label"</Code>", an "<Code inline=true>"Input"</Code>" ("<Code inline=true>"leptonic-Input"</Code>
+                    ") and a "<Code inline=true>"SearchFieldClearButton"</Code>" ("<Code inline=true>"leptonic-SearchFieldClearButton"</Code>
+                    "), with any markup between them. The clear button is named \u{201c}Clear search\u{201d}; its content is "
+                    "yours, e.g. an "<Code inline=true>"aria-hidden"</Code>" \u{2715}."
+                </p>
+                <p>
+                    "Hide the clear button while the field has "<Code inline=true>"data-empty"</Code>", and style the input "
+                    "and the button through their own data attributes. The demo above uses this CSS (its button and input "
+                    "classes are styled like the "<Link href=format!("{}#styling", routes::doc::button::Atom.materialize())>"Button Atom"</Link>
+                    " and the "<Link href=format!("{}#styling", routes::doc::text_field::Atom.materialize())>"Input"</Link>"):"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-search[data-empty] .my-clear { visibility: hidden; }
-                        .my-clear[data-hovered] { background: var(--surface); }
-                        .my-clear[data-disabled] { opacity: 0.5; }
+                        .demo-field { display: flex; flex-direction: column; gap: 0.25rem; }
+                        .demo-input-row { display: flex; align-items: center; gap: 0.5rem; }
+                        .demo-search-field[data-empty] .demo-search-field-clear { visibility: hidden; }
                     ")}
                 </Code>
-                <p>"The demo shows its complete styles under \u{201c}View styles\u{201d}."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <SeeAlso>

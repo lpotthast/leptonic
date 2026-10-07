@@ -1,7 +1,10 @@
-use leptonic::atoms::{
-    field::{Description, FieldError, Label},
-    input::Input,
-    search_field::{SearchField, SearchFieldClearButton},
+use leptonic::{
+    atoms::{
+        field::{Description, FieldError, Label},
+        input::Input,
+        search_field::{SearchField, SearchFieldClearButton},
+    },
+    hooks::InputType,
 };
 use leptos::{ev::SubmitEvent, prelude::*};
 
@@ -78,6 +81,14 @@ pub fn PageAtomSearchField() -> impl IntoView {
                     <Label>"Test"</Label>
                     <Input />
                     <SearchFieldClearButton>"x"</SearchFieldClearButton>
+                </SearchField>
+            </div>
+
+            // Another input type than `search`.
+            <div id="sf-type">
+                <SearchField input_type=InputType::Text>
+                    <Label>"Text type"</Label>
+                    <Input />
                 </SearchField>
             </div>
 

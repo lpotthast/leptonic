@@ -1,43 +1,40 @@
-// Upstream: react-aria/src/interactions/useFocus.ts @ 6f664fe911
-#![cfg_attr(feature = "ssr", allow(unused_imports))]
-
+// Upstream: react-aria/src/interactions/useFocus.ts @ 99e6102368
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{EventAccessors, EventHandler, EventTargetExt, shadow_dom, synthetic_blur},
-};
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocus.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
 // ## DIFFERENT BEHAVIOR
+// - The handlers are always attached and check `is_disabled` when they run (react-aria attaches
+//   none when there are no callbacks): `is_disabled` is reactive.
+// - A blur is reported only after a reported focus, once: Chrome fires its own blur for an
+//   element disabled while focused after the synthetic one (react-aria would report both).
 //
-// - Defensive `try_get_untracked` in blur handler
-//   In certain Leptos scenarios (e.g., the focused element is removed from the
-//   DOM), the `disabled` signal may be disposed before the blur handler fires.
-//   We use `try_get_untracked().unwrap_or(true)` to treat a disposed signal as
-//   disabled rather than panicking. React-aria does not face this issue because
-//   React's synthetic event system defers cleanup.
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - The blur handler reads `is_disabled` with `try_get_untracked` and runs callbacks with
+//   `try_run`: removing a focused element blurs it after its owner was disposed ("Blur After
+//   Disposal" in hooks-implementation.md).
 //
-// - Always-attached event handlers
-//   React-aria returns `undefined` props when no callbacks are provided,
-//   relying on React's reconciliation to avoid attaching empty listeners.
-//   Our `EventHandler` always attaches a listener but checks the disabled
-//   state inside the handler. The overhead is negligible.
+// =============================================================================
 
+/// Input of [`use_focus`].
 #[derive(Debug, Clone, Copy, Default)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.
     pub is_disabled: Signal<bool>,
-
+    /// Called when the element receives focus.
     pub on_focus: Option<Callback<FocusEvent>>,
+    /// Called when the element loses focus.
     pub on_blur: Option<Callback<FocusEvent>>,
+    /// Called when the element's focus state changes.
     pub on_focus_change: Option<Callback<bool>>,
 }
 
@@ -89,6 +86,12 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
+        use wasm_bindgen::JsCast;
+
+        use crate::utils::{
+            EventAccessors, EventTargetExt, shadow_dom, synthetic_blur::SyntheticBlurObserver,
+        };
+
         let UseFocusInput {
             is_disabled: disabled,
             on_focus,
@@ -96,10 +99,13 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             on_focus_change,
         } = input;
 
-        // Cleanup handle for the synthetic blur MutationObserver (Firefox workaround).
-        // Set up on focus, disconnected on blur or unmount.
-        let blur_observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
+        // Blur events for a form element disabled while focused (Firefox fires none). Set up on
+        // focus, dropped on blur or unmount.
+        let blur_observer: StoredValue<Option<SyntheticBlurObserver>, LocalStorage> =
             StoredValue::new_local(None);
+        // Whether the element has focus (as reported): a blur ends it once. Chrome blurs an element
+        // disabled while focused only after the synthetic blur was dispatched.
+        let has_focus = StoredValue::new(false);
 
         let handle_focus = move |e: FocusEvent| {
             // Double check that document.activeElement actually matches e.target in case a previously chained
@@ -116,15 +122,10 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
                 && active == target.to_element()
                 && !disabled.get_untracked()
             {
-                // Set up synthetic blur observer for form elements (Firefox workaround:
-                // Firefox does not fire blur when a form element becomes disabled while focused).
-                if let Some(el) = e
-                    .target()
-                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
-                {
-                    let cleanup = synthetic_blur::setup_synthetic_blur_observer(&el);
-                    blur_observer_cleanup.set_value(Some(cleanup));
+                if let Some(el) = target.dyn_ref::<web_sys::Element>() {
+                    blur_observer.set_value(SyntheticBlurObserver::observe(el));
                 }
+                has_focus.set_value(true);
 
                 if let Some(on_focus) = on_focus {
                     on_focus.run(e);
@@ -142,16 +143,15 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             // lead to removal from said element from the DOM.
             let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
-            // Disconnect synthetic blur observer (no longer needed once blur fires).
-            blur_observer_cleanup.update_value(|cleanup| {
-                if let Some(cleanup_fn) = cleanup.take() {
-                    cleanup_fn();
-                }
-            });
+            // No longer needed once blurred.
+            blur_observer.try_update_value(Option::take);
 
             // Removing a focused element blurs it after its owner was disposed: the callbacks
             // may be gone then (`try_run`).
-            if e.expect_target() == e.expect_current_target() && !is_disabled {
+            if e.expect_target() == e.expect_current_target()
+                && !is_disabled
+                && has_focus.try_update_value(|f| std::mem::replace(f, false)) == Some(true)
+            {
                 if let Some(on_blur) = on_blur {
                     on_blur.try_run(e);
                 }
@@ -162,13 +162,8 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             }
         };
 
-        // Cleanup observer on unmount.
         on_cleanup(move || {
-            blur_observer_cleanup.update_value(|cleanup| {
-                if let Some(cleanup_fn) = cleanup.take() {
-                    cleanup_fn();
-                }
-            });
+            blur_observer.try_update_value(Option::take);
         });
 
         UseFocusReturn {

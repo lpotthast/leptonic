@@ -30,11 +30,11 @@ pub fn PageModalOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Notify without blocking"</TableCell>
                         <TableCell>
-                            <Link href=routes::doc::Alert.materialize()>"Alert"</Link>" / "
-                            <Link href=routes::doc::Toast.materialize()>"Toast"</Link>
+                            <Link href=routes::doc::Toast.materialize()>"Toast"</Link>", or an "
+                            <Link href=format!("{}#alert", routes::doc::Status.materialize())>"alert"</Link>" in the page"
                         </TableCell>
                     </TableRow>
-                    <TableRow><TableCell>"Slide a panel over the page from its edge, such as a menu"</TableCell><TableCell><Link href=routes::doc::Drawer.materialize()>"Drawer"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Slide a panel over the page from its edge, such as a menu"</TableCell><TableCell><b>"Modal"</b>" as a "<Link href=format!("{}#drawer", routes::doc::modal::Atom.materialize())>"drawer"</Link></TableCell></TableRow>
                 </DocTable>
 
                 <p>
@@ -45,8 +45,7 @@ pub fn PageModalOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Each layer builds on the one below: the atoms combine the hooks, and the "<Code inline=true>"Modal"</Code>
-                    " component is built from the atoms. See "
+                    "The atoms combine the hooks. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -74,10 +73,12 @@ pub fn PageModalOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The component is the quickest way to a modal. It takes your open state as "
-                    <Code inline=true>"is_open"</Code>" and its setter as "<Code inline=true>"set_open"</Code>
-                    ", and dismissing it sets that state to "<Code inline=true>"false"</Code>". To style the modal yourself, "
-                    "build it from the "<Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link>" instead."
+                    "A confirmation built from the "<Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link>
+                    " around a "<Link href=routes::doc::dialog::Atom.materialize()>"Dialog"</Link>". The backdrop takes your "
+                    "open state as "<Code inline=true>"is_open"</Code>" and its setter as "<Code inline=true>"set_open"</Code>
+                    ", and dismissing it sets that state to "<Code inline=true>"false"</Code>". The classes are the "
+                    "book\u{2019}s own; the "<Link href=format!("{}#styling", routes::doc::modal::Atom.materialize())>"styling section"</Link>
+                    " shows its CSS."
                 </p>
 
                 <Demo description="Confirmation modal opened by a button" source=include_str!("demos/modal.rs") source_open=true>
@@ -94,14 +95,16 @@ pub fn PageModalOverview() -> impl IntoView {
 
                 <ul>
                     <li>
-                        "Focus moves into the modal when it opens: to its first focusable element, or to the dialog itself "
-                        "when it has none. It stays inside while the modal is open and returns to where it was, typically "
+                        "Focus moves into the modal when it opens: to the dialog inside, which screen readers then announce "
+                        "with its title (the atoms\u{2019} "<Code inline=true>"auto_focus"</Code>" moves it to the first "
+                        "focusable element instead). It stays inside while the modal is open and returns to where it was, typically "
                         "the trigger, when the modal closes."
                     </li>
                     <li>
-                        <Code inline=true>"aria-modal=\"true\""</Code>" tells assistive technology to ignore the content "
-                        "behind the modal, which is also made inert: it can\u{2019}t be clicked or focused. The page "
-                        "doesn\u{2019}t scroll while the modal is open."
+                        "The content behind the modal is inert: assistive technology ignores it, and it can\u{2019}t be "
+                        "clicked or focused. The page doesn\u{2019}t scroll while the modal is open. A dismissable modal "
+                        "starts with a visually hidden dismiss button for screen reader users who can\u{2019}t press "
+                        <Keys keys="Escape"/>"."
                     </li>
                     <li>
                         "The "<Link href=routes::doc::Dialog.materialize()>"dialog"</Link>" inside has "
@@ -112,8 +115,8 @@ pub fn PageModalOverview() -> impl IntoView {
                     </li>
                     <li>
                         <Keys keys="Escape"/>" closes the modal unless you disable it. A click outside closes it only when "
-                        "it is dismissable: the "<Code inline=true>"Modal"</Code>" component is by default, the atoms and "
-                        "hooks only when you opt in. With modals stacked, only the topmost one closes."
+                        "it is dismissable ("<Code inline=true>"is_dismissable"</Code>"). With modals stacked, only the topmost one "
+                        "closes."
                     </li>
                 </ul>
 

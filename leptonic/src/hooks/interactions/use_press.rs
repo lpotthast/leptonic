@@ -1,7 +1,8 @@
 // Upstream: react-aria/src/interactions/usePress.ts @ 99e6102368
-#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
-use std::{sync::atomic::Ordering, time::Duration};
+#[cfg(not(feature = "ssr"))]
+use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use leptos::{
     attr,
@@ -11,39 +12,45 @@ use leptos::{
     prelude::*,
 };
 use send_wrapper::SendWrapper;
+#[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
-use web_sys::{
-    DragEvent, EventTarget, HtmlElement, HtmlInputElement, HtmlTextAreaElement, KeyboardEvent,
-    MouseEvent, PointerEvent,
-};
+use web_sys::{DragEvent, EventTarget, KeyboardEvent, MouseEvent, PointerEvent};
+#[cfg(not(feature = "ssr"))]
+use web_sys::{HtmlElement, HtmlInputElement, HtmlTextAreaElement};
 
+#[cfg(not(feature = "ssr"))]
+use crate::utils::{
+    ContainsTarget, ElementExt, EventAccessors, EventModifiers, EventTargetExt,
+    event_listeners::{Listener, listen_to},
+    focus::focus_element,
+    key::KeyboardEventKey,
+    node_contains,
+    open_link::{is_opening_link, open_link},
+    platform::device,
+    prevent_focus::prevent_focus,
+    shadow_dom,
+    use_description::use_description,
+    virtual_click::{is_virtual_click, is_virtual_pointer_event},
+};
 use crate::{
     hooks::{IntoAttrs, PropsWithStyles},
-    utils::prevent_focus::prevent_focus,
     utils::{
-        CapturedElement, ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers,
-        EventTargetExt, Modifiers, Propagation,
+        CapturedElement, EventHandler, Modifiers, Propagation,
         aria::{AriaDescribedby, AriaExpanded, AriaHasPopup},
         css::{TouchAction, TouchActionGestures, TouchActionHorizontalPan, TouchActionVerticalPan},
-        event_listeners::{Listener, listen_to},
-        focus::focus_element,
-        is_over,
-        key::{KeyboardEventKey, KeyboardKey},
+        key::KeyboardKey,
         keyboard_shortcut::KeyboardShortcuts,
-        node_contains,
-        open_link::open_link,
-        platform::device,
         pointer_type::PointerType,
         propagation_control::{PropagationControl, Sealed},
         style::TouchActionProperty,
         styles::Styles,
-        use_description::use_description,
-        virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/usePress.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
 // ## API DIFFERENCES
 // - `propagation: PressPropagation` (`Stop`, `Continue`): links and anchor buttons let every press
 //   event propagate, so client-side routers see their clicks. react-aria only has
@@ -54,31 +61,30 @@ use crate::{
 //   element's: either can switch them on. react-aria merges them (the element's own value wins), so
 //   only an element explicitly passing `false` under a responder's `true` behaves differently;
 //   a flag can't tell "unset" from `false` here.
+// - Long presses are part of `use_press` (`on_long_press*`, `long_press_threshold`,
+//   `long_press_accessibility_description`): an element has one press handler, and react-aria's
+//   `useLongPress` only wraps `usePress`. As upstream, `LongPressEvent` has no
+//   `continuePropagation` (no `Propagation`).
 //
 // ## DIFFERENT BEHAVIOR
+// - `touch-action: pan-x pan-y pinch-zoom` is an inline style of the pressable element, rendered
+//   on the server too (react-aria injects a global `<style>` for `[data-react-aria-pressable]`):
+//   no runtime DOM changes, no marker attribute.
+// - Dragging out of and back into the element is tracked with `pointerenter`/`pointerleave`
+//   listeners added to the element while pressed (react-aria: the element's `onPointerEnter`/
+//   `onPointerLeave` props), so the props carry no handlers for them.
 //
-// - React-aria's `usePress` does not handle double-click. Double-click behavior
-//   lives in `useSelectableItem` (where double-click triggers an action). We add
-//   `on_double_press` here as a convenience so that any pressable element can opt
-//   into double-press handling without requiring a full selection model.
+// ## ADDITIONS
+// - `on_double_press` (the native `dblclick`): any pressable can take double presses without a
+//   selection model (react-aria handles double clicks in `useSelectableItem` only).
 //
-// - React-aria has a separate `useLongPress` hook that wraps `usePress`. We merged
-//   long press detection directly into `usePress` to avoid double-hook overhead
-//   when both press and long press are needed on the same element (e.g. menu triggers).
+// ## OMITTED FEATURES
+// - The `onClick` compatibility callback (for third-party libraries passing `onClick` instead of
+//   `onPress`): leptonic's press callbacks are the only interface.
+// - The mouse and touch event fallbacks for environments without `PointerEvent` (react-aria uses
+//   them in tests only): every supported browser has pointer events.
 //
-// - React-aria sets `touch-action: manipulation` via a global `<style>` element
-//   injected at runtime targeting `[data-pressable]` attributes. We use an inline
-//   `style="touch-action: pan-x pan-y pinch-zoom"` instead. This avoids
-//   programmatic DOM manipulation, is SSR-safe (inline styles serialize naturally
-//   without hydration concerns), and eliminates the need for a `data_pressable`
-//   field threaded through every press-based hook.
-//
-// ## INTENTIONAL OMISSIONS
-//
-// - React-aria's `onClick` compatibility alias is intentionally not provided.
-//   Leptonic uses `on_press` as the primary interaction callback. The `onClick`
-//   alias exists in react-aria for third-party library compatibility which is
-//   not relevant in the Rust/Leptos ecosystem.
+// =============================================================================
 
 /// The default long press threshold.
 pub const DEFAULT_LONG_PRESS_THRESHOLD: Duration = Duration::from_millis(500);
@@ -116,14 +122,6 @@ pub struct LongPressEvent {
     /// The Y coordinate of the pointer at the time of the event.
     /// `None` for keyboard events.
     pub y: Option<f64>,
-}
-
-#[derive(Debug)]
-pub enum PressEvents {
-    PressStart(PressEvent),
-    PressEnd(PressEvent),
-    PressUp(PressEvent),
-    Press(PressEvent),
 }
 
 #[derive(Debug, Clone)]
@@ -455,6 +453,7 @@ pub type UsePressAttrs = (
     Attr<attr::AriaDescribedby, Signal<Option<AriaDescribedby>>>,
 );
 
+#[cfg(not(feature = "ssr"))]
 struct PressState {
     pointer_id: i32,
     pointer_type: PointerType,
@@ -472,7 +471,8 @@ struct PressState {
     /// when iOS long press doesn't naturally fire a click event.
     click_timeout_handle: Option<TimeoutHandle>,
 
-    /// The press's global listeners (on the document), removed when dropped.
+    /// The press's listeners (on the document, and `pointerenter`/`pointerleave` on the element),
+    /// removed when dropped.
     global_listeners: Vec<Listener>,
 
     // Long press tracking
@@ -482,6 +482,7 @@ struct PressState {
     long_press_triggered: bool,
 }
 
+#[cfg(not(feature = "ssr"))]
 impl PressState {
     fn cleanup_event_handlers(&mut self) {
         self.global_listeners.clear();
@@ -504,12 +505,9 @@ impl PressState {
             element.restore_text_selection();
         }
     }
-
-    fn is_pointer_over_target(&self, e: &PointerEvent) -> bool {
-        is_over(e, self.current_target.as_element().expect("element"))
-    }
 }
 
+#[cfg(not(feature = "ssr"))]
 enum EventRef<'a> {
     Pointer(&'a PointerEvent),
     Keyboard(&'a KeyboardEvent),
@@ -519,6 +517,7 @@ enum EventRef<'a> {
     Synthetic(&'a EventTarget),
 }
 
+#[cfg(not(feature = "ssr"))]
 impl EventRef<'_> {
     fn modifiers(&self) -> Modifiers {
         match self {
@@ -598,6 +597,7 @@ impl EventRef<'_> {
     }
 }
 
+#[cfg(not(feature = "ssr"))]
 /// Runs a press callback, if any. Returns whether the event should stop propagating: press events
 /// stop propagation unless the callback calls `continue_propagation()` (react-aria's
 /// `shouldStopPropagation`, which defaults to `true`, also without a callback).
@@ -625,6 +625,18 @@ fn fire_press_callback(
     });
     is_triggering_event.set_value(false);
     !propagation_state.load(Ordering::Acquire)
+}
+
+/// The pressable element's style: `touch-action: pan-x pan-y pinch-zoom` (react-aria's
+/// `[data-react-aria-pressable] { touch-action: pan-x pan-y pinch-zoom }`; no double-tap zoom delay).
+fn press_styles() -> Styles {
+    Styles::new().add(
+        TouchActionProperty.declare(TouchAction::Gestures(
+            TouchActionGestures::horizontal(TouchActionHorizontalPan::PanX)
+                .with_vertical(TouchActionVerticalPan::PanY)
+                .with_pinch_zoom(),
+        )),
+    )
 }
 
 /// Merges a responder's and the element's `force_is_pressed`: either forces the pressed
@@ -666,7 +678,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     // Set after mount on the client, as on the client before hydration.
                     aria_describedby: Signal::stored(None),
                 },
-                Styles::new(),
+                press_styles(),
             ),
             is_pressed,
         }
@@ -949,83 +961,74 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         });
 
         let handle_key_up = move |e: KeyboardEvent| {
-            // First check if we should handle this event (immutable check).
-            // Use the stored press target, not e.current_target(), because the keyup listener
-            // is registered on the document — e.current_target() would be the Document, not the
-            // pressed element, causing is_valid_keyboard_event to bypass validation.
-            let should_handle = state.with_value(|s| {
-                s.as_ref().is_some_and(|s| {
-                    !disabled.get_untracked()
-                        && is_valid_keyboard_event(&e, s.current_target.clone())
-                })
-            });
-            if !should_handle {
+            let key = e.typed_key();
+            // The pressed element (the listener is on the document).
+            let Some(press_target) =
+                state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()))
+            else {
+                return;
+            };
+            if disabled.get_untracked() || !is_valid_keyboard_event(&e, press_target.clone()) {
+                // macOS fires no key up for keys released while Meta is held: when Meta itself is
+                // released, act as if the keys pressed meanwhile were released too, with key ups
+                // on the pressed element. Dispatched after this key up's dispatch (dispatching a
+                // key up from this key up listener would re-enter it).
+                if key == KeyboardKey::Meta
+                    && let Some(events) = meta_key_events.try_update_value(Option::take).flatten()
+                    && !events.is_empty()
+                {
+                    let press_target = SendWrapper::new(press_target);
+                    let events = SendWrapper::new(events.into_values().collect::<Vec<_>>());
+                    queue_microtask(move || {
+                        for event in events.iter() {
+                            if let Some(key_up) = key_up_like(event) {
+                                let _ = press_target.dispatch_event(&key_up);
+                            }
+                        }
+                    });
+                }
                 return;
             }
 
-            let key = e.typed_key();
-            if e.expect_target()
-                .to_element()
-                .is_some_and(|el| should_prevent_default_keyboard(&el, &key))
+            let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            if target
+                .as_element()
+                .is_some_and(|el| should_prevent_default_keyboard(el, &key))
             {
                 e.prevent_default();
             }
 
-            // If a link was triggered with a key other than Enter, open the URL ourselves.
-            // This means the link has a role override, and the default browser behavior
-            // only applies when using the Enter key.
-            if key != KeyboardKey::Enter
-                && let Some(current_target) =
-                    state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()))
-                && let Some(true) = node_contains(
-                    current_target.as_node().as_ref(),
-                    e.expect_target()
-                        .to_element()
-                        .and_then(|el| el.as_node())
-                        .as_ref(),
-                )
-                && let Some(el) = current_target.as_element()
-                && el.is_anchor_link()
-            {
-                open_link(el, e.modifiers());
-            }
-
-            // macOS Meta key workaround: if Meta key is up, dispatch synthetic
-            // keyup events for any keys that were pressed while Meta was held.
-            if key == KeyboardKey::Meta {
-                meta_key_events.update_value(|map| {
-                    if let Some(events) = map.take() {
-                        for (_key, stored_e) in events {
-                            if let Some(ct) = stored_e.current_target() {
-                                let _ = ct.dispatch_event(&stored_e);
-                            }
-                        }
-                    }
-                });
-            }
-
-            // Check if the keyup target is still inside the original press target.
-            // If focus moved away during the keypress, we should not fire on_press.
-            let was_pressed = state.with_value(|s| {
-                s.as_ref().is_some_and(|s| {
-                    node_contains(
-                        s.current_target.as_node().as_ref(),
-                        e.expect_target().as_node().as_ref(),
-                    )
-                    .unwrap_or(false)
-                })
-            });
-
-            // Now perform mutable operations: fire press_up and press_end.
-            state.update_value(move |s| {
+            // Whether the key up happened on the pressed element (focus may have moved since the
+            // key down): only then press up and press.
+            let was_pressed =
+                node_contains(press_target.as_node().as_ref(), target.as_node().as_ref())
+                    .unwrap_or(false);
+            state.update_value(|s| {
                 if let Some(s) = s.as_mut() {
                     // A document listener: nothing to stop (react-aria).
-                    trigger_press_up(s, EventRef::Keyboard(&e));
+                    if was_pressed && !e.repeat() {
+                        trigger_press_up(s, EventRef::Keyboard(&e));
+                    }
                     trigger_press_end(s, EventRef::Keyboard(&e), was_pressed);
                     s.cleanup_event_handlers();
                 }
             });
             state.set_value(None);
+
+            // A link pressed with a key other than Enter has a role override (only Enter follows a
+            // link natively): open it ourselves.
+            if key != KeyboardKey::Enter
+                && was_pressed
+                && let Some(el) = press_target.as_element()
+                && el.is_anchor_link()
+            {
+                open_link(el, e.modifiers());
+            }
+            meta_key_events.update_value(|events| {
+                if let Some(events) = events {
+                    events.remove(&key);
+                }
+            });
         };
 
         let handle_key_down = move |e: KeyboardEvent| {
@@ -1063,7 +1066,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                         EventRef::Keyboard(&e),
                         e.expect_current_target()
                             .get_owner_document()
-                            .map(|doc| listen_to(&doc, ev::keyup, false, handle_key_up))
+                            // Capturing (as react-aria): a keyup handler that stops propagation
+                            // (e.g. `use_keyboard` on this element or a child) must not leave the
+                            // press stuck.
+                            .map(|doc| listen_to(&doc, ev::keyup, true, handle_key_up))
                             .into_iter()
                             .collect(),
                     );
@@ -1082,8 +1088,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 // pressed while Meta is held even during an active press.
                 if let Some(e) = e_for_meta {
                     meta_key_events.update_value(|map| {
-                        let map = map.get_or_insert_with(std::collections::HashMap::new);
-                        map.insert(key.clone(), e.clone());
+                        if let Some(map) = map {
+                            map.insert(key.clone(), e.clone());
+                        }
                     });
                 }
             } else if key == KeyboardKey::Meta {
@@ -1109,8 +1116,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 return;
             }
 
-            // Only the primary button presses (react-aria).
-            if e.button() != 0 {
+            // Only the primary button presses (react-aria), and not the click `open_link`
+            // dispatches to follow a link this press opened.
+            if e.button() != 0 || is_opening_link() {
                 return;
             }
 
@@ -1178,50 +1186,35 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             stop_unless_forced(should_stop, EventRef::Mouse(&e));
         };
 
-        // Pointer move handler for drag-in / drag-out behavior.
-        let handle_pointer_move = move |e: PointerEvent| {
+        // Dragging out of and back into the element (react-aria's `onPointerEnter`/
+        // `onPointerLeave`, listened to on the element while pressed): leaving ends the press
+        // without pressing (or cancels it for good with `should_cancel_on_pointer_exit`),
+        // re-entering starts it again. Stops nothing (react-aria).
+        let handle_pointer_enter = move |e: PointerEvent| {
             state.update_value(|s| {
-                if let Some(s) = s.as_mut() {
-                    if e.pointer_id() != s.pointer_id {
-                        return;
-                    }
-                    let is_over_target = s.is_pointer_over_target(&e);
-
-                    if should_cancel_on_pointer_exit.get_untracked()
-                        && s.is_over_target
-                        && !is_over_target
-                    {
-                        // Cancel the entire press when configured to do so.
-                        trigger_press_end(s, EventRef::Pointer(&e), false);
-                        s.cleanup_event_handlers();
-                        s.restore_text_selection_if_needed(
-                            allow_text_selection_on_press.get_untracked(),
-                        );
-                    } else {
-                        // Leaving and re-entering stop nothing (react-aria).
-                        match (s.is_over_target, is_over_target) {
-                            (true, false) => {
-                                trigger_press_end(s, EventRef::Pointer(&e), false);
-                            }
-                            (false, true) => {
-                                trigger_press_start(s, EventRef::Pointer(&e));
-                            }
-                            _ => {}
-                        }
-                    }
-                    s.is_over_target = is_over_target;
+                if let Some(s) = s.as_mut()
+                    && e.pointer_id() == s.pointer_id
+                    && !s.is_over_target
+                {
+                    s.is_over_target = true;
+                    trigger_press_start(s, EventRef::Pointer(&e));
                 }
             });
-
-            // If should_cancel_on_pointer_exit caused a full cancel, clear state.
-            if should_cancel_on_pointer_exit.get_untracked() {
-                let should_clear = state.with_value(|s| {
-                    s.as_ref()
-                        .is_some_and(|s| !s.did_fire_press_start && !s.is_over_target)
-                });
-                if should_clear {
-                    state.set_value(None);
+        };
+        let handle_pointer_leave = move |e: PointerEvent| {
+            let mut left = false;
+            state.update_value(|s| {
+                if let Some(s) = s.as_mut()
+                    && e.pointer_id() == s.pointer_id
+                    && s.is_over_target
+                {
+                    s.is_over_target = false;
+                    trigger_press_end(s, EventRef::Pointer(&e), false);
+                    left = true;
                 }
+            });
+            if left && should_cancel_on_pointer_exit.get_untracked() {
+                cancel_active_press(EventRef::Pointer(&e));
             }
         };
 
@@ -1262,21 +1255,35 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 return;
             }
 
-            // Pointer is over the target. Keep state.is_pressed=true and defer
-            // actual completion to the onClick handler (Phase 3).
-            // Set up an 80ms timeout fallback: on iOS, long press interactions
-            // may not naturally fire a click event, so we programmatically trigger one.
+            // Pointer is over the target: the click completes the press (`handle_click`), which
+            // avoids browser issues when the DOM changes between pointer up and click. iOS and
+            // Android fire no click after a long press: then click ourselves after 80 ms, unless a
+            // click happened that didn't reach us (a child stopped it), which cancels the press. A
+            // capture listener sees every click.
+            let clicked = std::rc::Rc::new(std::cell::Cell::new(false));
+            let click_listener = e.expect_current_target().get_owner_document().map(|doc| {
+                let clicked = std::rc::Rc::clone(&clicked);
+                listen_to(&doc, ev::click, true, move |_: MouseEvent| {
+                    clicked.set(true)
+                })
+            });
             state.update_value(|s| {
                 if let Some(s) = s {
-                    // Prevent duplicate pointerleave handling
+                    // Ignore the pointer leave touch devices fire before the click.
                     s.is_over_target = false;
+                    s.global_listeners.extend(click_listener);
 
-                    // Set up 80ms fallback to programmatically click the target.
                     let current_target = s.current_target.clone();
                     s.click_timeout_handle = set_timeout_with_handle(
                         move || {
-                            // Focus the element without scrolling before clicking,
-                            // matching react-aria's focusWithoutScrolling behavior.
+                            if state.with_value(Option::is_none) {
+                                return;
+                            }
+                            if clicked.get() {
+                                cancel_active_press(EventRef::Synthetic(&current_target));
+                                return;
+                            }
+                            // Focus without scrolling, then click (react-aria).
                             if let Some(el) = current_target.as_element() {
                                 focus_element(el, true);
                             }
@@ -1294,6 +1301,41 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // Cancel the ongoing press.
         let handle_pointer_cancel = move |e: PointerEvent| {
             cancel_active_press(EventRef::Pointer(&e));
+        };
+
+        // The listeners preventing the context menu during a touch long press (react-aria's
+        // `useLongPress`): kept until 100 ms after the pointer up, as the menu may open after it.
+        let context_menu_blocker: StoredValue<Vec<Listener>, LocalStorage> =
+            StoredValue::new_local(Vec::new());
+        let block_context_menu = move |target: &EventTarget| {
+            // The next context menu only (react-aria: `{once: true}`).
+            let blocked = std::cell::Cell::new(false);
+            let mut listeners = vec![listen_to(
+                target,
+                ev::contextmenu,
+                false,
+                move |e: MouseEvent| {
+                    if !blocked.replace(true) {
+                        e.prevent_default();
+                    }
+                },
+            )];
+            if let Some(window) = leptos_use::use_window().as_ref() {
+                listeners.push(listen_to(
+                    window,
+                    ev::pointerup,
+                    false,
+                    move |_: PointerEvent| {
+                        set_timeout(
+                            move || {
+                                context_menu_blocker.try_update_value(Vec::clear);
+                            },
+                            Duration::from_millis(100),
+                        );
+                    },
+                ));
+            }
+            context_menu_blocker.set_value(listeners);
         };
 
         // Start a press.
@@ -1339,17 +1381,27 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     let _ = element.release_pointer_capture(e.pointer_id());
                 }
 
-                let global_listeners = e
-                    .expect_current_target()
-                    .get_owner_document()
-                    .map(|doc| {
-                        vec![
-                            listen_to(&doc, ev::pointermove, false, handle_pointer_move),
-                            listen_to(&doc, ev::pointerup, false, handle_pointer_up),
-                            listen_to(&doc, ev::pointercancel, false, handle_pointer_cancel),
-                        ]
-                    })
-                    .unwrap_or_default();
+                let current_target = e.expect_current_target();
+                let mut global_listeners = vec![
+                    listen_to(
+                        &current_target,
+                        ev::pointerenter,
+                        false,
+                        handle_pointer_enter,
+                    ),
+                    listen_to(
+                        &current_target,
+                        ev::pointerleave,
+                        false,
+                        handle_pointer_leave,
+                    ),
+                ];
+                if let Some(doc) = current_target.get_owner_document() {
+                    global_listeners.extend([
+                        listen_to(&doc, ev::pointerup, false, handle_pointer_up),
+                        listen_to(&doc, ev::pointercancel, false, handle_pointer_cancel),
+                    ]);
+                }
                 initialize_press_state(EventRef::Pointer(&e), global_listeners);
 
                 state.update_value(|s| {
@@ -1429,9 +1481,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                             )
                             .ok();
 
-                            // For touch, prevent the context menu on the event target.
+                            // Touch devices may open a context menu on a long press: prevent
+                            // the next one, until 100 ms after the pointer up (react-aria).
                             if s.pointer_type == PointerType::Touch {
-                                s.current_target.prevent_default_once("contextmenu");
+                                block_context_menu(&e.expect_target());
                             }
                         }
                     }
@@ -1441,10 +1494,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         };
 
         // Safari doesn't fire pointercancel on drag. Handle dragstart to cancel the press.
-        let handle_dragstart = move |_e: DragEvent| {
-            cancel_active_press(EventRef::Pointer(
-                &PointerEvent::new("pointercancel").expect("should create pointercancel event"),
-            ));
+        // Safari doesn't fire pointercancel when a drag starts, Chrome and Firefox do (react-aria).
+        // Cancelled with the drag event itself: it is dispatched, its current target is the
+        // element (a constructed, undispatched event has none).
+        let handle_dragstart = move |e: DragEvent| {
+            let inside = node_contains(
+                e.expect_current_target().as_node().as_ref(),
+                e.expect_target().as_node().as_ref(),
+            );
+            if inside != Some(true) {
+                return;
+            }
+            cancel_active_press(EventRef::Mouse(&e));
         };
 
         // Handle native dblclick for on_double_press.
@@ -1550,6 +1611,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         // Cleanup on unmount: restore text selection, remove global listeners, and clear timeouts.
         on_cleanup(move || {
+            context_menu_blocker.try_update_value(Vec::clear);
             state.update_value(|s| {
                 if let Some(s) = s.as_mut() {
                     s.restore_text_selection_if_needed(
@@ -1575,13 +1637,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     on_dblclick: EventHandler::new(handle_dblclick),
                     aria_describedby,
                 },
-                Styles::new().add(
-                    TouchActionProperty.declare(TouchAction::Gestures(
-                        TouchActionGestures::horizontal(TouchActionHorizontalPan::PanX)
-                            .with_vertical(TouchActionVerticalPan::PanY)
-                            .with_pinch_zoom(),
-                    )),
-                ),
+                press_styles(),
             ),
             is_pressed: match force_is_pressed {
                 Some(prop) => Signal::derive(move || is_pressed.get() || prop.get()),
@@ -1591,7 +1647,26 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     }
 }
 
-/// Tests whether a keyboard event's default action should be presented when the given `key` was pressed.
+/// A `keyup` with the key, code, location and modifiers of `event` (a key down), as macOS would
+/// have fired it (react-aria: `new KeyboardEvent('keyup', event)`).
+#[cfg(not(feature = "ssr"))]
+fn key_up_like(event: &KeyboardEvent) -> Option<KeyboardEvent> {
+    let init = web_sys::KeyboardEventInit::new();
+    init.set_key(&event.key());
+    init.set_code(&event.code());
+    init.set_location(event.location());
+    init.set_ctrl_key(event.ctrl_key());
+    init.set_shift_key(event.shift_key());
+    init.set_alt_key(event.alt_key());
+    init.set_meta_key(event.meta_key());
+    init.set_bubbles(true);
+    init.set_cancelable(true);
+    init.set_composed(true);
+    KeyboardEvent::new_with_keyboard_event_init_dict("keyup", &init).ok()
+}
+
+/// Tests whether a keyboard event's default action should be prevented when `key` was pressed.
+#[cfg(not(feature = "ssr"))]
 fn should_prevent_default_keyboard(element: &web_sys::Element, key: &KeyboardKey) -> bool {
     // Don't prevent the context menu shortcut on macOS.
     if *key == KeyboardKey::Enter && device::is_mac() {
@@ -1617,10 +1692,12 @@ fn should_prevent_default_keyboard(element: &web_sys::Element, key: &KeyboardKey
     !element.is_anchor_link()
 }
 
+#[cfg(not(feature = "ssr"))]
 const NON_TEXT_INPUT_TYPES: [&str; 9] = [
     "checkbox", "radio", "range", "color", "file", "image", "button", "submit", "reset",
 ];
 
+#[cfg(not(feature = "ssr"))]
 fn is_valid_input_key(element: &HtmlInputElement, key: &KeyboardKey) -> bool {
     // Checkboxes and radio-buttons should only toggle with space, not enter.
     match element.get_attribute("type") {
@@ -1633,6 +1710,7 @@ fn is_valid_input_key(element: &HtmlInputElement, key: &KeyboardKey) -> bool {
 }
 
 /// Accessibility for keyboards. Space and Enter only.
+#[cfg(not(feature = "ssr"))]
 #[allow(clippy::needless_pass_by_value)]
 fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: EventTarget) -> bool {
     let key = e.typed_key();

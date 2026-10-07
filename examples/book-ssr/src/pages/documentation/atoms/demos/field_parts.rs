@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use leptonic::{
     atoms::{
+        checkbox::Checkbox,
         field::{Description, FieldError, Label},
         radio::{Radio, RadioGroup},
     },
-    components::checkbox::Checkbox,
     hooks::Key,
 };
 use leptos::prelude::*;
@@ -59,7 +59,10 @@ pub fn FieldPartsDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -1,6 +1,19 @@
 # Design note: Collections and collection state in leptonic
 
-Status: proposal. Upstream reference: react-spectrum @ `99e6102368` (current HEAD; existing leptonic headers point at `6f664fe911`).
+Status: **implemented** (2026-10; history in `documentation/history.md`). This note keeps the design's rationale; the
+code (`leptonic/src/hooks/collections/`, the family hooks) is the reference where they differ. Upstream reference:
+react-spectrum @ `99e6102368`.
+
+Implemented differently from the proposal below:
+- `TypedKey` is `ToKey` (`collections/key.rs`): a trait for values that name their key, not a key wrapper.
+- `Key::cell(row, column)` takes the column as a `usize`.
+- `NodeKind` is `Item, Section, Header, Separator, Loader, Cell, HeaderRow, Column, Placeholder` (rows are `Item`s with
+  `Cell` children; no `Row`/`RowHeader`/`Body`); `Node` has `prev_key`/`next_key`/`first_child_key`/`last_child_key`
+  and `has_child_nodes`, links are `ItemLink`. Tables use `TableCollection` (`hooks/table/table_collection.rs`).
+- Module layout: everything of §4's `collections`/`selection`/`list` lives in `hooks/collections/`.
+- The typed atom layer of §4.10 was never built: atoms take a `CollectionMemo` the app builds (`use_collection`,
+  `use_list_collection` over items with key and text closures), and selections are `Key`s.
+
 Scope: listbox, select, combobox, menu, grid list, grid, table, tree, tag group, tabs (and DnD, which uses `KeyboardDelegate`).
 
 ---
@@ -51,62 +64,17 @@ Scope: listbox, select, combobox, menu, grid list, grid, table, tree, tag group,
 
 ---
 
-## 3. Current leptonic approach
+## 3. The approach it replaced
 
-### 3.1 Per family
-
-| Family | Keys / items | Selection state lives in | Navigation | Disabled |
-|---|---|---|---|---|
-| listbox / option | `items: Signal<Vec<K>>` (`use_listbox.rs`) | its own `use_selection_state` inside `use_selectable_list` | `ListKeyboardDelegate` over the flat `Vec<K>` | `disabled_keys` + a separate per-option `is_disabled` |
-| select | `items: Signal<Vec<K>>` + `get_text_value` | its own `use_selection_state` (`use_select.rs:701`) **and** a second one inside the listbox | trigger: hand-rolled `navigate_selection` (`use_select.rs:~840`) | `disabled_keys` |
-| combobox | `items: Signal<Vec<K>>`, `filter: Callback<(String, Vec<K>), Vec<K>>` | own `Option<K>` signal (`use_combobox.rs:540`); no selection manager | hand-rolled `find_adjacent_enabled` (`:403`) | `disabled_keys` |
-| menu | `all_keys` + `get_key_label` | `use_selectable_list`; mode `None` is faked as Single/Replace with selection→`on_action` (`use_menu.rs:209-232`) | list delegate; separate `use_type_select` (`:255`) | `disabled_keys` |
-| grid list | `all_keys: Signal<Vec<K>>` | `use_selection_state` + **its own** `focused_key` (`use_grid_list.rs:368`) | re-implemented `get_next_key` (`:227-301`) | `disabled_keys` + item `is_disabled` |
-| grid | `Signal<GridCollection<K>>` (rows → cell keys) | `use_selection_state` + own `focused_key` (`use_grid.rs:291`) | `GridKeyboardDelegate` (no RTL, no page up/down) | `disabled_keys` |
-| tree / table / tag / tabs | `String` keys, `Signal<Vec<String>>` / `Signal<Option<String>>` | controlled-only from the caller | caller supplies `on_focus_next/previous/...` callbacks (`use_tree_item.rs:65-84`, `use_tab_list.rs:42-51`, `use_tag.rs:48-51`, `use_table_row.rs:242-248`) | per-item prop only |
-
-### 3.2 Concrete problems
-
-1. **The controlled-state pattern breaks the Hook-Owned State rule and is buggy.**
-   - `selected_keys: Option<Signal<Selection<K>>>` (`use_selection_state.rs:267`) is repeated in every input struct.
-   - In controlled mode, `update_selection` writes only the ignored internal signal (`:476-484`).
-2. **Select ↔ listbox composition is two states glued together.**
-   - `use_select` passes its signal as "controlled" to the listbox (`use_select.rs:1210-1215`). The listbox's `on_selection_change` → `on_internal_selection_change` (`:692-700`) only calls the user callback and closes the menu.
-   - **It never writes `use_select`'s own state.** An uncontrolled `Select` very likely does not update when an option is clicked. This needs a browser test to confirm.
-   - The focused key is mirrored back through an `Effect` (`atoms/listbox.rs:236-241`). `UseSelectMenuConfig` copies ~20 fields.
-3. **Focus state is duplicated.** `use_selection_state` owns `focused_key`, but grid and grid list create a second one and never use the first.
-4. **`Selection::All` semantics differ from upstream.**
-   - `toggle`/`deselect`/`select` on `All` are no-ops (`use_selection_state.rs:518, 569, 592`).
-   - `is_selected` ignores disabled keys under `All`.
-   - Grid Shift+Arrow calls `select` where it should call `extend_selection` (`use_grid.rs:329-343`).
-5. **Type-ahead is effectively missing or wrong.**
-   - `use_listbox` drops `get_text_value` (`use_listbox.rs:271`, `get_key_label: None` at `:310`), so listboxes have no type-ahead.
-   - `use_type_select` (`:225-256`) does not skip disabled keys.
-   - The menu wires a second type-select by hand.
-6. **No collection structure.**
-   - Flat `Vec<K>` everywhere. Sections (`use_listbox_section.rs`, `use_menu_section.rs`) are purely presentational.
-   - Trees have no expansion model. `use_tree` uses `role="tree"` (`use_tree.rs:254`) where upstream uses `treegrid` via `useGridList`.
-   - `extend_selection` slices `Vec` indices (`use_selectable_collection.rs:284-338`).
-7. **Two sources of truth for disabled state.** Item hooks take their own `is_disabled` (`use_option.rs`, `use_grid_list_item.rs`), but the delegates only skip `disabled_keys`, so a prop-disabled item can still be reached with the keyboard.
-8. **DOM vs data order.**
-   - Navigation follows `all_keys`.
-   - Scroll and focus look elements up with `[data-collection][data-key]` querySelector built from `Display` (`selection/utils.rs:416-430`, uuid `collection_id` at `use_selectable_collection.rs:253`). These two diverge silently.
-9. **Missing delegate features.** No page up/down (`list_keyboard_delegate.rs:246`, `grid_keyboard_delegate.rs`), no RTL in grids, and RTL is hard-coded to `Ltr` with a TODO (`use_listbox.rs:304`, `use_menu.rs:241`).
-10. **Duplication.**
-    - Five `SelectionMode` enums (`use_selection_state.rs:19`, `table/use_table.rs:28`, `tree/use_tree.rs:29`, `tag/use_tag_group.rs:28`, plus tabs).
-    - Several orientation enums; `Orientation` lives in `form/use_checkbox_group.rs`.
-    - Four copies of "next enabled key".
-    - Three copies of the grid-level keydown handler.
-11. **SSR rule violations.** `web_sys::window()` in `use_grid.rs:451`, `use_grid_list.rs:493`, `use_grid_cell.rs:206`.
-12. **Generic cost.**
-    - ~15k lines are generic over `K` (and `D: KeyboardDelegate<K> + Copy`), so they are monomorphized per key type.
-    - DnD is already forced to `dyn KeyboardDelegate<String>` (`dnd/use_droppable_collection.rs:50`).
-    - `get_untracked()` clones the whole key `Vec` on every keypress.
-13. **No browser tests** for any collection hook (only focus/press/button fixtures exist).
+Before (2026-10-05): every collection family had its own key list (`items: Signal<Vec<K>>`, generic over a
+`SelectionKey`), its own selection and focus state (often two, e.g. select + its listbox, grid + `focused_key`),
+hand-rolled "next enabled key" navigation, controlled-mode bugs, no type-ahead in listboxes, no sections or tree
+structure, DOM lookups by `[data-key]`, RTL hard-coded to LTR, five `SelectionMode` enums, and no browser tests. The
+design below replaced all of it.
 
 ---
 
-## 4. Proposed design
+## 4. Design
 
 Module layout:
 - `hooks/collections/`: `key.rs`, `node.rs`, `collection.rs`, `builder.rs`, `use_collection.rs`, `item_elements.rs`.
@@ -400,7 +368,7 @@ let t = use_tree(UseTreeInput { state: tree, ..Default::default() });
 let row = use_tree_item(UseTreeItemInput { ctx: t.item_ctx, key });
 ```
 
-### 4.10 Typed layer for atoms and components
+### 4.10 Typed layer for atoms and components (not built)
 
 - Atoms and components stay ergonomic and typed: for example `ListBox<T> items: Signal<Vec<T>>, key: fn(&T) -> K, text_value: ...` and `Select<O>`.
 - They build the `CollectionMemo` from `items` and keep a `Memo<HashMap<Key, T>>`, so they can emit `on_change: Callback<O>` / `Vec<T>`.
@@ -420,39 +388,13 @@ Record these in `hooks/mod.rs` (global) and per file:
 
 ---
 
-## 5. Migration plan
+## 5. Migration (done)
 
-Every step must pass `cargo check -p leptonic --features full`, `just clippy`, `just test` and `just browser-test`.
-
-**Browser test pattern for every step:**
-- Fixture `testing/test-app/src/pages/hooks/<name>.rs`, registered in `FIXTURES`.
-- Page object `leptonic/tests/pages/<name>.rs`.
-- Test `leptonic/tests/ui_tests/test_<name>.rs`, registered in `ui_tests::all()`.
-
-Write the assertions against DOM/ARIA (roles, `aria-selected`, `document.activeElement`, `aria-activedescendant`), never against hook APIs. Only the fixture code changes during a rewrite; the tests must keep passing unchanged. Use RAC `ListBox.test.js`, `GridList.test.js`, `Select.test.js`, … as the behavioral spec, and RAC `*.ssr.test.js` for SSR expectations.
-
-0. **Safety net (no library changes).**
-   - Add fixtures and tests for the current listbox, select, grid list and menu: arrow navigation that skips disabled items, Home/End, wrap, Tab single stop with focus restore on re-entry, Shift+Arrow range, Ctrl+A, Escape, select open → click → trigger text, closed-trigger ArrowDown.
-   - Mark known-broken cases (uncontrolled select update, listbox type-ahead, type-ahead onto disabled items) as expected failures in a separate test, or fix them later in step 4. Do not hide them.
-1. **`hooks/collections`.** `Key`, `Node`, `Collection`, builder, `use_collection`, `filter`, `flatten_expanded`, `ItemElements`. Pure code with `assertr` unit tests: traversal across sections, filter pruning, tree flattening, duplicate keys, `PartialEq` memo stability. No consumers yet.
-2. **Selection core.** `use_multiple_selection_state` + `SelectionManager` + `ListState` / `use_list_state` / `use_single_select_list_state`, next to the old generic code. Port the `SelectionManager.ts` semantics with unit tests under an `Owner`: `All` toggling, `extend_selection` across sections, `disabled_behavior` override, duplicate events, focus reset.
-3. **Delegates.** New `KeyboardDelegate`/`LayoutDelegate`, `DomLayoutDelegate`, `ListKeyboardDelegate` (stack/grid, RTL, page up/down) and delegate-based `use_type_select`. Unit tests use a fake `LayoutDelegate`. Move DnD (`dnd/use_droppable_collection.rs`, `drop_target_keyboard_navigation.rs`) to the non-generic trait in the same step, since it already uses `dyn`.
-4. **Listbox family.** New `use_selectable_collection/list/item`; `use_listbox`, `use_option` and `use_listbox_section` on `ListState`; `ListBox` atom. Old generic selection files stay only for the not-yet-migrated families. New tests: sections (arrows cross sections, headings skipped), type-ahead (multi-character, space inside the search, skips disabled), PageUp/PageDown in a scrollable listbox, horizontal RTL, `disabled_behavior=Selection`, link items.
-5. **Select.** `use_select_state`; `use_select` returns `menu_props`. Delete `UseSelectMenuConfig` and the focused-key `Effect`. `use_hidden_select` reads the collection. Update the `Select` atom and component. Tests:
-   - Uncontrolled click selection updates the trigger text and the hidden select value.
-   - Type-to-select on the closed trigger.
-   - SSR: a raw HTTP GET of the fixture (before hydration) contains the default selected text and the hidden `<option>`s.
-6. **Menu.** Map `SelectionMode::None` to real `None` plus `on_action`; menu items go through `use_selectable_item` (`should_select_on_press_up`, `allows_different_press_origin`). Tests: action vs radio vs checkbox roles and `aria-checked`, type-ahead, sections, link items.
-7. **Combobox.** `use_combobox_state` (filtered `with_collection`), virtual focus in `use_selectable_collection`. Tests: DOM focus stays on the input while `aria-activedescendant` moves; filtering removes the focused item and focus resets to the next one; Enter commits; Escape reverts.
-8. **Grid list + tag group.** `use_grid_list` on `use_selectable_list` (drop `get_next_key`); `use_tag_group` on grid list (horizontal list delegate, `link_behavior: Override`, keyboard navigation behavior `tab`). Tests: row navigation, ArrowLeft/Right into cell children, remove-tag focus moves to a neighbor.
-9. **Tree.** `use_tree_state`; `use_tree` on grid list with `treegrid`. Tests: expand/collapse keys, navigation over visible nodes only, `aria-level/posinset/setsize`, collapse while a child is focused.
-10. **Grid + table.** `GridState`, `GridKeyboardDelegate` v2 (RTL, page up/down), `TableCollection` + `TableKeyboardDelegate`. Delete `GridCollection`. Fix `web_sys::window()` uses. Tests: row vs cell focus mode, RTL left/right, PageDown, column header navigation, select-all checkbox, Shift+Arrow range.
-11. **Tabs.** `TabsKeyboardDelegate`, tab-list state on `SingleSelectListState`. Tests: wrap, RTL, disabled skip, automatic vs manual activation.
-12. **Cleanup.**
-    - Delete `SelectionKey`, `Keyed`, generic `use_selection_state`, the per-family `*SelectionMode` enums and duplicate orientation enums; move `Orientation` to `utils`.
-    - Update book-ssr pages (CLAUDE.md requires it) and `// Upstream:` headers (`--mark-synced` at the new sha).
-
-Adjacent issue, out of scope but blocking SSR fidelity: about 50 `Uuid::new_v4()` ids are generated independently on the server and the client. Collection item ids (`aria-activedescendant`, `aria-controls`) need an SSR-stable `use_id` first. Plan that as step 0.5.
+Migrated family by family behind browser tests asserting DOM/ARIA only (roles, `aria-selected`,
+`document.activeElement`, `aria-activedescendant`), so fixtures changed during rewrites and tests didn't: safety net,
+`hooks/collections`, selection core, delegates, listbox, select, menu, combo box, grid list + tag group, tree, grid +
+table, tabs, cleanup (generic `SelectionKey`/`Keyed`/`use_selection_state` deleted, `Orientation` in `utils`).
+Collection item ids come from the SSR-stable `use_id`.
 
 ---
 
@@ -461,11 +403,3 @@ Adjacent issue, out of scope but blocking SSR fidelity: about 50 `Uuid::new_v4()
 - Whether to expose `Selection` as tracked-by-key (`Selector`-like) to cut per-item notifications. Measure on a 1k-item listbox first.
 - The virtualization API (`is_virtualized`, `Loader` nodes) is deferred, but `NodeKind::Loader` and `LayoutDelegate::key_range` leave room for it.
 - Whether atoms should also accept a pre-built `CollectionMemo` (power users) in addition to `items` + key/text closures. Recommendation: yes, via an enum prop.
-
-### Critical Files for Implementation
-- leptonic/src/hooks/selection/use_selection_state.rs
-- leptonic/src/hooks/selection/use_selectable_collection.rs
-- leptonic/src/hooks/select/use_select.rs
-- leptonic/src/atoms/listbox.rs
-- leptonic/src/hooks/grid/use_grid_list.rs
-- (upstream spec) ../react-spectrum/packages/react-stately/src/selection/SelectionManager.ts, ../react-spectrum/packages/react-aria/src/selection/ListKeyboardDelegate.ts, ../react-spectrum/packages/react-aria/src/collections/BaseCollection.ts

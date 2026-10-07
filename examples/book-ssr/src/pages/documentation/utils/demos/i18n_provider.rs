@@ -1,5 +1,8 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{
+        field::Label,
+        radio::{Radio, RadioGroup},
+    },
     hooks::{Orientation, collections::Key},
     utils::{
         i18n::{I18nProvider, Locale, locale, use_direction, use_i18n, use_locale},
@@ -38,11 +41,26 @@ fn LocaleSwitcher() -> impl IntoView {
     };
 
     view! {
-        <RadioGroup label="Locale" orientation=Orientation::Horizontal default_value="en-US" on_change>
-            <Radio value="en-US">"English (US)"</Radio>
-            <Radio value="de-DE">"German"</Radio>
-            <Radio value="hi-IN">"Hindi"</Radio>
-            <Radio value="ar-EG">"Arabic (Egypt)"</Radio>
+        <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change classes="demo-choice-group">
+            <Label classes="demo-choice-group-label">"Locale"</Label>
+            <div class="demo-choice-group-items">
+                <Radio value="en-US" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "English (US)"
+                </Radio>
+                <Radio value="de-DE" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "German"
+                </Radio>
+                <Radio value="hi-IN" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Hindi"
+                </Radio>
+                <Radio value="ar-EG" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Arabic (Egypt)"
+                </Radio>
+            </div>
         </RadioGroup>
         <dl class="demo-format-list">
             <dt>"use_locale"</dt>

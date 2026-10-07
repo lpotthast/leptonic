@@ -47,18 +47,25 @@ use crate::{
 // - The drag button comes back as a `UseButtonInput` for `use_button`.
 // - The drag preview is an element the `preview` callback returns (react-aria renders a
 //   `DragPreview` component into a ref).
-// - Drags started before React 17 cleanup semantics: not applicable (unmounting a dragged element
-//   always ends its drag).
+// - The dragged data and the allowed operations are signals (`items`, `allowed_drop_operations`),
+//   read when a drag starts (react-aria: the `getItems`/`getAllowedDropOperations` functions).
+//
+// ## BEHAVIOR DIFFERENCES
+// - A pointer counts as virtual (a screen reader's) when `is_virtual_pointer_event` says so OR it
+//   hits the element's center (TalkBack) OR it is iOS VoiceOver's zero-size pointer. react-aria
+//   overwrites the first check with the pointer type when the second fails, so a virtual pointer
+//   off center starts a native drag there.
 //
 // =============================================================================
 
 /// Input of [`use_drag`].
 #[derive(Clone)]
 pub struct UseDragInput {
-    /// The dragged data.
-    pub get_items: Callback<(), Vec<DragItem>>,
-    /// The operations the drag allows, in order of preference. Defaults to move, copy, link.
-    pub get_allowed_drop_operations: Option<Callback<(), Vec<DropOperation>>>,
+    /// The dragged data, read when a drag starts (e.g. a `Signal::derive`, computed only then).
+    pub items: Signal<Vec<DragItem>>,
+    /// The operations the drag allows, in order of preference. `None`: all of them (move, copy,
+    /// link).
+    pub allowed_drop_operations: Option<Signal<Vec<DropOperation>>>,
     /// What to show while dragging.
     pub preview: Option<Callback<Vec<DragItem>, Option<DragPreview>>>,
     pub on_drag_start: Option<Callback<DragStartEvent>>,
@@ -134,8 +141,8 @@ enum PointerModality {
 #[allow(clippy::too_many_lines)]
 pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let UseDragInput {
-        get_items,
-        get_allowed_drop_operations,
+        items,
+        allowed_drop_operations,
         preview,
         on_drag_start,
         on_drag_move,
@@ -158,7 +165,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let modality_on_pointer_down: StoredValue<Option<PointerModality>> = StoredValue::new(None);
 
     let allowed_operations = move || {
-        get_allowed_drop_operations.map_or_else(
+        allowed_drop_operations.map_or_else(
             || {
                 vec![
                     DropOperation::Move,
@@ -166,7 +173,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
                     DropOperation::Link,
                 ]
             },
-            |get| get.run(()),
+            |allowed| allowed.get_untracked(),
         )
     };
 
@@ -180,7 +187,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
         }
         drag_manager::begin_dragging(DragTarget {
             element: target.clone(),
-            items: get_items.run(()),
+            items: items.get_untracked(),
             allowed_drop_operations: allowed_operations(),
             // The drag manager ends the drag after the drop, when this element may be gone.
             on_drag_end: Some(Rc::new(move |e: DragEndEvent| {
@@ -215,15 +222,15 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
                 y: e.client_y(),
             });
         }
-        let items = get_items.run(());
+        let items = items.get_untracked();
         let Some(data_transfer) = e.data_transfer() else {
             return;
         };
         let _ = data_transfer.clear_data();
         write_to_data_transfer(&data_transfer, &items);
 
-        let allowed = get_allowed_drop_operations.map_or(DropOperations::ALL, |get| {
-            DropOperations::from_operations(&get.run(()))
+        let allowed = allowed_drop_operations.map_or(DropOperations::ALL, |allowed| {
+            DropOperations::from_operations(&allowed.get_untracked())
         });
         set_global_allowed_drop_operations(allowed);
         data_transfer.set_effect_allowed(allowed.as_effect_allowed());
@@ -242,7 +249,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
                 default_x = size.width() / 2.0;
                 default_y = size.height() / 2.0;
             }
-            let (offset_x, offset_y) = offset.unwrap_or((default_x, default_y));
+            let (offset_x, offset_y) = offset.map_or((default_x, default_y), |p| (p.x, p.y));
             let offset_x = offset_x.clamp(0.0, size.width());
             let offset_y = offset_y.clamp(0.0, size.height());
             // An even height keeps the preview sharp on some displays.
@@ -345,6 +352,9 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     }));
 
     let on_pointerdown = move |e: PointerEvent| {
+        if is_disabled.get_untracked() {
+            return;
+        }
         let virtual_pointer = is_virtual_pointer_event(&e)
             || (e.width() < 1 && e.height() < 1 && is_ios() && is_webkit());
         let centered = e
@@ -366,6 +376,9 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
     let on_target_itself =
         |e: &web_sys::Event| e.target().is_some() && e.target() == e.current_target();
     let on_keydown_capture = move |e: KeyboardEvent| {
+        if is_disabled.get_untracked() {
+            return;
+        }
         if on_target_itself(&e) && e.typed_key() == KeyboardKey::Enter {
             e.prevent_default();
             e.stop_propagation();
@@ -452,7 +465,7 @@ pub fn use_drag(input: UseDragInput) -> UseDragReturn {
             is_disabled,
             ..UseButtonInput::default()
         },
-        is_dragging: is_dragging.into(),
+        is_dragging: Signal::derive(move || is_dragging.get() && !is_disabled.get()),
     }
 }
 

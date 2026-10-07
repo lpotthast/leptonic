@@ -152,8 +152,8 @@ A demo is code readers copy. It shows one thing well, and everything around the 
 - **Disabling:** where the concept supports disabling, the standard demo control (a `Checkbox` atom, see "Demo
   controls" below) labelled "Disabled" in a `demo-controls` row below the demo toggles it. Further switches of a demo
   (read-only, orientation, ...) go into the same row.
-- **The book styles every demo itself.** Leptonic ships no stylesheet for its atoms: every demo is styled by the
-  book's demo stylesheets (`style/demos/`), with the book's tokens. Demos use atoms and hooks only, never the
+- **The book styles every demo itself:** every demo is styled by the book's demo stylesheets (`style/demos/`), with
+  the book's tokens. Leptonic's optional atom theme (`leptonic-atoms`) is for apps; the book never loads it. Demos use atoms and hooks only, never the
   components layer (`leptonic::components`); the component themes (`leptonic-themes`) stay loaded only until the last
   component demo is gone.
 - **The layer of the page is styled through what it renders:** atom demos style the atom only through its data
@@ -213,8 +213,7 @@ The markup of the other atoms demos use most (their classes: `_shared.scss` unle
     </div>
 </RadioGroup>
 
-// Text field: `demo-field`, `demo-field-label`, `demo-atom-input`, `demo-field-error`
-// (`demo-field-description` in `_fields.scss`).
+// Text field: `demo-field`, `demo-field-label`, `demo-atom-input`, `demo-field-error`, `demo-field-description`.
 <TextField value=name set_value=name classes="demo-field">
     <Label classes="demo-field-label">"Name"</Label>
     <Input classes="demo-atom-input"/>

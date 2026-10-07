@@ -17,7 +17,6 @@ use crate::{
         propagation_control::{PropagationControl, Sealed},
     },
 };
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useKeyboard.ts
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

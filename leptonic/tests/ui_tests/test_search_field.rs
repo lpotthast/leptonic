@@ -36,6 +36,7 @@ impl BrowserTest<str> for SearchFieldTests {
         validation_errors(&page).await?;
         read_only(&page).await?;
         form_attribute(&page).await?;
+        input_type(&page).await?;
 
         Ok(())
     }
@@ -152,5 +153,12 @@ async fn read_only(page: &Page<'_>) -> Result<(), Report> {
 async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
     let input = page.css("#sf-form-attribute input").await?;
     assert_that!(input.attr("form").await?).is_equal_to(Some("test".to_owned()));
+    Ok(())
+}
+
+/// "with base props": the input is a `search` input unless another type is given.
+async fn input_type(page: &Page<'_>) -> Result<(), Report> {
+    let input = page.css("#sf-type input").await?;
+    assert_that!(input.attr("type").await?).is_equal_to(Some("text".to_owned()));
     Ok(())
 }

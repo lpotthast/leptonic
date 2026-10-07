@@ -1,6 +1,8 @@
 // Upstream: react-aria-components/test/Calendar.test.js @ 99e6102368
 // Upstream: react-aria-components/test/RangeCalendar.test.tsx @ 99e6102368
 // Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/calendar/Calendar.ssr.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -121,6 +123,15 @@ async fn wait_for_value(page: &Page<'_>, name: &str, expected: &str) -> Result<(
 async fn value(page: &Page<'_>, name: &str) -> Result<String, Report> {
     page.read_text_of(&format!("test-calendar-{name}-value"))
         .await
+}
+
+/// The value of the calendar `name` stays `expected` (checked again after the effects of an
+/// interaction had time to run).
+async fn expect_value_unchanged(page: &Page<'_>, name: &str, expected: &str) -> Result<(), Report> {
+    assert_that!(value(page, name).await?).is_equal_to(expected.to_owned());
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert_that!(value(page, name).await?).is_equal_to(expected.to_owned());
+    Ok(())
 }
 
 /// Tab into the calendar `name`'s grid from the button before it (past the enabled previous and
@@ -318,7 +329,7 @@ async fn min_max(page: &Page<'_>) -> Result<(), Report> {
     june9.click().await?;
     let june21 = date(page, "min-max", "Friday, June 21, 2019").await?;
     june21.click().await?;
-    assert_that!(value(page, "min-max").await?).is_equal_to("2019-06-15".to_owned());
+    expect_value_unchanged(page, "min-max", "2019-06-15").await?;
 
     // The keyboard stops at the limits.
     enter(page, "min-max").await?;
@@ -335,7 +346,7 @@ async fn unavailable(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(attr(&june8, "data-unavailable").await?).is_equal_to(Some("true".to_owned()));
     assert_that!(attr(&june8, "aria-disabled").await?).is_equal_to(Some("true".to_owned()));
     june8.click().await?;
-    assert_that!(value(page, "unavailable").await?).is_equal_to("2019-06-05".to_owned());
+    expect_value_unchanged(page, "unavailable", "2019-06-05").await?;
 
     // Still focusable with the keyboard, but Enter doesn't select it.
     enter(page, "unavailable").await?;
@@ -362,7 +373,7 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
     let june10 = date(page, "disabled", "Monday, June 10, 2019").await?;
     assert_that!(attr(&june10, "aria-disabled").await?).is_equal_to(Some("true".to_owned()));
     june10.click().await?;
-    assert_that!(value(page, "disabled").await?).is_equal_to("2019-06-05".to_owned());
+    expect_value_unchanged(page, "disabled", "2019-06-05").await?;
     assert_that!(attr(&button(page, "disabled", "Next").await?, "disabled").await?).is_some();
     Ok(())
 }
@@ -380,7 +391,7 @@ async fn read_only(page: &Page<'_>) -> Result<(), Report> {
     expect_focus(page, "read-only", "Wednesday, June 5, 2019").await?;
     press_keys(page, &[Key::Right, Key::Enter]).await?;
     expect_focus(page, "read-only", "Thursday, June 6, 2019").await?;
-    assert_that!(value(page, "read-only").await?).is_equal_to("2019-06-05".to_owned());
+    expect_value_unchanged(page, "read-only", "2019-06-05").await?;
     Ok(())
 }
 
@@ -548,6 +559,14 @@ async fn range_by_press(page: &Page<'_>) -> Result<(), Report> {
 /// A range with the keyboard: Enter starts it (moving on by a day), Enter finishes it, Escape
 /// cancels a started range.
 async fn range_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    // The pointer away from the dates: while a range is started, hovering a date highlights it
+    // (and moves the focus there), also when the layout moves a date under a resting pointer.
+    let heading = page.driver.find(By::Css("h1")).await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&heading)
+        .perform()
+        .await?;
     // The focus returns to the last focused date.
     enter(page, "range").await?;
     expect_focus(page, "range", "Friday, June 14, 2019").await?;
@@ -710,4 +729,542 @@ async fn unavailable_dates_depending_on_the_anchor(page: &Page<'_>) -> Result<()
     june17.click().await?;
     wait_for_value(page, "range-week", "2019-06-10 - 2019-06-17").await?;
     page.wait_for_attr(&june18, "data-unavailable", None).await
+}
+
+/// Range selection by touch (react-spectrum `RangeCalendar.test.js`, "touch"): quick taps start
+/// and finish a range, dragging after the press delay selects one, and a touch that turns into
+/// a scroll doesn't finish a range being selected.
+pub struct RangeCalendarTouchTests {}
+
+#[async_trait]
+impl BrowserTest<str> for RangeCalendarTouchTests {
+    fn name(&self) -> Cow<'_, str> {
+        "calendar_range_touch_tests".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = Page { driver, base_url };
+        page.goto_path("/atoms/calendar").await?;
+
+        range_by_touch_taps(&page).await?;
+        range_by_touch_dragging(&page).await?;
+        range_kept_when_a_touch_scrolls(&page).await?;
+
+        page.expect_no_page_errors().await
+    }
+}
+
+/// Dispatches a touch pointer event (`pointerdown`, `pointerup`, `pointerenter`,
+/// `pointercancel`) at the center of `element`.
+async fn touch(page: &Page<'_>, element: &WebElement, kind: &str) -> Result<(), Report> {
+    page.driver
+        .execute(
+            "const [element, kind] = arguments;
+             const rect = element.getBoundingClientRect();
+             element.dispatchEvent(new PointerEvent(kind, {
+                 bubbles: kind !== 'pointerenter', cancelable: true, composed: true,
+                 pointerType: 'touch', pointerId: 1, isPrimary: true, button: 0,
+                 buttons: kind === 'pointerdown' ? 1 : 0, width: 1, height: 1,
+                 clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2,
+             }));",
+            vec![element.to_json()?, serde_json::Value::from(kind)],
+        )
+        .await?;
+    Ok(())
+}
+
+/// A quick tap: pressed and released before the drag delay.
+async fn touch_tap(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
+    touch(page, element, "pointerdown").await?;
+    touch(page, element, "pointerup").await
+}
+
+/// The labels of the selected dates of the calendar `name`, in document order.
+async fn selected_days(page: &Page<'_>, name: &str) -> Result<Vec<String>, Report> {
+    let mut days = Vec::new();
+    for button in page
+        .driver
+        .find_all(By::Css(format!("#test-calendar-{name} [role=button][data-selected]")))
+        .await?
+    {
+        days.push(button.text().await?);
+    }
+    Ok(days)
+}
+
+async fn wait_for_selected_days(page: &Page<'_>, name: &str, expected: &[&str]) -> Result<(), Report> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let days = selected_days(page, name).await?;
+        if days == expected {
+            return Ok(());
+        }
+        if std::time::Instant::now() > deadline {
+            leptos_browser_test::bail!("expected the selected days {expected:?} of {name}, got {days:?}");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+}
+
+/// Two quick taps select a range: the first starts it (a tap is released before the touch drag
+/// delay, so it selects on release), the second finishes it.
+async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
+    let june11 = date(page, "range-touch", "Tuesday, June 11, 2019").await?;
+    touch_tap(page, &june11).await?;
+    wait_for_selected_days(page, "range-touch", &["11"]).await?;
+    // Past the drag delay: still only started.
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    assert_that!(selected_days(page, "range-touch").await?).is_equal_to(vec!["11".to_owned()]);
+    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-05 - 2019-06-10".to_owned());
+
+    let june13 = date(page, "range-touch", "Thursday, June 13, 2019").await?;
+    touch_tap(page, &june13).await?;
+    wait_for_value(page, "range-touch", "2019-06-11 - 2019-06-13").await
+}
+
+/// "selects by dragging with touch": after the delay the pressed date starts the range, dates
+/// the finger enters extend it, releasing finishes it.
+async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
+    let june17 = date(page, "range-touch", "Monday, June 17, 2019").await?;
+    touch(page, &june17, "pointerdown").await?;
+    // The delay tells dragging from scrolling: nothing changes at first.
+    assert_that!(selected_days(page, "range-touch").await?)
+        .is_equal_to(["11", "12", "13"].map(str::to_owned).to_vec());
+    wait_for_selected_days(page, "range-touch", &["17"]).await?;
+    let june18 = date(page, "range-touch", "Tuesday, June 18, 2019").await?;
+    touch(page, &june18, "pointerenter").await?;
+    wait_for_selected_days(page, "range-touch", &["17", "18"]).await?;
+    let june23 = date(page, "range-touch", "Sunday, June 23, 2019").await?;
+    touch(page, &june23, "pointerenter").await?;
+    wait_for_selected_days(page, "range-touch", &["17", "18", "19", "20", "21", "22", "23"]).await?;
+    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-11 - 2019-06-13".to_owned());
+    touch(page, &june23, "pointerup").await?;
+    wait_for_value(page, "range-touch", "2019-06-17 - 2019-06-23").await
+}
+
+/// "selection isn't prematurely finalized when touching a day cell to scroll through the
+/// calendar": a touch cancelled by scrolling doesn't finish the range being selected.
+async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> {
+    date(page, "range-touch", "Sunday, June 23, 2019")
+        .await?
+        .click()
+        .await?;
+    wait_for_selected_days(page, "range-touch", &["23"]).await?;
+    let june10 = date(page, "range-touch", "Monday, June 10, 2019").await?;
+    touch(page, &june10, "pointerdown").await?;
+    touch(page, &june10, "pointercancel").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-17 - 2019-06-23".to_owned());
+    date(page, "range-touch", "Tuesday, June 25, 2019")
+        .await?
+        .click()
+        .await?;
+    wait_for_value(page, "range-touch", "2019-06-23 - 2019-06-25").await
+}
+
+/// A calendar without a value or focused date shows today (react-spectrum `Calendar.ssr.test.js`
+/// renders it on the server). The server's today may be another date than the browser's (its
+/// time zone): the page hydrates with the server's date, then the calendar moves to the
+/// browser's today, so the tabbable date is the one marked as today.
+pub struct CalendarTodayTests {}
+
+#[async_trait]
+impl BrowserTest<str> for CalendarTodayTests {
+    fn name(&self) -> Cow<'_, str> {
+        "calendar_today_tests".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = Page { driver, base_url };
+        // A browser time zone in which today is another date than on the server (this
+        // machine): 14 hours ahead or 12 behind UTC; one of them always differs.
+        let server_today = jiff::Zoned::now().date();
+        let mut browser_zone = None;
+        for zone in ["Pacific/Kiritimati", "Etc/GMT+12"] {
+            if jiff::Zoned::now().in_tz(zone)?.date() != server_today {
+                browser_zone = Some(zone);
+                break;
+            }
+        }
+        let Some(zone) = browser_zone else {
+            leptos_browser_test::bail!("no time zone with another date than {server_today}");
+        };
+        driver
+            .cdp()
+            .send_raw(
+                "Emulation.setTimezoneOverride",
+                serde_json::json!({ "timezoneId": zone }),
+            )
+            .await?;
+        page.goto_path("/atoms/calendar").await?;
+
+        page.wait_for_selector(
+            "#test-calendar-today [role=gridcell] > [role=button][tabindex='0'][aria-label^='Today, ']",
+        )
+        .await?;
+        assert_that!(
+            page.count_matching("#test-calendar-today [role=button][tabindex='0']")
+                .await?
+        )
+        .is_equal_to(1);
+        // Keyboard focus goes there.
+        enter(&page, "today").await?;
+        let active = page.driver.active_element().await?;
+        assert_that!(attr(&active, "aria-label").await?.unwrap_or_default().as_str())
+            .starts_with("Today, ");
+
+        page.expect_no_page_errors().await
+    }
+}
+
+/// The views and paging of calendars, their pickers and announcements: `pageBehavior: single`
+/// (`useCalendar.test.js`, "pagination"), a two-week view, a fixed number of week rows, held arrow
+/// keys, a changing visible duration, month and year pickers (RAC `Calendar.test.js`,
+/// `RangeCalendar.test.tsx`), the live announcements and the commit behaviors of a range being
+/// selected (react-spectrum `RangeCalendar.test.js`, "announcing", "pointer events").
+pub struct CalendarViewTests {}
+
+#[async_trait]
+impl BrowserTest<str> for CalendarViewTests {
+    fn name(&self) -> Cow<'_, str> {
+        "calendar_view_tests".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = Page { driver, base_url };
+        page.goto_path("/atoms/calendar").await?;
+
+        page_behavior_single(&page).await?;
+        two_weeks(&page).await?;
+        weeks_in_month(&page).await?;
+        held_arrow_keys(&page).await?;
+        changing_the_visible_duration(&page).await?;
+        month_and_year_pickers(&page).await?;
+        announcements(&page).await?;
+        commit_behaviors(&page).await?;
+
+        page.expect_no_page_errors().await
+    }
+}
+
+async fn grid_labels(page: &Page<'_>, name: &str) -> Result<Vec<String>, Report> {
+    let mut labels = Vec::new();
+    for grid in grids(page, name).await? {
+        labels.push(attr(&grid, "aria-label").await?.unwrap_or_default());
+    }
+    Ok(labels)
+}
+
+async fn wait_for_grid_labels(page: &Page<'_>, name: &str, expected: &[&str]) -> Result<(), Report> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let labels = grid_labels(page, name).await?;
+        if labels == expected {
+            return Ok(());
+        }
+        if std::time::Instant::now() > deadline {
+            leptos_browser_test::bail!("expected the grids of {name} {expected:?}, got {labels:?}");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+}
+
+/// `pageBehavior: single` pages by one month, week or day of the visible duration.
+async fn page_behavior_single(page: &Page<'_>) -> Result<(), Report> {
+    wait_for_grid_labels(
+        page,
+        "single-page",
+        &["single-page, January 2019", "single-page, February 2019"],
+    )
+    .await?;
+    button(page, "single-page", "Next").await?.click().await?;
+    wait_for_grid_labels(
+        page,
+        "single-page",
+        &["single-page, February 2019", "single-page, March 2019"],
+    )
+    .await?;
+    let previous = button(page, "single-page", "Previous").await?;
+    previous.click().await?;
+    previous.click().await?;
+    wait_for_grid_labels(
+        page,
+        "single-page",
+        &["single-page, December 2018", "single-page, January 2019"],
+    )
+    .await?;
+
+    wait_for_grid_label(
+        page,
+        "weeks-single",
+        "weeks-single, December 23, 2018 to January 12, 2019",
+    )
+    .await?;
+    button(page, "weeks-single", "Next").await?.click().await?;
+    wait_for_grid_label(
+        page,
+        "weeks-single",
+        "weeks-single, December 30, 2018 to January 19, 2019",
+    )
+    .await?;
+    let previous = button(page, "weeks-single", "Previous").await?;
+    previous.click().await?;
+    previous.click().await?;
+    wait_for_grid_label(
+        page,
+        "weeks-single",
+        "weeks-single, December 16, 2018 to January 5, 2019",
+    )
+    .await?;
+
+    wait_for_grid_label(
+        page,
+        "days-single",
+        "days-single, December 30, 2018 to January 3, 2019",
+    )
+    .await?;
+    button(page, "days-single", "Next").await?.click().await?;
+    wait_for_grid_label(
+        page,
+        "days-single",
+        "days-single, December 31, 2018 to January 4, 2019",
+    )
+    .await
+}
+
+/// A two-week view (`useCalendar.test.js`, "visibleDuration: 2 weeks"): two rows, labelled with
+/// its dates.
+async fn two_weeks(page: &Page<'_>) -> Result<(), Report> {
+    assert_that!(grid_label(page, "two-weeks").await?)
+        .is_equal_to(Some("two-weeks, June 2, 2019 to June 15, 2019".to_owned()));
+    assert_that!(
+        page.count_matching("#test-calendar-two-weeks tbody tr")
+            .await?
+    )
+    .is_equal_to(2);
+    enter(page, "two-weeks").await?;
+    expect_focus(page, "two-weeks", "Wednesday, June 5, 2019").await?;
+    press_keys(page, &[Key::Down, Key::Down]).await?;
+    expect_focus(page, "two-weeks", "Wednesday, June 19, 2019").await?;
+    wait_for_grid_label(page, "two-weeks", "two-weeks, June 16, 2019 to June 29, 2019").await
+}
+
+/// RAC "should support weeksInMonth prop": April 2026 has five week rows, six are shown.
+async fn weeks_in_month(page: &Page<'_>) -> Result<(), Report> {
+    assert_that!(
+        page.count_matching("#test-calendar-six-weeks tbody tr")
+            .await?
+    )
+    .is_equal_to(6);
+    Ok(())
+}
+
+/// Dispatches a keydown (`repeat`: as when the key is held) and, for the last, a keyup to the
+/// focused element.
+async fn hold_key(page: &Page<'_>, key: &str, repeats: usize) -> Result<(), Report> {
+    page.driver
+        .execute(
+            "const [key, repeats] = arguments;
+             const target = document.activeElement;
+             const fire = (type, repeat) => target.dispatchEvent(new KeyboardEvent(type, {
+                 key, repeat, bubbles: true, cancelable: true, composed: true,
+             }));
+             fire('keydown', false);
+             for (let i = 0; i < repeats; i++) fire('keydown', true);
+             fire('keyup', false);",
+            vec![serde_json::Value::from(key), serde_json::Value::from(repeats)],
+        )
+        .await?;
+    Ok(())
+}
+
+/// RAC "should support repeat keydown events when holding an arrow key".
+async fn held_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+    let march3 = date(page, "held", "Tuesday, March 3, 2020").await?;
+    march3.click().await?;
+    page.wait_for_focus_on(&march3, "March 3").await?;
+    hold_key(page, "ArrowRight", 1).await?;
+    expect_focus(page, "held", "Thursday, March 5, 2020").await
+}
+
+/// RAC "should handle changing the visible duration": a week view becomes a month view around
+/// the focused date.
+async fn changing_the_visible_duration(page: &Page<'_>) -> Result<(), Report> {
+    assert_that!(heading(page, "duration").await?)
+        .is_equal_to("April 5, 2026 to April 11, 2026".to_owned());
+    page.click_element_with_id("test-calendar-duration-month")
+        .await?;
+    page.wait_for_selector_text("#test-calendar-duration h2", "April 2026")
+        .await?;
+    wait_for_grid_label(page, "duration", "duration, April 2026").await?;
+    assert_that!(
+        page.count_matching("#test-calendar-duration tbody tr")
+            .await?
+    )
+    .is_equal_to(5);
+    Ok(())
+}
+
+async fn option_texts(select: &WebElement) -> Result<Vec<String>, Report> {
+    let mut texts = Vec::new();
+    for option in select.find_all(By::Css("option")).await? {
+        texts.push(option.text().await?);
+    }
+    Ok(texts)
+}
+
+/// RAC "should support month and year dropdowns": the pickers list the months and 20 years
+/// around the focused date's and move it; the year picker follows.
+async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
+    let month = page
+        .css("#test-calendar-pickers select[aria-label=month]")
+        .await?;
+    let year = page
+        .css("#test-calendar-pickers select[aria-label=year]")
+        .await?;
+    wait_for_grid_label(page, "pickers", "Appointment date, April 2026").await?;
+    assert_that!(month.prop("value").await?).is_equal_to(Some("4".to_owned()));
+    assert_that!(option_texts(&month).await?).is_equal_to(
+        [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ]
+        .map(str::to_owned)
+        .to_vec(),
+    );
+    month
+        .find(By::XPath("option[normalize-space()='Jun']"))
+        .await?
+        .click()
+        .await?;
+    wait_for_grid_label(page, "pickers", "Appointment date, June 2026").await?;
+    assert_that!(month.prop("value").await?).is_equal_to(Some("6".to_owned()));
+
+    assert_that!(option_texts(&year).await?)
+        .is_equal_to((2016..2036).map(|year| year.to_string()).collect::<Vec<_>>());
+    year.find(By::XPath("option[normalize-space()='2030']"))
+        .await?
+        .click()
+        .await?;
+    wait_for_grid_label(page, "pickers", "Appointment date, June 2030").await?;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    while option_texts(&year).await?.first().map(String::as_str) != Some("2020") {
+        if std::time::Instant::now() > deadline {
+            leptos_browser_test::bail!("the year picker didn't follow the focused year");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert_that!(option_texts(&year).await?)
+        .is_equal_to((2020..2040).map(|year| year.to_string()).collect::<Vec<_>>());
+    Ok(())
+}
+
+/// Wait for a polite live announcement.
+async fn wait_for_announcement(page: &Page<'_>, text: &str) -> Result<(), Report> {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let mut texts = Vec::new();
+        for entry in page
+            .driver
+            .find_all(By::Css("[data-live-announcer] [aria-live=polite] div"))
+            .await?
+        {
+            texts.push(entry.prop("textContent").await?.unwrap_or_default());
+        }
+        if texts.iter().any(|entry| entry == text) {
+            return Ok(());
+        }
+        if std::time::Instant::now() > deadline {
+            leptos_browser_test::bail!("no announcement {text:?}, got {texts:?}");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+}
+
+/// "announces when the current month changes", "announces when the selected date range
+/// changes".
+async fn announcements(page: &Page<'_>) -> Result<(), Report> {
+    button(page, "range-touch", "Next").await?.click().await?;
+    wait_for_announcement(page, "July 2019").await?;
+    button(page, "range-touch", "Previous")
+        .await?
+        .click()
+        .await?;
+    wait_for_announcement(page, "June 2019").await?;
+    date(page, "range-touch", "Monday, June 17, 2019")
+        .await?
+        .click()
+        .await?;
+    date(page, "range-touch", "Monday, June 10, 2019")
+        .await?
+        .click()
+        .await?;
+    wait_for_announcement(
+        page,
+        "Selected Range: Monday, June 10, 2019 to Monday, June 17, 2019",
+    )
+    .await
+}
+
+/// Starts a range at `start` and hovers `end` in the calendar `name`.
+async fn start_range(page: &Page<'_>, name: &str, start: &str, end: &str) -> Result<(), Report> {
+    date(page, name, start).await?.click().await?;
+    let end = date(page, name, end).await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&end)
+        .perform()
+        .await?;
+    page.wait_for_attr(&end, "data-selected", Some("true")).await
+}
+
+/// The commit behaviors of a range being selected, when the pointer is released on the calendar
+/// outside its dates (its heading) and when the focus leaves it (Tab): `Select` finishes it at the
+/// hovered date, `Clear` clears the value, `Reset` keeps the value.
+async fn commit_behaviors(page: &Page<'_>) -> Result<(), Report> {
+    let click_heading = |name: &'static str| async move {
+        page.css(&format!("#test-calendar-{name} h2"))
+            .await?
+            .click()
+            .await?;
+        Ok::<(), Report>(())
+    };
+
+    start_range(page, "commit-select", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
+        .await?;
+    click_heading("commit-select").await?;
+    wait_for_value(page, "commit-select", "2025-11-20 - 2025-11-25").await?;
+    start_range(page, "commit-select", "Thursday, November 27, 2025", "Saturday, November 22, 2025")
+        .await?;
+    page.press_tab().await?;
+    wait_for_value(page, "commit-select", "2025-11-22 - 2025-11-27").await?;
+
+    start_range(page, "commit-clear", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
+        .await?;
+    click_heading("commit-clear").await?;
+    wait_for_value(page, "commit-clear", "none").await?;
+    page.wait_for_count("#test-calendar-commit-clear [data-selected]", 0)
+        .await?;
+    start_range(page, "commit-clear", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
+        .await?;
+    page.press_tab().await?;
+    page.wait_for_count("#test-calendar-commit-clear [data-selected]", 0)
+        .await?;
+    expect_value_unchanged(page, "commit-clear", "none").await?;
+
+    let november25 = date(page, "commit-reset", "Tuesday, November 25, 2025").await?;
+    let november13 = date(page, "commit-reset", "Thursday, November 13, 2025").await?;
+    start_range(page, "commit-reset", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
+        .await?;
+    assert_that!(attr(&november13, "data-selected").await?).is_none();
+    click_heading("commit-reset").await?;
+    page.wait_for_attr(&november25, "data-selected", None).await?;
+    page.wait_for_attr(&november13, "data-selected", Some("true"))
+        .await?;
+    expect_value_unchanged(page, "commit-reset", "2025-11-13 - 2025-11-15").await?;
+    start_range(page, "commit-reset", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
+        .await?;
+    page.press_tab().await?;
+    page.wait_for_attr(&november13, "data-selected", Some("true"))
+        .await?;
+    expect_value_unchanged(page, "commit-reset", "2025-11-13 - 2025-11-15").await
 }

@@ -1,20 +1,15 @@
 // Upstream: react-aria/src/overlays/useCloseOnScroll.ts @ 99e6102368
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// This hook is based on React Aria's `useCloseOnScroll`:
-// https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useCloseOnScroll.ts
+// ## API DIFFERENCES
+// - `on_close` is passed explicitly (react-aria falls back to a close handler registered for the
+//   trigger by `useOverlayTrigger`, for backward compatibility).
+// - The trigger is a `CapturedElement` (react-aria: a ref).
 //
-// ## DIFFERENT BEHAVIOR
-//
-// - React Aria's `useCloseOnScroll` is called from `useOverlayPosition` and can
-//   also retrieve the close handler from a `WeakMap` keyed by the trigger element
-//   (for backward compat with `useOverlayTrigger`). Leptonic passes `on_close`
-//   explicitly.
-//
-// ## LEPTOS-SPECIFIC ADAPTATIONS
-//
-// - Uses `CapturedElement` instead of a React ref for the trigger element.
-// - Uses `Effect::new` + `on_cleanup` instead of `useEffect`.
-//
+// =============================================================================
 
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;

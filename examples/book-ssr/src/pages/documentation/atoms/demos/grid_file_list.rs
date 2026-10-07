@@ -1,26 +1,23 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    atoms::grid_list::{GridList, GridListItem},
-    components::prelude::{Button, ButtonVariant, Icon},
+    atoms::{
+        button::Button,
+        grid_list::{GridList, GridListItem},
+    },
     hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_list_collection},
-    prelude::icondata,
 };
 use leptos::prelude::*;
 
 /// A file: key, name and icon.
-type File = (&'static str, &'static str, icondata::Icon);
+type File = (&'static str, &'static str, &'static str);
 
 const FILES: [File; 5] = [
-    ("doc", "Document.pdf", icondata::BsFileEarmarkPdf),
-    ("photo", "Photo.jpg", icondata::BsFileEarmarkImage),
-    (
-        "sheet",
-        "Spreadsheet.xlsx",
-        icondata::BsFileEarmarkSpreadsheet,
-    ),
-    ("slides", "Presentation.pptx", icondata::BsFileEarmarkSlides),
-    ("archive", "Archive.zip", icondata::BsFileEarmarkZip),
+    ("doc", "Document.pdf", "\u{1f4c4}"),
+    ("photo", "Photo.jpg", "\u{1f5bc}"),
+    ("sheet", "Spreadsheet.xlsx", "\u{1f4ca}"),
+    ("slides", "Presentation.pptx", "\u{1f4d1}"),
+    ("archive", "Archive.zip", "\u{1f5dc}"),
 ];
 
 #[component]
@@ -65,15 +62,15 @@ pub fn GridFileListDemo() -> impl IntoView {
                 .map(|(key, name, icon)| view! {
                     <GridListItem key=key classes="demo-grid-list-item">
                         <span class="demo-grid-list-cell">
-                            <Icon icon=icon classes="demo-grid-list-icon"/>
+                            <span class="demo-grid-list-icon" aria-hidden="true">{icon}</span>
                             <span class="demo-grid-list-name">{name}</span>
                             // An interactive child: ArrowRight moves focus to it, ArrowLeft back to the row.
                             <Button
-                                variant=ButtonVariant::Flat
                                 on_press=move |_| last_action.set(Some(format!("downloaded {key}")))
-                                attr:aria-label=format!("Download {name}")
+                                aria_label=format!("Download {name}")
+                                classes="demo-grid-list-action"
                             >
-                                <Icon icon=icondata::BsDownload/>
+                                <span aria-hidden="true">"\u{2193}"</span>
                             </Button>
                         </span>
                     </GridListItem>

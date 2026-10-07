@@ -79,6 +79,24 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "visually-hidden",
+        title: "Visually hidden atom",
+        view: || view! { <atoms::visually_hidden::PageAtomVisuallyHidden /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "separator",
+        title: "Separator atom",
+        view: || view! { <atoms::separator::PageAtomSeparator /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "theme",
+        title: "Theme provider",
+        view: || view! { <atoms::theme::PageAtomTheme /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "disclosure",
         title: "Disclosure atoms",
         view: || view! { <atoms::disclosure::PageAtomDisclosure /> }.into_any(),
@@ -126,6 +144,24 @@ pub const FIXTURES: &[Fixture] = &[
         view: || view! { <atoms::tooltip::PageAtomTooltip /> }.into_any(),
     },
     Fixture {
+        group: "hooks",
+        name: "landmark-nested",
+        title: "Nested landmarks",
+        view: || view! { <hooks::landmark_nested::PageHookLandmarkNested /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "overlay",
+        title: "Overlay",
+        view: || view! { <hooks::overlay::PageHookOverlay /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "dismiss-button",
+        title: "Dismiss button",
+        view: || view! { <atoms::dismiss_button::PageAtomDismissButton /> }.into_any(),
+    },
+    Fixture {
         group: "atoms",
         name: "popover",
         title: "Popover",
@@ -136,6 +172,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "dialog",
         title: "Dialog",
         view: || view! { <atoms::dialog::PageAtomDialog /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "forms",
+        title: "Forms",
+        view: || view! { <atoms::forms::PageAtomForms /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -205,9 +247,21 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "hooks",
+        name: "scroll",
+        title: "Scroll utilities",
+        view: || view! { <hooks::scroll::PageHookScroll /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
         name: "tree",
         title: "Tree",
         view: || view! { <hooks::tree::PageHookTree /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "tree-cases",
+        title: "Tree cases",
+        view: || view! { <hooks::tree_cases::PageHookTreeCases /> }.into_any(),
     },
     Fixture {
         group: "hooks",
@@ -256,6 +310,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "combobox",
         title: "ComboBox",
         view: || view! { <atoms::combobox::PageAtomComboBox /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "combobox-forms",
+        title: "ComboBox forms",
+        view: || view! { <atoms::combobox_forms::PageAtomComboBoxForms /> }.into_any(),
     },
     Fixture {
         group: "hooks",
@@ -397,15 +457,33 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "listbox-features",
+        title: "ListBox features",
+        view: || view! { <atoms::listbox_features::PageAtomListBoxFeatures /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "select",
         title: "Select",
         view: || view! { <atoms::select::PageAtomSelect /> }.into_any(),
     },
     Fixture {
         group: "atoms",
+        name: "select-forms",
+        title: "Select forms",
+        view: || view! { <atoms::select_forms::PageAtomSelectForms /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "grid-list",
         title: "GridList",
         view: || view! { <atoms::grid_list::PageAtomGridList /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "grid-list-features",
+        title: "GridList features",
+        view: || view! { <atoms::grid_list_features::PageAtomGridListFeatures /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -427,6 +505,18 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "table-navigation",
+        title: "Table navigation",
+        view: || view! { <atoms::table_navigation::PageAtomTableNavigation /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "table-selection",
+        title: "Table selection",
+        view: || view! { <atoms::table_selection::PageAtomTableSelection /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "date-field",
         title: "Date and time fields",
         view: || view! { <atoms::date_field::PageAtomDateField /> }.into_any(),
@@ -436,6 +526,12 @@ pub const FIXTURES: &[Fixture] = &[
         name: "calendar",
         title: "Calendar",
         view: || view! { <atoms::calendar::PageAtomCalendar /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "date-picker",
+        title: "Date pickers",
+        view: || view! { <atoms::date_picker::PageAtomDatePicker /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -456,10 +552,34 @@ pub const FIXTURES: &[Fixture] = &[
         view: || view! { <atoms::slider::PageAtomSlider /> }.into_any(),
     },
     Fixture {
+        group: "atoms",
+        name: "slider-interactions",
+        title: "Slider interactions",
+        view: || view! { <atoms::slider_interactions::PageAtomSliderInteractions /> }.into_any(),
+    },
+    Fixture {
         group: "hooks",
         name: "dnd",
         title: "Drag and drop",
         view: || view! { <hooks::dnd::PageHookDnd /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "dnd-targets",
+        title: "Drag and drop targets",
+        view: || view! { <hooks::dnd_targets::PageHookDndTargets /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "dnd-collection",
+        title: "Droppable collection",
+        view: || view! { <hooks::dnd_collection::PageHookDndCollection /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "clipboard",
+        title: "Clipboard",
+        view: || view! { <hooks::clipboard::PageHookClipboard /> }.into_any(),
     },
     Fixture {
         group: "hooks",

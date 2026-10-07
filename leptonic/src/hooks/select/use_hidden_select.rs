@@ -31,6 +31,12 @@ use crate::{
 // ## API DIFFERENCES
 // - A hook returning props and the `<option>`s / hidden input values to render, instead of a
 //   component.
+// - `name` and `validation_behavior` are read from the state (react-aria: from `useSelect`'s
+//   data stored per state).
+//
+// ## DIFFERENT BEHAVIOR
+// - The hidden `<label>` holds the `label` text (react-aria-components renders it empty; Firefox
+//   identifies the `<select>` for autofill by its label).
 //
 // =============================================================================
 
@@ -45,19 +51,30 @@ pub const HIDDEN_SELECT_CONTAINER_STYLE: &str = concat!(
     " position: fixed; top: 0; left: 0;"
 );
 
-/// Input of [`use_hidden_select`] (usually `use_select`'s `hidden_select`).
+/// Input of [`use_hidden_select`] (usually `use_select`'s `hidden_select`). The field name and
+/// the validation behavior come from the state.
 #[derive(Clone)]
 pub struct UseHiddenSelectInput {
     pub state: SelectState,
-    pub name: Option<String>,
     pub form: Option<String>,
     pub auto_complete: Option<String>,
     pub is_disabled: Signal<bool>,
-    pub is_required: bool,
-    pub validation_behavior: ValidationBehavior,
+    pub is_required: Signal<bool>,
     /// The select's trigger, focused when the select is its form's first invalid field on
     /// submission.
     pub trigger: Option<CapturedElement>,
+    /// The text of the hidden `<label>` around the `<select>` (browsers identify fields for
+    /// autofill by their labels).
+    pub label: MaybeProp<String>,
+}
+
+impl std::fmt::Debug for UseHiddenSelectInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseHiddenSelectInput")
+            .field("form", &self.form)
+            .field("auto_complete", &self.auto_complete)
+            .finish_non_exhaustive()
+    }
 }
 
 /// An `<option>` of the hidden `<select>`.
@@ -79,7 +96,13 @@ pub struct UseHiddenSelectReturn {
     pub select_props: UseHiddenSelectSelectProps,
     /// The `<option>`s, starting with an empty one (no value).
     pub options: Signal<Vec<HiddenSelectOption>>,
+    /// The text of the `<label>` around the `<select>`.
+    pub label: MaybeProp<String>,
+    /// Props for every hidden input; `first_input_capture` goes on the first one only.
     pub input_props: UseHiddenSelectInputProps,
+    /// Captures the first hidden input (form reset and native validation work on it when there
+    /// is no `<select>`).
+    pub first_input_capture: ElementCaptureAttr,
     /// One hidden input per selected key (one empty input without a selection).
     pub input_values: Signal<Vec<String>>,
 }
@@ -94,6 +117,7 @@ pub type UseHiddenSelectContainerAttrs = (
     Attr<attr::AriaHidden, AriaHidden>,
     CustomAttr<&'static str, &'static str>,
     CustomAttr<&'static str, &'static str>,
+    crate::utils::focusability::PreventFocusAttr,
 );
 
 impl IntoAttrs for UseHiddenSelectContainerProps {
@@ -105,6 +129,8 @@ impl IntoAttrs for UseHiddenSelectContainerProps {
             custom_attribute("style", self.style),
             // Tells accessibility linters that the hidden, focusable `<select>` is intended.
             custom_attribute("data-a11y-ignore", "aria-hidden-focus"),
+            // Focus walks (grid cell child focus, `FocusScope` fallbacks) skip the hidden select.
+            crate::utils::focusability::prevent_focus_attr(),
         )
     }
 }
@@ -115,7 +141,7 @@ pub struct UseHiddenSelectSelectProps {
     pub auto_complete: Option<String>,
     pub disabled: Signal<bool>,
     pub multiple: bool,
-    pub required: bool,
+    pub required: Signal<bool>,
     pub name: Option<String>,
     pub form: Option<String>,
     pub on_change: EventHandler<web_sys::Event>,
@@ -127,7 +153,7 @@ pub type UseHiddenSelectSelectAttrs = (
     Attr<attr::Autocomplete, Option<String>>,
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::Multiple, bool>,
-    Attr<attr::Required, bool>,
+    Attr<attr::Required, Signal<bool>>,
     Attr<attr::Name, Option<String>>,
     Attr<attr::Form, Option<String>>,
     On<ev::change, SharedEventCallback<web_sys::Event>>,
@@ -164,7 +190,8 @@ pub struct UseHiddenSelectInputProps {
     pub name: Option<String>,
     pub form: Option<String>,
     pub disabled: Signal<bool>,
-    pub required: bool,
+    /// For the first input only.
+    pub required: Signal<bool>,
 }
 
 /// Mirrors a select's value in a hidden native form element, so the select takes part in form
@@ -172,14 +199,15 @@ pub struct UseHiddenSelectInputProps {
 pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
     let UseHiddenSelectInput {
         state,
-        name,
         form,
         auto_complete,
         is_disabled,
         is_required,
-        validation_behavior,
         trigger,
+        label,
     } = input;
+    let name = state.name();
+    let validation_behavior = state.validation_behavior();
     let collection = state.list.collection;
     let select_element = CapturedElement::new();
 
@@ -229,7 +257,9 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
         state.set_value(keys);
     });
 
-    let required = validation_behavior == ValidationBehavior::Native && is_required;
+    let required = Signal::derive(move || {
+        validation_behavior == ValidationBehavior::Native && is_required.get()
+    });
 
     UseHiddenSelectReturn {
         container_props: UseHiddenSelectContainerProps {
@@ -266,6 +296,9 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
             });
             options
         }),
+        label,
+        // Only one of `<select>` and the inputs is rendered: they capture into the same element.
+        first_input_capture: select_element.attr(),
         input_props: UseHiddenSelectInputProps {
             r#type: if validation_behavior == ValidationBehavior::Native {
                 "text"

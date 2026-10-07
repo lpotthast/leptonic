@@ -100,6 +100,16 @@ pub fn PageAtomTextField() -> impl IntoView {
                 </TextField>
             </div>
 
+            // Bound values: one without a setter rejects every change, one whose setter
+            // uppercases changes the text.
+            <div id="tf-rejecting">
+                <TextField value=Signal::stored("fixed".to_owned())>
+                    <Label>"Fixed"</Label>
+                    <Input />
+                </TextField>
+            </div>
+            <UppercaseField />
+
             <ServerErrorsForm />
 
             <Form attr:id="form-native">
@@ -158,5 +168,19 @@ fn ServerErrorsForm() -> impl IntoView {
             </TextField>
             <button id="form-server-submit" type="submit">"Submit"</button>
         </Form>
+    }
+}
+
+/// A text field bound to a signal whose setter stores the text uppercased.
+#[component]
+fn UppercaseField() -> impl IntoView {
+    let text = RwSignal::new(String::new());
+    view! {
+        <div id="tf-uppercase">
+            <TextField value=text set_value=move |value: String| text.set(value.to_uppercase())>
+                <Label>"Uppercase"</Label>
+                <Input />
+            </TextField>
+        </div>
     }
 }

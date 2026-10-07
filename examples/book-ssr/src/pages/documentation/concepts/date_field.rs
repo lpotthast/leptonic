@@ -64,7 +64,6 @@ pub fn PageDateFieldOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>"There is no themed date field component yet."</p>
             </Section>
 
             <Section title="Quick Start">

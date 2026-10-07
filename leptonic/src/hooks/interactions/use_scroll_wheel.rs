@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/interactions/useScrollWheel.ts @ 6f664fe911
+// Upstream: react-aria/src/interactions/useScrollWheel.ts @ 99e6102368
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -8,9 +8,17 @@ use web_sys::WheelEvent;
 
 use crate::{hooks::IntoAttrs, utils::EventHandler};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useScrollWheel.ts
-
-// No intentional deviations from the react-aria implementation.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The handler is returned as props to spread (react-aria adds it to `ref` with `useEvent`; a
+//   Leptos `on:wheel` on an element is not passive either, so it can prevent scrolling).
+// - As upstream, `ScrollEvent` has no `continuePropagation` (the wheel event is always stopped),
+//   so it doesn't implement `Propagation`.
+//
+// =============================================================================
 
 /// Scroll event data.
 #[derive(Debug, Clone, Copy)]
@@ -73,7 +81,7 @@ pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,)
 /// let (value, set_value) = signal(50.0f64);
 ///
 /// let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
-///     disabled: Signal::derive(|| false),
+///     is_disabled: Signal::derive(|| false),
 ///     on_scroll: Some(Callback::new(move |e: ScrollEvent| {
 ///         // e.delta_x, e.delta_y give scroll amounts
 ///         // Positive delta_y = scroll down, negative = scroll up
@@ -88,7 +96,7 @@ pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,)
 /// });
 ///
 /// view! {
-///     <div {..scroll_wheel.attrs} tabindex="0">
+///     <div {..scroll_wheel.props.into_attrs()} tabindex="0">
 ///         "Value: " { move || value.get().round() as i32 }
 ///     </div>
 /// }

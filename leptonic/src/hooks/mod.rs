@@ -3,16 +3,19 @@
 //
 // ## API DIFFERENCES
 //
-// - API conventions C1–C13 (documentation/hooks-implementation.md, "API Conventions"): typed
-//   enums/newtypes instead of strings and unions, `is_*` state flags as signals, `MaybeProp<String>`
-//   for user-visible text, state structs with methods, `new(required)` + struct update, typed
-//   ARIA values, `Duration`/`Fraction`/`Point` units.
+// - API conventions C1–C15 (documentation/conventions.md; summary in
+//   documentation/hooks-implementation.md, "API Conventions"): typed enums/newtypes instead of
+//   strings and unions, `is_*` state flags as signals, `MaybeProp<String>` for user-visible text,
+//   `Copy` state structs with methods, struct literals (no constructors on `*Input`s; `Default` +
+//   struct update where every field has a meaningful default), typed ARIA values,
+//   `Duration`/`Fraction`/`Point` units, generic number values.
 //   Rationale: react-aria's props objects are JavaScript idioms (stringly-typed values,
 //   `string | number` unions, optional everything); Rust expresses the same with types.
 //
-// - Hook-owned state
-//   Rationale: hooks create and own their state signals and expose read-only signals plus
-//   mutation methods, so callers can't bypass invariants and change callbacks always fire.
+// - Hook-owned state (C4)
+//   Rationale: a state hook takes `default_*` + `on_*_change`, or a `ValueBinding` to app state
+//   (a read signal plus a setter); callers read signals and change the state only through its
+//   methods, so they can't bypass invariants and change callbacks always fire.
 //   React-aria: `useControlledState` accepts controlled (`value`) or uncontrolled
 //   (`defaultValue`) state.
 //

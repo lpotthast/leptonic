@@ -56,9 +56,12 @@ pub fn PageSearchFieldOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The themed "<Code inline=true>"SearchField"</Code>" reports submitted queries through "
+                    "The "<Code inline=true>"SearchField"</Code>" atom reports submitted queries through "
                     <Code inline=true>"on_submit"</Code>" and an emptied field through "<Code inline=true>"on_clear"</Code>
-                    ". Type a query and press "<Keys keys="Enter"/>":"
+                    ". Compose it from a "<Code inline=true>"Label"</Code>", an "<Code inline=true>"Input"</Code>" and a "
+                    <Code inline=true>"SearchFieldClearButton"</Code>" (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::search_field::Atom.materialize())>"Search Field Atoms"</Link>
+                    " page). Type a query and press "<Keys keys="Enter"/>":"
                 </p>
 
                 <Demo

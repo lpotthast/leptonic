@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, utils::clipboard::write_text};
+use leptonic::{atoms::button::Button, utils::clipboard::write_text};
 use leptos::{prelude::*, task::spawn_local};
 
 #[component]
@@ -16,7 +16,7 @@ pub fn ClipboardWriteTextDemo() -> impl IntoView {
     };
 
     view! {
-        <Button on_press=copy>"Copy install command"</Button>
+        <Button on_press=copy classes="demo-btn">"Copy install command"</Button>
         <p class="demo-status">{status}</p>
     }
 }

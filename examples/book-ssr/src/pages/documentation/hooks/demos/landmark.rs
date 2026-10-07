@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{button::Button, input::Input, search_field::SearchField},
     hooks::{
         IntoAttrs, LandmarkRole, UseFocusWithinInput, UseLandmarkInput, UseLandmarkReturn,
         use_focus_within, use_landmark,
@@ -18,15 +18,13 @@ fn MailLandmark(
     children: Children,
 ) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(
-        UseLandmarkInput {
-            aria_label: label.into(),
-            role,
-            aria_labelledby: None,
-            focus: None,
-        },
+    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
         element,
-    );
+        aria_label: label.into(),
+        role,
+        aria_labelledby: None,
+        focus: None,
+    });
     let focus_within = use_focus_within(UseFocusWithinInput {
         on_focus_within_change: Some(Callback::new(move |is_within: bool| {
             if is_within {
@@ -57,16 +55,18 @@ pub fn LandmarkDemo() -> impl IntoView {
             <MailLandmark role=LandmarkRole::Navigation label="Folders" current=current>
                 {["Inbox", "Sent", "Archive"]
                     .map(|name| view! {
-                        <Button variant=ButtonVariant::Flat on_press=move |_| folder.set(name)>{name}</Button>
+                        <Button on_press=move |_| folder.set(name) classes="demo-btn">{name}</Button>
                     })
                     .collect_view()}
             </MailLandmark>
             <MailLandmark role=LandmarkRole::Search label="Mail search" current=current>
-                <SearchField aria_label="Search mail" value=query set_value=query/>
+                <SearchField aria_label="Search mail" value=query set_value=query classes="demo-field">
+                    <Input classes="demo-atom-input"/>
+                </SearchField>
             </MailLandmark>
             <MailLandmark role=LandmarkRole::Region label="Messages" current=current>
                 <p>{move || format!("3 messages in {}.", folder.get())}</p>
-                <Button>"Reply"</Button>
+                <Button classes="demo-btn">"Reply"</Button>
             </MailLandmark>
         </div>
 

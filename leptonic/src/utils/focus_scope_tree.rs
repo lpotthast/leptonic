@@ -1,4 +1,6 @@
-//! Thread-local tree tracking parent-child relationships between `FocusScope`s.
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
+//! Thread-local tree tracking parent-child relationships between `FocusScope`s (react-aria's
+//! `focusScopeTree`, `activeScope` and the scope queries of `FocusScope.tsx`).
 //!
 //! Each `FocusScope` registers itself in this tree on mount and unregisters on
 //! cleanup. The tree enables nested-scope queries: "is this element inside this
@@ -353,11 +355,6 @@ pub fn should_restore_focus(scope_id: ScopeId) -> bool {
     })
 }
 
-/// Get the currently active scope.
-pub fn get_active_scope() -> Option<ScopeId> {
-    TREE.with_borrow(|tree| tree.active_scope)
-}
-
 /// Set the active scope (called when focus enters a scope).
 pub fn set_active_scope(id: ScopeId) {
     TREE.with_borrow_mut(|tree| {
@@ -595,29 +592,109 @@ fn is_element_in_child_scope(
     false
 }
 
-/// Find the innermost containing scope that is an ancestor of (or is)
-/// `scope_id`. Used to determine which scope should actually recapture.
-pub fn innermost_containing_ancestor(scope_id: ScopeId) -> Option<ScopeId> {
-    TREE.with_borrow(|tree| {
-        // First check if any child of scope_id (recursively) is containing and active.
-        find_innermost_containing(tree, scope_id)
-    })
-}
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
 
-fn find_innermost_containing(tree: &FocusScopeTree, scope_id: ScopeId) -> Option<ScopeId> {
-    let node = tree.nodes.get(&scope_id)?;
+    use super::*;
 
-    // Check children first (deeper = more specific).
-    for &child_id in &node.children {
-        if let Some(inner) = find_innermost_containing(tree, child_id) {
-            return Some(inner);
-        }
+    /// Registers a scope without an element (the tree logic doesn't need one).
+    fn scope(parent: Option<ScopeId>, contain: bool) -> ScopeId {
+        let id = allocate_id();
+        register_scope(id, parent, || None, contain, false);
+        id
     }
 
-    // Then check self.
-    if node.contain {
-        return Some(scope_id);
+    fn active() -> Option<ScopeId> {
+        TREE.with_borrow(|tree| tree.active_scope)
     }
 
-    None
+    fn parent_of(id: ScopeId) -> Option<ScopeId> {
+        TREE.with_borrow(|tree| tree.nodes.get(&id).and_then(|node| node.parent))
+    }
+
+    #[test]
+    fn a_scope_contains_focus_while_it_or_a_descendant_is_active() {
+        let outer = scope(None, true);
+        let inner = scope(Some(outer), false);
+        assert_that!(should_contain_focus(outer)).is_false();
+
+        set_active_scope(inner);
+        assert_that!(should_contain_focus(outer)).is_true();
+        assert_that!(should_contain_focus(inner)).is_false();
+
+        set_contain(outer, false);
+        assert_that!(should_contain_focus(outer)).is_false();
+    }
+
+    #[test]
+    fn only_the_innermost_containing_scope_handles_tab() {
+        let outer = scope(None, true);
+        let middle = scope(Some(outer), false);
+        let inner = scope(Some(middle), true);
+
+        set_active_scope(middle);
+        assert_that!(is_innermost_container(outer)).is_true();
+        assert_that!(is_innermost_container(inner)).is_false();
+
+        set_active_scope(inner);
+        assert_that!(is_innermost_container(outer)).is_false();
+        assert_that!(is_innermost_container(inner)).is_true();
+
+        // react-aria's `shouldContainFocus`: containment stops at the nearest containing scope.
+        set_contain(inner, false);
+        assert_that!(is_innermost_container(outer)).is_true();
+    }
+
+    #[test]
+    fn a_scope_mounting_outside_the_active_scope_gets_it_as_its_parent() {
+        let menu = scope(None, true);
+        set_active_scope(menu);
+        // E.g. a dialog opened from the menu, rendered elsewhere.
+        let dialog = scope(None, true);
+        assert_that!(parent_of(dialog)).is_equal_to(Some(menu));
+        assert_that!(ancestors(dialog)).is_equal_to(vec![menu]);
+
+        // A scope inside the active one keeps its parent.
+        let item = scope(Some(menu), false);
+        let nested = scope(Some(item), false);
+        assert_that!(parent_of(nested)).is_equal_to(Some(item));
+        assert_that!(ancestors(nested)).is_equal_to(vec![item, menu]);
+    }
+
+    #[test]
+    fn unregistering_moves_children_and_activity_to_the_parent() {
+        let root = scope(None, false);
+        let middle = scope(Some(root), false);
+        let leaf = scope(Some(middle), true);
+        set_active_scope(leaf);
+
+        // As react-aria: unmounting the active scope or one of its ancestors makes the parent
+        // the active scope.
+        unregister_scope(middle);
+        assert_that!(parent_of(leaf)).is_equal_to(Some(root));
+        assert_that!(active()).is_equal_to(Some(root));
+
+        set_active_scope(leaf);
+        unregister_scope(leaf);
+        assert_that!(active()).is_equal_to(Some(root));
+        assert_that!(ancestors(leaf)).is_empty();
+    }
+
+    #[test]
+    fn the_active_scope_or_its_ancestors_restore_focus() {
+        let outer = scope(None, false);
+        let inner = scope(Some(outer), false);
+        let other = scope(None, false);
+        // No active scope: nothing restores.
+        assert_that!(should_restore_focus(outer)).is_false();
+
+        set_active_scope(inner);
+        assert_that!(should_restore_focus(inner)).is_true();
+        // No scope in between has a node to restore.
+        assert_that!(should_restore_focus(outer)).is_true();
+
+        // A scope outside the active one's ancestors doesn't restore.
+        assert_that!(should_restore_focus(other)).is_false();
+    }
 }

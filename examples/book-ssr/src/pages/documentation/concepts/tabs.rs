@@ -34,7 +34,7 @@ pub fn PageTabsOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Tabs exist as hooks, as atoms and as a styled component. See "
+                    "Tabs exist as hooks and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -62,8 +62,9 @@ pub fn PageTabsOverview() -> impl IntoView {
             <Section title="Quick Start">
                 <p>
                     "The atoms: a collection of tabs, a "<Code inline=true>"TabList"</Code>" with a "<Code inline=true>"Tab"</Code>
-                    " per tab and a "<Code inline=true>"TabPanel"</Code>" per tab. The classes come from the demo stylesheet, "
-                    "which styles the tabs through their data attributes."
+                    " per tab and a "<Code inline=true>"TabPanel"</Code>" per tab. The classes are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::tabs::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows how they style the tabs through their data attributes."
                 </p>
 
                 <Demo description="Tabbed content panels built with the tab atoms" source=include_str!("demos/tabs.rs") source_open=true>

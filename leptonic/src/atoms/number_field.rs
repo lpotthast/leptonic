@@ -280,7 +280,8 @@ pub fn NumberFieldGroup(
 /// The button incrementing the [`NumberField`] around it ("Increase <label>"; not in the tab
 /// order, the arrow keys step from the input).
 ///
-/// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 ///
 /// Default class: `leptonic-NumberFieldIncrementButton`.
 #[component]
@@ -296,7 +297,8 @@ pub fn NumberFieldIncrementButton(
 
 /// The button decrementing the [`NumberField`] around it ("Decrease <label>").
 ///
-/// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 ///
 /// Default class: `leptonic-NumberFieldDecrementButton`.
 #[component]
@@ -316,23 +318,18 @@ fn stepper_button(
     styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let is_disabled = input.is_disabled;
     let button = use_button(input);
-    let hover = use_hover(UseHoverInput {
-        is_disabled,
-        ..UseHoverInput::default()
-    });
     let (attrs, button_styles) = button.props.into_parts();
 
     view! {
         <button
             {..attrs}
-            {..hover.props.into_attrs()}
             class=classes
             style=button_styles.merge(styles)
             data-pressed=flag(button.is_pressed)
-            data-hovered=flag(hover.is_hovered)
-            data-disabled=flag(is_disabled)
+            data-hovered=flag(button.is_hovered)
+            data-focused=flag(button.is_focused)
+            data-disabled=flag(button.is_disabled)
         >
             {children()}
         </button>

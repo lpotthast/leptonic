@@ -20,7 +20,7 @@ rs = pathlib.Path(os.environ.get("REACT_SPECTRUM", root.parent / "react-spectrum
 name = sys.argv[1]
 src = rs / "starters/docs/src" / name
 commit = subprocess.run(
-    ["git", "-C", str(rs), "rev-parse", "--short=9", "HEAD"], capture_output=True, text=True, check=True
+    ["git", "-C", str(rs), "rev-parse", "--short=10", "HEAD"], capture_output=True, text=True, check=True
 ).stdout.strip()
 css = src.read_text()
 css = re.sub(r"^@import [^;]+;\n", "", css, flags=re.M)

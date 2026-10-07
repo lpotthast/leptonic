@@ -84,7 +84,7 @@ pub fn Drawer(
     let mut props = ModalBackdropProps::builder()
         .is_dismissable(is_dismissable)
         .is_keyboard_dismiss_disabled(is_keyboard_dismiss_disabled)
-        .classes(Classes::from("leptonic-drawer-backdrop"))
+        .classes(Classes::from("leptonic-modal-backdrop").add("leptonic-drawer-backdrop"))
         // Inherited by the panel.
         .styles(Styles::new().add_optional(width.map(|width| DRAWER_WIDTH.declare(width))))
         .children(ToChildren::to_children(content))

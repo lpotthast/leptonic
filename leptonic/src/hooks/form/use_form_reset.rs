@@ -1,37 +1,38 @@
-// Upstream: react-aria/src/utils/useFormReset.ts @ 6f664fe911
-//! Form reset detection hook.
-//!
-//! Detects `<form>` reset events and restores a field to its initial value.
+// Upstream: react-aria/src/utils/useFormReset.ts @ 99e6102368
+//! Restores a field to its initial value when its `<form>` is reset.
 
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 use send_wrapper::SendWrapper;
-use wasm_bindgen::{JsCast, closure::Closure};
 
 use super::use_form_validation::get_parent_form;
+use crate::utils::event_listeners::listen;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/useFormReset.ts
-
-// No intentional deviations from the react-aria implementation.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The initial value is fixed when the hook is called (react-aria: the latest render's). Callers
+//   pass the value the field started with, which doesn't change.
+//
+// =============================================================================
 
 /// Input parameters for [`use_form_reset`].
 pub struct UseFormResetInput<T: Clone + Send + Sync + 'static> {
-    /// Reference to the form field element, used to find the parent `<form>`.
+    /// The field's `<input>`, `<textarea>` or `<select>`, whose form is listened to.
     pub element: CapturedElement,
 
-    /// The initial/default value to restore on form reset.
+    /// The value to restore when the form is reset.
     pub initial_value: T,
 
-    /// Callback invoked with the initial value when the parent form is reset.
+    /// Called with `initial_value` when the form is reset (unless the `reset` event's default was
+    /// prevented).
     pub on_reset: Callback<T>,
 }
 
-/// Detects `<form>` reset events and calls `on_reset` with the initial value.
-///
-/// This hook finds the parent `<form>` element from the captured element
-/// reference and listens for the native `reset` event. When fired, it calls
-/// `on_reset` with the provided `initial_value`, allowing the field to
-/// restore its default state.
+/// Calls `on_reset` with the initial value when the field's `<form>` is reset (and the `reset`
+/// event wasn't canceled).
 ///
 /// # Example
 ///
@@ -58,23 +59,14 @@ pub fn use_form_reset<T: Clone + Send + Sync + 'static>(input: UseFormResetInput
         let Some(form) = get_parent_form(&el) else {
             return;
         };
-
         let initial = initial_value.clone();
-        let closure = Closure::<dyn Fn(web_sys::Event)>::new(move |_: web_sys::Event| {
-            on_reset.run(initial.clone());
+        // `reset` doesn't cross shadow DOM boundaries; this listener is on the field's own form.
+        let listener = listen(&form, "reset", false, move |e: web_sys::Event| {
+            if !e.default_prevented() {
+                on_reset.run(initial.clone());
+            }
         });
-
-        let form_target: &web_sys::EventTarget = form.unchecked_ref();
-        let _ =
-            form_target.add_event_listener_with_callback("reset", closure.as_ref().unchecked_ref());
-
-        // Wrap for Send + Sync requirement of on_cleanup.
-        let form = SendWrapper::new(form);
-        let closure = SendWrapper::new(closure);
-        on_cleanup(move || {
-            let form_target: &web_sys::EventTarget = (*form).unchecked_ref();
-            let _ = form_target
-                .remove_event_listener_with_callback("reset", closure.as_ref().unchecked_ref());
-        });
+        let listener = SendWrapper::new(listener);
+        on_cleanup(move || drop(listener));
     });
 }

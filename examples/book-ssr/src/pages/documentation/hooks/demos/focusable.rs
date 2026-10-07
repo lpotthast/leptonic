@@ -1,4 +1,7 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, checkbox::Checkbox},
+    hooks::*,
+};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
@@ -39,9 +42,15 @@ pub fn FocusableDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Button on_press=move |_| focus_handle.focus()>"Focus the notes"</Button>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=exclude_from_tab_order set_selected=exclude_from_tab_order>"Exclude from tab order"</Checkbox>
+            <Button on_press=move |_| focus_handle.focus() classes="demo-btn">"Focus the notes"</Button>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=exclude_from_tab_order set_selected=exclude_from_tab_order classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Exclude from tab order"
+            </Checkbox>
         </div>
 
         <p class="demo-status">

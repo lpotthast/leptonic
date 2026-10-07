@@ -1,9 +1,25 @@
+// Upstream: react-aria/src/utils/isFocusable.ts @ 99e6102368
+// Upstream: react-aria/src/utils/isElementVisible.ts @ 99e6102368
+// Upstream: react-aria/src/utils/keyboard.tsx @ 99e6102368
 //! Focusability and tabbability detection utilities.
 //!
 //! Shared infrastructure for determining whether DOM elements are focusable or tabbable,
 //! used by `use_focus_manager`, `use_has_tabbable_child`, and other focus hooks.
-//!
-//! Based on react-aria's `isFocusable.ts` and `isElementVisible.ts`.
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The prevent-focus attribute is `data-leptonic-prevent-focus` (react-aria:
+//   `data-react-aria-prevent-focus`), as leptonic's other marker attributes
+//   (`data-leptonic-top-layer`).
+//
+// ## DIFFERENT BEHAVIOR
+// - `is_tabbable` also rejects a negative `tabIndex` other than -1 (e.g. `tabindex="-2"`), which
+//   the browser never tabs to. React-aria's selector only excludes `tabindex="-1"`.
+//
+// =============================================================================
 
 use js_sys::Function;
 use wasm_bindgen::{JsCast, JsValue};
@@ -77,59 +93,41 @@ pub fn is_inert(element: &web_sys::Element) -> bool {
     false
 }
 
-/// Check if an element is visible (not hidden via CSS or attributes).
-///
-/// Handles both `HTMLElement` and `SVGElement` types. Elements that are neither
-/// (e.g., `MathMLElement`) are considered not visible (matching react-aria).
-///
-/// Prefers `checkVisibility()` when available (modern browsers), falling back
-/// to a recursive ancestor walk checking `display` and `visibility` CSS properties
-/// plus the `hidden` HTML attribute.
-///
-/// Inline style properties are checked first as an optimization — if the element's
-/// own `style.display` is `"none"` or `style.visibility` is `"hidden"`, we can
-/// return `false` immediately without the more expensive `checkVisibility()` call
-/// or computed style walk.
-///
-/// Based on react-aria's `isElementVisible()` from `isElementVisible.ts`.
+/// The attribute that keeps focus walks (`FocusScope`, `FocusManager`, grid cell child focus, ...)
+/// away from an element and its descendants, although they are focusable: e.g. a hidden `<select>`
+/// for form autofill, or a tree row's expand button (react-aria's `data-react-aria-prevent-focus`).
+pub const PREVENT_FOCUS_ATTRIBUTE: &str = "data-leptonic-prevent-focus";
+
+/// The [`PREVENT_FOCUS_ATTRIBUTE`] as an attribute to spread onto an element.
+pub type PreventFocusAttr =
+    leptos::tachys::html::attribute::custom::CustomAttr<&'static str, &'static str>;
+
+/// The [`PREVENT_FOCUS_ATTRIBUTE`], to spread onto an element.
+pub fn prevent_focus_attr() -> PreventFocusAttr {
+    leptos::tachys::html::attribute::custom::custom_attribute(PREVENT_FOCUS_ATTRIBUTE, "true")
+}
+
+/// Whether an element is visible (react-aria's `isElementVisible`): not hidden by CSS, the
+/// `hidden` attribute or a closed `<details>`, and not inside a [`PREVENT_FOCUS_ATTRIBUTE`]
+/// subtree. Uses `checkVisibility()` where available, else walks the ancestors.
 pub fn is_element_visible(element: &web_sys::Element) -> bool {
-    // Get inline style from HTMLElement or SVGElement. Elements that are neither
-    // (matching react-aria's `instanceof HTMLElement || instanceof SVGElement` check)
-    // are considered not visible.
-    let style = if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
-        html_el.style()
-    } else if let Some(svg_el) = element.dyn_ref::<web_sys::SvgElement>() {
-        svg_el.style()
-    } else {
-        return false;
-    };
-
-    // Fast-path: check inline style properties before anything else.
-    let inline_display = style.get_property_value("display").unwrap_or_default();
-    if inline_display == "none" {
-        return false;
-    }
-    let inline_visibility = style.get_property_value("visibility").unwrap_or_default();
-    if inline_visibility == "hidden" || inline_visibility == "collapse" {
-        return false;
-    }
-
-    // Try `checkVisibility()` (available in modern browsers).
-    // Cache whether the method exists to avoid repeated Reflect::get lookups.
     if has_check_visibility()
         && let Ok(check_visibility) = js_sys::Reflect::get(element, &"checkVisibility".into())
         && check_visibility.is_function()
     {
         let fun = Function::from(check_visibility);
-
         let options = js_sys::Object::new();
         let _ = js_sys::Reflect::set(&options, &"visibilityProperty".into(), &true.into());
         if let Ok(result) = js_sys::Reflect::apply(&fun, element, &js_sys::Array::of1(&options)) {
-            return result.as_bool().unwrap_or(true);
+            return result.as_bool().unwrap_or(true)
+                && element
+                    .closest(&format!("[{PREVENT_FOCUS_ATTRIBUTE}]"))
+                    .ok()
+                    .flatten()
+                    .is_none();
         }
     }
 
-    // Fallback: recursive ancestor walk.
     is_element_visible_fallback(element, None)
 }
 
@@ -165,35 +163,44 @@ fn is_element_visible_fallback(
     element: &web_sys::Element,
     child_element: Option<&web_sys::Element>,
 ) -> bool {
+    is_style_visible(element)
+        && is_attribute_visible(element, child_element)
+        && element
+            .parent_element()
+            .is_none_or(|parent| is_element_visible_fallback(&parent, Some(element)))
+}
+
+/// Whether the element's inline and computed styles show it (react-aria's `isStyleVisible`).
+/// Elements that are neither HTML nor SVG elements (e.g. MathML) count as invisible.
+fn is_style_visible(element: &web_sys::Element) -> bool {
+    let style = if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
+        html_el.style()
+    } else if let Some(svg_el) = element.dyn_ref::<web_sys::SvgElement>() {
+        svg_el.style()
+    } else {
+        return false;
+    };
+    let is_visible = |display: &str, visibility: &str| {
+        display != "none" && visibility != "hidden" && visibility != "collapse"
+    };
+    if !is_visible(
+        &style.get_property_value("display").unwrap_or_default(),
+        &style.get_property_value("visibility").unwrap_or_default(),
+    ) {
+        return false;
+    }
     let Some(window) = element.owner_document().and_then(|d| d.default_view()) else {
         return true;
     };
-
-    // Check attribute-based visibility (hidden attribute, <details>/<summary>).
-    if !is_attribute_visible(element, child_element) {
-        return false;
+    match window.get_computed_style(element) {
+        Ok(Some(computed)) => is_visible(
+            &computed.get_property_value("display").unwrap_or_default(),
+            &computed
+                .get_property_value("visibility")
+                .unwrap_or_default(),
+        ),
+        _ => true,
     }
-
-    // Check computed style. `getComputedStyle` works on any Element (HTML or SVG).
-    if let Ok(Some(style)) = window.get_computed_style(element) {
-        if let Ok(display) = style.get_property_value("display")
-            && display == "none"
-        {
-            return false;
-        }
-        if let Ok(visibility) = style.get_property_value("visibility")
-            && (visibility == "hidden" || visibility == "collapse")
-        {
-            return false;
-        }
-    }
-
-    // Recurse into parent.
-    if let Some(parent) = element.parent_element() {
-        return is_element_visible_fallback(&parent, Some(element));
-    }
-
-    true
 }
 
 /// Check attribute-based visibility for a single element.
@@ -205,7 +212,8 @@ fn is_attribute_visible(
     element: &web_sys::Element,
     child_element: Option<&web_sys::Element>,
 ) -> bool {
-    if element.has_attribute("hidden") {
+    // The hidden `<select>` and the like, which focus walks skip.
+    if element.has_attribute("hidden") || element.has_attribute(PREVENT_FOCUS_ATTRIBUTE) {
         return false;
     }
 

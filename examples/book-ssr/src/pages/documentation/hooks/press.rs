@@ -160,7 +160,8 @@ pub fn PageUsePress() -> impl IntoView {
                     "presses that leave the element and come back still complete, screen reader clicks are detected as "
                     <Code inline=true>"Virtual"</Code>" presses, text selection is suppressed while pressing, and browser "
                     "quirks (Safari not cancelling presses on drag, iOS pointer capture, keys stuck after "<Keys keys="Meta"/>
-                    " shortcuts on macOS) are handled."
+                    " shortcuts on macOS) are handled. Dragging something that starts inside the element (a link, an image, "
+                    "selected text) cancels the press."
                 </p>
             </Section>
 
@@ -253,6 +254,10 @@ pub fn PageUsePress() -> impl IntoView {
                         <Code inline=true>"Keyboard"</Code>" and the key in "<Code inline=true>"key"</Code>"."
                     </KeyRow>
                 </KeyboardTable>
+                <p>
+                    "The hook listens for the key\u{2019}s release on the document, so a keyboard press ends even when a "
+                    <Code inline=true>"keyup"</Code>" handler inside the element stops the event."
+                </p>
             </Section>
 
             <SeeAlso>

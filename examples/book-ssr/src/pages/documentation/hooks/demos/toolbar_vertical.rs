@@ -5,7 +5,7 @@ use leptos::prelude::*;
 pub fn ToolbarVerticalDemo() -> impl IntoView {
     let toolbar = use_toolbar(UseToolbarInput {
         aria_label: "File".into(),
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         ..UseToolbarInput::default()
     });
     let last_action = RwSignal::new(None::<&'static str>);

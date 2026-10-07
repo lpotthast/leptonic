@@ -1,3 +1,4 @@
+// No upstream: `use_global_shortcuts` is a leptonic addition.
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -96,6 +97,8 @@ impl BrowserTest<str> for GlobalShortcutsTests {
         // "Ctrl" shown, "Control" read (visually hidden).
         assert_that!(texts).is_equal_to(vec!["Ctrl\nControl".to_owned(), "K".to_owned()]);
         assert_that!(keys.find_all(By::Css("[data-separator]")).await?.len()).is_equal_to(1);
+        // Left to right in right-to-left text too (react-aria-components' `Keyboard`).
+        assert_that!(keys.attr("dir").await?).is_equal_to(Some("ltr".to_owned()));
 
         // Literal keys: as given, on every platform.
         let literal = page.element("test-gs-literal").await?;

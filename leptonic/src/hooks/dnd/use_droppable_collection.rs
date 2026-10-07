@@ -2,7 +2,6 @@
 use std::{collections::HashSet, rc::Rc, sync::Arc};
 
 use leptos::prelude::*;
-use send_wrapper::SendWrapper;
 
 use super::{
     drag_manager::{self, DragTarget, DropTargetOptions},
@@ -12,7 +11,8 @@ use super::{
         DragType, DragTypes, DropActivateEvent, DropEvent, DropItem, DropOperation, DropPosition,
         DropTarget, DroppableCollectionActivateEvent, DroppableCollectionDropEvent,
         DroppableCollectionInsertDropEvent, DroppableCollectionOnItemDropEvent,
-        DroppableCollectionReorderEvent, DroppableCollectionRootDropEvent, ItemDropTarget,
+        DroppableCollectionReorderEvent, DroppableCollectionRootDropEvent, DropTargetKeyDownEvent,
+        ItemDropTarget,
     },
     use_auto_scroll::use_auto_scroll,
     use_drop::{DropOperationPointQuery, UseDropInput, UseDropProps, UseDropReturn, use_drop},
@@ -45,10 +45,17 @@ use crate::{
 //   into it). Items and drop indicators get the collection through `DroppableCollectionData`
 //   (react-aria: a `WeakMap` keyed by the state).
 // - Drop handlers run synchronously (react-aria awaits each of them).
+// - `on_key_down` gets a `DropTargetKeyDownEvent` (react-aria: the `KeyboardEvent`).
+//
+// ## BEHAVIOR DIFFERENCES
+// - The default drop handling filters dropped items by `accepted_drag_types` with `DragTypes`,
+//   so wildcards (`image/*`, `*/*`) work at drop time as they do while dragging; react-aria
+//   compares the items' types exactly there and drops everything a wildcard accepted.
 //
 // ## OMITTED FEATURES
-// - Expanded-parent handling after drops on tree items (`expandedKeys` on the collection):
-//   trees are grid lists.
+// - Expanded-parent handling after drops on tree items (`expandedKeys` on the collection): no
+//   tree collection takes drops yet (tree grid lists and tree tables come with DnD on the
+//   collection atoms).
 //
 // =============================================================================
 
@@ -74,7 +81,7 @@ pub struct UseDroppableCollectionInput {
     /// The drop target at a point (native drags).
     pub drop_target_delegate: Arc<dyn DropTargetDelegate>,
     /// Called with key presses during keyboard drags (after the collection handled them).
-    pub on_key_down: Option<Callback<SendWrapper<web_sys::KeyboardEvent>>>,
+    pub on_key_down: Option<Callback<DropTargetKeyDownEvent>>,
 }
 
 /// Return value of [`use_droppable_collection`].
@@ -454,7 +461,7 @@ fn keyboard_drop_target(
     keyboard_delegate: Signal<Arc<dyn KeyboardDelegate>>,
     rtl: bool,
     on_drop: impl Fn(DropEvent, DropTarget) + Copy + 'static,
-    on_key_down: Option<Callback<SendWrapper<web_sys::KeyboardEvent>>>,
+    on_key_down: Option<Callback<DropTargetKeyDownEvent>>,
 ) -> DropTargetOptions {
     let state = *state;
     let collection_element = element.clone();
@@ -697,7 +704,7 @@ fn keyboard_drop_target(
             _ => {}
         }
         if let Some(on_key_down) = on_key_down {
-            on_key_down.run(SendWrapper::new(e.clone()));
+            on_key_down.run(DropTargetKeyDownEvent::new(e));
         }
     });
 

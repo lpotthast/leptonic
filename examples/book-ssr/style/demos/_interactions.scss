@@ -57,7 +57,7 @@
     }
 }
 
-// use_move demos. The handle's `left`/`top` are set from Rust, `data-moving` from the hook's `is_moving`.
+// The use_move demo. The handle's `left`/`top` are set from Rust, `data-moving` from the demo's move callbacks.
 .demo-move-area {
     position: relative;
     width: 100%;
@@ -68,12 +68,6 @@
     border-radius: var(--book-radius-m);
     background: var(--book-surface-color-raised);
 }
-
-.demo-move-area-short { height: 4em; }
-
-.demo-move-area-medium { height: 8em; }
-
-.demo-move-area-clickable { cursor: crosshair; }
 
 .demo-move-handle {
     position: absolute;
@@ -97,25 +91,6 @@
         outline-offset: 2px;
     }
 }
-
-.demo-move-handle-small { padding: var(--book-space-xs) var(--book-space-s); }
-
-.demo-move-handle-horizontal { cursor: ew-resize; }
-
-.demo-move-handle-vertical { cursor: ns-resize; }
-
-.demo-move-columns {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--book-space-m);
-}
-
-.demo-move-column {
-    flex: 1;
-    min-width: 200px;
-}
-
-.demo-move-presets { flex-wrap: wrap; }
 
 // Focusable element receiving key presses in the use_keyboard demos.
 .demo-keyboard-target {
@@ -161,3 +136,6 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
+
+// The message field of the use_global_shortcuts demo with its Send button, aligned at the bottom.
+.demo-message-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--book-space-m); }

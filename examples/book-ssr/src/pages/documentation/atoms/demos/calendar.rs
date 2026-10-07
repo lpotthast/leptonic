@@ -1,12 +1,13 @@
 use leptonic::{
-    atoms::calendar::{
-        Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
-        CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
-        CalendarNextButton, CalendarPreviousButton, CalendarWeek,
+    atoms::{
+        calendar::{
+            Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
+            CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
+            CalendarNextButton, CalendarPreviousButton, CalendarWeek,
+        },
+        checkbox::Checkbox,
     },
-    components::prelude::*,
     jiff::civil::{Date, Weekday, date},
-    prelude::icondata,
 };
 use leptos::prelude::*;
 
@@ -36,11 +37,11 @@ pub fn AtomCalendarDemo() -> impl IntoView {
         >
             <header class="demo-calendar-header">
                 <CalendarPreviousButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronLeft/>
+                    <span aria-hidden="true">"\u{2039}"</span>
                 </CalendarPreviousButton>
                 <CalendarHeading classes="demo-calendar-title"/>
                 <CalendarNextButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronRight/>
+                    <span aria-hidden="true">"\u{203a}"</span>
                 </CalendarNextButton>
             </header>
             <CalendarGrid classes="demo-calendar-grid">
@@ -67,8 +68,14 @@ pub fn AtomCalendarDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </Checkbox>
         </div>
     }
 }

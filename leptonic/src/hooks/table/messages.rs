@@ -9,5 +9,6 @@ pub(crate) fn column_size(pixels: f64) -> String {
 
 pub(crate) const RESIZER_DESCRIPTION: &str = "Press Enter to start resizing";
 
-/// The default label of a column resizer (react-aria-components' `tableResizer`).
+/// The default label of a column resizer (react-aria-components' `tableResizer`; the table atom's).
+#[cfg(feature = "atoms")]
 pub(crate) const RESIZER: &str = "Resizer";

@@ -1,18 +1,48 @@
+// Upstream: react-aria-components/src/Modal.tsx @ 99e6102368
 use leptos::{context::Provider, portal::Portal, prelude::*};
 
-use super::{dialog::DialogTriggerContext, focus_scope::FocusScope, press::ClearTriggerContexts};
+use super::{
+    dialog::DialogTriggerContext, dismiss_button::DismissButton, focus_scope::FocusScope,
+    press::ClearTriggerContexts,
+};
 use crate::{
     Out,
     hooks::{
         IntoAttrs, OverlayFocusContain, UseEnterAnimationInput, UseExitAnimationInput,
-        UseModalBackdropInput, UseModalBackdropReturn, UseModalInput, UseModalReturn,
-        UseOverlayAttrs, use_enter_animation, use_exit_animation, use_modal, use_modal_backdrop,
+        UseModalBackdropInput, UseModalBackdropReturn, UseOverlayAttrs, use_enter_animation,
+        use_exit_animation, use_modal_backdrop,
     },
     utils::{
         CapturedElement, classes::Classes, data_attributes::flag,
         default_class::with_default_class, styles::Styles, use_viewport_size::use_viewport_size,
     },
 };
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `ModalBackdrop` is react-aria-components' `ModalOverlay`, `ModalContent` its `Modal`; a
+//   `ModalContent` must be inside a `ModalBackdrop` (react-aria-components' `Modal` renders its
+//   own overlay without one).
+// - The open state comes from a surrounding `DialogTrigger`, or is passed directly: `is_open` +
+//   `set_open` (C4), `default_open`, `on_open_change`.
+// - Render props become `data-entering`/`data-exiting` plus plain children.
+// - `ModalContent` wraps its content in a `FocusScope` (`contain_focus`, `restore_focus`,
+//   `auto_focus`); react-aria-components' `Overlay` does that for the modal. `auto_focus` (off by
+//   default, as there) focuses the first focusable element instead of the dialog.
+//
+// ## DIFFERENT BEHAVIOR
+// - No `aria-modal` (as react-aria-components, WebKit bug 211934): the inert content outside
+//   (`use_modal_backdrop`) makes the modal modal.
+//
+// ## OMITTED FEATURES
+// - `UNSTABLE_portalContainer`, `UNSTABLE_deferUntilEntered`, `onEnter`/`onExit` props.
+// - Deferring the reveal until an on-screen keyboard opened by an auto-focused input finished
+//   its transition (`runAfterKeyboard`): leptonic doesn't track the on-screen keyboard yet.
+//
+// =============================================================================
 
 /// Context provided by [`ModalBackdrop`] for [`ModalContent`].
 #[derive(Clone, Copy)]
@@ -21,6 +51,10 @@ struct ModalBackdropContext {
     /// The modal element, whose exit animations the backdrop waits for.
     modal: CapturedElement,
     is_exiting: Signal<bool>,
+    /// Whether interacting outside closes the modal: then it gets a dismiss button for screen
+    /// reader users.
+    is_dismissable: Signal<bool>,
+    close: Callback<()>,
 }
 
 /// Backdrop overlay for a modal. Provides dismiss behavior (Escape key, outside click)
@@ -62,7 +96,8 @@ pub fn ModalBackdrop(
     on_open_change: Option<Callback<bool>>,
 
     /// Whether clicking outside closes the modal. (Escape closes it unless
-    /// `is_keyboard_dismiss_disabled`.)
+    /// `is_keyboard_dismiss_disabled`.) A dismissable modal starts with a visually hidden dismiss
+    /// button for screen reader users.
     #[prop(into, optional)]
     is_dismissable: Signal<bool>,
 
@@ -112,22 +147,6 @@ pub fn ModalBackdrop(
 
     let modal_props_attrs = StoredValue::new(modal_props.into_attrs());
 
-    // As react-aria-components' `ModalOverlay`: the visual viewport's and the page's size, for
-    // styling (e.g. a backdrop covering the page, a modal fitting above the on-screen keyboard).
-    let viewport = use_viewport_size();
-    let size_styles = move || {
-        let viewport = viewport.get();
-        let page = page_size();
-        Styles::new()
-            .add_unchecked("--visual-viewport-width", format!("{}px", viewport.width))
-            .add_unchecked("--visual-viewport-height", format!("{}px", viewport.height))
-            .add_optional_unchecked("--page-width", page.map(|(width, _)| format!("{width}px")))
-            .add_optional_unchecked(
-                "--page-height",
-                page.map(|(_, height)| format!("{height}px")),
-            )
-    };
-
     // Store children, classes, styles in StoredValue (Copy) so Show's Fn closure can call it repeatedly.
     let children = StoredValue::new(children);
     let classes = StoredValue::new(classes);
@@ -136,65 +155,102 @@ pub fn ModalBackdrop(
     // The context reaches only this backdrop's content: with several backdrops side by side, each
     // `ModalContent` gets its own backdrop's props.
     view! {
-            <Provider value=ModalBackdropContext {
-                modal_props_attrs,
-                modal,
-                is_exiting,
-            }>
-                // No portal container while closed: a modal would make it inert.
-                <Show when=move || is_open.get() || is_exiting.get()>
-                    {
-                        // Per opening: the entry of this opening's element.
-                        let entering = CapturedElement::new();
-                        let is_entering = use_enter_animation(UseEnterAnimationInput {
-    element: entering,
-    is_ready: Signal::stored(true),
-    on_enter: None,
-    })
-                            .is_entering;
-                        view! {
-                    <Portal>
-                        <div
-                            {..backdrop.attr().chain(entering.attr())}
-                            class=classes.get_value().add("leptonic-modal-backdrop")
-                            style=move || size_styles().merge(styles.get_value())
-                            data-entering=flag(is_entering)
-                            data-exiting=flag(is_exiting)
-                        >
-                            // Pressing in the modal must not toggle it through the trigger's responder.
-                            // A dialog inside switches on this modal's containment (which it has
-                            // anyway), not that of an overlay around it.
-                            <ClearTriggerContexts>
-                                <Provider value=OverlayFocusContain::new()>{(children.get_value())()}</Provider>
-                            </ClearTriggerContexts>
-                        </div>
-                    </Portal>
-                        }
+        <Provider value=ModalBackdropContext {
+            modal_props_attrs,
+            modal,
+            is_exiting,
+            is_dismissable,
+            close: Callback::new(move |()| state.close()),
+        }>
+            // No portal container while closed: a modal would make it inert.
+            <Show when=move || is_open.get() || is_exiting.get()>
+                {
+                    // Per opening: the entry of this opening's element.
+                    let entering = CapturedElement::new();
+                    let is_entering = use_enter_animation(UseEnterAnimationInput {
+                        element: entering,
+                        is_ready: Signal::stored(true),
+                        on_enter: None,
+                    })
+                    .is_entering;
+                    // As react-aria-components' `ModalOverlay`: the visual viewport's and the
+                    // page's size, for styling (e.g. a backdrop covering the page, a modal
+                    // fitting above the on-screen keyboard). Followed while open only.
+                    let viewport = use_viewport_size();
+                    let size_styles = move || {
+                        let viewport = viewport.get();
+                        let page = page_size();
+                        Styles::new()
+                            .add_unchecked(
+                                "--visual-viewport-width",
+                                format!("{}px", viewport.width),
+                            )
+                            .add_unchecked(
+                                "--visual-viewport-height",
+                                format!("{}px", viewport.height),
+                            )
+                            .add_optional_unchecked(
+                                "--page-width",
+                                page.map(|(width, _)| format!("{width}px")),
+                            )
+                            .add_optional_unchecked(
+                                "--page-height",
+                                page.map(|(_, height)| format!("{height}px")),
+                            )
+                    };
+                    view! {
+                        <Portal>
+                            <div
+                                {..backdrop.attr().chain(entering.attr())}
+                                class=classes.get_value()
+                                style=move || size_styles().merge(styles.get_value())
+                                data-entering=flag(is_entering)
+                                data-exiting=flag(is_exiting)
+                            >
+                                // Pressing in the modal must not toggle it through the trigger's
+                                // responder. A dialog inside switches on this modal's containment
+                                // (which it has anyway), not that of an overlay around it.
+                                <ClearTriggerContexts>
+                                    <Provider value=OverlayFocusContain::new()>
+                                        {(children.get_value())()}
+                                    </Provider>
+                                </ClearTriggerContexts>
+                            </div>
+                        </Portal>
                     }
-                </Show>
-            </Provider>
-        }
+                }
+            </Show>
+        </Provider>
+    }
 }
 
-/// The modal panel. Wraps children with [`FocusScope`] for focus trapping
-/// and applies `aria-modal` via `use_modal`.
+/// The modal panel. Wraps children with [`FocusScope`] for focus trapping and restoring. The
+/// content outside is inert while it is open (its `ModalBackdrop`), which makes it modal; like
+/// react-aria-components, it sets no `aria-modal`. Put a [`Dialog`](super::dialog::Dialog) in it:
+/// the dialog takes the focus when the modal opens. In a dismissable [`ModalBackdrop`], it starts
+/// with a visually hidden [`DismissButton`] for screen reader users who can't press Escape
+/// (VoiceOver on iOS).
 ///
 /// Must be a child of [`ModalBackdrop`].
+///
+/// Data attributes: `data-entering`, `data-exiting`.
 ///
 /// Default class: `leptonic-ModalContent`.
 #[component]
 pub fn ModalContent(
     /// Whether to trap focus within the modal.
-    #[prop(default = true)]
-    contain_focus: bool,
+    #[prop(into, default = Signal::stored(true))]
+    contain_focus: Signal<bool>,
 
-    /// Whether to restore focus to the previously focused element on close.
-    #[prop(default = true)]
-    restore_focus: bool,
+    /// Whether to restore focus to the previously focused element on close. Read when the modal
+    /// opens.
+    #[prop(into, default = Signal::stored(true))]
+    restore_focus: Signal<bool>,
 
-    /// Whether to auto-focus the first focusable element.
-    #[prop(default = true)]
-    auto_focus: bool,
+    /// Whether to focus the first focusable element when the modal opens, instead of the dialog
+    /// inside (react-aria-components: the dialog). Read when the modal opens. Default: `false`.
+    #[prop(into, optional)]
+    auto_focus: Signal<bool>,
 
     #[prop(into, optional)] classes: Classes,
 
@@ -205,7 +261,6 @@ pub fn ModalContent(
     let classes = with_default_class("leptonic-ModalContent", classes);
     let ctx = expect_context::<ModalBackdropContext>();
 
-    let UseModalReturn { modal_props } = use_modal(UseModalInput { is_disabled: false });
     let entering = CapturedElement::new();
     let is_entering = use_enter_animation(UseEnterAnimationInput {
         element: entering,
@@ -213,23 +268,24 @@ pub fn ModalContent(
         on_enter: None,
     })
     .is_entering;
+    let close = ctx.close;
 
     view! {
         <FocusScope
             // Not while exiting: the page is usable again.
-            contain=Signal::derive(move || contain_focus && !ctx.is_exiting.get())
-            restore_focus=restore_focus
-            auto_focus=auto_focus
+            contain=Signal::derive(move || contain_focus.get() && !ctx.is_exiting.get())
+            restore_focus=restore_focus.get_untracked()
+            auto_focus=auto_focus.get_untracked()
         >
             <div
                 {..ctx.modal_props_attrs.get_value()}
-                {..modal_props.into_attrs()}
                 {..ctx.modal.attr().chain(entering.attr())}
                 class=classes
                 style=styles
                 data-entering=flag(is_entering)
                 data-exiting=flag(ctx.is_exiting)
             >
+                {move || ctx.is_dismissable.get().then(|| view! { <DismissButton on_dismiss=close /> })}
                 {children()}
             </div>
         </FocusScope>

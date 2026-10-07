@@ -8,7 +8,7 @@ use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 
 use super::use_form_validation_state::{
-    UseFormValidationStateReturn, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
+    FormValidationState, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
 };
 use crate::{
     hooks::focus::use_focus_visible::{Modality, set_modality},
@@ -36,7 +36,7 @@ pub struct UseFormValidationInput {
     /// The `<input>`, `<textarea>` or `<select>` holding the value.
     pub element: CapturedElement,
     /// The state from [`use_form_validation_state`](super::use_form_validation_state::use_form_validation_state).
-    pub state: UseFormValidationStateReturn,
+    pub state: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     /// Focuses the field when it is the form's first invalid field (default: focuses `element`),
     /// for fields whose focusable element isn't the validated one.
@@ -87,7 +87,7 @@ pub fn use_form_validation(input: UseFormValidationInput) {
             }
 
             if !realtime.is_invalid {
-                state.update_validation.run(field.native_validity());
+                state.update_validation(field.native_validity());
             }
         };
         Effect::new(move |_| {
@@ -116,7 +116,7 @@ pub fn use_form_validation(input: UseFormValidationInput) {
                 // Only commit when not already showing an error: this keeps server errors the
                 // user didn't fix.
                 if !state.display_validation.get_untracked().is_invalid {
-                    state.commit_validation.run(());
+                    state.commit_validation();
                 }
                 // Focus the form's first invalid field, unless the event's default was prevented.
                 let is_first_invalid = Validatable::of(&el)
@@ -142,11 +142,11 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         let listeners = (
             listen(&el, "invalid", false, on_invalid),
             listen(&el, "change", false, move |_| {
-                state.commit_validation.run(());
+                state.commit_validation();
             }),
             form.map(|form| {
                 listen(&form, "reset", false, move |_| {
-                    state.reset_validation.run(());
+                    state.reset_validation();
                 })
             }),
         );

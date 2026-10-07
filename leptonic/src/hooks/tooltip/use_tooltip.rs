@@ -1,5 +1,6 @@
-// Upstream: react-aria/src/tooltip/useTooltip.ts @ 6f664fe911
+// Upstream: react-aria/src/tooltip/useTooltip.ts @ 99e6102368
 use leptos::{
+    attr::{self, Attr},
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -12,47 +13,41 @@ use crate::{
         IntoAttrs,
         interactions::use_hover::{UseHoverInput, use_hover},
     },
-    utils::EventHandler,
+    utils::{EventHandler, aria::AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tooltip/useTooltip.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## LEPTOS-SPECIFIC ADAPTATIONS
+// ## API DIFFERENCES
+// - The optional state goes into the input (C8). DOM and labelling props aren't passed through:
+//   set them on the element.
+// - `is_disabled` (an addition) stops hovering the tooltip from keeping it open.
 //
-// - Accepts `TooltipTriggerState` directly instead of separate
-//   `on_open`/`on_close` callbacks, enabling the tooltip to participate in
-//   the warmup/cooldown system when hovered.
-//
+// =============================================================================
 
 /// Input parameters for the `use_tooltip` hook.
-#[derive(Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseTooltipInput {
-    /// Whether the tooltip is disabled.
+    /// Whether hovering the tooltip no longer keeps it open. Default: `false`.
     pub is_disabled: Signal<bool>,
-
-    /// Tooltip trigger state. When provided, hovering the tooltip itself
-    /// keeps it open (calls `state.open(TooltipTiming::Immediate)` on hover start and
-    /// `state.close(TooltipTiming::Delayed)` on hover end).
+    /// The tooltip trigger's state. With it, hovering the tooltip itself keeps it open (it opens
+    /// right away on hover start and closes after the close delay on hover end). Default: none.
     pub state: Option<TooltipTriggerState>,
-
-    /// Called when the tooltip should open. Used when `state` is `None`.
-    pub on_open: Option<Callback<()>>,
-
-    /// Called when the tooltip should close. Used when `state` is `None`.
-    pub on_close: Option<Callback<()>>,
 }
 
 /// The return value of the `use_tooltip` hook.
 #[derive(Debug)]
 pub struct UseTooltipReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
+    /// Props for the tooltip element. Call `.into_attrs()` for view spreading.
     pub props: UseTooltipProps,
 }
 
-/// Props from `use_tooltip` that can be extracted and merged programmatically.
+/// Props for the tooltip element.
 #[derive(Debug)]
 pub struct UseTooltipProps {
+    pub role: AriaRole,
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
@@ -62,6 +57,7 @@ impl IntoAttrs for UseTooltipProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
+            Attr(attr::Role, self.role),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
         )
@@ -70,78 +66,50 @@ impl IntoAttrs for UseTooltipProps {
 
 /// These attributes must be spread onto the tooltip element.
 pub type UseTooltipAttrs = (
+    Attr<attr::Role, AriaRole>,
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
-/// Provides the accessibility implementation for a Tooltip component.
-///
-/// Tooltips display contextual help or information about an element when it is hovered.
-/// The tooltip should have `role="tooltip"` set on the actual tooltip content element.
-///
-/// When `state` is provided, hovering over the tooltip itself keeps it open
-/// (participates in the warmup/cooldown system).
+/// Provides the accessibility implementation for a tooltip: `role="tooltip"`, and with the
+/// trigger's state, hovering the tooltip keeps it open (it takes part in the warm-up and cooldown).
+/// Give the element the id from `use_tooltip_trigger`'s `tooltip_props`, which describes the
+/// trigger.
 ///
 /// # Example
 ///
 /// ```ignore
 /// let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput::default());
-/// let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
 /// let tooltip = use_tooltip(UseTooltipInput {
-///     disabled: Signal::derive(|| false),
 ///     state: Some(state),
-///     on_open: None,
-///     on_close: None,
+///     ..UseTooltipInput::default()
 /// });
 ///
 /// view! {
-///     <div {..tooltip.props.into_attrs()} role="tooltip">
-///         "Tooltip content"
-///     </div>
+///     <div id=tooltip_id {..tooltip.props.into_attrs()}>"Tooltip content"</div>
 /// }
 /// ```
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
-    let UseTooltipInput {
-        is_disabled: disabled,
-        state,
-        on_open,
-        on_close,
-    } = input;
-
-    // Determine hover callbacks: prefer state-based, fall back to direct callbacks.
-    let on_hover_start: Option<Callback<()>> = if let Some(st) = state {
-        Some(Callback::new(move |_| {
-            st.open(TooltipTiming::Immediate);
-        }))
-    } else {
-        on_open
-    };
-
-    let on_hover_end: Option<Callback<()>> = if let Some(st) = state {
-        Some(Callback::new(move |_| {
-            st.close(TooltipTiming::Delayed);
-        }))
-    } else {
-        on_close
-    };
+    let UseTooltipInput { is_disabled, state } = input;
 
     let hover = use_hover(UseHoverInput {
-        is_disabled: disabled,
-        on_hover_start: on_hover_start.map(|cb| {
+        is_disabled,
+        on_hover_start: state.map(|state| {
             Callback::new(move |_| {
-                cb.run(());
+                state.open(TooltipTiming::Immediate);
             })
         }),
-        on_hover_end: on_hover_end.map(|cb| {
+        on_hover_end: state.map(|state| {
             Callback::new(move |_| {
-                cb.run(());
+                state.close(TooltipTiming::Delayed);
             })
         }),
-        on_hover_change: None,
+        ..UseHoverInput::default()
     });
 
     UseTooltipReturn {
         props: UseTooltipProps {
+            role: AriaRole::Tooltip,
             on_pointerenter: hover.props.on_pointerenter,
             on_pointerleave: hover.props.on_pointerleave,
         },

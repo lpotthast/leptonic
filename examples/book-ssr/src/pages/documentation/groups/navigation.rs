@@ -31,9 +31,9 @@ pub fn PageNavigation() -> impl IntoView {
                     <li>
                         <Link href=routes::doc::Link.materialize()>"Link"</Link>" navigates to pages of your app and "
                         "other sites; "<Link href=format!("{}#anchorlink", routes::doc::link::Atom.materialize())>"AnchorLink"</Link>
-                        ", part of the same concept, scrolls to a section of the current page, and "
-                        <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())>"LinkButton"</Link>
-                        " is a link that looks like a button."
+                        ", part of the same concept, scrolls to a section of the current page. A link that looks like a "
+                        "button is a "<Link href=format!("{}#links-that-look-like-buttons", routes::doc::link::Atom.materialize())>"Link"</Link>
+                        " with the styles of your buttons."
                     </li>
                     <li>
                         <Link href=routes::doc::Tabs.materialize()>"Tabs"</Link>" and "

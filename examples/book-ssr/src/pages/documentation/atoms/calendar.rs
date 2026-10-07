@@ -424,25 +424,47 @@ pub fn PageAtomCalendar() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes: style them through "<Code inline=true>"classes"</Code>" and the data "
-                    "attributes. For a range, make the selected days a band and round its ends:"
+                    "The atoms bring no styles. Each renders its element with its default class, followed by the "<Code inline=true>"classes"</Code>" you "
+                    "pass: "<Code inline=true>"Calendar"</Code>" and "<Code inline=true>"RangeCalendar"</Code>" a "<Code inline=true>"<div>"</Code>" ("<Code inline=true>"leptonic-Calendar"</Code>", "
+                    <Code inline=true>"leptonic-RangeCalendar"</Code>"), "<Code inline=true>"CalendarHeading"</Code>" an "<Code inline=true>"<h2>"</Code>" ("<Code inline=true>"leptonic-CalendarHeading"</Code>"), "
+                    "the page buttons "<Code inline=true>"<button>"</Code>"s ("<Code inline=true>"leptonic-CalendarPreviousButton"</Code>", "<Code inline=true>"leptonic-CalendarNextButton"</Code>"), "
+                    <Code inline=true>"CalendarGrid"</Code>" a "<Code inline=true>"<table>"</Code>" ("<Code inline=true>"leptonic-CalendarGrid"</Code>") with header cells ("
+                    <Code inline=true>"leptonic-CalendarHeaderCell"</Code>") and weeks ("<Code inline=true>"leptonic-CalendarWeek"</Code>"), "<Code inline=true>"CalendarCell"</Code>" a "
+                    <Code inline=true>"<td>"</Code>" ("<Code inline=true>"leptonic-CalendarCell"</Code>") and "<Code inline=true>"CalendarCellButton"</Code>" the day ("
+                    <Code inline=true>"leptonic-CalendarCellButton"</Code>"). The row around the heading and the page buttons\u{2019} arrows are your own "
+                    "markup (the arrows "<Code inline=true>"aria-hidden"</Code>": the buttons are named \u{201c}Previous\u{201d} and \u{201c}Next\u{201d}). "
+                    "For a range, make the selected days a band and fill its ends; collapse the grid\u{2019}s borders, so that the band "
+                    "has no gaps. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-day { width: 2.5em; height: 2.5em; border-radius: 50%; }
-                        .my-day[data-hovered] { background: var(--surface); }
-                        .my-day[data-today] { font-weight: 700; }
-                        .my-day[data-outside-month], .my-day[data-unavailable] { color: var(--muted); }
-                        .my-day[data-selected] { background: var(--accent); }
-                        .my-day[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .demo-calendar { display: inline-flex; flex-direction: column; gap: 0.5rem; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; }
+                        .demo-calendar-header { display: flex; align-items: center; justify-content: space-between; }
+                        .demo-calendar-title { margin: 0; font-size: 1rem; }
+                        .demo-calendar-nav { width: 1.8em; height: 1.8em; border: none; border-radius: 50%; background: none; font-size: 1.25em; cursor: pointer; }
+                        .demo-calendar-nav[data-hovered] { background: var(--surface); }
+                        .demo-calendar-nav[data-disabled] { color: var(--muted); cursor: default; }
+                        .demo-calendar-nav[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .demo-calendar-grid { border-collapse: collapse; }
+                        .demo-calendar-grid :is(th, td) { padding: 0; text-align: center; }
+                        .demo-calendar-day { display: flex; align-items: center; justify-content: center; width: 2.5em; height: 2.5em; border-radius: 50%; cursor: pointer; }
+                        .demo-calendar-day[data-hovered] { background: var(--surface); }
+                        .demo-calendar-day[data-today] { font-weight: 700; text-decoration: underline; }
+                        .demo-calendar-day:is([data-outside-month], [data-disabled]) { color: var(--muted); cursor: default; }
+                        .demo-calendar-day[data-unavailable] { color: var(--muted); text-decoration: line-through; cursor: not-allowed; }
+                        .demo-calendar-day[data-selected] { background: var(--accent); color: var(--surface); }
+                        .demo-calendar-day[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
 
-                        .my-range .my-day[data-selected] { border-radius: 0; }
-                        .my-range .my-day[data-selection-start] { border-radius: 50% 0 0 50%; }
-                        .my-range .my-day[data-selection-end] { border-radius: 0 50% 50% 0; }
-                        .my-range .my-day[data-selection-start][data-selection-end] { border-radius: 50%; }
+                        .demo-calendar-range .demo-calendar-day[data-selected] { border-radius: 0; background: var(--surface); color: inherit; }
+                        .demo-calendar-range .demo-calendar-day[data-selection-start] { border-radius: 999px 0 0 999px; }
+                        .demo-calendar-range .demo-calendar-day[data-selection-end] { border-radius: 0 999px 999px 0; }
+                        .demo-calendar-range .demo-calendar-day:is([data-selection-start], [data-selection-end]) { background: var(--accent); color: var(--surface); }
                     ")}
                 </Code>
-                <p>"Collapse the grid\u{2019}s borders, so that the band has no gaps."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

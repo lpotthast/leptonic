@@ -29,8 +29,9 @@ pub struct UseDraggableCollectionStateInput {
     /// The data of the dragged items.
     pub get_items: Callback<HashSet<Key>, Vec<DragItem>>,
     pub preview: Option<Callback<Vec<DragItem>, Option<DragPreview>>>,
-    /// The operations drags allow, in order of preference. Defaults to move, copy, link.
-    pub get_allowed_drop_operations: Option<Callback<(), Vec<DropOperation>>>,
+    /// The operations drags allow, in order of preference. `None`: all of them (move, copy,
+    /// link).
+    pub allowed_drop_operations: Option<Signal<Vec<DropOperation>>>,
     pub on_drag_start: Option<Callback<DraggableCollectionStartEvent>>,
     pub on_drag_move: Option<Callback<DraggableCollectionMoveEvent>>,
     pub on_drag_end: Option<Callback<DraggableCollectionEndEvent>>,
@@ -47,7 +48,7 @@ pub struct DraggableCollectionState {
     pub dragging_keys: Signal<HashSet<Key>>,
     pub is_disabled: Signal<bool>,
     pub(crate) preview: Option<Callback<Vec<DragItem>, Option<DragPreview>>>,
-    pub(crate) get_allowed_drop_operations: Option<Callback<(), Vec<DropOperation>>>,
+    pub(crate) allowed_drop_operations: Option<Signal<Vec<DropOperation>>>,
     get_items: Callback<HashSet<Key>, Vec<DragItem>>,
     set_dragged_key: WriteSignal<Option<Key>>,
     set_dragging_keys: WriteSignal<HashSet<Key>>,
@@ -155,7 +156,7 @@ pub fn use_draggable_collection_state(
         list,
         get_items,
         preview,
-        get_allowed_drop_operations,
+        allowed_drop_operations,
         on_drag_start,
         on_drag_move,
         on_drag_end,
@@ -169,7 +170,7 @@ pub fn use_draggable_collection_state(
         dragging_keys: dragging_keys.into(),
         is_disabled,
         preview,
-        get_allowed_drop_operations,
+        allowed_drop_operations,
         get_items,
         set_dragged_key,
         set_dragging_keys,
@@ -223,7 +224,7 @@ mod tests {
                     keys.into_iter().map(DragItem::text).collect()
                 }),
                 preview: None,
-                get_allowed_drop_operations: None,
+                allowed_drop_operations: None,
                 on_drag_start: None,
                 on_drag_move: None,
                 on_drag_end: None,

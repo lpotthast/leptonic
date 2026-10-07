@@ -88,15 +88,21 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atom sets only its "<Code inline=true>"background-color"</Code>" and "
-                    <Code inline=true>"forced-color-adjust: none"</Code>", so Windows high contrast mode keeps the color. Its "
-                    "size and shape are yours:"
+                    "The atom renders a "<Code inline=true>"<div role=\"img\">"</Code>" with the class "<Code inline=true>"leptonic-ColorSwatch"</Code>" and the "<Code inline=true>"classes"</Code>" "
+                    "you pass, and sets only its "<Code inline=true>"background-color"</Code>" and "<Code inline=true>"forced-color-adjust: none"</Code>", so Windows high contrast "
+                    "mode keeps the color. Its size and shape are yours; the demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-swatch { width: 3em; height: 3em; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--border); }
+                        .demo-color-atoms-palette { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; padding: 0; list-style: none; }
+                        .demo-color-atoms-palette-item { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 7em; }
+                        .demo-color-atoms-palette-swatch { width: 3em; height: 3em; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--border); }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

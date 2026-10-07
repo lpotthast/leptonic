@@ -30,6 +30,7 @@ impl BrowserTest<str> for ToastTests {
         programmatic_close(&page).await?;
         remaining_time_after_pause(&page).await?;
         one_at_a_time(&page).await?;
+        focused_toast_after_new_toast(&page).await?;
         page.expect_no_page_errors().await
     }
 }
@@ -282,4 +283,46 @@ async fn wait_for_toast_title(page: &Page<'_>, title: &str) -> Result<(), Report
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
     rootcause::bail!("no toast named {title}")
+}
+
+/// The focused toast is tracked by its key, not its index: a new toast above it doesn't make the
+/// region lose it, so when it closes the focus still moves to a remaining toast ("should move focus
+/// to remaining toast when a toast exits and there are more").
+async fn focused_toast_after_new_toast(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/toast").await?;
+    page.click_element_with_id("test-toast-add").await?;
+    page.click_element_with_id("test-toast-add").await?;
+    page.wait_for_count("[role=alertdialog]", 2).await?;
+    // By keyboard (the focus moves to the next toast in keyboard modality only): schedule the new
+    // toast and the closing, then focus the oldest toast ("Toast 1").
+    page.driver
+        .execute(
+            "document.getElementById('test-toast-add-then-close-oldest').focus()",
+            vec![],
+        )
+        .await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.send_keys_to_active(Key::F6).await?;
+    page.wait_for_focus("region", None).await?;
+    page.press_tab().await?;
+    page.press_tab().await?;
+    page.press_tab().await?;
+    let toasts = page.driver.find_all(By::Css("[role=alertdialog]")).await?;
+    let Some(oldest) = toasts.last().cloned() else {
+        rootcause::bail!("no toasts");
+    };
+    page.wait_for_focus_on(&oldest, "the oldest toast").await?;
+    assert_that!(page.count_matching("[role=alertdialog]").await?)
+        .with_detail_message("the new toast must arrive after the focus moved (test too slow?)")
+        .is_equal_to(2);
+    assert_that!(referenced_text(page, &oldest, "aria-labelledby").await?)
+        .is_equal_to("Toast 1".to_owned());
+
+    // A new toast arrives above; the focus stays on "Toast 1".
+    page.wait_for_count("[role=alertdialog]", 3).await?;
+    page.wait_for_focus_on(&oldest, "the oldest toast").await?;
+    // "Toast 1" closes: the focus moves to a remaining toast instead of being lost.
+    page.wait_for_count("[role=alertdialog]", 2).await?;
+    page.wait_for_focus("alertdialog", None).await?;
+    page.wait_for_text("test-toast-closed", "1").await
 }

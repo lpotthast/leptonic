@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/menu/useMenuItem.ts @ 99e6102368
-use crate::hooks::collections::CloseOnSelect;
 use leptos::{
     attr::{self, Attr},
     ev,
@@ -14,8 +13,9 @@ use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
         collections::{
-            Key, LinkBehavior, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
+            CloseOnSelect, Key, LinkBehavior, SelectionMode, UseSelectableItemAttrs,
+            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
+            use_selectable_item,
         },
         focus::use_focus_visible::{
             Modality, UseFocusVisibleInput, get_modality, set_modality, use_focus_visible,
@@ -28,7 +28,7 @@ use crate::{
     },
     utils::{
         CapturedElement, EventAccessors, EventHandler, SlotProps,
-        aria::{AriaChecked, AriaDisabled, AriaHasPopup, AriaRole},
+        aria::{AriaChecked, AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         pointer_type::PointerType,
         use_slot,
@@ -94,7 +94,7 @@ pub struct UseMenuItemProps {
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_haspopup: Signal<Option<AriaHasPopup>>,
-    pub aria_expanded: Signal<Option<&'static str>>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_controls: Signal<Option<String>>,
     pub item: UseSelectableItemProps,
     pub press: UsePressProps,
@@ -115,7 +115,7 @@ pub type UseMenuItemAttrs = (
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
         Attr<attr::AriaHaspopup, Signal<Option<AriaHasPopup>>>,
-        Attr<attr::AriaExpanded, Signal<Option<&'static str>>>,
+        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
         Attr<attr::AriaControls, Signal<Option<String>>>,
     ),
     UseSelectableItemAttrs,
@@ -299,6 +299,8 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(
             KeyboardShortcuts::new()
+                // The click counts as virtual: the modality is the keyboard's again afterwards
+                // (focus moves into an opened submenu, focus rings show).
                 .on(Shortcut::key(" "), move |e| {
                     interaction.set_value(Some(Interaction::Keyboard { key: " " }));
                     if let Some(target) = click_target(e) {
@@ -308,8 +310,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                 })
                 .on(Shortcut::key("Enter"), move |e| {
                     interaction.set_value(Some(Interaction::Keyboard { key: "Enter" }));
-                    set_modality(Modality::Keyboard);
-                    match click_target(e) {
+                    let outcome = match click_target(e) {
                         // A link navigates by itself on Enter.
                         Some(target) if target.tag_name().eq_ignore_ascii_case("a") => {
                             ShortcutOutcome::Custom {
@@ -322,7 +323,9 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
                             ShortcutOutcome::Handled
                         }
                         None => ShortcutOutcome::Handled,
-                    }
+                    };
+                    set_modality(Modality::Keyboard);
+                    outcome
                 }),
         ),
         ..UseKeyboardInput::default()
@@ -377,7 +380,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
             let is_open = trigger.is_open;
             (
                 trigger.aria_haspopup,
-                Signal::derive(move || Some(if is_open.get() { "true" } else { "false" })),
+                Signal::derive(move || Some(AriaExpanded::from(is_open.get()))),
                 trigger.aria_controls,
             )
         }

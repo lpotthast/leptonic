@@ -5,18 +5,18 @@ use std::{
     sync::Arc,
 };
 
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 
 use crate::{
     Out,
     hooks::{
         IntoAttrs, UseFocusRingInput,
-        collections::{Collection, Key, LayoutDelegate, Rect, Size, use_collection},
+        collections::{Collection, Key, LayoutDelegate, Rect, use_collection},
         use_focus_ring,
         virtualizer::{
-            Layout, LayoutInfo, ListLayout, ListLayoutOptions, ScrollAnchorEdge, ScrollDirection,
-            UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState, use_scroll_view,
-            use_virtualizer_state,
+            ItemSizeChange, Layout, LayoutInfo, ListLayout, ListLayoutOptions, ScrollAnchorEdge,
+            ScrollDirection, UseScrollViewInput, UseVirtualizerStateInput, VirtualizerState,
+            use_scroll_view, use_virtualizer_state,
         },
     },
     utils::{
@@ -65,7 +65,9 @@ pub(crate) struct VirtualizedRoot {
     /// The content box around the items.
     pub(crate) content_styles: StoredValue<Styles>,
     pub(crate) visible: Signal<Vec<LayoutInfo>>,
-    pub(crate) update_item_size: Callback<(Key, Size)>,
+    /// The visible layout infos by key (rows look theirs up on every scroll frame).
+    pub(crate) layout_infos: Memo<HashMap<Key, LayoutInfo>>,
+    pub(crate) update_item_size: Callback<ItemSizeChange>,
     pub(crate) should_observe_item_size: bool,
     /// The wrappers of the rendered items (each with a token identifying the wrapper).
     pub(crate) rendered: StoredValue<HashMap<Key, (Arc<()>, CapturedElement)>>,
@@ -116,26 +118,33 @@ fn create_virtualized<L: Layout>(
             }
         }),
     });
-    let scroll_view = use_scroll_view(
-        UseScrollViewInput {
-            content_size: state.content_size.into(),
-            on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
-            on_size_change: Some(Callback::new(move |size| state.set_size(size))),
-            on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
-            on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
-            scroll_direction: ScrollDirection::Both,
-            allows_window_scrolling: true,
-        },
+    let scroll_view = use_scroll_view(UseScrollViewInput {
         element,
-    );
+        content_size: state.content_size(),
+        on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
+        on_size_change: Some(Callback::new(move |size| state.set_size(size))),
+        on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
+        on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
+        scroll_direction: Signal::stored(ScrollDirection::Both),
+        allows_window_scrolling: Signal::stored(true),
+    });
     scroll_to.set_value(Some(scroll_view.scroll_to));
+    let visible = state.visible();
     let root = VirtualizedRoot {
         layout_delegate: StoredValue::new(state.layout_delegate()),
         scroll_view_styles: StoredValue::new(scroll_view.scroll_view_styles),
         content_styles: StoredValue::new(scroll_view.content_styles),
-        visible: state.visible.into(),
-        update_item_size: Callback::new(move |(key, size): (Key, Size)| {
-            state.update_item_size(&key, size);
+        visible,
+        layout_infos: Memo::new(move |_| {
+            visible.with(|infos| {
+                infos
+                    .iter()
+                    .map(|info| (info.key.clone(), info.clone()))
+                    .collect()
+            })
+        }),
+        update_item_size: Callback::new(move |change: ItemSizeChange| {
+            state.update_item_size(&change.key, change.size);
         }),
         should_observe_item_size,
         rendered: StoredValue::new(HashMap::new()),
@@ -338,7 +347,7 @@ where
             return;
         }
         // Runs again whenever the content changes.
-        state.content_size.track();
+        state.content_size().track();
         if state.is_scrolling().get_untracked() {
             return;
         }
@@ -457,13 +466,23 @@ fn mount_visible_items(
 
     struct Row {
         owner: Owner,
+        /// Keeps the row's batch owner alive (see `batch`).
+        _batch: Owner,
         state: AnyViewState,
         element: CapturedElement,
     }
 
+    /// Rows per batch owner.
+    const ROWS_PER_BATCH: usize = 64;
+
     let Some(parent_owner) = Owner::current() else {
         return;
     };
+    // The rows' owners are children of batch owners (children of the parent), a new one every
+    // `ROWS_PER_BATCH` rows: a dropped owner leaves a dead weak entry in its parent until the
+    // parent is cleaned up, which would be one per row mounted while scrolling. A batch is freed
+    // with its last row, its entries with it; the parent keeps one per batch.
+    let batch = StoredValue::new_local((parent_owner.child(), 0_usize));
     // The rendered rows, and their keys in DOM order.
     let rows = StoredValue::new_local(HashMap::<Key, Row>::new());
     let order = StoredValue::new_local(Vec::<Key>::new());
@@ -530,7 +549,17 @@ fn mount_visible_items(
                     continue;
                 }
                 // Owned by the row (the effect's own owner is disposed on each run).
-                let owner = parent_owner.child();
+                let batch_owner = batch
+                    .try_update_value(|(owner, count)| {
+                        if *count == ROWS_PER_BATCH {
+                            *owner = parent_owner.child();
+                            *count = 0;
+                        }
+                        *count += 1;
+                        owner.clone()
+                    })
+                    .unwrap_or_else(|| parent_owner.clone());
+                let owner = batch_owner.child();
                 let element = owner.with(CapturedElement::new);
                 let render = Arc::clone(&render);
                 let item_key = key.clone();
@@ -551,6 +580,7 @@ fn mount_visible_items(
                     key.clone(),
                     Row {
                         owner,
+                        _batch: batch_owner,
                         state,
                         element,
                     },
@@ -602,20 +632,18 @@ fn VirtualizedItem(
         });
     });
     let key = item_key.clone();
-    let layout_info = Signal::derive(move || {
-        root.visible
-            .with(|infos| infos.iter().find(|info| info.key == key).cloned())
+    let layout_info = Memo::new(move |_| {
+        root.layout_infos
+            .with(|infos| infos.get(&key).cloned())
             .unwrap_or_else(|| LayoutInfo::new(NodeKind::Item, key.clone(), Rect::default()))
     });
-    let styles = use_virtualizer_item(
-        UseVirtualizerItemInput {
-            layout_info,
-            parent: Signal::stored(None),
-            update_item_size: root.update_item_size,
-            should_observe_item_size: root.should_observe_item_size,
-        },
+    let styles = use_virtualizer_item(UseVirtualizerItemInput {
         element,
-    )
+        layout_info: layout_info.into(),
+        parent: Signal::stored(None),
+        update_item_size: root.update_item_size,
+        should_observe_item_size: root.should_observe_item_size,
+    })
     .styles;
     view! {
         <div role="presentation" {..element.attr()} style=move || styles.get()>

@@ -54,9 +54,4 @@ impl FocusVisiblePage<'_> {
         let text = self.read_text_of("test-fv-modality").await?;
         Ok(text.trim().to_string())
     }
-
-    pub async fn read_stored_modality(&self) -> Result<String, Report> {
-        let text = self.read_text_of("test-fv-stored-modality").await?;
-        Ok(text.trim().to_string())
-    }
 }

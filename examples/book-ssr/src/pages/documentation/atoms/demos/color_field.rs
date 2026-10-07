@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::prelude::{ColorChannelField, ColorField, ColorSwatch, Input, Label},
-    components::prelude::Checkbox,
+    atoms::prelude::{Checkbox, ColorChannelField, ColorField, ColorSwatch, Input, Label},
     utils::color::{ColorValue, RGB8, RgbChannel},
 };
 use leptos::prelude::*;
@@ -20,7 +19,7 @@ pub fn ColorFieldAtomDemo() -> impl IntoView {
         .map(|channel| {
             view! {
                 <ColorChannelField channel value=color set_value=color is_disabled=disabled classes="demo-field">
-                    <Label classes="demo-field-label">{RGB8::get_channel_name(channel)}</Label>
+                    <Label classes="demo-field-label">{RGB8::channel_name(channel)}</Label>
                     <Input classes="demo-color-atoms-input"/>
                 </ColorChannelField>
             }
@@ -48,7 +47,10 @@ pub fn ColorFieldAtomDemo() -> impl IntoView {
             {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {c}, {}", c.color_name()))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

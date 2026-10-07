@@ -1,8 +1,8 @@
 use leptonic::{
     atoms::prelude::{
-        ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb, Label,
+        Checkbox, ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb,
+        Label,
     },
-    components::prelude::Checkbox,
     utils::color::{ColorValue, HSL, HslChannel},
 };
 use leptos::prelude::*;
@@ -34,7 +34,7 @@ pub fn ColorSliderAtomDemo() -> impl IntoView {
                 is_disabled=disabled
                 classes="demo-color-atoms-slider"
             >
-                <Label>{HSL::get_channel_name(channel)}</Label>
+                <Label>{HSL::channel_name(channel)}</Label>
                 <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
                 <ColorSliderTrack classes="demo-color-atoms-slider-track">
                     <ColorThumb classes="demo-color-atoms-thumb"/>
@@ -52,7 +52,10 @@ pub fn ColorSliderAtomDemo() -> impl IntoView {
 
         <p class="demo-status">{move || format!("Committed: {}", committed.get().to_css_string())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

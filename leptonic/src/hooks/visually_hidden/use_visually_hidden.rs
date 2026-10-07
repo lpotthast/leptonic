@@ -29,7 +29,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, Default)]
 pub struct UseVisuallyHiddenInput {
     /// Whether the element shows while focus is within it (e.g. a "skip to content" link).
-    pub is_focusable: bool,
+    pub is_focusable: Signal<bool>,
 }
 
 /// Return value of [`use_visually_hidden`].
@@ -39,7 +39,7 @@ pub struct UseVisuallyHiddenReturn {
 }
 
 /// Props for the hidden element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseVisuallyHiddenProps {
     pub style: Signal<Option<&'static str>>,
     pub on_focusin: EventHandler<FocusEvent>,
@@ -69,7 +69,7 @@ impl IntoAttrs for UseVisuallyHiddenProps {
 pub fn use_visually_hidden(input: UseVisuallyHiddenInput) -> UseVisuallyHiddenReturn {
     let UseVisuallyHiddenInput { is_focusable } = input;
     let focus_within = use_focus_within(UseFocusWithinInput {
-        is_disabled: Signal::stored(!is_focusable),
+        is_disabled: Signal::derive(move || !is_focusable.get()),
         ..UseFocusWithinInput::default()
     });
     let is_focused = focus_within.is_focus_within;

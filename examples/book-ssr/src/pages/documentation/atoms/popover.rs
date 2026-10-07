@@ -276,22 +276,35 @@ pub fn PageAtomPopover() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes: style the popover through "<Code inline=true>"classes"</Code>" and the data "
-                    "attributes above. The popover also sets two CSS variables: "<Code inline=true>"--trigger-width"</Code>
+                    "The atoms bring no styles. "<Code inline=true>"Popover"</Code>" renders the class "
+                    <Code inline=true>"leptonic-Popover"</Code>", "<Code inline=true>"OverlayArrow"</Code>" the class "
+                    <Code inline=true>"leptonic-OverlayArrow"</Code>", each followed by the "<Code inline=true>"classes"</Code>
+                    " you pass; target their state with the data attributes above. Positioning and layering come from the "
+                    "atom. The popover also sets two CSS variables: "<Code inline=true>"--trigger-width"</Code>
                     " (the trigger\u{2019}s width, e.g. "<Code inline=true>"min-width: var(--trigger-width)"</Code>
                     " for a popover as wide as its trigger) and "<Code inline=true>"--trigger-anchor-point"</Code>
                     " (the point closest to the trigger, e.g. as "<Code inline=true>"transform-origin"</Code>")."
                 </p>
+                <p>
+                    "The arrow\u{2019}s shape is yours: render it inside "<Code inline=true>"OverlayArrow"</Code>
+                    " (an SVG, or an element drawn with borders as in the demo), give the arrow a fixed size, and turn the "
+                    "shape with "<Code inline=true>"data-placement"</Code>". The book\u{2019}s demos use these rules:"
+                </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-popover { padding: 1em; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-                        .my-arrow path { fill: var(--surface); stroke: var(--border); }
-                        /* The SVG points down, at a trigger below the popover; turn it for the other sides. */
-                        .my-arrow[data-placement="bottom"] svg { transform: rotate(180deg); }
-                        .my-arrow[data-placement="left"] svg { transform: rotate(-90deg); }
-                        .my-arrow[data-placement="right"] svg { transform: rotate(90deg); }
+                        .my-popover { max-width: 300px; padding: 1em; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+                        .my-arrow { display: flex; width: 16px; height: 8px; }
+                        /* A triangle pointing down, at a trigger below the popover; turned for the other sides. */
+                        .my-arrow-shape { border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid var(--surface); }
+                        .my-arrow[data-placement="bottom"] .my-arrow-shape { transform: rotate(180deg); }
+                        .my-arrow[data-placement="left"] .my-arrow-shape { transform: rotate(-90deg); }
+                        .my-arrow[data-placement="right"] .my-arrow-shape { transform: rotate(90deg); }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
 
                 <Section title="Animation">
                     <p>

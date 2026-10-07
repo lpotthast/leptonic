@@ -3,6 +3,26 @@
 //! Formatting date field values with ICU4X: the whole value, and its parts in the locale's
 //! order (`Intl.DateTimeFormat#formatToParts`), from which the segments are made.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## DIFFERENT BEHAVIOR
+// - The options pick an ICU4X field set (react-aria: `Intl.DateTimeFormat` options from
+//   `getFormatOptions`): year, month and day (or month and day, or the day) up to the
+//   granularity's time precision, short (descriptions: long), the time zone's short specific name
+//   unless hidden. ICU4X has no per-field options: leading zeros come from column alignment.
+// - Era stripping: ICU4X adds an era to years before 1000; `Intl`'s numeric years have none
+//   unless asked for, so it is removed (with its separating literal) unless the era shows
+//   (`show_era`: a value before Christ).
+// - `resolve_hour_cycle` finds the locale's hour cycle (h11, h12, h23, h24) by formatting 0:00
+//   and 13:00 (react-aria: `Intl.DateTimeFormat#resolvedOptions().hourCycle`).
+// - The parts are ICU4X's datetime parts mapped to segment types (react-stately's
+//   `TYPE_MAPPING`); numbers are formatted again from the shown value (it may be an invalid date
+//   such as February 30).
+//
+// =============================================================================
+
 use std::fmt;
 
 use icu_datetime::{

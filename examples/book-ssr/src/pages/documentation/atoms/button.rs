@@ -91,11 +91,11 @@ pub fn PageAtomButton() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::{
                                 atoms::prelude as atoms,
-                                components::prelude::Icon,
                                 prelude::icondata,
                                 utils::aria::{AriaCurrent, AriaExpanded},
                             };
                             use leptos::prelude::*;
+                            use leptos_icons::Icon;
 
                             let is_open = RwSignal::new(false);
                             let is_closed = RwSignal::new(false);
@@ -168,20 +168,33 @@ pub fn PageAtomButton() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atom brings no styles. Pass "<Code inline=true>"classes"</Code>" and target its state with the data "
-                    "attributes. Unlike "<Code inline=true>":hover"</Code>" and "<Code inline=true>":active"</Code>", they "
-                    "ignore the emulated mouse events after a touch, and "<Code inline=true>"data-pressed"</Code>" also follows "
-                    <Keys keys="Enter"/>" and "<Keys keys="Space"/>":"
+                    "The atom brings no styles. Its "<Code inline=true>"<button>"</Code>" has the default class "
+                    <Code inline=true>"leptonic-Button"</Code>"; pass "<Code inline=true>"classes"</Code>" to add your own, "
+                    "and render the content (text, an icon) as its children. Target the state with the data attributes. "
+                    "Unlike "<Code inline=true>":hover"</Code>" and "<Code inline=true>":active"</Code>", they ignore the "
+                    "emulated mouse events after a touch, and "<Code inline=true>"data-pressed"</Code>" also follows "
+                    <Keys keys="Enter"/>" and "<Keys keys="Space"/>". The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-button { border: 1px solid var(--border); background: var(--surface); }
-                        .my-button[data-hovered] { border-color: var(--accent); }
-                        .my-button[data-pressed] { background: var(--border); }
-                        .my-button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-button[data-disabled] { opacity: 0.5; }
+                        .demo-atom-button {
+                            padding: 0.5rem 1rem;
+                            border: 1px solid var(--border);
+                            border-radius: 6px;
+                            background: var(--surface);
+                            font: inherit;
+                            cursor: pointer;
+                        }
+                        .demo-atom-button[data-hovered] { border-color: var(--accent); }
+                        .demo-atom-button[data-pressed] { background: var(--border); }
+                        .demo-atom-button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-atom-button[data-disabled] { opacity: 0.5; cursor: not-allowed; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">
@@ -196,9 +209,9 @@ pub fn PageAtomButton() -> impl IntoView {
                     <Code inline=true>"on_press"</Code>"."
                 </p>
                 <p>
-                    "For an element that looks like a button but navigates, use "
-                    <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())><Code inline=true>"LinkButton"</Code></Link>
-                    " from the Link Atoms: it renders a link with the press behavior and data attributes of this atom."
+                    "An element that looks like a button but navigates is a link: use the "
+                    <Code inline=true>"Link"</Code>" atom ("<Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link>
+                    ") and style it like your buttons."
                 </p>
             </Section>
 

@@ -7,7 +7,8 @@ use leptonic::{
     hooks::{
         ColumnKind, DisabledBehavior, IntoAttrs, NodeKind, SelectionMode, SortDescriptor,
         SortDirection, TableCollection, TableData, TableOptions, UseTableCellInput,
-        UseTableColumnHeaderInput, UseTableInput, UseTableReturn, UseTableRowInput,
+        UseTableColumnHeaderInput, UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn,
+        UseTableRowInput, UseTableSelectAllCheckboxInput, UseTableSelectionCheckboxInput,
         UseTableStateInput,
         collections::{Key, SelectionOptions},
         use_checkbox, use_grid_row_group, use_table, use_table_cell, use_table_column_header,
@@ -167,7 +168,7 @@ pub fn TableHookDemo() -> impl IntoView {
                     .into_iter()
                     .map(|(key, kind)| {
                         if kind == NodeKind::Placeholder {
-                            view! { <th {..use_table_header_placeholder(&data, &key).into_attrs()}></th> }.into_any()
+                            view! { <th {..use_table_header_placeholder(UseTableHeaderPlaceholderInput { table: data.clone(), key: key.clone() }).into_attrs()}></th> }.into_any()
                         } else {
                             view! { <ColumnHeader table=data.clone() column=key/> }.into_any()
                         }
@@ -236,7 +237,7 @@ fn ColumnHeader(table: TableData, column: Key) -> impl IntoView {
         })
     });
     let content = if is_checkbox_column {
-        let checkbox = use_checkbox(use_table_select_all_checkbox(&table));
+        let checkbox = use_checkbox(use_table_select_all_checkbox(UseTableSelectAllCheckboxInput { table: table.clone() }));
         let (attrs, styles) = checkbox.input_props.into_parts();
         view! { <input {..attrs} style=styles/> }.into_any()
     } else {
@@ -262,7 +263,7 @@ fn BookRow(table: TableData, book: Book) -> impl IntoView {
     });
     let allows_selection = row.allows_selection;
     let (attrs, styles) = row.row_props.into_parts();
-    let checkbox = use_checkbox(use_table_selection_checkbox(&table, key.clone()));
+    let checkbox = use_checkbox(use_table_selection_checkbox(UseTableSelectionCheckboxInput { table: table.clone(), key: key.clone() }));
     let (checkbox_attrs, checkbox_styles) = checkbox.input_props.into_parts();
 
     view! {

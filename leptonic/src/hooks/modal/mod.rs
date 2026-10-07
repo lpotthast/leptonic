@@ -1,44 +1,25 @@
 //! Modal hooks for creating accessible modal dialogs.
 //!
-//! This module provides hooks for managing modal behaviors including:
-//! - Aria-modal marking (`use_modal`)
-//! - Dismiss behavior and scroll prevention (`use_modal_backdrop`)
+//! - `use_modal_backdrop` (react-aria's `useModalOverlay`): dismissing (Escape, interacting
+//!   outside, through `use_overlay`), scroll prevention, and hiding everything outside the modal
+//!   (inert, through `utils::aria_hide_outside`), which is what makes the modal modal.
+//! - `use_modal` (react-aria's `useModal`): `aria-modal="true"` for a modal element. The modal
+//!   atoms don't use it: as react-aria-components, they set no `aria-modal` (WebKit bug 211934:
+//!   Safari focuses the first focusable element of an `aria-modal` element itself); the inert
+//!   content outside does the job.
 //!
 //! ## Hook Composition
 //!
 //! The modal/dialog system uses composable layers, each handling a specific concern:
 //!
-//! 2. **Backdrop Layer** — `use_modal_backdrop`: Dismiss behavior (Escape, interact-outside
-//!    via `use_overlay`) + scroll prevention
-//! 3. **Aria-modal Layer** — `use_modal`: Sets `aria-modal="true"` for assistive technology
-//! 4. **Dialog Layer** — `use_dialog` (optional): ARIA labeling, role, focus-on-mount
-//! 5. **Focus Layer** — `FocusScope` atom: Focus trapping and restoration
+//! 1. **Backdrop layer**: `use_modal_backdrop`, as above.
+//! 2. **Dialog layer**: `use_dialog` (optional): ARIA role, labeling, focusing the dialog when it
+//!    opens.
+//! 3. **Focus layer**: the `FocusScope` atom: containing and restoring the focus (react-aria's
+//!    `useModalOverlay` signals its `Overlay` to contain focus; here the consumer renders the
+//!    scope, the `ModalContent` atom does).
 //!
-//! ## React-aria Deviations
-//!
-//! This implementation is partially based on [React Aria's overlay hooks](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays)
-//! (rest in ./overlay) but has the following deviations:
-//!
-//! ### Implemented (in `use_modal_backdrop`)
-//!
-//! - **`ariaHideOutside()`**: When the modal is open, `use_modal_backdrop` sets the `inert`
-//!   attribute on all DOM siblings outside the modal via `utils::aria_hide_outside`. This hides
-//!   outside content from assistive technology AND prevents pointer/keyboard interaction. Works
-//!   alongside `aria-modal="true"` (set by `use_modal`) for defense in depth. Reference counting
-//!   and an observer stack support nested overlays correctly.
-//!
-//! - **`useOverlayFocusContain`**: React Aria's `useModalOverlay` signals to the parent
-//!   `Overlay` component that focus should be contained. In Leptonic, focus containment is
-//!   handled by the `FocusScope` atom which is applied by the consumer.
-//!
-//! ### Differences
-//!
-//! - **Naming**: React Aria's `useModalOverlay` is renamed to `use_modal_backdrop`. Its
-//!   `underlayProps` are empty upstream and omitted here: the backdrop element needs no props.
-//!
-//! - **`use_modal` scope**: React Aria's `useModal` manages `aria-hidden` on sibling
-//!   elements via `ModalProvider` context. Leptonic's `use_modal` simply sets
-//!   `aria-modal="true"` on the modal element, since modern browsers honour this attribute.
+//! See each hook's deviation block for the details.
 
 pub mod use_modal;
 pub mod use_modal_backdrop;

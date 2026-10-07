@@ -1,18 +1,18 @@
 use leptonic::utils::CapturedElement;
 use leptonic::utils::date_time_formatter::DateTimeFormat;
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
         IntoAttrs,
         calendar::{
             CalendarData, CommitBehavior, UseCalendarCellInput, UseCalendarCellReturn,
-            UseCalendarGridInput, UseCalendarInput, UseCalendarReturn, UseRangeCalendarStateInput,
+            UseCalendarGridInput, UseCalendarReturn, UseRangeCalendarInput,
+            UseRangeCalendarStateInput,
             use_calendar_cell, use_calendar_grid, use_range_calendar, use_range_calendar_state,
         },
         use_button,
     },
     jiff::civil::{Date, date},
-    prelude::icondata,
     utils::{
         data_attributes::flag,
         date::{DateExt, DateRange},
@@ -39,14 +39,15 @@ pub fn CalendarRangeDemo() -> impl IntoView {
         title,
         data,
         ..
-    } = use_range_calendar(
-        UseCalendarInput {
-            aria_label: "Trip dates".into(),
-            ..Default::default()
-        },
+    } = use_range_calendar(UseRangeCalendarInput {
         state,
-        CommitBehavior::Select,
-    );
+        commit_behavior: CommitBehavior::Select,
+        id: None,
+        aria_label: "Trip dates".into(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_details: None,
+    });
     let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
     let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
 
@@ -70,11 +71,11 @@ pub fn CalendarRangeDemo() -> impl IntoView {
         <div {..calendar_props.into_attrs()} class="demo-calendar demo-calendar-range">
             <header class="demo-calendar-header">
                 <button {..previous_attrs} style=previous_styles class="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronLeft/>
+                    <span aria-hidden="true">"\u{2039}"</span>
                 </button>
                 <h2 class="demo-calendar-title" aria-hidden="true">{title}</h2>
                 <button {..next_attrs} style=next_styles class="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronRight/>
+                    <span aria-hidden="true">"\u{203a}"</span>
                 </button>
             </header>
             <MonthGrid data/>
@@ -83,7 +84,10 @@ pub fn CalendarRangeDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

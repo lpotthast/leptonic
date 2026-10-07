@@ -113,6 +113,31 @@ pub fn PageAtomTimeField() -> impl IntoView {
                 </p>
             </Section>
 
+            <Section title="Styling">
+                <p>
+                    "The atoms bring no styles. "<Code inline=true>"TimeField"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-TimeField"</Code>" "
+                    "and the "<Code inline=true>"classes"</Code>" you pass; its "<Code inline=true>"DateInput"</Code>" and "<Code inline=true>"DateSegment"</Code>"s are those of a "
+                    <Link href=format!("{}#styling", routes::doc::date_field::Atom.materialize())>"date field"</Link>". The demo above uses "
+                    "the date field\u{2019}s CSS:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r#"
+                        .demo-date-field { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+                        .demo-date-input { display: inline-flex; flex-wrap: wrap; align-items: center; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-variant-numeric: tabular-nums; }
+                        .demo-date-input[data-focus-within] { border-color: var(--focus); }
+                        .demo-date-input[data-disabled] { opacity: 0.5; }
+                        .demo-date-segment { padding: 0 0.1em; border-radius: 4px; outline: none; }
+                        .demo-date-segment:is([data-placeholder], [data-type="literal"]) { color: var(--muted); }
+                        .demo-date-segment[data-type="literal"] { white-space: pre; }
+                        .demo-date-segment[data-focused] { background: var(--accent); color: var(--surface); }
+                    "#)}
+                </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
+            </Section>
+
             <SeeAlso>
                 <li><Link href=routes::doc::TimeField.materialize()>"Time Field overview"</Link></li>
                 <li><Link href=routes::doc::time_field::Hook.materialize()>"Time Field Hooks"</Link></li>

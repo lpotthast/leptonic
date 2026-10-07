@@ -26,9 +26,9 @@ use crate::{
 /// Default class: `leptonic-Toolbar`.
 #[component]
 pub fn Toolbar(
-    /// The axis of the arrow keys.
-    #[prop(default = Orientation::Horizontal)]
-    orientation: Orientation,
+    /// The axis of the arrow keys. Default: horizontal.
+    #[prop(into, default = Orientation::Horizontal.into())]
+    orientation: Signal<Orientation>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     /// The ids of the elements naming the toolbar. Ignored when `aria_label` is set.
     #[prop(into, optional)]
@@ -48,7 +48,7 @@ pub fn Toolbar(
             {..toolbar.props.into_attrs()}
             class=classes
             style=styles
-            data-orientation=orientation.as_str()
+            data-orientation=move || orientation.get().as_str()
         >
             {children()}
         </div>

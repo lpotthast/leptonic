@@ -1,18 +1,17 @@
 // Upstream: react-stately/src/select/useSelectState.ts @ 99e6102368
 use std::collections::HashSet;
 
-use crate::hooks::collections::CloseOnSelect;
 use leptos::prelude::*;
 
 use crate::{
     hooks::{
         collections::{
-            CollectionMemo, FocusStrategy, Key, ListState, Node, Selection, SelectionMode,
-            SelectionOptions, UseListStateInput, use_list_state,
+            CloseOnSelect, CollectionMemo, FocusStrategy, Key, ListState, Node, Selection,
+            SelectionMode, SelectionOptions, UseListStateInput, use_list_state,
         },
         form::use_form_validation_state::{
-            UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn,
-            ValidationBehavior, use_form_validation_state,
+            FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
+            use_form_validation_state,
         },
         menu::use_menu_trigger_state::{
             MenuTriggerState, MenuTriggerStateApi, UseMenuTriggerStateInput, use_menu_trigger_state,
@@ -28,7 +27,7 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - Hook-owned state (C4): `default_value` and `set_value`, or `value` bound to app state, instead
-//   of a controlled `value`.
+//   of a controlled `value`; likewise `default_open` or `is_open` bound to app state.
 // - The value is a `Vec<Key>` in both modes (at most one key in `Single` mode), in collection
 //   order. react-aria: `Key | null` or `Key[]` depending on the mode.
 // - The deprecated `selectedKey`/`defaultSelectedKey`/`onSelectionChange` aliases are not
@@ -62,7 +61,10 @@ pub struct UseSelectStateInput {
     pub should_close_on_select: CloseOnSelect,
     /// Allow opening the popover without options (e.g. to show an empty state).
     pub allows_empty_collection: bool,
+    /// Whether the popover starts open. Ignored when `is_open` is bound.
     pub default_open: bool,
+    /// The open state as app state, replacing `default_open`.
+    pub is_open: Option<ValueBinding<bool>>,
     pub on_open_change: Option<Callback<bool>>,
     /// Marks the value invalid, regardless of `validate`.
     pub is_invalid: Signal<bool>,
@@ -71,6 +73,18 @@ pub struct UseSelectStateInput {
     pub validation_behavior: ValidationBehavior,
     /// The form field name (matches server-side validation errors).
     pub name: Option<String>,
+}
+
+impl std::fmt::Debug for UseSelectStateInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseSelectStateInput")
+            .field("selection_mode", &self.selection_mode)
+            .field("default_value", &self.default_value)
+            .field("default_open", &self.default_open)
+            .field("validation_behavior", &self.validation_behavior)
+            .field("name", &self.name)
+            .finish_non_exhaustive()
+    }
 }
 
 /// The state of a select: its options and selection, whether its popover is open, focus and
@@ -83,9 +97,21 @@ pub struct SelectState {
     /// which only open it if there are options (or `allows_empty_collection` is set).
     pub menu_trigger: MenuTriggerState,
     allows_empty_collection: bool,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     is_focused: RwSignal<bool>,
     default_value: StoredValue<Vec<Key>>,
+    name: StoredValue<Option<String>>,
+    validation_behavior: ValidationBehavior,
+}
+
+impl std::fmt::Debug for SelectState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SelectState")
+            .field("list", &self.list)
+            .field("selection_mode", &self.selection_mode)
+            .field("menu_trigger", &self.menu_trigger)
+            .finish_non_exhaustive()
+    }
 }
 
 impl OverlayState for SelectState {
@@ -153,6 +179,16 @@ impl SelectState {
         self.default_value.get_value()
     }
 
+    /// The form field name.
+    pub fn name(&self) -> Option<String> {
+        self.name.get_value()
+    }
+
+    /// How validation errors are shown (native form validation or ARIA only).
+    pub fn validation_behavior(&self) -> ValidationBehavior {
+        self.validation_behavior
+    }
+
     pub fn is_open(&self) -> bool {
         self.menu_trigger.is_open()
     }
@@ -209,6 +245,7 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
         should_close_on_select,
         allows_empty_collection,
         default_open,
+        is_open,
         on_open_change,
         is_invalid,
         validate,
@@ -220,12 +257,12 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
 
     let menu_trigger = use_menu_trigger_state(UseMenuTriggerStateInput {
         default_open,
+        value: is_open,
         on_open_change,
-        ..UseMenuTriggerStateInput::default()
     });
 
     // Set once validation exists (it needs the list's value).
-    let commit_validation: StoredValue<Option<Callback<()>>> = StoredValue::new(None);
+    let commit_validation: StoredValue<Option<FormValidationState>> = StoredValue::new(None);
     // The value `on_change` last reported, to report only changes. A bound value changed by the app
     // counts as reported (picking the previous value again is a change).
     let last_value = StoredValue::new(value.map_or_else(
@@ -275,8 +312,8 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
                 if should_close_on_select && menu_trigger.overlay.is_open.get_untracked() {
                     menu_trigger.close();
                 }
-                if let Some(commit) = commit_validation.get_value() {
-                    commit.run(());
+                if let Some(validation) = commit_validation.get_value() {
+                    validation.commit_validation();
                 }
             })),
             disallow_empty_selection: Signal::stored(selection_mode == SelectMode::Single),
@@ -294,9 +331,9 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
         value: Signal::derive(move || ordered(collection, selection.selected_keys())),
         validate,
         validation_behavior,
-        name,
+        name: name.clone(),
     });
-    commit_validation.set_value(Some(validation.commit_validation));
+    commit_validation.set_value(Some(validation));
 
     SelectState {
         list,
@@ -306,6 +343,8 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
         validation,
         is_focused: RwSignal::new(false),
         default_value: StoredValue::new(default_value),
+        name: StoredValue::new(name),
+        validation_behavior,
     }
 }
 
@@ -347,6 +386,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -374,6 +414,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -405,6 +446,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -431,6 +473,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -458,6 +501,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -482,6 +526,7 @@ mod tests {
                 should_close_on_select: CloseOnSelect::Auto,
                 allows_empty_collection: false,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,
@@ -500,6 +545,7 @@ mod tests {
                 disabled_keys: Signal::stored(HashSet::new()),
                 should_close_on_select: CloseOnSelect::Auto,
                 default_open: false,
+                is_open: None,
                 on_open_change: None,
                 is_invalid: Signal::stored(false),
                 validate: None,

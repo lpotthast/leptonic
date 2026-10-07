@@ -1,9 +1,7 @@
-use leptonic::{
-    atoms::{
-        dialog::{Dialog, DialogTitle, DialogTrigger},
-        modal::{ModalBackdrop, ModalContent},
-    },
-    components::prelude::*,
+use leptonic::atoms::{
+    button::Button,
+    dialog::{Dialog, DialogTitle, DialogTrigger},
+    modal::{ModalBackdrop, ModalContent},
 };
 use leptos::prelude::*;
 
@@ -15,7 +13,7 @@ pub fn DialogConceptDemo() -> impl IntoView {
     view! {
         // The trigger opens the modal and gets `aria-expanded`; focus returns to it on close.
         <DialogTrigger is_open=is_open set_open=is_open>
-            <Button>"Show terms"</Button>
+            <Button classes="demo-btn">"Show terms"</Button>
             <ModalBackdrop is_dismissable=true classes="demo-backdrop">
                 <ModalContent classes="demo-modal">
                     // Named by its title.
@@ -23,8 +21,16 @@ pub fn DialogConceptDemo() -> impl IntoView {
                         <DialogTitle classes="demo-dialog-title">"Terms of use"</DialogTitle>
                         <p class="demo-dialog-description">"Be kind, and don\u{2019}t share your password."</p>
                         <div class="demo-dialog-actions">
-                            <Button on_press=move |_| is_open.set(false) color=ButtonColor::Secondary>"Close"</Button>
-                            <Button on_press=move |_| { set_accepted.set(true); is_open.set(false); }>"Accept"</Button>
+                            <Button on_press=move |_| is_open.set(false) classes="demo-btn">"Close"</Button>
+                            <Button
+                                on_press=move |_| {
+                                    set_accepted.set(true);
+                                    is_open.set(false);
+                                }
+                                classes="demo-btn-primary"
+                            >
+                                "Accept"
+                            </Button>
                         </div>
                     </Dialog>
                 </ModalContent>

@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::button::Button,
     utils::scroll::{ScrollAlignment, ScrollIntoViewOpts, is_scrollable, scroll_into_view},
 };
 use leptos::{html, prelude::*, wasm_bindgen::JsCast};
@@ -40,9 +40,9 @@ pub fn ScrollDemo() -> impl IntoView {
             {(1..=ITEMS).map(|n| view! { <li>{format!("Item {n}")}</li> }).collect_view()}
         </ul>
         <div class="demo-controls">
-            <Button on_press=move |_| scroll_to(0)>"First"</Button>
-            <Button on_press=move |_| scroll_to(ITEMS / 2)>"Middle"</Button>
-            <Button on_press=move |_| scroll_to(ITEMS - 1)>"Last"</Button>
+            <Button on_press=move |_| scroll_to(0) classes="demo-btn">"First"</Button>
+            <Button on_press=move |_| scroll_to(ITEMS / 2) classes="demo-btn">"Middle"</Button>
+            <Button on_press=move |_| scroll_to(ITEMS - 1) classes="demo-btn">"Last"</Button>
         </div>
         <p class="demo-status">
             {move || {

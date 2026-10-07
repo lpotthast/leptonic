@@ -12,7 +12,7 @@ use crate::pages::{BaseActions, Page};
 
 /// Long presses through `use_press`: start, end and the long press after the threshold, which
 /// cancels the press; cancelled when released early; a custom threshold; the accessibility
-/// description; no context menu on touch; nothing for the keyboard.
+/// description; no context menu on touch (only during the press); nothing for the keyboard.
 pub struct LongPressTests {}
 
 #[async_trait]
@@ -27,7 +27,7 @@ impl BrowserTest<str> for LongPressTests {
 
         // "should perform a long press".
         fire(driver, "basic", "pointerdown").await?;
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        // Well before the 500 ms threshold.
         expect_log(&page, "basic:longpressstart:touch").await?;
         page.wait_for_text(
             "test-long-press-log",
@@ -72,6 +72,7 @@ impl BrowserTest<str> for LongPressTests {
         reset(&page).await?;
 
         // "allows changing the threshold".
+        // A 1500 ms threshold: nothing after 600 ms (beyond the default's 500 ms).
         fire(driver, "threshold", "pointerdown").await?;
         tokio::time::sleep(Duration::from_millis(600)).await;
         expect_log(&page, "threshold:longpressstart:touch").await?;
@@ -117,6 +118,23 @@ impl BrowserTest<str> for LongPressTests {
             "basic:longpressstart:touch,basic:longpressend:touch",
         )
         .await?;
+        reset(&page).await?;
+
+        // The context menu blocker goes 100 ms after the pointer up (upstream: "If no
+        // contextmenu/click event is fired quickly after pointerup, remove the handler"), so a later
+        // context menu opens.
+        fire(driver, "basic", "pointerdown").await?;
+        fire(driver, "basic", "pointerup").await?;
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        let prevented = driver
+            .execute(
+                "const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+                 document.getElementById('test-long-press-basic').dispatchEvent(e);
+                 return e.defaultPrevented;",
+                vec![],
+            )
+            .await?;
+        assert_that!(prevented.json().as_bool()).is_equal_to(Some(false));
         reset(&page).await?;
 
         // "should not fire any events for keyboard interactions" (long press events, that is).

@@ -1,4 +1,4 @@
-// Upstream: react-stately/src/form/useFormValidationState.ts @ 6f664fe911
+// Upstream: react-stately/src/form/useFormValidationState.ts @ 99e6102368
 //! Form validation state management hook.
 //!
 //! This module provides [`use_form_validation_state`], the state layer for form validation.
@@ -10,32 +10,31 @@ use std::{collections::HashMap, sync::Arc};
 
 use leptos::prelude::*;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/form/useFormValidationState.ts
-
+// =============================================================================
 // REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// OMITTED FEATURES
-// - `privateValidationStateProp`: React-specific prop-passing mechanism for parent
-//   components to share validation state with children. Not needed because Leptos
-//   signals are Copy and can be passed directly.
-// - `builtinValidation` as a separate input prop: Simplified for the initial
-//   implementation. Native validation is read via `use_form_validation`'s
-//   `update_validation` callback instead. Can be added later for complex field hooks
-//   (e.g., NumberField with hidden native inputs).
-//
-// LEPTOS-SPECIFIC ADAPTATIONS
-// - Hook-owned state: All validation signals are created and owned internally.
-//   Callers get read-only `Signal<T>` and semantic callbacks.
-// - Validate function signature: `Fn(&T) -> Result<(), Vec<String>>` instead of
-//   React-aria's `(value: T) => ValidationError | true | null | undefined`.
-// - Commit mechanism: Uses Leptos `Effect` + `Trigger` instead of React's useEffect
-//   render-cycle scheduling.
-// - FormValidationContext: Uses Leptos `provide_context`/`use_context` instead of
-//   React's `createContext`.
+// ## API DIFFERENCES
+// - The state is a `Copy` struct of read-only signals and methods (C3).
+// - `validate` returns `Result<(), Vec<String>>` (react-aria: `ValidationError | true | null |
+//   undefined`).
 // - `is_invalid` is a `Signal<bool>` that marks the field invalid while `true` and leaves the
-//   other validation sources in charge while `false` (API convention C4). React-aria's
-//   `isInvalid` is a controlled prop: `false` forces the field valid, overriding `validate` and
-//   native validity; a controlled valid state is not a hook-owned-state shape.
+//   other validation sources in charge while `false` (C4). React-aria's `isInvalid` is a
+//   controlled prop: `false` forces the field valid, overriding `validate` and native validity;
+//   a controlled valid state is not a hook-owned-state shape.
+// - `name` is one field name (react-aria: also a list, whose server errors are joined); no
+//   leptonic field submits several names.
+// - The commit runs in an `Effect` triggered by `commit_validation` (react-aria: a `useEffect`
+//   after the next render), and re-reads the inputs' native validity first
+//   (`NativeValidityReaders`; react-aria re-reads it after every render).
+// - Server errors show again whenever the `FormValidationContext`'s signal changes (react-aria:
+//   for every new errors object).
+//
+// ## OMITTED FEATURES
+// - `privateValidationStateProp`: a parent shares its state by passing it in the child hook's
+//   input (e.g. `UseTextFieldInput.validation`).
+//
+// =============================================================================
 
 /// Snapshot of the browser's native `ValidityState`.
 ///
@@ -145,7 +144,9 @@ pub type ValidateFn<T> = Arc<dyn Fn(&T) -> Result<(), Vec<String>> + Send + Sync
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct FormValidationContext {
-    /// Maps field name to error messages.
+    /// Maps field name to error messages. A field shows its errors until its value changes;
+    /// every change of this signal (each server response, also one equal to the last) shows them
+    /// again.
     pub errors: Signal<HashMap<String, Vec<String>>>,
 }
 
@@ -215,11 +216,10 @@ impl NativeValidityReaders {
     }
 }
 
-/// Return value of [`use_form_validation_state`].
-///
-/// All fields are `Copy` (signals and callbacks are indices into the reactive system).
-#[derive(Clone, Copy)]
-pub struct UseFormValidationStateReturn {
+/// The validation state of a field (react-stately's `FormValidationState`), from
+/// [`use_form_validation_state`]: read-only signals and methods. `Copy`.
+#[derive(Debug, Clone, Copy)]
+pub struct FormValidationState {
     /// Realtime validation result (updated as the user edits).
     ///
     /// Used by [`use_form_validation`](super::use_form_validation::use_form_validation)
@@ -237,20 +237,52 @@ pub struct UseFormValidationStateReturn {
     /// Convenience: the displayed validation error messages.
     pub validation_errors: Signal<Vec<String>>,
 
-    /// Updates the committed validation result (e.g., from native input validity).
-    ///
-    /// In `Aria` mode, updates immediately. In `Native` mode, queued until
-    /// [`commit_validation`](Self::commit_validation).
-    pub update_validation: Callback<ValidationResult>,
-
-    /// Resets displayed validation to valid (on form reset).
-    pub reset_validation: Callback<()>,
-
-    /// Commits realtime validation so it is displayed to the user (on change/submit).
-    pub commit_validation: Callback<()>,
+    update_validation: Callback<ValidationResult>,
+    reset_validation: Callback<()>,
+    commit_validation: Callback<()>,
 
     /// Readers of the native validity of the validated inputs, run before each commit.
-    pub native_validity_readers: NativeValidityReaders,
+    pub(crate) native_validity_readers: NativeValidityReaders,
+}
+
+impl FormValidationState {
+    /// A state showing `display_validation`, whose operations are the given callbacks (a
+    /// checkbox in a group: its own realtime validation, the group's commit and reset).
+    pub(crate) fn from_parts(
+        realtime_validation: Signal<ValidationResult>,
+        display_validation: Signal<ValidationResult>,
+        update_validation: Callback<ValidationResult>,
+        group: Self,
+    ) -> Self {
+        Self {
+            realtime_validation,
+            display_validation,
+            is_invalid: Signal::derive(move || display_validation.get().is_invalid),
+            validation_errors: Signal::derive(move || display_validation.get().validation_errors),
+            update_validation,
+            reset_validation: group.reset_validation,
+            commit_validation: group.commit_validation,
+            native_validity_readers: group.native_validity_readers,
+        }
+    }
+
+    /// Updates the committed validation result (e.g. from the input's native validity). With
+    /// `Aria` validation it shows right away; with `Native` validation on the next
+    /// [`commit_validation`](Self::commit_validation).
+    pub fn update_validation(&self, result: ValidationResult) {
+        self.update_validation.run(result);
+    }
+
+    /// Resets the displayed validation to valid (on form reset).
+    pub fn reset_validation(&self) {
+        self.reset_validation.run(());
+    }
+
+    /// Commits the realtime validation so that it is displayed (on change or submission), and
+    /// clears the server errors (the user changed the value).
+    pub fn commit_validation(&self) {
+        self.commit_validation.run(());
+    }
 }
 
 /// Manages form validation state with multiple validation sources.
@@ -266,17 +298,15 @@ pub struct UseFormValidationStateReturn {
 /// 2. **Server** — errors from [`FormValidationContext`] matched by field `name`
 /// 3. **Client** — custom `validate` function
 /// 4. **Committed** — native validity read via
-///    [`update_validation`](UseFormValidationStateReturn::update_validation)
+///    [`update_validation`](FormValidationState::update_validation)
 ///
 /// # Validation Behavior
 ///
 /// - [`ValidationBehavior::Aria`] — all errors displayed in realtime
 /// - [`ValidationBehavior::Native`] — client/native errors deferred until
-///   [`commit_validation`](UseFormValidationStateReturn::commit_validation)
+///   [`commit_validation`](FormValidationState::commit_validation)
 #[allow(clippy::too_many_lines)]
-pub fn use_form_validation_state<T>(
-    input: UseFormValidationStateInput<T>,
-) -> UseFormValidationStateReturn
+pub fn use_form_validation_state<T>(input: UseFormValidationStateInput<T>) -> FormValidationState
 where
     T: Clone + PartialEq + Send + Sync + 'static,
 {
@@ -326,14 +356,12 @@ where
     let server_context = use_context::<FormValidationContext>();
     let (server_error_cleared, set_server_error_cleared) = signal(false);
 
-    // When server errors change (new form submission response), reset the
-    // "cleared" flag so new errors become visible.
+    // Every new set of server errors (a new response, even one equal to the last) shows again
+    // (react-aria: every new errors object).
     if let Some(ctx) = server_context {
-        let prev_errors = StoredValue::new(HashMap::<String, Vec<String>>::new());
-        Effect::new(move |_| {
-            let current = ctx.errors.get();
-            if current != prev_errors.get_value() {
-                prev_errors.set_value(current);
+        Effect::new(move |previous: Option<()>| {
+            ctx.errors.track();
+            if previous.is_some() {
                 set_server_error_cleared.set(false);
             }
         });
@@ -418,7 +446,7 @@ where
     let result_validation_errors =
         Signal::derive(move || display_validation.get().validation_errors);
 
-    UseFormValidationStateReturn {
+    FormValidationState {
         realtime_validation,
         display_validation,
         is_invalid: result_is_invalid,

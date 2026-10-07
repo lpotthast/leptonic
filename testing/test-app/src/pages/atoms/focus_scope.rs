@@ -1,5 +1,5 @@
-use leptonic::atoms::focus_scope::FocusScope;
-use leptos::prelude::*;
+use leptonic::atoms::focus_scope::{FocusScope, RESTORE_FOCUS_EVENT};
+use leptos::{ev, prelude::*, tachys::html::event::on, web_sys};
 
 #[component]
 pub fn PageAtomFocusScope() -> impl IntoView {
@@ -12,6 +12,13 @@ pub fn PageAtomFocusScope() -> impl IntoView {
     // A dialog opened from a menu, rendered outside the menu's scope.
     let show_menu = RwSignal::new(false);
     let show_dialog = RwSignal::new(false);
+    // Containment that changes at runtime.
+    let runtime_contain = RwSignal::new(false);
+    // Restoring scopes whose restoration a listener cancels.
+    let show_cancelled = RwSignal::new(false);
+    let show_nested_cancelled = RwSignal::new(false);
+    // Tabbing out of a restoring scope that doesn't contain focus.
+    let show_tab_out = RwSignal::new(false);
 
     view! {
         <div id="test-page-atom-focus-scope">
@@ -137,6 +144,99 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                     </FocusScope>
                 </Show>
             </section>
+
+            // ---- FocusScope.test.js "should select all text in input when tabbing" ----
+            <section>
+                <h2>"Select on Tab"</h2>
+                <FocusScope contain=true>
+                    <input id="test-fs-select-input-1" value="Test1" />
+                    <input id="test-fs-select-input-2" value="Test2" />
+                    <input id="test-fs-select-input-3" value="Test3" />
+                </FocusScope>
+            </section>
+
+            // ---- Containment that changes at runtime (a non-modal popover starting to contain) ----
+            <section>
+                <h2>"Runtime contain"</h2>
+                <FocusScope contain=runtime_contain>
+                    <button
+                        id="test-fs-runtime-toggle"
+                        on:click=move |_| runtime_contain.update(|c| *c = !*c)
+                    >
+                        {move || if runtime_contain.get() { "Stop containing" } else { "Contain" }}
+                    </button>
+                    <button id="test-fs-runtime-2">"Runtime 2"</button>
+                </FocusScope>
+                <button id="test-fs-runtime-after">"After runtime scope"</button>
+            </section>
+
+            // ---- FocusScope.test.js "should allow restoration to be overridden with a custom event"
+            // and "should not bubble focus scope restoration event out of nested focus scopes" ----
+            <section>
+                <h2>"Cancelled restore"</h2>
+                <div {..on(
+                    ev::Custom::<web_sys::CustomEvent>::new(RESTORE_FOCUS_EVENT),
+                    |e: web_sys::CustomEvent| e.prevent_default(),
+                )}>
+                    <button id="test-fs-cancel-show" on:click=move |_| show_cancelled.set(true)>
+                        "Show"
+                    </button>
+                    <Show when=move || show_cancelled.get()>
+                        <FocusScope restore_focus=true auto_focus=true>
+                            <input
+                                id="test-fs-cancel-input"
+                                on:keydown=move |_| show_cancelled.set(false)
+                            />
+                        </FocusScope>
+                    </Show>
+                </div>
+                <div {..on(
+                    ev::Custom::<web_sys::CustomEvent>::new(RESTORE_FOCUS_EVENT),
+                    |e: web_sys::CustomEvent| e.prevent_default(),
+                )}>
+                    <FocusScope>
+                        <button
+                            id="test-fs-nested-cancel-show"
+                            on:click=move |_| show_nested_cancelled.set(true)
+                        >
+                            "Show nested"
+                        </button>
+                        <Show when=move || show_nested_cancelled.get()>
+                            <FocusScope restore_focus=true auto_focus=true>
+                                <input
+                                    id="test-fs-nested-cancel-input"
+                                    on:keydown=move |_| show_nested_cancelled.set(false)
+                                />
+                            </FocusScope>
+                        </Show>
+                    </FocusScope>
+                </div>
+            </section>
+
+            // ---- FocusScope.test.js "should move focus to the element after the previously focused
+            // node on Tab" / "... previous element ... on Shift+Tab" ----
+            <section>
+                <h2>"Tab out of a restoring scope"</h2>
+                <input id="test-fs-tab-before" />
+                <button id="test-fs-tab-trigger" on:click=move |_| show_tab_out.update(|s| *s = !*s)>
+                    "Toggle"
+                </button>
+                <input id="test-fs-tab-after-trigger" />
+                <Show when=move || show_tab_out.get()>
+                    <FocusScope restore_focus=true auto_focus=true>
+                        <input id="test-fs-tab-input-1" />
+                        <input id="test-fs-tab-input-2" />
+                        <input id="test-fs-tab-input-3" />
+                    </FocusScope>
+                </Show>
+                <input id="test-fs-tab-after" />
+            </section>
+
+            // ---- Top layer (e.g. toasts): focus may move there from a containing scope ----
+            <div data-leptonic-top-layer="true">
+                <button id="test-fs-top-layer-1">"Top layer 1"</button>
+                <button id="test-fs-top-layer-2">"Top layer 2"</button>
+            </div>
 
             // ---- Button outside all scopes (for containment tests) ----
             <button id="test-fs-outside">"Outside"</button>

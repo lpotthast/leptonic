@@ -14,7 +14,7 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## API ADDITIONS
+// ## ADDITIONS
 // - `use_table_header_placeholder`: props for the empty cells that fill header rows above columns
 //   without a column group (React Spectrum renders these itself).
 //
@@ -46,21 +46,30 @@ pub fn use_table_header_row() -> UseTableHeaderRowProps {
     }
 }
 
+/// Input of [`use_table_header_placeholder`].
+#[derive(Debug, Clone)]
+pub struct UseTableHeaderPlaceholderInput {
+    /// The table (from `use_table`).
+    pub table: TableData,
+    /// The placeholder's key (a `NodeKind::Placeholder` node of a header row).
+    pub key: Key,
+}
+
 /// Props for a header placeholder element.
 #[derive(Debug)]
 pub struct UseTableHeaderPlaceholderProps {
     pub role: AriaRole,
-    pub aria_colindex: Option<usize>,
-    pub aria_colspan: Option<usize>,
+    pub aria_colindex: Signal<Option<usize>>,
+    pub aria_colspan: Signal<Option<usize>>,
     /// For `<th>`/`<td>` placeholders.
-    pub colspan: Option<usize>,
+    pub colspan: Signal<Option<usize>>,
 }
 
 pub type UseTableHeaderPlaceholderAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaColindex, Option<usize>>,
-    Attr<attr::AriaColspan, Option<usize>>,
-    Attr<attr::Colspan, Option<usize>>,
+    Attr<attr::AriaColindex, Signal<Option<usize>>>,
+    Attr<attr::AriaColspan, Signal<Option<usize>>>,
+    Attr<attr::Colspan, Signal<Option<usize>>>,
 );
 
 impl IntoAttrs for UseTableHeaderPlaceholderProps {
@@ -77,21 +86,24 @@ impl IntoAttrs for UseTableHeaderPlaceholderProps {
 }
 
 /// An empty cell of a header row (a `NodeKind::Placeholder` node), filling the space above
-/// columns that aren't in a column group. Not focusable.
+/// columns that aren't in a column group. Not focusable. Its position follows the table.
 pub fn use_table_header_placeholder(
-    table: &TableData,
-    key: &Key,
+    input: UseTableHeaderPlaceholderInput,
 ) -> UseTableHeaderPlaceholderProps {
-    let (col_index, col_span) = table.state.table.with_untracked(|t| {
-        t.collection()
-            .get(key)
-            .map(|n| (n.col_index, n.col_span))
-            .unwrap_or_default()
+    let UseTableHeaderPlaceholderInput { table, key } = input;
+    let table = table.state.table;
+    let position = Memo::new(move |_| {
+        table.with(|t| {
+            t.collection()
+                .get(&key)
+                .map(|n| (n.col_index, n.col_span))
+                .unwrap_or_default()
+        })
     });
     UseTableHeaderPlaceholderProps {
         role: AriaRole::Gridcell,
-        aria_colindex: col_index.map(|i| i + 1),
-        aria_colspan: col_span,
-        colspan: col_span,
+        aria_colindex: Signal::derive(move || position.get().0.map(|i| i + 1)),
+        aria_colspan: Signal::derive(move || position.get().1),
+        colspan: Signal::derive(move || position.get().1),
     }
 }

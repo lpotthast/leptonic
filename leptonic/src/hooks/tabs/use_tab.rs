@@ -1,5 +1,4 @@
 // Upstream: react-aria/src/tabs/useTab.ts @ 99e6102368
-use crate::hooks::collections::SelectOnPressUp;
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -10,7 +9,7 @@ use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
         collections::{
-            Key, LinkBehavior, UseSelectableItemAttrs, UseSelectableItemInput,
+            Key, LinkBehavior, SelectOnPressUp, UseSelectableItemAttrs, UseSelectableItemInput,
             UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
         },
     },
@@ -43,8 +42,10 @@ pub struct UseTabInput {
 }
 
 /// Return value of [`use_tab`].
+#[derive(Debug)]
 pub struct UseTabReturn {
-    pub tab_props: PropsWithStyles<UseTabProps>,
+    /// For the tab element. Call `.into_parts()` for spreading and styles.
+    pub props: PropsWithStyles<UseTabProps>,
     pub is_selected: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
@@ -137,7 +138,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     let panel_id = list.tabs.tab_panel_id(&key);
 
     UseTabReturn {
-        tab_props: PropsWithStyles::new(
+        props: PropsWithStyles::new(
             UseTabProps {
                 role: AriaRole::Tab,
                 aria_selected: Signal::derive(move || AriaSelected::from(is_selected.get())),

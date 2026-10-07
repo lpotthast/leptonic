@@ -1,7 +1,6 @@
 // Upstream: react-aria/src/disclosure/useDisclosure.ts @ 99e6102368
 use leptos::{
     attr::{self, Attr},
-    oco::Oco,
     prelude::*,
     tachys::html::attribute::custom::{CustomAttr, custom_attribute},
 };
@@ -136,7 +135,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
     manage_panel(state, is_disabled, panel_element);
 
     let button = UseButtonInput {
-        id: Some(Oco::Owned(trigger_id.clone())),
+        id: Some(trigger_id.clone()),
         is_disabled,
         aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_expanded.get()))),
         aria_controls: Signal::stored(Some(panel_id.clone())),

@@ -198,20 +198,57 @@ pub fn PageAtomCheckbox() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Select the states with attribute selectors on your class. The input is visually hidden but focusable, so draw "
-                    "the focus ring with "<Code inline=true>"data-focus-visible"</Code>":"
+                    "The atoms bring no styles. "<Code inline=true>"Checkbox"</Code>" renders a "<Code inline=true>"<label>"</Code>
+                    " (default class "<Code inline=true>"leptonic-Checkbox"</Code>") around a visually hidden "
+                    <Code inline=true>"<input>"</Code>", followed by your children. Draw the box yourself as the first child, "
+                    "hidden from assistive technology, and put the label text after it:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <Checkbox is_selected=subscribed set_selected=subscribed classes="demo-check">
+                            <span class="demo-check-box" aria-hidden="true"></span>
+                            "Subscribe to the newsletter"
+                        </Checkbox>
+                    "#)}
+                </Code>
+                <p>
+                    "Style the box through the data attributes of the label. The input has the focus, but is invisible, so "
+                    "draw the focus ring around the box with "<Code inline=true>"data-focus-visible"</Code>". The demos above "
+                    "use this CSS:"
                 </p>
                 <Code language=Language::Css>
-                    {indoc!(r"
-                        .my-checkbox { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
-                        .my-checkbox-box { width: 1em; height: 1em; border: 2px solid var(--border); border-radius: 4px; }
-                        .my-checkbox[data-hovered] .my-checkbox-box { border-color: var(--accent); }
-                        .my-checkbox[data-selected] .my-checkbox-box { background: var(--accent); border-color: var(--accent); }
-                        .my-checkbox[data-focus-visible] .my-checkbox-box { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-checkbox[data-disabled] { opacity: 0.5; cursor: not-allowed; }
-                    ")}
+                    {indoc!(r#"
+                        .demo-check { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+                        .demo-check[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-check-box {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: 1.1em;
+                            height: 1.1em;
+                            border: 2px solid var(--muted);
+                            border-radius: 4px;
+                            color: var(--surface);
+                        }
+                        .demo-check[data-hovered] .demo-check-box { border-color: var(--accent); }
+                        .demo-check[data-selected] .demo-check-box,
+                        .demo-check[data-indeterminate] .demo-check-box { background: var(--accent); border-color: var(--accent); }
+                        .demo-check[data-selected] .demo-check-box::after { content: "\2713"; }
+                        .demo-check[data-indeterminate] .demo-check-box::after { content: "\2013"; }
+                        .demo-check[data-focus-visible] .demo-check-box { outline: 2px solid var(--focus); outline-offset: 2px; }
+                    "#)}
                 </Code>
-                <p>"The demos above show their complete styles under \u{201c}View styles\u{201d}."</p>
+                <p>
+                    <Code inline=true>"CheckboxGroup"</Code>" renders a "<Code inline=true>"<div>"</Code>" (default class "
+                    <Code inline=true>"leptonic-CheckboxGroup"</Code>") around its children: a "<Code inline=true>"Label"</Code>
+                    ", the checkboxes, a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
+                    ", styled like any "<Link href=format!("{}#styling", routes::doc::field::Atom.materialize())>"field part"</Link>"."
+                </p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <SeeAlso>

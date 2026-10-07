@@ -1,4 +1,7 @@
-use leptonic::{atoms::focus_scope::FocusScope, components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, focus_scope::FocusScope},
+    hooks::*,
+};
 use leptos::{portal::Portal, prelude::*};
 
 /// An alert dialog: `role="alertdialog"`, named by its title and described by its message. Escape cancels; a click
@@ -40,7 +43,7 @@ pub fn AlertDialogDemo() -> impl IntoView {
 
     view! {
         // Deleting asks for confirmation, restoring doesn't.
-        <Button on_press=move |_| if deleted.get() { set_deleted.set(false) } else { state.open() }>
+        <Button on_press=move |_| if deleted.get() { set_deleted.set(false) } else { state.open() } classes="demo-btn">
             {move || if deleted.get() { "Restore draft.txt" } else { "Delete draft.txt" }}
         </Button>
         <p class="demo-status">
@@ -64,8 +67,8 @@ pub fn AlertDialogDemo() -> impl IntoView {
                                 "The file is deleted permanently. This can\u{2019}t be undone."
                             </p>
                             <div class="demo-dialog-actions">
-                                <Button on_press=move |_| state.close() color=ButtonColor::Secondary>"Cancel"</Button>
-                                <Button on_press=move |_| delete() color=ButtonColor::Danger>"Delete"</Button>
+                                <Button on_press=move |_| state.close() classes="demo-btn">"Cancel"</Button>
+                                <Button on_press=move |_| delete() classes="demo-btn-danger">"Delete"</Button>
                             </div>
                         </div>
                     </FocusScope>

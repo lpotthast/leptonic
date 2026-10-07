@@ -51,6 +51,59 @@ impl std::fmt::Debug for GridKeyboardDelegate {
 }
 
 impl GridKeyboardDelegate {
+    /// The key a page above `from`, stepping up with `key_above` (react-aria's
+    /// `getKeyPageAbove`, which steps with the possibly overridden `getKeyAbove`: a table's
+    /// delegate reaches its column headers this way).
+    pub fn key_page_above_with(
+        &self,
+        from: &Key,
+        key_above: impl Fn(&Key) -> Option<Key>,
+    ) -> Option<Key> {
+        let mut key = from.clone();
+        let mut rect = self.layout_delegate.item_rect(&key)?;
+        let page_y = (rect.y + rect.height - self.layout_delegate.visible_rect().height).max(0.0);
+        while rect.y > page_y {
+            let Some(above) = key_above(&key) else {
+                break;
+            };
+            key = above;
+            match self.layout_delegate.item_rect(&key) {
+                Some(r) => rect = r,
+                None => break,
+            }
+        }
+        Some(key)
+    }
+
+    /// The key a page below `from`, stepping down with `key_below` (see
+    /// [`GridKeyboardDelegate::key_page_above_with`]).
+    pub fn key_page_below_with(
+        &self,
+        from: &Key,
+        key_below: impl Fn(&Key) -> Option<Key>,
+    ) -> Option<Key> {
+        let mut key = from.clone();
+        let mut rect = self.layout_delegate.item_rect(&key)?;
+        let page_height = self.layout_delegate.visible_rect().height;
+        let page_y = self
+            .layout_delegate
+            .content_size()
+            .height
+            .min(rect.y + page_height);
+        while rect.y + rect.height < page_y {
+            let Some(below) = key_below(&key) else {
+                break;
+            };
+            let Some(below_rect) = self.layout_delegate.item_rect(&below) else {
+                key = below;
+                break;
+            };
+            rect = below_rect;
+            key = below;
+        }
+        Some(key)
+    }
+
     pub fn new(
         collection: CollectionMemo,
         selection: SelectionManager,
@@ -299,43 +352,11 @@ impl KeyboardDelegate for GridKeyboardDelegate {
     }
 
     fn key_page_above(&self, from: &Key) -> Option<Key> {
-        let mut key = from.clone();
-        let mut rect = self.layout_delegate.item_rect(&key)?;
-        let page_y = (rect.y + rect.height - self.layout_delegate.visible_rect().height).max(0.0);
-        while rect.y > page_y {
-            let Some(above) = self.key_above(&key, NavigationOptions::default()) else {
-                break;
-            };
-            key = above;
-            match self.layout_delegate.item_rect(&key) {
-                Some(r) => rect = r,
-                None => break,
-            }
-        }
-        Some(key)
+        self.key_page_above_with(from, |key| self.key_above(key, NavigationOptions::default()))
     }
 
     fn key_page_below(&self, from: &Key) -> Option<Key> {
-        let mut key = from.clone();
-        let mut rect = self.layout_delegate.item_rect(&key)?;
-        let page_height = self.layout_delegate.visible_rect().height;
-        let page_y = self
-            .layout_delegate
-            .content_size()
-            .height
-            .min(rect.y + page_height);
-        while rect.y + rect.height < page_y {
-            let Some(below) = self.key_below(&key, NavigationOptions::default()) else {
-                break;
-            };
-            let Some(below_rect) = self.layout_delegate.item_rect(&below) else {
-                key = below;
-                break;
-            };
-            rect = below_rect;
-            key = below;
-        }
-        Some(key)
+        self.key_page_below_with(from, |key| self.key_below(key, NavigationOptions::default()))
     }
 
     fn key_for_search(&self, search: &str, from: Option<&Key>) -> Option<Key> {

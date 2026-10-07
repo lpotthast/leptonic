@@ -11,8 +11,8 @@ use crate::{
             use_list_state_view,
         },
         form::use_form_validation_state::{
-            UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn,
-            ValidationBehavior, use_form_validation_state,
+            FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
+            use_form_validation_state,
         },
         menu::use_menu_trigger_state::{UseMenuTriggerStateInput, use_menu_trigger_state},
         select::SelectMode,
@@ -32,6 +32,12 @@ use crate::{
 //   order.
 // - `filter: None` shows the collection as is (react-aria: controlled `items`, filtered by the
 //   caller).
+// - `on_open_change` receives a `ComboBoxOpenChange` (react-aria: `(isOpen, menuTrigger)`).
+//
+// ## DIFFERENT BEHAVIOR
+// - With both `value` and `input_value` bound to app state, the combo box still keeps the text in
+//   sync with the selection (the selected option's text on selection and commit, an emptied text
+//   clears a single selection); react-aria leaves both to the app then.
 //
 // =============================================================================
 
@@ -44,6 +50,14 @@ pub enum MenuTriggerAction {
     Input,
     /// The trigger button or ArrowDown/ArrowUp.
     Manual,
+}
+
+/// The popover opened or closed (`on_open_change`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ComboBoxOpenChange {
+    pub is_open: bool,
+    /// What opened it; `None` when it closed.
+    pub trigger: Option<MenuTriggerAction>,
 }
 
 /// When the popover opens.
@@ -64,14 +78,9 @@ pub type ComboBoxFilter = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
 /// A filter matching options whose text contains the input, ignoring case and accents in the
 /// current locale (react-aria: `useFilter({sensitivity: 'base'}).contains`).
 pub fn use_contains_filter() -> ComboBoxFilter {
-    let locale = crate::utils::i18n::use_locale();
-    Arc::new(move |text: &str, input: &str| {
-        crate::utils::filter::Filter::new(
-            &locale.get_untracked(),
-            &crate::utils::filter::CollatorOptions::default(),
-        )
-        .contains(text, input)
-    })
+    // One filter per locale; reading it tracked lets a filtered collection follow the locale.
+    let filter = crate::utils::filter::use_filter(crate::utils::filter::CollatorOptions::default());
+    Arc::new(move |text: &str, input: &str| filter.with(|filter| filter.contains(text, input)))
 }
 
 /// The value validated by a combo box (react-aria validates the input text and the selection
@@ -114,11 +123,25 @@ pub struct UseComboBoxStateInput {
     /// Commit (or revert) the input when focus leaves the combo box.
     pub should_close_on_blur: bool,
     pub is_read_only: Signal<bool>,
-    pub on_open_change: Option<Callback<(bool, Option<MenuTriggerAction>)>>,
+    pub on_open_change: Option<Callback<ComboBoxOpenChange>>,
     pub is_invalid: Signal<bool>,
     pub validate: Option<ValidateFn<ComboBoxValue>>,
     pub validation_behavior: ValidationBehavior,
     pub name: Option<String>,
+}
+
+impl std::fmt::Debug for UseComboBoxStateInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseComboBoxStateInput")
+            .field("selection_mode", &self.selection_mode)
+            .field("default_value", &self.default_value)
+            .field("default_input_value", &self.default_input_value)
+            .field("menu_trigger", &self.menu_trigger)
+            .field("allows_custom_value", &self.allows_custom_value)
+            .field("validation_behavior", &self.validation_behavior)
+            .field("name", &self.name)
+            .finish_non_exhaustive()
+    }
 }
 
 /// The state of a combo box: its options (filtered by the input text), selection, input text,
@@ -128,8 +151,17 @@ pub struct ComboBoxState {
     /// The displayed options (filtered while open) with their selection and focus.
     pub list: ListState,
     pub selection_mode: SelectMode,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     inner: StoredValue<Inner>,
+}
+
+impl std::fmt::Debug for ComboBoxState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ComboBoxState")
+            .field("list", &self.list)
+            .field("selection_mode", &self.selection_mode)
+            .finish_non_exhaustive()
+    }
 }
 
 // The settings mirror `UseComboBoxStateInput`.
@@ -147,17 +179,20 @@ struct Inner {
     menu_open_trigger: StoredValue<Option<MenuTriggerAction>>,
     closed_due_to_empty: StoredValue<bool>,
     last_value: StoredValue<String>,
-    last_reported: StoredValue<Vec<Key>>,
+    /// The value the reconciliation saw last (react-aria: `lastValueRef`).
+    last_value_ref: StoredValue<Vec<Key>>,
     value_on_focus: StoredValue<(String, Vec<Key>)>,
     default_value: StoredValue<Vec<Key>>,
     default_input_value: StoredValue<String>,
     on_input_change: Option<Callback<String>>,
-    on_open_change: Option<Callback<(bool, Option<MenuTriggerAction>)>>,
+    on_open_change: Option<Callback<ComboBoxOpenChange>>,
     menu_trigger: ComboBoxMenuTrigger,
     allows_empty_collection: bool,
     allows_custom_value: bool,
     should_close_on_blur: bool,
     is_read_only: Signal<bool>,
+    name: StoredValue<Option<String>>,
+    validation_behavior: ValidationBehavior,
     filtering: bool,
 }
 
@@ -235,6 +270,21 @@ impl ComboBoxState {
 
     pub fn input_value(&self) -> String {
         self.inner().input_value.get()
+    }
+
+    /// Whether the combo box is read-only (the popover doesn't open, the text can't change).
+    pub fn is_read_only_signal(&self) -> Signal<bool> {
+        self.inner().is_read_only
+    }
+
+    /// The form field name.
+    pub fn name(&self) -> Option<String> {
+        self.inner().name.get_value()
+    }
+
+    /// How validation errors are shown (native form validation or ARIA only).
+    pub fn validation_behavior(&self) -> ValidationBehavior {
+        self.inner().validation_behavior
     }
 
     /// Whether typed text that matches no option is kept.
@@ -362,7 +412,7 @@ impl ComboBoxState {
             if inner.input_value.get_untracked() != input_on_focus
                 || untrack(|| self.value()) != value_on_focus
             {
-                self.validation.commit_validation.run(());
+                self.validation.commit_validation();
             }
         }
         inner.is_focused.set(focused);
@@ -425,8 +475,12 @@ impl ComboBoxState {
             self.close_menu();
             return;
         }
-        inner.last_reported.set_value(Vec::new());
-        self.set_value(Vec::new());
+        // The reconciliation must not reset the input to the (empty) selection's text: the
+        // custom text stays.
+        inner.last_value_ref.set_value(Vec::new());
+        if !untrack(|| self.value()).is_empty() {
+            self.set_value(Vec::new());
+        }
         self.close_menu();
     }
 
@@ -571,10 +625,10 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
             with_state(&|state| {
                 let inner = state.inner();
                 if let Some(on_open_change) = inner.on_open_change {
-                    on_open_change.run((
-                        open,
-                        open.then(|| inner.menu_open_trigger.get_value()).flatten(),
-                    ));
+                    on_open_change.run(ComboBoxOpenChange {
+                        is_open: open,
+                        trigger: open.then(|| inner.menu_open_trigger.get_value()).flatten(),
+                    });
                 }
                 state.list.selection.set_focused(open);
                 if !open {
@@ -610,7 +664,7 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         }),
         validate,
         validation_behavior,
-        name,
+        name: name.clone(),
     });
 
     let is_focused = RwSignal::new(false);
@@ -626,9 +680,9 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         menu_open_trigger: StoredValue::new(None),
         closed_due_to_empty: StoredValue::new(false),
         last_value: StoredValue::new(initial_text.clone()),
-        last_reported,
+        last_value_ref: StoredValue::new(default_value.clone()),
         value_on_focus: StoredValue::new((String::new(), Vec::new())),
-        default_value: StoredValue::new(default_value.clone()),
+        default_value: StoredValue::new(default_value),
         default_input_value: StoredValue::new(initial_text),
         on_input_change,
         on_open_change,
@@ -637,6 +691,8 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
         allows_custom_value,
         should_close_on_blur,
         is_read_only,
+        name: StoredValue::new(name),
+        validation_behavior,
         filtering,
     };
     let state = ComboBoxState {
@@ -649,7 +705,7 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
 
     // Reconciles the popover, input text and selection after changes, as react-aria does on
     // every render.
-    let last_value_ref = StoredValue::new(default_value);
+    let last_value_ref = inner.last_value_ref;
     let last_selected_text = StoredValue::new(untrack(|| state.selected_text()));
     Effect::new(move |_| {
         // Upstream sources before the memos derived from them (the input text, value and
@@ -745,6 +801,7 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
+    use crate::testing::{flush_effects, with_owner};
 
     fn fruits() -> CollectionMemo {
         Memo::new(|_| {
@@ -753,6 +810,312 @@ mod tests {
                 b.item("banana", "Banana");
             }))
         })
+    }
+
+    fn fruit_input() -> UseComboBoxStateInput {
+        UseComboBoxStateInput {
+            collection: Memo::new(|_| {
+                Arc::new(Collection::build(|b| {
+                    b.item("apple", "Apple");
+                    b.item("banana", "Banana");
+                    b.item("cherry", "Cherry");
+                }))
+            }),
+            filter: Some(use_contains_filter()),
+            selection_mode: SelectMode::Single,
+            default_value: Vec::new(),
+            value: None,
+            on_change: None,
+            default_input_value: None,
+            input_value: None,
+            on_input_change: None,
+            disabled_keys: Signal::stored(HashSet::new()),
+            menu_trigger: ComboBoxMenuTrigger::Input,
+            allows_empty_collection: false,
+            allows_custom_value: false,
+            should_close_on_blur: true,
+            is_read_only: Signal::stored(false),
+            on_open_change: None,
+            is_invalid: Signal::stored(false),
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            name: None,
+        }
+    }
+
+    /// The keys of the displayed options.
+    fn displayed(state: &ComboBoxState) -> Vec<String> {
+        state
+            .list
+            .collection
+            .with_untracked(|c| c.items().map(|n| n.key.to_string()).collect())
+    }
+
+    /// Records every `on_change` call.
+    fn changes() -> (RwSignal<Vec<Vec<Key>>>, Callback<Vec<Key>>) {
+        let changes = RwSignal::new(Vec::new());
+        let callback = Callback::new(move |value: Vec<Key>| changes.update(|c| c.push(value)));
+        (changes, callback)
+    }
+
+    /// The user focuses the combo box and types `text`.
+    fn type_text(state: &ComboBoxState, text: &str) {
+        state.set_focused(true);
+        flush_effects();
+        state.set_input_value(text.to_owned());
+        flush_effects();
+    }
+
+    // Upstream: useComboBoxState's `commitCustomValue` (ComboBox.test.js "allowsCustomValue").
+    #[test]
+    fn committing_custom_text_keeps_it_and_clears_the_selection() {
+        with_owner(|| {
+            let (changes, on_change) = changes();
+            let state = use_combobox_state(UseComboBoxStateInput {
+                default_value: vec![Key::from("apple")],
+                on_change: Some(on_change),
+                allows_custom_value: true,
+                ..fruit_input()
+            });
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Apple".to_owned());
+
+            type_text(&state, "Kiwi");
+            state.commit();
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Kiwi".to_owned());
+            assert_that!(state.value()).is_empty();
+            assert_that!(state.is_open()).is_false();
+            assert_that!(changes.get_untracked()).is_equal_to(vec![Vec::new()]);
+
+            // Committing the same custom text again reports nothing.
+            state.commit();
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Kiwi".to_owned());
+            assert_that!(changes.get_untracked().len()).is_equal_to(1);
+        });
+    }
+
+    #[test]
+    fn blur_commits_custom_text() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                allows_custom_value: true,
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "Kiwi");
+            assert_that!(state.is_open()).is_false();
+            state.set_focused(false);
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Kiwi".to_owned());
+            assert_that!(state.value()).is_empty();
+        });
+    }
+
+    #[test]
+    fn revert_without_selection_keeps_custom_text() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                allows_custom_value: true,
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "Ba");
+            assert_that!(state.is_open()).is_true();
+            state.revert();
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Ba".to_owned());
+            assert_that!(state.is_open()).is_false();
+        });
+    }
+
+    #[test]
+    fn revert_restores_the_selected_text() {
+        with_owner(|| {
+            let (changes, on_change) = changes();
+            let state = use_combobox_state(UseComboBoxStateInput {
+                default_value: vec![Key::from("banana")],
+                on_change: Some(on_change),
+                allows_custom_value: true,
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "Ch");
+            assert_that!(state.is_open()).is_true();
+            state.revert();
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Banana".to_owned());
+            assert_that!(state.value()).is_equal_to(vec![Key::from("banana")]);
+            assert_that!(changes.get_untracked()).is_empty();
+        });
+    }
+
+    #[test]
+    fn commit_without_custom_values_resets_the_text() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                default_value: vec![Key::from("banana")],
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "Kiwi");
+            state.commit();
+            flush_effects();
+            assert_that!(state.input_value()).is_equal_to("Banana".to_owned());
+            assert_that!(state.value()).is_equal_to(vec![Key::from("banana")]);
+        });
+    }
+
+    #[test]
+    fn commit_selects_the_focused_option() {
+        with_owner(|| {
+            let (changes, on_change) = changes();
+            let state = use_combobox_state(UseComboBoxStateInput {
+                on_change: Some(on_change),
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "an");
+            assert_that!(state.is_open()).is_true();
+            assert_that!(displayed(&state)).is_equal_to(vec!["banana".to_owned()]);
+            state
+                .list
+                .selection
+                .set_focused_key(Some(Key::from("banana")), None);
+            state.commit();
+            flush_effects();
+            assert_that!(state.value()).is_equal_to(vec![Key::from("banana")]);
+            assert_that!(state.input_value()).is_equal_to("Banana".to_owned());
+            assert_that!(state.is_open()).is_false();
+            assert_that!(changes.get_untracked()).is_equal_to(vec![vec![Key::from("banana")]]);
+        });
+    }
+
+    #[test]
+    fn menu_trigger_input_opens_on_typing() {
+        with_owner(|| {
+            let state = use_combobox_state(fruit_input());
+            flush_effects();
+            state.set_focused(true);
+            flush_effects();
+            assert_that!(state.is_open()).is_false();
+            state.set_input_value("e".to_owned());
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+            // Nothing matches: the popover closes, and reopens once something matches again.
+            state.set_input_value("ex".to_owned());
+            flush_effects();
+            assert_that!(state.is_open()).is_false();
+            state.set_input_value("e".to_owned());
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+        });
+    }
+
+    #[test]
+    fn menu_trigger_focus_opens_on_focus_with_all_items() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                default_input_value: Some("Ban".to_owned()),
+                menu_trigger: ComboBoxMenuTrigger::Focus,
+                ..fruit_input()
+            });
+            flush_effects();
+            state.set_focused(true);
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+            assert_that!(displayed(&state).len()).is_equal_to(3);
+            // Typing filters again.
+            state.set_input_value("Che".to_owned());
+            flush_effects();
+            assert_that!(displayed(&state)).is_equal_to(vec!["cherry".to_owned()]);
+        });
+    }
+
+    #[test]
+    fn menu_trigger_manual_opens_only_manually() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                menu_trigger: ComboBoxMenuTrigger::Manual,
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "a");
+            assert_that!(state.is_open()).is_false();
+            state.open(None, MenuTriggerAction::Manual);
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+        });
+    }
+
+    #[test]
+    fn opening_manually_shows_all_items_until_typing() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                default_input_value: Some("Ban".to_owned()),
+                ..fruit_input()
+            });
+            flush_effects();
+            state.set_focused(true);
+            state.toggle(None, MenuTriggerAction::Manual);
+            flush_effects();
+            assert_that!(state.is_open()).is_true();
+            assert_that!(displayed(&state).len()).is_equal_to(3);
+            state.set_input_value("Bana".to_owned());
+            flush_effects();
+            assert_that!(displayed(&state)).is_equal_to(vec!["banana".to_owned()]);
+            // Closing keeps the shown options (no flicker while the popover animates out).
+            state.toggle(None, MenuTriggerAction::Manual);
+            flush_effects();
+            assert_that!(state.is_open()).is_false();
+            assert_that!(displayed(&state)).is_equal_to(vec!["banana".to_owned()]);
+        });
+    }
+
+    #[test]
+    fn on_open_change_reports_the_trigger() {
+        with_owner(|| {
+            let events = RwSignal::new(Vec::new());
+            let state = use_combobox_state(UseComboBoxStateInput {
+                on_open_change: Some(Callback::new(move |event: ComboBoxOpenChange| {
+                    events.update(|e| e.push(event));
+                })),
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "a");
+            state.close();
+            flush_effects();
+            assert_that!(events.get_untracked()).is_equal_to(vec![
+                ComboBoxOpenChange {
+                    is_open: true,
+                    trigger: Some(MenuTriggerAction::Input),
+                },
+                ComboBoxOpenChange {
+                    is_open: false,
+                    trigger: None,
+                },
+            ]);
+        });
+    }
+
+    #[test]
+    fn multiple_selection_keeps_its_selection_on_custom_text() {
+        with_owner(|| {
+            let state = use_combobox_state(UseComboBoxStateInput {
+                selection_mode: SelectMode::Multiple,
+                default_value: vec![Key::from("apple")],
+                allows_custom_value: true,
+                ..fruit_input()
+            });
+            flush_effects();
+            type_text(&state, "Kiwi");
+            state.commit();
+            flush_effects();
+            assert_that!(state.value()).is_equal_to(vec![Key::from("apple")]);
+            assert_that!(state.input_value()).is_equal_to("Kiwi".to_owned());
+        });
     }
 
     #[test]

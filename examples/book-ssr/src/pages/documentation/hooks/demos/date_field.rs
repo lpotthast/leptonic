@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::{
         IntoAttrs,
         datepicker::{
-            DateFieldData, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
-            UseDateFieldStateInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
+            DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
+            UseDateFieldStateInput, UseDateSegmentInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
             use_date_segment,
         },
     },
@@ -35,15 +35,15 @@ pub fn DateFieldHookDemo() -> impl IntoView {
         description_props,
         error_message_props,
         data,
-    } = use_date_field(
-        UseDateFieldInput {
-            has_label: true.into(),
-            ..UseDateFieldInput::default()
-        },
+    } = use_date_field(UseDateFieldInput {
         state,
-        CapturedElement::new(),
-        CapturedElement::new(),
-    );
+        element: CapturedElement::new(),
+        input_element: CapturedElement::new(),
+        options: DateFieldOptions {
+            has_label: true.into(),
+            ..DateFieldOptions::default()
+        },
+    });
     let (field_attrs, field_styles) = field_props.into_parts();
     let segments = state.segments;
     let errors = state.validation.validation_errors;
@@ -89,7 +89,10 @@ pub fn DateFieldHookDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }
@@ -106,7 +109,11 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         .into_any();
     }
     let UseDateSegmentReturn { segment_props } =
-        use_date_segment(segment, data, CapturedElement::new());
+        use_date_segment(UseDateSegmentInput {
+            segment,
+            data,
+            element: CapturedElement::new(),
+        });
     let (attrs, styles) = segment_props.into_parts();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>

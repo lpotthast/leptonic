@@ -11,7 +11,7 @@ use crate::{
         IntoAttrs,
         collections::{
             CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
-            use_list_keyboard_delegate,
+            UseListKeyboardDelegateInput, use_list_keyboard_delegate,
         },
         focus::use_focus_within::{
             UseFocusWithinAttrs, UseFocusWithinInput, UseFocusWithinProps, use_focus_within,
@@ -45,7 +45,7 @@ use crate::{
 // =============================================================================
 
 /// Input of [`use_tag_group`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseTagGroupInput {
     pub state: ListState,
     /// The group element; the hook's props capture it.
@@ -136,7 +136,13 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     } = input;
 
     let delegate = keyboard_delegate.unwrap_or_else(|| {
-        use_list_keyboard_delegate(state, element, Orientation::Horizontal, ListLayout::Stack)
+        use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+            state,
+            element,
+            orientation: Orientation::Horizontal,
+            layout: ListLayout::Stack,
+            layout_delegate: None,
+        })
     });
     let UseFieldReturn {
         label_props,

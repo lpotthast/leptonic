@@ -86,9 +86,10 @@ impl TableData {
         )
     }
 
-    /// The ids of the row header cells of `row`: the row's label.
+    /// The ids of the row header cells of `row`: the row's label. Tracks the table (the row
+    /// header columns can change).
     pub fn row_labelledby(&self, row: &Key) -> String {
-        self.state.table.with_untracked(|t| {
+        self.state.table.with(|t| {
             t.row_header_columns()
                 .iter()
                 .map(|column| self.cell_id(row, column))

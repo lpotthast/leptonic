@@ -1,4 +1,16 @@
+// Upstream: react-aria-components/src/Keyboard.tsx @ 99e6102368
 //! Headless keyboard shortcut display.
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## ADDITIONS
+// - The keys are rendered from typed values (`Shortcut`, `KeyboardKey`): one `<kbd>` per key,
+//   with names for glyphs, in the platform's form for `ShortcutKeys`. react-aria-components'
+//   `Keyboard` is a plain `<kbd dir="ltr">` around the app's text.
+//
+// =============================================================================
 use leptos::prelude::*;
 
 use crate::{
@@ -33,7 +45,12 @@ pub fn ShortcutKeys(
         let apple = apple.get();
         render_keys(shortcut.with_value(|shortcut| shortcut.keys(apple)), !apple)
     };
-    view! { <kbd class=classes style=styles>{keys}</kbd> }
+    // Left to right also in right-to-left text, as react-aria-components' `Keyboard`.
+    view! {
+        <kbd dir="ltr" class=classes style=styles>
+            {keys}
+        </kbd>
+    }
 }
 
 /// Keys as given, e.g. for documentation ("Command + X" on every platform; [`ShortcutKeys`] shows
@@ -51,7 +68,7 @@ pub fn Keys(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Keys", classes);
     view! {
-        <kbd class=classes style=styles>
+        <kbd dir="ltr" class=classes style=styles>
             {move || render_keys(keys.get(), separators)}
         </kbd>
     }

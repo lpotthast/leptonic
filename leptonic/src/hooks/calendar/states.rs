@@ -2,6 +2,24 @@
 //! What the calendar hooks share: either calendar state, the calendar's data for its grids and
 //! cells, and the descriptions of dates and ranges.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Either state is a `CalendarStates` enum (react-aria: a `CalendarState | RangeCalendarState`
+//   union told apart by its fields); the calendar's data for its parts is `CalendarData`
+//   (react-aria: `hookData`, a `WeakMap` keyed by the state).
+// - The formatters of the labels are kept per locale in `CalendarData` (react-aria memoizes them
+//   per hook): cells share them.
+//
+// ## OMITTED FEATURES
+// - Localized strings ("Selected Date: ...", "... to ..."): English.
+// - Range formatting with shared fields ("June 1 – 15, 2024", `formatRange`): ICU4X has none
+//   yet; a range is "start to end".
+//
+// =============================================================================
+
 use jiff::civil::Date;
 use leptos::prelude::*;
 
@@ -11,7 +29,7 @@ use crate::utils::{
     date_time_formatter::{
         DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
     },
-    i18n::Locale,
+    i18n::{Locale, use_locale},
 };
 
 /// The English strings of the calendar hooks (react-aria: `@react-aria/calendar`'s messages),
@@ -136,20 +154,66 @@ pub struct CalendarData {
     pub error_message_id: Signal<Option<String>>,
     /// A description of the selection, e.g. "Selected Date: Monday, May 20, 2024".
     pub selected_date_description: Signal<String>,
+    /// The formatters of the labels, shared by the cells.
+    pub(crate) formatters: CalendarFormatters,
 }
 
-/// A formatter for full dates: "Monday, May 20, 2024".
-pub(crate) fn full_date_formatter(locale: &Locale) -> DateTimeFormatter {
-    DateTimeFormatter::new(
-        locale,
-        DateTimeFormatOptions {
-            weekday: Some(DateTimeFormat::Long),
-            month: Some(MonthFormat::Long),
-            day: Some(NumericFormat::Numeric),
-            year: Some(NumericFormat::Numeric),
-            ..DateTimeFormatOptions::default()
-        },
-    )
+/// The era format of a date: the short era for dates before Christ (react-aria's
+/// `getEraFormat`), else none.
+pub(crate) fn era_format(date: Date) -> Option<DateTimeFormat> {
+    (date.year() <= 0).then_some(DateTimeFormat::Short)
+}
+
+/// Options for full dates ("Monday, May 20, 2024").
+fn full_date_options(era: Option<DateTimeFormat>) -> DateTimeFormatOptions {
+    DateTimeFormatOptions {
+        weekday: Some(DateTimeFormat::Long),
+        month: Some(MonthFormat::Long),
+        day: Some(NumericFormat::Numeric),
+        year: Some(NumericFormat::Numeric),
+        era,
+        ..DateTimeFormatOptions::default()
+    }
+}
+
+/// The formatters of a calendar's labels, kept per locale.
+#[derive(Clone, Copy)]
+pub(crate) struct CalendarFormatters {
+    full_date: Memo<DateTimeFormatter>,
+    full_date_with_era: Memo<DateTimeFormatter>,
+    day: Memo<DateTimeFormatter>,
+}
+
+impl CalendarFormatters {
+    pub(crate) fn new() -> Self {
+        let locale = use_locale();
+        let formatter = move |options: fn() -> DateTimeFormatOptions| {
+            Memo::new(move |_| DateTimeFormatter::new(&locale.get(), options()))
+        };
+        Self {
+            full_date: formatter(|| full_date_options(None)),
+            full_date_with_era: formatter(|| full_date_options(Some(DateTimeFormat::Short))),
+            day: formatter(|| DateTimeFormatOptions {
+                day: Some(NumericFormat::Numeric),
+                ..DateTimeFormatOptions::default()
+            }),
+        }
+    }
+
+    /// "Monday, May 20, 2024" (with the era before Christ).
+    pub(crate) fn full_date(&self, date: Date) -> String {
+        let formatter = if era_format(date).is_some() {
+            self.full_date_with_era
+        } else {
+            self.full_date
+        };
+        formatter.with(|formatter| formatter.format_date(date))
+    }
+
+    /// The day number: "20".
+    pub(crate) fn day(&self, date: Date) -> String {
+        self.day.with(|formatter| formatter.format_date(date))
+    }
 }
 
 /// The description of the selection (react-aria's `useSelectedDateDescription`).
@@ -170,7 +234,10 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
     let (Some(start), Some(end)) = (start, end) else {
         return String::new();
     };
-    let formatter = full_date_formatter(locale);
+    let formatter = DateTimeFormatter::new(
+        locale,
+        full_date_options(era_format(start).or_else(|| era_format(end))),
+    );
     if start == end {
         strings::selected_date(&formatter.format_date(start))
     } else {
@@ -184,11 +251,13 @@ pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale)
 /// The description of the visible range (react-aria's `useVisibleRangeDescription`): "May 2024"
 /// for a month, "May 2024 to July 2024" for months, else the dates.
 pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> String {
+    let era = era_format(range.start).or_else(|| era_format(range.end));
     let months = DateTimeFormatter::new(
         locale,
         DateTimeFormatOptions {
             month: Some(MonthFormat::Long),
             year: Some(NumericFormat::Numeric),
+            era,
             ..DateTimeFormatOptions::default()
         },
     );
@@ -209,6 +278,7 @@ pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> St
             month: Some(MonthFormat::Long),
             day: Some(NumericFormat::Numeric),
             year: Some(NumericFormat::Numeric),
+            era,
             ..DateTimeFormatOptions::default()
         },
     );
@@ -216,4 +286,61 @@ pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> St
         &dates.format_date(range.start),
         &dates.format_date(range.end),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+    use jiff::civil::date;
+
+    use super::*;
+
+    fn locale(tag: &str) -> Locale {
+        tag.parse().expect("a locale")
+    }
+
+    #[test]
+    fn describes_visible_ranges() {
+        let en = locale("en-US");
+        let month = DateRange {
+            start: date(2024, 5, 1),
+            end: date(2024, 5, 31),
+        };
+        assert_that!(visible_range_description(month, &en)).is_equal_to("May 2024".to_owned());
+        let months = DateRange {
+            start: date(2024, 5, 1),
+            end: date(2024, 7, 31),
+        };
+        assert_that!(visible_range_description(months, &en))
+            .is_equal_to("May 2024 to July 2024".to_owned());
+        let days = DateRange {
+            start: date(2019, 6, 2),
+            end: date(2019, 6, 15),
+        };
+        assert_that!(visible_range_description(days, &en))
+            .is_equal_to("June 2, 2019 to June 15, 2019".to_owned());
+        assert_that!(visible_range_description(month, &locale("de-DE")))
+            .is_equal_to("Mai 2024".to_owned());
+    }
+
+    /// Dates before Christ get their era (react-aria's `getEraFormat`), as in
+    /// `RangeCalendar.test.js` ("March 5 BC").
+    #[test]
+    fn names_the_era_before_christ() {
+        let en = locale("en-US");
+        // The proleptic year -1 is 2 BC.
+        let month = DateRange {
+            start: date(-1, 3, 1),
+            end: date(-1, 3, 31),
+        };
+        assert_that!(visible_range_description(month, &en)).is_equal_to("March 2 BC".to_owned());
+        Owner::new().with(|| {
+            let formatters = CalendarFormatters::new();
+            assert_that!(formatters.full_date(date(-1, 3, 5)))
+                .is_equal_to("Friday, March 5, 2 BC".to_owned());
+            assert_that!(formatters.full_date(date(2024, 5, 20)))
+                .is_equal_to("Monday, May 20, 2024".to_owned());
+            assert_that!(formatters.day(date(2024, 5, 20))).is_equal_to("20".to_owned());
+        });
+    }
 }

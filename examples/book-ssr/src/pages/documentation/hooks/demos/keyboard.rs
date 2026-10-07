@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, utils::Propagation,
+    atoms::{checkbox::Checkbox, focus_ring::FocusRing}, hooks::*, utils::Propagation,
 };
 use leptos::prelude::*;
 use ringbuf::{
@@ -45,7 +45,10 @@ pub fn KeyboardDemo() -> impl IntoView {
         </FocusRing>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=set_disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=set_disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>

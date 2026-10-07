@@ -7,7 +7,7 @@ use crate::{
         Orientation,
         collections::{CollectionMemo, ItemElements, ListLayout},
     },
-    utils::{CapturedElement, locale::WritingDirection},
+    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection},
 };
 
 // =============================================================================
@@ -17,6 +17,8 @@ use crate::{
 // ## API DIFFERENCES
 // - Finds the items' elements in the list's `ItemElements` registry (react-aria queries
 //   `[data-key]` elements in the collection element).
+// - The writing direction comes from the i18n context (react-aria: a `direction` option, LTR by
+//   default); layout and orientation are builder methods.
 //
 // =============================================================================
 
@@ -41,14 +43,15 @@ pub struct ListDropTargetDelegate {
     element: CapturedElement,
     layout: ListLayout,
     orientation: Orientation,
-    direction: WritingDirection,
+    direction: Signal<WritingDirection>,
 }
 
 /// How close (in px) to an item's edge a drop is before/after rather than on it.
 const EDGE: f64 = 5.0;
 
 impl ListDropTargetDelegate {
-    /// A vertical stack in left-to-right text.
+    /// A vertical stack, in the writing direction of the i18n context. Call it in a reactive
+    /// owner (a component or hook), which provides the context.
     pub fn new(
         collection: CollectionMemo,
         item_elements: ItemElements,
@@ -60,7 +63,7 @@ impl ListDropTargetDelegate {
             element,
             layout: ListLayout::Stack,
             orientation: Orientation::Vertical,
-            direction: WritingDirection::Ltr,
+            direction: use_direction(),
         }
     }
 
@@ -73,12 +76,6 @@ impl ListDropTargetDelegate {
     #[must_use]
     pub fn with_orientation(mut self, orientation: Orientation) -> Self {
         self.orientation = orientation;
-        self
-    }
-
-    #[must_use]
-    pub fn with_direction(mut self, direction: WritingDirection) -> Self {
-        self.direction = direction;
         self
     }
 
@@ -155,7 +152,7 @@ impl DropTargetDelegate for ListDropTargetDelegate {
         } else {
             secondary
         };
-        let rtl = self.direction == WritingDirection::Rtl;
+        let rtl = self.direction.get_untracked() == WritingDirection::Rtl;
         let primary_rtl = self.horizontal() && rtl;
         let secondary_rtl = self.layout == ListLayout::Grid && !self.horizontal() && rtl;
         let flow_rtl = if self.layout == ListLayout::Stack {

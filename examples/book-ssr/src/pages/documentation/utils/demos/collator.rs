@@ -1,5 +1,10 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{
+        field::Label,
+        input::Input,
+        radio::{Radio, RadioGroup},
+        search_field::SearchField,
+    },
     hooks::{Orientation, collections::Key},
     utils::{
         filter::{Collator, CollatorOptions, Filter},
@@ -50,12 +55,27 @@ pub fn CollatorDemo() -> impl IntoView {
     };
 
     view! {
-        <RadioGroup label="Locale" orientation=Orientation::Horizontal default_value="en-US" on_change=on_locale_change>
-            <Radio value="en-US">"English (US)"</Radio>
-            <Radio value="de-DE">"German"</Radio>
-            <Radio value="sv-SE">"Swedish"</Radio>
+        <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change=on_locale_change classes="demo-choice-group">
+            <Label classes="demo-choice-group-label">"Locale"</Label>
+            <div class="demo-choice-group-items">
+                <Radio value="en-US" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "English (US)"
+                </Radio>
+                <Radio value="de-DE" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "German"
+                </Radio>
+                <Radio value="sv-SE" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Swedish"
+                </Radio>
+            </div>
         </RadioGroup>
-        <SearchField label="Filter" value=query set_value=query/>
+        <SearchField value=query set_value=query classes=["demo-field", "demo-mt-1"]>
+            <Label classes="demo-field-label">"Filter"</Label>
+            <Input classes="demo-atom-input"/>
+        </SearchField>
         <ol class="demo-collator-list">
             {move || words().into_iter().map(|word| view! { <li>{word}</li> }).collect_view()}
         </ol>

@@ -6,7 +6,6 @@ use leptos::{
     attr::Attr,
     ev,
     ev::{On, SharedEventCallback},
-    oco::Oco,
     prelude::*,
 };
 use send_wrapper::SendWrapper;
@@ -104,7 +103,7 @@ pub struct UseOverlayReturn {
     pub props: UseOverlayProps,
 
     /// Unique ID for the overlay. Pass to `use_overlay_trigger` as `overlay_id`.
-    pub id: Oco<'static, str>,
+    pub id: String,
 
     /// The captured overlay element. Enables consumers (e.g. `use_popover`,
     /// `use_modal_backdrop`) to pass the element to `aria_hide_outside`.
@@ -152,15 +151,16 @@ pub type UseOverlayAttrs = (
 /// # Example
 ///
 /// ```ignore
-/// let (is_open, set_is_open) = signal(false);
+/// let is_open = RwSignal::new(false);
 ///
 /// let UseOverlayReturn { props: overlay_props, .. } = use_overlay(UseOverlayInput {
 ///     is_open: is_open.into(),
-///     on_close: Callback::new(move |_| set_is_open.set(false)),
-///     is_dismissable: true,
-///     should_close_on_blur: false,
-///     is_keyboard_dismiss_disabled: false,
+///     on_close: Callback::new(move |()| is_open.set(false)),
+///     is_dismissable: Signal::stored(true),
+///     should_close_on_blur: Signal::stored(false),
+///     is_keyboard_dismiss_disabled: Signal::stored(false),
 ///     should_close_on_interact_outside: None,
+///     group: None,
 /// });
 ///
 /// view! {
@@ -186,7 +186,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                     on_focusin: EventHandler::new(|_: FocusEvent| {}),
                     on_focusout: EventHandler::new(|_: FocusEvent| {}),
                 },
-                id: Oco::Owned(id),
+                id,
                 overlay_element,
             }
         } else {
@@ -377,7 +377,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                     on_focusin: focus_within_return.props.on_focusin,
                     on_focusout: focus_within_return.props.on_focusout,
                 },
-                id: Oco::Owned(id_string.clone()),
+                id: id_string,
                 overlay_element,
             }
         }

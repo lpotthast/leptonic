@@ -33,6 +33,7 @@ pub fn PageHookTree() -> impl IntoView {
         collection,
         selection: SelectionOptions::default(),
         default_expanded_keys: HashSet::new(),
+        expanded_keys: None,
         on_expanded_change: None,
     });
     let tree = use_tree(UseTreeInput {
@@ -75,15 +76,18 @@ fn TreeItem(tree: GridListData, key: Key) -> impl IntoView {
     let UseTreeItemReturn {
         item,
         expand_button,
-        expand_button_label,
+        expand_button_attrs,
         has_child_items,
         ..
     } = use_tree_item(UseTreeItemInput { tree, key });
     let (attrs, styles) = item.row_props.into_parts();
-    let button = has_child_items.then(|| {
-        let (attrs, styles) = use_button(expand_button).props.into_parts();
-        view! { <button {..attrs} aria-label=expand_button_label style=styles>"›"</button> }
-    });
+    // Only items with children have one (an item can get children later).
+    let button = move || {
+        has_child_items.get().then(|| {
+            let (attrs, styles) = use_button(expand_button.clone()).props.into_parts();
+            view! { <button {..attrs} {..expand_button_attrs.clone()} style=styles>"›"</button> }
+        })
+    };
 
     view! {
         <div {..attrs} style=styles>

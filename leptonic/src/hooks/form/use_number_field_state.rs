@@ -2,7 +2,7 @@
 use leptos::prelude::*;
 
 use super::use_form_validation_state::{
-    UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+    FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
     use_form_validation_state,
 };
 use crate::utils::{
@@ -125,7 +125,7 @@ pub struct NumberFieldState<T: NumberValue> {
     pub commit_behavior: CommitBehavior,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     /// The value form resets restore.
     pub default_number_value: Option<T>,
@@ -187,13 +187,6 @@ impl<T: NumberValue> NumberFieldState<T> {
     }
 }
 
-/// The number formatter and parser of a locale and format options.
-#[derive(Clone)]
-struct Formatting {
-    formatter: NumberFormatter,
-    parser: NumberParser,
-}
-
 /// Creates the state of a number field holding values of type `T`.
 ///
 /// ```ignore
@@ -225,26 +218,41 @@ pub fn use_number_field_state<T: NumberValue>(
         name,
     } = input;
 
-    // Formatter and parser, rebuilt when the locale or the options (by value) change.
+    // The parser, rebuilt when the locale or the options (by value) change.
     let locale = use_locale();
     let formatting_key: Memo<(Locale, NumberFormatOptions)> =
         Memo::new(move |_| (locale.get(), format_options.get()));
-    let formatting = Memo::new_with_compare(
+    let parser = Memo::new_with_compare(
+        move |_| formatting_key.with(|(locale, options)| NumberParser::new(locale, options)),
+        // Always a change: the key memo already compares by value.
+        |_, _| true,
+    );
+    // The text, created first: the formatter writes the digits it was typed with.
+    let input_value = RwSignal::new(String::new());
+    let numbering_system = Memo::new(move |_| {
+        parser.with(|parser| input_value.with(|text| parser.numbering_system(text)))
+    });
+    let formatter = Memo::new_with_compare(
         move |_| {
-            formatting_key.with(|(locale, options)| Formatting {
-                formatter: NumberFormatter::new(locale, options.clone()),
-                parser: NumberParser::new(locale, options),
+            let numbering_system = numbering_system.get();
+            formatting_key.with(|(locale, options)| {
+                NumberFormatter::new(
+                    locale,
+                    NumberFormatOptions {
+                        numbering_system: Some(numbering_system),
+                        ..options.clone()
+                    },
+                )
             })
         },
-        // Always a change: the key memo already compares by value.
         |_, _| true,
     );
     let format = move |value: Option<T>| {
         value.map_or_else(String::new, |value| {
-            formatting.with_untracked(|f| f.formatter.format(value))
+            formatter.with_untracked(|formatter| formatter.format(value))
         })
     };
-    let parse = move |text: &str| formatting.with_untracked(|f| f.parser.parse::<T>(text));
+    let parse = move |text: &str| parser.with_untracked(|parser| parser.parse::<T>(text));
 
     let explicit_step = step;
     let step = Signal::derive(move || {
@@ -281,7 +289,20 @@ pub fn use_number_field_state<T: NumberValue>(
     // The committed value: bound app state, or owned.
     let (value, store_value): (Signal<Option<T>>, Callback<Option<T>>) =
         if let Some(binding) = binding {
-            (binding.value, Callback::new(move |v| binding.set(v)))
+            // Shown snapped, as react-aria snaps a controlled value (the bound state keeps what
+            // the app set).
+            let value = match commit_behavior {
+                CommitBehavior::Snap => Signal::derive(move || {
+                    let (min, max) = (min_value.get(), max_value.get());
+                    let step = explicit_step.get();
+                    binding.value.get().map(|value| match step {
+                        Some(step) => value.snap_to_step(min, max, step),
+                        None => value.clamp_to(min, max),
+                    })
+                }),
+                CommitBehavior::Validate => binding.value,
+            };
+            (value, Callback::new(move |v| binding.set(v)))
         } else {
             let owned = RwSignal::new(match commit_behavior {
                 CommitBehavior::Snap => default_value.map(snap_committed),
@@ -299,12 +320,12 @@ pub fn use_number_field_state<T: NumberValue>(
     });
     let default_number_value = value.get_untracked();
 
-    let input_value = RwSignal::new(format(value.get_untracked()));
+    input_value.set(format(value.get_untracked()));
     // The text follows the committed value (also when changed from outside), the locale and the
-    // format options.
+    // format options (not the numbering system typed, which the text sets).
     Effect::new(move |previous: Option<()>| {
         let value = value.get();
-        formatting.track();
+        formatting_key.track();
         if previous.is_some() {
             input_value.set(format(value));
         }
@@ -312,7 +333,7 @@ pub fn use_number_field_state<T: NumberValue>(
 
     // The value of the typed text.
     let number_value = Signal::derive(move || {
-        formatting.track();
+        parser.track();
         input_value.with(|text| parse(text))
     });
 
@@ -329,7 +350,8 @@ pub fn use_number_field_state<T: NumberValue>(
         let text = text.unwrap_or_else(|| input_value.get_untracked());
         if text.is_empty() {
             set_value.run(None);
-            input_value.set(String::new());
+            // What the store holds (a bound value may reject the change).
+            input_value.set(format(value.get_untracked()));
             return;
         }
         let Some(parsed) = parse(&text) else {
@@ -348,7 +370,7 @@ pub fn use_number_field_state<T: NumberValue>(
         // What the store holds (a bound value may reject the change).
         input_value.set(format(value.get_untracked()));
         if should_validate {
-            validation.commit_validation.run(());
+            validation.commit_validation();
         }
     });
 
@@ -376,7 +398,7 @@ pub fn use_number_field_state<T: NumberValue>(
         // Also when the value didn't change (the text may differ from it), and what the store
         // holds (a bound value may reject the change).
         input_value.set(format(value.get_untracked()));
-        validation.commit_validation.run(());
+        validation.commit_validation();
     };
     let increment = Callback::new(move |()| {
         set_stepped(next_step(true, min_value.get_untracked()));
@@ -455,8 +477,8 @@ pub fn use_number_field_state<T: NumberValue>(
         increment_to_max,
         decrement_to_min,
         validate: Callback::new(move |text: String| {
-            formatting.with_untracked(|f| {
-                f.parser.is_valid_partial_number(
+            parser.with_untracked(|parser| {
+                parser.is_valid_partial_number(
                     &text,
                     min_value.get_untracked(),
                     max_value.get_untracked(),
@@ -714,6 +736,73 @@ mod tests {
             assert_that!(state.input_value.get_untracked()).is_equal_to("4".to_owned());
             state.increment();
             assert_that!(app.get_untracked()).is_equal_to(Some(5));
+        });
+    }
+    #[test]
+    fn a_bound_value_shows_snapped() {
+        Owner::new().with(|| {
+            let app = RwSignal::new(Some(17_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                value: Some(ValueBinding::from(app)),
+                step: Signal::stored(Some(5)),
+                max_value: Signal::stored(Some(30)),
+                ..UseNumberFieldStateInput::default()
+            });
+            assert_that!(state.value().get_untracked()).is_equal_to(Some(15));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("15".to_owned());
+            app.set(Some(100));
+            assert_that!(state.value().get_untracked()).is_equal_to(Some(30));
+        });
+    }
+
+    #[test]
+    fn committing_empty_text_shows_what_a_bound_value_holds() {
+        Owner::new().with(|| {
+            let app = RwSignal::new(Some(4_i32));
+            let state = use_number_field_state(UseNumberFieldStateInput {
+                // Rejects `None`.
+                value: Some(ValueBinding::new(
+                    app.into(),
+                    Callback::new(move |value: Option<i32>| {
+                        if value.is_some() {
+                            app.set(value);
+                        }
+                    }),
+                )),
+                ..UseNumberFieldStateInput::default()
+            });
+            state.set_input_value(String::new());
+            state.commit(None);
+            assert_that!(state.input_value.get_untracked()).is_equal_to("4".to_owned());
+        });
+    }
+
+    #[test]
+    fn typed_integers_beyond_the_type_clamp() {
+        with_state(UseNumberFieldStateInput::<u8>::default(), |state| {
+            state.set_input_value("1000".to_owned());
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(255));
+            state.increment();
+            assert_that!(state.value().get_untracked()).is_equal_to(Some(255));
+            state.set_input_value("300".to_owned());
+            state.commit(None);
+            assert_that!(state.value().get_untracked()).is_equal_to(Some(255));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("255".to_owned());
+        });
+    }
+
+    #[test]
+    fn keeps_the_numbering_system_typed() {
+        with_state(UseNumberFieldStateInput::<i32>::default(), |state| {
+            state.set_input_value("١٢".to_owned());
+            state.commit(None);
+            assert_that!(state.value().get_untracked()).is_equal_to(Some(12));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("١٢".to_owned());
+            state.increment();
+            assert_that!(state.input_value.get_untracked()).is_equal_to("١٣".to_owned());
+            state.set_input_value("7".to_owned());
+            state.commit(None);
+            assert_that!(state.input_value.get_untracked()).is_equal_to("7".to_owned());
         });
     }
 }

@@ -14,7 +14,10 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Returns the `UseCheckboxInput` for `use_checkbox`. The label ("Select") is English only.
+// - Returns the `UseCheckboxInput` for `use_checkbox`, to render the checkbox with it.
+//
+// ## OMITTED FEATURES
+// - A localized label: "Select" is English (no message bundles yet).
 //
 // =============================================================================
 

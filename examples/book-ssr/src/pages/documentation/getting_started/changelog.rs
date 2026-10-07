@@ -71,7 +71,6 @@ const RELEASES: &[Release] = &[
                     "`Toggle` \u{2192} `Switch`, and `ToggleIcons`, `ToggleSize` and `ToggleVariant` \u{2192} \
                  `SwitchIcons`, `SwitchSize` and `SwitchVariant`. Its `state` and `set_state` \u{2192} `is_selected` and \
                  `set_selected`.",
-                    "`SafeHtml` \u{2192} `SanitizedHtml`, behind the new `sanitize` feature.",
                     "`Anchor` \u{2192} `AnchorLink`.",
                     "`LinkExt` \u{2192} `Link`, which takes a `target`; `LinkExtTarget` \u{2192} `LinkTarget`.",
                     "`create_signal_ls` \u{2192} `signal_ls`.",
@@ -89,72 +88,13 @@ const RELEASES: &[Release] = &[
                 &[
                     "`Button` and `LinkButton`: `on_click` \u{2192} `on_press`, `disabled` \u{2192} `is_disabled`. \
                  `button_type` makes a button submit or reset its form; without it, buttons have `type=\"button\"`.",
-                    "`TiptapEditor`: `disabled` \u{2192} `is_disabled`.",
-                    "`Toast`: `id` and `created_at` were removed. `Toasts::push` returns the toast\u{2019}s key, and \
-                 `close(&key)` replaces `try_remove(id)`; the `toasts` signal \u{2192} `queue()`, whose `visible_toasts` \
-                 lists the toasts shown. `ToastTimeout::CustomDelay` takes a `std::time::Duration`, and `DefaultDelay` is \
-                 5 seconds (was 3). The toasts are built on the toast atoms: every toast has a close button, timeouts \
-                 pause while the toasts are hovered or focused, screen readers announce new toasts, and the toast region \
-                 is a landmark reached with F6. New: `max_visible_toasts` on `ToastRoot`.",
-                    "`DateSelector` is built on the calendar atoms and picks a `jiff::civil::Date` instead of a \
-                 `time::OffsetDateTime`. The initial `value` \u{2192} `default_value` (or `value` and `set_value` for a \
-                 controlled date), `on_change` \u{2192} `set_value` (`on_change` is now a `Callback<Option<Date>>` that \
-                 only observes); `min` and `max` \
-                 \u{2192} `min_value` and `max_value`; `guide_mode` \u{2192} `initial_view` (`DateSelectorView::Days`, \
-                 `Months` or `Years`). New: `default_focused_value`, `is_date_unavailable`, `is_disabled`, \
-                 `is_read_only`, `is_invalid`, `error_message`, `first_day_of_week` and `aria_label`. It works with the \
-                 keyboard and screen readers; its heading switches to the years, then the months.",
                     "`Checkbox`: `checked` and `set_checked` \u{2192} `is_selected` and `set_selected`. Its children are its \
                  label. New: `is_indeterminate`, `is_required`, `is_invalid`, `name` and `form_value`. Removed: \
                  `variant`, `size` and `id`.",
-                    "`Modal`: `show_when` \u{2192} `is_open` and `set_open`. Escape closes the modal through `set_open`, \
-                 replacing `on_escape` (`is_keyboard_dismiss_disabled` turns it off); so does clicking outside while \
-                 `is_dismissable`. Modals render into `<body>` by themselves.",
-                    "`Popover`: put the element that opens it into the new `PopoverTrigger` slot, instead of rendering \
-                 the popover next to it with `show`. The popover opens and closes itself, or follows `is_open` and \
-                 `set_open`; `placement` positions it and `modality` makes it modal.",
-                    "`Drawer` is a modal side sheet: it renders into `<body>` over the page, keeps the focus inside, closes \
-                 on Escape and (while `is_dismissable`, the default) a press outside, and makes the page behind it inert \
-                 and unscrollable. `shown` \u{2192} `is_open` and `set_open` (or `default_open`; inside a `DialogTrigger`, \
-                 the trigger opens it); `side` defaults to `DrawerSide::Left`. New: `on_open_change`, `is_dismissable`, \
-                 `is_keyboard_dismiss_disabled` and `aria_label`. It slides while `data-entering` and `data-exiting` are \
-                 set, instead of the classes `showing`, `shown`, `hiding` and `hidden`; `classes` and `styles` reach the \
-                 dialog inside the panel. For a panel next to the content, use a `Collapse` with `axis=CollapseAxis::X`.",
-                    "Transitions (`Collapse`, `Fade`, `Grow`, `Slide` and `Zoom`): `inn` and `show` \u{2192} `is_shown`, \
-                 a value or any signal. The wrapper has `data-shown` while shown (was `data-in`); hidden content is \
-                 `inert` and invisible once its transition ended. The theme styles all five and turns them off for \
-                 reduced motion.",
-                    "`Collapse` animates a grid track and follows the size of its content. Its classes `height` and \
-                 `width` \u{2192} `leptonic-collapse-y` and `leptonic-collapse-x`; its inner `content` (with `show` while \
-                 expanded) \u{2192} `leptonic-collapse-content`.",
                     "`Slider` and `RangeSlider` are generic over their number type. `min` and `max` \u{2192} `min_value` \
                  and `max_value`, `value_display` \u{2192} `format_options`, `disabled` \u{2192} `is_disabled`; name them \
                  with `aria_label`.",
-                    "`ProgressBar` is generic over its number type. `progress` \u{2192} `value` (`None`: indeterminate), \
-                 `max` \u{2192} `max_value`; new: `min_value`.",
                     "`Select`, `OptionalSelect` and `Multiselect` take `label` (or `aria_label`), `is_disabled` and `name`.",
-                    "`Collapsible`: `open` \u{2192} `default_expanded`, or `is_expanded` and `set_expanded`. \
-                 `Collapsibles`: `default_on_open` \u{2192} `expansion`; which collapsibles are open can be set by their \
-                 `id`.",
-                    "`Tabs` are built on the tabs atoms (keyboard navigation, ARIA) and take `default_selected_key`, \
-                 `selected_key` and `set_selected_key`, `on_selection_change`, `orientation`, `keyboard_activation` and \
-                 `aria_label`. `Tab`: `name` is a `String`, `label` takes a closure (`ViewFn`) instead of a `View`, \
-                 new `is_disabled`; `id`, `on_show`, `on_hide`, `classes` and `styles` were removed (use \
-                 `on_selection_change`).",
-                    "`TableHeaderCell`: new `on_press`, which makes the header focusable and pressable with the keyboard \
-                 (e.g. to sort by its column), and `aria_sort`; `min_width` is a `Signal<bool>` and defaults to `true`. \
-                 `Table`: `bordered` and `hoverable` are `Signal<bool>`.",
-                    "`Grid` and `Row`: `spacing` \u{2192} `gap`.",
-                    "`Separator` takes an `orientation` and an `aria_label`.",
-                    "`Chip`: `dismissible` \u{2192} `on_dismiss` (a `Callback<()>`), which renders a focusable dismiss \
-                 button; new `dismiss_label` and `is_disabled`. `color` is a `Signal<ChipColor>`.",
-                    "`Icon`: without `aria_label`, icons are decorative and hidden from screen readers; with it, they are \
-                 labelled images.",
-                    "`Code` highlights code blocks with a `language` (`syntax-highlight` feature).",
-                    "`ColorPicker`: `hsv` and `set_hsv` \u{2192} `value` and `set_value`, a `Color` (or `default_value` \
-                 and `on_change`). Its RGB fields are editable, and it has a hex field. `ColorPreview`: `rgb` \u{2192} \
-                 `color`; `ColorPalette` and `HueSlider` take an `HSV` as `value` and `set_value` (instead of \
-                 `hsv`/`hue` and setters of single channels). Inside a `ColorPicker`, all three show its color.",
                 ],
             ),
             (
@@ -168,10 +108,24 @@ const RELEASES: &[Release] = &[
                     "`Box`. Use a `<div>` with your own classes.",
                     "The typography components `H1` to `H6` and `P`. Write the HTML elements; the theme styles them.",
                     "`ModalRoot`. Modals need no root anymore.",
-                    "`DateTimeInput` and its `GuideMode`. Use `DatePicker`, which can be typed into and picks `jiff` \
-                 dates (with times, if you like) instead of `time::OffsetDateTime`; its `initial_view` replaces \
-                 `guide_mode`.",
-                    "`OnOpen` of `Collapsibles`. Use `expansion`.",
+                    "`DateTimeInput` and its `GuideMode`. Use the `DatePicker` atoms, which can be typed into and pick \
+                 `jiff` dates (with times, if you like) instead of `time::OffsetDateTime`.",
+                    "The styled `Table` (with `TableHeaderCell`), `DateSelector`, `DatePicker` and `ColorPicker` (with \
+                 `ColorPreview`, `ColorPalette` and `HueSlider`) components. Use the table, calendar, date picker and \
+                 color atoms (`ColorPicker` around `ColorArea`, `ColorSlider`, `ColorField`, ...) with your own CSS.",
+                    "The `Modal` (with `ModalHeader`, `ModalTitle`, `ModalBody` and `ModalFooter`), `Popover` (with \
+                 `PopoverTrigger`) and `Drawer` components. Use the modal, dialog and popover atoms with your own CSS; a \
+                 drawer is a modal whose panel slides in from the edge of the screen.",
+                    "The styled `Link`, `LinkButton`, `Tabs` (with `Tab`) and `Collapsible` (with `Collapsibles`) \
+                 components. Use the link, tabs and disclosure atoms with your own CSS; a link that looks like a button is a \
+                 `Link` with your button styles.",
+                    "The `Alert`, `Meter`, `ProgressBar` and toast (`ToastRoot`, `Toasts`, `Toast`) components. Use the \
+                 meter and progress bar atoms and the toast atoms (`ToastRegion` on a `ToastQueue`); an alert is an \
+                 element with `role=\"alert\"` (see Status).",
+                    "The `AppBar`, `Card`, `Tile`, `Chip`, `Grid` (with `Row` and `Col`), `Icon`, `KbdKey`, `KbdShortcut`, \
+                 `SanitizedHtml`, `Separator`, `Skeleton`, `Stack`, `Code`, `TiptapEditor` and transition (`Collapse`, \
+                 `Fade`, `Grow`, `Slide` and `Zoom`) components. Use the `TagGroup`, `Keys` and `Separator` atoms, \
+                 `leptos_icons`, `ammonia`, `leptos-tiptap` and CSS (see Content & Layout).",
                     "`Consumer` and `Producer` (and `consumer` and `producer`). Use Leptos\u{2019} `Callback`.",
                     "The global event contexts `GlobalClickEvent` and `GlobalKeyboardEvent`. Listen to document events \
                  with leptos-use\u{2019}s `use_event_listener`, or detect outside interactions with \
@@ -206,13 +160,12 @@ const RELEASES: &[Release] = &[
                  `Hoverable`, `Input` and `TextArea`, `Link` and `AnchorLink`, `ListBox`, `Menu` with `MenuTrigger` and \
                  `SubmenuTrigger`, `Meter`, `ModalBackdrop` and `ModalContent`, `NumberField`, `OverlayArrow`, \
                  `Popover`, `Pressable` and `PressResponder`, `ProgressBar`, `Radio` and `RadioGroup`, `SearchField`, \
-                 `Select`, `Separator`, `ShortcutKeys`, `Slider`, `Switch`, `Table`, `Tabs`, `TextField`, `ToastRegion` and `Toast` with \
+                 `Select`, `Separator`, `ShortcutKeys` and `Keys`, `Slider`, `Switch`, `Table`, `Tabs`, `TagGroup` with \
+                 `TagList`, `Tag` and `TagRemoveButton`, `TextField`, `ToastRegion` and `Toast` with \
                  `ToastContent`, `ToastTitle`, `ToastDescription` and `ToastCloseButton`, `ToggleButton` and \
                  `ToggleButtonGroup`, `Toolbar`, `Tooltip` and `VisuallyHidden`.",
                     "Components: `TextField` and `SearchField` with label, description and validation, `NumberField` \
-                 (generic over its number type), `DatePicker` (generic over `civil::Date`, `civil::DateTime` and `Zoned`, \
-                 with a `DateSelector` in a popover), `CheckboxGroup`, `Radio` and `RadioGroup`, `Meter`, and the \
-                 `PopoverTrigger` slot.",
+                 (generic over its number type), `CheckboxGroup`, `Radio` and `RadioGroup`.",
                     "Virtualization of long lists: the `Virtualizer` atom renders only the visible options of a \
                  `ListBox` (with `ListBoxItems`), positioned by a `ListLayout` of fixed or measured row sizes; \
                  `VirtualList` renders only the visible rows of a plain list such as a log, optionally following its \
@@ -252,8 +205,8 @@ const RELEASES: &[Release] = &[
                  `use_press` (`on_long_press`); `PlacementX` and `PlacementY` \u{2192} `Placement`.",
                     "`use_press`: `force_propagation` \u{2192} `propagation: PressPropagation`, `force_prevent_default` \
                  was removed, `on_press` is an `Option<Callback<PressEvent>>`.",
-                    "`use_move`: `axis` is a `Signal<MoveAxis>` (default `MoveAxis::Both`); constrained movement is \
-                 `use_constrained_move(input, MoveConstraintOptions)`, which returns the position directly.",
+                    "`use_move` reports movement deltas only: the arrow keys move by one pixel on both axes, and callers \
+                 track the position and whether a move is in progress (`on_move_start`, `on_move_end`) themselves.",
                 ],
             ),
         ],

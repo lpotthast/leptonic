@@ -3,8 +3,9 @@
 use leptos::prelude::*;
 
 use super::LayoutInfo;
-use crate::utils::{
-    CapturedElement, i18n::use_direction, locale::WritingDirection, styles::Styles,
+use crate::{
+    hooks::collections::{Key, Size},
+    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection, styles::Styles},
 };
 
 // =============================================================================
@@ -13,21 +14,29 @@ use crate::utils::{
 //
 // ## API DIFFERENCES
 // - Returns the item wrapper's styles (react-aria's `VirtualizerItem` renders the wrapper with
-//   `layoutInfoToStyle`); the caller renders the wrapper (`role="presentation"`).
+//   `layoutInfoToStyle`); the caller renders the wrapper (`role="presentation"`) and captures it
+//   (`element`).
+// - The measured size arrives as an [`ItemSizeChange`] (react-aria: `updateItemSize(key, size)`).
 //
 // =============================================================================
 
+/// An item's measured size (see [`UseVirtualizerItemInput::update_item_size`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ItemSizeChange {
+    pub key: Key,
+    pub size: Size,
+}
+
 /// Input of [`use_virtualizer_item`].
 pub struct UseVirtualizerItemInput {
+    /// The item's wrapper, which is measured.
+    pub element: CapturedElement,
     pub layout_info: Signal<LayoutInfo>,
     /// The layout info of the parent view (e.g. the section), for relative positions.
     pub parent: Signal<Option<LayoutInfo>>,
     /// Receives the measured size of the item (react-aria: the virtualizer's `updateItemSize`,
     /// e.g. `VirtualizerState::update_item_size`).
-    pub update_item_size: Callback<(
-        crate::hooks::collections::Key,
-        crate::hooks::collections::Size,
-    )>,
+    pub update_item_size: Callback<ItemSizeChange>,
     /// Re-measure whenever the item's children resize (variable sizes that change after the
     /// first measurement).
     pub should_observe_item_size: bool,
@@ -41,11 +50,9 @@ pub struct UseVirtualizerItemReturn {
 
 /// Positions an item of a virtualized collection and measures items of estimated size
 /// (react-aria's `useVirtualizerItem` + `VirtualizerItem`).
-pub fn use_virtualizer_item(
-    input: UseVirtualizerItemInput,
-    element: CapturedElement,
-) -> UseVirtualizerItemReturn {
+pub fn use_virtualizer_item(input: UseVirtualizerItemInput) -> UseVirtualizerItemReturn {
     let UseVirtualizerItemInput {
+        element,
         layout_info,
         parent,
         update_item_size,
@@ -56,8 +63,6 @@ pub fn use_virtualizer_item(
     #[cfg(not(feature = "ssr"))]
     {
         use wasm_bindgen::JsCast;
-
-        use crate::hooks::collections::Size;
 
         let update_size = move || {
             let Some(element) = element.get_untracked() else {
@@ -82,7 +87,10 @@ pub fn use_virtualizer_item(
             let Some(info) = layout_info.try_get_untracked() else {
                 return;
             };
-            let _ = update_item_size.try_run((info.key, size));
+            let _ = update_item_size.try_run(ItemSizeChange {
+                key: info.key,
+                size,
+            });
         };
         // Items of estimated size are measured once rendered.
         Effect::new(move |_| {

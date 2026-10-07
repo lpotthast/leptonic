@@ -4,18 +4,18 @@ use leptonic::hooks::FocusMode;
 use leptonic::hooks::KeyboardNavigationBehavior;
 use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
         DragItem, DraggableCollectionState, DropPosition, DropTarget, DroppableCollectionData,
         DroppableCollectionOptions, DroppableCollectionReorderEvent, GridListData, IntoAttrs,
-        ListDropTargetDelegate, Orientation, SelectionMode, UseDraggableCollectionStateInput,
+        ListDropTargetDelegate, Orientation, SelectionMode, UseDraggableCollectionInput, UseDraggableCollectionStateInput,
         UseDraggableItemInput, UseDraggableItemReturn, UseDropIndicatorInput,
         UseDropIndicatorReturn, UseDroppableCollectionInput, UseDroppableCollectionReturn,
         UseDroppableCollectionStateInput, UseDroppableItemInput, UseDroppableItemReturn,
         UseGridListInput, UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
         collections::{
             Key, ListLayout, SelectionOptions, UseListStateInput, use_list_collection,
-            use_list_keyboard_delegate, use_list_state,
+            UseListKeyboardDelegateInput, use_list_keyboard_delegate, use_list_state,
         },
         use_draggable_collection, use_draggable_collection_state, use_draggable_item,
         use_drop_indicator, use_droppable_collection, use_droppable_collection_state,
@@ -110,12 +110,15 @@ pub fn ReorderDemo() -> impl IntoView {
                 .collect()
         }),
         preview: None,
-        get_allowed_drop_operations: None,
+        allowed_drop_operations: None,
         on_drag_start: None,
         on_drag_move: None,
         on_drag_end: None,
     });
-    use_draggable_collection(drag_state, element);
+    use_draggable_collection(UseDraggableCollectionInput {
+        state: drag_state,
+        element,
+    });
 
     // Dropping: only reorders (drops between rows) are valid.
     let drop_state = use_droppable_collection_state(UseDroppableCollectionStateInput {
@@ -145,12 +148,13 @@ pub fn ReorderDemo() -> impl IntoView {
         state: drop_state,
         element,
         collection_id: props.id.clone(),
-        keyboard_delegate: use_list_keyboard_delegate(
-            list,
-            element,
-            Orientation::Vertical,
-            ListLayout::Stack,
-        ),
+        keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+            state: list,
+            element: element,
+            orientation: Orientation::Vertical,
+            layout: ListLayout::Stack,
+            layout_delegate: None,
+        }),
         drop_target_delegate: Arc::new(ListDropTargetDelegate::new(
             list.collection,
             list.item_elements,
@@ -175,7 +179,10 @@ pub fn ReorderDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p class="demo-status">
@@ -224,7 +231,7 @@ fn TaskRow(
     let element = CapturedElement::new();
     let UseDroppableItemReturn { drop_props, .. } = use_droppable_item(UseDroppableItemInput {
         collection: drop.clone(),
-        target: DropTarget::item(key, DropPosition::On),
+        target: DropTarget::item(key, DropPosition::On).into(),
         element,
         activate_button: None,
     });
@@ -275,7 +282,7 @@ fn DropIndicator(
         is_hidden,
     } = use_drop_indicator(UseDropIndicatorInput {
         collection: drop,
-        target: DropTarget::item(task, position),
+        target: DropTarget::item(task, position).into(),
         activate_button: None,
     });
     view! {

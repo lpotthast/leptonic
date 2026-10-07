@@ -41,7 +41,7 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 0.6, value: 0.8 });
+                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 });
 
                         view! {
                             <ColorSlider channel=HsvChannel::Hue value=color set_value=color classes="my-color-slider">
@@ -166,21 +166,31 @@ pub fn PageAtomColorSlider() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms set only the inline styles their function needs: the track gets its gradient, "
-                    <Code inline=true>"position: relative"</Code>" and "<Code inline=true>"touch-action: none"</Code>"; the thumb "
-                    "gets its position, a "<Code inline=true>"transform"</Code>" centering it on the value, and its fill. Both "
-                    "keep their colors in Windows high contrast mode. Sizes, borders and states are yours; on a horizontal "
-                    "track, center the thumb vertically:"
+                    "The atoms bring no styles beyond the inline ones their function needs. "<Code inline=true>"ColorSlider"</Code>" renders a "<Code inline=true>"<div>"</Code>" "
+                    "with the class "<Code inline=true>"leptonic-ColorSlider"</Code>" around its label, output and track; "<Code inline=true>"ColorSliderTrack"</Code>" a "
+                    <Code inline=true>"<div>"</Code>" with "<Code inline=true>"leptonic-ColorSliderTrack"</Code>", with its gradient, "<Code inline=true>"position: relative"</Code>" and "
+                    <Code inline=true>"touch-action: none"</Code>"; "<Code inline=true>"ColorSliderOutput"</Code>" an "<Code inline=true>"<output>"</Code>" with "<Code inline=true>"leptonic-ColorSliderOutput"</Code>"; "
+                    "and the "<Code inline=true>"ColorThumb"</Code>" ("<Code inline=true>"leptonic-ColorThumb"</Code>") gets its position, a "<Code inline=true>"transform"</Code>" centering it "
+                    "on the value, and its fill. Your "<Code inline=true>"classes"</Code>" follow the default class. The track and the thumb keep their "
+                    "colors in Windows high contrast mode. Lay out the slider, size the track and the thumb, and on a horizontal track "
+                    "center the thumb vertically. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-color-slider-track { height: 24px; border-radius: 4px; }
-                        .my-color-slider-track[data-disabled] { opacity: 0.5; }
-
-                        .my-color-thumb { top: 50%; width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; }
-                        .my-color-thumb[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .demo-color-atoms-slider { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem; }
+                        .demo-color-atoms-slider-output { color: var(--muted); }
+                        .demo-color-atoms-slider-track { grid-column: 1 / -1; height: 24px; border-radius: 4px; }
+                        .demo-color-atoms-slider-track[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-color-atoms-slider-track > .demo-color-atoms-thumb { top: 50%; }
+                        .demo-color-atoms-thumb { box-sizing: border-box; width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--muted); cursor: grab; }
+                        .demo-color-atoms-thumb[data-dragging] { cursor: grabbing; }
+                        .demo-color-atoms-thumb[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

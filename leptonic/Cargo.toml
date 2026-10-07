@@ -37,7 +37,7 @@ hooks = []
 atoms = ["hooks"]
 
 # Components provide headless, pre-build, complex functionality, building on atoms.
-components = ["atoms"]
+components = ["atoms", "dep:icondata"]
 
 # Themes for atoms and components. Copied on build to your applicaiton root directory.
 themes = []
@@ -61,33 +61,29 @@ nightly = ["leptos/nightly"]
 docsrs = []
 
 [dependencies]
-atomic_enum = "0.3.0"
-cfg-if = "1.0.4"
-educe = "0.6.0"
-icondata = { version = "0.7.0" }
-indoc = "2.0.7"
-js-sys = "0.3"
-jiff = { version = "0.2.38", features = ["js"] }
-leptos = "0.8.2"
-leptos-classes = "0.1.4"
-leptos-element-capture = "0.1.0"
-leptos-styles = "0.1.0"
+atomic_enum = { version = "0.3.0", default-features = false }
+cfg-if = { version = "1.0.5", default-features = false }
+icondata = { version = "0.7.0", optional = true, default-features = false, features = ["bootstrap-icons", "vs-code-icons"] }
+js-sys = { version = "0.3", default-features = false, features = ["std"] }
+jiff = { version = "0.2.38", default-features = false, features = ["std", "js", "tz-system", "tzdb-bundle-platform", "tzdb-zoneinfo"] }
+leptos = { version = "0.8.22", default-features = false }
+leptos-classes = { version = "0.1.4", default-features = false }
+leptos-element-capture = { version = "0.1.0", default-features = false }
+leptos-styles = { version = "0.1.0", default-features = false, features = ["typed-css"] }
 leptos-tiptap = { version = "0.10.0", optional = true, default-features = false, features = ["full"] }
-leptos-use = { version = "0.19.2", features = ["math"] }
-leptos_meta = { version = "0.8.2", features = [] }
-leptos_reactive = "0.6.6"
-leptos_router = "0.8.2"
-ordered-float = "5.1.0"
-reactive_graph = "0.2"
-send_wrapper = "0.6.0"
-serde = "1.0.228"
-serde_json = "1.0.149"
-smallvec = "1"
-strum = { version = "0.27.2", features = ["derive"] }
-tracing = "0.1.44"
-wasm-bindgen = "0.2.117"
-wasm-bindgen-futures = "0.4.64"
-web-sys = { version = "0.3.91", features = [
+leptos-use = { version = "0.19.2", default-features = false, features = ["use_document", "use_element_bounding", "use_element_size", "use_event_listener", "use_resize_observer", "use_window"] }
+leptos_router = { version = "0.8.17", default-features = false }
+ordered-float = { version = "5.4.0", default-features = false }
+send_wrapper = { version = "0.6.0", default-features = false }
+serde = { version = "1.0.229", default-features = false, features = ["std", "derive"] }
+serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
+smallvec = { version = "1", default-features = false }
+strum = { version = "0.28.0", default-features = false, features = ["derive"] }
+tracing = { version = "0.1.44", default-features = false, features = ["std"] }
+wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std"] }
+wasm-bindgen-futures = { version = "0.4.79", default-features = false, features = ["std"] }
+web-sys = { version = "0.3.106", default-features = false, features = [
+    "std",
     "Animation",
     "AnimationPlayState",
     "AnimationTimeline",
@@ -129,6 +125,9 @@ web-sys = { version = "0.3.91", features = [
     "VisualViewport",
     "HtmlSelectElement",
     "Blob",
+    "CustomEvent",
+    "CustomEventInit",
+    "ScrollBehavior",
     "ClipboardEvent",
     "CompositionEvent",
     "InputEvent",
@@ -145,38 +144,49 @@ web-sys = { version = "0.3.91", features = [
     "MutationObserverInit",
     "MutationRecord",
 ] }
-fixed_decimal = "0.7"
-icu_calendar = "2"
-icu_collator = "2"
-icu_datetime = "2"
-icu_decimal = "2"
-icu_list = "2"
-icu_locale = "2"
-icu_normalizer = "2"
-icu_plurals = "2"
+fixed_decimal = { version = "0.7", default-features = false }
+icu_calendar = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_collator = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_datetime = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_decimal = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_list = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_locale = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_normalizer = { version = "2", default-features = false, features = ["compiled_data"] }
+icu_plurals = { version = "2", default-features = false, features = ["compiled_data"] }
+# The Unicode general category (format characters, which the number parser ignores).
+icu_properties = { version = "2", default-features = false, features = ["compiled_data"] }
 # `Send + Sync` formatters (Arc instead of Rc in data payloads), so they can be cached in signals.
-icu_provider = { version = "2", features = ["sync"] }
-icu_time = "2"
-itertools = "0.14.0"
-ammonia = { version = "4", optional = true }
+icu_provider = { version = "2", default-features = false, features = ["sync"] }
+icu_time = { version = "2", default-features = false, features = ["compiled_data"] }
+itertools = { version = "0.15.0", default-features = false, features = ["use_alloc"] }
+ammonia = { version = "4", optional = true, default-features = false }
 syntect = { version = "5", optional = true, default-features = false, features = ["default-fancy"] }
 # `TryWriteable` output of ICU4X pattern formatting.
-writeable = "0.6"
+writeable = { version = "0.6", default-features = false }
 
 [build-dependencies]
-anyhow = "1.0.102"
-cargo_toml = "0.22.3"
-leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
+anyhow = { version = "1.0.104", default-features = false, features = ["std"] }
+cargo_toml = { version = "1.0.1", default-features = false }
+leptonic-theme = { version = "0.5", path = "../leptonic-theme", default-features = false }
 
 [dev-dependencies]
-assertr = "0.7.1"
-browser-test = "0.5.0"
-leptos-browser-test = "0.3.0"
-leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
-rootcause = "0.13.0"
-tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
+# `testing::with_owner`: a thread-local executor for Effects. `tracing`: an Effect spawned before any
+# executor is installed is dropped instead of panicking (tests without the helper).
+any_spawner = { version = "0.3.0", default-features = false, features = ["tracing"] }
+assertr = { version = "0.7.1", default-features = false, features = ["std", "num"] }
+browser-test = { version = "0.5.0", default-features = false }
+futures = { version = "0.3.34", default-features = false, features = ["std", "executor"] }
+leptos-browser-test = { version = "0.3.0", default-features = false }
+# `effects`: Effects run in native unit tests (`testing::with_owner`); Leptos enables it only for csr/hydrate.
+reactive_graph = { version = "0.2.15", default-features = false, features = ["effects"] }
+rootcause = { version = "0.13.0", default-features = false }
+tokio = { version = "1.53.2", features = ["rt", "rt-multi-thread", "macros", "time"], default-features = false }
+tracing = { version = "0.1.44", default-features = false }
+tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt", "registry", "ansi", "std"] }
+
+[package.metadata.cargo-machete]
+# Used for its `sync` feature only (ICU4X formatters cached in signals).
+ignored = ["icu_provider"]
 
 [lints]
 workspace = true

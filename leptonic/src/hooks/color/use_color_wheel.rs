@@ -5,6 +5,7 @@ use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
+    tachys::html::property::{Property, prop},
 };
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
@@ -18,12 +19,14 @@ use crate::{
     },
     utils::{
         CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
-        color::ColorValue,
+        color::{ColorValue, HSL, HslChannel},
         css::{ForcedColorAdjust, TouchAction, computed_size},
         event_listeners::{Listener, listen_to},
         focus::focus_element,
+        i18n::use_locale,
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        number_formatter::NumberFormatter,
         pointer_type::PointerType,
         style::{ForcedColorAdjustProperty, HeightProperty, TouchActionProperty, WidthProperty},
         styles::Styles,
@@ -37,6 +40,7 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The track and input elements are captured by the returned props instead of refs passed in.
+// - Any color type: the hue is its hue channel, or its HSL form's (see `use_color_wheel_state`).
 //
 // ## OMITTED FEATURES
 // - Localized channel names and the hue's localized name (English until leptonic has a
@@ -143,7 +147,8 @@ pub struct UseColorWheelInputProps {
     pub aria_describedby: Option<String>,
     pub aria_details: Option<String>,
     pub aria_valuetext: Signal<String>,
-    pub on_change: EventHandler<Event>,
+    /// Sets the channel from the input's value (e.g. by assistive technology).
+    pub on_input: EventHandler<Event>,
     pub element_capture: ElementCaptureAttr,
 }
 
@@ -155,6 +160,7 @@ pub type UseColorWheelInputAttrs = (
         Attr<attr::Max, f64>,
         Attr<attr::Step, f64>,
         Attr<attr::Value, Signal<f64>>,
+        Property<&'static str, Signal<f64>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Name, Option<String>>,
         Attr<attr::Form, Option<String>>,
@@ -165,7 +171,7 @@ pub type UseColorWheelInputAttrs = (
         Attr<attr::AriaDescribedby, Option<String>>,
         Attr<attr::AriaDetails, Option<String>>,
         Attr<attr::AriaValuetext, Signal<String>>,
-        On<ev::change, SharedEventCallback<Event>>,
+        On<ev::input, SharedEventCallback<Event>>,
         ElementCaptureAttr,
     ),
 );
@@ -182,6 +188,9 @@ impl IntoAttrs for UseColorWheelInputProps {
                 Attr(attr::Max, self.max),
                 Attr(attr::Step, self.step),
                 Attr(attr::Value, self.value),
+                // The attribute is the initial value only: once changed (e.g. by assistive
+                // technology), the input follows its property.
+                prop("value", self.value),
                 Attr(attr::Disabled, self.is_disabled),
                 Attr(attr::Name, self.name),
                 Attr(attr::Form, self.form),
@@ -192,7 +201,7 @@ impl IntoAttrs for UseColorWheelInputProps {
                 Attr(attr::AriaDescribedby, self.aria_describedby),
                 Attr(attr::AriaDetails, self.aria_details),
                 Attr(attr::AriaValuetext, self.aria_valuetext),
-                self.on_change.into_on(ev::change),
+                self.on_input.into_on(ev::input),
                 self.element_capture,
             ),
         )
@@ -311,7 +320,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         on_move_start: Some(on_move_start),
         on_move: Some(on_move),
         on_move_end: Some(on_move_end),
-        ..UseMoveInput::default()
     })
     .props;
     // The track forwards its moves only while a press started on it.
@@ -333,7 +341,6 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 on_move_end.run(e);
             }
         })),
-        ..UseMoveInput::default()
     })
     .props;
 
@@ -359,7 +366,7 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         }
     };
     let ignored = |e: &PointerEvent| {
-        e.pointer_type() == "mouse"
+        PointerType::from(e.pointer_type()) == PointerType::Mouse
             && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
     };
     let on_thumb_down = EventHandler::new(move |e: PointerEvent| {
@@ -407,11 +414,10 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
 
     // Without any label, the channel names the wheel (react-aria).
     let has_labelledby = aria_labelledby.is_some();
-    let channel = state.channel;
     let input_label = Signal::derive(move || {
         aria_label
             .get()
-            .or_else(|| (!has_labelledby).then(|| C::get_channel_name(channel).to_owned()))
+            .or_else(|| (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue).to_owned()))
     });
     let input_id = use_id("color-wheel");
     // With other labels next to its `aria-label`, the input names itself too (`use_label`).
@@ -427,7 +433,9 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
         })
     };
     let value = state.value;
-    let range = C::get_channel_range(channel);
+    let hue = state.hue;
+    let locale = use_locale();
+    let range = HSL::channel_range(HslChannel::Hue);
 
     let size = computed_size(crate::utils::css::computed_px(outer_radius * 2.0));
     let hue_stops = (0..=12)
@@ -504,14 +512,15 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
                 aria_describedby,
                 aria_details,
                 aria_valuetext: Signal::derive(move || {
-                    let color = value.get();
-                    format!(
-                        "{}, {}",
-                        color.format_channel_value(channel),
-                        color.hue_name()
+                    // The hue formatted as react-aria's (the color's HSL hue), and its name.
+                    let degrees = NumberFormatter::new(
+                        &locale.get(),
+                        HSL::channel_format_options(HslChannel::Hue),
                     )
+                    .format(hue.get());
+                    format!("{degrees}, {}", value.get().hue_name())
                 }),
-                on_change: EventHandler::new(move |e: Event| {
+                on_input: EventHandler::new(move |e: Event| {
                     if let Some(target) = e
                         .expect_target()
                         .dyn_into::<web_sys::HtmlInputElement>()

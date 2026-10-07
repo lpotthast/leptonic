@@ -3,8 +3,11 @@ use std::{collections::HashSet, sync::Arc};
 
 use leptos::prelude::*;
 
-use crate::hooks::collections::{
-    CollectionMemo, ItemElements, Key, ListState, SelectionManager, SelectionOptions,
+use crate::{
+    hooks::collections::{
+        CollectionMemo, ItemElements, Key, ListState, SelectionManager, SelectionOptions,
+    },
+    utils::ValueBinding,
 };
 
 // =============================================================================
@@ -12,8 +15,9 @@ use crate::hooks::collections::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Hook-owned state: `default_expanded_keys` with `toggle_key`/`set_expanded_keys` instead of
-//   a controlled `expandedKeys`.
+// - Expansion state (C4): `default_expanded_keys` and `on_expanded_change`, or `expanded_keys`
+//   bound to app state, instead of a controlled `expandedKeys`; changes go through
+//   `toggle_key`/`set_expanded_keys`.
 // - The tree is a collection built with item children (`ItemBuilder::children`); the state's
 //   list shows its visible part (`Collection::with_expanded`).
 //
@@ -22,6 +26,7 @@ use crate::hooks::collections::{
 /// Which items of a tree are expanded, and how to change that.
 #[derive(Debug, Clone, Copy)]
 pub struct TreeExpansion {
+    /// The keys of the expanded items.
     pub expanded_keys: Signal<HashSet<Key>>,
     toggle: Callback<Key>,
 }
@@ -43,7 +48,11 @@ pub struct UseTreeStateInput {
     /// The whole tree.
     pub collection: CollectionMemo,
     pub selection: SelectionOptions,
+    /// The initially expanded items. Ignored when `expanded_keys` is bound.
     pub default_expanded_keys: HashSet<Key>,
+    /// The expanded items as app state, replacing `default_expanded_keys`: the tree shows them,
+    /// and expanding or collapsing items writes them.
+    pub expanded_keys: Option<ValueBinding<HashSet<Key>>>,
     /// Called when items are expanded or collapsed.
     pub on_expanded_change: Option<Callback<HashSet<Key>>>,
 }
@@ -54,11 +63,13 @@ pub struct UseTreeStateInput {
 pub struct TreeState {
     /// The visible items.
     pub list: ListState,
+    /// Which items are expanded (also given to `use_tree`'s items).
     pub expansion: TreeExpansion,
     set_expanded: Callback<HashSet<Key>>,
 }
 
 impl TreeState {
+    /// Expands exactly the items of `keys`.
     pub fn set_expanded_keys(&self, keys: HashSet<Key>) {
         self.set_expanded.run(keys);
     }
@@ -70,13 +81,16 @@ pub fn use_tree_state(input: UseTreeStateInput) -> TreeState {
         collection,
         selection,
         default_expanded_keys,
+        expanded_keys: binding,
         on_expanded_change,
     } = input;
 
-    let expanded_keys = RwSignal::new(default_expanded_keys);
+    let binding =
+        binding.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_expanded_keys)));
+    let expanded_keys = binding.value;
     let set_expanded = Callback::new(move |keys: HashSet<Key>| {
         if expanded_keys.with_untracked(|current| *current != keys) {
-            expanded_keys.set(keys.clone());
+            binding.set(keys.clone());
             if let Some(on_expanded_change) = on_expanded_change {
                 on_expanded_change.run(keys);
             }
@@ -112,9 +126,146 @@ pub fn use_tree_state(input: UseTreeStateInput) -> TreeState {
             item_elements: ItemElements::new(),
         },
         expansion: TreeExpansion {
-            expanded_keys: expanded_keys.into(),
+            expanded_keys,
             toggle,
         },
         set_expanded,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::{
+        hooks::collections::Collection,
+        testing::{flush_effects, with_owner},
+    };
+
+    /// a (a1, a2 (a2x)), b
+    fn tree() -> CollectionMemo {
+        Memo::new(|_| {
+            Arc::new(Collection::build(|b| {
+                b.item("a", "a").children(|c| {
+                    c.item("a1", "a1");
+                    c.item("a2", "a2").children(|c| {
+                        c.item("a2x", "a2x");
+                    });
+                });
+                b.item("b", "b");
+            }))
+        })
+    }
+
+    /// The visible items, sorted.
+    fn visible(state: &TreeState) -> Vec<String> {
+        let mut keys: Vec<String> = state
+            .list
+            .collection
+            .with_untracked(|c| c.keys().map(ToString::to_string).collect());
+        keys.sort();
+        keys
+    }
+
+    fn keys(keys: &[&str]) -> HashSet<Key> {
+        keys.iter().map(|k| Key::from(*k)).collect()
+    }
+
+    #[test]
+    fn expanding_shows_children_and_reports_the_change() {
+        Owner::new().with(|| {
+            let changes = RwSignal::new(Vec::new());
+            let state = use_tree_state(UseTreeStateInput {
+                collection: tree(),
+                selection: SelectionOptions::default(),
+                default_expanded_keys: HashSet::new(),
+                expanded_keys: None,
+                on_expanded_change: Some(Callback::new(move |keys: HashSet<Key>| {
+                    changes.update(|c| c.push(keys));
+                })),
+            });
+            assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
+            state.expansion.toggle_key(Key::from("a"));
+            assert_that!(visible(&state))
+                .is_equal_to(vec!["a".to_owned(), "a1".to_owned(), "a2".to_owned(), "b".to_owned()]);
+            assert_that!(state.expansion.is_expanded(&Key::from("a"))).is_true();
+            // Collapsing hides the children again; setting the same keys reports nothing.
+            state.expansion.toggle_key(Key::from("a"));
+            state.set_expanded_keys(HashSet::new());
+            assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
+            assert_that!(changes.get_untracked())
+                .is_equal_to(vec![keys(&["a"]), HashSet::new()]);
+        });
+    }
+
+    #[test]
+    fn a_collapsed_parent_hides_expanded_descendants() {
+        Owner::new().with(|| {
+            let state = use_tree_state(UseTreeStateInput {
+                collection: tree(),
+                selection: SelectionOptions::default(),
+                default_expanded_keys: keys(&["a2"]),
+                expanded_keys: None,
+                on_expanded_change: None,
+            });
+            assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
+            state.expansion.toggle_key(Key::from("a"));
+            assert_that!(visible(&state)).is_equal_to(vec![
+                "a".to_owned(),
+                "a1".to_owned(),
+                "a2".to_owned(),
+                "a2x".to_owned(),
+                "b".to_owned(),
+            ]);
+        });
+    }
+
+    #[test]
+    fn bound_expanded_keys_are_shown_and_written() {
+        Owner::new().with(|| {
+            let expanded = RwSignal::new(keys(&["a"]));
+            let state = use_tree_state(UseTreeStateInput {
+                collection: tree(),
+                selection: SelectionOptions::default(),
+                default_expanded_keys: HashSet::new(),
+                expanded_keys: Some(expanded.into()),
+                on_expanded_change: None,
+            });
+            assert_that!(visible(&state))
+                .is_equal_to(vec!["a".to_owned(), "a1".to_owned(), "a2".to_owned(), "b".to_owned()]);
+            state.expansion.toggle_key(Key::from("b"));
+            assert_that!(expanded.get_untracked()).is_equal_to(keys(&["a", "b"]));
+            // The app changes it: the tree follows.
+            expanded.set(HashSet::new());
+            assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
+        });
+    }
+
+    #[test]
+    fn collapsing_the_parent_of_the_focused_item_clears_the_focus() {
+        // react-stately's `useTreeState`: a focused key no longer in the tree is reset.
+        with_owner(|| {
+            let state = use_tree_state(UseTreeStateInput {
+                collection: tree(),
+                selection: SelectionOptions::default(),
+                default_expanded_keys: keys(&["a"]),
+                expanded_keys: None,
+                on_expanded_change: None,
+            });
+            flush_effects();
+            state
+                .list
+                .selection
+                .set_focused_key(Some(Key::from("a1")), None);
+            flush_effects();
+            state.expansion.toggle_key(Key::from("b"));
+            flush_effects();
+            // Still visible: kept.
+            assert_that!(state.list.selection.focused_key()).is_equal_to(Some(Key::from("a1")));
+            state.expansion.toggle_key(Key::from("a"));
+            flush_effects();
+            assert_that!(state.list.selection.focused_key()).is_none();
+        });
     }
 }

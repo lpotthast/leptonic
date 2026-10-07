@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use leptonic::{atoms::prelude as atoms, components::prelude::Checkbox};
+use leptonic::atoms::prelude as atoms;
 use leptos::prelude::*;
 
 #[component]
@@ -21,7 +21,10 @@ pub fn FocusableDemo() -> impl IntoView {
         </p>
         <p class="demo-status">{move || if focused.get() { "The icon has focus." } else { "The icon has no focus." }}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <atoms::Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </atoms::Checkbox>
         </div>
     }
 }

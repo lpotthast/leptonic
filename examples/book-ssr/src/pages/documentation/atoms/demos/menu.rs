@@ -1,6 +1,8 @@
 use leptonic::{
-    atoms::prelude as atoms,
-    components::prelude::Checkbox,
+    atoms::prelude::{
+        Button, Checkbox, Menu, MenuItem, MenuItemLabel, MenuItemShortcut, MenuItems, MenuSection,
+        MenuTrigger, Popover,
+    },
     hooks::{
         Placement, SelectionMode,
         collections::{Key, Selection, use_collection},
@@ -30,46 +32,46 @@ pub fn MenuDemo() -> impl IntoView {
     view! {
         <div class="demo-flex-center-row">
             // An action menu: pressing an item performs the action and closes the menu.
-            <atoms::MenuTrigger is_disabled=disabled>
-                <atoms::Button classes="demo-btn">"Edit"</atoms::Button>
-                <atoms::Popover placement=Placement::BottomLeft offset=4.0>
-                    <atoms::Menu
+            <MenuTrigger is_disabled=disabled>
+                <Button classes="demo-btn">"Edit"</Button>
+                <Popover placement=Placement::BottomLeft offset=4.0>
+                    <Menu
                         collection=actions
                         on_action=move |key: Key| last_action.set(Some(key))
                         classes="demo-menu-list"
                     >
-                        <atoms::MenuItems classes="demo-menu-atom-item" let:node>
+                        <MenuItems classes="demo-menu-atom-item" let:node>
                             {node.text_value.to_string()}
-                        </atoms::MenuItems>
-                    </atoms::Menu>
-                </atoms::Popover>
-            </atoms::MenuTrigger>
+                        </MenuItems>
+                    </Menu>
+                </Popover>
+            </MenuTrigger>
 
             // A menu with checkable items in a section; it stays open while you check them.
-            <atoms::MenuTrigger is_disabled=disabled>
-                <atoms::Button classes="demo-btn">"View"</atoms::Button>
-                <atoms::Popover placement=Placement::BottomLeft offset=4.0>
-                    <atoms::Menu
+            <MenuTrigger is_disabled=disabled>
+                <Button classes="demo-btn">"View"</Button>
+                <Popover placement=Placement::BottomLeft offset=4.0>
+                    <Menu
                         collection=view_options
                         selection_mode=SelectionMode::Multiple
                         selection=view
                         set_selection=view
                         classes="demo-menu-list"
                     >
-                        <atoms::MenuSection key="panels" heading_classes="demo-menu-heading">
-                            <atoms::MenuItem key="sidebar" classes="demo-menu-atom-item">
+                        <MenuSection key="panels" heading_classes="demo-menu-heading">
+                            <MenuItem key="sidebar" classes="demo-menu-atom-item">
                                 <span class="demo-menu-atom-check" aria-hidden="true"></span>
-                                <atoms::MenuItemLabel>"Sidebar"</atoms::MenuItemLabel>
-                                <atoms::MenuItemShortcut classes="demo-menu-atom-shortcut">"Ctrl+B"</atoms::MenuItemShortcut>
-                            </atoms::MenuItem>
-                            <atoms::MenuItem key="toolbar" classes="demo-menu-atom-item">
+                                <MenuItemLabel>"Sidebar"</MenuItemLabel>
+                                <MenuItemShortcut classes="demo-menu-atom-shortcut">"Ctrl+B"</MenuItemShortcut>
+                            </MenuItem>
+                            <MenuItem key="toolbar" classes="demo-menu-atom-item">
                                 <span class="demo-menu-atom-check" aria-hidden="true"></span>
-                                <atoms::MenuItemLabel>"Toolbar"</atoms::MenuItemLabel>
-                            </atoms::MenuItem>
-                        </atoms::MenuSection>
-                    </atoms::Menu>
-                </atoms::Popover>
-            </atoms::MenuTrigger>
+                                <MenuItemLabel>"Toolbar"</MenuItemLabel>
+                            </MenuItem>
+                        </MenuSection>
+                    </Menu>
+                </Popover>
+            </MenuTrigger>
         </div>
         <p class="demo-status">
             {move || match last_action.get() {
@@ -88,8 +90,10 @@ pub fn MenuDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
-
     }
 }

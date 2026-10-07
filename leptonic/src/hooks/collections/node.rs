@@ -45,8 +45,18 @@ impl ItemLink {
     }
 
     /// Opens the link as if `element` (the item) was a link that was clicked with `modifiers`. An
-    /// `<a>` item is clicked itself; for other elements, a temporary `<a>` is clicked.
+    /// `<a>` item is clicked itself; for other elements, a temporary `<a>` is clicked, and focus
+    /// returns to the item.
+    ///
+    /// Runs in a microtask: the item's own click handling (e.g. a press ending in a `click`) may
+    /// still be running, and a nested `click` dispatch can't re-enter its listener.
     pub(crate) fn open(&self, element: &web_sys::Element, modifiers: Modifiers) {
+        let link = self.clone();
+        let element = send_wrapper::SendWrapper::new(element.clone());
+        leptos::prelude::queue_microtask(move || link.open_now(&element, modifiers));
+    }
+
+    fn open_now(&self, element: &web_sys::Element, modifiers: Modifiers) {
         if element.is_anchor_link() {
             open_link(element, modifiers);
             return;
@@ -67,6 +77,8 @@ impl ItemLink {
         if element.append_child(&link).is_ok() {
             open_link(&link, modifiers);
             let _ = element.remove_child(&link);
+            // Opening focused the temporary link, which is gone now.
+            crate::utils::focus::focus_element(element, true);
         }
     }
 }
@@ -99,6 +111,9 @@ pub struct Node {
     pub has_child_nodes: bool,
     /// Whether the item itself is disabled (in addition to any `disabled_keys` of the state).
     pub is_disabled: bool,
+    /// How the item behaves while disabled, overriding the collection's `disabled_behavior`
+    /// (react-aria: an item's `disabledBehavior` prop). `None`: the collection's.
+    pub disabled_behavior: Option<super::DisabledBehavior>,
     /// Where the item navigates to, for items that are links.
     pub link: Option<ItemLink>,
     /// Cells: the column, counting spanned columns (set when a row has cells spanning columns, and

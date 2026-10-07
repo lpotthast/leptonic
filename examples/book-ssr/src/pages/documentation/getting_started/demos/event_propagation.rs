@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{Propagation, key::KeyboardKey},
 };
@@ -81,7 +81,8 @@ pub fn EventPropagationDemo() -> impl IntoView {
         </div>
         <p class="demo-status">{last_handled}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=lets_keys_bubble set_selected=set_lets_keys_bubble>
+            <Checkbox is_selected=lets_keys_bubble set_selected=set_lets_keys_bubble classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
                 "Let other keys of the field bubble"
             </Checkbox>
         </div>

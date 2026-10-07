@@ -266,19 +266,32 @@ pub fn PageAtomDatePicker() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes. Give the group the field\u{2019}s border, and the popover its own surface; the "
-                    <Code inline=true>"Popover"</Code>" positions and layers itself."
+                    "The atoms bring no styles. "<Code inline=true>"DatePicker"</Code>" and "<Code inline=true>"DateRangePicker"</Code>" render a "<Code inline=true>"<div>"</Code>" with the class "
+                    <Code inline=true>"leptonic-DatePicker"</Code>" or "<Code inline=true>"leptonic-DateRangePicker"</Code>", "<Code inline=true>"DatePickerGroup"</Code>" one with "
+                    <Code inline=true>"leptonic-DatePickerGroup"</Code>" and "<Code inline=true>"DatePickerButton"</Code>" a "<Code inline=true>"<button>"</Code>" with "
+                    <Code inline=true>"leptonic-DatePickerButton"</Code>", each followed by the "<Code inline=true>"classes"</Code>" you pass. The segments are those of a "
+                    <Link href=format!("{}#styling", routes::doc::date_field::Atom.materialize())>"date field"</Link>", the days those of the "
+                    <Link href=format!("{}#styling", routes::doc::calendar::Atom.materialize())>"Calendar Atoms"</Link>". The button\u{2019}s "
+                    "arrow is your own markup ("<Code inline=true>"aria-hidden"</Code>": the button is named \u{201c}Calendar\u{201d}). Give the group the "
+                    "field\u{2019}s border, and the popover its own surface; the "<Code inline=true>"Popover"</Code>" positions and layers itself. The demos "
+                    "above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-picker-group { display: inline-flex; align-items: center; border: 1px solid var(--border); }
-                        .my-picker-group[data-focus-within] { border-color: var(--focus); }
-                        .my-picker-group[data-invalid] { border-color: var(--accent); }
-                        .my-picker-button[data-hovered] { background: var(--surface); }
-                        .my-picker-button[data-focus-visible] { outline: 2px solid var(--focus); }
-                        .my-picker-popover { padding: 1em; background: var(--surface); border: 1px solid var(--border); }
+                        .demo-date-input { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; }
+                        .demo-date-input[data-focus-within] { border-color: var(--focus); }
+                        .demo-date-segments { display: inline-flex; flex-wrap: wrap; align-items: center; }
+                        .demo-date-picker-button { margin-left: 0.5rem; padding: 0.25rem; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); cursor: pointer; }
+                        .demo-date-picker-button[data-hovered] { background: var(--border); }
+                        [data-open] > .demo-date-picker-button { border-color: var(--accent); }
+                        .demo-date-picker-button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-date-picker-popover { padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

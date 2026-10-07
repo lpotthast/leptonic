@@ -31,6 +31,7 @@ pub fn SliderRangeDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_details: None,
     });
     // One `use_slider_thumb` per value, each with a focus ring that shows while its input has keyboard focus.
     let thumb = |index: usize, label: &'static str| {
@@ -48,6 +49,8 @@ pub fn SliderRangeDemo() -> impl IntoView {
             has_label: Signal::stored(false),
             aria_labelledby: None,
             aria_describedby: None,
+            aria_errormessage: None,
+            aria_details: None,
         });
         let focus_ring = use_focus_ring(UseFocusRingInput {
             within: true,

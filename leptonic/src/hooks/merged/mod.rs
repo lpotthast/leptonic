@@ -1,3 +1,5 @@
+// No upstream: typed prop merging for independent hooks on one element (react-aria merges props
+// objects at runtime with `mergeProps`).
 //! Merged Props types for composing multiple hooks.
 //!
 //! This module provides pre-defined merged Props types for common hook combinations.
@@ -10,9 +12,15 @@
 //!
 //! # Available Merged Types
 //!
-//! - [`MergedPressHoverProps`]: Combines `UsePressProps` + `UseHoverProps`
-//! - [`MergedPressHoverFocusRingProps`]: Combines the above + `UseFocusRingProps`
-//! - [`MergedOverlayOverlayPositionProps`]: Combines `UseOverlayProps` + `UseOverlayPositionProps`
+//! - [`MergedPressHoverProps`]: `UsePressProps` + `UseHoverProps` (either order).
+//! - [`MergedPressFocusRingProps`]: `UsePressProps` + `UseFocusRingProps` (either order).
+//! - [`MergedPressHoverFocusRingProps`]: [`MergedPressHoverProps`] + `UseFocusRingProps`.
+//! - [`MergedHoverFocusRingProps`]: `UseHoverProps` + `UseFocusRingProps` (either order).
+//! - [`MergedFocusablePressProps`]: `UseFocusableProps` + `UsePressProps` (either order).
+//! - [`MergedFocusablePressFocusRingProps`]: [`MergedFocusablePressProps`] + `UseFocusRingProps`
+//!   (either order).
+//! - [`MergedOverlayOverlayPositionProps`]: `UseOverlayProps` + `UseOverlayPositionProps` (either
+//!   order).
 //!
 //! # Usage
 //!

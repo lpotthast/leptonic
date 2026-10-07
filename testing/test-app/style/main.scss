@@ -1,6 +1,3 @@
-// The atom theme, so the fixtures aren't unstyled (and the theme gets exercised by every test).
-@use "./leptonic/leptonic-atoms";
-
 *:focus {
   outline: 3px solid cornflowerblue;
 }
@@ -13,8 +10,6 @@
 .test-resizable-container {
   width: 900px;
   overflow: auto;
-  // Exactly 900px for the columns (the atom theme borders resizable containers).
-  border: none;
 
   th {
     position: relative;

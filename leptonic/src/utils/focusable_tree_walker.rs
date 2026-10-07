@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
 //! Focusable tree walker utility.
 //!
 //! Creates a `ShadowTreeWalker` with a baked-in filter that handles focusability/tabbability

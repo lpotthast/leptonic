@@ -1,3 +1,5 @@
+// No upstream: a container providing a `FocusManager` without a `FocusScope` (react-aria:
+// `createFocusManager(ref)` on an element of the app's own).
 use leptos::{context::Provider, prelude::*};
 
 use crate::{

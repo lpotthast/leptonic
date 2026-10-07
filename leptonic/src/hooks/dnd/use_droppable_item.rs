@@ -23,7 +23,11 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - The item's element is a `CapturedElement` (react-aria: a ref); `target` is a signal (a
+//   changed target re-registers the item with the drag manager).
+// - The props hide items that can't take the dragged data with `aria-hidden` themselves
+//   (react-aria computes the same `aria-hidden` per render).
 //
 // =============================================================================
 
@@ -32,8 +36,9 @@ use crate::{
 pub struct UseDroppableItemInput {
     /// The droppable collection (from `use_droppable_collection`).
     pub collection: DroppableCollectionData,
-    /// The drop target this item (or drop indicator) stands for.
-    pub target: DropTarget,
+    /// The drop target this item (or drop indicator) stands for (e.g.
+    /// `DropTarget::item(key, DropPosition::On).into()`).
+    pub target: Signal<DropTarget>,
     /// The item's element (captured by its props, or by the element's own hook).
     pub element: CapturedElement,
     /// A button activating the target (e.g. opening a folder) during keyboard drags.
@@ -83,13 +88,16 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
     } = input;
     let state = collection.state;
     let collection_element = collection.element;
-    let target = StoredValue::new(target);
     let describedby = use_virtual_drop();
 
+    // Also called by the drag manager, which may outlive this item's signals briefly.
     let operation = move |types: &DragTypes, allowed: &[DropOperation]| {
+        let Some(target) = target.try_get() else {
+            return DropOperation::Cancel;
+        };
         let collection_element = collection_element.get_untracked().map(|e| (*e).clone());
         state.get_drop_operation(&DropOperationEvent {
-            target: target.get_value(),
+            target,
             types: types.clone(),
             allowed_operations: allowed.to_vec(),
             is_internal: is_internal_drop_operation(collection_element.as_ref()),
@@ -111,7 +119,7 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
         };
         let id = drag_manager::register_drop_item(DroppableItemOptions {
             element: (*el).clone(),
-            target: target.get_value(),
+            target: target.get(),
             get_drop_operation: Some(Rc::new(operation)),
             activate_button,
         });
@@ -129,7 +137,7 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
         })
     });
     let is_drop_target =
-        Signal::derive(move || target.with_value(|t| state.is_drop_target(Some(t))));
+        Signal::derive(move || target.with(|t| state.is_drop_target(Some(t))));
 
     // During keyboard drags, the drop target has focus.
     Effect::new(move || {

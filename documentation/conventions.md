@@ -23,9 +23,9 @@ working rules for agents; `documentation/hooks-implementation.md`, `atoms-implem
   for independent hooks on one element. See `documentation/hooks-implementation.md`.
 - **Upstream is tracked by commit.** Every ported file starts with `// Upstream: <path> @ <sha>`;
   `scripts/upstream-drift.sh` lists unabsorbed upstream commits, `--mark-synced` records a finished re-sync.
-- **Tests are the definition of done.** Pure logic and `*_state` hooks get native unit tests. DOM behavior gets
-  browser tests against `testing/test-app`, derived from react-aria's own tests. A hook without a test is not
-  finished.
+- **Tests are the definition of done.** Pure logic and `*_state` hooks get native unit tests (`testing::with_owner`
+  runs their Effects). DOM behavior gets browser tests against `testing/test-app`, derived from react-aria's own
+  tests. A hook without a test is not finished.
 - **Docs follow code.** Every hook, atom and component change gets its book-ssr page updated: the library session
   sends the new API to the book session, which updates pages, API tables and demos (`CLAUDE.md`, "Working in
   Parallel").
@@ -38,6 +38,12 @@ working rules for agents; `documentation/hooks-implementation.md`, `atoms-implem
   `let classes = with_default_class("leptonic-<AtomName>", classes);` (`utils::default_class`) and documents it
   ("Default class: `leptonic-<AtomName>`."). The caller's classes add to the default (react-aria-components: a
   `className` replaces it). Atoms without an element of their own (providers, triggers, iterators) get none.
+- **Dependencies** (the user's rule, 2026-10-07): every dependency is declared with `default-features = false` and
+  only the features the code needs (say why where it isn't obvious); keep them at their latest versions.
+- **Event propagation follows upstream** (the user's decision, 2026-10-07): only event types whose react-aria
+  counterpart has `continuePropagation()` (press and keyboard events) implement `Propagation` (stopped by default,
+  opt-in bubbling); all others keep upstream's fixed behavior (hover/focus never stop, move/scroll wheel/DnD always
+  stop). Details: `hooks-implementation.md`, "Event Propagation Control".
 - **Target modern browsers.** Where react-aria carries code for old browsers, we omit it.
 
 ## API conventions (decided 2026-10-05, audit §1)
@@ -83,6 +89,7 @@ per-hook deviation blocks only list what goes beyond them.
   `Option<Signal<T>>` only for "inherit vs. override" (documented).
 - **C12 ARIA typing:** typed enums from `utils/aria.rs`, `tabindex` as `i32`. The `&'static str` advice in
   hooks-implementation.md goes.
+- **C13 Units:** `Fraction` (0..=1) newtype for percentages, `Point { x, y }` for coordinates, `Duration` for time.
 - **C14 Field parts (decided 2026-10-05 by the user):** one generic `Label`, `Description` and `FieldError` atom
   reading a `FieldContext` that every field atom provides (TextField, SearchField, NumberField, CheckboxGroup,
   RadioGroup, Select, ComboBox, ...), as react-aria-components' `LabelContext`/`TextContext`/`FieldErrorContext`.
@@ -90,4 +97,3 @@ per-hook deviation blocks only list what goes beyond them.
 - **C15 Number values (decided 2026-10-05 by the user):** the number field is generic over its value type
   (`NumberValue`, implemented for all primitive integers and floats): exact integer stepping and clamping, min/max
   defaulting to the type's bounds, ICU4X decimals for parsing and formatting (react-aria: JS numbers).
-- **C13 Units:** `Fraction` (0..=1) newtype for percentages, `Point { x, y }` for coordinates, `Duration` for time.

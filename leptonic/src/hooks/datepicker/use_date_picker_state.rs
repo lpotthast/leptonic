@@ -7,14 +7,14 @@ use leptos::prelude::*;
 use super::{
     format::{DateFormatter, FormatOptions},
     types::{DateValue, Era, Granularity, HourCycle, MaxGranularity},
-    use_date_field_state::validation_result,
+    use_date_field_state::{resolve_granularity, validation_result},
 };
 use crate::{
     hooks::{
         OverlayTriggerState, UseOverlayTriggerStateInput,
         form::{
-            UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn,
-            ValidationBehavior, use_form_validation_state,
+            FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
+            use_form_validation_state,
         },
         use_overlay_trigger_state,
     },
@@ -32,6 +32,7 @@ use crate::{
 // - Closing commits a selected date through the overlay state's `on_open_change` (react-aria
 //   wraps `setOpen`), so that a popover closing itself commits as well.
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
+// - The format options and the placeholder are signals (C11).
 //
 // ## OMITTED FEATURES
 // - `shouldCloseOnSelect` as a function: a signal.
@@ -43,14 +44,18 @@ pub struct UseDatePickerStateInput<V: DateValue> {
     pub default_value: Option<V>,
     pub value: Option<ValueBinding<Option<V>>>,
     pub on_change: Option<Callback<Option<V>>>,
-    pub placeholder_value: Option<V>,
+    /// The value the field starts from when edited, its time for dates selected in the
+    /// calendar, and the month the calendar opens on.
+    pub placeholder_value: Signal<Option<V>>,
     pub min_value: Signal<Option<V>>,
     pub max_value: Signal<Option<V>>,
     pub is_date_unavailable: Option<Callback<V, bool>>,
-    pub granularity: Option<Granularity>,
-    pub hour_cycle: Option<HourCycle>,
-    pub hide_time_zone: bool,
-    pub should_force_leading_zeros: bool,
+    /// The finest unit. Default: the minute for values with a time, else the day.
+    pub granularity: Signal<Option<Granularity>>,
+    /// 12 or 24 hours. Default: the locale's.
+    pub hour_cycle: Signal<Option<HourCycle>>,
+    pub hide_time_zone: Signal<bool>,
+    pub should_force_leading_zeros: Signal<bool>,
     /// Whether selecting a date closes the popover. Default: `true`.
     pub should_close_on_select: Signal<bool>,
     pub default_open: bool,
@@ -68,14 +73,14 @@ impl<V: DateValue> Default for UseDatePickerStateInput<V> {
             default_value: None,
             value: None,
             on_change: None,
-            placeholder_value: None,
+            placeholder_value: Signal::stored(None),
             min_value: Signal::stored(None),
             max_value: Signal::stored(None),
             is_date_unavailable: None,
-            granularity: None,
-            hour_cycle: None,
-            hide_time_zone: false,
-            should_force_leading_zeros: false,
+            granularity: Signal::stored(None),
+            hour_cycle: Signal::stored(None),
+            hide_time_zone: Signal::stored(false),
+            should_force_leading_zeros: Signal::stored(false),
             should_close_on_select: Signal::stored(true),
             default_open: false,
             is_open: None,
@@ -96,18 +101,18 @@ pub struct DatePickerState<V: DateValue> {
     pub date_value: Signal<Option<Date>>,
     /// The time: the one selected in the popover, else the value's.
     pub time_value: Signal<Option<Time>>,
-    pub granularity: Granularity,
+    pub granularity: Signal<Granularity>,
     /// Whether the value has a time (selecting a date then waits for one, unless it closes).
-    pub has_time: bool,
+    pub has_time: Signal<bool>,
     pub overlay: OverlayTriggerState,
     pub is_invalid: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     pub(crate) binding: ValueBinding<Option<V>>,
     pub(crate) format_options: Memo<FormatOptions>,
     selected_date: RwSignal<Option<Date>>,
     selected_time: RwSignal<Option<Time>>,
     placeholder: Memo<V>,
-    placeholder_time: Time,
+    placeholder_time: Signal<Time>,
     should_close_on_select: Signal<bool>,
     locale: Signal<crate::utils::i18n::Locale>,
 }
@@ -136,7 +141,7 @@ impl<V: DateValue> DatePickerState<V> {
         self.binding.set(Some(base.with_fields(date, time, None)));
         self.selected_date.set(None);
         self.selected_time.set(None);
-        self.validation.commit_validation.run(());
+        self.validation.commit_validation();
     }
 
     /// A date as a value: on the time and in the zone of the value, else of the placeholder.
@@ -152,10 +157,10 @@ impl<V: DateValue> DatePickerState<V> {
     /// Selects a date in the calendar (keeping the time).
     pub fn select_date(&self, date: Date) {
         let should_close = self.should_close_on_select.get_untracked();
-        if self.has_time {
+        if self.has_time.get_untracked() {
             match self.time_value.get_untracked() {
                 Some(time) => self.commit(date, time),
-                None if should_close => self.commit(date, self.placeholder_time),
+                None if should_close => self.commit(date, self.placeholder_time.get_untracked()),
                 None => self.selected_date.set(Some(date)),
             }
         } else {
@@ -236,23 +241,24 @@ pub fn use_date_picker_state<V: DateValue>(
         }),
     );
 
-    let granularity = match granularity {
-        Some(granularity) if granularity.has_time() && !V::HAS_TIME => Granularity::Day,
-        Some(granularity) => granularity,
-        None if V::HAS_TIME => Granularity::Minute,
-        None => Granularity::Day,
-    };
-    let has_time = granularity.has_time();
-    let placeholder_time = default_value
-        .as_ref()
-        .or(placeholder_value.as_ref())
-        .filter(|_| V::HAS_TIME)
-        .map_or(Time::midnight(), DateValue::time);
-    let default_time_zone = default_value
-        .as_ref()
-        .or(placeholder_value.as_ref())
-        .and_then(|value| value.time_zone().cloned());
-    let placeholder_value = StoredValue::new(placeholder_value);
+    let granularity = Signal::derive(move || resolve_granularity::<V>(granularity.get()));
+    let has_time = Signal::derive(move || granularity.get().has_time());
+    let default_value = StoredValue::new(default_value);
+    // The time of dates selected in the calendar without one: the default value's or the
+    // placeholder's (react-aria's `getPlaceholderTime`), else midnight.
+    let placeholder_time = Signal::derive(move || {
+        default_value
+            .get_value()
+            .or_else(|| placeholder_value.get())
+            .filter(|_| V::HAS_TIME)
+            .map_or(Time::midnight(), |value| value.time())
+    });
+    let default_time_zone = Signal::derive(move || {
+        default_value
+            .get_value()
+            .or_else(|| placeholder_value.get())
+            .and_then(|value| value.time_zone().cloned())
+    });
     // The time zone of zoned values: the value's, else the last one's (react-aria's
     // `useDefaultProps`), else the default value's or placeholder's.
     let time_zone = Memo::new(move |previous: Option<&Option<jiff::tz::TimeZone>>| {
@@ -261,11 +267,11 @@ pub fn use_date_picker_state<V: DateValue>(
             .get()
             .and_then(|value| value.time_zone().cloned())
             .or_else(|| previous.cloned().flatten())
-            .or_else(|| default_time_zone.clone())
+            .or_else(|| default_time_zone.get())
     });
     let placeholder = Memo::new(move |_| {
         placeholder_value
-            .get_value()
+            .get()
             .unwrap_or_else(|| V::today(time_zone.get().as_ref()))
     });
 
@@ -290,16 +296,16 @@ pub fn use_date_picker_state<V: DateValue>(
     });
 
     let format_options = Memo::new(move |_| FormatOptions {
-        granularity,
+        granularity: granularity.get(),
         max_granularity: MaxGranularity::Year,
         time_zone: time_zone.get(),
-        hide_time_zone,
-        hour_cycle,
+        hide_time_zone: hide_time_zone.get(),
+        hour_cycle: hour_cycle.get(),
         show_era: binding
             .value
             .get()
             .is_some_and(|value| Era::of(value.date().year()).0 == Era::Bc),
-        should_force_leading_zeros,
+        should_force_leading_zeros: should_force_leading_zeros.get(),
     });
     let is_date_unavailable = StoredValue::new(is_date_unavailable);
     let builtin_validation = Signal::derive(move || {
@@ -326,16 +332,18 @@ pub fn use_date_picker_state<V: DateValue>(
     // Closing commits a date selected without a time, with the placeholder time (a time selected
     // without a date stays until the popover opens again).
     let commit_on_close: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
-        if has_time
+        if has_time.get_untracked()
             && binding.value.get_untracked().is_none()
             && let Some(date) = selected_date.get_untracked()
         {
-            let time = selected_time.get_untracked().unwrap_or(placeholder_time);
+            let time = selected_time
+                .get_untracked()
+                .unwrap_or_else(|| placeholder_time.get_untracked());
             let base = placeholder.get_untracked();
             binding.set(Some(base.with_fields(date, time, None)));
             selected_date.set(None);
             selected_time.set(None);
-            validation.commit_validation.run(());
+            validation.commit_validation();
         }
     });
     let overlay = use_overlay_trigger_state(UseOverlayTriggerStateInput {

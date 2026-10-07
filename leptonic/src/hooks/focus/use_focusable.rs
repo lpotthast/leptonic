@@ -27,27 +27,20 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocusable.tsx
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `FocusableContext` is provided with `provide_context` or the `Focusable` atom; there is no
+//   `FocusableProvider` component.
+//
 // ## DIFFERENT BEHAVIOR
+// - The handlers are always attached and check `is_disabled` when they run (react-aria attaches
+//   none without callbacks, and drops every interaction prop, including the context's, when
+//   disabled): `is_disabled` is reactive. The context's handlers are skipped while disabled too.
 //
-// - Handler optimization when disabled
-//   React-aria returns `undefined` props when no callbacks are provided,
-//   relying on React's reconciliation to avoid attaching empty listeners.
-//   Our `EventHandler` always attaches a listener but checks the disabled
-//   state inside the handler. The overhead is negligible.
-//
-// - Context handler disabled guard
-//   React-aria: `let interactionProps = props.isDisabled ? {} : domProps`
-//   discards all interaction props (including context-provided handlers) when
-//   disabled. Leptonic: context handlers are guarded with a `disabled` check
-//   at chain time — the own handler (from `use_focus`) already checks disabled
-//   internally, and context handlers are wrapped to also skip when disabled.
-//
-// - No FocusableProvider component
-//   There is no wrapper component for providing FocusableContext to children.
-//   Parent components must call `provide_context(FocusableContext { ... })`
-//   directly before rendering focusable children.
+// =============================================================================
 
 /// Input parameters for the `use_focusable` hook.
 #[derive(Debug, Clone)]

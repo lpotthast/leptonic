@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use leptos::{context::Provider, prelude::*};
+use leptos::{context::Provider, ev, prelude::*};
 
 use super::{
     field::{FieldContext, LabelContext},
@@ -11,12 +11,12 @@ use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        IntoAttrs, Placement, PopoverModality, SelectMode, SelectState, UseHiddenSelectReturn,
-        UseLabelProps, UseListBoxInput, UsePopoverInput, UsePopoverReturn, UseSelectInput,
-        UseSelectReturn, UseSelectStateInput, UseSelectTriggerProps, ValidateFn,
+        IntoAttrs, Placement, PopoverModality, SelectMode, SelectState, UseFocusRingInput,
+        UseHiddenSelectReturn, UseLabelProps, UseListBoxInput, UsePopoverInput, UsePopoverReturn,
+        UseSelectInput, UseSelectReturn, UseSelectStateInput, UseSelectTriggerProps, ValidateFn,
         ValidationBehavior,
         collections::{CloseOnSelect, CollectionMemo, Key},
-        use_button, use_hidden_select, use_popover, use_select, use_select_state,
+        use_button, use_focus_ring, use_hidden_select, use_popover, use_select, use_select_state,
     },
     utils::{
         CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
@@ -64,6 +64,9 @@ impl SelectCtx {
 /// one `ListBoxItem` per option), a [`Description`](super::field::Description), a
 /// [`FieldError`](super::field::FieldError) and [`HiddenSelect`] (for forms).
 ///
+/// Data attributes: `data-focused`, `data-focus-visible` (focus anywhere inside), `data-open`,
+/// `data-disabled`, `data-invalid`, `data-required`.
+///
 /// Default class: `leptonic-Select`.
 #[component]
 #[allow(
@@ -90,8 +93,16 @@ pub fn Select(
     on_change: Option<Callback<Vec<Key>>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     #[prop(into, optional)] is_disabled: Signal<bool>,
-    #[prop(optional)] is_required: bool,
-    #[prop(optional)] default_open: bool,
+    #[prop(into, optional)] is_required: Signal<bool>,
+    /// Whether the popover starts open. Ignored with `is_open`.
+    #[prop(optional)]
+    default_open: bool,
+    /// Whether the popover is open (controlled): a value or any signal.
+    #[prop(into, optional)]
+    is_open: Option<Signal<bool>>,
+    /// Receives the open state: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_open: Option<Out<bool>>,
     #[prop(into, optional)] on_open_change: Option<Callback<bool>>,
     #[prop(optional)] allows_empty_collection: bool,
     /// Close the popover when an option is selected. Default: in `Single` mode.
@@ -117,6 +128,8 @@ pub fn Select(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Select", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
+    let (is_open, on_open_change) =
+        ValueBinding::from_state_props(is_open, set_open, on_open_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let state = use_select_state(UseSelectStateInput {
         selection_mode,
@@ -127,11 +140,12 @@ pub fn Select(
         should_close_on_select,
         allows_empty_collection,
         default_open,
+        is_open,
         on_open_change,
         is_invalid,
         validate,
         validation_behavior,
-        name: name.clone(),
+        name,
         collection,
     });
 
@@ -156,9 +170,7 @@ pub fn Select(
         aria_label,
         aria_labelledby,
         on_focus_change,
-        name,
         form,
-        validation_behavior,
         state,
         id: None,
         aria_describedby: None,
@@ -196,6 +208,15 @@ pub fn Select(
         }),
     };
     let is_open = Signal::derive(move || state.is_open());
+    let is_focused = Signal::derive(move || state.is_focused());
+    let focus_ring = use_focus_ring(UseFocusRingInput {
+        within: true,
+        ..UseFocusRingInput::default()
+    });
+    let focus_within = (
+        focus_ring.props.on_focusin.into_on(ev::focusin),
+        focus_ring.props.on_focusout.into_on(ev::focusout),
+    );
 
     let listbox_parent = super::listbox::ListBoxParent { input: ctx.listbox };
 
@@ -204,11 +225,15 @@ pub fn Select(
             <Provider value=listbox_parent>
                 <Provider value=label><Provider value=field>
                     <div
+                        {..focus_within}
                         class=classes
                         style=styles
+                        data-focused=flag(is_focused)
+                        data-focus-visible=flag(focus_ring.is_focus_visible)
                         data-open=flag(is_open)
                         data-invalid=flag(is_invalid)
                         data-disabled=flag(is_disabled)
+                        data-required=flag(is_required)
                     >
                         {children()}
                     </div>
@@ -253,13 +278,17 @@ pub fn SelectTrigger(
     }
 }
 
-/// The text of the selected option(s), or `placeholder`. Exposes `data-placeholder` while
-/// nothing is selected.
+/// The text of the selected option(s), or `placeholder`. Several selected options are listed in
+/// the locale's way ("Cat, Dog, and Kangaroo"). Exposes `data-placeholder` while nothing is
+/// selected.
 ///
 /// Default class: `leptonic-SelectValue`.
 #[component]
 pub fn SelectValue(
-    #[prop(into, optional)] placeholder: Option<String>,
+    /// Shown while nothing is selected. Default: "Select an item" (react-aria-components; not
+    /// localized yet).
+    #[prop(into, optional)]
+    placeholder: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
@@ -268,16 +297,22 @@ pub fn SelectValue(
     let state = ctx.state;
     let id = ctx.parts.with_value(|p| p.value_id.clone());
     let is_empty = move || state.value().is_empty();
+    let locale = crate::utils::i18n::use_locale();
     let text = move || {
         let items = state.selected_items();
         if items.is_empty() {
-            placeholder.clone().unwrap_or_default()
+            placeholder
+                .get()
+                .unwrap_or_else(|| "Select an item".to_owned())
         } else {
-            items
-                .iter()
-                .map(|n| n.text_value.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            let texts: Vec<&str> = items.iter().map(|n| &*n.text_value).collect();
+            locale.with(|locale| {
+                crate::utils::list_formatter::ListFormatter::new(
+                    locale,
+                    &crate::utils::list_formatter::ListFormatOptions::default(),
+                )
+                .format(&texts)
+            })
         }
     };
 
@@ -381,24 +416,33 @@ pub fn HiddenSelect(
     /// The `autocomplete` attribute (autofill hint).
     #[prop(into, optional)]
     auto_complete: Option<String>,
+    /// The text of the hidden `<label>` (browsers identify fields for autofill by their
+    /// labels). Default: the select's `aria_label`.
+    #[prop(into, optional)]
+    label: MaybeProp<String>,
 ) -> impl IntoView {
     let ctx = expect_context::<SelectCtx>();
     let input = ctx.part(|p| p.hidden_select.clone());
-    let has_name = input.name.is_some();
+    let has_name = ctx.state.name().is_some();
+    let default_label = input.label;
     let UseHiddenSelectReturn {
         container_props,
         use_native_select,
         select_props,
         options,
+        label,
         input_props,
+        first_input_capture,
         input_values,
     } = use_hidden_select(crate::hooks::UseHiddenSelectInput {
         auto_complete,
         trigger: Some(ctx.trigger_element),
+        label: MaybeProp::derive(move || label.get().or_else(|| default_label.get())),
         ..input
     });
     let select_props = StoredValue::new(select_props);
     let input_props = StoredValue::new(input_props);
+    let first_input_capture = StoredValue::new(first_input_capture);
 
     view! {
         <div {..container_props.into_attrs()}>
@@ -413,7 +457,7 @@ pub fn HiddenSelect(
                                 .enumerate()
                                 .map(|(i, value)| {
                                     let p = input_props.get_value();
-                                    view! {
+                                    let input = view! {
                                         <input
                                             type=p.r#type
                                             style=p.style
@@ -421,9 +465,18 @@ pub fn HiddenSelect(
                                             name=p.name
                                             form=p.form
                                             disabled=p.disabled
-                                            required=p.required && i == 0
+                                            required=move || i == 0 && p.required.get()
                                             value=value
                                         />
+                                    };
+                                    // The first input stands for the field (form reset,
+                                    // native validation).
+                                    if i == 0 {
+                                        input
+                                            .add_any_attr(first_input_capture.get_value())
+                                            .into_any()
+                                    } else {
+                                        input.into_any()
                                     }
                                 })
                                 .collect_view()
@@ -431,6 +484,7 @@ pub fn HiddenSelect(
                 }
             >
                 <label>
+                    {move || label.get()}
                     <select {..select_props.get_value().into_attrs()}>
                         <For
                             each=move || options.get()

@@ -1,6 +1,11 @@
 use leptonic::{
-    atoms::form::Form,
-    components::prelude::*,
+    atoms::{
+        button::Button,
+        field::{FieldError, Label},
+        form::Form,
+        input::Input,
+        text_field::TextField,
+    },
     hooks::{ButtonType, InputType},
 };
 use leptos::{ev::SubmitEvent, prelude::*};
@@ -20,17 +25,25 @@ pub fn FormConceptDemo() -> impl IntoView {
                 set_invited.set(Some(format!("{} <{}>", name.get_untracked(), email.get_untracked())));
             }
         >
-            <TextField label="Name" name="name" is_required=true value=name set_value=name/>
+            <TextField name="name" is_required=true value=name set_value=name classes="demo-field">
+                <Label classes="demo-field-label">"Name"</Label>
+                <Input classes="demo-atom-input"/>
+                <FieldError classes="demo-field-error"/>
+            </TextField>
             <TextField
-                label="Email"
                 name="email"
                 input_type=InputType::Email
                 is_required=true
                 value=email
                 set_value=email
-            />
+                classes="demo-field"
+            >
+                <Label classes="demo-field-label">"Email"</Label>
+                <Input classes="demo-atom-input"/>
+                <FieldError classes="demo-field-error"/>
+            </TextField>
             <div>
-                <Button button_type=ButtonType::Submit>"Send invitation"</Button>
+                <Button button_type=ButtonType::Submit classes="demo-btn-primary">"Send invitation"</Button>
             </div>
         </Form>
 

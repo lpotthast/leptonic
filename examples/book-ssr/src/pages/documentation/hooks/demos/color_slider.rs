@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
@@ -19,7 +19,7 @@ pub fn ColorSliderDemo() -> impl IntoView {
         default_value: HSV {
             hue: 210.0,
             saturation: 0.6,
-            value: 0.8,
+            brightness: 0.8,
         },
         value: None,
         channel: HsvChannel::Hue,
@@ -55,7 +55,7 @@ pub fn ColorSliderDemo() -> impl IntoView {
     let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
     let display_color = state.display_color();
     let thumb_styles = thumb_styles.add_reactive(move || {
-        BackgroundColorProperty.declare(CssColor::from(display_color.get().into_rgb8()))
+        BackgroundColorProperty.declare(CssColor::from(display_color.get().to_rgb8()))
     });
     let formatted = state.formatted_value();
 
@@ -70,9 +70,12 @@ pub fn ColorSliderDemo() -> impl IntoView {
             </div>
         </div>
 
-        <p class="demo-status">{move || format!("Color: {}, hue: {}", state.value.get().into_rgb8(), state.value.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, hue: {}", state.value.get().to_rgb8(), state.value.get().hue_name())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

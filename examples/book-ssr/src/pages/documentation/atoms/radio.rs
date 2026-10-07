@@ -171,20 +171,55 @@ pub fn PageAtomRadio() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Select the states with attribute selectors on your class; draw the focus ring with "
-                    <Code inline=true>"data-focus-visible"</Code>", as the input itself is visually hidden:"
+                    "The atoms bring no styles. "<Code inline=true>"RadioGroup"</Code>" renders a "<Code inline=true>"<div>"</Code>
+                    " (default class "<Code inline=true>"leptonic-RadioGroup"</Code>") around its children: a "
+                    <Code inline=true>"Label"</Code>", the radios, a "<Code inline=true>"Description"</Code>" and a "
+                    <Code inline=true>"FieldError"</Code>" ("<Link href=format!("{}#styling", routes::doc::field::Atom.materialize())>"Field Atoms"</Link>
+                    "). Each "<Code inline=true>"Radio"</Code>" renders a "<Code inline=true>"<label>"</Code>" (default class "
+                    <Code inline=true>"leptonic-Radio"</Code>") around a visually hidden "<Code inline=true>"<input>"</Code>
+                    ", followed by your children: draw the circle as the first child, hidden from assistive technology, "
+                    "and put the label text after it:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <Radio value="standard" classes="demo-radio">
+                            <span class="demo-radio-circle" aria-hidden="true"></span>
+                            "Standard shipping"
+                        </Radio>
+                    "#)}
+                </Code>
+                <p>
+                    "Style the circle through the data attributes of the label, and draw the focus ring around it with "
+                    <Code inline=true>"data-focus-visible"</Code>", as the input itself is invisible. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
-                    {indoc!(r"
-                        .my-radio { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
-                        .my-radio-circle { width: 1em; height: 1em; border: 2px solid var(--border); border-radius: 50%; }
-                        .my-radio[data-hovered] .my-radio-circle { border-color: var(--accent); }
-                        .my-radio[data-selected] .my-radio-circle { border: 0.3em solid var(--accent); }
-                        .my-radio[data-focus-visible] .my-radio-circle { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-radio[data-disabled] { opacity: 0.5; cursor: not-allowed; }
-                    ")}
+                    {indoc!(r#"
+                        .demo-radio { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+                        .demo-radio[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-radio-circle {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: 1.1em;
+                            height: 1.1em;
+                            border: 2px solid var(--muted);
+                            border-radius: 50%;
+                        }
+                        .demo-radio-circle::after { content: ""; width: 0.55em; height: 0.55em; border-radius: 50%; }
+                        .demo-radio[data-hovered] .demo-radio-circle,
+                        .demo-radio[data-selected] .demo-radio-circle { border-color: var(--accent); }
+                        .demo-radio[data-selected] .demo-radio-circle::after { background: var(--accent); }
+                        .demo-radio[data-focus-visible] .demo-radio-circle { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+                        .demo-choice-group-items { display: flex; flex-direction: column; gap: 0.5rem; }
+                        [data-orientation="horizontal"] > .demo-choice-group-items { flex-direction: row; gap: 1rem; }
+                    "#)}
                 </Code>
-                <p>"The demo shows its complete styles under \u{201c}View styles\u{201d}."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <SeeAlso>

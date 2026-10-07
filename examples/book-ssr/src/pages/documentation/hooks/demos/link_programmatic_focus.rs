@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::button::Button, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -13,7 +13,7 @@ pub fn LinkProgrammaticFocusDemo() -> impl IntoView {
 
     view! {
         <p><a {..link_attrs} class="demo-link" style=link_styles>"Link overview"</a></p>
-        <Button on_press=move |_| focus_handle.focus()>"Focus the link"</Button>
+        <Button on_press=move |_| focus_handle.focus() classes="demo-btn">"Focus the link"</Button>
         <p class="demo-status">{move || if is_focused.get() { "The link has focus." } else { "The link doesn\u{2019}t have focus." }}</p>
     }
 }

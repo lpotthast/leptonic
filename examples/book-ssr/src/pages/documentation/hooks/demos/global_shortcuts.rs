@@ -1,6 +1,5 @@
 use leptonic::{
     atoms::prelude as atoms,
-    components::prelude::*,
     hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
     utils::{
         focus::focus_safely,
@@ -55,11 +54,12 @@ pub fn GlobalShortcutsDemo() -> impl IntoView {
             " anywhere on this page to write a message, "
             <atoms::ShortcutKeys shortcut=SEND classes="demo-shortcut-keys"/>" to send it."
         </p>
-        <div class="demo-control-row">
-            <TextField label="Message" id=MESSAGE_FIELD_ID value=message set_value=message/>
-            <Button on_press=move |_| {
-                send();
-            }>"Send"</Button>
+        <div class="demo-message-row">
+            <atoms::TextField id=MESSAGE_FIELD_ID value=message set_value=message classes="demo-field">
+                <atoms::Label classes="demo-field-label">"Message"</atoms::Label>
+                <atoms::Input classes="demo-atom-input"/>
+            </atoms::TextField>
+            <atoms::Button on_press=move |_| { send(); } classes="demo-btn">"Send"</atoms::Button>
         </div>
         <p class="demo-status">
             {move || match (sent.get(), last_sent.get()) {

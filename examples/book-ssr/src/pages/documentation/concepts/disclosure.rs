@@ -32,7 +32,7 @@ pub fn PageDisclosureOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Disclosures exist at all three layers. See "
+                    "Disclosures exist as hooks and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -57,9 +57,14 @@ pub fn PageDisclosureOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"The "<Code inline=true>"Collapsible"</Code>" component is the quickest way to a disclosure:"</p>
+                <p>
+                    "A disclosure from the atoms: a trigger button in a heading, and the panel it shows and hides. The "
+                    "classes are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::disclosure::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows its CSS."
+                </p>
 
-                <Demo description="A collapsible with a header and a body" source=include_str!("demos/disclosure.rs") source_open=true>
+                <Demo description="A disclosure with a trigger in a heading and a panel" source=include_str!("demos/disclosure.rs") source_open=true>
                     <DisclosureConceptDemo/>
                 </Demo>
             </Section>

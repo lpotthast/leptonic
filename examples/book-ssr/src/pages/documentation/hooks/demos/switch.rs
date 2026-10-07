@@ -1,4 +1,6 @@
-use leptonic::{components::prelude::*, hooks::*, utils::visually_hidden::visually_hidden_styles};
+use leptonic::{
+    atoms::checkbox::Checkbox, hooks::*, utils::visually_hidden::visually_hidden_styles,
+};
 use leptos::prelude::*;
 
 #[component]
@@ -48,8 +50,14 @@ pub fn SwitchDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </Checkbox>
         </div>
     }
 }

@@ -20,6 +20,12 @@ use crate::{
 //   bound to app state, instead of a controlled `selectedKey`. Without a default, the first
 //   enabled tab is selected.
 //
+// ## DIFFERENT BEHAVIOR
+// - A bound `selected_key` that isn't a tab is replaced by the first enabled tab, which is written
+//   to the app state (react-aria leaves a controlled `selectedKey` alone). Reason: one tab is
+//   always selected, and the app state shows which. A disabled selected tab stays selected, as in
+//   react-aria.
+//
 // =============================================================================
 
 /// Input of [`use_tab_list_state`].
@@ -30,8 +36,8 @@ pub struct UseTabListStateInput {
     /// The initially selected tab. Defaults to the first enabled tab. Ignored when
     /// `selected_key` is bound.
     pub default_selected_key: Option<Key>,
-    /// The selected tab as app state, replacing `default_selected_key`. A key that isn't an
-    /// enabled tab is replaced by the first enabled tab.
+    /// The selected tab as app state, replacing `default_selected_key`. A key that isn't a tab
+    /// is replaced by the first enabled tab; a disabled tab stays selected.
     pub selected_key: Option<ValueBinding<Key>>,
     /// Called with the key of the tab the user selects.
     pub on_selection_change: Option<Callback<Key>>,
@@ -56,7 +62,8 @@ impl TabListState {
 }
 
 /// Creates the state of a tab list (see [`TabListState`]). One tab is always selected: the
-/// default, or the first enabled tab; if the selected tab disappears, the first enabled tab.
+/// default, or the first enabled tab; if the selected tab disappears, the first enabled tab. A
+/// disabled tab can be selected (by default or bound key) and stays selected.
 pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
     let UseTabListStateInput {
         collection,
@@ -97,8 +104,10 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
     // list doesn't have focus.
     let selection = list.list.selection;
     Effect::new(move |last_selected: Option<Option<Key>>| {
-        // Every source up front, the app's inputs before what derives from them ("Effect Read
-        // Order"): the disabled keys are otherwise read only without a valid selection.
+        // Every source up front, the app's inputs (collection, disabled keys, bound key) before
+        // what derives from them ("Effect Read Order"): the disabled keys are otherwise read only
+        // without a valid selection.
+        collection.track();
         disabled_keys.track();
         let mut selected = list.selected_key();
         let exists = selected
@@ -151,6 +160,23 @@ mod tests {
                 }
             }))
         })
+    }
+
+    #[test]
+    fn a_disabled_bound_key_stays_selected() {
+        Owner::new().with(|| {
+            let selected = RwSignal::new(Key::from("b"));
+            let state = use_tab_list_state(UseTabListStateInput {
+                selected_key: Some(selected.into()),
+                collection: tabs(&["a", "b", "c"]),
+                default_selected_key: None,
+                on_selection_change: None,
+                disabled_keys: Signal::stored(HashSet::from([Key::from("b")])),
+                is_disabled: Signal::stored(false),
+            });
+            assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
+            assert_that!(selected.get_untracked()).is_equal_to(Key::from("b"));
+        });
     }
 
     #[test]

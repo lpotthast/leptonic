@@ -1,4 +1,12 @@
-use leptonic::{atoms::prelude::FocusScope, components::prelude::*, hooks::*, utils::css::em};
+use leptonic::{
+    atoms::{
+        button::Button,
+        field::Label,
+        focus_scope::FocusScope,
+        radio::{Radio, RadioGroup},
+    },
+    hooks::*,
+};
 use leptos::{portal::Portal, prelude::*};
 use leptos_element_capture::CapturedElement;
 
@@ -48,7 +56,7 @@ pub fn PositioningDemo() -> impl IntoView {
     let UseOverlayTriggerReturn {
         props: trigger_props,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open.into(),
+        is_open: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -90,20 +98,36 @@ pub fn PositioningDemo() -> impl IntoView {
     let (button_attrs, button_styles) = button_props.into_parts();
 
     view! {
-        <Grid gap=em(0.5) classes="demo-mb-1">
-            <Row>
-                <Col xs=6 classes="demo-option-group">
-                    <RadioGroup label="Side" value=side_key set_value=side_key classes="demo-radio-list">
-                        {Side::ALL.into_iter().map(|side| view! { <Radio value=side.to_key()>{format!("{side:?}")}</Radio> }).collect_view()}
-                    </RadioGroup>
-                </Col>
-                <Col xs=6 classes="demo-option-group">
-                    <RadioGroup label="Alignment" value=align_key set_value=align_key classes="demo-radio-list">
-                        {Align::ALL.into_iter().map(|align| view! { <Radio value=align.to_key()>{format!("{align:?}")}</Radio> }).collect_view()}
-                    </RadioGroup>
-                </Col>
-            </Row>
-        </Grid>
+        <div class="demo-option-groups">
+            <RadioGroup value=side_key set_value=side_key classes=["demo-choice-group", "demo-option-group"]>
+                <Label classes="demo-choice-group-label">"Side"</Label>
+                <div class="demo-choice-group-items">
+                    {Side::ALL
+                        .into_iter()
+                        .map(|side| view! {
+                            <Radio value=side.to_key() classes="demo-radio">
+                                <span class="demo-radio-circle" aria-hidden="true"></span>
+                                {format!("{side:?}")}
+                            </Radio>
+                        })
+                        .collect_view()}
+                </div>
+            </RadioGroup>
+            <RadioGroup value=align_key set_value=align_key classes=["demo-choice-group", "demo-option-group"]>
+                <Label classes="demo-choice-group-label">"Alignment"</Label>
+                <div class="demo-choice-group-items">
+                    {Align::ALL
+                        .into_iter()
+                        .map(|align| view! {
+                            <Radio value=align.to_key() classes="demo-radio">
+                                <span class="demo-radio-circle" aria-hidden="true"></span>
+                                {format!("{align:?}")}
+                            </Radio>
+                        })
+                        .collect_view()}
+                </div>
+            </RadioGroup>
+        </div>
 
         <div class="demo-positioning-stage">
             <button
@@ -137,7 +161,7 @@ pub fn PositioningDemo() -> impl IntoView {
                     // Moves focus into the overlay, so that Escape reaches its key handler, and back to the trigger.
                     <FocusScope restore_focus=true auto_focus=true>
                         <p class="demo-overlay-text">{move || format!("Placed {:?} of the button.", placement.get())}</p>
-                        <Button on_press=move |_| set_is_open.set(false)>"Close"</Button>
+                        <Button on_press=move |_| set_is_open.set(false) classes="demo-btn">"Close"</Button>
                     </FocusScope>
                 </div>
             </Show>

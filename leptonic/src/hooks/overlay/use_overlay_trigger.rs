@@ -1,8 +1,7 @@
-// Upstream: react-aria/src/overlays/useOverlayTrigger.ts @ 6f664fe911
+// Upstream: react-aria/src/overlays/useOverlayTrigger.ts @ 99e6102368
 use leptos::{
     attr,
     attr::{Attr, IntoAttributeValue},
-    oco::Oco,
     prelude::*,
 };
 
@@ -12,19 +11,22 @@ use crate::{
     utils::aria::AriaControls,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// 1. No `overlayProps` / ID generation: react-aria generates an ID for the
-//    overlay and returns `overlayProps` with that ID. In leptonic, the ID is
-//    generated in `use_overlay` instead, and passed here as `overlay_id`.
+// ## API DIFFERENCES
+// - Takes the open state as `is_open` and the overlay's id as `overlay_id` (react-aria: the state,
+//   and an id it generates and returns in `overlayProps`): the id comes from `use_overlay`.
+// - No `onPress` in the trigger props (react-aria: `state.toggle`): pressing is the caller's
+//   (`use_button`, `use_menu_trigger`).
+// - The overlay type is the `OverlayTriggerType` enum.
 //
-// 2. No `onPress` in trigger props: react-aria includes an `onPress` handler
-//    in the trigger props that toggles the overlay. In leptonic, press handling
-//    is the caller's responsibility (e.g., via `use_button` or `use_menu_trigger`).
+// ## OMITTED FEATURES
+// - The `onCloseMap` registration (react-aria's backward compatibility for closing on scroll):
+//   `use_overlay_position` takes `on_close`.
 //
-// 3. No `onCloseMap` integration: react-aria integrates with a global close
-//    handler map for overlay stacking. Leptonic handles dismiss differently
-//    via `use_overlay`.
-//
+// =============================================================================
 
 /// The type of overlay opened by a trigger.
 ///
@@ -50,10 +52,12 @@ pub enum OverlayTriggerType {
 
 #[derive(Debug, Clone)]
 pub struct UseOverlayTriggerInput {
-    /// Whether the overlay is currently shown.
-    pub show: Signal<bool>,
+    /// Whether the overlay is open.
+    pub is_open: Signal<bool>,
 
-    pub overlay_id: Oco<'static, str>,
+    /// The overlay's id (from `use_overlay`, `use_popover`, ...): the trigger's `aria-controls`
+    /// while it is open.
+    pub overlay_id: String,
 
     /// The type of overlay opened by this trigger.
     pub overlay_type: OverlayTriggerType,
@@ -92,9 +96,11 @@ pub type UseOverlayTriggerAttrs = (
     Attr<attr::AriaControls, Signal<Option<String>>>,
 );
 
+/// The trigger's ARIA attributes for the overlay it opens: `aria-expanded`, `aria-controls` (while
+/// open) and, for menus and list boxes, `aria-haspopup`.
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
     let UseOverlayTriggerInput {
-        show,
+        is_open,
         overlay_id,
         overlay_type,
     } = input;
@@ -111,10 +117,11 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {
             aria_haspopup,
-            aria_expanded: Signal::derive(move || Some(AriaExpanded::from(show.get()))),
+            aria_expanded: Signal::derive(move || Some(AriaExpanded::from(is_open.get()))),
             aria_controls: Signal::derive(move || {
-                show.get()
-                    .then(|| AriaControls(vec![overlay_id.to_string()]).into_attribute_value())
+                is_open
+                    .get()
+                    .then(|| AriaControls(vec![overlay_id.clone()]).into_attribute_value())
             }),
         },
     }

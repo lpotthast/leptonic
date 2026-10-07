@@ -90,6 +90,8 @@ fn MenuButton(
         state,
     });
     let menu_props = menu_trigger.menu_props;
+    let menu_id = StoredValue::new(menu_props.id.clone());
+    let (labelled_by, auto_focus) = (menu_props.aria_labelledby, menu_props.auto_focus);
     let (trigger_attrs, trigger_styles) = use_button(menu_trigger.button).props.into_parts();
     let UsePopoverReturn {
         props: popover_props,
@@ -129,9 +131,9 @@ fn MenuButton(
                     <div {..popover_attrs} style=popover_styles>
                         <FocusScope contain=true restore_focus=true>
                             <Menu
-                                id=menu_props.id
-                                labelled_by=menu_props.aria_labelledby
-                                auto_focus=menu_props.auto_focus
+                                id=menu_id.get_value()
+                                labelled_by=labelled_by
+                                auto_focus=auto_focus
                                 selection_mode=selection_mode
                                 contents=contents.get_value()
                                 on_action=on_action
@@ -150,7 +152,7 @@ fn MenuButton(
 /// so its auto focus applies on every opening.
 #[component]
 fn Menu(
-    id: Signal<String>,
+    id: String,
     labelled_by: Signal<String>,
     auto_focus: Signal<Option<AutoFocus>>,
     selection_mode: SelectionMode,
@@ -169,7 +171,7 @@ fn Menu(
         },
     });
     let UseMenuReturn { props, data } = use_menu(UseMenuInput {
-        id: Some(id.get_untracked()),
+        id: Some(id),
         aria_labelledby: labelled_by.into(),
         options: CollectionOptions {
             auto_focus,

@@ -1,3 +1,5 @@
+// No upstream: merged `use_press` + `use_focus_ring` props on one element
+// (react-aria: `mergeProps`).
 use leptos::{
     attr,
     attr::{

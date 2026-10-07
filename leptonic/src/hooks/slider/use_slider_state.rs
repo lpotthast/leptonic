@@ -24,6 +24,8 @@ use crate::utils::{
 // ## DIFFERENT BEHAVIOR
 // - Two values are formatted "a – b" (react-aria: `Intl.NumberFormat.formatRange`, which ICU4X
 //   lacks); more as a list of units, as react-aria.
+// - A thumb index without a value reads `min_value` and ignores changes (react-aria: `undefined`
+//   and `NaN`), with a development warning from `use_slider_thumb`.
 //
 // =============================================================================
 
@@ -97,9 +99,12 @@ impl<T: NumberValue> SliderState<T> {
         self.values.with(Vec::len)
     }
 
-    /// The value of thumb `index` (tracked).
+    /// The value of thumb `index` (tracked). A thumb without a value (an index beyond the
+    /// values) is at `min_value`.
     pub fn thumb_value(&self, index: usize) -> T {
-        self.values.with(|values| values[index])
+        self.values
+            .with(|values| values.get(index).copied())
+            .unwrap_or_else(|| self.min_value.get())
     }
 
     /// The values the slider started with (for form resets).
@@ -109,28 +114,26 @@ impl<T: NumberValue> SliderState<T> {
 
     /// The smallest value thumb `index` can take: the previous thumb's value or `min_value`.
     pub fn thumb_min_value(&self, index: usize) -> T {
-        if index == 0 {
-            self.min_value.get()
-        } else {
-            self.values.with(|values| values[index - 1])
-        }
+        index
+            .checked_sub(1)
+            .and_then(|previous| self.values.with(|values| values.get(previous).copied()))
+            .unwrap_or_else(|| self.min_value.get())
     }
 
     /// The largest value thumb `index` can take: the next thumb's value or `max_value`.
     pub fn thumb_max_value(&self, index: usize) -> T {
-        self.values.with(|values| {
-            if index + 1 >= values.len() {
-                self.max_value.get()
-            } else {
-                values[index + 1]
-            }
-        })
+        self.values
+            .with(|values| values.get(index + 1).copied())
+            .unwrap_or_else(|| self.max_value.get())
     }
 
     /// Sets thumb `index` to `value`, snapped to the step and kept between its neighbors.
-    /// Ignored while the slider is disabled or the thumb isn't editable.
+    /// Ignored while the slider is disabled, the thumb isn't editable, or has no value.
     pub fn set_thumb_value(&self, index: usize, value: T) {
-        if self.is_disabled.get_untracked() || !self.is_thumb_editable(index) {
+        if self.is_disabled.get_untracked()
+            || !self.is_thumb_editable(index)
+            || index >= self.values.with_untracked(Vec::len)
+        {
             return;
         }
         let (min, max) = untrack(|| (self.thumb_min_value(index), self.thumb_max_value(index)));
@@ -145,10 +148,10 @@ impl<T: NumberValue> SliderState<T> {
         } else {
             self.values.get_untracked()
         };
-        if values.get(index) == Some(&value) {
-            return;
+        match values.get_mut(index) {
+            Some(current) if *current != value => *current = value,
+            _ => return,
         }
-        values[index] = value;
         self.latest.set_value(values.clone());
         self.binding.set(values);
     }
@@ -338,6 +341,23 @@ impl<T: NumberValue> SliderState<T> {
     }
 }
 
+/// Each value snapped to the step and kept between its neighbors (react-stately's
+/// `restrictValues`: the neighbors' values as given).
+fn restrict_values<T: NumberValue>(values: &[T], min: T, max: T, step: T) -> Vec<T> {
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            let lower = index
+                .checked_sub(1)
+                .and_then(|previous| values.get(previous).copied())
+                .unwrap_or(min);
+            let upper = values.get(index + 1).copied().unwrap_or(max);
+            value.snap_to_step(Some(lower), Some(upper), step)
+        })
+        .collect()
+}
+
 /// Manages the values of a slider with one or more thumbs.
 pub fn use_slider_state<T: NumberValue>(input: UseSliderStateInput<T>) -> SliderState<T> {
     let UseSliderStateInput {
@@ -355,40 +375,40 @@ pub fn use_slider_state<T: NumberValue>(input: UseSliderStateInput<T>) -> Slider
         on_change_end,
     } = input;
 
-    // Each value is snapped to the step, between its neighbors (react-stately's
-    // `restrictValues`).
-    let restrict = move |values: Vec<T>| -> Vec<T> {
-        let (min, max, step) = (
-            min_value.get_untracked(),
-            max_value.get_untracked(),
-            step.get_untracked(),
-        );
-        let mut restricted: Vec<T> = values.clone();
-        for index in 0..values.len() {
-            let lower = if index == 0 { min } else { values[index - 1] };
-            let upper = if index + 1 == values.len() {
-                max
-            } else {
-                values[index + 1]
-            };
-            restricted[index] = values[index].snap_to_step(Some(lower), Some(upper), step);
-        }
-        restricted
-    };
-
     // The values a form reset restores: `default_values`, else the initial bound values (as
     // upstream's `initialValues`), else the minimum.
-    let defaults = match (default_values, value) {
-        (Some(default_values), _) => restrict(default_values),
-        (None, Some(value)) => value.value.get_untracked(),
-        (None, None) => vec![min_value.get_untracked()],
-    };
+    let defaults = untrack(|| {
+        restrict_values(
+            &match (default_values, &value) {
+                (Some(default_values), _) => default_values,
+                (None, Some(value)) => value.value.get(),
+                (None, None) => vec![min_value.get()],
+            },
+            min_value.get(),
+            max_value.get(),
+            step.get(),
+        )
+    });
+    let is_bound = value.is_some();
     let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(defaults.clone())));
-    let initial = binding.value.get_untracked();
+    // Bound values are restricted on every change (react-stately restricts the controlled
+    // `value`): values out of the range or out of order render within it. Own values are
+    // restricted once (the defaults) and stay restricted.
+    let bound = binding.value;
+    let values = Memo::new(move |_| {
+        if is_bound {
+            bound.with(|values| {
+                restrict_values(values, min_value.get(), max_value.get(), step.get())
+            })
+        } else {
+            bound.get()
+        }
+    });
+    let initial = values.get_untracked();
     let thumbs = initial.len();
     let latest = StoredValue::new(initial);
     let binding = ValueBinding::new(
-        binding.value,
+        values.into(),
         Callback::new(move |values: Vec<T>| {
             binding.set(values.clone());
             if let Some(on_change) = on_change {
@@ -588,6 +608,59 @@ mod tests {
             disabled.set(true);
             slider.set_thumb_value(0, 5);
             assert_that!(slider.thumb_value(0)).is_equal_to(0);
+        });
+    }
+
+    #[test]
+    fn bound_values_are_restricted_to_the_range_and_order() {
+        Owner::new().with(|| {
+            let app = RwSignal::new(vec![-20, 150]);
+            let slider = state(UseSliderStateInput {
+                value: Some(ValueBinding::from(app)),
+                default_values: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(100),
+                step: Signal::stored(1),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
+            });
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![0, 100]);
+            // Out of order: each value stays between its neighbors.
+            app.set(vec![80, 20]);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![20, 80]);
+            assert_that!(slider.default_values()).is_equal_to(vec![0, 100]);
+        });
+    }
+
+    #[test]
+    fn a_thumb_without_a_value_does_not_panic() {
+        Owner::new().with(|| {
+            let slider = state(UseSliderStateInput {
+                default_values: Some(vec![30, 60]),
+                value: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(100),
+                step: Signal::stored(1),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
+            });
+            assert_that!(slider.thumb_value(5)).is_equal_to(0);
+            assert_that!(slider.thumb_min_value(5)).is_equal_to(0);
+            assert_that!(slider.thumb_max_value(5)).is_equal_to(100);
+            slider.set_thumb_value(5, 50);
+            slider.increment_thumb(5, None);
+            assert_that!(slider.values.get_untracked()).is_equal_to(vec![30, 60]);
+            assert_that!(slider.thumb_value_label(5)).is_equal_to("0".to_owned());
         });
     }
 }

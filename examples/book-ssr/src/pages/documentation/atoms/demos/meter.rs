@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude as atoms, components::prelude::*};
+use leptonic::atoms::prelude as atoms;
 use leptos::prelude::*;
 
 #[component]
@@ -23,8 +23,8 @@ pub fn MeterAtomDemo() -> impl IntoView {
             </div>
         </atoms::Meter>
         <div class="demo-inline-controls">
-            <Button on_press=move |_| used.update(|gb| *gb = (*gb - 8.0).max(0.0))>"Free 8 GB"</Button>
-            <Button on_press=move |_| used.update(|gb| *gb = (*gb + 8.0).min(64.0))>"Use 8 GB"</Button>
+            <atoms::Button on_press=move |_| used.update(|gb| *gb = (*gb - 8.0).max(0.0)) classes="demo-btn">"Free 8 GB"</atoms::Button>
+            <atoms::Button on_press=move |_| used.update(|gb| *gb = (*gb + 8.0).min(64.0)) classes="demo-btn">"Use 8 GB"</atoms::Button>
         </div>
     }
 }

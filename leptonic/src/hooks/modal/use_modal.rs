@@ -1,46 +1,31 @@
-// Upstream: react-aria/src/overlays/useModal.tsx @ 6f664fe911
-use leptos::{attr, attr::Attr};
+// Upstream: react-aria/src/overlays/useModal.tsx @ 99e6102368
+use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaModal};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useModal.tsx
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
-//
-// - aria-modal vs aria-hidden
-//   React-aria's `useModal` aria-hides all content *outside* the modal by
-//   setting `aria-hidden` on sibling DOM trees (via `ariaHideOutside()`) and
-//   uses a `ModalProvider` context to track nested modals. This lets screen
-//   readers ignore everything outside the modal.
-//
-//   Leptonic instead sets `aria-modal="true"` on the modal element itself.
-//   Modern browsers/AT already honour `aria-modal` and hide outside content,
-//   so the `aria-hidden` approach is unnecessary for our target environments.
-//   Combined with `aria_hide_outside` (called by `use_modal_backdrop` for
-//   defense in depth), this replaces React-aria's `ModalProvider` system.
+// - Sets `aria-modal="true"` on the element instead of react-aria's `data-ismodal` marker for
+//   its `ModalProvider`, which hides the content of parent providers with `aria-hidden`.
+//   `use_modal_backdrop` makes everything outside the modal inert (`aria_hide_outside`), which
+//   replaces the provider system.
+// - The modal atoms (`ModalContent`) don't use this hook: as react-aria's `useDialog`, they set no
+//   `aria-modal` (WebKit bug 211934: Safari then focuses the first focusable element on its own);
+//   the inert content outside makes the modal modal.
 //
 // ## OMITTED FEATURES
+// - `ModalProvider`, `OverlayProvider`, `OverlayContainer` and `useModalProvider` (see above).
 //
-// - `ModalProvider` / `ModalContext`: Not needed. `aria-modal="true"` (this
-//   hook) plus `aria_hide_outside` (in `use_modal_backdrop`) together replace
-//   the provider-based aria-hidden propagation.
-//
-// Note: `ariaHideOutside()` IS implemented — it lives in `use_modal_backdrop`,
-// not in this hook. See `use_modal_backdrop.rs` for details.
-//
+// =============================================================================
 
 /// Input parameters for the `use_modal` hook.
-///
-/// This hook marks an element as a modal for assistive technology by setting
-/// `aria-modal="true"`. For dismiss behavior (Escape key, outside click) and
-/// overlay stacking, use `use_modal_backdrop` (which delegates to `use_overlay`).
-/// For ARIA role and labeling, use `use_dialog`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct UseModalInput {
-    /// Whether the modal behavior is disabled.
-    /// When `true`, `aria-modal` is not set.
-    pub is_disabled: bool,
+    /// Whether the modal behavior is disabled: then `aria-modal` is not set. Default: `false`.
+    pub is_disabled: Signal<bool>,
 }
 
 /// The return value of the `use_modal` hook.
@@ -52,7 +37,7 @@ pub struct UseModalReturn {
 /// Props from `use_modal` that can be converted to spreadable attributes.
 #[derive(Debug)]
 pub struct UseModalProps {
-    pub aria_modal: Option<AriaModal>,
+    pub aria_modal: Signal<Option<AriaModal>>,
 }
 
 impl IntoAttrs for UseModalProps {
@@ -64,37 +49,32 @@ impl IntoAttrs for UseModalProps {
 }
 
 /// These attributes must be spread onto the modal element: `<div {..attrs} />`
-pub type UseModalAttrs = (Attr<attr::AriaModal, Option<AriaModal>>,);
+pub type UseModalAttrs = (Attr<attr::AriaModal, Signal<Option<AriaModal>>>,);
 
-/// Marks an element as a modal for assistive technology.
+/// Marks an element as a modal for assistive technology: `aria-modal="true"`, so that screen
+/// readers treat the content outside it as hidden.
 ///
-/// Sets `aria-modal="true"` on the element so that screen readers treat content
-/// outside the modal as hidden.
-///
-/// This hook only handles the aria-modal marker. Combine with:
-/// - `use_modal_backdrop` for dismiss behavior (Escape, outside click) and scroll prevention
-/// - `use_dialog` for ARIA role, labeling, and focus-on-mount
-/// - `FocusScope` atom for focus trapping and restoration
+/// Prefer an element with a `dialog` role for `aria-modal` (on an element without a role, it is
+/// invalid ARIA), and mind WebKit bug 211934: Safari focuses the first focusable element inside an
+/// `aria-modal` element. The modal atoms don't use this hook; `use_modal_backdrop` hides the content
+/// outside the modal (inert), which makes it modal for everyone.
 ///
 /// # Example
 ///
 /// ```ignore
-/// let UseModalReturn { modal_props } = use_modal(UseModalInput { is_disabled: false });
+/// let UseModalReturn { modal_props } = use_modal(UseModalInput::default());
 ///
 /// view! {
-///     <div {..modal_props.into_attrs()}>
+///     <div role="dialog" {..modal_props.into_attrs()}>
 ///         "Modal content"
 ///     </div>
 /// }
 /// ```
 pub fn use_modal(input: UseModalInput) -> UseModalReturn {
-    let aria_modal = if input.is_disabled {
-        None
-    } else {
-        Some(AriaModal::True)
-    };
-
+    let UseModalInput { is_disabled } = input;
     UseModalReturn {
-        modal_props: UseModalProps { aria_modal },
+        modal_props: UseModalProps {
+            aria_modal: Signal::derive(move || (!is_disabled.get()).then_some(AriaModal::True)),
+        },
     }
 }

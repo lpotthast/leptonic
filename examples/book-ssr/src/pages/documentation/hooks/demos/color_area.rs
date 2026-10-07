@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
@@ -19,7 +19,7 @@ pub fn ColorAreaDemo() -> impl IntoView {
         default_value: HSV {
             hue: 210.0,
             saturation: 0.6,
-            value: 0.8,
+            brightness: 0.8,
         },
         value: None,
         x_channel_step: None,
@@ -53,7 +53,7 @@ pub fn ColorAreaDemo() -> impl IntoView {
     let (y_attrs, y_styles) = area.y_input_props.into_parts();
     let color = state.value;
     let thumb_styles = thumb_styles.add_reactive(move || {
-        BackgroundColorProperty.declare(CssColor::from(color.get().into_rgb8()))
+        BackgroundColorProperty.declare(CssColor::from(color.get().to_rgb8()))
     });
 
     view! {
@@ -64,9 +64,12 @@ pub fn ColorAreaDemo() -> impl IntoView {
             </div>
         </div>
 
-        <p class="demo-status">{move || format!("Color: {}, {}", color.get().into_rgb8(), color.get().color_name())}</p>
+        <p class="demo-status">{move || format!("Color: {}, {}", color.get().to_rgb8(), color.get().color_name())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -100,20 +100,30 @@ pub fn PageAtomMeter() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The meter atoms add no classes and no data attributes: a meter has no states beyond its value. Give the "
-                    "track a size and a background, and the fill a height and a color:"
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-Meter"</Code>", "
+                    <Code inline=true>"leptonic-MeterFill"</Code>" and "<Code inline=true>"leptonic-MeterValueText"</Code>
+                    ", each followed by the "<Code inline=true>"classes"</Code>" you pass, and no data attributes: a meter "
+                    "has no states beyond its value. The track is your own markup around the fill, which the atom sizes to "
+                    "the value (an inline "<Code inline=true>"width"</Code>" in percent). The book\u{2019}s demos use these "
+                    "rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .meter { display: grid; grid-template-columns: 1fr auto; gap: 0.25em; }
-                        .meter-track { grid-column: 1 / -1; height: 0.5em; overflow: hidden; border-radius: 4px; background: var(--border); }
-                        .meter-fill { height: 100%; background: var(--accent); }
+                        .my-meter { max-width: 400px; }
+                        .my-meter-header { display: flex; justify-content: space-between; margin-bottom: 0.5em; }
+                        .my-meter-track { height: 8px; overflow: hidden; border-radius: 4px; background: var(--border); }
+                        .my-meter-fill { height: 100%; background: var(--accent); transition: width 150ms; }
+                        @media (prefers-reduced-motion: reduce) { .my-meter-fill { transition: none; } }
                     ")}
                 </Code>
                 <p>
                     "To color the fill by the value (e.g. red above 90%), compute the level from the value you pass and set it "
-                    "as an attribute or class of your own, as the "<Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link>
+                    "as an attribute of your own, as the "<Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link>
                     " demo does."
+                </p>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
                 </p>
             </Section>
 

@@ -1,3 +1,4 @@
+// No upstream: merged `use_press` + `use_hover` props on one element (react-aria: `mergeProps`).
 use leptos::{
     attr,
     attr::Attr,

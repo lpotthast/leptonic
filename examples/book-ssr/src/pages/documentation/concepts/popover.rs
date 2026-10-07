@@ -26,14 +26,13 @@ pub fn PagePopoverOverview() -> impl IntoView {
                     "A popover is modal or non-modal. A modal popover takes over the page until it closes: a press outside "
                     "closes it, focus stays inside and the page behind it is inert and doesn\u{2019}t scroll. A non-modal "
                     "popover leaves the page usable: presses outside reach the page, and moving focus out of the popover or "
-                    "scrolling the page closes it. The atoms are modal by default, like menus and selects; the component is "
-                    "non-modal."
+                    "scrolling the page closes it. The atoms are modal by default, like menus and selects."
                 </p>
             </Section>
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Popovers exist at all three layers. See "
+                    "Popovers exist as a hook and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -54,9 +53,14 @@ pub fn PagePopoverOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"The component is the quickest way to a popover: the button in its trigger slot opens and closes it."</p>
+                <p>
+                    "A "<Code inline=true>"DialogTrigger"</Code>" connects a button and a popover: the button opens and "
+                    "closes it. The classes are the book\u{2019}s own; the "
+                    <Link href=format!("{}#styling", routes::doc::popover::Atom.materialize())>"styling section"</Link>
+                    " of the atoms shows how to style a popover."
+                </p>
 
-                <Demo description="Popover component opened by a button" source=include_str!("demos/popover.rs") source_open=true>
+                <Demo description="Popover opened by a button through a DialogTrigger" source=include_str!("demos/popover.rs") source_open=true>
                     <PopoverConceptDemo/>
                 </Demo>
             </Section>

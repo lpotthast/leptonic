@@ -15,9 +15,14 @@ Connecting a hook to an element happens via Leptos's attribute spreading:
 ```rust
 #[component]
 fn Button() -> impl IntoView {
-    // Making a <div> announce, show and act like a button. 
-    let UseButtonReturn { props, .. } = use_button(UseButtonInput { .. });
-    view! { <div {..props.into_attrs()}>"Press me"</div> }
+    // Making a <div> announce, show and act like a button.
+    let UseButtonReturn { props, .. } = use_button(UseButtonInput {
+        element_type: ButtonElementType::Other,
+        ..UseButtonInput::default()
+    });
+    // `use_button` also returns styles (see "Props and Styles"), so its props are split first.
+    let (attrs, styles) = props.into_parts();
+    view! { <div {..attrs} style=styles>"Press me"</div> }
 }
 ```
 
@@ -67,9 +72,11 @@ Hooks return data as a single `*Return` return value.
 
 A `*Return` value has:
 
-- At least one `props: *Props` member. (more when returning props for multiple elements.)
-- Additional fields of type `Signal` that provide reactive access to data.
-- Additional fields of type `Callback` that give users additional programmatic control.
+- At least one `props: *Props` member (`<part>_props` for further elements, C9), or `PropsWithStyles<*Props>` when the
+  hook also sets inline styles (see "Props and Styles").
+- Additional fields of type `Signal` that provide reactive access to data (`is_pressed`, `is_focus_visible`, ...).
+- No `Callback` fields for programmatic control: state and its mutations live on the state struct of the matching
+  `use_*_state` hook, as methods (C3).
 
 Hooks expose (through `*Props`):
 
@@ -88,6 +95,23 @@ after construction. Having raw access (owned, when possible) to signals and even
 hook" allows for easy programmatic merges. Merges of different hook *Return types must be implemented explicitly though.
 We do not support a react-aria like generic `mergeProps` function.
 
+### Props and Styles (`IntoAttrs`, `PropsWithStyles`)
+
+Every `*Props` type implements `hooks::IntoAttrs` (`fn into_attrs(self) -> Self::Attrs`). Hooks that also set inline
+styles (positions, `touch-action`, `user-select`, ...; e.g. `use_press`, `use_button`, `use_link`, `use_slider_thumb`,
+the grid/table/listbox items) return `PropsWithStyles<*Props>` instead (`hooks/mod.rs`). It deliberately has no
+`into_attrs` and isn't an attribute itself, because a `style` attribute spread onto an element would be replaced by
+the caller's `style=`, or replace it. Split it and merge the styles with the caller's:
+
+```rust
+let (attrs, hook_styles) = button.props.into_parts();
+view! { <button {..attrs} style=hook_styles.merge(styles)>"Save"</button> }
+```
+
+- `into_parts()` → `(Attrs, Styles)`: for spreading.
+- `into_inner()` → `(Props, Styles)`: to compose the props further first (e.g. `merge_with`, then `into_attrs`).
+- `PropsWithStyles<P>` implements `MergeWith<Other>` whenever `P` does, keeping its styles through the merge.
+
 ## API Conventions
 
 react-aria defines the behavior; the API shape is ours (see "Based On React-Aria"). These conventions apply to every
@@ -99,7 +123,7 @@ in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goe
 | C1  | State flags are `is_disabled`, `is_read_only`, `is_required`, `is_invalid: Signal<bool>` (default `false`), in hook inputs and atom props alike. DOM-level `*Props` keep DOM attribute names (`disabled`, `aria_disabled`).                                                                | react-aria's names (`isDisabled`); one name per concept across hooks and atoms.                                                                                          |
 | C2  | Ids, `name`, `form`: `Option<String>`. User-visible text (`aria_label`, placeholders, value labels): `MaybeProp<String>`.                                                                                                                                                                  | Text must be able to change at runtime (e.g. with the locale); `MaybeProp` accepts constants, `String`s and signals via `into`. `&'static str` rules out dynamic values. |
 | C3  | `use_foo_state(..) -> FooState`: a `Copy` struct with read-only `Signal`s and methods (`set_value`, `toggle`, ...).                                                                                                                                                                        | Methods are discoverable and typed; a struct of `Callback` fields with tuple arguments is a JavaScript props-bag shape.                                                  |
-| C4  | Hook-owned state: `default_*` + `on_*_change` + state methods; no controlled inputs (see "Hook-Owned State"). `is_invalid: Signal<bool>` is OR-ed into validation results.                                                                                                                 | Callers can't bypass the hook's invariants; one source of truth.                                                                                                         |
+| C4  | Hook-owned state: `default_*` + `on_*_change`, or a `ValueBinding` to app state; changes go through the state's methods (see "Hook-Owned State"). Atoms: `<x>` + `set_<x>: Out<T>`, or `default_<x>` + `on_<x>_change`. `is_invalid: Signal<bool>` is OR-ed into validation results. | Callers can't bypass the hook's invariants; change callbacks always fire.                                                                                               |
 | C5  | Hooks read locale and writing direction from the i18n context (`use_locale()`, `use_direction()`); they never take `is_rtl`, `writing_direction` or `locale` inputs. Locale-derived defaults are `Option<_>` meaning "from the locale".                                                    | react-aria's `useLocale()` does the same; per-hook flags drift apart from the actual locale.                                                                             |
 | C6  | One `Orientation` enum (no `Default`; callers name it, the docs give react-aria's default for each hook).                                                                                                                                                                                  | No near-identical per-module copies.                                                                                                                                     |
 | C7  | No constructors on `*Input` types: struct literals naming every field; `Default` (and struct update) only when everything has a meaningful default.                                                                                                                                        | Creation stays explicit, field names visible (the user's rule).                                                                                                          |
@@ -109,6 +133,8 @@ in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goe
 | C11 | Anything a user could change at runtime is a `Signal<T>` with a default. `Option<Signal<T>>` only for "inherit vs. override", documented on the field.                                                                                                                                     | Reactivity is the Leptos way to change configuration.                                                                                                                    |
 | C12 | ARIA attributes use the typed enums from `utils/aria.rs`; `tabindex` is `i32`.                                                                                                                                                                                                             | See "ARIA Attribute Types".                                                                                                                                              |
 | C13 | Units: `Fraction` (0..=1) for percentages, `Point { x, y }` for coordinates, `Duration` for time.                                                                                                                                                                                          | Units in the type, not in naming conventions.                                                                                                                            |
+| C14 | One generic `Label`, `Description` and `FieldError` atom reading the `LabelContext`/`FieldContext` every field atom provides.                                                                                                                                                             | react-aria-components' `LabelContext`/`TextContext`/`FieldErrorContext`; no per-family parts.                                                                           |
+| C15 | Number values are generic over `NumberValue` (all primitive integers and floats), with ICU4X decimals for parsing and formatting.                                                                                                                                                         | Exact integer stepping and clamping, min/max from the type (react-aria: JS numbers).                                                                                    |
 
 ## Input Destructuring
 
@@ -189,13 +215,39 @@ values.
 
 ## Event Propagation Control
 
-Leptonic events stop propagation by default. User handlers call `continue_propagation()` to opt in to
-bubbling.
+**Rule** (the user's decision, 2026-10-07): an event type implements the sealed `Propagation` trait exactly when its
+react-aria counterpart has `continuePropagation()`. Those events stop propagation by default; a user handler calls
+`continue_propagation()` to let the native event bubble. Every other event type keeps upstream's fixed propagation
+behavior and has no `Propagation`.
+
+### Types That Implement It
+
+| Event type | Hook(s) | react-aria counterpart |
+|------------|---------|------------------------|
+| `PressEvent` | `use_press` (and everything built on it: buttons, links, toggles, items, ...) | `PressEvent.continuePropagation()` (usePress) |
+| `KeyboardEventWrapper` | `use_keyboard` (and type select, toggles, the autocomplete, keyboard shortcuts) | `KeyboardEvent = BaseEvent<KeyboardEvent>` (`createEventHandler`) |
+| `EventWrapper<E>` | raw DOM events handed through such APIs | — (generic wrapper, `utils/event_wrapper.rs`) |
+
+### Types That Deliberately Don't
+
+| Event type | Upstream behavior (kept) |
+|------------|--------------------------|
+| Hover (`HoverStartEvent`, `HoverEndEvent`) | `useHover` never stops propagation. |
+| Focus, focus within (`FocusEvent`, focus-within callbacks) | `useFocus`/`useFocusWithin` never stop propagation. Stopping `focusin`/`focusout` would break nested focus-within containers and collection listeners above the element. |
+| Long press (`LongPressEvent`) | `LongPressEvent` is `Omit<PressEvent, 'type' \| 'continuePropagation'>`; `useLongPress` continues its press events' propagation. |
+| Move (`MoveStartEvent`, `MoveEvent`, `MoveEndEvent`) | `useMove` stops the native events it handles unconditionally (no opt-out). |
+| Scroll wheel | `useScrollWheel` stops the wheel event unconditionally (except Ctrl+wheel zoom). |
+| DnD (drag, drop, drop-target events) | `useDrag`/`useDrop`/`DragManager` stop the native events they handle unconditionally. |
+
+### Deciding for a New Event Type
+
+Look up its type in `@react-types/shared/src/events.d.ts` (and the hook's own types): with `continuePropagation()`,
+implement `Propagation` via `PropagationControl`; without it, port the hook's fixed behavior (never stop, or stop
+unconditionally where upstream calls `stopPropagation()`) and add no `Propagation`.
 
 ### The Propagation Trait (Sealed)
 
-All user-facing event types (e.g., `PressEvent`, `HoverEvent`) must implement the sealed `Propagation` trait
-from `utils/propagation_control.rs`:
+`Propagation` (`utils/propagation_control.rs`) provides:
 
 - `continue_propagation()` — opt in to letting the native DOM event bubble.
 - `stop_propagation()` — explicit no-op (propagation is already stopped by default). Emits a compile-time
@@ -209,16 +261,6 @@ from `utils/propagation_control.rs`:
 3. Hook runs the user's `on_press` handler, passing the event.
 4. After the handler returns, the hook checks `is_propagation_stopped()` on the shared control.
 5. If propagation was not continued, the hook calls `stop_propagation()` on the native DOM event.
-
-### For Raw DOM Events
-
-`EventWrapper<E>` from `utils/event_wrapper.rs` wraps any `E: AsRef<web_sys::Event>` and implements
-`Propagation`. Use this when exposing raw DOM events through hook APIs.
-
-### When to Implement
-
-Every user-facing event type must implement `Propagation`. If adding a new event type to a hook, implement
-the sealed trait via `PropagationControl`.
 
 **Reference**: `PressEvent` in `hooks/interactions/use_press.rs`
 
@@ -291,11 +333,11 @@ use leptonic::hooks::{use_press, use_hover, UsePressInput, UseHoverInput};
 let press = use_press(press_input);
 let hover = use_hover(hover_input);
 
-// Merge press and hover props
-let combined = press.props.merge_with(hover.props);
+// Merge press and hover props. `use_press` returns `PropsWithStyles`, which keeps its styles through the merge.
+let (attrs, styles) = press.props.merge_with(hover.props).into_parts();
 
 view! {
-    <button {..combined.into_attrs()}>
+    <button {..attrs} style=styles>
         "Hover and click me"
     </button>
 }
@@ -312,12 +354,14 @@ let press = use_press(press_input);
 let hover = use_hover(hover_input);
 let focus_ring = use_focus_ring(focus_ring_input);
 
-let combined = press.props
-.merge_with(hover.props)
-.merge_with(focus_ring.props);
+let (attrs, styles) = press
+    .props
+    .merge_with(hover.props)
+    .merge_with(focus_ring.props)
+    .into_parts();
 
 view! {
-    <button {..combined.into_attrs()}>
+    <button {..attrs} style=styles>
         "Interactive button"
     </button>
 }
@@ -327,12 +371,17 @@ view! {
 
 Pre-defined merged types in `leptonic::hooks::merged`:
 
-| Merged Type                      | Source Hooks                          |
-|----------------------------------|---------------------------------------|
-| `MergedPressHoverProps`          | `UsePressProps` + `UseHoverProps`     |
-| `MergedPressFocusRingProps`      | `UsePressProps` + `UseFocusRingProps` |
-| `MergedHoverFocusRingProps`      | `UseHoverProps` + `UseFocusRingProps` |
-| `MergedPressHoverFocusRingProps` | All three combined                    |
+| Merged Type                          | Source Hooks                                           |
+|--------------------------------------|--------------------------------------------------------|
+| `MergedPressHoverProps`              | `UsePressProps` + `UseHoverProps`                      |
+| `MergedPressFocusRingProps`          | `UsePressProps` + `UseFocusRingProps`                  |
+| `MergedHoverFocusRingProps`          | `UseHoverProps` + `UseFocusRingProps`                  |
+| `MergedPressHoverFocusRingProps`     | `MergedPressHoverProps` + `UseFocusRingProps`          |
+| `MergedFocusablePressProps`          | `UseFocusableProps` + `UsePressProps`                  |
+| `MergedFocusablePressFocusRingProps` | `MergedFocusablePressProps` + `UseFocusRingProps`      |
+| `MergedOverlayOverlayPositionProps`  | `UseOverlayProps` + `UseOverlayPositionProps`          |
+
+Each merge is implemented in both orders (`a.merge_with(b)` and `b.merge_with(a)`).
 
 ### Why Not a Generic `mergeProps`?
 
@@ -413,9 +462,11 @@ pub struct UseFooProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
-impl UseFooProps {
+impl IntoAttrs for UseFooProps {
+    type Attrs = UseFooAttrs;
+
     /// Convert to spreadable attributes for Leptos views, consuming self.
-    pub fn into_attrs(self) -> UseFooAttrs {
+    fn into_attrs(self) -> UseFooAttrs {
         (
             // attributes
             Attr(attr::Disabled, self.disabled),
@@ -491,21 +542,20 @@ type UseFooAttrs = (
 );
 
 struct UseFooProps {
-    data_focus_visible: Signal<&'static str>,
+    data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseFooProps {
-    pub fn into_attrs(self) -> UseFooAttrs {
-        (
-            custom_attribute("data-focus-visible", self.data_focus_visible)
-        )
+impl IntoAttrs for UseFooProps {
+    type Attrs = UseFooAttrs;
+
+    fn into_attrs(self) -> UseFooAttrs {
+        (custom_attribute("data-focus-visible", self.data_focus_visible),)
     }
 }
 
 fn use_foo() -> UseFooReturn {
-    let data_focus_visible = Signal::derive(move || {
-        if is_focus_visible.get() { Some("true") } else { None }
-    });
+    // Present and empty while true, absent otherwise (as `utils::data_attributes::flag` renders it).
+    let data_focus_visible = Signal::derive(move || is_focus_visible.get().then_some(""));
 
     UseFooReturn {
         props: UseFooProps {
@@ -752,8 +802,8 @@ fire `blur`/`focusout` on it while Leptos unmounts it, after its owner and the c
 disposed. Blur and focus-out paths therefore run callbacks with `try_run` and read signals with `try_get_untracked`:
 nothing is left to notify then. (Other events can't reach a removed element, so they keep `run`.)
 
-**Reference**: `use_focus`, `use_focus_within`, `use_focus_ring`; browser test `select_components_tests`
-(dismissing a focused chip).
+**Reference**: `use_focus`, `use_focus_within`, `use_focus_ring`; `utils::owner_alive::OwnerAlive` for deferred
+callbacks (timeouts, animation frames, global listeners) that may run after disposal.
 
 ### Effect Read Order
 
@@ -783,24 +833,31 @@ In Leptos, `Signal<T>` is `Copy` and inherently shared. However, accepting a wri
 hook's mutation path. This breaks invariants and prevents the hook from intercepting changes
 (e.g., firing `on_open_change`, resetting related state).
 
-**Convention:** Hooks own their state's mutation path. They expose:
+**Convention (C4):** the hook owns the state's mutation path. A state hook (`use_*_state`) takes one of:
 
-- A read-only `Signal<T>` for observation
-- Semantic mutation methods (`open`, `close`, `toggle`, `set_open`, etc.)
-- An `on_X_change` callback that fires on every mutation
+- `default_<x>: T` (the initial value) and `on_<x>_change: Option<Callback<T>>`: the hook stores the value itself;
+- `<x>: Option<ValueBinding<T>>`: the value lives in app state (a read `Signal` plus a setter; from an `RwSignal`, a
+  signal pair or `ValueBinding::new`), and every change still goes through the hook, which calls the setter
+  (`default_<x>` is then ignored).
 
-The caller sets the initial value via `default_X: T` in the input struct, or binds the state to app state with a
-`ValueBinding<T>` (a read signal plus a setter): every change still goes through the hook, which calls the setter.
+It returns a `Copy` state struct (C3) exposing:
+
+- read-only `Signal`s for observation;
+- semantic mutation methods (`open`, `close`, `toggle`, `set_value`, ...), which keep the invariants and call
+  `on_<x>_change` on every change.
+
+Examples: `UseToggleStateInput::value`, `SelectionOptions::selection`; `UseTextFieldStateInput` is a small complete
+one.
 
 **Atoms and components** (the user's rule, 2026-10-06) take controlled state as two props, never as one binding:
 a readable `<x>` (`#[prop(into)] Signal<T>` or `MaybeProp<T>`: a plain value, any signal, a closure) and a writable
-`set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`). This keeps every usage
-pattern open instead of forcing an `RwSignal`. Uncontrolled: `default_<x>`, plus `on_<x>_change` to observe. The
-component builds the hook's `ValueBinding` from the two props.
+`set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`; for `is_<x>` the setter is
+`set_<x>`). This keeps every usage pattern open instead of forcing an `RwSignal`. Uncontrolled: `default_<x>`, plus
+`on_<x>_change` to observe. The atom builds the hook's `ValueBinding` from the two props
+(`ValueBinding::from_state_props`, see `atoms-implementation.md`).
 
-When porting a React Aria hook that accepts both `isOpen` and `defaultOpen` via `useControlledState`,
-we automatically deviate by only supporting `default_open` and hook-owned state. This is a
-**project-wide pattern**, not a per-hook deviation.
+When porting a React Aria hook whose state uses `useControlledState`, map `value`/`defaultValue`/`onChange` onto
+this pattern. It is a **project-wide deviation** (the global block in `hooks/mod.rs`), not a per-hook one.
 
 ## Animation Lifecycle Hooks
 
@@ -849,46 +906,95 @@ is_open.get() | | exit.exit_state.get() == ExitState::Exiting
 
 ## Form Validation Hooks
 
-Three cooperating hooks handle form validation, typically composed internally by field hooks.
+Three cooperating hooks handle form validation, composed internally by the field hooks (text field, number field,
+checkbox, radio group, select, combo box, date field, ...).
 
 ### `use_form_validation_state`
 
 State management for multiple validation sources:
 
-- Controlled validation, server errors (via `FormValidationContext`), client-side `validate` functions,
-  and native HTML5 validation.
-- `ValidationBehavior::Aria` — validation surfaced via ARIA attributes (accessible, non-intrusive).
-- `ValidationBehavior::Native` — validation surfaced via native constraint validation API (`setCustomValidity()`).
-- Returns `ValidationResult` aggregating `is_invalid`, `validation_errors`, and `validation_details`
-  (`ValidityStateSnapshot`).
+- `is_invalid` (OR-ed with the rest), server errors (via `FormValidationContext`, the `Form` atom's
+  `validation_errors`), client-side `validate` functions, and native HTML5 validity (`builtin_validation`, read
+  back by `use_form_validation`).
+- `ValidationBehavior::Aria`: errors show in realtime through ARIA attributes, the form submits anyway.
+- `ValidationBehavior::Native`: errors show on commit (form submission, `change`), and the field's custom validity
+  (`setCustomValidity()`) blocks submission.
+- Returns `UseFormValidationStateReturn`: `realtime_validation` and `display_validation` (`ValidationResult`:
+  `is_invalid`, `validation_errors`, `validation_details` as a `ValidityStateSnapshot`) plus `update`/`reset`/
+  `commit_validation` (still callbacks: moving them onto a state struct with methods is a C3 item in `PLAN.md`).
 
 ### `use_form_validation`
 
-DOM connection hook (side-effectual, no return value):
+DOM connection hook (no return value), `UseFormValidationInput { element, state, validation_behavior, focus }`:
 
-- Calls `setCustomValidity()` on the form element to surface validation errors.
-- Listens for native validation events.
+- In `Native` mode, calls `setCustomValidity()` on the field's own `<input>`/`<textarea>`/`<select>` (`element`)
+  from the realtime validation, and reads the native validity back.
+- Commits the validation on `invalid` (form submission) and `change`, focusing the form's first invalid field
+  (`focus` for fields whose focusable element isn't the validated one).
+- Resets the validation when the form is reset.
 
 ### `use_form_reset`
 
-Detects parent `<form>` reset events:
+Restores a field's initial value when its `<form>` is reset:
 
-- Uses element capture to find the parent `<form>`.
-- Listens for `reset` events and triggers the provided callback.
+- `UseFormResetInput { element, initial_value, on_reset }`: listens for `reset` on the form of `element` and calls
+  `on_reset(initial_value)`.
 
 ### Integration Pattern
 
 Field hooks compose all three internally:
 
 ```rust
-let validation_state = use_form_validation_state(UseFormValidationStateInput { .. });
-use_form_validation(UseFormValidationInput { element, validation_state,..});
-use_form_reset(UseFormResetInput { element, on_reset: reset_callback,..});
+let validation = use_form_validation_state(UseFormValidationStateInput { value, validate, .. });
+use_form_validation(UseFormValidationInput {
+    element,
+    state: validation,
+    validation_behavior,
+    focus: None,
+});
+use_form_reset(UseFormResetInput { element, initial_value, on_reset: state_reset });
 ```
 
-**Reference**: `hooks/form/use_form_validation_state.rs`
+**Reference**: `hooks/form/use_form_validation_state.rs`, `hooks/form/use_text_field.rs`
 
 ---
+
+## Native Tests
+
+Pure logic and `*_state` hooks get native unit tests (`cargo test -p leptonic --features full --lib`), with
+`assertr`. A hook needs a reactive owner; run it through `crate::testing::with_owner` (`leptonic/src/testing.rs`,
+test builds only), which also makes Effects run:
+
+```rust
+use crate::testing::{flush_effects, with_owner};
+
+#[test]
+fn focus_moves_to_the_row_that_took_the_removed_rows_place() {
+    with_owner(|| {
+        let rows = RwSignal::new(vec!["alice", "bob", "carol"]);
+        let state = grid(rows, &[], GridFocusMode::Row); // calls `use_grid_state`
+        flush_effects(); // the Effects' first runs
+        state.list.selection.set_focused_key(Some(Key::from("bob")), None);
+        rows.update(|rows| rows.retain(|row| *row != "bob"));
+        flush_effects(); // the re-runs the change caused
+        assert_that!(state.list.selection.focused_key()).is_equal_to(Some(Key::from("carol")));
+    });
+}
+```
+
+- `with_owner(f)` runs `f` in a fresh `Owner` (as a component body runs), without Leptos' "read outside a tracking
+  context" warnings, and disposes the owner afterwards.
+- `flush_effects()` runs every pending Effect of the test's thread until none can make progress: the first runs of
+  new Effects, and the re-runs caused by signal changes. Effects never run on their own, so a test decides when (like
+  React's `act`); call it after creating the state and after each change whose Effects matter.
+- How: leptonic's dev-dependencies enable `reactive_graph`'s `effects` feature (Leptos enables it only for
+  `csr`/`hydrate`), and `with_owner` installs an `any_spawner` executor that queues every task on the spawning
+  thread, polled by `flush_effects`. Tests under a plain `Owner::new().with(..)` keep working; their Effects don't run
+  (`any_spawner`'s `tracing` feature drops tasks spawned before an executor exists instead of panicking).
+- Signals and memos work without `flush_effects`; only Effects need it. Code touching the DOM can't run natively:
+  that is the browser tests' job.
+
+**Reference**: `hooks/grid/use_grid_state.rs` (tests of the refocus Effect).
 
 ## Based On React-Aria
 

@@ -1,5 +1,6 @@
-use leptonic::hooks::{IntoAttrs, UseFocusWithinInput, use_focus_within};
-use leptos::prelude::*;
+use leptonic::hooks::{FocusWithinEvent, IntoAttrs, UseFocusWithinInput, use_focus_within};
+use leptos::{prelude::*, web_sys};
+use wasm_bindgen::JsCast;
 
 #[component]
 pub fn PageHookFocusWithin() -> impl IntoView {
@@ -44,6 +45,28 @@ pub fn PageHookFocusWithin() -> impl IntoView {
         on_focus_within_change: Some(Callback::new(move |is_within: bool| {
             set_change_value.set(is_within);
             set_change_count.update(|c| *c += 1);
+        })),
+    });
+
+    // ---- Removal and disabling (useFocusWithin.test.js) ----
+    let removal_shown = RwSignal::new(true);
+    let removal_disabled = RwSignal::new(false);
+    let removal_events = RwSignal::new(Vec::<String>::new());
+    let log = move |entry: String| removal_events.update(|events| events.push(entry));
+    let removal_fw = use_focus_within(UseFocusWithinInput {
+        is_disabled: Signal::derive(|| false),
+        on_focus_within: Some(Callback::new(move |_| log("focus".to_owned()))),
+        on_blur_within: Some(Callback::new(move |e: FocusWithinEvent| {
+            let target = e
+                .event
+                .target()
+                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                .map(|t| t.id())
+                .unwrap_or_default();
+            log(format!("blur:{target}"));
+        })),
+        on_focus_within_change: Some(Callback::new(move |is_within: bool| {
+            log(format!("change:{is_within}"));
         })),
     });
 
@@ -109,6 +132,40 @@ pub fn PageHookFocusWithin() -> impl IntoView {
                     </span>
                 </div>
                 <div>"Change count: " <span id="test-fw-change-count">{change_count}</span></div>
+            </section>
+
+            <section>
+                <h2>"Removal and Disabling"</h2>
+                <div id="test-fw-removal-container" {..removal_fw.props.into_attrs()}>
+                    <Show when=move || removal_shown.get()>
+                        <button id="test-fw-removal-hide" on:click=move |_| removal_shown.set(false)>
+                            "Hide"
+                        </button>
+                    </Show>
+                    // Stops its `focusout`, as leptonic's hooks may: no blur reaches the container.
+                    <input
+                        id="test-fw-removal-quiet"
+                        aria-label="Quiet"
+                        on:focusout=|e: web_sys::FocusEvent| e.stop_propagation()
+                    />
+                    <button
+                        id="test-fw-removal-disable"
+                        disabled=move || removal_disabled.get()
+                        on:click=move |_| removal_disabled.set(true)
+                    >
+                        "Disable"
+                    </button>
+                </div>
+                // Stops `focusin`, as leptonic's hooks do by default.
+                <input
+                    id="test-fw-removal-outer"
+                    aria-label="Outer"
+                    on:focusin=|e: web_sys::FocusEvent| e.stop_propagation()
+                />
+                <div>
+                    "Events: "
+                    <span id="test-fw-removal-events">{move || removal_events.get().join(",")}</span>
+                </div>
             </section>
 
             <section>

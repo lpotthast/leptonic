@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/focus/useFocusRing.ts @ 6f664fe911
+// Upstream: react-aria/src/focus/useFocusRing.ts @ 99e6102368
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
     ev,
@@ -19,20 +19,17 @@ use crate::{
     utils::EventHandler,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/useFocusRing.ts
-
-// ## ADDITIONAL FUNCTIONALITY
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// - Additional `disabled`, `on_focus`, `on_blur`, `on_focus_change` props
-//   React-aria's `useFocusRing` does not accept these; it only exposes an
-//   internal `onFocusChange`. Leptonic forwards these to the underlying
-//   `use_focus` / `use_focus_within` hooks as a convenience so consumers can
-//   receive focus events without a separate `use_focus` call.
+// ## ADDITIONS
+// - `is_disabled`, `on_focus`, `on_blur` and `on_focus_change` are forwarded to the underlying
+//   `use_focus`/`use_focus_within`, so callers needn't add a separate `use_focus`.
+// - The props render `data-focus-visible` for CSS-only styling (react-aria returns only
+//   `isFocusVisible`).
 //
-// - `data-focus-visible` attribute output
-//   React-aria does not output any data attributes; consumers style based on the
-//   `isFocusVisible` boolean. Leptonic outputs a `data-focus-visible="true"`
-//   custom attribute for CSS-only styling. This is an ergonomic addition.
+// =============================================================================
 
 /// Input parameters for the `use_focus_ring` hook.
 #[derive(Debug, Clone, Copy)]

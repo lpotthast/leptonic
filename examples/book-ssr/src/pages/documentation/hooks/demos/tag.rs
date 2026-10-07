@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    components::prelude::*,
+    atoms::button::Button,
     hooks::{
         IntoAttrs, SelectionMode, TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput,
         UseTagReturn,
@@ -80,7 +80,7 @@ pub fn TagDemo() -> impl IntoView {
         </div>
         <p class="demo-status">{status}</p>
         <div class="demo-controls">
-            <Button on_press=move |_| tags.set(ALL_TAGS.to_vec())>"Restore all"</Button>
+            <Button on_press=move |_| tags.set(ALL_TAGS.to_vec()) classes="demo-btn">"Restore all"</Button>
         </div>
     }
 }

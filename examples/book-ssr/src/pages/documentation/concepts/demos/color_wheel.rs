@@ -6,15 +6,15 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorWheelConceptDemo() -> impl IntoView {
+    let locale = leptonic::utils::i18n::use_locale();
     let color = RwSignal::new(HSV {
         hue: 210.0,
         saturation: 1.0,
-        value: 1.0,
+        brightness: 1.0,
     });
 
     view! {
         <ColorWheel
-            channel=HsvChannel::Hue
             outer_radius=100.0
             inner_radius=74.0
             value=color
@@ -24,6 +24,6 @@ pub fn ColorWheelConceptDemo() -> impl IntoView {
             <ColorWheelTrack/>
             <ColorThumb classes="demo-color-atoms-thumb"/>
         </ColorWheel>
-        <p class="demo-status">{move || format!("Hue: {}, {}", color.get().format_channel_value(HsvChannel::Hue), color.get().hue_name())}</p>
+        <p class="demo-status">{move || format!("Hue: {}, {}", color.get().format_channel_value(HsvChannel::Hue, &locale.get()), color.get().hue_name())}</p>
     }
 }

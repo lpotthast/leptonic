@@ -57,8 +57,14 @@ pub mod visually_hidden;
 pub mod prelude {
     pub use super::{
         breadcrumbs::{Breadcrumb, Breadcrumbs},
-        button::{Button, LinkButton},
-        checkbox::{Checkbox, CheckboxGroup},
+        button::Button,
+        calendar::{
+            Calendar, CalendarCell, CalendarCellButton, CalendarErrorMessage, CalendarGrid,
+            CalendarGridBody, CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow,
+            CalendarHeading, CalendarMonthPicker, CalendarNextButton, CalendarPreviousButton,
+            CalendarWeek, CalendarYearPicker, RangeCalendar,
+        },
+        checkbox::{Checkbox, CheckboxButton, CheckboxField, CheckboxGroup},
         color_area::ColorArea,
         color_field::{ColorChannelField, ColorField},
         color_picker::{ColorPicker, ColorPickerContext},
@@ -71,6 +77,10 @@ pub mod prelude {
         color_thumb::{ColorThumb, ColorThumbContext},
         color_wheel::{ColorWheel, ColorWheelTrack},
         combobox::{ComboBox, ComboBoxButton, ComboBoxCtx, ComboBoxPopover},
+        datepicker::{
+            DateField, DateInput, DatePicker, DatePickerButton, DatePickerGroup, DateRangePicker,
+            DateSegment, TimeField,
+        },
         dialog::{Dialog, DialogDescription, DialogTitle, DialogTrigger, DialogTriggerContext},
         disclosure::{
             Disclosure, DisclosureGroup, DisclosurePanel, DisclosurePanelRole, DisclosureTrigger,
@@ -82,14 +92,16 @@ pub mod prelude {
         focus_scope::{FocusScope, FocusScopeContext},
         focusable::Focusable,
         form::{Form, FormContext},
-        grid_list::{GridList, GridListItem},
+        grid_list::{
+            GridList, GridListHeader, GridListItem, GridListItemDescription, GridListSection,
+        },
         hoverable::Hoverable,
         input::{Input, InputContext, InputState, TextArea},
         kbd::{Keys, ShortcutKeys},
         link::{AnchorLink, CurrentMatch, Link, LinkRel},
         listbox::{
             ListBox, ListBoxItem, ListBoxItemCtx, ListBoxItemDescription, ListBoxItemLabel,
-            ListBoxItems, ListBoxParent, ListBoxSection,
+            ListBoxItems, ListBoxParent, ListBoxSection, ListBoxSectionHeading,
         },
         menu::{
             ContextMenuTrigger, Menu, MenuItem, MenuItemDescription, MenuItemLabel,
@@ -105,7 +117,7 @@ pub mod prelude {
         popover::Popover,
         press::{ClearPressResponder, PressResponder, Pressable},
         progress_bar::{ProgressBar, ProgressBarFill, ProgressBarValueText},
-        radio::{Radio, RadioGroup},
+        radio::{Radio, RadioButton, RadioField, RadioGroup},
         search_field::{SearchField, SearchFieldClearButton},
         select::{HiddenSelect, Select, SelectCtx, SelectPopover, SelectTrigger, SelectValue},
         separator::Separator,
@@ -113,7 +125,8 @@ pub mod prelude {
             Slider, SliderFill, SliderMark, SliderMarks, SliderOutput, SliderPopover, SliderThumb,
             SliderThumbTooltip, SliderTrack,
         },
-        switch::Switch,
+        switch::{Switch, SwitchButton, SwitchField},
+        tabs::{Tab, TabList, TabPanel, TabPanels, Tabs},
         text_field::TextField,
         theme::{LeptonicTheme, Theme, ThemeContext, ThemeProvider, use_theme},
         toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},

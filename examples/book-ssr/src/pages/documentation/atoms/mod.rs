@@ -44,6 +44,7 @@ pub mod slider;
 pub mod switch;
 pub mod table;
 pub mod tabs;
+pub mod tag_group;
 pub mod text_field;
 pub mod time_field;
 pub mod toast;

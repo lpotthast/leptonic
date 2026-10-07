@@ -1,12 +1,11 @@
 use std::time::Duration;
 
 use leptonic::{
-    atoms::prelude::{Button, Focusable, OverlayArrow, Tooltip, TooltipTrigger},
-    components::prelude::{Checkbox, Icon},
+    atoms::prelude::{Button, Checkbox, Focusable, OverlayArrow, Tooltip, TooltipTrigger},
     hooks::Placement,
-    prelude::icondata,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn TooltipDemo() -> impl IntoView {
@@ -52,7 +51,10 @@ pub fn TooltipDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

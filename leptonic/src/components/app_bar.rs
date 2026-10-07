@@ -24,15 +24,13 @@ pub fn AppBar(
         None => styles,
     };
     let element = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(
-        UseLandmarkInput {
-            role: LandmarkRole::Banner,
-            aria_label,
-            aria_labelledby: None,
-            focus: None,
-        },
+    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
         element,
-    );
+        role: LandmarkRole::Banner,
+        aria_label,
+        aria_labelledby: None,
+        focus: None,
+    });
     view! {
         <header
             {..props.into_attrs()}

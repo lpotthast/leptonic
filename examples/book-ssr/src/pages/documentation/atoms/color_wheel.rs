@@ -38,7 +38,7 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 1.0, value: 1.0 });
+                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 1.0, brightness: 1.0 });
 
                         view! {
                             <ColorWheel
@@ -150,16 +150,25 @@ pub fn PageAtomColorWheel() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms set the ring\u{2019}s size, gradient and shape and the thumb\u{2019}s position and fill, and keep "
-                    "their colors in Windows high contrast mode. The thumb\u{2019}s size, border and states are yours:"
+                    "The atoms set the inline styles their function needs: "<Code inline=true>"ColorWheel"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "
+                    <Code inline=true>"leptonic-ColorWheel"</Code>", sized by its radii; "<Code inline=true>"ColorWheelTrack"</Code>" a "<Code inline=true>"<div>"</Code>" with "
+                    <Code inline=true>"leptonic-ColorWheelTrack"</Code>", the ring with its gradient; and the "<Code inline=true>"ColorThumb"</Code>" ("<Code inline=true>"leptonic-ColorThumb"</Code>") "
+                    "gets its position and fill. Your "<Code inline=true>"classes"</Code>" follow the default class. They keep their colors in Windows high "
+                    "contrast mode. The thumb\u{2019}s size, border and states are yours; the demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-color-thumb { width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; }
-                        .my-color-thumb[data-dragging] { width: 24px; height: 24px; }
-                        .my-color-thumb[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .demo-color-atoms-wheel { width: fit-content; }
+                        .demo-color-atoms-wheel[data-disabled] { opacity: 0.5; }
+                        .demo-color-atoms-thumb { box-sizing: border-box; width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--muted); cursor: grab; }
+                        .demo-color-atoms-thumb[data-dragging] { cursor: grabbing; }
+                        .demo-color-atoms-thumb[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

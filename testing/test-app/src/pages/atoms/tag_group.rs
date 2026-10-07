@@ -16,6 +16,7 @@ use leptos::prelude::*;
 /// - `#test-tg-main`: label "Test", removable tags Cat, Dog, Kangaroo (multiple selection), a
 ///   description; `on_remove` doesn't remove: the last removed keys show in `#test-tg-removed`
 ///   (sorted, comma-separated), the number of removals in `#test-tg-remove-count`.
+/// - `#test-tg-after-group`: a `Label` after the main group, outside any field.
 /// - `#test-tg-empty`: no tags, the empty state "No results".
 /// - `#test-tg-fruits`: Grape and Plum disabled, Watermelon; removing removes.
 #[component]
@@ -65,6 +66,10 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                 </TagList>
                 <Description>"Description"</Description>
             </TagGroup>
+        </div>
+        // A label after a tag group isn't the group's (its contexts stay inside it).
+        <div id="test-tg-after-group">
+            <Label>"Not the group's"</Label>
         </div>
         <p>"Removed: " <span id="test-tg-removed">{move || removed.get()}</span></p>
         <p>"Removals: " <span id="test-tg-remove-count">{move || remove_count.get()}</span></p>

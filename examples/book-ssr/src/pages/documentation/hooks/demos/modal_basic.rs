@@ -1,4 +1,7 @@
-use leptonic::{atoms::focus_scope::FocusScope, components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, checkbox::Checkbox, focus_scope::FocusScope},
+    hooks::*,
+};
 use leptos::{portal::Portal, prelude::*};
 
 /// A modal dialog built from the hooks: the open state, the backdrop (dismissal, scroll lock, inert page),
@@ -56,7 +59,7 @@ pub fn ModalHooksDemo() -> impl IntoView {
     let title_attrs = StoredValue::new(title_props.into_attrs());
 
     view! {
-        <Button on_press=move |_| state.open()>"Discard draft\u{2026}"</Button>
+        <Button on_press=move |_| state.open() classes="demo-btn">"Discard draft\u{2026}"</Button>
         <p class="demo-status">
             {move || match closed_by.get() {
                 None => "The modal hasn\u{2019}t been closed yet.".to_owned(),
@@ -64,10 +67,14 @@ pub fn ModalHooksDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=close_on_outside_click set_selected=close_on_outside_click>
+            <Checkbox is_selected=close_on_outside_click set_selected=close_on_outside_click classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
                 "Close on outside click"
             </Checkbox>
-            <Checkbox is_selected=close_on_escape set_selected=close_on_escape>"Close on Escape"</Checkbox>
+            <Checkbox is_selected=close_on_escape set_selected=close_on_escape classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Close on Escape"
+            </Checkbox>
         </div>
 
         <Show when=move || state.is_open.get()>
@@ -85,10 +92,10 @@ pub fn ModalHooksDemo() -> impl IntoView {
                             <h2 {..title_attrs.get_value()} class="demo-dialog-title">"Discard the draft?"</h2>
                             <p class="demo-dialog-description">"Your unsaved changes will be lost."</p>
                             <div class="demo-dialog-actions">
-                                <Button on_press=move |_| close_with("with \u{201c}Keep editing\u{201d}") color=ButtonColor::Secondary>
+                                <Button on_press=move |_| close_with("with \u{201c}Keep editing\u{201d}") classes="demo-btn">
                                     "Keep editing"
                                 </Button>
-                                <Button on_press=move |_| close_with("with \u{201c}Discard\u{201d}") color=ButtonColor::Danger>
+                                <Button on_press=move |_| close_with("with \u{201c}Discard\u{201d}") classes="demo-btn-danger">
                                     "Discard"
                                 </Button>
                             </div>

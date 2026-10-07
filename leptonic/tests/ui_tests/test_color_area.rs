@@ -175,6 +175,164 @@ impl BrowserTest<str> for ColorAreaTests {
     }
 }
 
+/// HSV and HSL areas (their gradients' layer order with swapped axes, percentages), right to
+/// left, the inputs' `value` property and `input` event (assistive technology), the thumb's
+/// color without alpha, and a thumb that mounts again.
+pub struct ColorAreaSpacesTests {}
+
+#[async_trait]
+impl BrowserTest<str> for ColorAreaSpacesTests {
+    fn name(&self) -> Cow<'_, str> {
+        "color_area_spaces_tests".into()
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = Page { driver, base_url };
+        page.goto_path("/atoms/color-area").await?;
+
+        // An HSV area: saturation and brightness from 0 to 1, formatted as percentages.
+        let (x, y) = inputs(&page, "test-ca-hsv").await?;
+        for input in [&x, &y] {
+            assert_that!(attr(input, "min").await?).is_equal_to(Some("0".to_owned()));
+            assert_that!(attr(input, "max").await?).is_equal_to(Some("1".to_owned()));
+            assert_that!(attr(input, "step").await?).is_equal_to(Some("0.01".to_owned()));
+        }
+        assert_that!(attr(&x, "aria-valuetext").await?.unwrap_or_default())
+            .starts_with("Saturation: 50%, Brightness: 50%, Hue: 0°, ");
+        x.focus().await?;
+        page.send_keys_to_active(Key::Right).await?;
+        wait_for_value(&x, "0.51").await?;
+        assert_that!(attr(&x, "aria-valuetext").await?.unwrap_or_default())
+            .starts_with("Saturation: 51%, ");
+
+        // Gradients: the space's later channel on top (react-aria's `useColorAreaGradient`),
+        // whichever axis it is on.
+        let layer = gradient_layers(&page, "test-ca-hsv").await?;
+        assert_that!(layer[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
+        let layer = gradient_layers(&page, "test-ca-hsv-swapped").await?;
+        assert_that!(layer[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
+        assert_that!(layer[0].contains("to right") || layer[0].contains("90deg")).is_true();
+        assert_that!(layer[1].contains("to top") || layer[1].contains("0deg")).is_true();
+        let layer = gradient_layers(&page, "test-ca-hsl-swapped").await?;
+        assert_that!(layer[0].as_str())
+            .contains("rgb(0, 0, 0), rgba(0, 0, 0, 0), rgb(255, 255, 255)");
+
+        // Right to left: x grows to the left (a press a quarter in from the left is 75%), and
+        // ArrowLeft increases it.
+        let (rtl_x, rtl_y) = inputs(&page, "test-ca-rtl").await?;
+        let area = page.css("#test-ca-rtl [role=group]").await?;
+        driver
+            .execute(
+                "arguments[0].scrollIntoView({block: 'center'});",
+                vec![area.to_json()?],
+            )
+            .await?;
+        driver
+            .action_chain()
+            .move_to_element_with_offset(&area, -50, 50)
+            .click()
+            .perform()
+            .await?;
+        let mut channels = (0.0, 0.0);
+        for _ in 0..50 {
+            channels = (number(&page, &rtl_x).await?, number(&page, &rtl_y).await?);
+            if (channels.0 - 191.0).abs() <= 1.0 && (channels.1 - 64.0).abs() <= 1.0 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+        expect_channels(&page, &rtl_x, &rtl_y, (191.0, 64.0)).await?;
+        let before = number(&page, &rtl_x).await?;
+        rtl_x.focus().await?;
+        page.send_keys_to_active(Key::Left).await?;
+        wait_for_value(&rtl_x, &(before + 1.0).to_string()).await?;
+
+        // The `input` event (assistive technology sets the value), then the keyboard: the value
+        // property follows the state.
+        let (input_x, _) = inputs(&page, "test-ca-input").await?;
+        driver
+            .execute(
+                "arguments[0].value = '100'; \
+                 arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+                vec![input_x.to_json()?],
+            )
+            .await?;
+        page.wait_for_text("test-ca-input-log", "input:640000")
+            .await?;
+        input_x.focus().await?;
+        page.send_keys_to_active(Key::Right).await?;
+        wait_for_value(&input_x, "101").await?;
+
+        // The thumb shows the color without its alpha (react-aria's `getDisplayColor`).
+        let thumb = page.css("#test-ca-alpha .leptonic-ColorThumb").await?;
+        let background = thumb.css_value("background-color").await?;
+        assert_that!(background == "rgb(255, 0, 255)" || background == "rgba(255, 0, 255, 1)")
+            .with_detail_message(background)
+            .is_true();
+
+        // A thumb mounted again (inside a `<Show>`) renders and works.
+        let toggle = page.element("test-ca-toggle").await?;
+        toggle.click().await?;
+        page.wait_for_count("#test-ca-show input[type=range]", 0)
+            .await?;
+        toggle.click().await?;
+        page.wait_for_count("#test-ca-show input[type=range]", 2)
+            .await?;
+        let (shown_x, _) = inputs(&page, "test-ca-show").await?;
+        shown_x.focus().await?;
+        page.send_keys_to_active(Key::Right).await?;
+        wait_for_value(&shown_x, "11").await?;
+
+        page.expect_no_page_errors().await
+    }
+}
+
+/// The layers of the computed background of the area in `#id`.
+async fn gradient_layers(page: &Page<'_>, id: &str) -> Result<Vec<String>, Report> {
+    let area = page.css(&format!("#{id} [role=group]")).await?;
+    let background = page
+        .driver
+        .execute(
+            "return getComputedStyle(arguments[0]).backgroundImage;",
+            vec![area.to_json()?],
+        )
+        .await?
+        .json()
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    Ok(background
+        .split(", linear-gradient(")
+        .map(str::to_owned)
+        .collect())
+}
+
+/// Waits until the input's `value` property is `expected`.
+async fn wait_for_value(input: &WebElement, expected: &str) -> Result<(), Report> {
+    let mut last = None;
+    for _ in 0..100 {
+        last = input.prop("value").await?;
+        if last.as_deref() == Some(expected) {
+            return Ok(());
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    Err(rootcause::report!(
+        "the input's value is {last:?}, not {expected:?}"
+    ))
+}
+
+async fn number(page: &Page<'_>, input: &WebElement) -> Result<f64, Report> {
+    Ok(page
+        .driver
+        .execute("return Number(arguments[0].value);", vec![input.to_json()?])
+        .await?
+        .json()
+        .as_f64()
+        .unwrap_or_default())
+}
+
 async fn inputs(page: &Page<'_>, id: &str) -> Result<(WebElement, WebElement), Report> {
     let mut found = page
         .driver

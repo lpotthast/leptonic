@@ -69,8 +69,9 @@ pub fn PageDatePickerOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The component is the quickest way to a date picker: type the date into the segments, or open the "
-                    "calendar with the button (or "<Keys keys="Alt + ArrowDown"/>" in the field) and pick a day."
+                    "A departure date picker of the atoms: type the date into the segments, or open the calendar with the "
+                    "button (or "<Keys keys="Alt + ArrowDown"/>" in the field) and pick a day. The CSS shown with the demo "
+                    "styles the atoms through their classes and data attributes."
                 </p>
                 <Demo
                     description="Departure date picker with a calendar popover, showing the picked date"

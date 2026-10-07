@@ -1,5 +1,9 @@
 // Upstream: react-aria/src/collections/BaseCollection.ts @ 99e6102368
-use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use std::{
+    cmp::Ordering,
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use super::{ItemLink, Key, Node, NodeKind};
 
@@ -236,7 +240,10 @@ impl Collection {
         keep: &impl Fn(&str, &Node) -> bool,
     ) -> Vec<Entry> {
         let mut entries = Vec::new();
+        // The kind of the previous sibling if it was kept.
+        let mut kept_previous: Option<NodeKind> = None;
         for node in self.siblings_from(first) {
+            let kept_before = entries.len();
             match node.kind {
                 NodeKind::Item => {
                     if keep(&node.text_value, node) {
@@ -257,8 +264,14 @@ impl Collection {
                 }
                 // Table header rows stay as they are.
                 NodeKind::HeaderRow => entries.push(self.to_entry(node)),
+                // A separator stays only after a kept sibling that isn't a separator, so no
+                // separator leads or doubles (react-aria-components' `SeparatorNode.filter`).
+                NodeKind::Separator => {
+                    if kept_previous.is_some_and(|kind| kind != NodeKind::Separator) {
+                        entries.push(Entry::from_node(node));
+                    }
+                }
                 NodeKind::Header
-                | NodeKind::Separator
                 | NodeKind::Loader
                 | NodeKind::Cell
                 | NodeKind::Column
@@ -266,6 +279,7 @@ impl Collection {
                     entries.push(Entry::from_node(node));
                 }
             }
+            kept_previous = (entries.len() > kept_before).then_some(node.kind);
         }
         if entries
             .last()
@@ -306,6 +320,7 @@ struct Entry {
     text_value: Arc<str>,
     aria_label: Option<Arc<str>>,
     is_disabled: bool,
+    disabled_behavior: Option<super::DisabledBehavior>,
     link: Option<ItemLink>,
     /// Set for items whose children are hidden (a collapsed tree item).
     has_child_nodes: bool,
@@ -321,6 +336,7 @@ impl Entry {
             text_value,
             aria_label: None,
             is_disabled: false,
+            disabled_behavior: None,
             link: None,
             has_child_nodes: false,
             col_span: None,
@@ -335,6 +351,7 @@ impl Entry {
             text_value: node.text_value.clone(),
             aria_label: node.aria_label.clone(),
             is_disabled: node.is_disabled,
+            disabled_behavior: node.disabled_behavior,
             link: node.link.clone(),
             has_child_nodes: node.has_child_nodes,
             col_span: node.col_span,
@@ -435,7 +452,10 @@ impl CollectionBuilder {
 
     fn finish(self) -> Collection {
         let mut collection = Collection::default();
-        let (first, last) = link(&mut collection, self.entries, None, 0);
+        let mut seen = HashSet::new();
+        let entries = without_duplicate_keys(self.entries, &mut seen);
+        collection.nodes.reserve(seen.len());
+        let (first, last) = link(&mut collection, entries, None, 0);
         collection.first_key = first;
         collection.last_key = last;
         let order: HashMap<Key, usize> = collection
@@ -469,7 +489,26 @@ impl Collection {
     }
 }
 
-/// Insert `entries` as siblings below `parent`, linking them. Returns the first and last key.
+/// `entries` without the entries (and their subtrees) whose key occurred before in document
+/// order, at any level (`seen`: the keys so far).
+fn without_duplicate_keys(entries: Vec<Entry>, seen: &mut HashSet<Key>) -> Vec<Entry> {
+    let mut kept = Vec::with_capacity(entries.len());
+    for mut entry in entries {
+        if !seen.insert(entry.key.clone()) {
+            crate::utils::dev_warn!(
+                "Duplicate key {:?} in collection; ignoring all but its first occurrence.",
+                entry.key
+            );
+            continue;
+        }
+        entry.children = without_duplicate_keys(std::mem::take(&mut entry.children), seen);
+        kept.push(entry);
+    }
+    kept
+}
+
+/// Insert `entries` (unique keys, see [`without_duplicate_keys`]) as siblings below `parent`,
+/// linking them. Returns the first and last key.
 fn link(
     collection: &mut Collection,
     entries: Vec<Entry>,
@@ -479,13 +518,6 @@ fn link(
     let mut keys: Vec<Key> = Vec::with_capacity(entries.len());
     let mut nodes: Vec<(Node, Vec<Entry>)> = Vec::with_capacity(entries.len());
     for entry in entries {
-        if collection.nodes.contains_key(&entry.key) || keys.contains(&entry.key) {
-            crate::utils::dev_warn!(
-                "Duplicate key {:?} in collection; ignoring all but its first occurrence.",
-                entry.key
-            );
-            continue;
-        }
         keys.push(entry.key.clone());
         let node = Node {
             key: entry.key,
@@ -501,6 +533,7 @@ fn link(
             last_child_key: None,
             has_child_nodes: entry.has_child_nodes || !entry.children.is_empty(),
             is_disabled: entry.is_disabled,
+            disabled_behavior: entry.disabled_behavior,
             link: entry.link,
             col_index: None,
             col_span: entry.col_span,
@@ -617,6 +650,14 @@ impl ItemBuilder<'_> {
     /// An accessible name for the item.
     pub fn aria_label(self, label: impl Into<Arc<str>>) -> Self {
         self.entry.aria_label = Some(label.into());
+        self
+    }
+
+    /// How the item behaves while disabled, overriding the collection's `disabled_behavior`:
+    /// with [`DisabledBehavior::Selection`](super::DisabledBehavior::Selection), a disabled item
+    /// can still be focused and have actions.
+    pub fn disabled_behavior(self, behavior: super::DisabledBehavior) -> Self {
+        self.entry.disabled_behavior = Some(behavior);
         self
     }
 
@@ -803,6 +844,65 @@ mod tests {
         assert_that!(c.size()).is_equal_to(2);
         assert_that!(&*c.get(&Key::from("a")).unwrap().text_value).is_equal_to("First");
         assert_that!(c.key_after(&Key::from("a"))).is_equal_to(Some(&Key::from("b")));
+    }
+
+    #[test]
+    fn filter_drops_leading_and_doubled_separators() {
+        let c = Collection::build(|b| {
+            b.separator("sep0");
+            b.item("a", "Apple");
+            b.separator("sep1");
+            b.item("b", "Banana");
+            b.separator("sep2");
+            b.item("c", "Cherry");
+            b.separator("sep3");
+            b.item("d", "Durian");
+        });
+        // Banana is gone: the separator after it follows a removed item, the one before it stays
+        // (as in react-aria-components' `SeparatorNode.filter`).
+        let filtered = c.filter(|text, _| text != "Banana");
+        assert_that!(keys(filtered.nodes_in_order()))
+            .is_equal_to(["a", "sep1", "c", "sep3", "d"].map(String::from).to_vec());
+        // Only the last item is left: no separator before it.
+        let filtered = c.filter(|text, _| text == "Durian");
+        assert_that!(keys(filtered.nodes_in_order())).is_equal_to(vec!["d".to_owned()]);
+        // A separator right after another one is dropped.
+        let doubled = Collection::build(|b| {
+            b.item("a", "Apple");
+            b.separator("sep1");
+            b.separator("sep2");
+            b.item("b", "Banana");
+        });
+        assert_that!(keys(doubled.filter(|_, _| true).nodes_in_order()))
+            .is_equal_to(["a", "sep1", "b"].map(String::from).to_vec());
+    }
+
+    #[test]
+    fn duplicate_keys_across_tree_levels_keep_the_first_in_document_order() {
+        let c = Collection::build(|b| {
+            b.item("a", "A").children(|c| {
+                c.item("x", "Child X");
+            });
+            b.item("x", "Top-level X");
+            b.item("b", "B");
+        });
+        assert_that!(&*c.get(&Key::from("x")).unwrap().text_value).is_equal_to("Child X");
+        assert_that!(c.get(&Key::from("x")).unwrap().parent_key.clone())
+            .is_equal_to(Some(Key::from("a")));
+        assert_that!(keys(c.iter())).is_equal_to(["a", "b"].map(String::from).to_vec());
+        assert_that!(c.key_after(&Key::from("a"))).is_equal_to(Some(&Key::from("b")));
+        assert_that!(c.size()).is_equal_to(3);
+    }
+
+    #[test]
+    fn builds_large_collections() {
+        let c = Collection::build(|b| {
+            for i in 0..20_000 {
+                b.item(i.to_string(), format!("Item {i}"));
+            }
+        });
+        assert_that!(c.size()).is_equal_to(20_000);
+        assert_that!(c.last_key()).is_equal_to(Some(&Key::from("19999")));
     }
 
     #[test]

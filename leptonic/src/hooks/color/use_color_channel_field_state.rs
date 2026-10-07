@@ -72,7 +72,7 @@ impl<C: ColorValue> ColorChannelFieldState<C> {
 /// empty field's channel changes).
 fn black<C: ColorValue + Default>() -> C {
     C::channels().iter().fold(C::default(), |color, &channel| {
-        color.with_channel_value(channel, C::get_channel_range(channel).min_value)
+        color.with_channel_value(channel, C::channel_range(channel).min_value)
     })
 }
 
@@ -106,10 +106,10 @@ pub fn use_color_channel_field_state<C: ColorValue + Default>(
         }),
     );
 
-    let range = C::get_channel_range(channel);
+    let range = C::channel_range(channel);
     let number = use_number_field_state(UseNumberFieldStateInput {
         value: Some(ValueBinding::new(
-            Signal::derive(move || color_value.get().map(|c| c.get_channel_value(channel))),
+            Signal::derive(move || color_value.get().map(|c| c.channel_value(channel))),
             Callback::new(move |value: Option<f64>| {
                 binding.set(value.map(|value| {
                     color_value
@@ -122,7 +122,7 @@ pub fn use_color_channel_field_state<C: ColorValue + Default>(
         min_value: Signal::stored(Some(range.min_value)),
         max_value: Signal::stored(Some(range.max_value)),
         step: Signal::stored(Some(range.step)),
-        format_options: Signal::stored(C::get_channel_format_options(channel)),
+        format_options: Signal::stored(C::channel_format_options(channel)),
         is_disabled,
         is_read_only,
         is_invalid,

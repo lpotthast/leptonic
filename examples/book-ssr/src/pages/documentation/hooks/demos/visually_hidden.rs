@@ -1,16 +1,16 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{button::Button, link::AnchorLink},
     hooks::{IntoAttrs, UseVisuallyHiddenInput, use_visually_hidden},
-    prelude::icondata,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn VisuallyHiddenDemo() -> impl IntoView {
     let archived = RwSignal::new(0u32);
 
     // Shown while focus is within it: a skip link.
-    let skip_link = use_visually_hidden(UseVisuallyHiddenInput { is_focusable: true });
+    let skip_link = use_visually_hidden(UseVisuallyHiddenInput { is_focusable: true.into() });
     // Never shown: names the icon-only button for screen readers.
     let button_label = use_visually_hidden(UseVisuallyHiddenInput::default());
 
@@ -19,7 +19,7 @@ pub fn VisuallyHiddenDemo() -> impl IntoView {
             <AnchorLink href="#visually-hidden-demo-status">"Skip to the status"</AnchorLink>
         </div>
         <div class="demo-control-row">
-            <Button variant=ButtonVariant::Flat on_press=move |_| archived.update(|n| *n += 1)>
+            <Button on_press=move |_| archived.update(|n| *n += 1) classes=["demo-btn", "demo-icon-btn"]>
                 <Icon icon=icondata::BsArchive/>
                 <span {..button_label.props.into_attrs()}>"Archive message"</span>
             </Button>

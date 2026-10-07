@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::Checkbox, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -58,7 +58,10 @@ pub fn NumberFieldBasicDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

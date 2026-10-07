@@ -14,7 +14,7 @@ use super::{
     use_form_reset::{UseFormResetInput, use_form_reset},
     use_form_validation::{UseFormValidationInput, use_form_validation},
     use_form_validation_state::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+        FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
         ValidityStateSnapshot, use_form_validation_state,
     },
     use_toggle_state::ToggleState,
@@ -44,7 +44,8 @@ use crate::{
 //   `ToggleOptions` struct, so they aren't repeated per hook.
 // - `checked` is set as a DOM property (and re-synced after a rejected change, e.g. while
 //   read-only), as React does for controlled inputs; an attribute would stop applying once
-//   the user toggled the input.
+//   the user toggled the input. The `checked` attribute holds the initial selection (React's
+//   `defaultChecked`), which a native form reset restores after the state's own reset.
 //
 // ## DIFFERENT BEHAVIOR
 // - A virtual click on the label (`label.click()`, assistive technology) toggles, as with a
@@ -215,6 +216,8 @@ pub struct UseToggleInputProps {
     pub form: Option<String>,
     pub value: Option<String>,
     pub checked: Signal<bool>,
+    /// The `checked` attribute: the initial selection, which a form reset restores.
+    pub default_checked: bool,
     /// The `indeterminate` DOM property (checkboxes; there is no attribute).
     pub indeterminate: Signal<bool>,
     pub disabled: Signal<bool>,
@@ -255,6 +258,7 @@ pub type UseToggleInputAttrs = (
         Attr<attr::Form, Option<String>>,
         Attr<attr::Value, Option<String>>,
         Property<&'static str, Signal<bool>>,
+        Attr<attr::Checked, bool>,
         Property<&'static str, Signal<bool>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Required, Signal<bool>>,
@@ -300,6 +304,7 @@ impl IntoAttrs for UseToggleInputProps {
                 Attr(attr::Form, self.form),
                 Attr(attr::Value, self.value),
                 prop("checked", self.checked),
+                Attr(attr::Checked, self.default_checked),
                 prop("indeterminate", self.indeterminate),
                 Attr(attr::Disabled, self.disabled),
                 Attr(attr::Required, self.required),
@@ -346,7 +351,7 @@ pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
 pub(crate) fn use_toggle_with(
     input: UseToggleInput,
     role: Option<AriaRole>,
-    group_validation: Option<UseFormValidationStateReturn>,
+    group_validation: Option<FormValidationState>,
 ) -> UseToggleReturn {
     let UseToggleInput { state, options } = input;
     let ToggleOptions {
@@ -487,7 +492,7 @@ pub(crate) fn use_toggle_with(
             }
             state.toggle();
             focus_handle.focus();
-            validation.commit_validation.run(());
+            validation.commit_validation();
         })),
         ..UsePressInput::default()
     });
@@ -548,6 +553,7 @@ pub(crate) fn use_toggle_with(
                 form,
                 value,
                 checked: state.is_selected,
+                default_checked: state.default_selected,
                 indeterminate: Signal::stored(false),
                 disabled: is_disabled,
                 required: Signal::derive(move || native_required && is_required.get()),

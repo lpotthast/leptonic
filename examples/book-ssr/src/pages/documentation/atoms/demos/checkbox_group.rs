@@ -5,7 +5,6 @@ use leptonic::{
         checkbox::{Checkbox, CheckboxGroup},
         field::{Description, FieldError, Label},
     },
-    components::prelude::Checkbox as ThemedCheckbox,
     hooks::Key,
 };
 use leptos::prelude::*;
@@ -53,7 +52,10 @@ pub fn CheckboxGroupAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <ThemedCheckbox is_selected=disabled set_selected=disabled>"Disabled"</ThemedCheckbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

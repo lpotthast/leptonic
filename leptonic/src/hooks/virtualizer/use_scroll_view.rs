@@ -4,7 +4,7 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::collections::{Rect, Size},
-    utils::{CapturedElement, styles::Styles},
+    utils::{CapturedElement, i18n::use_direction, locale::WritingDirection, styles::Styles},
 };
 
 // =============================================================================
@@ -12,9 +12,15 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The scroll view is the element the caller captures (react-aria: a `ScrollView` component or
-//   `useScrollView`'s ref); the hook returns the styles of it and of its content box.
-// - Callbacks are `Callback`s of typed values.
+// - The scroll view is the element the caller captures (`element`; react-aria: a `ScrollView`
+//   component or `useScrollView`'s ref); the hook returns the styles of it and of its content box.
+// - Callbacks are `Callback`s of typed values. `scroll_to` is part of the hook (react-aria's
+//   `Virtualizer` writes `scrollLeft`/`scrollTop` in its `onVisibleRectChange`).
+// - `scroll_to` subtracts the view's offset in the window (window scrolling): the visible
+//   rectangle includes it, the view's own scroll position doesn't (react-aria writes the
+//   rectangle's position as it is, which overshoots while the page is scrolled past the view).
+//   In right-to-left, it writes the negative `scrollLeft` the specification defines (react-aria
+//   writes the positive offset).
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `scroll_to` scrolls the view (after the next frame, once the content has its new size,
@@ -22,9 +28,13 @@ use crate::{
 //   scrolling: items are measured in effects
 //   after that event (react-aria: in layout effects before it), and anchoring skips while the
 //   user scrolls.
+// - Scrollbars appearing or disappearing after a size change (the content laid out for the new
+//   size) are picked up by measuring again in the next frame (react-aria measures again
+//   synchronously after `flushSync`); at most once per change, as react-aria.
 //
 // ## OMITTED FEATURES
 // - Typekit's `tk.disconnect-observer`/`tk.connect-observer` events.
+// - `onScroll`: listen to `scroll` on the element itself.
 // - Right-to-left `scrollLeft` normalization (`getRTLOffsetType`): modern browsers report
 //   negative offsets as specified; horizontal virtualization in right-to-left is untested.
 //
@@ -41,6 +51,8 @@ pub enum ScrollDirection {
 
 /// Input of [`use_scroll_view`].
 pub struct UseScrollViewInput {
+    /// The scroll view element (captured by the caller).
+    pub element: CapturedElement,
     /// The size of the content (the virtualizer's).
     pub content_size: Signal<Size>,
     /// The visible part of the content changed.
@@ -49,10 +61,11 @@ pub struct UseScrollViewInput {
     pub on_size_change: Option<Callback<Size>>,
     pub on_scroll_start: Option<Callback<()>>,
     pub on_scroll_end: Option<Callback<()>>,
-    pub scroll_direction: ScrollDirection,
+    /// The axes the view scrolls along. React-aria's default: `Both`.
+    pub scroll_direction: Signal<ScrollDirection>,
     /// The visible area is also bounded by the window's viewport (the scroll view may grow with
-    /// its content and scroll with the page).
-    pub allows_window_scrolling: bool,
+    /// its content and scroll with the page). React-aria's default: `false`.
+    pub allows_window_scrolling: Signal<bool>,
 }
 
 /// Return value of [`use_scroll_view`].
@@ -81,8 +94,9 @@ struct ScrollState {
 /// A scrollable view of a virtualized collection's content (react-aria's `useScrollView`):
 /// reports the visible rectangle as it scrolls and resizes.
 #[allow(clippy::too_many_lines)]
-pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> UseScrollViewReturn {
+pub fn use_scroll_view(input: UseScrollViewInput) -> UseScrollViewReturn {
     let UseScrollViewInput {
+        element,
         content_size,
         on_visible_rect_change,
         on_size_change,
@@ -104,7 +118,7 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
         };
         // Intersect the window viewport with the scroll view: a scroll view of unbounded height
         // still virtualizes while the page scrolls.
-        let visible_rect = if allows_window_scrolling {
+        let visible_rect = if allows_window_scrolling.get_untracked() {
             Rect::new(
                 s.viewport_offset.0 + s.scroll_position.0,
                 s.viewport_offset.1 + s.scroll_position.1,
@@ -149,19 +163,20 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
         let scroll_timeout = Arc::new(Mutex::new(None::<TimeoutHandle>));
         let scroll_end_time = StoredValue::new(0.0_f64);
 
-        let update_size = move || {
+        // Measures the view; whether its size changed.
+        let measure = move || -> bool {
             // Disposed before a deferred call (the element capture belongs to the same owner).
             let Some(previous) = state.try_get_value() else {
-                return;
+                return false;
             };
             let Some(dom) = element.get_untracked() else {
-                return;
+                return false;
             };
             let Some(dom) = dom.dyn_ref::<web_sys::HtmlElement>() else {
-                return;
+                return false;
             };
             let Some(window) = leptos_use::use_window().as_ref().cloned() else {
-                return;
+                return false;
             };
             let viewport = Size::new(
                 window
@@ -179,17 +194,36 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
                 f64::from(dom.client_width()),
                 f64::from(dom.client_height()),
             );
-            if previous.size != size || previous.viewport_size != viewport {
-                state.update_value(|s| {
-                    s.size = size;
-                    s.viewport_size = viewport;
+            if previous.size == size && previous.viewport_size == viewport {
+                return false;
+            }
+            state.update_value(|s| {
+                s.size = size;
+                s.viewport_size = viewport;
+            });
+            update_visible_rect();
+            if let Some(on_size_change) = on_size_change {
+                on_size_change.run(size);
+            }
+            true
+        };
+        let update_size = move || {
+            // The new layout may show or hide scrollbars, which changes the client size again:
+            // measure once more after it rendered.
+            if measure() {
+                request_animation_frame(move || {
+                    measure();
                 });
-                update_visible_rect();
-                if let Some(on_size_change) = on_size_change {
-                    on_size_change.run(size);
-                }
             }
         };
+        // Switching window scrolling changes the visible rectangle.
+        Effect::new(move |previous: Option<bool>| {
+            let allows = allows_window_scrolling.get();
+            if previous.is_some_and(|previous| previous != allows) {
+                update_visible_rect();
+            }
+            allows
+        });
 
         // Scrolls of the view and of its ancestors (a capturing document listener).
         let scroll_timeout_handle = Arc::clone(&scroll_timeout);
@@ -326,7 +360,6 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
     }
     #[cfg(feature = "ssr")]
     let _ = (
-        element,
         on_size_change,
         on_scroll_start,
         on_scroll_end,
@@ -338,7 +371,7 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
     let overflow = move || -> (&'static str, &'static str) {
         let content = content_size.get();
         let size = state.try_get_value().map(|s| s.size).unwrap_or_default();
-        match scroll_direction {
+        match scroll_direction.get() {
             ScrollDirection::Horizontal => ("auto", "hidden"),
             ScrollDirection::Vertical => ("hidden", "auto"),
             ScrollDirection::Both if content.width == size.width => ("hidden", "auto"),
@@ -359,6 +392,7 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
         .add_optional_unchecked("width", move || px(content_size.get().width))
         .add_optional_unchecked("height", move || px(content_size.get().height));
 
+    let direction = use_direction();
     let scroll_to = Callback::new(move |rect: crate::hooks::collections::Rect| {
         // Once the content box has its new size (else the browser clamps the position).
         let requested_after = user_scrolls.try_get_value();
@@ -380,7 +414,9 @@ pub fn use_scroll_view(input: UseScrollViewInput, element: CapturedElement) -> U
             if (before.0 - x).abs() < 1.0 && (before.1 - y).abs() < 1.0 {
                 return;
             }
-            view.set_scroll_left(x);
+            // Right-to-left: the specified negative offsets from the right edge.
+            let rtl = direction.get_untracked() == WritingDirection::Rtl;
+            view.set_scroll_left(if rtl { -x } else { x });
             view.set_scroll_top(y);
             // The browser may clamp the position: expect the scroll event of where it went (none
             // if it didn't move).

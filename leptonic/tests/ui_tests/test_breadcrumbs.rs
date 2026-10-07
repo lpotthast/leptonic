@@ -1,4 +1,6 @@
 // Upstream: react-aria-components/test/Breadcrumbs.test.js @ 99e6102368
+// Upstream: react-aria/test/breadcrumbs/useBreadcrumbs.test.js @ 99e6102368
+// Upstream: react-aria/test/breadcrumbs/useBreadcrumbItem.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -9,7 +11,8 @@ use crate::pages::{BaseActions, Page};
 
 /// The breadcrumbs atoms: a labelled list whose current item is a disabled link with
 /// `aria-current="page"` and no `href`, also while the trail grows and shrinks; pressed items
-/// report their id; the whole trail can be disabled.
+/// report their id; the whole trail can be disabled. The hooks: the navigation's default label,
+/// items as anchors and spans, disabled and current.
 pub struct BreadcrumbsTests {}
 
 /// The text of the current items of the trail named "Breadcrumbs".
@@ -68,6 +71,8 @@ impl BrowserTest<str> for BreadcrumbsTests {
         )
         .is_equal_to(0);
 
+        hooks(&page).await?;
+
         // Pressing an item reports its id (last: following the in-page link navigates).
         page.by_role_and_text("link", "Action 1")
             .await?
@@ -77,4 +82,27 @@ impl BrowserTest<str> for BreadcrumbsTests {
 
         page.expect_no_page_errors().await
     }
+}
+
+/// useBreadcrumbs.test.js "handles defaults"; useBreadcrumbItem.test.js "handles span elements",
+/// "handles isCurrent", "handles isDisabled".
+async fn hooks(page: &Page<'_>) -> Result<(), Report> {
+    let nav = page.element("test-bc-hook").await?;
+    assert_that!(nav.attr("aria-label").await?).is_equal_to(Some("Breadcrumbs".to_owned()));
+    let home = page.by_role_and_text("link", "Hook home").await?;
+    assert_that!(home.attr("href").await?.unwrap_or_default()).ends_with("/atoms");
+    assert_that!(home.attr("aria-current").await?).is_none();
+
+    let section = page.by_role_and_text("link", "Hook section").await?;
+    assert_that!(section.tag_name().await?).is_equal_to("span".to_owned());
+    assert_that!(section.attr("aria-disabled").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(section.attr("tabindex").await?).is_none();
+
+    // The current item: announced as the page, not followed (no `href`, so `role="link"`).
+    let current = page.by_role_and_text("link", "Hook current").await?;
+    assert_that!(current.attr("aria-current").await?).is_equal_to(Some("page".to_owned()));
+    assert_that!(current.attr("aria-disabled").await?).is_equal_to(Some("true".to_owned()));
+    assert_that!(current.attr("href").await?).is_none();
+    assert_that!(current.attr("role").await?).is_equal_to(Some("link".to_owned()));
+    Ok(())
 }

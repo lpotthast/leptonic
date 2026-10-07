@@ -169,22 +169,34 @@ pub fn PageAtomDisclosure() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Turn the chevron through the disclosure\u{2019}s "<Code inline=true>"data-expanded"</Code>
-                    " and put the panel\u{2019}s padding on its content: a panel hidden with "<Code inline=true>"until-found"</Code>
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-Disclosure"</Code>", "
+                    <Code inline=true>"leptonic-DisclosurePanel"</Code>" and "<Code inline=true>"leptonic-DisclosureGroup"</Code>
+                    ", each followed by the "<Code inline=true>"classes"</Code>" you pass; the trigger is a "
+                    <Code inline=true>"Button"</Code>" atom with its own class. The chevron is your own markup, hidden from "
+                    "assistive technology: turn it through the disclosure\u{2019}s "<Code inline=true>"data-expanded"</Code>
+                    ". Put the panel\u{2019}s padding on its content, as a panel hidden with "<Code inline=true>"until-found"</Code>
                     " keeps its own box. To animate, transition the panel\u{2019}s size with "
                     <Code inline=true>"--disclosure-panel-height"</Code>" (see "
-                    <Link href=hook_section("hiding-the-panel")>"Hiding the Panel"</Link>")."
+                    <Link href=hook_section("hiding-the-panel")>"Hiding the Panel"</Link>"). The book\u{2019}s demos use "
+                    "these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-trigger[data-hovered] { background: var(--surface); }
-                        .my-trigger[data-focus-visible] { outline: 2px solid var(--focus); }
-                        .my-trigger[data-disabled] { color: var(--muted); }
-                        .my-chevron { transition: transform 150ms; }
+                        .my-disclosure { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+                        .my-trigger { display: flex; justify-content: space-between; width: 100%; padding: 1em; border: none; background: var(--surface); }
+                        .my-trigger[data-hovered] { background: var(--border); }
+                        .my-trigger[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .my-trigger[data-disabled] { color: var(--muted); cursor: not-allowed; }
+                        .my-chevron { display: flex; transition: transform 150ms; }
                         .my-disclosure[data-expanded] .my-chevron { transform: rotate(180deg); }
+                        .my-panel p { margin: 0; padding: 1em; }
                         @media (prefers-reduced-motion: reduce) { .my-chevron { transition: none; } }
                     ")}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>

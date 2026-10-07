@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use leptonic::hooks::PopoverModality;
 use leptonic::{
-    atoms::focus_scope::FocusScope,
-    components::prelude::Checkbox,
+    atoms::{checkbox::Checkbox, focus_scope::FocusScope},
     hooks::{
         IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode,
         UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
@@ -81,7 +80,10 @@ pub fn MenuDemo() -> impl IntoView {
         </div>
         <p class="demo-status">{status}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }
@@ -148,11 +150,12 @@ fn MenuButton(
             {
                 let popover_attrs = popover_attrs.clone();
                 let popover_styles = popover_styles.clone();
+                let menu_id = menu_props.id.clone();
                 view! {
                     <div {..popover_attrs} style=popover_styles>
                         <FocusScope contain=true restore_focus=true>
                             <Menu
-                                id=menu_props.id
+                                id=menu_id
                                 labelled_by=menu_props.aria_labelledby
                                 auto_focus=menu_props.auto_focus
                                 contents=contents.get_value()
@@ -171,7 +174,7 @@ fn MenuButton(
 /// The menu only exists while it is open, so it is focused anew on every opening.
 #[component]
 fn Menu(
-    id: Signal<String>,
+    id: String,
     labelled_by: Signal<String>,
     auto_focus: Signal<Option<AutoFocus>>,
     contents: MenuContents,
@@ -193,7 +196,7 @@ fn Menu(
         },
     });
     let UseMenuReturn { props, data } = use_menu(UseMenuInput {
-        id: Some(id.get_untracked()),
+        id: Some(id),
         aria_labelledby: labelled_by.into(),
         options: CollectionOptions {
             auto_focus,

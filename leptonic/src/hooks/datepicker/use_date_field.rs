@@ -15,8 +15,8 @@ use super::{
 };
 use crate::{
     hooks::{
-        IntoAttrs, PressEvent, PropsWithStyles, UseKeyboardInput, UsePressAttrs, UsePressInput,
-        UsePressProps,
+        IntoAttrs, OverlayTriggerState, PressEvent, PropsWithStyles, UseKeyboardInput,
+        UsePressAttrs, UsePressInput, UsePressProps,
         focus::{FocusManager, FocusManagerOptions, UseFocusWithinInput, use_focus_within},
         form::{
             LabelElementType, UseFieldInput, UseFieldReturn, UseFormResetInput,
@@ -27,7 +27,7 @@ use crate::{
     },
     utils::{
         CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
-        aria::AriaRole,
+        aria::{AriaDisabled, AriaRole},
         i18n::use_direction,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         locale::WritingDirection,
@@ -43,10 +43,14 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The data segments need (labels, focus manager) is returned as `DateFieldData` (react-aria:
-//   a `WeakMap` keyed by the state); the picker's role and focus manager are input fields
-//   (react-aria: private props).
+//   a `WeakMap` keyed by the state); the picker a field belongs to is an input field,
+//   `DateFieldPicker` (react-aria: private props of `useDatePicker`'s field).
+// - One input each (C8): `UseDateFieldInput`, `UseTimeFieldInput` (the state, the elements and
+//   `DateFieldOptions`); `UseDatePickerGroupInput` with `GroupArrowKeys` (react-aria: a
+//   `disableArrowNavigation` flag) and the picker's overlay state to open (react-aria: the
+//   state's `setOpen`).
 // - The hidden input is part of the return (`input_props`); the form reset and validation
-//   capture it (`input`).
+//   capture it (`input_element`).
 //
 // ## OMITTED FEATURES
 // - Localized field names and descriptions (`useDisplayNames`): English ("year", "Selected
@@ -116,6 +120,26 @@ pub(crate) fn segment_focus_manager(element: CapturedElement) -> FocusManager {
     FocusManager::new(move || element.get_untracked().map(|element| (*element).clone()))
 }
 
+/// Whether a group's left and right arrows move between its segments.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GroupArrowKeys {
+    /// Move to the previous or next segment (by position in right-to-left locales).
+    MoveBetweenSegments,
+    /// Leave them to an enclosing group (a field inside a date picker: the picker's group moves
+    /// across its fields).
+    Ignore,
+}
+
+/// Input of [`use_date_picker_group`].
+#[derive(Clone, Copy)]
+pub struct UseDatePickerGroupInput {
+    /// The group's element (containing the segments).
+    pub element: CapturedElement,
+    pub arrow_keys: GroupArrowKeys,
+    /// The popover Alt+ArrowDown/Up opens, inside a date picker.
+    pub overlay: Option<OverlayTriggerState>,
+}
+
 /// Props of a date field group (the segments' container), from `use_date_picker_group`.
 #[derive(Debug)]
 pub struct UseDatePickerGroupProps {
@@ -145,15 +169,18 @@ impl IntoAttrs for UseDatePickerGroupProps {
 /// right-to-left locales), Alt+ArrowDown/Up opens a picker (`open`), and pressing the group
 /// outside the segments focuses the last segment with a value.
 pub fn use_date_picker_group(
-    element: CapturedElement,
-    disable_arrow_navigation: bool,
-    open: Option<Callback<()>>,
+    input: UseDatePickerGroupInput,
 ) -> PropsWithStyles<UseDatePickerGroupProps> {
+    let UseDatePickerGroupInput {
+        element,
+        arrow_keys,
+        overlay,
+    } = input;
     let direction = use_direction();
     let manager = StoredValue::new(segment_focus_manager(element));
 
     let arrow = move |e: &KeyboardEvent, forward: bool| -> ShortcutOutcome {
-        if disable_arrow_navigation {
+        if arrow_keys == GroupArrowKeys::Ignore {
             return ShortcutOutcome::Ignored;
         }
         if direction.get_untracked() == WritingDirection::Rtl {
@@ -174,21 +201,20 @@ pub fn use_date_picker_group(
                 None => ShortcutOutcome::Ignored,
             }
         } else {
-            let moved = manager.with_value(|manager| {
+            // Handled even at the ends (react-aria returns without `false`).
+            manager.with_value(|manager| {
                 if forward {
-                    manager.focus_next(FocusManagerOptions::default())
+                    manager.focus_next(FocusManagerOptions::default());
                 } else {
-                    manager.focus_previous(FocusManagerOptions::default())
+                    manager.focus_previous(FocusManagerOptions::default());
                 }
             });
-            // Handled even at the ends (react-aria returns without `false`).
-            let _ = moved;
             ShortcutOutcome::Handled
         }
     };
-    let open_with = move || match open {
-        Some(open) => {
-            open.run(());
+    let open_with = move || match overlay {
+        Some(overlay) => {
+            overlay.set_open(true);
             ShortcutOutcome::Handled
         }
         None => ShortcutOutcome::Ignored,
@@ -302,9 +328,19 @@ fn find_next_segment(
         .map(|(_, segment)| segment)
 }
 
-/// Input of [`use_date_field`].
+/// The date picker a field belongs to (react-aria: private props of `useDatePicker`'s field).
+#[derive(Clone)]
+pub struct DateFieldPicker {
+    /// The picker's popover (Alt+ArrowDown opens it).
+    pub overlay: OverlayTriggerState,
+    /// The picker's focus manager, when it spans more fields (a range picker's).
+    pub focus_manager: Option<FocusManager>,
+}
+
+/// The options of a date or time field (the parts of [`UseDateFieldInput`] and
+/// [`UseTimeFieldInput`] besides the state and the elements).
 #[derive(Clone, Default)]
-pub struct UseDateFieldInput {
+pub struct DateFieldOptions {
     pub id: Option<String>,
     /// Whether a visible label labels the field.
     pub has_label: Signal<bool>,
@@ -317,12 +353,29 @@ pub struct UseDateFieldInput {
     pub on_focus_change: Option<Callback<bool>>,
     pub on_key_down: Option<Callback<KeyboardEvent>>,
     pub on_key_up: Option<Callback<KeyboardEvent>>,
-    /// Inside a date picker: no group role (the picker's group labels and describes it).
-    pub is_in_picker: bool,
-    /// The picker's focus manager (it spans more fields).
-    pub focus_manager: Option<FocusManager>,
-    /// Opens the picker (Alt+ArrowDown).
-    pub open: Option<Callback<()>>,
+    /// The date picker the field belongs to: no group role then (the picker's group labels and
+    /// describes it).
+    pub picker: Option<DateFieldPicker>,
+}
+
+/// Input of [`use_date_field`].
+pub struct UseDateFieldInput<V: DateValue> {
+    pub state: DateFieldState<V>,
+    /// The group of segments.
+    pub element: CapturedElement,
+    /// The hidden input (form reset and native validation).
+    pub input_element: CapturedElement,
+    pub options: DateFieldOptions,
+}
+
+/// Input of [`use_time_field`].
+pub struct UseTimeFieldInput<T: TimeValue> {
+    pub state: TimeFieldState<T>,
+    /// The group of segments.
+    pub element: CapturedElement,
+    /// The hidden input (form reset and native validation).
+    pub input_element: CapturedElement,
+    pub options: DateFieldOptions,
 }
 
 /// Return value of [`use_date_field`].
@@ -365,7 +418,7 @@ pub struct UseDateFieldProps {
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
-    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub group: UseDatePickerGroupProps,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
@@ -379,7 +432,7 @@ pub type UseDateFieldAttrs = (
         Attr<attr::AriaLabel, Signal<Option<String>>>,
         Attr<attr::AriaLabelledby, Signal<Option<String>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-        Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     ),
     UsePressAttrs,
     (
@@ -459,13 +512,14 @@ impl IntoAttrs for UseDateFieldInputProps {
 /// Behavior and accessibility of a date field (react-aria's `useDateField`): a group of
 /// segments labelled by the field, describing its value ("Selected Date: ..."), committing an
 /// incomplete value and showing validation when left, with a hidden input for forms.
-pub fn use_date_field<V: DateValue>(
-    input: UseDateFieldInput,
-    state: DateFieldState<V>,
-    element: CapturedElement,
-    input_element: CapturedElement,
-) -> UseDateFieldReturn<V> {
+pub fn use_date_field<V: DateValue>(input: UseDateFieldInput<V>) -> UseDateFieldReturn<V> {
     let UseDateFieldInput {
+        state,
+        element,
+        input_element,
+        options,
+    } = input;
+    let DateFieldOptions {
         id,
         has_label,
         aria_label,
@@ -476,10 +530,13 @@ pub fn use_date_field<V: DateValue>(
         on_focus_change,
         on_key_down,
         on_key_up,
-        is_in_picker,
-        focus_manager,
-        open,
-    } = input;
+        picker,
+    } = options;
+    let is_in_picker = picker.is_some();
+    let (overlay, focus_manager) = picker
+        .map(|picker| (picker.overlay, picker.focus_manager))
+        .unzip();
+    let focus_manager = focus_manager.flatten();
     let validation = state.validation;
 
     let UseFieldReturn {
@@ -512,7 +569,7 @@ pub fn use_date_field<V: DateValue>(
             }
             state.confirm_placeholder();
             if state.value.get_untracked() != value_on_focus.get_value() {
-                validation.commit_validation.run(());
+                validation.commit_validation();
             }
         })),
         on_focus_within_change: on_focus_change,
@@ -523,7 +580,7 @@ pub fn use_date_field<V: DateValue>(
     let description = Signal::derive(move || {
         state.value.get().map(|_| {
             let formatted = state.format_value();
-            if state.max_granularity == MaxGranularity::Hour {
+            if state.max_granularity.get() == MaxGranularity::Hour {
                 format!("Selected Time: {formatted}")
             } else {
                 format!("Selected Date: {formatted}")
@@ -545,7 +602,15 @@ pub fn use_date_field<V: DateValue>(
 
     let focus_manager =
         StoredValue::new(focus_manager.unwrap_or_else(|| segment_focus_manager(element)));
-    let group = use_date_picker_group(element, is_in_picker, open);
+    let group = use_date_picker_group(UseDatePickerGroupInput {
+        element,
+        arrow_keys: if is_in_picker {
+            GroupArrowKeys::Ignore
+        } else {
+            GroupArrowKeys::MoveBetweenSegments
+        },
+        overlay,
+    });
 
     let label_id = label_props.id.clone();
     let segments_labelledby = Signal::derive(move || {
@@ -624,7 +689,7 @@ pub fn use_date_field<V: DateValue>(
             aria_label: Signal::derive(move || label_aria.get()),
             aria_labelledby: field_labelledby,
             aria_describedby: described_by,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some("true")),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             group: UseDatePickerGroupProps {
                 on_keydown,
                 on_keyup,
@@ -671,13 +736,19 @@ pub fn use_date_field<V: DateValue>(
 
 /// Behavior and accessibility of a time field (react-aria's `useTimeField`): a date field over the
 /// time state's field whose hidden input submits the time (`"08:30:00"`), not a date and time.
-pub fn use_time_field<T: TimeValue>(
-    input: UseDateFieldInput,
-    state: TimeFieldState<T>,
-    element: CapturedElement,
-    input_element: CapturedElement,
-) -> UseDateFieldReturn<T::Field> {
-    let mut field = use_date_field(input, state.field, element, input_element);
+pub fn use_time_field<T: TimeValue>(input: UseTimeFieldInput<T>) -> UseDateFieldReturn<T::Field> {
+    let UseTimeFieldInput {
+        state,
+        element,
+        input_element,
+        options,
+    } = input;
+    let mut field = use_date_field(UseDateFieldInput {
+        state: state.field,
+        element,
+        input_element,
+        options,
+    });
     let time_value = state.time_value;
     field.input_props.value = Signal::derive(move || {
         time_value

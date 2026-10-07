@@ -544,6 +544,20 @@ for matching and showing `Mod`; `Shortcut::parse` takes the `+` key; TagGroup de
 the virtualized focused item scrolls into view once rendered (`ItemElements::get_tracked`), landmark checks run
 after route transitions settle, `ListBox`/`GridList`/`Menu`/`Tabs`/`ComboBoxButton` data attributes as RAC.
 
+Browser tests (2026-10-07): the component fixtures and tests are removed with their layer (the test-app's shell
+uses `ThemeProvider`, no stylesheet theme); tests no longer depend on styling: `wait_for_count`,
+`wait_for_selector_text` and waits for `data-entering` around overlay animations, focus helpers compare the
+rendered text (`innerText`: WebDriver skips `display: contents` children), tags found by name, descriptions read
+by text content, the combo box test closes the options its cleared input opens.
+
+Dependencies (2026-10-07, the user's high-priority item): all upgraded to their latest versions (compatible
+ones together; strum 0.28, itertools 0.15, cargo_toml 1.0 one at a time), unused ones removed (`leptos_reactive`
+with the unused Leptos 0.6 `utils::signals`, `educe`, `indoc`, `leptos_meta`, `reactive_graph`; the test-app's
+`tower`, `tower-http`), and every dependency of `leptonic`, `leptonic-theme` and the test-app declared with
+`default-features = false` plus only the features needed. The `atoms` and `components` features now gate their
+modules (they compiled always), `icondata` is optional with `components`, `leptonic-theme` reruns its build when its
+SCSS changes.
+
 ## Resolved findings
 
 - Found by the book's re-check (2026-10-06; both done 2026-10-06: `utils::HideMode` exported, Cmd (+ Shift) +

@@ -32,7 +32,7 @@ pub fn PageColor() -> impl IntoView {
                     <li>
                         <Link href=routes::doc::ColorPicker.materialize()>"Color Picker"</Link>" puts several of them "
                         "together: the "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker atom"</Link>
-                        " shares its color with the atoms inside it, the themed component is a ready-made picker, and "
+                        " shares its color with the atoms inside it, and "
                         <Link href=routes::doc::color_picker::Hook.materialize()>"use_color_picker_state"</Link>
                         " holds the color for parts built from hooks."
                     </li>
@@ -161,13 +161,13 @@ pub fn PageColor() -> impl IntoView {
                             pub trait ColorValue: Clone + Copy + PartialEq + Debug + Send + Sync + From<Color> + Into<Color> + 'static {
                                 type Channel: ColorChannel<Color = Self>;
 
-                                fn get_channel_value(&self, channel: Self::Channel) -> f64;
+                                fn channel_value(&self, channel: Self::Channel) -> f64;
                                 fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
                                 const HAS_ALPHA: bool = false;
 
                                 fn channels() -> Vec<Self::Channel>;
-                                fn get_channel_range(channel: Self::Channel) -> ColorChannelRange;
-                                fn get_channel_name(channel: Self::Channel) -> &'static str;
+                                fn channel_range(channel: Self::Channel) -> ColorChannelRange;
+                                fn channel_name(channel: Self::Channel) -> &'static str;
                                 fn is_alpha_channel(channel: Self::Channel) -> bool;
                                 fn format_channel_value(&self, channel: Self::Channel) -> String;
                                 fn to_css_string(&self) -> String;
@@ -201,7 +201,7 @@ pub fn PageColor() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::utils::color::{Color, HSV, RGB8};
 
-                            let color = Color::from(HSV { hue: 210.0, saturation: 0.6, value: 0.8 });
+                            let color = Color::from(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 });
                             let rgb: RGB8 = color.to::<RGB8>();
 
                             // CSS-like text: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(r, g, b), rgba(r, g, b, a),

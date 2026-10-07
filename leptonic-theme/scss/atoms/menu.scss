@@ -1,8 +1,8 @@
-// Upstream: ../starters/docs/src/Menu.css @ 99e610236
-// Upstream: ../starters/docs/src/Menu.tsx @ 99e610236
+// Upstream: ../starters/docs/src/Menu.css @ 99e6102368
+// Upstream: ../starters/docs/src/Menu.tsx @ 99e6102368
 //
 // `Menu`, `MenuItem` (with `MenuItemLabel`, `MenuItemDescription`, `MenuItemShortcut`),
-// `MenuSection` (its heading as `leptonic-MenuSectionHeading`) and a `Separator` between the
+// `MenuSection` (its `<header>` as `leptonic-MenuSectionHeading`) and a `Separator` between the
 // items. The menu of a `MenuTrigger` or `SubmenuTrigger` goes into a `Popover` (`popover.scss`;
 // the starter gives a submenu's popover `offset=-2` and `cross_offset=-4`, without an arrow).
 //
@@ -151,13 +151,6 @@
     width: var(--spacing-4);
     height: var(--spacing-4);
   }
-}
-
-// A section renders its heading and its group (`leptonic-MenuSection`) in a wrapper
-// (`role="presentation"`), which leaves the layout to them (upstream: the header is inside the
-// section).
-.leptonic-Menu > [role='presentation']:has(> .leptonic-MenuSection) {
-  display: contents;
 }
 
 .leptonic-MenuSection {

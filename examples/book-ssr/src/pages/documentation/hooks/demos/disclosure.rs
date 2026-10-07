@@ -1,5 +1,6 @@
-use leptonic::{components::prelude::*, hooks::*, prelude::icondata};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn DisclosureDemo() -> impl IntoView {
@@ -23,7 +24,7 @@ pub fn DisclosureDemo() -> impl IntoView {
                 // Styled through `aria-expanded` and `disabled`, which the hooks set.
                 <button {..button_attrs} style=button_styles class="demo-disclosure-trigger demo-hook-disclosure-trigger">
                     "What is a disclosure?"
-                    <Icon icon=icondata::BsChevronDown classes="demo-disclosure-chevron"/>
+                    <span class="demo-disclosure-chevron" aria-hidden="true"><Icon icon=icondata::BsChevronDown/></span>
                 </button>
             </h4>
 
@@ -37,7 +38,10 @@ pub fn DisclosureDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
         <p class="demo-status">{move || if state.is_expanded.get() { "Expanded" } else { "Collapsed" }}</p>
     }

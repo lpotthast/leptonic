@@ -32,7 +32,9 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - `checked` is set as a DOM property (and the group's radios re-synced after a rejected
-//   change, e.g. while read-only), as React does for controlled radio groups.
+//   change, e.g. while read-only), as React does for controlled radio groups. The `checked`
+//   attribute holds the initial selection (React's `defaultChecked`), which a native form reset
+//   restores after the state's own reset.
 //
 // ## ADDITIONS
 // - Focus ring state (`is_focused`, `is_focus_visible`), which react-aria-components adds with
@@ -89,6 +91,8 @@ pub struct UseRadioInputProps {
     pub form: Option<String>,
     pub value: String,
     pub checked: Signal<bool>,
+    /// The `checked` attribute: the initial selection, which a form reset restores.
+    pub default_checked: bool,
     pub disabled: Signal<bool>,
     pub required: Signal<bool>,
     pub tabindex: Signal<Option<i32>>,
@@ -121,6 +125,7 @@ pub type UseRadioInputAttrs = (
         Attr<attr::Form, Option<String>>,
         Attr<attr::Value, String>,
         Property<&'static str, Signal<bool>>,
+        Attr<attr::Checked, bool>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Required, Signal<bool>>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
@@ -159,6 +164,7 @@ impl IntoAttrs for UseRadioInputProps {
                 Attr(attr::Form, self.form),
                 Attr(attr::Value, self.value),
                 prop("checked", self.checked),
+                Attr(attr::Checked, self.default_checked),
                 Attr(attr::Disabled, self.disabled),
                 Attr(attr::Required, self.required),
                 Attr(attr::Tabindex, self.tabindex),
@@ -382,6 +388,7 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
                 form: group.form.get_value(),
                 value: value.to_string(),
                 checked: is_selected,
+                default_checked: state.default_selected_value().as_ref() == Some(&value),
                 disabled: is_disabled,
                 required: Signal::derive(move || native_required && is_required.get()),
                 tabindex,

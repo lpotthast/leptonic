@@ -1,6 +1,18 @@
 // Upstream: react-stately/src/calendar/utils.ts @ 99e6102368
 //! Aligning and constraining the visible range of a calendar.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Dates are `jiff::civil::Date`, durations `DateDuration` (react-aria: `CalendarDate`,
+//   `DateDuration`).
+// - The `align_*` functions take the first day of the week (react-aria: the locale, from which
+//   `startOfWeek` finds it): calendars may override it (`first_day_of_week`).
+//
+// =============================================================================
+
 use jiff::civil::{Date, Weekday};
 
 use crate::utils::date::{DateDuration, DateExt, max_date, min_date};

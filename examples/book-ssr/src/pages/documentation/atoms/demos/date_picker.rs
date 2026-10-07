@@ -5,15 +5,14 @@ use leptonic::{
             CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
             CalendarNextButton, CalendarPreviousButton, CalendarWeek,
         },
+        checkbox::Checkbox,
         datepicker::{DateInput, DatePicker, DatePickerButton, DatePickerGroup, DateSegment},
         dialog::Dialog,
         field::{Description, FieldError, Label},
         popover::Popover,
     },
-    components::prelude::{Checkbox, Icon},
     hooks::ValidationBehavior,
     jiff::civil::{Date, Weekday, date},
-    prelude::icondata,
 };
 use leptos::prelude::*;
 
@@ -42,7 +41,7 @@ pub fn DatePickerAtomDemo() -> impl IntoView {
                     children=|segment| view! { <DateSegment segment classes="demo-date-segment"/> }
                 />
                 <DatePickerButton classes="demo-date-picker-button">
-                    <Icon icon=icondata::BsCalendar3/>
+                    <span aria-hidden="true">"\u{25be}"</span>
                 </DatePickerButton>
             </DatePickerGroup>
             <Description classes="demo-field-description">"Weekdays in March and April 2026."</Description>
@@ -52,11 +51,11 @@ pub fn DatePickerAtomDemo() -> impl IntoView {
                     <Calendar classes="demo-date-picker-calendar">
                         <header class="demo-calendar-header">
                             <CalendarPreviousButton classes="demo-calendar-nav">
-                                <Icon icon=icondata::BsChevronLeft/>
+                                <span aria-hidden="true">"\u{2039}"</span>
                             </CalendarPreviousButton>
                             <CalendarHeading classes="demo-calendar-title"/>
                             <CalendarNextButton classes="demo-calendar-nav">
-                                <Icon icon=icondata::BsChevronRight/>
+                                <span aria-hidden="true">"\u{203a}"</span>
                             </CalendarNextButton>
                         </header>
                         <CalendarGrid classes="demo-calendar-grid">
@@ -86,7 +85,10 @@ pub fn DatePickerAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

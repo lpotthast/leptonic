@@ -189,18 +189,35 @@ pub fn PageAtomToggleButton() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with the data "
-                    "attributes:"
+                    "The atoms bring no styles. Their default classes are "<Code inline=true>"leptonic-ToggleButton"</Code>
+                    " (the "<Code inline=true>"<button>"</Code>") and "<Code inline=true>"leptonic-ToggleButtonGroup"</Code>
+                    " (the group\u{2019}s "<Code inline=true>"<div>"</Code>"); pass "<Code inline=true>"classes"</Code>
+                    " to add your own. The button\u{2019}s content is its children. Target the state with the data "
+                    "attributes. The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
-                    {indoc!(r"
-                        .my-toggle { border: 1px solid var(--border); background: var(--surface); }
-                        .my-toggle[data-hovered] { border-color: var(--accent); }
-                        .my-toggle[data-selected] { background: var(--accent); }
-                        .my-toggle[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-toggle[data-disabled] { opacity: 0.5; }
-                    ")}
+                    {indoc!(r#"
+                        .demo-atom-toggle-button {
+                            padding: 0.5rem 1rem;
+                            border: 1px solid var(--border);
+                            border-radius: 6px;
+                            background: var(--surface);
+                            font: inherit;
+                            cursor: pointer;
+                        }
+                        .demo-atom-toggle-button[data-hovered] { border-color: var(--accent); }
+                        .demo-atom-toggle-button[data-selected] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+                        .demo-atom-toggle-button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-atom-toggle-button[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-toggle-group { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border: 1px solid var(--border); border-radius: 6px; }
+                        .demo-toggle-group[data-orientation="vertical"] { flex-direction: column; }
+                    "#)}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

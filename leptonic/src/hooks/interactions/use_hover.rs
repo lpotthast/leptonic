@@ -1,6 +1,4 @@
-// Upstream: react-aria/src/interactions/useHover.ts @ 6f664fe911
-#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
-
+// Upstream: react-aria/src/interactions/useHover.ts @ 99e6102368
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -11,17 +9,24 @@ use web_sys::PointerEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{
-        ContainsTarget, EventAccessors, EventHandler, EventTargetExt,
-        event_listeners::{Listener, listen_to},
-        node_contains,
-        pointer_type::PointerType,
-    },
+    utils::{EventHandler, pointer_type::PointerType},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useHover.ts
-
-// No intentional deviations from the react-aria implementation.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `HoverStartEvent`/`HoverEndEvent` instead of one `HoverEvent` with a `type`; the hovered
+//   element is `current_target` (react-aria: `target`, set to the event's current target).
+// - As upstream, hover events don't stop propagation and have no `continuePropagation`, so they
+//   don't implement `Propagation`.
+//
+// ## OMITTED FEATURES
+// - The `mouseenter`/`mouseleave`/`touchstart` fallbacks for environments without
+//   `PointerEvent`: every supported browser has pointer events.
+//
+// =============================================================================
 
 /// iOS fires `pointerenter` twice: once with `pointerType="touch"` and again with
 /// `pointerType="mouse"` (https://bugs.webkit.org/show_bug.cgi?id=214609). After a touch
@@ -84,18 +89,25 @@ mod global_touch {
     }
 }
 
+/// A pointer started hovering the element.
 #[derive(Debug, Clone)]
 pub struct HoverStartEvent {
+    /// The pointer's type (`Mouse` or `Pen`).
     pub pointer_type: PointerType,
+    /// The hovered element.
     pub current_target: SendWrapper<web_sys::EventTarget>,
 }
 
+/// A pointer stopped hovering the element.
 #[derive(Debug, Clone)]
 pub struct HoverEndEvent {
+    /// The pointer's type (`Mouse` or `Pen`).
     pub pointer_type: PointerType,
+    /// The element that was hovered.
     pub current_target: SendWrapper<web_sys::EventTarget>,
 }
 
+/// Input of [`use_hover`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseHoverInput {
     /// Whether hover callbacks should be disabled.
@@ -127,6 +139,7 @@ impl Default for UseHoverInput {
     }
 }
 
+/// Return value of [`use_hover`].
 #[derive(Debug)]
 pub struct UseHoverReturn {
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
@@ -163,14 +176,19 @@ pub type UseHoverAttrs = (
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
+#[cfg(not(feature = "ssr"))]
 struct HoverState {
     pointer_type: PointerType,
     target: web_sys::EventTarget,
     /// The global `pointerover` listener that detects the removal of the hovered element
     /// (removed when the state is dropped).
-    _pointerover: Option<Listener>,
+    _pointerover: Option<crate::utils::event_listeners::Listener>,
 }
 
+/// Handles pointer hover interactions for an element (react-aria's `useHover`): hover starts when
+/// a mouse or pen pointer enters the element (touch never hovers, and the mouse events iOS emulates
+/// after a touch are ignored) and ends when it leaves, the element is removed or `is_disabled`
+/// becomes true.
 #[allow(clippy::too_many_lines)]
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     #[cfg(feature = "ssr")]
@@ -188,6 +206,11 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
+        use crate::utils::{
+            ContainsTarget, EventAccessors, EventTargetExt, event_listeners::listen_to,
+            node_contains,
+        };
+
         let UseHoverInput {
             is_disabled: disabled,
             on_hover_start,

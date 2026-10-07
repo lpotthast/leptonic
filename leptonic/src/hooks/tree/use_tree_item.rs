@@ -1,15 +1,18 @@
 // Upstream: react-aria/src/tree/useTreeItem.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::hooks::FocusMode;
-use crate::hooks::{
-    button::use_button::UseButtonInput,
-    collections::Key,
-    gridlist::{
-        GridListData, UseGridListItemInput, UseGridListItemReturn, grid_list_row_id,
-        use_grid_list_item,
+use crate::{
+    hooks::{
+        FocusMode,
+        button::use_button::UseButtonInput,
+        collections::Key,
+        gridlist::{
+            GridListData, UseGridListItemInput, UseGridListItemReturn, grid_list_row_id,
+            use_grid_list_item,
+        },
+        interactions::use_press::PressEvent,
     },
-    interactions::use_press::PressEvent,
+    utils::focusability::{PreventFocusAttr, prevent_focus_attr},
 };
 
 // =============================================================================
@@ -18,7 +21,11 @@ use crate::hooks::{
 //
 // ## API DIFFERENCES
 // - The expand button is configured, not rendered: `expand_button` is the `UseButtonInput` for
-//   `use_button`. Its label ("Expand"/"Collapse") is English only.
+//   `use_button` (with its label). Its `data-leptonic-prevent-focus` attribute comes separately
+//   (`expand_button_attrs`), as `UseButtonInput` takes no extra attributes.
+//
+// ## OMITTED FEATURES
+// - A localized label: "Expand"/"Collapse" are English (no message bundles yet).
 //
 // =============================================================================
 
@@ -35,12 +42,14 @@ pub struct UseTreeItemInput {
 pub struct UseTreeItemReturn {
     pub item: UseGridListItemReturn,
     /// The expand/collapse button's configuration, for `use_button` (render it for items with
-    /// children).
+    /// children). Labelled "Expand" or "Collapse", plus the item.
     pub expand_button: UseButtonInput,
-    /// The expand button's `aria-label` ("Expand" or "Collapse"); set it on the button.
-    pub expand_button_label: Signal<&'static str>,
+    /// Spread onto the expand button besides `use_button`'s attributes: it keeps focus walks
+    /// (ArrowRight on an expanded row) off the button (`data-leptonic-prevent-focus`).
+    pub expand_button_attrs: PreventFocusAttr,
     pub is_expanded: Signal<bool>,
-    pub has_child_items: bool,
+    /// Whether the item has children (follows the collection).
+    pub has_child_items: Signal<bool>,
 }
 
 /// An item of a tree: a grid list row with `aria-expanded`, `aria-level`, `aria-posinset` and
@@ -51,11 +60,11 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     let selection = tree.state.selection;
     let row_id = grid_list_row_id(&tree.id, &key);
     let button_id = crate::utils::id::use_id("tree-expand");
-    let has_child_items = untrack(|| {
-        tree.state
-            .collection
-            .with(|c| c.get(&key).is_some_and(|n| n.has_child_nodes))
-    });
+    let has_child_items = {
+        let collection = tree.state.collection;
+        let key = key.clone();
+        Memo::new(move |_| collection.with(|c| c.get(&key).is_some_and(|n| n.has_child_nodes)))
+    };
     let item = use_grid_list_item(UseGridListItemInput {
         list: tree,
         key: key.clone(),
@@ -71,7 +80,17 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     });
     let expand_button = UseButtonInput {
         // Labelled by its own label ("Expand"/"Collapse") and the item.
-        id: Some(button_id.clone().into()),
+        id: Some(button_id.clone()),
+        aria_label: MaybeProp::derive(move || {
+            Some(
+                if is_expanded.get() {
+                    "Collapse"
+                } else {
+                    "Expand"
+                }
+                .to_owned(),
+            )
+        }),
         aria_labelledby: Signal::stored(Some(format!("{button_id} {row_id}"))),
         exclude_from_tab_order: Signal::stored(true),
         prevent_focus_on_press: true,
@@ -91,14 +110,8 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     UseTreeItemReturn {
         item,
         expand_button,
-        expand_button_label: Signal::derive(move || {
-            if is_expanded.get() {
-                "Collapse"
-            } else {
-                "Expand"
-            }
-        }),
+        expand_button_attrs: prevent_focus_attr(),
         is_expanded,
-        has_child_items,
+        has_child_items: has_child_items.into(),
     }
 }

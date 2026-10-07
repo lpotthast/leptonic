@@ -1,8 +1,11 @@
 use leptonic::{
-    atoms::listbox::{
-        ListBox, ListBoxItem, ListBoxItemDescription, ListBoxItemLabel, ListBoxSection,
+    atoms::{
+        button::Button,
+        listbox::{
+            ListBox, ListBoxItem, ListBoxItemDescription, ListBoxItemLabel, ListBoxSection,
+            ListBoxSectionHeading,
+        },
     },
-    components::prelude::{Button, ButtonColor},
     hooks::{
         SelectionMode,
         collections::{Key, Selection, use_collection},
@@ -124,7 +127,8 @@ pub fn ListBoxAtomDemo() -> impl IntoView {
                     .iter()
                     .map(|group| {
                         view! {
-                            <ListBoxSection key=group.key classes="demo-lb-group" heading_classes="demo-lb-heading">
+                            <ListBoxSection key=group.key classes="demo-lb-group">
+                                <ListBoxSectionHeading classes="demo-lb-heading" />
                                 {group
                                     .toppings
                                     .iter()
@@ -150,11 +154,10 @@ pub fn ListBoxAtomDemo() -> impl IntoView {
         <p class="demo-status">"Selected: "{move || selected_names(&selection.get())}"."</p>
         <div class="demo-controls">
             // The app changes the selection by writing its state.
-            <Button on_press=move |_| selection.set(Selection::default()) color=ButtonColor::Secondary>
+            <Button on_press=move |_| selection.set(Selection::default()) classes="demo-btn">
                 "Clear"
             </Button>
         </div>
-
     }
 }
 

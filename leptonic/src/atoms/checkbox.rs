@@ -30,6 +30,8 @@ use crate::{
 //   `default_value` + `on_change`, or `value` + `set_value` (react-aria: `isSelected`/`value`
 //   + `onChange`).
 // - Render props become `data-*` attributes plus plain children.
+// - `Checkbox` is kept beside `CheckboxField` + `CheckboxButton` (react-aria-components deprecates
+//   it): the one-element checkbox without a description of its own.
 //
 // =============================================================================
 
@@ -40,7 +42,9 @@ pub struct CheckboxGroupCtx {
 }
 
 /// A headless checkbox: a `<label>` around a visually hidden `<input type="checkbox">` and the
-/// children (draw the box with them, styled through the label's data attributes).
+/// children (draw the box with them, styled through the label's data attributes). For a
+/// description or an error message of its own, use a [`CheckboxField`] with a
+/// [`CheckboxButton`].
 ///
 /// Data attributes: `data-selected`, `data-indeterminate`, `data-pressed`, `data-hovered`,
 /// `data-focused`, `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`,
@@ -97,15 +101,270 @@ pub fn Checkbox(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Checkbox", classes);
-    let validation_behavior = use_validation_behavior(validation_behavior);
+    let checkbox = use_checkbox_atom(CheckboxSetup {
+        value,
+        default_selected,
+        on_change,
+        is_selected,
+        set_selected,
+        is_indeterminate,
+        is_disabled,
+        is_read_only,
+        is_required,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
+        form_value,
+        form,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        auto_focus,
+        on_focus_change,
+    });
+    checkbox_button(
+        checkbox,
+        is_indeterminate,
+        is_required,
+        classes,
+        styles,
+        children,
+    )
+}
+
+/// A headless checkbox with a description and an error message of its own: a `<div>` around a
+/// [`CheckboxButton`] (the clickable `<label>` with the box), a
+/// [`Description`](super::field::Description) and a [`FieldError`](super::field::FieldError). In a
+/// [`CheckboxGroup`], the group validates, so a `FieldError` shows nothing.
+///
+/// Data attributes: `data-selected`, `data-indeterminate`, `data-disabled`, `data-readonly`,
+/// `data-invalid`, `data-required`.
+///
+/// Inside a [`CheckboxGroup`], `value` is required and the group holds the selection
+/// (`default_selected`, `is_selected` and `set_selected` don't apply).
+///
+/// Default class: `leptonic-CheckboxField`.
+#[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
+#[component]
+pub fn CheckboxField(
+    /// The checkbox's value in its [`CheckboxGroup`].
+    #[prop(into, optional)]
+    value: Option<Key>,
+    #[prop(optional)] default_selected: bool,
+    /// Called when the checkbox is checked or unchecked.
+    #[prop(into, optional)]
+    on_change: Option<Callback<bool>>,
+    /// Whether the toggle is selected (controlled): a value or any signal.
+    #[prop(into, optional)]
+    is_selected: Option<Signal<bool>>,
+    /// Receives the selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected: Option<Out<bool>>,
+    /// Shows the checkbox as partially checked, regardless of its selection.
+    #[prop(into, optional)]
+    is_indeterminate: Signal<bool>,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    #[prop(into, optional)] is_read_only: Signal<bool>,
+    #[prop(into, optional)] is_required: Signal<bool>,
+    #[prop(into, optional)] is_invalid: Signal<bool>,
+    #[prop(optional)] validate: Option<ValidateFn<bool>>,
+    /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
+    #[prop(optional)]
+    validation_behavior: Option<ValidationBehavior>,
+    /// The input's `name` (in a group: the group's).
+    #[prop(into, optional)]
+    name: Option<String>,
+    /// The input's `value` (submitted while checked; in a group: `value`).
+    #[prop(into, optional)]
+    form_value: Option<String>,
+    #[prop(into, optional)] form: Option<String>,
+    /// The input's id.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(optional)] auto_focus: bool,
+    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-CheckboxField", classes);
+    let in_group = use_context::<CheckboxGroupCtx>().is_some();
+    let checkbox = use_checkbox_atom(CheckboxSetup {
+        value,
+        default_selected,
+        on_change,
+        is_selected,
+        set_selected,
+        is_indeterminate,
+        is_disabled,
+        is_read_only,
+        is_required,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
+        form_value,
+        form,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        auto_focus,
+        on_focus_change,
+    });
+    let (is_selected, is_disabled, is_read_only, is_invalid) = (
+        checkbox.is_selected,
+        checkbox.is_disabled,
+        checkbox.is_read_only,
+        checkbox.is_invalid,
+    );
+    // In a group, the group's validation shows (react-aria-components: no `FieldErrorContext`).
+    let field = FieldContext {
+        description: checkbox.description_props.clone(),
+        error_message: checkbox.error_message_props.clone(),
+        is_invalid: if in_group {
+            Signal::stored(false)
+        } else {
+            is_invalid
+        },
+        validation_errors: if in_group {
+            Signal::stored(Vec::new())
+        } else {
+            checkbox.validation_errors
+        },
+        validation_details: checkbox.validation_details,
+    };
+    let button = CheckboxButtonCtx {
+        checkbox: StoredValue::new(Some(checkbox)),
+        is_indeterminate,
+        is_required,
+    };
+
+    view! {
+        <Provider value=button>
+            <Provider value=field>
+                <div
+                    class=classes
+                    style=styles
+                    data-selected=flag(is_selected)
+                    data-indeterminate=flag(is_indeterminate)
+                    data-disabled=flag(is_disabled)
+                    data-readonly=flag(is_read_only)
+                    data-invalid=flag(is_invalid)
+                    data-required=flag(is_required)
+                >
+                    {children()}
+                </div>
+            </Provider>
+        </Provider>
+    }
+}
+
+/// The clickable part of a [`CheckboxField`]: a `<label>` around a visually hidden
+/// `<input type="checkbox">` and the children (the box and the label text).
+///
+/// Data attributes: `data-selected`, `data-indeterminate`, `data-pressed`, `data-hovered`,
+/// `data-focused`, `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`,
+/// `data-required`.
+///
+/// Default class: `leptonic-CheckboxButton`.
+#[component]
+pub fn CheckboxButton(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-CheckboxButton", classes);
+    let ctx = use_context::<CheckboxButtonCtx>()
+        .expect("a <CheckboxButton> belongs in a <CheckboxField>");
+    let checkbox = ctx
+        .checkbox
+        .try_update_value(Option::take)
+        .flatten()
+        .expect("a <CheckboxField> has one <CheckboxButton>");
+    checkbox_button(
+        checkbox,
+        ctx.is_indeterminate,
+        ctx.is_required,
+        classes,
+        styles,
+        children,
+    )
+}
+
+/// What a [`CheckboxField`] hands its [`CheckboxButton`].
+#[derive(Clone)]
+struct CheckboxButtonCtx {
+    /// The checkbox, taken by the button.
+    checkbox: StoredValue<Option<UseCheckboxReturn>>,
+    is_indeterminate: Signal<bool>,
+    is_required: Signal<bool>,
+}
+
+/// The settings of a [`Checkbox`] or [`CheckboxField`].
+struct CheckboxSetup {
+    value: Option<Key>,
+    default_selected: bool,
+    on_change: Option<Callback<bool>>,
+    is_selected: Option<Signal<bool>>,
+    set_selected: Option<Out<bool>>,
+    is_indeterminate: Signal<bool>,
+    is_disabled: Signal<bool>,
+    is_read_only: Signal<bool>,
+    is_required: Signal<bool>,
+    is_invalid: Signal<bool>,
+    validate: Option<ValidateFn<bool>>,
+    validation_behavior: Option<ValidationBehavior>,
+    name: Option<String>,
+    form_value: Option<String>,
+    form: Option<String>,
+    id: Option<String>,
+    aria_label: MaybeProp<String>,
+    aria_labelledby: Option<String>,
+    aria_describedby: Option<String>,
+    auto_focus: bool,
+    on_focus_change: Option<Callback<bool>>,
+}
+
+/// The checkbox of a [`Checkbox`] or [`CheckboxField`]: an item of the surrounding
+/// [`CheckboxGroup`], or a checkbox with its own state.
+fn use_checkbox_atom(setup: CheckboxSetup) -> UseCheckboxReturn {
+    let CheckboxSetup {
+        value,
+        default_selected,
+        on_change,
+        is_selected,
+        set_selected,
+        is_indeterminate,
+        is_disabled,
+        is_read_only,
+        is_required,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
+        form_value,
+        form,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        auto_focus,
+        on_focus_change,
+    } = setup;
     let options = ToggleOptions {
         id,
         is_disabled,
         is_read_only,
         is_required,
         is_invalid,
-        validate: None,
-        validation_behavior,
+        validate,
+        validation_behavior: use_validation_behavior(validation_behavior),
         name,
         form,
         value: form_value,
@@ -116,12 +375,11 @@ pub fn Checkbox(
         on_focus_change,
         ..ToggleOptions::default()
     };
-    let checkbox: UseCheckboxReturn = if let Some(group) = use_context::<CheckboxGroupCtx>() {
-        let value = value.expect("a <Checkbox> in a <CheckboxGroup> needs a `value`");
+    if let Some(group) = use_context::<CheckboxGroupCtx>() {
+        let value = value.expect("a checkbox in a <CheckboxGroup> needs a `value`");
         use_checkbox_group_item(UseCheckboxGroupItemInput {
             is_indeterminate,
             on_change,
-            validate,
             options,
             group: group.data,
             value,
@@ -136,19 +394,28 @@ pub fn Checkbox(
             is_read_only,
         });
         use_checkbox(UseCheckboxInput {
-            is_indeterminate,
-            options: ToggleOptions {
-                validate,
-                ..options
-            },
             state,
+            is_indeterminate,
+            options,
         })
-    };
+    }
+}
+
+/// The `<label>` of a [`Checkbox`] or [`CheckboxButton`].
+fn checkbox_button(
+    checkbox: UseCheckboxReturn,
+    is_indeterminate: Signal<bool>,
+    is_required: Signal<bool>,
+    classes: Classes,
+    styles: Styles,
+    children: Option<Children>,
+) -> impl IntoView {
     let hover = use_hover(UseHoverInput {
-        is_disabled: checkbox.is_disabled,
+        is_disabled: Signal::derive(move || {
+            checkbox.is_disabled.get() || checkbox.is_read_only.get()
+        }),
         ..UseHoverInput::default()
     });
-
     let (label_attrs, label_styles) = checkbox.label_props.into_parts();
     let (input_attrs, input_styles) = checkbox.input_props.into_parts();
 

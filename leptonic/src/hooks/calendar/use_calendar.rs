@@ -10,7 +10,8 @@ use web_sys::FocusEvent;
 
 use super::{
     states::{
-        CalendarData, CalendarStates, selected_date_description, strings, visible_range_description,
+        CalendarData, CalendarFormatters, CalendarStates, selected_date_description, strings,
+        visible_range_description,
     },
     use_calendar_state::CalendarState,
     use_range_calendar_state::RangeCalendarState,
@@ -38,6 +39,8 @@ use crate::{
 // - The calendar's data for its grids and cells is returned (`data`; react-aria: a `WeakMap`
 //   keyed by the state).
 // - `commit_behavior` is an enum (react-aria: a string).
+// - One input with the state (C8): `UseCalendarInput`, `UseRangeCalendarInput` (react-aria:
+//   props, state and ref as arguments).
 //
 // ## OMITTED FEATURES
 // - Localized strings: "Next", "Previous" and the descriptions are English.
@@ -46,15 +49,39 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_calendar`] and [`use_range_calendar`].
-#[derive(Debug, Clone, Default)]
+/// Input of [`use_calendar`].
+#[derive(Clone)]
 pub struct UseCalendarInput {
+    pub state: CalendarState,
     /// The calendar's id. Generated when `None`.
     pub id: Option<String>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
     pub aria_details: Option<String>,
+}
+
+/// Input of [`use_range_calendar`].
+#[derive(Clone)]
+pub struct UseRangeCalendarInput {
+    pub state: RangeCalendarState,
+    /// What a press outside the dates or leaving the calendar does with a range being selected.
+    pub commit_behavior: CommitBehavior,
+    /// The calendar's id. Generated when `None`.
+    pub id: Option<String>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_details: Option<String>,
+}
+
+/// What `use_calendar_base` takes from either input.
+struct CalendarAria {
+    id: Option<String>,
+    aria_label: MaybeProp<String>,
+    aria_labelledby: Option<String>,
+    aria_describedby: Option<String>,
+    aria_details: Option<String>,
 }
 
 /// What a range calendar does with a range being selected when the user presses outside its
@@ -129,11 +156,11 @@ impl IntoAttrs for UseCalendarProps {
 
 /// Behavior and accessibility of a calendar (react-aria's `useCalendarBase`).
 fn use_calendar_base(
-    input: UseCalendarInput,
+    input: CalendarAria,
     state: &CalendarStates,
     element: CapturedElement,
 ) -> UseCalendarReturn {
-    let UseCalendarInput {
+    let CalendarAria {
         id,
         aria_label,
         aria_labelledby,
@@ -145,7 +172,7 @@ fn use_calendar_base(
     let locale = use_locale();
     let id = id.unwrap_or_else(|| use_id("calendar"));
 
-    let title = Signal::derive(move || {
+    let title = Memo::new(move |_| {
         visible_range_description(calendar.visible_range.get(), &locale.get())
     });
     // The visible range is announced when it changes by the previous or next button (not while
@@ -160,7 +187,7 @@ fn use_calendar_base(
         description
     });
     let selected_date_description =
-        Signal::derive(move || selected_date_description(&state, &locale.get()));
+        Memo::new(move |_| selected_date_description(&state, &locale.get()));
     Effect::new(move |previous: Option<String>| {
         let description = selected_date_description.get();
         if previous.is_some_and(|previous| previous != description) && !description.is_empty() {
@@ -179,7 +206,8 @@ fn use_calendar_base(
         aria_label,
         aria_labelledby: aria_labelledby.clone(),
         error_message_id: error.referenced_id,
-        selected_date_description,
+        selected_date_description: selected_date_description.into(),
+        formatters: CalendarFormatters::new(),
     };
 
     // Buttons disabled while focused hand the focus to the calendar's grid.
@@ -241,27 +269,60 @@ fn use_calendar_base(
             ..UseButtonInput::default()
         },
         error_message_props: error.props,
-        title,
+        title: title.into(),
         data,
     }
 }
 
 /// Behavior and accessibility of a calendar: its grouping element, the previous and next
 /// buttons, the title, announcements of the visible range and the selection.
-pub fn use_calendar(input: UseCalendarInput, state: CalendarState) -> UseCalendarReturn {
-    use_calendar_base(input, &state.into(), CapturedElement::new())
+pub fn use_calendar(input: UseCalendarInput) -> UseCalendarReturn {
+    let UseCalendarInput {
+        state,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
+    } = input;
+    use_calendar_base(
+        CalendarAria {
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            aria_details,
+        },
+        &state.into(),
+        CapturedElement::new(),
+    )
 }
 
 /// Behavior and accessibility of a range calendar: [`use_calendar`]'s, and finishing (per
 /// `commit_behavior`) a range being selected when a pointer is released outside its dates or
 /// the focus leaves the calendar.
-pub fn use_range_calendar(
-    input: UseCalendarInput,
-    state: RangeCalendarState,
-    commit_behavior: CommitBehavior,
-) -> UseCalendarReturn {
+pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseCalendarReturn {
+    let UseRangeCalendarInput {
+        state,
+        commit_behavior,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
+    } = input;
     let element = CapturedElement::new();
-    let mut calendar = use_calendar_base(input, &state.into(), element);
+    let mut calendar = use_calendar_base(
+        CalendarAria {
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            aria_details,
+        },
+        &state.into(),
+        element,
+    );
     let commit = move || match commit_behavior {
         CommitBehavior::Clear => state.clear_selection(),
         CommitBehavior::Reset => state.set_anchor_date(None),

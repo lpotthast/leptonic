@@ -45,19 +45,14 @@ impl FocusRingPage<'_> {
         Ok(())
     }
 
-    pub async fn read_is_focus_visible(&self) -> Result<bool, Report> {
-        let text = self.read_text_of("test-fr-is-focus-visible").await?;
-        Ok(text.trim() == "true")
-    }
-
-    pub async fn read_is_focused(&self) -> Result<bool, Report> {
-        let text = self.read_text_of("test-fr-is-focused").await?;
-        Ok(text.trim() == "true")
-    }
-
-    pub async fn read_data_focus_visible_attr(&self) -> Result<Option<String>, Report> {
+    /// Waits until the target's `data-focus-visible` is `expected` (`None`: absent).
+    pub async fn wait_for_target_focus_visible_attr(
+        &self,
+        expected: Option<&str>,
+    ) -> Result<(), Report> {
         let el = self.driver.find(By::Id("test-fr-target")).await?;
-        Ok(el.attr("data-focus-visible").await?)
+        self.wait_for_attr(&el, "data-focus-visible", expected)
+            .await
     }
 
     // ---- Within section ----
@@ -82,16 +77,6 @@ impl FocusRingPage<'_> {
         let active = self.driver.active_element().await?;
         active.send_keys(Key::Tab).await?;
         Ok(())
-    }
-
-    pub async fn read_within_is_focus_visible(&self) -> Result<bool, Report> {
-        let text = self.read_text_of("test-fr-within-is-focus-visible").await?;
-        Ok(text.trim() == "true")
-    }
-
-    pub async fn read_within_is_focused(&self) -> Result<bool, Report> {
-        let text = self.read_text_of("test-fr-within-is-focused").await?;
-        Ok(text.trim() == "true")
     }
 
     // ---- Disabled section ----

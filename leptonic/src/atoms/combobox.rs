@@ -13,10 +13,10 @@ use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        ComboBoxFilter, ComboBoxMenuTrigger, ComboBoxState, ComboBoxValue, IntoAttrs, Placement,
-        PopoverModality, SelectMode, UseButtonInput, UseComboBoxInput, UseComboBoxReturn,
-        UseComboBoxStateInput, UseHoverInput, UsePopoverInput, UsePopoverReturn,
-        UseTextFieldReturn, ValidateFn, ValidationBehavior,
+        ComboBoxFilter, ComboBoxFormValue, ComboBoxMenuTrigger, ComboBoxOpenChange, ComboBoxState,
+        ComboBoxValue, IntoAttrs, Placement, PopoverModality, SelectMode, UseButtonInput,
+        UseComboBoxInput, UseComboBoxReturn, UseComboBoxStateInput, UseHoverInput, UsePopoverInput,
+        UsePopoverReturn, UseTextFieldReturn, ValidateFn, ValidationBehavior,
         collections::{CollectionMemo, Key},
         use_button, use_combobox, use_combobox_state, use_hover, use_popover, use_text_field,
     },
@@ -51,6 +51,13 @@ struct Parts {
 /// [`ComboBoxPopover`] (containing a [`ListBox`](super::listbox::ListBox) with one
 /// `ListBoxItem` per option), a [`Description`](super::field::Description) and a
 /// [`FieldError`](super::field::FieldError).
+///
+/// With a `name`, the selected keys are submitted in hidden inputs rendered inside the combo box
+/// (`form_value`: [`ComboBoxFormValue::Key`]), or the input's text under that name
+/// ([`ComboBoxFormValue::Text`], always with `allows_custom_value`).
+///
+/// Data attributes: `data-open`, `data-focused`, `data-invalid`, `data-disabled`,
+/// `data-readonly`, `data-required`.
 ///
 /// Default class: `leptonic-ComboBox`.
 #[component]
@@ -95,15 +102,24 @@ pub fn ComboBox(
     #[prop(optional)] allows_custom_value: bool,
     #[prop(into, optional)] is_disabled: Signal<bool>,
     #[prop(into, optional)] is_read_only: Signal<bool>,
-    #[prop(optional)] is_required: bool,
+    #[prop(into, optional)] is_required: Signal<bool>,
+    /// Called when the popover opens (with what opened it) or closes.
+    #[prop(into, optional)]
+    on_open_change: Option<Callback<ComboBoxOpenChange>>,
     /// Labels the combo box when there is no [`Label`](super::field::Label).
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
-    #[prop(into, optional)] placeholder: Option<String>,
+    #[prop(into, optional)] placeholder: MaybeProp<String>,
     /// The form field name.
     #[prop(into, optional)]
     name: Option<String>,
+    /// What the form submits: the selected keys (default) or the input's text.
+    #[prop(optional)]
+    form_value: ComboBoxFormValue,
+    /// The id of the form the combo box belongs to, if it is outside of it.
+    #[prop(into, optional)]
+    form: Option<String>,
     #[prop(into, optional)] is_invalid: Signal<bool>,
     #[prop(optional)] validate: Option<ValidateFn<ComboBoxValue>>,
     /// Default: the surrounding [`Form`](super::form::Form)'s, else `Native`.
@@ -135,10 +151,10 @@ pub fn ComboBox(
         is_invalid,
         validate,
         validation_behavior,
-        name: name.clone(),
+        name,
         collection,
         should_close_on_blur: true,
-        on_open_change: None,
+        on_open_change,
     });
 
     let popover = CapturedElement::new();
@@ -150,16 +166,17 @@ pub fn ComboBox(
         input_props,
         button,
         listbox,
+        form_values,
         ..
     } = use_combobox(UseComboBoxInput {
         is_disabled,
-        is_read_only,
         is_required,
         has_label,
         aria_label,
         aria_labelledby,
         placeholder,
-        name,
+        form_value,
+        form: form.clone(),
         popover,
         state,
         id: None,
@@ -218,6 +235,8 @@ pub fn ComboBox(
         input: StoredValue::new(listbox),
     };
     let is_open = Signal::derive(move || state.is_open());
+    let is_focused = Signal::derive(move || state.is_focused());
+    let hidden_name = state.name();
 
     view! {
         <Provider value=ctx>
@@ -228,10 +247,30 @@ pub fn ComboBox(
                         class=classes
                         style=styles
                         data-open=flag(is_open)
+                        data-focused=flag(is_focused)
                         data-invalid=flag(state.validation.is_invalid)
                         data-disabled=flag(is_disabled)
+                        data-readonly=flag(is_read_only)
+                        data-required=flag(is_required)
                     >
                         {children()}
+                        // The selected keys for the form (react-aria-components' `ComboBox`).
+                        {move || {
+                            form_values
+                                .get()
+                                .into_iter()
+                                .map(|value| {
+                                    view! {
+                                        <input
+                                            type="hidden"
+                                            name=hidden_name.clone()
+                                            form=form.clone()
+                                            value=value
+                                        />
+                                    }
+                                })
+                                .collect_view()
+                        }}
                     </div>
                     </Provider>
                 </Provider></Provider>

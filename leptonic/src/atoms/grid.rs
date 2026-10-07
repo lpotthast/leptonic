@@ -75,7 +75,7 @@ pub fn Grid(
         collection,
         selection: SelectionOptions {
             selection_mode,
-            selection_behavior,
+            selection_behavior: Signal::stored(selection_behavior),
             default_selection: Selection::keys(default_selected_keys),
             selection,
             on_selection_change,
@@ -105,14 +105,24 @@ pub fn Grid(
         should_select_on_press_up: false,
     });
 
+    // One keyboard-modality signal for all rows.
+    let focus_visible = GridFocusVisible(
+        use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible,
+    );
     view! {
         <Provider value=data>
-            <div {..props.into_attrs()} class=classes style=styles>
-                {children()}
-            </div>
+            <Provider value=focus_visible>
+                <div {..props.into_attrs()} class=classes style=styles>
+                    {children()}
+                </div>
+            </Provider>
         </Provider>
     }
 }
+
+/// Whether focus rings should be visible (keyboard modality), for the [`GridRow`]s of a [`Grid`].
+#[derive(Debug, Clone, Copy)]
+struct GridFocusVisible(Signal<bool>);
 
 /// A group of rows of a [`Grid`] (`role="rowgroup"`).
 ///
@@ -164,7 +174,7 @@ pub fn GridRow(
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
     // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
-    let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
+    let focus_visible = expect_context::<GridFocusVisible>().0;
     let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
 
     view! {
@@ -197,6 +207,10 @@ pub fn GridCell(
     /// `KeyboardNavigationBehavior::Tab` and the child otherwise.
     #[prop(optional)]
     focus_mode: Option<CellFocusMode>,
+    /// Let ArrowLeft/ArrowRight move between the cell's children (and ArrowUp/ArrowDown between
+    /// rows) even with `KeyboardNavigationBehavior::Tab`.
+    #[prop(optional)]
+    allows_arrow_navigation: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -208,11 +222,11 @@ pub fn GridCell(
         is_pressed,
     } = use_grid_cell(UseGridCellInput {
         focus_mode,
+        should_select_on_press_up: grid.should_select_on_press_up,
         grid,
         key,
         id: None,
-        allows_arrow_navigation: false,
-        should_select_on_press_up: false,
+        allows_arrow_navigation,
     });
 
     let (attrs, cell_styles) = grid_cell_props.into_parts();
@@ -230,7 +244,7 @@ pub fn GridCell(
             {..focus_ring.into_attrs()}
             class=classes
             style=styles
-            data-pressed=move || is_pressed.get().then_some("true")
+            data-pressed=flag(is_pressed)
             data-focused=flag(is_focused)
             data-focus-visible=flag(is_focus_visible)
         >

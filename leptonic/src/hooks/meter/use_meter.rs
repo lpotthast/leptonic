@@ -138,7 +138,13 @@ mod tests {
                 .is_equal_to(Some("3".to_owned()));
             assert_that!(meter.props.aria_valuetext.get_untracked())
                 .is_equal_to(Some("50%".to_owned()));
-            assert_that!(meter.percentage.get_untracked()).is_equal_to(Some(50.0));
+            assert_that!(
+                meter
+                    .percentage
+                    .get_untracked()
+                    .map(crate::utils::fraction::Fraction::as_percent)
+            )
+            .is_equal_to(Some(50.0));
         });
     }
 }

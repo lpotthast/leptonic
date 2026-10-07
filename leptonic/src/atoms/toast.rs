@@ -91,14 +91,12 @@ where
     let render = move || {
         let (aria_label, aria_labelledby, classes, styles) = props.get_value();
         let element = CapturedElement::new();
-        let UseToastRegionReturn { region_props } = use_toast_region(
-            UseToastRegionInput {
-                aria_label,
-                aria_labelledby,
-            },
+        let UseToastRegionReturn { region_props } = use_toast_region(UseToastRegionInput {
             queue,
             element,
-        );
+            aria_label,
+            aria_labelledby,
+        });
         let UseFocusRingReturn {
             props: focus_ring,
             is_focused,
@@ -168,15 +166,13 @@ pub fn Toast<T: Clone + Send + Sync + 'static>(
         title_id,
         description_props,
         close_button,
-    } = use_toast(
-        UseToastInput {
-            aria_label,
-            toast,
-            aria_labelledby: None,
-            aria_describedby: None,
-        },
-        region.queue,
-    );
+    } = use_toast(UseToastInput {
+        queue: region.queue,
+        aria_label,
+        toast,
+        aria_labelledby: None,
+        aria_describedby: None,
+    });
     let UseFocusRingReturn {
         props: focus_ring,
         is_focused,

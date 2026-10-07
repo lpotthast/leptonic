@@ -13,8 +13,7 @@ pub fn PageUseTag() -> impl IntoView {
                 "users navigate with the arrow keys and can select and remove. "<Code inline=true>"use_tag_group"</Code>
                 " and "<Code inline=true>"use_tag"</Code>" build one from a list state; you render the tags and their "
                 "remove buttons. A tag group is a horizontal "<Link href=routes::doc::GridList.materialize()>"grid list"</Link>
-                ". For a single label that only shows a status or an attribute, use a "
-                <Link href=routes::doc::Chip.materialize()>"Chip"</Link>"."
+". See the "<Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link>" for concept guidance."
             </p>
 
             <ReactAria hook="useTagGroup"/>
@@ -154,7 +153,8 @@ pub fn PageUseTag() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Collections.materialize()>"Collections"</Link></li>
                 <li><Link href=routes::doc::grid_list::Hook.materialize()>"Grid List Hooks"</Link></li>
-                <li><Link href=routes::doc::Chip.materialize()>"Chip"</Link></li>
+                <li><Link href=routes::doc::TagGroup.materialize()>"Tag Group overview"</Link></li>
+                <li><Link href=routes::doc::tag_group::Atom.materialize()>"Tag Group Atoms"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>

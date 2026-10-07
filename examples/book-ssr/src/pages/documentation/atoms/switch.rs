@@ -112,21 +112,43 @@ pub fn PageAtomSwitch() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Move the thumb and color the track from "<Code inline=true>"data-selected"</Code>". The input is visually "
-                    "hidden but focusable, so draw the focus ring around the track with "<Code inline=true>"data-focus-visible"</Code>":"
+                    "The atom brings no styles. It renders a "<Code inline=true>"<label>"</Code>" (default class "
+                    <Code inline=true>"leptonic-Switch"</Code>") around a visually hidden "<Code inline=true>"<input>"</Code>
+                    ", followed by your children: draw the track and its thumb as the first child, hidden from assistive "
+                    "technology, and put the label text after it:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <Switch is_selected=wifi set_selected=wifi classes="demo-switch">
+                            <span class="demo-switch-track" aria-hidden="true"><span class="demo-switch-thumb"></span></span>
+                            "Wi-Fi"
+                        </Switch>
+                    "#)}
+                </Code>
+                <p>
+                    "Move the thumb and color the track from "<Code inline=true>"data-selected"</Code>". The input has the "
+                    "focus but is invisible, so draw the focus ring around the track with "
+                    <Code inline=true>"data-focus-visible"</Code>". The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-switch { display: inline-flex; align-items: center; gap: 0.5em; cursor: pointer; }
-                        .my-switch-track { width: 44px; height: 24px; padding: 2px; box-sizing: border-box; border-radius: 12px; background: var(--muted); }
-                        .my-switch-thumb { display: block; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); transition: transform 0.15s; }
-                        .my-switch[data-selected] .my-switch-track { background: var(--accent); }
-                        .my-switch[data-selected] .my-switch-thumb { transform: translateX(20px); }
-                        .my-switch[data-focus-visible] .my-switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-switch[data-disabled] { opacity: 0.5; cursor: not-allowed; }
-                        @media (prefers-reduced-motion: reduce) { .my-switch-thumb { transition: none; } }
+                        .demo-switch { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+                        .demo-switch[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+
+                        .demo-switch-track { display: inline-block; width: 44px; height: 24px; padding: 2px; box-sizing: border-box; border-radius: 12px; background: var(--muted); }
+                        .demo-switch[data-selected] .demo-switch-track { background: var(--accent); }
+                        .demo-switch[data-focus-visible] .demo-switch-track { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+                        .demo-switch-thumb { display: block; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); transition: transform 0.15s; }
+                        .demo-switch[data-selected] .demo-switch-thumb { transform: translateX(20px); }
+
+                        @media (prefers-reduced-motion: reduce) { .demo-switch-thumb { transition: none; } }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <SeeAlso>

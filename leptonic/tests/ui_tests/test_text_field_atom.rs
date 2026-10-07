@@ -38,6 +38,7 @@ impl BrowserTest<str> for TextFieldAtomTests {
         id_goes_on_the_input(&page).await?;
         form_attribute(&page).await?;
         server_validation_errors(&page).await?;
+        bound_values_keep_the_dom_in_sync(&page).await?;
         form_validation_behavior(&page).await?;
 
         Ok(())
@@ -284,6 +285,34 @@ async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_no_selector("#form-server [aria-describedby]")
         .await?;
     assert_that!(is_valid(page, &input).await?).is_true();
+
+    // The server answers with the same errors again: they show again (react-aria resets on
+    // every new errors object).
+    page.click_element_with_id("form-server-submit").await?;
+    wait_for_referenced_texts(page, &input, "aria-describedby", "Invalid name.").await?;
+    assert_that!(is_valid(page, &input).await?).is_false();
+    Ok(())
+}
+
+/// No upstream test (React keeps a controlled input's DOM value in sync by itself): text a bound
+/// value rejects or changes shows as the value holds it.
+async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report> {
+    let fixed = page.css("#tf-rejecting input").await?;
+    fixed.focus().await?;
+    page.send_keys_to_active("x").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_that!(fixed.prop("value").await?).is_equal_to(Some("fixed".to_owned()));
+
+    let upper = page.css("#tf-uppercase input").await?;
+    upper.focus().await?;
+    page.send_keys_to_active("ab").await?;
+    for _ in 0..50 {
+        if upper.prop("value").await?.as_deref() == Some("AB") {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_that!(upper.prop("value").await?).is_equal_to(Some("AB".to_owned()));
     Ok(())
 }
 

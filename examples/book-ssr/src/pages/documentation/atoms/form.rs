@@ -132,8 +132,20 @@ pub fn PageAtomForm() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The form renders no data attributes. Give it classes, and style its fields through their own "
-                    "attributes (see "<Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>")."
+                    "The atom brings no styles and renders no data attributes. Its "<Code inline=true>"<form>"</Code>" has the "
+                    "default class "<Code inline=true>"leptonic-Form"</Code>"; its content is your fields and buttons. Lay "
+                    "them out with your classes, and style the fields through their own attributes (see "
+                    <Link href=format!("{}#styling", routes::doc::field::Atom.materialize())>"Field Atoms"</Link>
+                    "). The demo above stacks them:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .demo-form { display: flex; flex-direction: column; gap: 1rem; max-width: 24em; }
+                    ")}
+                </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
                 </p>
             </Section>
 

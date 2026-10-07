@@ -1,6 +1,5 @@
 use leptonic::{
     atoms::prelude::*,
-    components::prelude::Checkbox,
     hooks::{HoverEndEvent, HoverStartEvent},
 };
 use leptos::prelude::*;
@@ -25,7 +24,10 @@ pub fn HoverableDemo() -> impl IntoView {
         </Hoverable>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p class="demo-status">

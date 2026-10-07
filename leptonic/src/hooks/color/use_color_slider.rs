@@ -48,7 +48,9 @@ pub struct UseColorSliderInput<C: ColorValue> {
 /// Return value of [`use_color_slider`].
 #[derive(Debug)]
 pub struct UseColorSliderReturn {
-    /// The slider: label, output and track (whose styles are `track_styles`).
+    /// The slider: label, output and track (whose styles are `track_styles`). Its
+    /// `group_props` go on the track (react-aria merges them into the track props): the track is
+    /// the slider's group.
     pub slider: UseSliderReturn,
     /// The thumb and its input (with the color's value text).
     pub thumb: UseSliderThumbReturn,
@@ -76,7 +78,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
     let has_other_label = aria_labelledby.is_some();
     let aria_label = MaybeProp::derive(move || {
         aria_label.get().or_else(|| {
-            (!has_label.get() && !has_other_label).then(|| C::get_channel_name(channel).to_owned())
+            (!has_label.get() && !has_other_label).then(|| C::channel_name(channel).to_owned())
         })
     });
 
@@ -87,6 +89,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_describedby,
         state: state.slider,
         id: None,
+        aria_details: None,
     });
     let mut thumb = use_slider_thumb(UseSliderThumbInput {
         is_disabled: state.slider.is_disabled,
@@ -102,13 +105,16 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_errormessage: None,
+        aria_details: None,
     });
     let value = state.value;
+    let formatted = state.formatted_value();
     thumb.input_props.aria_valuetext = Signal::derive(move || {
         // The hue names a hue slider, the color the other channels, nothing an alpha slider
         // (react-aria).
         let color = value.get();
-        let text = color.format_channel_value(channel);
+        let text = formatted.get();
         if C::is_alpha_channel(channel) {
             text
         } else if C::hue_channel() == Some(channel) {
@@ -123,7 +129,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
     let direction = use_direction();
     let background = move || {
         let color = display_color.get();
-        let range = C::get_channel_range(channel);
+        let range = C::channel_range(channel);
         let stops: Vec<String> = match range.gradient_stops {
             Some(stops) => stops
                 .iter()

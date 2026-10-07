@@ -1,6 +1,17 @@
 use std::time::Duration;
 
-use leptonic::{components::prelude::*, hooks::*, utils::data_attributes::flag};
+use leptonic::{
+    atoms::{
+        checkbox::Checkbox,
+        field::Label,
+        input::Input,
+        number_field::{
+            NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
+        },
+    },
+    hooks::*,
+    utils::data_attributes::flag,
+};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
@@ -66,14 +77,29 @@ pub fn PressLongDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=lp_disabled set_selected=set_lp_disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=lp_disabled set_selected=set_lp_disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
             <NumberField
-                label="Threshold (ms)"
-                value=threshold_ms set_value=threshold_ms
+                value=threshold_ms
+                set_value=threshold_ms
                 min_value=100_u64
                 max_value=2000_u64
                 step=100_u64
-            />
+                classes="demo-field"
+            >
+                <Label classes="demo-field-label">"Threshold (ms)"</Label>
+                <NumberFieldGroup classes="demo-number-field-group">
+                    <NumberFieldDecrementButton classes="demo-number-field-stepper">
+                        <span aria-hidden="true">"\u{2212}"</span>
+                    </NumberFieldDecrementButton>
+                    <Input classes="demo-number-field-input"/>
+                    <NumberFieldIncrementButton classes="demo-number-field-stepper">
+                        <span aria-hidden="true">"+"</span>
+                    </NumberFieldIncrementButton>
+                </NumberFieldGroup>
+            </NumberField>
         </div>
 
         <p>"Last " {move || lp_events.with(Observer::occupied_len)} " events:"</p>

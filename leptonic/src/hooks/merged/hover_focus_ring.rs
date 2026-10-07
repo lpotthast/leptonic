@@ -1,3 +1,5 @@
+// No upstream: merged `use_hover` + `use_focus_ring` props on one element
+// (react-aria: `mergeProps`).
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
     ev,

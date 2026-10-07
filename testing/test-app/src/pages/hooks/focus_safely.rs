@@ -2,7 +2,7 @@ use leptonic::{
     hooks::{UseFocusVisibleInput, get_modality, use_focus_visible},
     utils::focus::focus_safely,
 };
-use leptos::{html, prelude::*};
+use leptos::{html, prelude::*, svg};
 
 /// `focus_safely` (react-aria's `focusSafely.test.js`): with virtual modality (a click without a
 /// pointer, e.g. by a screen reader or a script), focusing waits for transitions; an element
@@ -13,6 +13,8 @@ pub fn PageHookFocusSafely() -> impl IntoView {
     // Tracks the interaction modality.
     let _ = use_focus_visible(UseFocusVisibleInput::default());
     let target = NodeRef::<html::Button>::new();
+    // SVG elements take focus too.
+    let svg_target = NodeRef::<svg::Svg>::new();
     let shown = RwSignal::new(true);
     let modality = RwSignal::new(String::new());
     let focus = move |remove: bool| {
@@ -40,6 +42,19 @@ pub fn PageHookFocusSafely() -> impl IntoView {
             </button>
             <button id="test-focus-safely-remove" on:click=focus(true)>
                 "Focus and remove the target"
+            </button>
+            <svg id="test-focus-safely-svg" tabindex="0" width="24" height="24" node_ref=svg_target>
+                <circle cx="12" cy="12" r="10" />
+            </svg>
+            <button
+                id="test-focus-safely-focus-svg"
+                on:click=move |_| {
+                    if let Some(svg_target) = svg_target.get_untracked() {
+                        focus_safely(&svg_target);
+                    }
+                }
+            >
+                "Focus the SVG"
             </button>
             <div>
                 "Modality: " <span id="test-focus-safely-modality">{move || modality.get()}</span>

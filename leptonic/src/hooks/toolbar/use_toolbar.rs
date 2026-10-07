@@ -40,7 +40,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct UseToolbarInput {
     /// The axis of the arrow keys (react-aria's default: horizontal).
-    pub orientation: Orientation,
+    pub orientation: Signal<Orientation>,
     pub aria_label: MaybeProp<String>,
     /// Ignored when `aria_label` is set.
     pub aria_labelledby: Option<String>,
@@ -49,7 +49,7 @@ pub struct UseToolbarInput {
 impl Default for UseToolbarInput {
     fn default() -> Self {
         Self {
-            orientation: Orientation::Horizontal,
+            orientation: Signal::stored(Orientation::Horizontal),
             aria_label: MaybeProp::default(),
             aria_labelledby: None,
         }
@@ -68,7 +68,7 @@ pub struct UseToolbarReturn {
 pub struct UseToolbarProps {
     /// `toolbar`, or `group` inside another toolbar.
     pub role: Signal<AriaRole>,
-    pub aria_orientation: AriaOrientation,
+    pub aria_orientation: Signal<AriaOrientation>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub element_capture: ElementCaptureAttr,
@@ -79,7 +79,7 @@ pub struct UseToolbarProps {
 
 pub type UseToolbarAttrs = (
     Attr<attr::Role, Signal<AriaRole>>,
-    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     ElementCaptureAttr,
@@ -145,6 +145,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         {
             return;
         }
+        let orientation = orientation.get_untracked();
         let reverse = direction.get_untracked() == WritingDirection::Rtl
             && orientation == Orientation::Horizontal;
         let (next_key, previous_key) = match orientation {
@@ -242,7 +243,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
                     AriaRole::Toolbar
                 }
             }),
-            aria_orientation: orientation.into(),
+            aria_orientation: Signal::derive(move || orientation.get().into()),
             aria_label,
             // Only without `aria_label` (react-aria), also when the label changes.
             aria_labelledby: Signal::derive(move || {

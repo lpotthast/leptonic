@@ -52,8 +52,8 @@ pub fn PageFields() -> impl IntoView {
                         "by typing and stepping, the other by dragging."
                     </li>
                     <li>
-                        "The "<Link href=routes::doc::RichTextEditor.materialize()>"Rich Text Editor"</Link>
-                        " is not built on the field frame: it has no label, description or validation of its own."
+                        "For rich text, use the "<Link href=format!("{}#rich-content", routes::doc::Layout.materialize())>"leptos-tiptap"</Link>
+                        " crate; it is not built on the field frame and needs a label of your own."
                     </li>
                 </ul>
             </Section>

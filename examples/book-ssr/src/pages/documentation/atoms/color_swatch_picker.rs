@@ -164,16 +164,25 @@ pub fn PageAtomColorSwatchPicker() -> impl IntoView {
             </Section>
 
             <Section title="Styling">
-                <p>"Lay the items out as a wrapping row, and mark the picked one and the focused one:"</p>
+                <p>
+                    "The atoms bring no styles. "<Code inline=true>"ColorSwatchPicker"</Code>" renders a listbox "<Code inline=true>"<div>"</Code>" with the class "
+                    <Code inline=true>"leptonic-ColorSwatchPicker"</Code>", each item an option "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"leptonic-ColorSwatchPickerItem"</Code>", "
+                    "followed by the "<Code inline=true>"classes"</Code>" you pass; the "<Code inline=true>"ColorSwatch"</Code>" inside an item is yours to size. Lay the items "
+                    "out as a wrapping row, and mark the picked one and the focused one. The demo above uses this CSS:"
+                </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-picker { display: flex; flex-wrap: wrap; gap: 4px; }
-                        .my-item { padding: 2px; border-radius: 50%; }
-                        .my-item[data-selected] { box-shadow: 0 0 0 2px var(--accent); }
-                        .my-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-swatch { width: 2em; height: 2em; border-radius: 50%; }
+                        .demo-color-swatch-picker { display: flex; flex-wrap: wrap; gap: 0.25rem; max-width: 16em; }
+                        .demo-color-swatch-picker-item { display: flex; padding: 3px; border-radius: 50%; cursor: pointer; }
+                        .demo-color-swatch-picker-item[data-selected] { box-shadow: 0 0 0 2px var(--accent); }
+                        .demo-color-swatch-picker-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-color-swatch-picker-swatch { width: 2em; height: 2em; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--border); }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Accessibility">

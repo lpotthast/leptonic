@@ -141,9 +141,7 @@ pub fn PageUseClipboard() -> impl IntoView {
                     </li>
                     <li>
                         <Code inline=true>"use_clipboard"</Code>" is part of the hooks and needs no feature. The "
-                        <Code inline=true>"clipboard"</Code>" feature adds "<AnchorLink href="#write-text">"write_text"</AnchorLink>
-                        " and the copy button of the "
-                        <Link href=routes::doc::Typography.materialize()><Code inline=true>"Code"</Code></Link>" component."
+                        <Code inline=true>"clipboard"</Code>" feature adds "<AnchorLink href="#write-text">"write_text"</AnchorLink>"."
                     </li>
                 </ul>
             </Section>

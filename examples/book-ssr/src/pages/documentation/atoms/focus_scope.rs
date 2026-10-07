@@ -94,8 +94,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            atoms::focus_scope::FocusScopeContext,
-                            components::prelude::Button,
+                            atoms::{button::Button, focus_scope::FocusScopeContext},
                             hooks::FocusManagerOptions,
                         };
                         use leptos::prelude::*;

@@ -57,16 +57,13 @@ pub fn PageUseLandmark() -> impl IntoView {
                         use leptonic::{hooks::*, utils::CapturedElement};
 
                         let element = CapturedElement::new();
-                        let UseLandmarkReturn { props } = use_landmark(
-                            UseLandmarkInput {
-                                role: LandmarkRole::Region,
-                                aria_label: "Filters".into(),
-                                aria_labelledby: None,
-                                focus: None,
-                            },
-
+                        let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
                             element,
-                        );
+                            role: LandmarkRole::Region,
+                            aria_label: "Filters".into(),
+                            aria_labelledby: None,
+                            focus: None,
+                        });
 
                         view! {
                             <div {..props.into_attrs()} {..element.attr()}>

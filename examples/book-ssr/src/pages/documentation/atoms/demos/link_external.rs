@@ -1,10 +1,9 @@
 use leptonic::{
     atoms::prelude::{Link, LinkRel},
-    components::prelude::Icon,
     hooks::LinkTarget,
-    prelude::icondata,
 };
 use leptos::prelude::*;
+use leptos_icons::Icon;
 
 #[component]
 pub fn LinkExternalAtomDemo() -> impl IntoView {
@@ -18,8 +17,8 @@ pub fn LinkExternalAtomDemo() -> impl IntoView {
             classes="demo-link-atom"
         >
             "Leptonic on GitHub"
-            // Decorative: the icon has no label, so assistive technology skips it.
-            <Icon icon=icondata::BsBoxArrowUpRight classes="demo-link-icon"/>
+            // Decorative: hidden from assistive technology.
+            <span class="demo-link-icon" aria-hidden="true"><Icon icon=icondata::BsBoxArrowUpRight/></span>
         </Link>
         <p class="demo-caption">"Opens in a new tab."</p>
     }

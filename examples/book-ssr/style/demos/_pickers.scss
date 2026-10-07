@@ -75,9 +75,8 @@
 }
 
 
-// The atom demo's input and button, styled through the data attributes of the `Input` atom and the
-// `ComboBoxButton` (`data-open`, `data-pressed`) and the `ComboBox` (`data-disabled`). The button renders no
-// hover attribute, so `:hover` stands in.
+// The atom demos' input and button, styled through the data attributes of the `Input` atom and the
+// `ComboBoxButton` (`data-hovered`, `data-pressed`, `data-open`, `data-disabled`).
 .demo-combo-atom-input {
     flex: 1;
     min-width: 0;
@@ -104,11 +103,10 @@
     font-size: var(--book-font-size-xs);
     cursor: pointer;
 
-    &:hover { color: var(--book-brand-text-color); }
+    &[data-hovered] { color: var(--book-brand-text-color); }
     &[data-pressed] { background: var(--book-hover-background-color); }
     &[data-open] span { display: inline-block; transform: rotate(180deg); }
-
-    .demo-combo[data-disabled] & { cursor: not-allowed; opacity: 0.5; }
+    &[data-disabled] { cursor: not-allowed; opacity: 0.5; }
 }
 
 // The popover's frame. The atom positions it; the hook demo places it below the field with `demo-combo-below`.
@@ -380,7 +378,7 @@
         background: var(--brand-color-subtle);
     }
 
-    // Replaces the theme's generic focus ring, which would be clipped by the popover.
+    // Inside the option: the popover would clip a ring outside it.
     &[data-focus-visible] {
         outline: 2px solid var(--book-focus-color);
         outline-offset: -2px;

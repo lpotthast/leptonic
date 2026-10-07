@@ -112,18 +112,29 @@ pub fn PageAtomBreadcrumbs() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "Draw the separators with CSS, hidden from assistive technology by an empty alternative text. Style the "
-                    "current item after the disabled ones, as it is disabled as well:"
+                    "The atoms bring no styles. "<Code inline=true>"Breadcrumbs"</Code>" renders the class "
+                    <Code inline=true>"leptonic-Breadcrumbs"</Code>" on its list, "<Code inline=true>"Breadcrumb"</Code>" the "
+                    "class "<Code inline=true>"leptonic-Breadcrumb"</Code>" on each item, each followed by the "
+                    <Code inline=true>"classes"</Code>" you pass; the "<Code inline=true>"Link"</Code>" inside an item has "
+                    "its own class. Draw the separators with CSS, hidden from assistive technology by an empty alternative "
+                    "text. Style the current item after the disabled ones, as it is disabled as well. The book\u{2019}s "
+                    "demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-breadcrumbs { display: flex; gap: 0.5em; list-style: none; padding: 0; }
-                        .my-breadcrumb:not(:last-child)::after { content: "/" / ""; margin-left: 0.5em; }
-                        .my-breadcrumb-link[data-disabled] { color: var(--muted); }
-                        .my-breadcrumb[data-current] .my-breadcrumb-link { color: inherit; font-weight: 600; }
-                        .my-breadcrumb-link[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .my-breadcrumbs { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0; padding: 0; list-style: none; }
+                        .my-breadcrumb:not(:last-child)::after { content: "/" / ""; margin-left: 0.5em; color: var(--muted); }
+                        .my-breadcrumb-link { color: var(--accent); text-decoration: none; }
+                        .my-breadcrumb-link[data-hovered] { text-decoration: underline; }
+                        .my-breadcrumb-link[data-disabled] { color: var(--muted); cursor: not-allowed; }
+                        .my-breadcrumb[data-current] .my-breadcrumb-link { color: inherit; font-weight: 600; cursor: default; }
+                        .my-breadcrumb-link[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>

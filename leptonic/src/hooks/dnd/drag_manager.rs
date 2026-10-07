@@ -1,7 +1,7 @@
 // Upstream: react-aria/src/dnd/DragManager.ts @ 99e6102368
 //! Keyboard and screen reader drag and drop: a drag session lets the user move between drop
 //! targets (Tab, or a collection's own keys), drop (Enter) or cancel (Escape), while the rest of
-//! the page is inert.
+//! the page is inert (`inert`, not only `aria-hidden`, as react-aria's `shouldUseInert`).
 
 use std::{
     cell::{Cell, RefCell},
@@ -22,7 +22,7 @@ use super::{
 };
 use crate::utils::{
     CapturedElement, EventAccessors,
-    aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside},
+    aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside},
     event_listeners::{Listener, listen},
     key::{KeyboardEventKey, KeyboardKey},
     live_announcer::{Assertiveness, announce},
@@ -118,16 +118,22 @@ pub(crate) fn register_drop_target(target: DropTargetOptions) -> u64 {
         targets.retain(|(_, existing)| existing.element != target.element);
         targets.push((id, Rc::new(target)));
     });
-    if let Some(session) = session() {
-        session.update_valid_drop_targets();
-    }
+    update_session_drop_targets();
     id
 }
 
 pub(crate) fn unregister_drop_target(id: u64) {
     DROP_TARGETS.with(|t| t.borrow_mut().retain(|(i, _)| *i != id));
+    update_session_drop_targets();
+}
+
+/// A drop target came or went during a drag: re-validate the session's targets. Hooks
+/// (un)register in Effects, and this runs the targets' `get_drop_operation` and enter/exit
+/// callbacks, which must not subscribe the registering Effect to the signals they read (it would
+/// re-register, and lose the current drop target, whenever they change).
+fn update_session_drop_targets() {
     if let Some(session) = session() {
-        session.update_valid_drop_targets();
+        untrack(|| session.update_valid_drop_targets());
     }
 }
 
@@ -621,7 +627,14 @@ impl DragSession {
             keep.extend(target.element.clone());
             keep.extend(button(target.activate_button));
         }
-        let restore = aria_hide_outside(&keep, AriaHideOutsideOptions::default());
+        // `inert`: what can't take the drop is neither announced nor focusable or clickable.
+        let restore = aria_hide_outside(
+            &keep,
+            AriaHideOutsideOptions {
+                mode: HideMode::Inert,
+                ..AriaHideOutsideOptions::default()
+            },
+        );
         self.state.borrow_mut().restore_aria_hidden = Some(restore);
 
         if let Some(body) = use_document().as_ref().and_then(web_sys::Document::body) {

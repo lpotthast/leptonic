@@ -1,4 +1,7 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, checkbox::Checkbox},
+    hooks::*,
+};
 use leptos::{prelude::*, web_sys};
 use send_wrapper::SendWrapper;
 
@@ -39,10 +42,10 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
 
     view! {
         <div class="demo-controls demo-mb-1">
-            <Button on_press=move |_| report(first.focus_first(options()))>"Focus first"</Button>
-            <Button on_press=move |_| report(previous.focus_previous(options()))>"Focus previous"</Button>
-            <Button on_press=move |_| report(next.focus_next(options()))>"Focus next"</Button>
-            <Button on_press=move |_| report(last.focus_last(options()))>"Focus last"</Button>
+            <Button on_press=move |_| report(first.focus_first(options())) classes="demo-btn">"Focus first"</Button>
+            <Button on_press=move |_| report(previous.focus_previous(options())) classes="demo-btn">"Focus previous"</Button>
+            <Button on_press=move |_| report(next.focus_next(options())) classes="demo-btn">"Focus next"</Button>
+            <Button on_press=move |_| report(last.focus_last(options())) classes="demo-btn">"Focus last"</Button>
         </div>
 
         <div
@@ -59,8 +62,14 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
         <p class="demo-status">{move || status.get()}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=wrap set_selected=wrap>"Wrap around"</Checkbox>
-            <Checkbox is_selected=tabbable_only set_selected=tabbable_only>"Tabbable only"</Checkbox>
+            <Checkbox is_selected=wrap set_selected=wrap classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Wrap around"
+            </Checkbox>
+            <Checkbox is_selected=tabbable_only set_selected=tabbable_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Tabbable only"
+            </Checkbox>
         </div>
     }
 }

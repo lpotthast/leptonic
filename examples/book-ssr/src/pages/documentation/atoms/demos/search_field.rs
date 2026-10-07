@@ -1,10 +1,8 @@
-use leptonic::{
-    atoms::{
-        field::Label,
-        input::Input,
-        search_field::{SearchField, SearchFieldClearButton},
-    },
-    components::prelude::Checkbox,
+use leptonic::atoms::{
+    checkbox::Checkbox,
+    field::Label,
+    input::Input,
+    search_field::{SearchField, SearchFieldClearButton},
 };
 use leptos::prelude::*;
 
@@ -49,7 +47,10 @@ pub fn SearchFieldAtomDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

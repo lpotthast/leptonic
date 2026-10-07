@@ -72,7 +72,8 @@
   padding-inline-end: 3em;
 }
 
-// The live components below the hero: one quiet panel, two columns of fields (one on small screens).
+// The live atoms below the hero: one quiet panel, two columns of fields (one on small screens). Every rule styles an
+// atom through its data attributes; the switch's track and the icons are the page's own markup.
 .book-welcome-showcase {
   width: 100%;
   max-width: 44rem;
@@ -95,17 +96,315 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--book-space-l);
-  align-items: center;
+  align-items: end;
 
   @media (width <= $small) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.book-welcome-showcase-volume {
+// A label above its control.
+.book-welcome-field {
   display: flex;
   flex-direction: column;
   gap: var(--book-space-xs);
+  min-width: 0;
+}
+
+.book-welcome-label {
+  color: var(--book-muted-color);
+  font-size: var(--book-font-size-s);
+}
+
+// The text input and the date picker's group share the look of a field.
+.book-welcome-input,
+.book-welcome-date {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.75em;
+  border: 1px solid var(--book-border-color);
+  border-radius: var(--book-radius-s);
+  background-color: var(--book-surface-color);
+  color: var(--main-color);
+  font: inherit;
+  transition: border-color var(--book-transition);
+
+  &[data-hovered] {
+    border-color: var(--book-muted-color);
+  }
+}
+
+.book-welcome-input {
+  padding: var(--book-space-s) var(--book-space-m);
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 1px;
+  }
+}
+
+.book-welcome-date {
+  display: flex;
+  align-items: center;
+  padding: 0 0 0 var(--book-space-m);
+
+  &[data-focus-within] {
+    border-color: var(--book-focus-color);
+  }
+}
+
+.book-welcome-date-segments {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+// A segment has the focus while it is edited, so its background marks the focus.
+.book-welcome-date-segment {
+  padding: 0 0.1em;
+  border-radius: var(--book-radius-s);
+  outline: none;
+
+  &[data-placeholder],
+  &[data-type="literal"] {
+    color: var(--book-muted-color);
+  }
+
+  &[data-focused] {
+    background-color: var(--brand-color);
+    color: var(--book-on-brand-color);
+  }
+}
+
+.book-welcome-date-button {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  padding: 0 var(--book-space-s);
+  border: none;
+  border-inline-start: 1px solid var(--book-border-color);
+  border-radius: 0 var(--book-radius-s) var(--book-radius-s) 0;
+  background: none;
+  color: var(--main-color);
+  cursor: pointer;
+
+  &[data-hovered] {
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: -2px;
+  }
+}
+
+// The calendar's popover. The atom positions it and puts it above the page.
+.book-welcome-popover {
+  padding: var(--book-space-m);
+  border: 1px solid var(--book-border-color);
+  border-radius: var(--book-radius-m);
+  background-color: var(--book-surface-color);
+  color: var(--main-color);
+  box-shadow: var(--book-shadow);
+}
+
+.book-welcome-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--book-space-s);
+}
+
+.book-welcome-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.book-welcome-calendar-title {
+  margin: 0;
+  font-size: var(--book-font-size-m);
+  font-weight: 600;
+}
+
+.book-welcome-calendar-nav {
+  display: inline-flex;
+  padding: var(--book-space-s);
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--main-color);
+  cursor: pointer;
+
+  &[data-hovered] {
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+  }
+}
+
+.book-welcome-calendar-grid {
+  margin: 0;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: center;
+  }
+
+  th {
+    padding-bottom: var(--book-space-xs);
+    color: var(--book-muted-color);
+    font-size: var(--book-font-size-s);
+    font-weight: 400;
+  }
+}
+
+.book-welcome-calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25em;
+  height: 2.25em;
+  border-radius: 50%;
+  cursor: pointer;
+  user-select: none;
+
+  &[data-hovered] {
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-today] {
+    font-weight: 700;
+  }
+
+  &[data-outside-month],
+  &[data-disabled] {
+    color: var(--book-muted-color);
+    cursor: default;
+  }
+
+  &[data-selected] {
+    background-color: var(--brand-color);
+    color: var(--book-on-brand-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: -2px;
+  }
+}
+
+// The slider: label and value above the track.
+.book-welcome-slider {
+  display: flex;
+  flex-direction: column;
+  gap: var(--book-space-s);
+}
+
+.book-welcome-slider-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--book-space-m);
+}
+
+.book-welcome-slider-output {
+  font-size: var(--book-font-size-s);
+  font-variant-numeric: tabular-nums;
+}
+
+// The slider positions the fill and the thumb along the track; `top` centers the thumb across it.
+.book-welcome-slider-track {
+  position: relative;
+  height: 6px;
+  margin: var(--book-space-s) 0;
+  border-radius: var(--book-radius-pill);
+  background-color: var(--brand-color-subtle);
+  cursor: pointer;
+}
+
+.book-welcome-slider-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--book-radius-pill);
+  background-color: var(--brand-color);
+}
+
+.book-welcome-slider-thumb {
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--brand-color);
+  box-shadow: var(--book-shadow-s);
+  cursor: grab;
+
+  &[data-dragging] {
+    cursor: grabbing;
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+// The switch: a track with a knob (the page's own markup), next to the label text.
+.book-welcome-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--book-space-s);
+  padding-bottom: var(--book-space-s);
+  cursor: pointer;
+  user-select: none;
+
+  &[data-focus-visible] {
+    outline: none;
+  }
+}
+
+.book-welcome-switch-track {
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 3.5em;
+  height: 1.75em;
+  padding: 0.2em;
+  border-radius: var(--book-radius-pill);
+  background-color: var(--book-switch-off-color);
+  transition: background-color var(--book-transition);
+
+  .book-welcome-switch[data-selected] & {
+    background-color: var(--brand-color);
+  }
+
+  .book-welcome-switch[data-focus-visible] & {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+.book-welcome-switch-thumb {
+  display: block;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  background-color: var(--book-switch-knob-color);
+  box-shadow: var(--book-shadow-s);
+  transition: transform var(--book-transition);
+
+  .book-welcome-switch[data-selected] & {
+    transform: translateX(1.75em);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 .book-welcome-showcase-actions {
@@ -113,6 +412,38 @@
   justify-content: flex-end;
   gap: var(--book-space-m);
   margin-top: var(--book-space-l);
+}
+
+// Save and Reset: the hero's buttons, smaller.
+.book-welcome-button {
+  padding: var(--book-space-s) var(--book-space-m);
+  border: 1px solid var(--brand-color);
+  border-radius: var(--book-radius-s);
+  background-color: var(--brand-color);
+  color: var(--book-on-brand-color);
+  font: inherit;
+  cursor: pointer;
+  transition: background-color var(--book-transition), border-color var(--book-transition);
+
+  &[data-hovered] {
+    border-color: color-mix(in srgb, black 7%, var(--brand-color));
+    background-color: color-mix(in srgb, black 7%, var(--brand-color));
+  }
+
+  &[data-variant="secondary"] {
+    border-color: var(--book-border-color);
+    background-color: transparent;
+    color: var(--main-color);
+
+    &[data-hovered] {
+      background-color: var(--book-hover-background-color);
+    }
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
 }
 
 // The selling points: three text columns without boxes; one per row on small screens.

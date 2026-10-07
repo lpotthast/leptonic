@@ -4,9 +4,7 @@ use leptonic::{
         CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
         CalendarNextButton, CalendarPreviousButton, CalendarWeek,
     },
-    components::prelude::Icon,
     jiff::civil::Date,
-    prelude::icondata,
 };
 use leptos::prelude::*;
 
@@ -18,11 +16,11 @@ pub fn CalendarConceptDemo() -> impl IntoView {
         <Calendar value set_value=value aria_label="Appointment date" classes="demo-calendar">
             <header class="demo-calendar-header">
                 <CalendarPreviousButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronLeft/>
+                    <span aria-hidden="true">"\u{2039}"</span>
                 </CalendarPreviousButton>
                 <CalendarHeading classes="demo-calendar-title"/>
                 <CalendarNextButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronRight/>
+                    <span aria-hidden="true">"\u{203a}"</span>
                 </CalendarNextButton>
             </header>
             <CalendarGrid classes="demo-calendar-grid">

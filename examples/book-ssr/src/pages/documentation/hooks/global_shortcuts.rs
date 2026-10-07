@@ -105,7 +105,7 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                 <ul>
                     <li>
                         "The hook listens for "<Code inline=true>"keydown"</Code>" on the document in the capture phase, so "
-                        "its shortcuts see every key press before the focused element does. Leptonic\u{2019}s components "
+                        "its shortcuts see every key press before the focused element does. Leptonic\u{2019}s atoms "
                         "stop their events from bubbling (see "
                         <Link href=routes::doc::EventPropagation.materialize()>"Event Propagation"</Link>"), so a "
                         <Code inline=true>"use_keyboard"</Code>" listener on your app\u{2019}s root element would miss "
@@ -139,7 +139,7 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
                 <ul>
                     <li>
                         "Show shortcuts where users meet the action, e.g. next to a button or in its tooltip. The "
-                        <Link href=routes::doc::kbd::Atom.materialize()><Code inline=true>"ShortcutKeys"</Code></Link>
+                        <Link href=format!("{}#shortcutkeys", routes::doc::Kbd.materialize())><Code inline=true>"ShortcutKeys"</Code></Link>
                         " atom shows a "<Code inline=true>"Shortcut"</Code>" as the user\u{2019}s platform writes it."
                     </li>
                     <li>
@@ -165,7 +165,7 @@ pub fn PageUseGlobalShortcuts() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
-                <li><Link href=routes::doc::kbd::Atom.materialize()>"Kbd Atom"</Link></li>
+                <li><Link href=routes::doc::Kbd.materialize()>"Kbd Atoms"</Link></li>
                 <li><Link href=routes::doc::focus::Focusability.materialize()>"focusability"</Link></li>
                 <li><Link href=routes::doc::EventPropagation.materialize()>"Event Propagation"</Link></li>
             </SeeAlso>

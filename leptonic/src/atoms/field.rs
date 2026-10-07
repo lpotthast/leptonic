@@ -64,6 +64,9 @@ pub struct LabelContext {
     pub on_click: EventHandler<MouseEvent>,
     /// Captures the rendered label (see [`LabelPresence`]).
     element: CapturedElement,
+    /// The text a `Label` without children shows (react-aria-components: the context's
+    /// `children`, e.g. a color slider's channel name).
+    default_text: Option<Signal<String>>,
 }
 
 impl LabelContext {
@@ -74,6 +77,7 @@ impl LabelContext {
             element_type: LabelElementType::Label,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
+            default_text: None,
         }
     }
 
@@ -84,6 +88,7 @@ impl LabelContext {
             element_type: LabelElementType::Span,
             on_click: EventHandler::empty(),
             element: CapturedElement::new(),
+            default_text: None,
         }
     }
 
@@ -92,6 +97,15 @@ impl LabelContext {
     pub(crate) fn with_presence(self, presence: LabelPresence) -> Self {
         Self {
             element: presence.element,
+            ..self
+        }
+    }
+
+    /// Shows `text` in a `Label` without children.
+    #[must_use]
+    pub fn with_default_text(self, text: Signal<String>) -> Self {
+        Self {
+            default_text: Some(text),
             ..self
         }
     }
@@ -143,21 +157,30 @@ pub enum TextElement {
 }
 
 /// The visible label of the atom around it (see [`LabelContext`]). Outside one, a plain `<label>`.
+/// Without children, it shows the atom's default text, if it has one (e.g. a color slider's
+/// channel name).
 ///
 /// Default class: `leptonic-Label`.
 #[component]
 pub fn Label(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    children: Children,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Label", classes);
-    match use_context::<LabelContext>() {
+    let context = use_context::<LabelContext>();
+    let default_text = context.as_ref().and_then(|context| context.default_text);
+    let children = move || match children {
+        Some(children) => Either::Left(children()),
+        None => Either::Right(default_text),
+    };
+    match context {
         Some(LabelContext {
             props,
             element_type: LabelElementType::Span,
             on_click,
             element,
+            ..
         }) => EitherOf3::A(view! {
             <span {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}
@@ -168,6 +191,7 @@ pub fn Label(
             element_type: LabelElementType::Label,
             on_click,
             element,
+            ..
         }) => EitherOf3::B(view! {
             <label {..props.into_attrs()} {..(on_click.into_on(ev::click), element.attr())} class=classes style=styles>
                 {children()}

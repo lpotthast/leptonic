@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 const TOPPINGS: [&str; 4] = ["Cheese", "Mushrooms", "Olives", "Peppers"];
@@ -65,7 +65,10 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }
@@ -77,7 +80,6 @@ fn ToppingCheckbox(group: CheckboxGroupData, topping: &'static str) -> impl Into
         value: Key::from(topping),
         is_indeterminate: Signal::stored(false),
         on_change: None,
-        validate: None,
         options: ToggleOptions::default(),
     });
     let (label_attrs, label_styles) = checkbox.label_props.into_parts();

@@ -1,4 +1,14 @@
 // Upstream: react-aria/src/i18n/useListFormatter.tsx @ 6f664fe911
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - A formatter built from a `Locale` and options (react-aria: a hook memoizing
+//   `Intl.ListFormat`), with ICU4X's `ListFormatter` (works during SSR).
+//
+// =============================================================================
 // Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useListFormatter.tsx
 
 use icu_list::{ListFormatter as IcuListFormatter, options::ListLength};

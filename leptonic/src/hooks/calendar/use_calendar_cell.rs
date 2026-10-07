@@ -9,7 +9,7 @@ use leptos::{
 };
 use web_sys::{FocusEvent, MouseEvent, PointerEvent};
 
-use super::states::{CalendarData, full_date_formatter, strings};
+use super::states::{CalendarData, strings};
 use crate::{
     hooks::{
         IntoAttrs, PressEvent, PropsWithStyles, UsePressAttrs, UsePressInput, UsePressProps,
@@ -17,10 +17,8 @@ use crate::{
     },
     utils::{
         CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
-        aria::AriaRole,
+        aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected},
         date::use_today,
-        date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, NumericFormat},
-        i18n::use_locale,
         pointer_type::PointerType,
         use_description::use_description,
     },
@@ -35,6 +33,8 @@ use crate::{
 //   `WeakMap`) and captures the button element (`element`).
 // - `date` is a signal: the atoms keep a cell's elements when the calendar pages (as
 //   react-aria-components keys cells by their position), so that the focus stays in the grid.
+// - The cells share the calendar's formatters (`CalendarData`); their states are memos, so that
+//   moving the highlighted range only updates the cells that change.
 //
 // ## OMITTED FEATURES
 // - Localized strings: "Today, {date}", "{date} selected", "First available date", the range
@@ -84,16 +84,16 @@ pub struct UseCalendarCellReturn {
 #[derive(Debug, Clone)]
 pub struct UseCalendarCellProps {
     pub role: AriaRole,
-    pub aria_disabled: Signal<Option<&'static str>>,
-    pub aria_selected: Signal<Option<&'static str>>,
-    pub aria_invalid: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
 }
 
 pub type UseCalendarCellAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::AriaInvalid, Signal<Option<&'static str>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
 );
 
 impl IntoAttrs for UseCalendarCellProps {
@@ -116,8 +116,8 @@ pub struct UseCalendarCellButtonProps {
     pub role: AriaRole,
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: Signal<String>,
-    pub aria_disabled: Signal<Option<&'static str>>,
-    pub aria_invalid: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_describedby: Signal<Option<String>>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_pointerenter: EventHandler<PointerEvent>,
@@ -132,8 +132,8 @@ pub type UseCalendarCellButtonAttrs = (
         Attr<attr::Role, AriaRole>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::AriaLabel, Signal<String>>,
-        Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
-        Attr<attr::AriaInvalid, Signal<Option<&'static str>>>,
+        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ),
     (
@@ -170,8 +170,16 @@ impl IntoAttrs for UseCalendarCellButtonProps {
     }
 }
 
-fn flag(signal: Signal<bool>) -> Signal<Option<&'static str>> {
-    Signal::derive(move || signal.get().then_some("true"))
+/// A `true` ARIA value while `signal` is (none otherwise).
+fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
+    Signal::derive(move || signal.get().then(|| T::from(true)))
+}
+
+/// A memoized signal.
+fn memo<T: PartialEq + Clone + Send + Sync + 'static>(
+    f: impl Fn() -> T + Send + Sync + 'static,
+) -> Signal<T> {
+    Memo::new(move |_| f()).into()
 }
 
 /// Focuses a cell's button, scrolling it into view unless a pointer moved the focus.
@@ -216,16 +224,16 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     let state = data.state;
     let calendar = state.calendar();
     let range = state.range();
-    let locale = use_locale();
+    let formatters = data.formatters;
 
     let is_focused =
-        Signal::derive(move || calendar.is_cell_focused(date.get()) && !is_outside_month.get());
-    let is_disabled = Signal::derive(move || {
+        memo(move || calendar.is_cell_focused(date.get()) && !is_outside_month.get());
+    let is_disabled = memo(move || {
         is_disabled_prop.get() || state.is_cell_disabled(date.get()) || is_outside_month.get()
     });
-    let is_unavailable = Signal::derive(move || calendar.is_cell_unavailable(date.get()));
-    let is_selectable = Signal::derive(move || !is_disabled.get() && !is_unavailable.get());
-    let is_invalid = Signal::derive(move || {
+    let is_unavailable = memo(move || calendar.is_cell_unavailable(date.get()));
+    let is_selectable = memo(move || !is_disabled.get() && !is_unavailable.get());
+    let is_invalid = memo(move || {
         if !state.is_value_invalid().get() {
             return false;
         }
@@ -241,15 +249,15 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         }
     });
     // Invalid selected dates show as selected.
-    let is_selected = Signal::derive(move || {
+    let is_selected = memo(move || {
         (state.is_selected(date.get()) && is_selectable.get())
             || (is_invalid.get() && !is_disabled.get())
     });
 
     let today = use_today();
-    let is_today = Signal::derive(move || today.get() == Some(date.get()));
+    let is_today = memo(move || today.get() == Some(date.get()));
     let selected_date_description = data.selected_date_description;
-    let label = Signal::derive(move || {
+    let label = memo(move || {
         let mut label = String::new();
         // The first and last dates of a selected range name the whole range.
         if let Some(range) = range
@@ -261,7 +269,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         {
             label = format!("{}, ", selected_date_description.get());
         }
-        label.push_str(&full_date_formatter(&locale.get()).format_date(date.get()));
+        label.push_str(&formatters.full_date(date.get()));
         let mut label = if is_today.get() {
             if is_selected.get() {
                 strings::today_selected(&label)
@@ -284,7 +292,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     });
 
     // In a range calendar, the focused cell says how to select.
-    let prompt = Signal::derive(move || {
+    let prompt = memo(move || {
         let range = range?;
         (is_focused.get() && !calendar.is_read_only.get() && is_selectable.get()).then(|| {
             if range.anchor_date.get().is_some() {
@@ -383,6 +391,9 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         let Some(range) = range else {
             return;
         };
+        // The anchor as the press found it (react-aria reads the one of its render): a quick tap
+        // below sets it, which mustn't count as the range's other end.
+        let anchor = range.anchor_date.get_untracked();
         // A quick tap: the timer is still running, the date not selected yet.
         if touch_drag_timer.get_value().is_some() {
             focus_and_select();
@@ -390,12 +401,10 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         if is_range_boundary_pressed.get_value() {
             // Pressing an end of the selected range starts a new range there on release.
             range.set_anchor_date(Some(date.get_untracked()));
-        } else if range.anchor_date.get_untracked().is_some() && !is_anchor_pressed.get_value() {
+        } else if anchor.is_some() && !is_anchor_pressed.get_value() {
             // Releasing a drag, or pressing the other end: select it.
             focus_and_select();
-        } else if e.pointer_type == PointerType::Keyboard
-            && range.anchor_date.get_untracked().is_none()
-        {
+        } else if e.pointer_type == PointerType::Keyboard && anchor.is_none() {
             // Keyboard selection moves on by a day, to show that a range is being selected.
             state.select_date(date.get_untracked());
             range.focus_nearest_available_date(date.get_untracked());
@@ -466,18 +475,9 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         (!ids.is_empty()).then(|| ids.join(" "))
     });
 
-    let formatted_date = Signal::derive(move || {
-        DateTimeFormatter::new(
-            &locale.get(),
-            DateTimeFormatOptions {
-                day: Some(NumericFormat::Numeric),
-                ..DateTimeFormatOptions::default()
-            },
-        )
-        .format_date(date.get())
-    });
+    let formatted_date = memo(move || formatters.day(date.get()));
 
-    let not_selectable = Signal::derive(move || !is_selectable.get());
+    let not_selectable = memo(move || !is_selectable.get());
     UseCalendarCellReturn {
         cell_props: UseCalendarCellProps {
             role: AriaRole::Gridcell,
@@ -530,9 +530,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         is_selected,
         is_disabled,
         is_unavailable,
-        is_outside_visible_range: Signal::derive(move || {
-            !calendar.visible_range.get().contains(date.get())
-        }),
+        is_outside_visible_range: memo(move || !calendar.visible_range.get().contains(date.get())),
         is_invalid,
         is_today,
         formatted_date,

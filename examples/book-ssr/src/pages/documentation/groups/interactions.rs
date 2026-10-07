@@ -48,7 +48,7 @@ pub fn PageInteractions() -> impl IntoView {
                         <li>
                             <Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link>
                             " binds shortcuts to the whole page instead of one element. It sees every key press first, also "
-                            "those inside leptonic\u{2019}s components, which stop their events from bubbling."
+                            "those inside leptonic\u{2019}s atoms, which stop their events from bubbling."
                         </li>
                         <li>
                             <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>

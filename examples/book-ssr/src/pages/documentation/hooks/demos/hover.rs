@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*, utils::data_attributes::flag};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
@@ -32,7 +32,10 @@ pub fn HoverDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p class="demo-status">

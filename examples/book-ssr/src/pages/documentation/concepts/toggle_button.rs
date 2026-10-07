@@ -65,7 +65,6 @@ pub fn PageToggleButtonOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>"There is no themed toggle button component yet."</p>
             </Section>
 
             <Section title="Quick Start">

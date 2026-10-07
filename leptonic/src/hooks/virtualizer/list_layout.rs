@@ -1,6 +1,6 @@
 // Upstream: react-stately/src/layout/ListLayout.ts @ 99e6102368
 // Upstream: @react-spectrum/ai/src/ListLayout.ts @ 99e6102368
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use super::{
     InvalidationContext, Layout, LayoutInfo, ScrollAnchorAxis, ScrollAnchorEdge, ScrollAnchorInfo,
@@ -24,6 +24,8 @@ use crate::{
 // ## OMITTED FEATURES
 // - The AI layout's bottom alignment of content shorter than the viewport (chat-style).
 // - Drop targets (`getDropTargetFromPoint`, `getDropTargetLayoutInfo`): with DnD on the atoms.
+//   Until then there is no `dropIndicatorThickness` option either (only drop indicator layout
+//   infos read it).
 // - The deprecated `*Height` options.
 //
 // =============================================================================
@@ -45,8 +47,6 @@ pub struct ListLayoutOptions {
     pub estimated_heading_size: Option<f64>,
     /// The size of a loader ("load more"). Default: the row size, else 48.
     pub loader_size: Option<f64>,
-    /// The thickness of drop indicators.
-    pub drop_indicator_thickness: f64,
     /// The gap between items.
     pub gap: f64,
     /// The padding around the list.
@@ -67,7 +67,6 @@ impl Default for ListLayoutOptions {
             heading_size: None,
             estimated_heading_size: None,
             loader_size: None,
-            drop_indicator_thickness: 2.0,
             gap: 0.0,
             padding: 0.0,
             anchor_to: None,
@@ -76,12 +75,13 @@ impl Default for ListLayoutOptions {
     }
 }
 
-/// A laid out node: its layout info, children, and the part of it that is valid.
+/// A laid out node: its layout info, children, and the part of it that is valid. Shared between
+/// the cache and the laid out tree (a valid node is reused without copying it).
 #[derive(Debug, Clone)]
 struct LayoutNode {
     node: Option<Node>,
     layout_info: LayoutInfo,
-    children: Vec<LayoutNode>,
+    children: Vec<Arc<LayoutNode>>,
     valid_rect: Rect,
 }
 
@@ -91,10 +91,10 @@ struct LayoutNode {
 #[derive(Debug, Clone)]
 pub struct ListLayout {
     options: ListLayoutOptions,
-    layout_nodes: HashMap<Key, LayoutNode>,
+    layout_nodes: HashMap<Key, Arc<LayoutNode>>,
     content_size: Size,
-    last_collection: Option<std::sync::Arc<Collection>>,
-    root_nodes: Vec<LayoutNode>,
+    last_collection: Option<Arc<Collection>>,
+    root_nodes: Vec<Arc<LayoutNode>>,
     invalidate_everything: bool,
     /// The rectangle containing currently valid layout infos.
     valid_rect: Rect,
@@ -242,9 +242,9 @@ impl ListLayout {
         &mut self,
         ctx: &VirtualizerContext<'_>,
         mut offset: f64,
-    ) -> Vec<LayoutNode> {
+    ) -> Vec<Arc<LayoutNode>> {
         let collection = ctx.collection;
-        let collection_nodes: Vec<Node> = collection.iter().cloned().collect();
+        let collection_nodes: Vec<&Node> = collection.iter().collect();
         let mut loader_nodes: Vec<usize> = collection_nodes
             .iter()
             .enumerate()
@@ -288,7 +288,7 @@ impl ListLayout {
                     {
                         offset += (loader_index - last_processed - 1) as f64 * row_size;
                     }
-                    let loader_node = &collection_nodes[loader_index];
+                    let loader_node = collection_nodes[loader_index];
                     let loader = if self.is_horizontal() {
                         self.build_child(ctx, loader_node, offset, padding, None)
                     } else {
@@ -324,18 +324,19 @@ impl ListLayout {
         x: f64,
         y: f64,
         parent_key: Option<Key>,
-    ) -> LayoutNode {
+    ) -> Arc<LayoutNode> {
         let offset = if self.is_horizontal() { x } else { y };
         if self.is_valid(node, offset)
             && let Some(cached) = self.layout_nodes.get(&node.key)
         {
-            return cached.clone();
+            return Arc::clone(cached);
         }
         let mut layout_node = self.build_node(ctx, node, x, y);
         layout_node.layout_info.parent_key = parent_key;
         layout_node.layout_info.allow_overflow = true;
+        let layout_node = Arc::new(layout_node);
         self.layout_nodes
-            .insert(node.key.clone(), layout_node.clone());
+            .insert(node.key.clone(), Arc::clone(&layout_node));
         layout_node
     }
 
@@ -398,10 +399,10 @@ impl ListLayout {
         let start = if self.is_horizontal() { x } else { y };
         let mut offset = start;
         let row_size = self.row_size();
-        let child_nodes: Vec<Node> = ctx.collection.children(&node.key).cloned().collect();
+        let child_nodes: Vec<&Node> = ctx.collection.children(&node.key).collect();
         let mut skipped = 0;
         let mut children = Vec::new();
-        for child in &child_nodes {
+        for child in child_nodes.iter().copied() {
             // Rows before the requested area are skipped unless cached.
             if offset + row_size < self.offset_of(&self.requested_rect)
                 && !self.is_valid(node, offset)
@@ -526,6 +527,8 @@ impl ListLayout {
     fn update_layout_node(&mut self, key: &Key, old: &LayoutInfo, new: &LayoutInfo) {
         let valid_rect = self.valid_rect;
         if let Some(node) = self.layout_nodes.get_mut(key) {
+            // A copy if the laid out tree shares it (react-stately mutates it in place).
+            let node = Arc::make_mut(node);
             // Invalidate it by intersecting its valid rectangle with the overall one.
             node.valid_rect = node.valid_rect.intersection(&valid_rect);
             if node.layout_info == *old {
@@ -584,7 +587,7 @@ impl Layout for ListLayout {
         self.layout_if_needed(ctx, rect);
 
         let mut result = Vec::new();
-        let mut stack: Vec<&LayoutNode> = self.root_nodes.iter().rev().collect();
+        let mut stack: Vec<&Arc<LayoutNode>> = self.root_nodes.iter().rev().collect();
         while let Some(node) = stack.pop() {
             if self.is_visible(ctx, node, &rect) {
                 result.push(node.layout_info.clone());
@@ -631,7 +634,7 @@ impl Layout for ListLayout {
 
         // Remove deleted nodes.
         if let Some(last) = &self.last_collection
-            && !std::sync::Arc::ptr_eq(last, ctx.collection)
+            && !Arc::ptr_eq(last, ctx.collection)
         {
             let removed: Vec<Key> = last
                 .keys()
@@ -642,7 +645,7 @@ impl Layout for ListLayout {
                 self.layout_nodes.remove(&key);
             }
         }
-        self.last_collection = Some(std::sync::Arc::clone(ctx.collection));
+        self.last_collection = Some(Arc::clone(ctx.collection));
         self.invalidate_everything = false;
         self.valid_rect = self.requested_rect;
     }
@@ -657,6 +660,7 @@ impl Layout for ListLayout {
             // Deleted.
             return false;
         };
+        let layout_node = Arc::make_mut(layout_node);
         layout_node.layout_info.estimated_size = false;
         let layout_info = layout_node.layout_info.clone();
         let is_item = layout_node
@@ -670,7 +674,7 @@ impl Layout for ListLayout {
         let mut new_layout_info = layout_info.clone();
         self.set_length(&mut new_layout_info.rect, new_length);
         if let Some(layout_node) = self.layout_nodes.get_mut(key) {
-            layout_node.layout_info = new_layout_info.clone();
+            Arc::make_mut(layout_node).layout_info = new_layout_info.clone();
         }
 
         // The items after it move: only the ones above stay valid.
@@ -714,9 +718,326 @@ impl Layout for ListLayout {
             edge: ScrollAnchorEdge::End,
             axis: ScrollAnchorAxis::Y,
             threshold: options.scroll_end_threshold,
-            is_anchorable: Some(std::sync::Arc::new(|info: &LayoutInfo| {
+            is_anchorable: Some(Arc::new(|info: &LayoutInfo| {
                 info.kind != NodeKind::Loader
             })),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashSet, sync::Arc};
+
+    use assertr::prelude::*;
+
+    use super::*;
+
+    fn rows(count: usize) -> Arc<Collection> {
+        Arc::new(Collection::build(|b| {
+            for i in 0..count {
+                b.item(format!("row-{i}"), format!("Row {i}"));
+            }
+        }))
+    }
+
+    /// A layout with the virtualizer's state around it.
+    struct Harness {
+        layout: ListLayout,
+        collection: Arc<Collection>,
+        persisted_keys: HashSet<Key>,
+        size: Size,
+    }
+
+    impl Harness {
+        fn new(options: ListLayoutOptions, collection: Arc<Collection>, size: Size) -> Self {
+            let mut harness = Self {
+                layout: ListLayout::new(options),
+                collection,
+                persisted_keys: HashSet::new(),
+                size,
+            };
+            // The first pass: the scroll view got its size.
+            harness.update(InvalidationContext {
+                size_changed: true,
+                width_changed: true,
+                height_changed: true,
+                ..InvalidationContext::default()
+            });
+            harness
+        }
+
+        fn ctx(&self) -> VirtualizerContext<'_> {
+            VirtualizerContext {
+                collection: &self.collection,
+                persisted_keys: &self.persisted_keys,
+                size: self.size,
+                visible_rect: Rect::new(0.0, 0.0, self.size.width, self.size.height),
+                content_size: self.layout.content_size(),
+            }
+        }
+
+        fn update(&mut self, invalidation: InvalidationContext<ListLayoutOptions>) {
+            let collection = Arc::clone(&self.collection);
+            let persisted_keys = self.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..self.ctx()
+            };
+            self.layout.update(&ctx, &invalidation);
+        }
+
+        fn visible(&mut self) -> Vec<LayoutInfo> {
+            let collection = Arc::clone(&self.collection);
+            let persisted_keys = self.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..self.ctx()
+            };
+            let rect = ctx.visible_rect;
+            self.layout.visible_layout_infos(&ctx, rect)
+        }
+
+        fn info(&mut self, key: &str) -> LayoutInfo {
+            let collection = Arc::clone(&self.collection);
+            let persisted_keys = self.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..self.ctx()
+            };
+            self.layout
+                .layout_info(&ctx, &Key::from(key))
+                .expect("laid out")
+        }
+
+        /// Reports the measured height of `key` and lays out again, as the virtualizer does.
+        fn measure(&mut self, key: &str, height: f64) -> bool {
+            let collection = Arc::clone(&self.collection);
+            let persisted_keys = self.persisted_keys.clone();
+            let ctx = VirtualizerContext {
+                collection: &collection,
+                persisted_keys: &persisted_keys,
+                ..self.ctx()
+            };
+            let changed = self.layout.update_item_size(
+                &ctx,
+                &Key::from(key),
+                Size::new(self.size.width, height),
+            );
+            if changed {
+                self.update(InvalidationContext {
+                    item_size_changed: true,
+                    ..InvalidationContext::default()
+                });
+            }
+            changed
+        }
+    }
+
+    fn keys(infos: &[LayoutInfo]) -> Vec<String> {
+        infos.iter().map(|info| info.key.to_string()).collect()
+    }
+
+    #[test]
+    fn stacks_fixed_rows_with_gap_and_padding() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: Some(30.0),
+                gap: 5.0,
+                padding: 10.0,
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 100.0),
+        );
+        // Padding, 10 rows, 9 gaps, padding.
+        assert_that!(harness.layout.content_size()).is_equal_to(Size::new(200.0, 365.0));
+        let visible = harness.visible();
+        // The visible rectangle snaps to whole rows (35px with the gap): 0..105.
+        assert_that!(keys(&visible)).is_equal_to(vec![
+            "row-0".to_owned(),
+            "row-1".to_owned(),
+            "row-2".to_owned(),
+        ]);
+        assert_that!(visible[0].rect).is_equal_to(Rect::new(10.0, 10.0, 180.0, 30.0));
+        assert_that!(visible[1].rect).is_equal_to(Rect::new(10.0, 45.0, 180.0, 30.0));
+        assert_that!(visible[0].estimated_size).is_false();
+        // Far rows are laid out on demand.
+        assert_that!(harness.info("row-9").rect.y).is_equal_to(10.0 + 9.0 * 35.0);
+    }
+
+    #[test]
+    fn an_empty_collection_has_no_content() {
+        let harness = Harness::new(
+            ListLayoutOptions {
+                row_size: Some(30.0),
+                padding: 10.0,
+                ..ListLayoutOptions::default()
+            },
+            rows(0),
+            Size::new(200.0, 100.0),
+        );
+        assert_that!(harness.layout.content_size()).is_equal_to(Size::new(200.0, 0.0));
+    }
+
+    #[test]
+    fn measured_rows_move_the_rows_after_them() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                estimated_row_size: Some(20.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        let visible = harness.visible();
+        assert_that!(visible.len()).is_equal_to(10);
+        assert_that!(visible.iter().all(|info| info.estimated_size)).is_true();
+        assert_that!(harness.layout.content_size().height).is_equal_to(200.0);
+
+        assert_that!(harness.measure("row-0", 50.0)).is_true();
+        // The same size again changes nothing.
+        assert_that!(harness.measure("row-0", 50.0)).is_false();
+        let visible = harness.visible();
+        assert_that!(visible[0].rect.height).is_equal_to(50.0);
+        assert_that!(visible[0].estimated_size).is_false();
+        assert_that!(visible[1].rect.y).is_equal_to(50.0);
+        assert_that!(visible[9].rect.y).is_equal_to(50.0 + 8.0 * 20.0);
+        assert_that!(harness.layout.content_size().height).is_equal_to(230.0);
+    }
+
+    /// Measured sizes survive changes of the anchoring options (a `VirtualList` turns
+    /// `anchor_to` on and off as the user scrolls to and away from the end), but not a change of
+    /// the width (rows wrap differently).
+    #[test]
+    fn anchoring_changes_keep_measured_sizes() {
+        let options = ListLayoutOptions {
+            estimated_row_size: Some(20.0),
+            ..ListLayoutOptions::default()
+        };
+        let mut harness = Harness::new(options.clone(), rows(10), Size::new(200.0, 1000.0));
+        harness.visible();
+        harness.measure("row-0", 50.0);
+        harness.measure("row-1", 70.0);
+
+        for new_options in [
+            ListLayoutOptions {
+                anchor_to: Some(ScrollAnchorEdge::End),
+                ..options.clone()
+            },
+            ListLayoutOptions {
+                anchor_to: Some(ScrollAnchorEdge::End),
+                scroll_end_threshold: 10.0,
+                ..options.clone()
+            },
+            options.clone(),
+        ] {
+            harness.update(InvalidationContext {
+                layout_options_changed: true,
+                layout_options: Some(new_options),
+                ..InvalidationContext::default()
+            });
+            let visible = harness.visible();
+            assert_that!(visible[0].rect.height).is_equal_to(50.0);
+            assert_that!(visible[0].estimated_size).is_false();
+            assert_that!(visible[1].rect.height).is_equal_to(70.0);
+            assert_that!(visible[2].rect.y).is_equal_to(120.0);
+        }
+
+        // A new width: every row is estimated again.
+        harness.size = Size::new(150.0, 1000.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            width_changed: true,
+            ..InvalidationContext::default()
+        });
+        let visible = harness.visible();
+        assert_that!(visible[0].rect.height).is_equal_to(20.0);
+        assert_that!(visible[0].estimated_size).is_true();
+        assert_that!(visible[0].rect.width).is_equal_to(150.0);
+
+        // A new height alone (more or less of the list visible) keeps them.
+        harness.measure("row-0", 50.0);
+        harness.size = Size::new(150.0, 500.0);
+        harness.update(InvalidationContext {
+            size_changed: true,
+            height_changed: true,
+            ..InvalidationContext::default()
+        });
+        assert_that!(harness.info("row-0").rect.height).is_equal_to(50.0);
+    }
+
+    #[test]
+    fn a_changed_fixed_row_size_invalidates_everything() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: Some(30.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        harness.update(InvalidationContext {
+            layout_options_changed: true,
+            layout_options: Some(ListLayoutOptions {
+                row_size: Some(40.0),
+                ..ListLayoutOptions::default()
+            }),
+            ..InvalidationContext::default()
+        });
+        assert_that!(harness.layout.content_size().height).is_equal_to(400.0);
+        assert_that!(harness.visible()[1].rect.y).is_equal_to(40.0);
+    }
+
+    #[test]
+    fn removed_rows_are_forgotten() {
+        let mut harness = Harness::new(
+            ListLayoutOptions {
+                row_size: Some(30.0),
+                ..ListLayoutOptions::default()
+            },
+            rows(10),
+            Size::new(200.0, 1000.0),
+        );
+        harness.visible();
+        harness.collection = rows(5);
+        harness.update(InvalidationContext::default());
+        assert_that!(keys(&harness.visible()).len()).is_equal_to(5);
+        assert_that!(harness.layout.content_size().height).is_equal_to(150.0);
+        let collection = Arc::clone(&harness.collection);
+        let persisted_keys = HashSet::new();
+        let ctx = VirtualizerContext {
+            collection: &collection,
+            persisted_keys: &persisted_keys,
+            ..harness.ctx()
+        };
+        assert_that!(harness.layout.layout_info(&ctx, &Key::from("row-7"))).is_none();
+    }
+
+    #[test]
+    fn end_anchoring_is_for_vertical_lists() {
+        let layout = ListLayout::new(ListLayoutOptions {
+            anchor_to: Some(ScrollAnchorEdge::End),
+            scroll_end_threshold: 12.0,
+            ..ListLayoutOptions::default()
+        });
+        let info = layout.scroll_anchor_info(None).expect("anchored");
+        assert_that!(info.threshold).is_equal_to(12.0);
+        let horizontal = ListLayoutOptions {
+            anchor_to: Some(ScrollAnchorEdge::End),
+            orientation: Orientation::Horizontal,
+            ..ListLayoutOptions::default()
+        };
+        assert_that!(layout.scroll_anchor_info(Some(&horizontal)).is_none()).is_true();
+        assert_that!(
+            layout
+                .scroll_anchor_info(Some(&ListLayoutOptions::default()))
+                .is_none()
+        )
+        .is_true();
     }
 }

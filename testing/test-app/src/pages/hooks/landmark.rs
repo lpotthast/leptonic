@@ -13,15 +13,13 @@ fn Landmark(
     children: Children,
 ) -> impl IntoView {
     let element = CapturedElement::new();
-    let UseLandmarkReturn { props } = use_landmark(
-        UseLandmarkInput {
-            role,
-            aria_label: label.into(),
-            aria_labelledby: None,
-            focus: None,
-        },
+    let UseLandmarkReturn { props } = use_landmark(UseLandmarkInput {
         element,
-    );
+        role,
+        aria_label: label.into(),
+        aria_labelledby: None,
+        focus: None,
+    });
     view! {
         <div {..props.into_attrs()} {..element.attr()} id=id>
             {children()}

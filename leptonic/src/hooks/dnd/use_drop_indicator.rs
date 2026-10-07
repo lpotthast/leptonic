@@ -23,7 +23,9 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - `target` is a signal (see `use_droppable_item`); `is_hidden` says when to render nothing
+//   (react-aria's components check `aria-hidden` and `isDropTarget` themselves).
 //
 // =============================================================================
 
@@ -32,8 +34,8 @@ use crate::{
 pub struct UseDropIndicatorInput {
     /// The droppable collection (from `use_droppable_collection`).
     pub collection: DroppableCollectionData,
-    /// The position the indicator marks.
-    pub target: DropTarget,
+    /// The position the indicator marks (e.g. `DropTarget::item(key, DropPosition::Before).into()`).
+    pub target: Signal<DropTarget>,
     /// A button activating the target during keyboard drags.
     pub activate_button: Option<CapturedElement>,
 }
@@ -54,7 +56,7 @@ pub struct UseDropIndicatorProps {
     pub id: String,
     pub aria_roledescription: &'static str,
     pub aria_label: Signal<String>,
-    pub aria_labelledby: Option<String>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
     pub tabindex: i32,
@@ -65,7 +67,7 @@ pub type UseDropIndicatorAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaRoledescription, &'static str>,
     Attr<attr::AriaLabel, Signal<String>>,
-    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
     Attr<attr::Tabindex, i32>,
@@ -141,9 +143,12 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
     let id = use_id("drop-indicator");
     let element = CapturedElement::new();
     let session = use_drag_session();
-    let labelledby = (target == DropTarget::Root).then(|| format!("{id} {}", collection.id));
+    let collection_id = collection.id.clone();
+    let labelled_id = id.clone();
+    let aria_labelledby = Signal::derive(move || {
+        target.with(|t| *t == DropTarget::Root).then(|| format!("{labelled_id} {collection_id}"))
+    });
     let items = collection.state.list.collection;
-    let label_target = target.clone();
     let UseDroppableItemReturn {
         drop_props,
         is_drop_target,
@@ -166,8 +171,8 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
         drop_indicator_props: UseDropIndicatorProps {
             id,
             aria_roledescription: messages::DROP_INDICATOR,
-            aria_label: Signal::derive(move || items.with(|c| label(c, &label_target))),
-            aria_labelledby: labelledby,
+            aria_label: Signal::derive(move || items.with(|c| target.with(|t| label(c, t)))),
+            aria_labelledby,
             aria_describedby: drop_props.aria_describedby,
             aria_hidden,
             tabindex: -1,

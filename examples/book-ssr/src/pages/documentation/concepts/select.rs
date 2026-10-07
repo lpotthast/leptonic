@@ -29,7 +29,7 @@ pub fn PageSelectOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Selects exist at all three layers. See "
+                    "Selects exist as hooks and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -54,8 +54,11 @@ pub fn PageSelectOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "The themed component takes the options as values of your own type. Its "<Code inline=true>"label"</Code>
-                    " names the select for everyone, including screen reader users:"
+                    "Build a collection of options, pass it to the "<Code inline=true>"Select"</Code>" atom and compose the "
+                    "parts: a "<Code inline=true>"Label"</Code>" that names the select for everyone, including screen reader "
+                    "users, a trigger showing the "<Code inline=true>"SelectValue"</Code>", and a popover with a "
+                    <Code inline=true>"ListBox"</Code>" of the options (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::select::Atom.materialize())>"Select Atoms"</Link>" page):"
                 </p>
 
                 <Demo description="Coffee size select with a label and a disabled toggle" source=include_str!("demos/select.rs") source_open=true>

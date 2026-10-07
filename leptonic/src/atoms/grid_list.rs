@@ -7,15 +7,16 @@ use crate::{
     hooks::{
         DisabledBehavior, FocusMode, GridListData, IntoAttrs, KeyboardNavigationBehavior,
         SelectionBehavior, SelectionMode, UseFocusRingInput, UseGridListInput,
-        UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
+        UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, UseGridListSectionInput,
+        UseGridListSectionReturn, UseGridListSectionRowHeaderProps, UseGridListSectionRowProps,
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout,
             Selection, SelectionOptions, UseListStateInput, use_list_state,
         },
-        use_focus_ring, use_grid_list, use_grid_list_item,
+        use_focus_ring, use_grid_list, use_grid_list_item, use_grid_list_section,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
         default_class::with_default_class, styles::Styles,
     },
 };
@@ -41,7 +42,9 @@ pub fn GridList(
     #[prop(into)]
     collection: CollectionMemo,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
-    #[prop(optional)] selection_behavior: SelectionBehavior,
+    /// How pressing an item changes the selection; a change applies right away.
+    #[prop(into, optional)]
+    selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
@@ -145,7 +148,7 @@ pub fn GridList(
 /// children.
 ///
 /// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
-/// `data-pressed` on the row for styling.
+/// `data-pressed` on the row for styling. A [`GridListItemDescription`] inside describes the row.
 ///
 /// Default class: `leptonic-GridListItem`.
 #[component]
@@ -159,6 +162,13 @@ pub fn GridListItem(
     /// CSS styles (of the row element).
     #[prop(into, optional)]
     styles: Styles,
+    /// What gets focus when the row is focused: the row, or its first focusable child.
+    #[prop(optional)]
+    focus_mode: FocusMode,
+    /// Let ArrowUp/ArrowDown move between rows while a child has focus, also with
+    /// `KeyboardNavigationBehavior::Tab`.
+    #[prop(optional)]
+    allows_arrow_navigation: bool,
     children: Children,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-GridListItem", classes);
@@ -166,6 +176,7 @@ pub fn GridListItem(
     let UseGridListItemReturn {
         row_props,
         grid_cell_props,
+        description_props,
         is_selected,
         is_focused,
         is_focus_visible,
@@ -177,11 +188,14 @@ pub fn GridListItem(
         on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
         list,
         key,
-        focus_mode: FocusMode::Row,
-        allows_arrow_navigation: false,
+        focus_mode,
+        allows_arrow_navigation,
     });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
+    let item = GridListItemCtx {
+        description_props: StoredValue::new(Some(description_props)),
+    };
 
     view! {
         <div
@@ -195,8 +209,126 @@ pub fn GridListItem(
             data-pressed=flag(is_pressed)
         >
             <div {..grid_cell_props.into_attrs()} style="display: contents">
-                {children()}
+                <Provider value=item>{children()}</Provider>
             </div>
         </div>
+    }
+}
+
+/// What a [`GridListItem`] provides to its [`GridListItemDescription`].
+#[derive(Clone, Copy)]
+struct GridListItemCtx {
+    description_props: StoredValue<Option<SlotProps>>,
+}
+
+/// Secondary text of a [`GridListItem`] (react-aria-components: `Text slot="description"`): the
+/// row is labelled by its text and described by this.
+///
+/// Default class: `leptonic-GridListItemDescription`.
+#[component]
+pub fn GridListItemDescription(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridListItemDescription", classes);
+    let ctx = expect_context::<GridListItemCtx>();
+    if let Some(props) = ctx
+        .description_props
+        .try_update_value(Option::take)
+        .flatten()
+    {
+        view! {
+            <span {..props.into_attrs()} class=classes style=styles>
+                {children()}
+            </span>
+        }
+        .into_any()
+    } else {
+        crate::utils::dev_warn!("GridListItemDescription: only one per GridListItem");
+        view! {
+            <span class=classes style=styles>
+                {children()}
+            </span>
+        }
+        .into_any()
+    }
+}
+
+/// What a [`GridListSection`] provides to its [`GridListHeader`].
+#[derive(Clone, Copy)]
+struct GridListSectionCtx {
+    header: StoredValue<Option<(UseGridListSectionRowProps, UseGridListSectionRowHeaderProps)>>,
+    /// The collection's header text.
+    heading: StoredValue<Option<String>>,
+}
+
+/// A group of rows in a [`GridList`], for the collection section `key`: one `role="rowgroup"`
+/// element holding a [`GridListHeader`] (when the section has a header in the collection) and
+/// the section's rows.
+///
+/// Default class: `leptonic-GridListSection`.
+#[component]
+pub fn GridListSection(
+    /// The section's key in the grid list's collection.
+    #[prop(into)]
+    key: Key,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridListSection", classes);
+    let list = expect_context::<GridListData>();
+    let UseGridListSectionReturn {
+        row_props,
+        row_header_props,
+        row_group_props,
+        heading,
+    } = use_grid_list_section(UseGridListSectionInput { list, key });
+    let ctx = GridListSectionCtx {
+        header: StoredValue::new(heading.is_some().then_some((row_props, row_header_props))),
+        heading: StoredValue::new(heading),
+    };
+
+    view! {
+        <div {..row_group_props.into_attrs()} class=classes style=styles>
+            <Provider value=ctx>{children()}</Provider>
+        </div>
+    }
+}
+
+/// The header row of a [`GridListSection`], labelling it: a `role="row"` element with a
+/// `role="rowheader"` cell (`display: contents`). Shows `children`, or else the section's header
+/// text from the collection.
+///
+/// Default class: `leptonic-GridListHeader`.
+#[component]
+pub fn GridListHeader(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridListHeader", classes);
+    let ctx = expect_context::<GridListSectionCtx>();
+    let content = match children {
+        Some(children) => children().into_any(),
+        None => ctx.heading.get_value().into_any(),
+    };
+    if let Some((row_props, row_header_props)) = ctx.header.try_update_value(Option::take).flatten()
+    {
+        view! {
+            <div {..row_props.into_attrs()} class=classes style=styles>
+                <div {..row_header_props.into_attrs()} style="display: contents">
+                    {content}
+                </div>
+            </div>
+        }
+        .into_any()
+    } else {
+        crate::utils::dev_warn!(
+            "GridListHeader: one per section, and only for sections with a header in the \
+                 collection"
+        );
+        view! { <div class=classes style=styles>{content}</div> }.into_any()
     }
 }

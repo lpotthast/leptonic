@@ -46,7 +46,7 @@ pub fn PageCallbacks() -> impl IntoView {
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::components::prelude::*;
+                        use leptonic::atoms::prelude::Button;
                         use leptos::prelude::*;
 
                         /// What `Rating` reports when the user picks a rating.

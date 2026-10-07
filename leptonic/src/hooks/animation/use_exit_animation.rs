@@ -1,20 +1,25 @@
 // Upstream: react-aria/src/utils/animation.ts @ 99e6102368
 //! Hook for tracking CSS exit animations on an element.
-//!
-//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/animation.ts>
 
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## LEPTOS-SPECIFIC ADAPTATIONS
+// ## API DIFFERENCES
+// - The element is a `CapturedElement` (react-aria: a ref).
+// - Returns `is_exiting: Signal<bool>` and the state machine as `exit_state` (react-aria: a
+//   boolean per render).
+// - `on_exit` is a `Callback` of the element: it can start Web Animations, which are awaited like
+//   CSS ones (react-aria: a function that may return a promise to await as well).
 //
-// - Uses `CapturedElement` instead of React's `RefObject<HTMLElement>`.
-// - Uses `spawn_local` + `JsFuture` instead of React's `useLayoutEffect` cleanup.
-// - No `flushSync` equivalent needed — Leptos signals update synchronously.
-// - Exposes `exit_state: Signal<ExitState>` in addition to `is_exiting: Signal<bool>`
-//   for consumers that need fine-grained state machine access.
+// ## DIFFERENT BEHAVIOR
+// - A watch is cancelled when the effect re-runs or the owner is disposed (react-aria lets the
+//   promise resolve and ignores the result through its state machine).
 //
+// =============================================================================
 
 /// Exit animation state machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

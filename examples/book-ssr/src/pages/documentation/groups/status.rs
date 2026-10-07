@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 
+use super::demos::status_alert::StatusAlertDemo;
 use crate::{kit::*, routes};
 
 #[component]
@@ -7,9 +8,10 @@ pub fn PageStatus() -> impl IntoView {
     view! {
         <DocPage title="Status">
             <p>
-                "Status concepts tell users about the state of the app or of a task: a message that something succeeded or "
-                "needs attention, a value within a known range, the progress of an operation, or a notification that "
-                "comes and goes. They inform; none of them asks the user for input."
+                "Status concepts tell users about the state of the app or of a task: a value within a known range, the "
+                "progress of an operation, or a notification that comes and goes. They inform; none of them asks the user "
+                "for input. A message in the page, such as an error above a form, needs no leptonic piece: see "
+                <AnchorLink href="#alert">"Alert"</AnchorLink>" below."
             </p>
 
             <Section title="Pages">
@@ -25,8 +27,8 @@ pub fn PageStatus() -> impl IntoView {
                         "unknown; a meter shows a measurement, such as disk usage, that is not a task."
                     </li>
                     <li>
-                        <Link href=routes::doc::Alert.materialize()>"Alert"</Link>" and "
-                        <Link href=routes::doc::Toast.materialize()>"Toast"</Link>" both show a message in a variant such as "
+                        "An "<AnchorLink href="#alert">"alert"</AnchorLink>" and a "
+                        <Link href=routes::doc::Toast.materialize()>"toast"</Link>" both show a message in a variant such as "
                         "success or warning. An alert sits in the flow of the page and stays; a toast appears above the app "
                         "and usually disappears after a timeout."
                     </li>
@@ -43,7 +45,7 @@ pub fn PageStatus() -> impl IntoView {
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow>
                         <TableCell>"Show a lasting message in the page, such as a warning above a form"</TableCell>
-                        <TableCell><Link href=routes::doc::Alert.materialize()>"Alert"</Link></TableCell>
+                        <TableCell>"An "<AnchorLink href="#alert">"alert"</AnchorLink></TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Confirm briefly that something happened, without interrupting the user"</TableCell>
@@ -59,17 +61,45 @@ pub fn PageStatus() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Hold the place of content that is still loading"</TableCell>
-                        <TableCell><Link href=routes::doc::Skeleton.materialize()>"Skeleton"</Link></TableCell>
+                        <TableCell>"A "<Link href=format!("{}#skeleton", routes::doc::Layout.materialize())>"skeleton"</Link>" drawn with CSS"</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Require a decision before the user continues"</TableCell>
                         <TableCell><Link href=routes::doc::Modal.materialize()>"Modal"</Link></TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell>"Label an item with a short status, such as \u{201c}Draft\u{201d}"</TableCell>
-                        <TableCell><Link href=routes::doc::Chip.materialize()>"Chip"</Link></TableCell>
-                    </TableRow>
                 </DocTable>
+            </Section>
+
+            <Section title="Alert">
+                <p>
+                    "An alert is a message in the flow of the page that tells users about something important: an "
+                    "operation succeeded, something needs their attention, or an error occurred. It needs no leptonic "
+                    "piece: render the message in an element with the role that fits its urgency, and style it with CSS."
+                </p>
+                <ul>
+                    <li>
+                        <Code inline=true>"role=\"alert\""</Code>" for urgent messages, such as an error: screen readers "
+                        "announce it at once, interrupting what they are reading, also when you add the element to the page."
+                    </li>
+                    <li>
+                        <Code inline=true>"role=\"status\""</Code>" for messages that can wait, such as \u{201c}Saved\u{201d}: "
+                        "screen readers announce changes of its content after they finished reading. Keep the element in the "
+                        "page and change its content, as a status added together with its message may not be announced."
+                    </li>
+                    <li>
+                        "Tell the variant by the icon and the text, not by color alone, and hide decorative icons from "
+                        "assistive technology ("<Code inline=true>"aria-hidden=\"true\""</Code>")."
+                    </li>
+                    <li>
+                        "An alert doesn\u{2019}t take the focus. For a message that requires a response, use a "
+                        <Link href=routes::doc::Dialog.materialize()>"dialog"</Link>" with "
+                        <Code inline=true>"DialogRole::AlertDialog"</Code>"; to only announce something to screen reader "
+                        "users, use the "<Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live announcer"</Link>"."
+                    </li>
+                </ul>
+                <Demo description="A status message after saving and an alert after a failed upload" source=include_str!("demos/status_alert.rs")>
+                    <StatusAlertDemo/>
+                </Demo>
             </Section>
         </DocPage>
     }

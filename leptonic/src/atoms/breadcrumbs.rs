@@ -19,6 +19,11 @@ use crate::{
 //   marked (`is_current`) instead of being the collection's last: without a collection, which
 //   item is last isn't known while the items render (and hydrate).
 // - Render props become `data-*` attributes plus plain children.
+// - The `<ol>` carries `use_breadcrumbs`' props (its name), as react-aria-components does; the
+//   `<nav>` around it is the app's.
+// - A `Breadcrumb` hands its link the item's settings through the link's context instead of
+//   calling `use_breadcrumb_item` (as react-aria-components, which composes a `Link` child the
+//   same way).
 //
 // =============================================================================
 

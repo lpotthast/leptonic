@@ -73,6 +73,18 @@ pub struct UseListBoxInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
+impl std::fmt::Debug for UseListBoxInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseListBoxInput")
+            .field("id", &self.id)
+            .field("orientation", &self.orientation)
+            .field("layout", &self.layout)
+            .field("options", &self.options)
+            .field("is_virtualized", &self.is_virtualized)
+            .finish_non_exhaustive()
+    }
+}
+
 /// What options need to know about their listbox. Pass it to `use_option` (atoms provide it as
 /// context).
 #[derive(Debug, Clone)]

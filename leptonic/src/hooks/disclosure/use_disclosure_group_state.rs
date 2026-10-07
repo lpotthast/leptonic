@@ -19,8 +19,9 @@ use crate::{hooks::collections::Key, utils::ValueBinding};
 // - More than one expanded key in a single-expansion group is reduced to one when the keys are
 //   set (react-aria: an effect after each render): the first of `default_expanded_keys`, the
 //   smallest of a set (react-aria: the first in insertion order, which a `HashSet` doesn't keep;
-//   the smallest is the same on the server and the client). A bound `value` is reduced once, on
-//   creation.
+//   the smallest is the same on the server and the client). A bound `value` is reduced on
+//   creation (so the server renders one) and in an effect whenever it changes; both report the
+//   reduction through `on_expanded_change`, as react-aria's effect does.
 //
 // =============================================================================
 
@@ -109,31 +110,36 @@ pub fn use_disclosure_group_state(input: UseDisclosureGroupStateInput) -> Disclo
         DisclosureGroupExpansion::Single => default_expanded_keys.into_iter().take(1).collect(),
         DisclosureGroupExpansion::Multiple => default_expanded_keys.into_iter().collect(),
     };
-    let binding = match value {
-        Some(binding) => {
-            let current = binding.value.get_untracked();
-            if expansion == DisclosureGroupExpansion::Single && current.len() > 1 {
-                binding.set(single(current));
-            }
-            binding
-        }
-        None => ValueBinding::from(RwSignal::new(defaults)),
-    };
+    let binding = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(defaults)));
     let expanded_keys = binding.value;
+    let set_expanded_keys = Callback::new(move |keys: HashSet<Key>| {
+        let keys = single(keys);
+        if expanded_keys.with_untracked(|current| *current == keys) {
+            return;
+        }
+        binding.set(keys.clone());
+        if let Some(on_expanded_change) = on_expanded_change {
+            on_expanded_change.run(keys);
+        }
+    });
+    if expansion == DisclosureGroupExpansion::Single {
+        // A bound value with several keys: reduced now and whenever it changes to several.
+        let reduce = move || {
+            if expanded_keys.with_untracked(|keys| keys.len() > 1) {
+                set_expanded_keys.run(expanded_keys.get_untracked());
+            }
+        };
+        reduce();
+        Effect::new(move || {
+            expanded_keys.track();
+            reduce();
+        });
+    }
     DisclosureGroupState {
         expansion,
         is_disabled,
         expanded_keys,
-        set_expanded_keys: Callback::new(move |keys: HashSet<Key>| {
-            let keys = single(keys);
-            if expanded_keys.with_untracked(|current| *current == keys) {
-                return;
-            }
-            binding.set(keys.clone());
-            if let Some(on_expanded_change) = on_expanded_change {
-                on_expanded_change.run(keys);
-            }
-        }),
+        set_expanded_keys,
     }
 }
 
@@ -159,6 +165,29 @@ mod tests {
             // Setting several keys keeps one.
             state.set_expanded_keys(HashSet::from([a, b]));
             assert_that!(state.expanded_keys.get_untracked().len()).is_equal_to(1);
+        });
+    }
+
+    #[test]
+    fn a_bound_value_with_several_keys_is_reduced_and_reported() {
+        use std::sync::{Arc, Mutex};
+
+        Owner::new().with(|| {
+            let (a, b) = (Key::from("a"), Key::from("b"));
+            let bound = RwSignal::new(HashSet::from([a.clone(), b]));
+            let changes = Arc::new(Mutex::new(Vec::new()));
+            let recorded = Arc::clone(&changes);
+            let state = use_disclosure_group_state(UseDisclosureGroupStateInput {
+                value: Some(bound.into()),
+                on_expanded_change: Some(Callback::new(move |keys| {
+                    recorded.lock().unwrap().push(keys);
+                })),
+                ..UseDisclosureGroupStateInput::default()
+            });
+            assert_that!(state.expanded_keys.get_untracked())
+                .is_equal_to(HashSet::from([a.clone()]));
+            assert_that!(bound.get_untracked()).is_equal_to(HashSet::from([a.clone()]));
+            assert_that!(changes.lock().unwrap().clone()).is_equal_to(vec![HashSet::from([a])]);
         });
     }
 

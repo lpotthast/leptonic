@@ -1,6 +1,29 @@
 // Upstream: react-stately/src/datepicker/types.ts @ 99e6102368
 //! The values and segments of date and time fields.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Values are `jiff` types behind the `DateValue` trait (`civil::Date`, `civil::DateTime`,
+//   `Zoned`; react-aria: `@internationalized/date`'s `CalendarDate`, `CalendarDateTime`,
+//   `ZonedDateTime`), times behind `TimeValue` (`civil::Time`, ...). A field returns the type it
+//   was given (react-aria's `MappedDateValue`).
+// - `Granularity`, `MaxGranularity`, `HourCycle`, `DateSegmentType`: enums (react-aria: strings
+//   and numbers); `Era` is the Gregorian era of a proleptic year (react-aria: era strings of any
+//   calendar).
+//
+// ## DIFFERENT BEHAVIOR
+// - A local time a zoned value doesn't have once (`to_zoned`): a repeated time keeps its offset
+//   if it has one there (else the earlier), a skipped one moves forward (`Temporal`'s
+//   `compatible`, as `@internationalized/date`'s `toZoned` with `disambiguation: 'compatible'`).
+//
+// ## OMITTED FEATURES
+// - Calendar systems other than the Gregorian.
+//
+// =============================================================================
+
 use std::{cmp::Ordering, fmt::Debug};
 
 use jiff::{
@@ -61,11 +84,7 @@ impl MaxGranularity {
 }
 
 /// Whether times show 12 or 24 hours (react-aria's `hourCycle: 12 | 24`). Default: the locale's.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum HourCycle {
-    H12,
-    H24,
-}
+pub use crate::utils::date_time_formatter::HourCycle;
 
 /// How hours are numbered (`Intl`'s resolved `hourCycle`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

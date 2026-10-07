@@ -1,30 +1,27 @@
-// Upstream: react-aria/src/interactions/useInteractOutside.ts @ 6f664fe911
-#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
-
+// Upstream: react-aria/src/interactions/useInteractOutside.ts @ 99e6102368
 use leptos::prelude::*;
-use leptos_use::{UseEventListenerOptions, use_event_listener_with_options};
-use send_wrapper::SendWrapper;
-use wasm_bindgen::JsCast;
-use web_sys::PointerEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{CapturedElement, ElementCaptureAttr, EventAccessors, dom_ext::node_contains},
+    utils::{CapturedElement, ElementCaptureAttr},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useInteractOutside.ts
-
-// ## OMITTED FEATURES
-//
-// - Legacy mouse/touch fallback (`process.env.NODE_ENV === 'test'` branch) — WASM always has `PointerEvent`.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
 // ## API DIFFERENCES
 // - Both callbacks get a `MouseEvent`: the `pointerdown` (a `PointerEvent`, which is one) and the
 //   `click` (react-aria's handlers are untyped).
+// - The element is captured by the returned props, or given as `element` (react-aria: `ref`).
+// - Top-layer elements are marked `data-leptonic-top-layer` (react-aria:
+//   `data-react-aria-top-layer`).
 //
-// ## LEPTOS-SPECIFIC ADAPTATIONS
+// ## OMITTED FEATURES
+// - The mouse/touch fallback for environments without `PointerEvent` (react-aria uses it in tests
+//   only): every supported browser has pointer events.
 //
-// - Uses `ElementCaptureAttr` instead of `RefObject`.
+// =============================================================================
 
 /// Input parameters for the `use_interact_outside` hook.
 #[derive(Debug, Clone, Default)]
@@ -113,6 +110,9 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 
     #[cfg(not(feature = "ssr"))]
     {
+        use leptos_use::{UseEventListenerOptions, use_event_listener_with_options};
+        use web_sys::PointerEvent;
+
         let UseInteractOutsideInput {
             is_disabled: disabled,
             on_interact_outside_start,
@@ -198,58 +198,47 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     }
 }
 
-/// Check if a pointer/mouse event is valid (outside the element and meets other criteria).
-///
-/// Works for both `PointerEvent` (from pointerdown) and `MouseEvent` (from click) because
-/// `PointerEvent` derefs to `MouseEvent` in the web-sys type hierarchy.
-///
-/// Uses shadow-DOM-aware `node_contains` for containment checks, matching react-aria's
-/// `nodeContains` behavior.
+/// Whether a pointer/mouse event counts as an interaction outside `element` (react-aria's
+/// `isValidEvent`): a primary button, a target still in the document and not in a top layer, and
+/// `element` not on the event's composed path (which also sees into open shadow roots).
+#[cfg(not(feature = "ssr"))]
 fn is_valid_event(
     event: &web_sys::MouseEvent,
-    element: Option<&SendWrapper<web_sys::Element>>,
+    element: Option<&send_wrapper::SendWrapper<web_sys::Element>>,
 ) -> bool {
-    // Only handle primary button (left click)
+    use wasm_bindgen::JsCast;
+
+    use crate::utils::shadow_dom::{get_event_target, node_contains};
+
     if event.button() > 0 {
         return false;
     }
-
-    // Check if target is still in the document (shadow-DOM-aware)
-    let target = event.expect_target();
-    if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
-        let owner_document = target_node.owner_document();
-        if let Some(doc) = owner_document
-            && let Some(doc_element) = doc.document_element()
-            && !node_contains(Some(doc_element.as_ref()), Some(target_node)).unwrap_or(false)
-        {
+    if let Some(target) =
+        get_event_target(event).and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+    {
+        // A target no longer in the document.
+        let Some(document_element) = target
+            .owner_document()
+            .and_then(|document| document.document_element())
+        else {
+            return false;
+        };
+        if !node_contains(&document_element, &target) {
             return false;
         }
-    }
-
-    // Check if target is within a top layer element (e.g. toasts)
-    if let Some(target_el) = target.dyn_ref::<web_sys::Element>()
-        && target_el
+        // A target in a top layer element (e.g. toasts).
+        if target
             .closest("[data-leptonic-top-layer]")
             .ok()
             .flatten()
             .is_some()
-    {
-        return false;
+        {
+            return false;
+        }
     }
-
-    // Check if we have an element to compare against
-    let Some(el) = element else {
+    let Some(element) = element else {
         return false;
     };
-    // Dereference SendWrapper to get the actual element
-    let el: &web_sys::Element = el;
-
-    // Check if the event target is inside our element (shadow-DOM-aware).
-    // node_contains traverses shadow DOM boundaries via slot assignments and shadow root hosts.
-    if node_contains(Some(el.as_ref()), target.dyn_ref::<web_sys::Node>()).unwrap_or(false) {
-        return false;
-    }
-
-    // Event is outside the element
-    true
+    let element: &web_sys::Element = element;
+    !event.composed_path().includes(element, 0)
 }

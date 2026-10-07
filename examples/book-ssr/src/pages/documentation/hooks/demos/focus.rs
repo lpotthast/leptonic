@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 use ringbuf::{
     HeapRb,
@@ -37,7 +37,10 @@ pub fn FocusDemo() -> impl IntoView {
             {move || if is_focused.get() { "The field has focus." } else { "The field doesn\u{2019}t have focus." }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>

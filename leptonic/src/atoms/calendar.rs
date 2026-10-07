@@ -11,11 +11,15 @@ use crate::{
         IntoAttrs, UseButtonInput, UseButtonReturn, UseFocusRingInput, UseFocusRingReturn,
         UseHoverInput,
         calendar::{
-            CalendarData, CalendarHeadingFormat, CalendarStates, CommitBehavior, PageBehavior,
-            SelectionAlignment, UseCalendarCellInput, UseCalendarCellReturn, UseCalendarGridInput,
-            UseCalendarGridReturn, UseCalendarInput, UseCalendarReturn, UseCalendarStateInput,
+            CalendarData, CalendarHeadingFormat, CalendarStates, CalendarYearPickerFormat,
+            CommitBehavior, DateAvailabilityQuery, PageBehavior, SelectionAlignment,
+            UseCalendarCellInput, UseCalendarCellReturn, UseCalendarGridInput,
+            UseCalendarGridReturn, UseCalendarHeadingInput, UseCalendarInput,
+            UseCalendarMonthPickerInput, UseCalendarPickerReturn, UseCalendarReturn,
+            UseCalendarStateInput, UseCalendarYearPickerInput, UseRangeCalendarInput,
             UseRangeCalendarStateInput, use_calendar, use_calendar_cell, use_calendar_grid,
-            use_calendar_heading, use_calendar_state, use_range_calendar, use_range_calendar_state,
+            use_calendar_heading, use_calendar_month_picker, use_calendar_state,
+            use_calendar_year_picker, use_range_calendar, use_range_calendar_state,
         },
         use_button, use_focus_ring, use_hover,
     },
@@ -24,7 +28,7 @@ use crate::{
         classes::Classes,
         data_attributes::flag,
         date::{DateDuration, DateExt, DateRange},
-        date_time_formatter::DateTimeFormat,
+        date_time_formatter::{DateTimeFormat, MonthFormat},
         default_class::with_default_class,
         slot_id::SlotProps,
         styles::Styles,
@@ -43,6 +47,10 @@ use crate::{
 //   (`CalendarPreviousButton`, `CalendarNextButton`, `CalendarErrorMessage`; react-aria-components:
 //   slots of `Button` and `Text`).
 // - State props per C4: `value` + `set_value`, `default_value`, `on_change`.
+// - The layout props (`visible_duration`, `page_behavior`, `first_day_of_week`,
+//   `selection_alignment`, `weeks_in_month`) are reactive (C11).
+// - `CalendarMonthPicker`/`CalendarYearPicker` render their children from the picker's
+//   `UseCalendarPickerReturn` (react-aria-components: a render function of its props).
 //
 // ## OMITTED FEATURES
 // - The visually hidden heading before the grids and the hidden next button after them
@@ -82,7 +90,7 @@ pub(crate) struct RangeCalendarPickerContext {
     pub select: Callback<DateRange>,
     pub min_value: Signal<Option<Date>>,
     pub max_value: Signal<Option<Date>>,
-    pub is_date_unavailable: Option<Callback<(Date, Option<Date>), bool>>,
+    pub is_date_unavailable: Option<Callback<DateAvailabilityQuery, bool>>,
     pub allows_non_contiguous_ranges: bool,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
@@ -153,19 +161,21 @@ pub fn Calendar(
     #[prop(into, optional)]
     set_focused_value: Option<Out<Date>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<Date>>,
-    /// How much is visible at once. Default: one month.
-    #[prop(optional)]
-    visible_duration: Option<DateDuration>,
-    #[prop(optional)] page_behavior: PageBehavior,
+    /// How much is visible at once. Default: one month. A change re-aligns the visible range.
+    #[prop(into, default = Signal::stored(DateDuration::months(1)))]
+    visible_duration: Signal<DateDuration>,
+    /// How the previous and next buttons page. Default: by the visible duration.
+    #[prop(into, optional)]
+    page_behavior: Signal<PageBehavior>,
     /// The first day of the week. Default: the locale's.
-    #[prop(optional)]
-    first_day_of_week: Option<Weekday>,
-    /// Where the selected date is placed when it is shown on another page. Default: centered.
-    #[prop(optional)]
-    selection_alignment: SelectionAlignment,
+    #[prop(into, optional)]
+    first_day_of_week: MaybeProp<Weekday>,
+    /// Where the focused date is placed when the visible range is aligned. Default: centered.
+    #[prop(into, optional)]
+    selection_alignment: Signal<SelectionAlignment>,
     /// A fixed number of week rows per month (e.g. 6, so the calendar keeps its height).
-    #[prop(optional)]
-    weeks_in_month: Option<u8>,
+    #[prop(into, optional)]
+    weeks_in_month: MaybeProp<u8>,
     /// The calendar's id. Generated when not given.
     #[prop(into, optional)]
     id: Option<String>,
@@ -237,22 +247,20 @@ pub fn Calendar(
         default_focused_value,
         focused_value,
         on_focus_change,
-        visible_duration: visible_duration.unwrap_or(DateDuration::months(1)),
+        visible_duration,
         page_behavior,
-        first_day_of_week,
+        first_day_of_week: Signal::derive(move || first_day_of_week.get()),
         selection_alignment,
-        weeks_in_month,
+        weeks_in_month: Signal::derive(move || weeks_in_month.get()),
     });
-    let calendar = use_calendar(
-        UseCalendarInput {
-            id,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-            aria_details,
-        },
+    let calendar = use_calendar(UseCalendarInput {
         state,
-    );
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
+    });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
 
@@ -279,7 +287,7 @@ pub fn RangeCalendar(
     #[prop(into, optional)] max_value: Signal<Option<Date>>,
     /// Whether a date can't be selected, given the anchor of a range being selected.
     #[prop(into, optional)]
-    is_date_unavailable: Option<Callback<(Date, Option<Date>), bool>>,
+    is_date_unavailable: Option<Callback<DateAvailabilityQuery, bool>>,
     /// Whether a range may span unavailable dates.
     #[prop(optional)]
     allows_non_contiguous_ranges: bool,
@@ -294,13 +302,17 @@ pub fn RangeCalendar(
     #[prop(into, optional)] focused_value: Option<Signal<Date>>,
     #[prop(into, optional)] set_focused_value: Option<Out<Date>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<Date>>,
-    #[prop(optional)] visible_duration: Option<DateDuration>,
-    #[prop(optional)] page_behavior: PageBehavior,
-    #[prop(optional)] first_day_of_week: Option<Weekday>,
+    /// How much is visible at once. Default: one month. A change re-aligns the visible range.
+    #[prop(into, default = Signal::stored(DateDuration::months(1)))]
+    visible_duration: Signal<DateDuration>,
+    #[prop(into, optional)] page_behavior: Signal<PageBehavior>,
+    /// The first day of the week. Default: the locale's.
+    #[prop(into, optional)]
+    first_day_of_week: MaybeProp<Weekday>,
     /// Default: centered, or the start if the range doesn't fit then.
-    #[prop(optional)]
-    selection_alignment: Option<SelectionAlignment>,
-    #[prop(optional)] weeks_in_month: Option<u8>,
+    #[prop(into, optional)]
+    selection_alignment: MaybeProp<SelectionAlignment>,
+    #[prop(into, optional)] weeks_in_month: MaybeProp<u8>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
@@ -373,23 +385,21 @@ pub fn RangeCalendar(
         default_focused_value,
         focused_value,
         on_focus_change,
-        visible_duration: visible_duration.unwrap_or(DateDuration::months(1)),
+        visible_duration,
         page_behavior,
-        first_day_of_week,
-        selection_alignment,
-        weeks_in_month,
+        first_day_of_week: Signal::derive(move || first_day_of_week.get()),
+        selection_alignment: Signal::derive(move || selection_alignment.get()),
+        weeks_in_month: Signal::derive(move || weeks_in_month.get()),
     });
-    let calendar = use_range_calendar(
-        UseCalendarInput {
-            id,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-            aria_details,
-        },
+    let calendar = use_range_calendar(UseRangeCalendarInput {
         state,
         commit_behavior,
-    );
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        aria_details,
+    });
     render_calendar(calendar, is_disabled, classes, styles, children)
 }
 
@@ -445,8 +455,62 @@ pub fn CalendarHeading(
     let Some(context) = expect_calendar("CalendarHeading") else {
         return ().into_any();
     };
-    let heading = use_calendar_heading(&context.data.state, offset, format);
+    let heading = use_calendar_heading(UseCalendarHeadingInput {
+        state: context.data.state,
+        offset,
+        format,
+    });
     view! { <h2 class=classes style=styles aria-hidden="true">{heading}</h2> }.into_any()
+}
+
+/// A month picker of the calendar around it (react-aria-components' `CalendarMonthPicker`):
+/// renders `children` with the year's months, the focused date's month and a setter moving the
+/// focused date, e.g. into a `<select>`. Renders no element of its own.
+#[component]
+pub fn CalendarMonthPicker<F, V>(
+    children: F,
+    /// How the months are formatted. Default: short ("Jan").
+    #[prop(optional)]
+    format: Option<MonthFormat>,
+) -> impl IntoView
+where
+    F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
+    V: IntoView + 'static,
+{
+    let Some(context) = expect_calendar("CalendarMonthPicker") else {
+        return ().into_any();
+    };
+    children(use_calendar_month_picker(UseCalendarMonthPickerInput {
+        state: context.data.state,
+        format: format.unwrap_or(MonthFormat::Short),
+    }))
+    .into_any()
+}
+
+/// A year picker of the calendar around it (react-aria-components' `CalendarYearPicker`):
+/// renders `children` with `visible_years` years around the focused date's (default 20, within
+/// min and max), its year and a setter moving the focused date. Renders no element of its own.
+#[component]
+pub fn CalendarYearPicker<F, V>(
+    children: F,
+    /// How many years to offer. Default: 20.
+    #[prop(optional)]
+    visible_years: Option<u8>,
+    #[prop(optional)] format: CalendarYearPickerFormat,
+) -> impl IntoView
+where
+    F: FnOnce(UseCalendarPickerReturn) -> V + 'static,
+    V: IntoView + 'static,
+{
+    let Some(context) = expect_calendar("CalendarYearPicker") else {
+        return ().into_any();
+    };
+    children(use_calendar_year_picker(UseCalendarYearPickerInput {
+        state: context.data.state,
+        visible_years: visible_years.unwrap_or(20),
+        format,
+    }))
+    .into_any()
 }
 
 /// A button of the calendar around it.
@@ -557,7 +621,15 @@ pub fn CalendarGrid(
     };
     let calendar = context.data.state.calendar();
     let start_date = Signal::derive(move || calendar.visible_range.get().start.add(offset));
-    let is_month_view = calendar.visible_duration.days == 0 && calendar.visible_duration.weeks == 0;
+    // A month view's grid shows a month (react-aria-components: always).
+    let end_date = Signal::derive(move || {
+        let duration = calendar.visible_duration.get();
+        if duration.days == 0 && duration.weeks == 0 {
+            start_date.get().last_of_month()
+        } else {
+            calendar.visible_range.get().end
+        }
+    });
     let UseCalendarGridReturn {
         grid_props,
         start_date,
@@ -565,8 +637,7 @@ pub fn CalendarGrid(
         weeks_in_month,
     } = use_calendar_grid(UseCalendarGridInput {
         start_date: Some(start_date),
-        // A month view's grid shows a month (react-aria-components: always).
-        end_date: is_month_view.then_some(Signal::derive(move || start_date.get().last_of_month())),
+        end_date: Some(end_date),
         weekday_style: weekday_style.unwrap_or(DateTimeFormat::Narrow),
         data: context.data.clone(),
     });
@@ -762,7 +833,7 @@ pub fn CalendarCell(
     let calendar = state.calendar();
     let grid = use_context::<GridContext>();
     let is_outside_month = Signal::derive(move || {
-        let duration = calendar.visible_duration;
+        let duration = calendar.visible_duration.get();
         if duration.days != 0 || duration.weeks != 0 {
             return false;
         }

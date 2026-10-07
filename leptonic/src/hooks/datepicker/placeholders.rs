@@ -3,6 +3,16 @@
 //! browsers' `<input type="date">`), the formatted value for era and day period, dashes for
 //! times.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The placeholder of a segment is looked up by `DateSegmentType` and our `Locale` (react-aria:
+//   by type string and locale string).
+//
+// =============================================================================
+
 use super::types::DateSegmentType;
 use crate::utils::i18n::Locale;
 

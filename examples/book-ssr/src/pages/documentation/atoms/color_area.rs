@@ -38,7 +38,7 @@ pub fn PageAtomColorArea() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 0.6, value: 0.8 });
+                        let color = RwSignal::new(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 });
 
                         view! {
                             <ColorArea
@@ -146,22 +146,27 @@ pub fn PageAtomColorArea() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms set only the inline styles their function needs: the area gets its gradient, "
-                    <Code inline=true>"position: relative"</Code>" and "<Code inline=true>"touch-action: none"</Code>"; the thumb "
-                    "gets its position, a "<Code inline=true>"transform"</Code>" centering it on the color, and the color as "
-                    <Code inline=true>"background-color"</Code>". Both set "<Code inline=true>"forced-color-adjust: none"</Code>
-                    ", so Windows high contrast mode keeps their colors. The sizes, borders and states are yours:"
+                    "The atoms bring no styles beyond the inline ones their function needs. "<Code inline=true>"ColorArea"</Code>" renders a "<Code inline=true>"<div>"</Code>" "
+                    "with the class "<Code inline=true>"leptonic-ColorArea"</Code>" and sets its gradient, "<Code inline=true>"position: relative"</Code>" and "
+                    <Code inline=true>"touch-action: none"</Code>"; "<Code inline=true>"ColorThumb"</Code>" renders a "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"leptonic-ColorThumb"</Code>" around "
+                    "the visually hidden inputs and sets its position, a "<Code inline=true>"transform"</Code>" centering it on the color, and the color as "
+                    <Code inline=true>"background-color"</Code>". Your "<Code inline=true>"classes"</Code>" follow the default class. Both set "<Code inline=true>"forced-color-adjust: none"</Code>", "
+                    "so Windows high contrast mode keeps their colors. The sizes, borders and states are yours; the demo above uses this "
+                    "CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-color-area { width: 200px; height: 200px; border-radius: 8px; }
-                        .my-color-area[data-disabled] { opacity: 0.5; }
-
-                        .my-color-thumb { width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; }
-                        .my-color-thumb[data-dragging] { width: 24px; height: 24px; }
-                        .my-color-thumb[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .demo-color-atoms-area { width: 200px; height: 200px; max-width: 100%; border-radius: 8px; cursor: crosshair; }
+                        .demo-color-atoms-area[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-color-atoms-thumb { box-sizing: border-box; width: 20px; height: 20px; border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--muted); cursor: grab; }
+                        .demo-color-atoms-thumb[data-dragging] { cursor: grabbing; }
+                        .demo-color-atoms-thumb[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

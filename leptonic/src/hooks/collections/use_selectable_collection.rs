@@ -51,10 +51,15 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `auto_focus` is `Option<FocusStrategy>` (react-aria: `boolean | 'first' | 'last'`).
+// - `auto_focus` is a `Signal<Option<AutoFocus>>` (react-aria: `boolean | 'first' | 'last'`).
 // - `select_on_focus: SelectOnFocus` (`Auto`, `Always`, `Never`; react-aria: an optional
 //   boolean): `Auto` selects on focus exactly when the selection behavior is `Replace`.
 // - Item elements are looked up in the `ItemElements` registry instead of `[data-key]` queries.
+//
+// ## DIFFERENT BEHAVIOR
+// - Escape with a selection the state doesn't allow to empty (`disallow_empty_selection` of the
+//   selection manager) is not handled, so it propagates (e.g. to close a popover). react-aria
+//   handles it with a `clearSelection` that does nothing, which swallows it.
 //
 // ## OMITTED FEATURES
 // - The virtual focus events `react-aria-focus` / `react-aria-clear-focus` (sent by react-aria's
@@ -116,7 +121,7 @@ pub struct CollectionOptions {
 }
 
 /// Input of [`use_selectable_collection`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseSelectableCollectionInput {
     pub selection: SelectionManager,
     /// Item elements, registered by the item hooks.
@@ -238,7 +243,8 @@ pub fn use_selectable_collection(
     let focused = move || untrack(|| selection.focused_key());
 
     // Move focus to `key` and update the selection as keyboard navigation does. Returns whether
-    // the key press was handled.
+    // the key press was handled: whenever there is a key to go to (react-aria prevents the
+    // default for every navigation, also onto link items).
     let navigate_to_key =
         move |e: &KeyboardEvent, key: Option<Key>, child: Option<FocusStrategy>| {
             let Some(key) = key else {
@@ -259,13 +265,12 @@ pub fn use_selectable_collection(
                 });
                 if let (Some(item), Some(link)) = (item_elements.get(&key), link) {
                     link.open(&item, e.modifiers());
-                    return true;
                 }
-                return false;
+                return true;
             }
             selection.set_focused_key(Some(key.clone()), child);
             if is_link && link_behavior == LinkBehavior::Override {
-                return false;
+                return true;
             }
             if e.shift_key() && untrack(|| selection.selection_mode()) == SelectionMode::Multiple {
                 selection.extend_selection(&key);

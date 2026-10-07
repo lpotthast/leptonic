@@ -1,10 +1,14 @@
 use leptonic::{
     atoms::{
+        button::Button,
+        checkbox::Checkbox,
         field::{Description, Label},
-        listbox::{ListBox, ListBoxItem, ListBoxItemDescription, ListBoxItemLabel, ListBoxSection},
+        listbox::{
+            ListBox, ListBoxItem, ListBoxItemDescription, ListBoxItemLabel, ListBoxSection,
+            ListBoxSectionHeading,
+        },
         select::{Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    components::prelude::{Button, ButtonColor, Checkbox},
     hooks::collections::{Key, use_collection},
 };
 use leptos::prelude::*;
@@ -82,7 +86,8 @@ pub fn SelectAtomDemo() -> impl IntoView {
                         .iter()
                         .map(|region| {
                             view! {
-                                <ListBoxSection key=region.key heading_classes="demo-sel-heading">
+                                <ListBoxSection key=region.key>
+                                    <ListBoxSectionHeading classes="demo-sel-heading" />
                                     {region
                                         .offices
                                         .iter()
@@ -112,10 +117,12 @@ pub fn SelectAtomDemo() -> impl IntoView {
             {move || office.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
             // The app changes the selection by writing its state.
-            <Button on_press=move |_| office.set(Vec::new()) color=ButtonColor::Secondary>"Clear"</Button>
+            <Button on_press=move |_| office.set(Vec::new()) classes="demo-btn">"Clear"</Button>
         </div>
-
     }
 }

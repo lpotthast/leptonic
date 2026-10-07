@@ -9,6 +9,7 @@ use crate::{
         css::{computed_pct, computed_size},
         data_attributes::flag,
         default_class::with_default_class,
+        fraction::Fraction,
         number_formatter::NumberFormatOptions,
         number_value::{NumberValue, OptionalNumberSignal},
         style::WidthProperty,
@@ -27,14 +28,20 @@ use crate::{
 //   `ProgressBarFill` (sized to the percentage) and `ProgressBarValueText`, plus
 //   `data-indeterminate`. Reason: a component's children aren't a function of its state in
 //   Leptos.
-// - No slots (`ProgressBarContext`) and no `render` prop.
+// - No slots and no `render` prop. A surrounding `Button` gives the progress bar its id (as
+//   react-aria-components' `ProgressBarContext` does).
 //
 // =============================================================================
+
+/// The id a surrounding [`Button`](super::button::Button) gives the progress bar inside it: it
+/// names the button while the button is pending (react-aria-components' `ProgressBarContext`).
+#[derive(Debug, Clone)]
+pub(crate) struct ProgressBarIdContext(pub(crate) String);
 
 /// What the parts of a progress bar or meter show.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct ValueContext {
-    pub percentage: Signal<Option<f64>>,
+    pub percentage: Signal<Option<Fraction>>,
     pub value_text: Signal<Option<String>>,
 }
 
@@ -75,7 +82,10 @@ pub fn ProgressBar<T: NumberValue>(
     /// Replaces the formatted value text (e.g. "1 of 4").
     #[prop(into, optional)]
     value_label: MaybeProp<String>,
-    #[prop(into, optional)] id: Option<String>,
+    /// The element's id. Default: the id a surrounding `Button` asks for (it names the pending
+    /// button), else generated.
+    #[prop(into, optional)]
+    id: Option<String>,
     /// Names the progress bar when it has no `Label`.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -86,6 +96,7 @@ pub fn ProgressBar<T: NumberValue>(
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-ProgressBar", classes);
+    let id = id.or_else(|| use_context::<ProgressBarIdContext>().map(|ctx| ctx.0));
     let value = value.into_signal();
     let defaults = UseProgressBarInput::<T>::default();
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
@@ -157,9 +168,9 @@ pub(crate) fn fill(classes: Classes, styles: Styles) -> impl IntoView {
     let ValueContext { percentage, .. } = expect_context::<ValueContext>();
     let styles = Styles::new()
         .add_optional(move || {
-            percentage
-                .get()
-                .map(|percentage| WidthProperty.declare(computed_size(computed_pct(percentage))))
+            percentage.get().map(|percentage| {
+                WidthProperty.declare(computed_size(computed_pct(percentage.as_percent())))
+            })
         })
         .merge(styles);
     view! {

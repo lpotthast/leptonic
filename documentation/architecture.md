@@ -1,25 +1,32 @@
 # Leptonic Architecture
 
-See CLAUDE.md for the layer overview (hooks → atoms → components), feature flags, theme system, and build
-system. This document covers architectural patterns not captured there.
+See CLAUDE.md for the layer overview, feature flags, theme system, and build system. Leptonic is becoming hooks +
+atoms + an optional CSS theme for the atoms (the components layer is being removed, see `PLAN.md`). This document
+shows how the two remaining layers are used; the implementation patterns are in `hooks-implementation.md` (incl.
+form validation and animation hooks) and `atoms-implementation.md`.
 
 ## Layer Examples
 
 ### Hooks
 
+A hook adds behavior and accessibility to an element you render yourself:
+
 ```rust
 use leptos::prelude::*;
-use leptonic::hooks::{use_button, UseButtonInput, UsePressInput, UseHoverInput, UseFocusRingInput};
+use leptonic::hooks::{UseButtonInput, UseButtonReturn, use_button};
 
 #[component]
-fn MyButton(children: Children) -> impl IntoView {
-    let UseButtonReturn { props, .. } = use_button(UseButtonInput {
-        /* ... */
+fn MyButton(#[prop(into)] on_press: Callback<PressEvent>, children: Children) -> impl IntoView {
+    let UseButtonReturn { props, is_pressed, .. } = use_button(UseButtonInput {
+        on_press: Some(on_press),
+        ..UseButtonInput::default()
     });
+    // `use_button` also sets inline styles: spread the attributes, apply the styles.
+    let (attrs, styles) = props.into_parts();
 
     view! {
-        <button {..props.into_attrs()}>
-            { children() }
+        <button {..attrs} style=styles class:pressed=is_pressed>
+            {children()}
         </button>
     }
 }
@@ -27,67 +34,30 @@ fn MyButton(children: Children) -> impl IntoView {
 
 ### Atoms
 
+An atom renders one element with the hooks wired in, a default class (`leptonic-Button`) and data attributes
+(`data-pressed`, `data-hovered`, `data-focus-visible`, ...) to style it by:
+
 ```rust
 use leptos::prelude::*;
 use leptonic::atoms::button::Button;
 
 #[component]
-fn MyButton(
-    #[prop(into)] on_press: Callback<PressEvent>,
-    children: Children
-) -> impl IntoView {
+fn MyButton(#[prop(into)] on_press: Callback<PressEvent>, children: Children) -> impl IntoView {
     view! {
-        <Button on_press>
-            { children() }
+        <Button on_press classes="my-button">
+            {children()}
         </Button>
     }
 }
 ```
 
-### Components
+## Where Things Live
 
-```rust
-use leptonic::components::button::{Button, ButtonVariant, ButtonColor};
-
-view! {
-    <Button
-        on_press=move |_press| { /* handle press */ }
-        variant=ButtonVariant::Filled
-        color=ButtonColor::Primary
-    >
-        "Click me"
-    </Button>
-}
-```
-
-## Form Validation Hooks
-
-Three cooperating hooks handle form validation:
-
-- `use_form_validation_state` — state management for multiple validation sources (controlled, server,
-  client-side, native). `ValidationBehavior::Aria` vs `::Native` determines how validation is surfaced.
-  Returns `ValidationResult` aggregating all sources.
-- `use_form_validation` — DOM connection (side-effectual, no return value). Calls `setCustomValidity()` on
-  the form element and listens for native validation events.
-- `use_form_reset` — detects parent `<form>` reset events via `CapturedElement` from
-  `leptos-element-capture`.
-
-Field hooks (e.g., `use_text_field`, `use_checkbox`) compose these three internally.
-
-## Animation System (`leptonic/src/hooks/animation/`)
-
-CSS animation lifecycle hooks using the Web Animations API.
-
-- `use_enter_animation` — accepts `CapturedElement` from `leptos-element-capture` plus an `is_ready` signal,
-  returns `is_entering: Signal<bool>`.
-  Watches element animations on mount and reports when they complete.
-- `use_exit_animation` — accepts `CapturedElement` from `leptos-element-capture` plus an `is_open` signal,
-  returns `is_exiting: Signal<bool>` and `exit_state: Signal<ExitState>`.
-- `ExitState` enum: `Open` → `Exiting` → `Closed`.
-
-Internally, `watch_animations()` uses `Element.getAnimations()` and `Promise.all(animation.finished)` to
-detect animation completion. During SSR, no Web Animations API calls are made; enter reports `false`, exit
-follows `is_open` directly.
-
-**Purpose:** Coordinated enter/exit transitions for overlays, popovers, modals — keeping the element mounted
-during exit animations.
+| Concern                               | Place                                                                                     |
+|---------------------------------------|-------------------------------------------------------------------------------------------|
+| Interaction, focus, ARIA, state logic | `leptonic/src/hooks/<family>/` (ported from react-aria/react-stately)                     |
+| Elements wiring hooks together        | `leptonic/src/atoms/` (ported from react-aria-components)                                 |
+| Shared types and DOM utilities        | `leptonic/src/utils/` (ARIA types, i18n, focus, collections helpers, ...)                 |
+| Atom theme (optional)                 | `leptonic-theme/scss/atoms/` (`documentation/atom-theme.md`)                              |
+| Native test support                   | `leptonic/src/testing.rs` (test builds only; "Native Tests" in `hooks-implementation.md`) |
+| Browser tests                         | `leptonic/tests/` driving `testing/test-app/` (CLAUDE.md, "Browser Tests")                |

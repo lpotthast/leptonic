@@ -122,25 +122,33 @@ pub fn PageAtomProgressBar() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes. Give the track a size and the fill a color; while indeterminate, give the "
-                    "fill a width and an animation. Without motion, show something that can\u{2019}t be mistaken for "
-                    "a partial fill, such as a striped track:"
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-ProgressBar"</Code>", "
+                    <Code inline=true>"leptonic-ProgressBarFill"</Code>" and "<Code inline=true>"leptonic-ProgressBarValueText"</Code>
+                    ", each followed by the "<Code inline=true>"classes"</Code>" you pass. The track is your own markup "
+                    "around the fill, which the atom sizes to the progress. While indeterminate, the fill has no width: "
+                    "give it one and an animation through "<Code inline=true>"data-indeterminate"</Code>". Without motion, "
+                    "show something that can\u{2019}t be mistaken for a partial fill, such as a striped track. The "
+                    "book\u{2019}s demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .progress-track { position: relative; height: 0.5em; overflow: hidden; background: var(--border); }
-                        .progress-fill { height: 100%; background: var(--accent); }
-                        .progress-fill[data-indeterminate] { position: absolute; width: 40%; animation: slide 1.5s infinite ease-in-out; }
-                        @keyframes slide { from { left: -40%; } to { left: 100%; } }
+                        .my-progress-track { position: relative; height: 8px; overflow: hidden; border-radius: 4px; background: var(--border); }
+                        .my-progress-fill { height: 100%; background: var(--accent); }
+                        .my-progress-fill[data-indeterminate] { position: absolute; width: 40%; animation: sweep 1.5s infinite ease-in-out; }
+                        @keyframes sweep { from { left: -40%; } to { left: 100%; } }
 
                         @media (prefers-reduced-motion: reduce) {
-                            .progress-fill[data-indeterminate] {
+                            .my-progress-fill[data-indeterminate] {
                                 left: 0; width: 100%; animation: none;
                                 background: repeating-linear-gradient(-45deg, var(--accent) 0 0.5em, var(--surface) 0.5em 1em);
                             }
                         }
                     ")}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>

@@ -27,7 +27,7 @@ pub fn PageGridOverview() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Arrange content in responsive columns, without interaction"</TableCell>
-                        <TableCell><Link href=routes::doc::GridLayout.materialize()>"Grid Layout"</Link></TableCell>
+                        <TableCell>"A "<Link href=format!("{}#grid-layout", routes::doc::Layout.materialize())>"CSS grid layout"</Link></TableCell>
                     </TableRow>
                 </DocTable>
             </Section>

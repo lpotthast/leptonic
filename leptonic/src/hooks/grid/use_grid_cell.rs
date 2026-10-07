@@ -7,16 +7,16 @@ use leptos::{
 };
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
-use web_sys::{FocusEvent, KeyboardEvent};
+use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::GridData;
 use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
         collections::{
-            FocusStrategy, Key, LinkBehavior, NavigationOptions, UseSelectableItemAttrs,
-            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
-            use_selectable_item,
+            FocusItem, FocusStrategy, Key, LinkBehavior, NavigationOptions,
+            UseSelectableItemAttrs, UseSelectableItemInput, UseSelectableItemProps,
+            UseSelectableItemReturn, use_selectable_item,
         },
         focus::use_focus_visible::{Modality, get_modality},
         gridlist::KeyboardNavigationBehavior,
@@ -27,7 +27,7 @@ use crate::{
         focus::focus_safely,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
         i18n::use_direction,
-        key::{KeyboardEventKey, KeyboardKey},
+        key::{KeyboardEventKey, KeyboardKey, redispatch_keyboard_event},
         locale::WritingDirection,
         node_contains,
         owner_alive::OwnerAlive,
@@ -81,24 +81,27 @@ pub struct UseGridCellReturn {
 /// Props for the cell element.
 #[derive(Debug)]
 pub struct UseGridCellProps {
-    pub role: AriaRole,
-    pub aria_colspan: Option<usize>,
-    pub aria_colindex: Option<usize>,
+    pub role: Signal<AriaRole>,
+    pub aria_colspan: Signal<Option<usize>>,
+    pub aria_colindex: Signal<Option<usize>>,
     /// For `<td>`/`<th>` cells.
-    pub colspan: Option<usize>,
+    pub colspan: Signal<Option<usize>>,
     pub item: UseSelectableItemProps,
     pub on_keydown_capture: EventHandler<KeyboardEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
+    /// Briefly removes the cell's `tabindex` on pointer down (see [`use_grid_cell`]).
+    pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
 pub type UseGridCellAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaColspan, Option<usize>>,
-    Attr<attr::AriaColindex, Option<usize>>,
-    Attr<attr::Colspan, Option<usize>>,
+    Attr<attr::Role, Signal<AriaRole>>,
+    Attr<attr::AriaColspan, Signal<Option<usize>>>,
+    Attr<attr::AriaColindex, Signal<Option<usize>>>,
+    Attr<attr::Colspan, Signal<Option<usize>>>,
     UseSelectableItemAttrs,
     On<ev::Capture<ev::keydown>, SharedEventCallback<KeyboardEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
 );
 
 impl IntoAttrs for UseGridCellProps {
@@ -113,6 +116,7 @@ impl IntoAttrs for UseGridCellProps {
             self.item.into_attrs(),
             self.on_keydown_capture.into_on(ev::capture(ev::keydown)),
             self.on_focusin.into_on(ev::focusin),
+            self.on_pointerdown.into_on(ev::pointerdown),
         )
     }
 }
@@ -147,13 +151,17 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     );
     let selection = state.list.selection;
     let direction = use_direction();
-    let (col_span, col_index) = untrack(|| {
-        state.list.collection.with(|c| {
-            c.get(&key)
-                .map(|n| (n.col_span, n.col_index))
-                .unwrap_or_default()
+    // The cell's span and column follow the collection (e.g. when columns change).
+    let position = {
+        let key = key.clone();
+        Memo::new(move |_| {
+            state.list.collection.with(|c| {
+                c.get(&key)
+                    .map(|n| (n.col_span, n.col_index))
+                    .unwrap_or_default()
+            })
         })
-    });
+    };
 
     let element = CapturedElement::new();
     let cell_key = StoredValue::new(key.clone());
@@ -222,6 +230,8 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     let UseSelectableItemReturn {
         props: item_props,
         is_pressed,
+        allows_selection,
+        has_action,
         ..
     } = use_selectable_item(UseSelectableItemInput {
         selection,
@@ -238,7 +248,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
             Callback::new(move |()| on_cell_action.run(key.clone()))
         }),
         link_behavior: LinkBehavior::Action,
-        focus: Some(Callback::new(move |()| focus_cell())),
+        focus: Some(FocusItem::new(focus_cell)),
         should_use_virtual_focus: false,
         on_context_menu: None,
     });
@@ -263,7 +273,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         {
             return;
         }
-        if state.is_keyboard_navigation_disabled.get_untracked() {
+        if state.is_keyboard_navigation_disabled().get_untracked() {
             return;
         }
         let Some(cell) = element.get_untracked() else {
@@ -284,9 +294,12 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         };
         walker.set_current_node(active.unchecked_ref());
         let rtl = direction.get_untracked() == WritingDirection::Rtl;
+        // Lets the row and grid handle the key: a nested dispatch of `keydown`, but the copy's
+        // path (the row and its ancestors) has no listener still running for `e` (their capture
+        // listeners ran before this one, their bubble listeners haven't, as `e` stops here).
         let redispatch = |e: &KeyboardEvent| {
             if let Some(parent) = cell.parent_element() {
-                let _ = parent.dispatch_event(&clone_keyboard_event(e));
+                redispatch_keyboard_event(e, &parent);
             }
         };
 
@@ -357,7 +370,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
     // before the cell's own key handling.
     let tab_navigation = move |e: &KeyboardEvent| {
         if keyboard_navigation_behavior != KeyboardNavigationBehavior::Tab
-            || state.is_keyboard_navigation_disabled.get_untracked()
+            || state.is_keyboard_navigation_disabled().get_untracked()
         {
             return;
         }
@@ -456,36 +469,48 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         item_props.tabindex = Signal::stored(Some(-1));
     }
 
+    // When rows select on press up (e.g. draggable rows) and the press goes to the row (the cell
+    // can't be selected and has no action), the pointer down's default focus would land on the
+    // cell (the closest element with a tabindex) instead of the row: the cell drops its tabindex
+    // for a frame (useGridCell.ts).
+    let on_pointerdown = {
+        let tabindex = item_props.tabindex;
+        EventHandler::new(move |e: PointerEvent| {
+            if !should_select_on_press_up
+                || allows_selection.get_untracked()
+                || has_action.get_untracked()
+                || tabindex.get_untracked().is_none()
+            {
+                return;
+            }
+            let Ok(cell) = e.expect_current_target().dyn_into::<web_sys::Element>() else {
+                return;
+            };
+            let Some(value) = cell.get_attribute("tabindex") else {
+                return;
+            };
+            let _ = cell.remove_attribute("tabindex");
+            let cell = SendWrapper::new(cell);
+            request_animation_frame(move || {
+                let _ = cell.set_attribute("tabindex", &value);
+            });
+        })
+    };
+
     UseGridCellReturn {
         grid_cell_props: PropsWithStyles::new(
             UseGridCellProps {
-                role: AriaRole::Gridcell,
-                aria_colspan: col_span,
-                aria_colindex: col_index.map(|i| i + 1),
-                colspan: col_span,
+                role: Signal::stored(AriaRole::Gridcell),
+                aria_colspan: Signal::derive(move || position.get().0),
+                aria_colindex: Signal::derive(move || position.get().1.map(|i| i + 1)),
+                colspan: Signal::derive(move || position.get().0),
                 item: item_props,
                 on_keydown_capture: EventHandler::new(on_keydown_capture),
                 on_focusin,
+                on_pointerdown,
             },
             item_styles,
         ),
         is_pressed,
     }
-}
-
-/// A copy of `e` (same key and modifiers) that bubbles, for re-dispatching it elsewhere.
-fn clone_keyboard_event(e: &KeyboardEvent) -> KeyboardEvent {
-    let init = web_sys::KeyboardEventInit::new();
-    init.set_key(&e.key());
-    init.set_code(&e.code());
-    init.set_location(e.location());
-    init.set_repeat(e.repeat());
-    init.set_shift_key(e.shift_key());
-    init.set_ctrl_key(e.ctrl_key());
-    init.set_alt_key(e.alt_key());
-    init.set_meta_key(e.meta_key());
-    init.set_bubbles(true);
-    init.set_cancelable(true);
-    KeyboardEvent::new_with_keyboard_event_init_dict(&e.type_(), &init)
-        .expect("KeyboardEvent creation should not fail")
 }

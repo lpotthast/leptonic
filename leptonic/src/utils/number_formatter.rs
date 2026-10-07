@@ -1,14 +1,34 @@
-// Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 6f664fe911
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useNumberFormatter.ts
+// Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 99e6102368
 
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use fixed_decimal::{Decimal, Sign, SignedRoundingMode, UnsignedRoundingMode};
 use icu_decimal::{DecimalFormatter, options::DecimalFormatterOptions};
-use icu_locale::Locale as IcuLocale;
+use icu_locale::{
+    Locale as IcuLocale,
+    extensions::unicode::{Value, key},
+};
 use leptos::prelude::*;
+use writeable::{Part, PartsWrite, Writeable};
 
 use super::{i18n::Locale, number_value::NumberValue};
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `Intl.NumberFormat` is replaced by an ICU4X-based formatter: typed options (enums instead of
+//   strings), exact formatting of any `NumberValue`, and `format_to_parts` with typed parts.
+//
+// ## OMITTED FEATURES
+// - CLDR currency, unit and percent patterns: currency symbols come from a small built-in table
+//   and always precede the number, units are written as given, the percent sign always follows
+//   the number without a space, and the accounting format wraps negative amounts in parentheses
+//   in every locale. Reason: ICU4X's currency, unit and percent formatters are experimental
+//   (`icu_experimental`).
+//
+// =============================================================================
 
 /// Number formatting options (as `Intl.NumberFormatOptions`).
 #[derive(Debug, Clone, PartialEq)]
@@ -49,6 +69,13 @@ pub struct NumberFormatOptions {
 
     /// How to display the sign. Default is "auto".
     pub sign_display: SignDisplay,
+
+    /// How negative currency amounts are shown. Default: with a minus sign.
+    pub currency_sign: CurrencySign,
+
+    /// The digits to format with. Default (`None`): the locale's (a `-u-nu-` keyword in the
+    /// locale, else its default numbering system).
+    pub numbering_system: Option<NumberingSystem>,
 }
 
 impl Default for NumberFormatOptions {
@@ -66,6 +93,8 @@ impl Default for NumberFormatOptions {
             unit: None,
             unit_display: UnitDisplay::default(),
             sign_display: SignDisplay::default(),
+            currency_sign: CurrencySign::default(),
+            numbering_system: None,
         }
     }
 }
@@ -124,6 +153,182 @@ pub enum SignDisplay {
     Never,
 }
 
+/// How negative currency amounts are shown (`Intl.NumberFormat`'s `currencySign`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CurrencySign {
+    /// With a minus sign: "-$1.50".
+    #[default]
+    Standard,
+    /// In parentheses, as in accounting: "($1.50)".
+    Accounting,
+}
+
+/// A numbering system: the digits numbers are written with (a BCP 47 `nu` value).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum NumberingSystem {
+    /// Latin digits: 0123456789.
+    Latn,
+    /// Arabic-Indic digits: ٠١٢٣٤٥٦٧٨٩.
+    Arab,
+    /// Extended Arabic-Indic digits (Persian, Urdu): ۰۱۲۳۴۵۶۷۸۹.
+    ArabExt,
+    /// Bengali digits: ০১২৩৪৫৬৭৮৯.
+    Beng,
+    /// Devanagari digits: ०१२३४५६७८९.
+    Deva,
+    /// Full-width digits: ０１２３４５６７８９.
+    FullWide,
+    /// Han decimal digits: 〇一二三四五六七八九.
+    HaniDec,
+    /// Myanmar digits: ၀၁၂၃၄၅၆၇၈၉.
+    Mymr,
+    /// Tamil digits: ௦௧௨௩௪௫௬௭௮௯.
+    TamlDec,
+    /// Thai digits: ๐๑๒๓๔๕๖๗๘๙.
+    Thai,
+}
+
+impl NumberingSystem {
+    const ALL: [Self; 10] = [
+        Self::Latn,
+        Self::Arab,
+        Self::ArabExt,
+        Self::Beng,
+        Self::Deva,
+        Self::FullWide,
+        Self::HaniDec,
+        Self::Mymr,
+        Self::TamlDec,
+        Self::Thai,
+    ];
+
+    /// The BCP 47 `nu` value, e.g. `"arab"`.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Latn => "latn",
+            Self::Arab => "arab",
+            Self::ArabExt => "arabext",
+            Self::Beng => "beng",
+            Self::Deva => "deva",
+            Self::FullWide => "fullwide",
+            Self::HaniDec => "hanidec",
+            Self::Mymr => "mymr",
+            Self::TamlDec => "tamldec",
+            Self::Thai => "thai",
+        }
+    }
+
+    /// The digit zero of this system.
+    fn zero(self) -> char {
+        match self {
+            Self::Latn => '0',
+            Self::Arab => '\u{660}',
+            Self::ArabExt => '\u{6f0}',
+            Self::Beng => '\u{9e6}',
+            Self::Deva => '\u{966}',
+            Self::FullWide => '\u{ff10}',
+            Self::HaniDec => '\u{3007}',
+            Self::Mymr => '\u{1040}',
+            Self::TamlDec => '\u{be6}',
+            Self::Thai => '\u{e50}',
+        }
+    }
+
+    /// The system whose zero is `zero`.
+    pub(crate) fn of_zero(zero: char) -> Option<Self> {
+        Self::ALL.into_iter().find(|system| system.zero() == zero)
+    }
+
+    /// `locale` with this numbering system (its `-u-nu-` keyword).
+    pub(crate) fn apply_to(self, locale: &Locale) -> Locale {
+        let mut locale = locale.icu_locale().clone();
+        if let Ok(value) = Value::try_from_str(self.as_str()) {
+            locale.extensions.unicode.keywords.set(key!("nu"), value);
+        }
+        Locale::from(locale)
+    }
+}
+
+/// What a part of a formatted number is (`Intl.NumberFormat.formatToParts`' part types).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NumberPartKind {
+    MinusSign,
+    PlusSign,
+    /// Integer digits (between group separators).
+    Integer,
+    /// A group (thousands) separator.
+    Group,
+    /// The decimal separator.
+    Decimal,
+    /// Fraction digits.
+    Fraction,
+    PercentSign,
+    /// A currency symbol, code or name.
+    Currency,
+    Unit,
+    /// Anything else: spaces, parentheses, direction marks.
+    Literal,
+}
+
+/// A part of a formatted number, see [`NumberFormatter::format_to_parts`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NumberPart {
+    pub kind: NumberPartKind,
+    pub value: String,
+}
+
+impl NumberPart {
+    fn new(kind: NumberPartKind, value: impl Into<String>) -> Self {
+        Self {
+            kind,
+            value: value.into(),
+        }
+    }
+}
+
+/// Collects the parts ICU4X's decimal formatter writes, merging adjacent text of one kind.
+struct PartsCollector(Vec<NumberPart>, Vec<NumberPartKind>);
+
+impl fmt::Write for PartsCollector {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s.is_empty() {
+            return Ok(());
+        }
+        let kind = self.1.last().copied().unwrap_or(NumberPartKind::Literal);
+        match self.0.last_mut() {
+            Some(last) if last.kind == kind => last.value.push_str(s),
+            _ => self.0.push(NumberPart::new(kind, s)),
+        }
+        Ok(())
+    }
+}
+
+impl PartsWrite for PartsCollector {
+    type SubPartsWrite = Self;
+
+    fn with_part(
+        &mut self,
+        part: Part,
+        mut f: impl FnMut(&mut Self::SubPartsWrite) -> fmt::Result,
+    ) -> fmt::Result {
+        use icu_decimal::parts;
+        let kind = match part {
+            parts::MINUS_SIGN => NumberPartKind::MinusSign,
+            parts::PLUS_SIGN => NumberPartKind::PlusSign,
+            parts::INTEGER => NumberPartKind::Integer,
+            parts::GROUP => NumberPartKind::Group,
+            parts::DECIMAL => NumberPartKind::Decimal,
+            parts::FRACTION => NumberPartKind::Fraction,
+            _ => NumberPartKind::Literal,
+        };
+        self.1.push(kind);
+        let result = f(self);
+        self.1.pop();
+        result
+    }
+}
+
 /// A locale-aware number formatter backed by ICU4X.
 ///
 /// Uses `icu_decimal::DecimalFormatter` for locale-aware grouping
@@ -156,7 +361,10 @@ impl NumberFormatter {
     /// Creates a new number formatter with the given locale and options.
     #[must_use]
     pub fn new(locale: &Locale, options: NumberFormatOptions) -> Self {
-        let locale = locale.icu_locale().clone();
+        let locale = match options.numbering_system {
+            Some(system) => system.apply_to(locale).icu_locale().clone(),
+            None => locale.icu_locale().clone(),
+        };
         let mut decimal_options = DecimalFormatterOptions::default();
         decimal_options.grouping_strategy = Some(if options.use_grouping {
             icu_decimal::options::GroupingStrategy::Auto
@@ -183,15 +391,76 @@ impl NumberFormatter {
     /// Formats a number according to the formatter's options. Empty for infinite and NaN floats.
     #[must_use]
     pub fn format<T: NumberValue>(&self, value: T) -> String {
-        let Some(decimal) = value.to_decimal() else {
-            return String::new();
-        };
+        self.format_to_parts(value)
+            .into_iter()
+            .map(|part| part.value)
+            .collect()
+    }
+
+    /// Formats a number into its parts (`Intl.NumberFormat.formatToParts`). Empty for infinite
+    /// and NaN floats.
+    #[must_use]
+    pub fn format_to_parts<T: NumberValue>(&self, value: T) -> Vec<NumberPart> {
+        value
+            .to_decimal()
+            .map(|decimal| self.format_decimal_to_parts(decimal))
+            .unwrap_or_default()
+    }
+
+    /// Formats a decimal into its parts.
+    pub(crate) fn format_decimal_to_parts(&self, decimal: Decimal) -> Vec<NumberPart> {
         match self.options.style {
             NumberStyle::Percent => self.format_percent(decimal),
             NumberStyle::Currency => self.format_currency(decimal),
             NumberStyle::Unit => self.format_unit(decimal),
             NumberStyle::Decimal => self.format_decimal(decimal),
         }
+    }
+
+    /// `decimal` rounded as this formatter shows it (with the style's default fraction digits).
+    pub(crate) fn round(&self, decimal: Decimal) -> Decimal {
+        let (min, max) = self.default_fraction_digits();
+        self.with_digits(decimal, min, max)
+    }
+
+    /// The style's default minimum and maximum fraction digits (as `Intl.NumberFormat`).
+    fn default_fraction_digits(&self) -> (u32, u32) {
+        match self.options.style {
+            NumberStyle::Percent => (0, 0),
+            NumberStyle::Currency => (2, 2),
+            NumberStyle::Decimal | NumberStyle::Unit => (0, 3),
+        }
+    }
+
+    /// The maximum fraction digits this formatter shows, `None` when significant digits decide
+    /// (`Intl.NumberFormat`'s resolved `maximumFractionDigits`).
+    pub(crate) fn maximum_fraction_digits(&self) -> Option<u32> {
+        let options = &self.options;
+        if options.minimum_significant_digits.is_some()
+            || options.maximum_significant_digits.is_some()
+        {
+            return None;
+        }
+        let (min, max) = self.default_fraction_digits();
+        let min = options.minimum_fraction_digits.unwrap_or(min);
+        Some(options.maximum_fraction_digits.unwrap_or(max).max(min))
+    }
+
+    /// The minimum fraction digits this formatter shows.
+    pub(crate) fn minimum_fraction_digits(&self) -> u32 {
+        self.options
+            .minimum_fraction_digits
+            .unwrap_or(self.default_fraction_digits().0)
+    }
+
+    /// The numbering system this formatter writes digits with.
+    #[must_use]
+    pub fn numbering_system(&self) -> NumberingSystem {
+        let digits = self.format_with_icu(&Decimal::from(0));
+        digits
+            .chars()
+            .find_map(NumberingSystem::of_zero)
+            .unwrap_or(NumberingSystem::Latn)
     }
 
     /// Applies the digit options: significant digits if set, else fraction digits (`min` and
@@ -234,63 +503,111 @@ impl NumberFormatter {
         });
     }
 
-    fn format_decimal(&self, decimal: Decimal) -> String {
-        let mut decimal = self.with_digits(decimal, 0, 3);
+    fn format_decimal(&self, decimal: Decimal) -> Vec<NumberPart> {
+        let mut decimal = self.round(decimal);
         self.apply_sign_display(&mut decimal);
-        self.format_with_icu(&decimal)
+        self.parts_with_icu(&decimal)
     }
 
-    fn format_percent(&self, mut decimal: Decimal) -> String {
+    fn format_percent(&self, mut decimal: Decimal) -> Vec<NumberPart> {
         decimal.absolute.multiply_pow10(2);
         decimal.absolute.trim_start();
-        let mut decimal = self.with_digits(decimal, 0, 0);
+        let mut decimal = self.round(decimal);
         self.apply_sign_display(&mut decimal);
-        let formatted = self.format_with_icu(&decimal);
-        format!("{formatted}%")
+        let mut parts = self.parts_with_icu(&decimal);
+        parts.push(NumberPart::new(NumberPartKind::PercentSign, "%"));
+        parts
     }
 
-    fn format_currency(&self, decimal: Decimal) -> String {
+    fn format_currency(&self, decimal: Decimal) -> Vec<NumberPart> {
         let currency = self.options.currency.as_deref().unwrap_or("USD");
-        let mut decimal = self.with_digits(decimal, 2, 2);
+        let mut decimal = self.round(decimal);
         self.apply_sign_display(&mut decimal);
-        let sign = match decimal.sign {
-            Sign::Negative => "-",
-            Sign::Positive => "+",
-            Sign::None => "",
-        };
-        decimal.sign = Sign::None;
-        let formatted = self.format_with_icu(&decimal);
-        let symbol = get_currency_symbol(currency);
-
+        let accounting = self.options.currency_sign == CurrencySign::Accounting
+            && decimal.sign == Sign::Negative;
+        if accounting {
+            decimal.sign = Sign::None;
+        }
+        let mut parts = self.parts_with_icu(&decimal);
+        // The sign comes first.
+        let sign_end = parts
+            .iter()
+            .position(|part| {
+                !matches!(
+                    part.kind,
+                    NumberPartKind::MinusSign | NumberPartKind::PlusSign
+                )
+            })
+            .unwrap_or(parts.len());
         match self.options.currency_display {
-            CurrencyDisplay::Code => format!("{sign}{currency}\u{a0}{formatted}"),
+            CurrencyDisplay::Code => {
+                parts.splice(
+                    sign_end..sign_end,
+                    [
+                        NumberPart::new(NumberPartKind::Currency, currency),
+                        NumberPart::new(NumberPartKind::Literal, "\u{a0}"),
+                    ],
+                );
+            }
             CurrencyDisplay::Name => {
-                let name = get_currency_name(currency);
-                format!("{sign}{formatted} {name}")
+                parts.push(NumberPart::new(NumberPartKind::Literal, " "));
+                parts.push(NumberPart::new(
+                    NumberPartKind::Currency,
+                    get_currency_name(currency),
+                ));
             }
             CurrencyDisplay::Symbol | CurrencyDisplay::NarrowSymbol => {
-                format!("{sign}{symbol}{formatted}")
+                parts.insert(
+                    sign_end,
+                    NumberPart::new(NumberPartKind::Currency, get_currency_symbol(currency)),
+                );
             }
         }
-    }
-
-    fn format_unit(&self, decimal: Decimal) -> String {
-        let unit = self.options.unit.as_deref().unwrap_or("unit");
-        let formatted = self.format_decimal(decimal);
-
-        match self.options.unit_display {
-            UnitDisplay::Narrow => format!("{formatted}{unit}"),
-            UnitDisplay::Short => format!("{formatted} {unit}"),
-            UnitDisplay::Long => format!("{formatted} {unit}s"),
+        if accounting {
+            parts.insert(0, NumberPart::new(NumberPartKind::Literal, "("));
+            parts.push(NumberPart::new(NumberPartKind::Literal, ")"));
         }
+        parts
     }
 
-    /// Applies the locale's separators (and grouping, if enabled) with ICU4X.
+    fn format_unit(&self, decimal: Decimal) -> Vec<NumberPart> {
+        let unit = self.options.unit.as_deref().unwrap_or("unit");
+        let mut parts = self.format_decimal(decimal);
+        match self.options.unit_display {
+            UnitDisplay::Narrow => parts.push(NumberPart::new(NumberPartKind::Unit, unit)),
+            UnitDisplay::Short => {
+                parts.push(NumberPart::new(NumberPartKind::Literal, " "));
+                parts.push(NumberPart::new(NumberPartKind::Unit, unit));
+            }
+            UnitDisplay::Long => {
+                parts.push(NumberPart::new(NumberPartKind::Literal, " "));
+                parts.push(NumberPart::new(NumberPartKind::Unit, format!("{unit}s")));
+            }
+        }
+        parts
+    }
+
+    /// The parts of `decimal` with the locale's digits, separators and signs (and grouping, if
+    /// enabled), from ICU4X.
+    fn parts_with_icu(&self, decimal: &Decimal) -> Vec<NumberPart> {
+        let mut collector = PartsCollector(Vec::new(), Vec::new());
+        match &self.decimal {
+            Some(formatter) => {
+                let _ = formatter.format(decimal).write_to_parts(&mut collector);
+            }
+            None => {
+                let _ = fmt::Write::write_str(&mut collector, &decimal.to_string());
+            }
+        }
+        collector.0
+    }
+
+    /// `decimal` with the locale's digits and separators.
     fn format_with_icu(&self, decimal: &Decimal) -> String {
-        self.decimal.as_ref().map_or_else(
-            || decimal.to_string(),
-            |formatter| formatter.format(decimal).to_string(),
-        )
+        self.parts_with_icu(decimal)
+            .into_iter()
+            .map(|part| part.value)
+            .collect()
     }
 }
 

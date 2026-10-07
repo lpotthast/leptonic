@@ -224,16 +224,26 @@ pub fn PageAtomDialog() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles of their own. Give the dialog its visual frame. It receives focus when no "
-                    "element inside it does; show a ring when that happens through the keyboard:"
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-Dialog"</Code>", "
+                    <Code inline=true>"leptonic-DialogTitle"</Code>" and "<Code inline=true>"leptonic-DialogDescription"</Code>
+                    ", each followed by the "<Code inline=true>"classes"</Code>" you pass. Give the dialog its frame, unless "
+                    "the overlay around it draws one (a popover usually does). The dialog receives focus when no element "
+                    "inside it does: show a ring when that happens through the keyboard. The book\u{2019}s demos use these "
+                    "rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
                         .my-dialog { padding: 1.5em; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
                         .my-dialog:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
                         .my-dialog[role="alertdialog"] { border-top: 4px solid var(--accent); }
+                        .my-dialog-title { margin: 0 0 0.5em; font-size: 1.25em; }
+                        .my-dialog-description { margin: 0 0 1.5em; color: var(--muted); }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <Section title="Composition">

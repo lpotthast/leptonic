@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::button::Button,
     hooks::*,
     utils::{
         css::{computed_pct, computed_size},
@@ -24,7 +24,7 @@ pub fn MeterDiskDemo() -> impl IntoView {
         ..UseMeterInput::default()
     });
     // A meter always has a value, so `percentage` is always `Some`.
-    let percentage = Signal::derive(move || percentage.get().unwrap_or_default());
+    let percentage = Signal::derive(move || percentage.get().unwrap_or_default().as_percent());
 
     let fill_styles = Styles::new()
         .add_reactive(move || WidthProperty.declare(computed_size(computed_pct(percentage.get()))));
@@ -47,8 +47,8 @@ pub fn MeterDiskDemo() -> impl IntoView {
         </div>
 
         <div class="demo-inline-controls">
-            <Button on_press=move |_| disk_usage.update(|v| *v = (*v - 10.0).max(0.0))>"Free 10%"</Button>
-            <Button on_press=move |_| disk_usage.update(|v| *v = (*v + 10.0).min(100.0))>"Use 10%"</Button>
+            <Button on_press=move |_| disk_usage.update(|v| *v = (*v - 10.0).max(0.0)) classes="demo-btn">"Free 10%"</Button>
+            <Button on_press=move |_| disk_usage.update(|v| *v = (*v + 10.0).min(100.0)) classes="demo-btn">"Use 10%"</Button>
         </div>
     }
 }

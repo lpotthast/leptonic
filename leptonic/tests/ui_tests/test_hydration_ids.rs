@@ -1,3 +1,5 @@
+// No upstream: leptonic-only (react-aria's ids come from React's `useId`; this checks leptonic's
+// SSR/hydration id stability).
 use std::{borrow::Cow, collections::BTreeSet};
 
 use assertr::prelude::*;
@@ -6,66 +8,34 @@ use rootcause::Report;
 
 use crate::pages::{BaseActions, Page};
 
-/// Pages whose hooks generate element ids. Every page with id-generating hooks should be listed.
-const PAGES: &[&str] = &[
-    "/hooks/button",
-    "/hooks/menu",
-    "/hooks/menu-trigger",
-    "/hooks/number-field",
-    "/atoms/listbox",
-    "/atoms/select",
-    "/atoms/grid-list",
-    "/atoms/grid",
-    "/atoms/table",
-    "/atoms/table-resizing",
-    "/atoms/tabs",
-    "/atoms/calendar",
-    "/atoms/date-field",
-    "/hooks/dnd",
-    "/hooks/text-field",
-    "/atoms/text-field",
-    "/atoms/search-field",
-    "/atoms/number-field",
-    "/atoms/combobox",
-    "/hooks/tag-group",
-    "/hooks/tree",
-    "/atoms/checkbox",
-    "/atoms/radio-group",
-    "/atoms/switch",
-    "/atoms/toggle-button",
-    "/atoms/dialog",
-    "/atoms/popover",
-    "/atoms/tooltip",
-    "/atoms/menu",
-    "/atoms/disclosure",
-    "/atoms/link",
-    "/atoms/breadcrumbs",
-    "/atoms/progress-bar",
-    "/atoms/overlay-position",
-    "/atoms/color-area",
-    "/atoms/color-slider",
-    "/atoms/color-wheel",
-    "/atoms/color-field",
-    "/atoms/color-swatch",
-    "/atoms/color-picker",
-];
-
 /// Every element id of the server-rendered HTML must survive hydration, and every id reference
 /// (`aria-labelledby`, `aria-controls`, ...) must point at an existing element. Random ids break
 /// both: attributes the client updates after hydration would reference ids that only exist on the
 /// server's side, or vice versa. The client may add ids the server didn't render (a trigger gets
 /// one once a panel needs to reference it).
-pub struct HydrationIdTests {}
+///
+/// Checks every fixture the test app's index page links to, so new fixtures are covered without
+/// registering them here. The fixtures are split into `shards` tests (this one checks every
+/// `shards`-th, starting at `shard`), which run in parallel.
+pub struct HydrationIdTests {
+    pub shard: usize,
+    pub shards: usize,
+}
 
 #[async_trait]
 impl BrowserTest<str> for HydrationIdTests {
     fn name(&self) -> Cow<'_, str> {
-        "hydration_id_tests".into()
+        format!("hydration_id_tests_{}_of_{}", self.shard + 1, self.shards).into()
     }
 
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
-        for path in PAGES {
+        page.goto_path("/").await?;
+        let fixtures = fixture_paths(&page).await?;
+        assert_that!(fixtures.len())
+            .with_detail_message("the index page links to the fixtures")
+            .is_greater_than(0);
+        for path in fixtures.iter().skip(self.shard).step_by(self.shards) {
             page.goto_path(path).await?;
             let server_ids = server_rendered_ids(&page).await?;
             let client_ids = string_set(
@@ -104,6 +74,19 @@ impl BrowserTest<str> for HydrationIdTests {
         }
         Ok(())
     }
+}
+
+/// The paths of every fixture, in the order the index page lists them.
+async fn fixture_paths(page: &Page<'_>) -> Result<Vec<String>, Report> {
+    let result = page
+        .driver
+        .execute(
+            r#"return [...document.querySelectorAll('a[href^="/atoms/"], a[href^="/hooks/"]')]
+                .map(a => a.getAttribute('href'));"#,
+            vec![],
+        )
+        .await?;
+    Ok(result.convert()?)
 }
 
 /// The ids in the HTML the server sends for the current page, before any client code runs.

@@ -5,6 +5,7 @@ use std::{collections::HashSet, sync::Arc};
 
 use leptos::{context::Provider, prelude::*};
 
+use super::field::{FieldContext, LabelContext, LabelPresence};
 use crate::{
     Out,
     hooks::{
@@ -22,8 +23,6 @@ use crate::{
         styles::Styles,
     },
 };
-
-use super::field::{FieldContext, LabelContext, LabelPresence};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -88,7 +87,9 @@ pub fn TagGroup(
     #[prop(into)]
     collection: CollectionMemo,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
-    #[prop(optional)] selection_behavior: SelectionBehavior,
+    /// How pressing an item changes the selection; a change applies right away.
+    #[prop(into, optional)]
+    selection_behavior: Signal<SelectionBehavior>,
     /// The initially selected keys.
     #[prop(into, optional)]
     default_selected_keys: Vec<Key>,
@@ -153,24 +154,29 @@ pub fn TagGroup(
         on_action,
     });
 
-    provide_context(LabelContext::span(label_props).with_presence(label_presence));
-    provide_context(FieldContext {
+    let label = LabelContext::span(label_props).with_presence(label_presence);
+    let field = FieldContext {
         description: description_props,
         error_message: error_message_props,
         is_invalid: Signal::stored(false),
         validation_errors: Signal::stored(Vec::new()),
         validation_details: Signal::stored(crate::hooks::ValidityStateSnapshot::default()),
-    });
+    };
     let list = TagListCtx {
         props: StoredValue::new(Some(grid_props)),
         data: StoredValue::new(data),
     };
 
+    // Provided around the children only, so they don't reach the group's later siblings.
     view! {
-        <Provider value=list>
-            <div class=classes style=styles>
-                {children()}
-            </div>
+        <Provider value=label>
+            <Provider value=field>
+                <Provider value=list>
+                    <div class=classes style=styles>
+                        {children()}
+                    </div>
+                </Provider>
+            </Provider>
         </Provider>
     }
 }

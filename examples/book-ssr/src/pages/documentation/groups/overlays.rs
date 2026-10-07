@@ -41,10 +41,11 @@ pub fn PageOverlays() -> impl IntoView {
                         "it opens on hover or keyboard focus, never takes the focus and holds no interactive content."
                     </li>
                     <li>
-                        <Link href=routes::doc::Drawer.materialize()>"Drawer"</Link>" is a modal dialog at the left or "
-                        "right edge of the screen that slides in and out. It behaves like a modal: it keeps the focus inside, "
-                        "closes on "<Keys keys="Escape"/>" or a press outside, and makes the page behind it inert and "
-                        "unscrollable. Use it for menus on small screens and side panels such as filters."
+                        "A drawer is a modal at the left or right edge of the screen that slides in and out, built from the "
+                        <Link href=format!("{}#drawer", routes::doc::modal::Atom.materialize())>"Modal Atoms"</Link>
+                        " and CSS. It behaves like any modal: it keeps the focus inside, closes on "<Keys keys="Escape"/>
+                        " or a press outside, and makes the page behind it inert and unscrollable. Use it for menus on small "
+                        "screens and side panels such as filters."
                     </li>
                     <li>
                         "Other concepts open overlays too: a "<Link href=routes::doc::Menu.materialize()>"menu"</Link>
@@ -75,7 +76,7 @@ pub fn PageOverlays() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Slide a panel over the page from its edge, such as a menu on small screens"</TableCell>
-                        <TableCell><Link href=routes::doc::Drawer.materialize()>"Drawer"</Link></TableCell>
+                        <TableCell><Link href=format!("{}#drawer", routes::doc::modal::Atom.materialize())>"Modal"</Link>" as a drawer"</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Offer a list of actions from a button"</TableCell>
@@ -84,8 +85,8 @@ pub fn PageOverlays() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Tell the user something without interrupting them"</TableCell>
                         <TableCell>
-                            <Link href=routes::doc::Toast.materialize()>"Toast"</Link>" or "
-                            <Link href=routes::doc::Alert.materialize()>"Alert"</Link>
+                            <Link href=routes::doc::Toast.materialize()>"Toast"</Link>", or an "
+                            <Link href=format!("{}#alert", routes::doc::Status.materialize())>"alert"</Link>" in the page"
                         </TableCell>
                     </TableRow>
                     <TableRow>

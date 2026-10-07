@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{button::Button, checkbox::Checkbox},
     hooks::{
         ClipboardAction, DragItem, DropItem, IntoAttrs, UseClipboardInput, UseClipboardReturn,
         use_clipboard,
@@ -88,8 +88,11 @@ pub fn ClipboardDemo() -> impl IntoView {
         </div>
         <p class="demo-status">"Last action: "{last}"."</p>
         <div class="demo-controls">
-            <Button on_press=move |_| items.set(default_items())>"Reset list"</Button>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Button on_press=move |_| items.set(default_items()) classes="demo-btn">"Reset list"</Button>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/focus/useHasTabbableChild.ts @ 6f664fe911
+// Upstream: react-aria/src/focus/useHasTabbableChild.ts @ 99e6102368
 use leptos::prelude::*;
 #[cfg(not(feature = "ssr"))]
 use wasm_bindgen::prelude::*;
@@ -11,31 +11,14 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/useHasTabbableChild.ts
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## React-aria deviation
+// ## API DIFFERENCES
+// - The returned props capture the element (react-aria: the caller passes a ref).
 //
-// **React-aria pattern**: `useHasTabbableChild(scopeRef)` - caller passes a ref as parameter.
-//
-// **Leptonic pattern**: `use_has_tabbable_child(input)` returns props with `ElementCaptureAttr` that
-// automatically captures the element when spread.
-//
-// This is a deliberate deviation for better ergonomics - users don't need to manually create
-// and wire up NodeRefs. The element is captured automatically when attributes are spread.
-
-// ## DIFFERENT BEHAVIOR
-//
-// - Element capture pattern vs caller-provided ref
-//   React-aria: `useHasTabbableChild(scopeRef)` takes a ref as parameter.
-//   Leptonic: Returns `ElementCaptureAttr` for automatic element capture.
-//
-// ## OMITTED FUNCTIONALITY
-//
-// - No radio button group handling
-//   React-aria's `isTabbableRadio()` ensures only one radio per group is tabbable.
-//   `focusability::is_tabbable_radio` is now available but is not used here because
-//   at least one radio in any group is always tabbable, so the boolean result of
-//   `has_tabbable_child` is unaffected.
+// =============================================================================
 
 /// Input parameters for the `use_has_tabbable_child` hook.
 #[derive(Debug, Clone, Copy)]

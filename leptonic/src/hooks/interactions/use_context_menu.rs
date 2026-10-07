@@ -6,12 +6,13 @@ use leptos::{
     prelude::*,
 };
 use send_wrapper::SendWrapper;
+use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::{
     hooks::{IntoAttrs, LongPressEvent},
     utils::{
-        EventHandler,
+        EventAccessors, EventHandler,
         key::{KeyboardEventKey, KeyboardKey},
         platform::device::{is_ios, is_mac},
     },
@@ -109,10 +110,7 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
         e.stop_propagation();
         e.prevent_default();
         fired.set_value(true);
-        let Some(target) = e
-            .current_target()
-            .and_then(|t| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(t).ok())
-        else {
+        let Ok(target) = e.expect_current_target().dyn_into::<web_sys::Element>() else {
             return;
         };
         let rect = target.get_bounding_client_rect();
@@ -126,10 +124,7 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
         }
         fired.set_value(false);
         e.stop_propagation();
-        let Some(target) = e
-            .current_target()
-            .and_then(|t| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(t).ok())
-        else {
+        let Ok(target) = e.expect_current_target().dyn_into::<web_sys::Element>() else {
             return;
         };
         let target = SendWrapper::new(target);
@@ -165,8 +160,7 @@ pub fn use_context_menu(input: UseContextMenuInput) -> UseContextMenuReturn {
                     fired.set_value(false);
                     return;
                 }
-                if let Some(target) = wasm_bindgen::JsCast::dyn_ref::<web_sys::Element>(&*e.target)
-                {
+                if let Some(target) = e.target.dyn_ref::<web_sys::Element>() {
                     at(target, e.x.unwrap_or_default(), e.y.unwrap_or_default());
                 }
             })

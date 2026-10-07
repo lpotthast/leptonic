@@ -1,6 +1,5 @@
-use leptonic::{
-    atoms::{field::TextElement, visually_hidden::VisuallyHidden},
-    components::prelude::*,
+use leptonic::atoms::{
+    button::Button, field::TextElement, link::AnchorLink, visually_hidden::VisuallyHidden,
 };
 use leptos::prelude::*;
 
@@ -26,7 +25,7 @@ pub fn VisuallyHiddenAtomDemo() -> impl IntoView {
                     <li class="demo-control-row">
                         <span>{format!("Invoice {number}, {customer}")}</span>
                         // Every button reads "Download", screen readers hear which invoice.
-                        <Button on_press=move |_| last.set(format!("invoice {number}"))>
+                        <Button on_press=move |_| last.set(format!("invoice {number}")) classes="demo-btn">
                             "Download"
                             <VisuallyHidden element=TextElement::Span>{format!(" invoice {number}")}</VisuallyHidden>
                         </Button>

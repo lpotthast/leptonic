@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::prelude::{ColorArea, ColorSwatch, ColorThumb},
-    components::prelude::Checkbox,
+    atoms::prelude::{Checkbox, ColorArea, ColorSwatch, ColorThumb},
     utils::color::{ColorValue, HSV, HsvChannel},
 };
 use leptos::prelude::*;
@@ -9,11 +8,12 @@ use leptos::prelude::*;
 const INITIAL: HSV = HSV {
     hue: 210.0,
     saturation: 0.6,
-    value: 0.8,
+    brightness: 0.8,
 };
 
 #[component]
 pub fn ColorAreaAtomDemo() -> impl IntoView {
+    let locale = leptonic::utils::i18n::use_locale();
     // The area owns its color (`default_value`). `on_change` reports every change, `on_change_end`
     // only the color at the end of a drag or key press.
     let color = RwSignal::new(INITIAL);
@@ -26,8 +26,8 @@ pub fn ColorAreaAtomDemo() -> impl IntoView {
         format!(
             "{}, saturation {}, brightness {}",
             c.hue_name(),
-            c.format_channel_value(HsvChannel::Saturation),
-            c.format_channel_value(HsvChannel::Brightness),
+            c.format_channel_value(HsvChannel::Saturation, &locale.get()),
+            c.format_channel_value(HsvChannel::Brightness, &locale.get()),
         )
     });
 
@@ -50,18 +50,21 @@ pub fn ColorAreaAtomDemo() -> impl IntoView {
                 <ColorSwatch color=color color_name=color_name classes="demo-color-atoms-swatch"/>
                 <dl class="demo-color-atoms-values">
                     <dt>"Saturation"</dt>
-                    <dd>{move || color.get().format_channel_value(HsvChannel::Saturation)}</dd>
+                    <dd>{move || color.get().format_channel_value(HsvChannel::Saturation, &locale.get())}</dd>
                     <dt>"Brightness"</dt>
-                    <dd>{move || color.get().format_channel_value(HsvChannel::Brightness)}</dd>
+                    <dd>{move || color.get().format_channel_value(HsvChannel::Brightness, &locale.get())}</dd>
                     <dt>"Hex"</dt>
-                    <dd><code>{move || color.get().into_rgb8().to_string()}</code></dd>
+                    <dd><code>{move || color.get().to_rgb8().to_string()}</code></dd>
                 </dl>
             </div>
         </div>
 
-        <p class="demo-status">{move || format!("Committed: {}", committed.get().into_rgb8())}</p>
+        <p class="demo-status">{move || format!("Committed: {}", committed.get().to_rgb8())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

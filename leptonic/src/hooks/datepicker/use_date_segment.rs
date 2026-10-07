@@ -21,7 +21,7 @@ use crate::{
     },
     utils::{
         CapturedElement, ElementCaptureAttr, EventHandler,
-        aria::AriaRole,
+        aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRequired, AriaRole},
         date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, MonthFormat},
         filter::{CollatorOptions, Filter},
         i18n::{use_direction, use_locale},
@@ -40,8 +40,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Takes the field's `DateFieldData` (react-aria: a `WeakMap` keyed by the state) and the
-//   segment as a signal (its kind stays: a field keeps a segment per kind).
+// - One input (C8): the field's `DateFieldData` (react-aria: a `WeakMap` keyed by the state), the
+//   segment as a signal (its kind stays: a field keeps a segment per kind) and its element.
 // - For editable segments and the time zone only: literals are rendered hidden from assistive
 //   technology by the caller (react-aria returns `aria-hidden` for them).
 //
@@ -49,6 +49,16 @@ use crate::{
 // - Localized segment names (see `use_date_field`).
 //
 // =============================================================================
+
+/// Input of [`use_date_segment`].
+pub struct UseDateSegmentInput<V: DateValue> {
+    /// The segment. Its kind stays: a field keeps a segment per kind.
+    pub segment: Signal<DateSegment>,
+    /// What the field gives its segments.
+    pub data: DateFieldData<V>,
+    /// The segment's element.
+    pub element: CapturedElement,
+}
 
 /// Return value of [`use_date_segment`].
 pub struct UseDateSegmentReturn {
@@ -67,10 +77,10 @@ pub struct UseDateSegmentProps {
     pub aria_label: Signal<Option<String>>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
-    pub aria_invalid: Signal<Option<&'static str>>,
-    pub aria_readonly: Signal<Option<&'static str>>,
-    pub aria_required: Signal<Option<&'static str>>,
-    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
+    pub aria_readonly: Signal<Option<AriaReadonly>>,
+    pub aria_required: Signal<Option<AriaRequired>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub data_placeholder: Signal<Option<&'static str>>,
     pub contenteditable: Signal<Option<&'static str>>,
     pub spellcheck: Signal<Option<&'static str>>,
@@ -102,10 +112,10 @@ pub type UseDateSegmentAttrs = (
         Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     ),
     (
-        Attr<attr::AriaInvalid, Signal<Option<&'static str>>>,
-        Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
-        Attr<attr::AriaRequired, Signal<Option<&'static str>>>,
-        Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+        Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
+        Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
+        Attr<attr::AriaRequired, Signal<Option<AriaRequired>>>,
+        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
         CustomAttr<&'static str, Signal<Option<&'static str>>>,
         Attr<attr::Contenteditable, Signal<Option<&'static str>>>,
         Attr<attr::Spellcheck, Signal<Option<&'static str>>>,
@@ -243,11 +253,12 @@ fn eras(locale: &crate::utils::i18n::Locale) -> [String; 2] {
 /// on once no further digit fits), letters choose the day period and era, Backspace deletes a
 /// digit; the selection stays collapsed (Android Chrome's composition would break the DOM).
 #[allow(clippy::too_many_lines)]
-pub fn use_date_segment<V: DateValue>(
-    segment: Signal<DateSegment>,
-    data: DateFieldData<V>,
-    element: CapturedElement,
-) -> UseDateSegmentReturn {
+pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateSegmentReturn {
+    let UseDateSegmentInput {
+        segment,
+        data,
+        element,
+    } = input;
     let state = data.state;
     let kind = segment.with_untracked(|segment| segment.kind);
     let locale = use_locale();
@@ -677,19 +688,23 @@ pub fn use_date_segment<V: DateValue>(
     });
     let editable_flag =
         move |value: &'static str| Signal::derive(move || is_editable.get().then_some(value));
-    let flag = |signal: Signal<bool>| Signal::derive(move || signal.get().then_some("true"));
-
-    let mut styles = Styles::new().add_unchecked("caret-color", "transparent");
-    if direction.get_untracked() == WritingDirection::Rtl {
-        // Placeholders and values in left-to-right order (a left-to-right embedding).
-        styles = styles.add_unchecked("unicode-bidi", "embed");
-        if !matches!(
-            kind,
-            DateSegmentType::DayPeriod | DateSegmentType::Era | DateSegmentType::TimeZoneName
-        ) {
-            styles = styles.add_unchecked("direction", "ltr");
-        }
+    fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
+        Signal::derive(move || signal.get().then(|| T::from(true)))
     }
+
+    // Placeholders and values in left-to-right order in right-to-left locales (a left-to-right
+    // embedding), following the locale.
+    let is_rtl = move || direction.get() == WritingDirection::Rtl;
+    let is_numeric = !matches!(
+        kind,
+        DateSegmentType::DayPeriod | DateSegmentType::Era | DateSegmentType::TimeZoneName
+    );
+    let styles = Styles::new()
+        .add_unchecked("caret-color", "transparent")
+        .add_optional_unchecked("unicode-bidi", move || is_rtl().then_some("embed"))
+        .add_optional_unchecked("direction", move || {
+            (is_rtl() && is_numeric).then_some("ltr")
+        });
 
     UseDateSegmentReturn {
         segment_props: PropsWithStyles::new(
@@ -709,10 +724,11 @@ pub fn use_date_segment<V: DateValue>(
                 aria_describedby,
                 aria_invalid: flag(state.is_invalid),
                 aria_readonly: Signal::derive(move || {
-                    (state.is_read_only.get() || !segment.get().is_editable).then_some("true")
+                    (state.is_read_only.get() || !segment.get().is_editable)
+                        .then_some(AriaReadonly::True)
                 }),
-                aria_required: spin.aria_required,
-                aria_disabled: spin.aria_disabled,
+                aria_required: flag(state.is_required),
+                aria_disabled: flag(state.is_disabled),
                 data_placeholder: Signal::derive(move || {
                     segment.get().is_placeholder.then_some("true")
                 }),
@@ -739,5 +755,40 @@ pub fn use_date_segment<V: DateValue>(
             },
             styles,
         ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+
+    use super::*;
+    use crate::utils::i18n::Locale;
+
+    fn locale(tag: &str) -> Locale {
+        tag.parse().expect("a locale")
+    }
+
+    /// The day period names typed by their first letter (react-aria's `useDateSegment`:
+    /// `amPmFormatter`).
+    #[test]
+    fn names_the_day_periods_of_the_locale() {
+        assert_that!(day_periods(&locale("en-US"))).is_equal_to(["AM".to_owned(), "PM".to_owned()]);
+        assert_that!(day_periods(&locale("ja-JP")))
+            .is_equal_to(["午前".to_owned(), "午後".to_owned()]);
+        // German has no day period in its 24-hour times, but names them in 12-hour ones.
+        let [am, pm] = day_periods(&locale("de-DE"));
+        assert_that!(am.as_str()).is_equal_to("AM");
+        assert_that!(pm.as_str()).is_equal_to("PM");
+    }
+
+    /// The era names without their common prefix, so that the first letter tells them apart
+    /// (react-aria's `useDateSegment`: `eras`).
+    #[test]
+    fn names_the_eras_without_a_common_prefix() {
+        assert_that!(eras(&locale("en-US"))).is_equal_to(["BC".to_owned(), "AD".to_owned()]);
+        // "v. Chr." and "n. Chr.": distinct first letters already.
+        assert_that!(eras(&locale("de-DE")))
+            .is_equal_to(["v. Chr.".to_owned(), "n. Chr.".to_owned()]);
     }
 }

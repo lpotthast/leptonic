@@ -16,7 +16,13 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
+// - Returns `use_grid_list`'s props and data (react-aria's `useTree` is `useGridList` with
+//   `role="treegrid"`); the expansion state comes from the `TreeState` given.
+//
+// ## OMITTED FEATURES
+// - The grid list settings besides `options` and `on_action` (keyboard navigation behavior,
+//   selecting on press up, a custom keyboard delegate): trees use the grid list defaults.
 //
 // =============================================================================
 

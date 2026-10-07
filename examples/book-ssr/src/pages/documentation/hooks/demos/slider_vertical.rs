@@ -31,6 +31,7 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_details: None,
     });
     let thumb = use_slider_thumb(UseSliderThumbInput {
         state,
@@ -46,6 +47,8 @@ pub fn SliderVerticalDemo() -> impl IntoView {
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
+        aria_errormessage: None,
+        aria_details: None,
     });
     let focus_ring = use_focus_ring(UseFocusRingInput {
         within: true,

@@ -83,7 +83,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         ", convert the signal: "<Code inline=true>"ToggleState::from(rw_signal)"</Code>" or "
                         <Code inline=true>"ToggleState::from((read, write))"</Code>
                         ". The toggle then reads and writes the signal, like Leptos\u{2019} "
-                        <Code inline=true>"bind:checked"</Code>". The Checkbox atom and component take your state as their "
+                        <Code inline=true>"bind:checked"</Code>". The Checkbox atom takes your state as its "
                         <Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" props instead."
                     </p>
                 </Section>

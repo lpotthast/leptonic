@@ -1,6 +1,5 @@
 use leptonic::{
-    atoms::prelude::{Label, Meter, MeterFill, MeterValueText},
-    components::prelude::Button,
+    atoms::prelude::{Button, Label, Meter, MeterFill, MeterValueText},
     utils::{
         classes::Classes,
         css::{CssColor, CssColorName, css_custom_property, var},
@@ -48,12 +47,14 @@ pub fn ClassesAndStylesMeterDemo() -> impl IntoView {
             <Button
                 on_press=move |_| set_used.update(|used| *used = used.saturating_sub(10))
                 is_disabled=Signal::derive(move || used.get() == 0)
+                classes="demo-btn"
             >
                 "Free 10 GB"
             </Button>
             <Button
                 on_press=move |_| set_used.update(|used| *used = (*used + 10).min(100))
                 is_disabled=Signal::derive(move || used.get() == 100)
+                classes="demo-btn"
             >
                 "Use 10 GB"
             </Button>

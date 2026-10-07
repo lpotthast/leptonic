@@ -1,3 +1,4 @@
+// No upstream: `VirtualList` is a leptonic addition (react-aria has no virtualized plain list).
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -48,7 +49,7 @@ impl BrowserTest<str> for VirtualListTests {
             page.driver
                 .execute(&format!("{LOG}.scrollTop = {top};"), vec![])
                 .await?;
-            tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+            wait_until(&page, &rows_cover_viewport()).await?;
             assert_that!(eval_bool(&page, &in_visual_order()).await?).is_true();
         }
         let selected = eval_string(
@@ -138,6 +139,17 @@ fn in_visual_order() -> String {
         "(() => {{ const tops = Array.from({LOG}.querySelectorAll('.line')).map(l => \
          parseFloat(l.parentElement.style.top)); return tops.every((top, i) => i === 0 || \
          tops[i - 1] <= top); }})()"
+    )
+}
+
+/// Whether the rendered rows cover the log's viewport (rendering after a scroll finished).
+fn rows_cover_viewport() -> String {
+    format!(
+        "(() => {{ const rows = Array.from({LOG}.querySelectorAll('.line')).map(l => l.parentElement); \
+         if (rows.length === 0) return false; \
+         const top = Math.min(...rows.map(r => parseFloat(r.style.top))); \
+         const bottom = Math.max(...rows.map(r => parseFloat(r.style.top) + parseFloat(r.style.height))); \
+         return top <= {LOG}.scrollTop && bottom >= {LOG}.scrollTop + {LOG}.clientHeight; }})()"
     )
 }
 
@@ -238,6 +250,68 @@ impl BrowserTest<str> for ComponentSpreadRebuildKnownIssues {
             .await?;
         page.click_element_with_id("test-vl-rebuilt-wrapper")
             .await?;
+        page.expect_no_page_errors().await
+    }
+}
+
+/// Following turns off when the user scrolls away from the end: measured row sizes must survive
+/// that (the layout options change, but only `anchor_to`), else the content jumps and every row is
+/// measured again.
+pub struct VirtualListFollowToggleTests {}
+
+#[async_trait]
+impl BrowserTest<str> for VirtualListFollowToggleTests {
+    fn name(&self) -> Cow<'_, str> {
+        "virtual_list_follow_toggle_tests".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = Page { driver, base_url };
+        page.goto_path("/atoms/virtual_list").await?;
+        wait_until(&page, &at_end()).await?;
+        wait_until(&page, &rendered("Line 1999")).await?;
+
+        // Records every row wrapper whose measured height goes back to the 20px estimate.
+        page.driver
+            .execute(
+                &format!(
+                    "window.__vlReestimated = [];
+                     new MutationObserver(records => {{
+                         for (const record of records) {{
+                             const wrapper = record.target;
+                             if (!wrapper.firstElementChild?.classList.contains('line')) continue;
+                             const old = /height: ([0-9.]+)px/.exec(record.oldValue ?? '')?.[1];
+                             if (old !== undefined && old !== '20' && wrapper.style.height === '20px') {{
+                                 window.__vlReestimated.push(wrapper.textContent.slice(0, 12));
+                             }}
+                         }}
+                     }}).observe({LOG}, {{ subtree: true, attributes: true, attributeFilter: ['style'], attributeOldValue: true }});"
+                ),
+                vec![],
+            )
+            .await?;
+
+        // To the middle: following turns off when the scroll ends.
+        page.driver
+            .execute(
+                &format!("{LOG}.scrollTop = {LOG}.scrollHeight / 2;"),
+                vec![],
+            )
+            .await?;
+        page.wait_for_text("test-vl-follow", "not following")
+            .await?;
+        wait_until(&page, &rows_cover_viewport()).await?;
+        // A visible row and its offset in the viewport: the content must not move.
+        let anchor = "(() => { const log = document.getElementById('test-vl-log'); \
+             const row = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement) \
+             .find(r => parseFloat(r.style.top) >= log.scrollTop); \
+             return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop); })()";
+        let before = eval_string(&page, anchor).await?;
+        // Settle (a re-layout runs in effects and frames), then re-check.
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        assert_that!(eval_string(&page, anchor).await?).is_equal_to(before);
+        assert_that!(eval_string(&page, "JSON.stringify(window.__vlReestimated)").await?)
+            .is_equal_to("[]".to_owned());
         page.expect_no_page_errors().await
     }
 }

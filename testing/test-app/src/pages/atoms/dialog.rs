@@ -11,13 +11,16 @@ use leptos::prelude::*;
 /// A dismissable modal dialog named by `aria_label` (react-aria-components' `Dialog.test.js`
 /// setup), opened by a button. A second modal next to it (in the same owner) closes through a
 /// button closing it. A third one opens from a `DialogTrigger` (`#test-dialog-trigger`); its
-/// "Count" button (`#test-dialog-count`) only counts and must not toggle the modal.
+/// "Count" button (`#test-dialog-count`) only counts and must not toggle the modal. A fourth one
+/// (`#test-dialog-open-autofocus`) opts into `auto_focus`: its first button gets the focus instead
+/// of the dialog.
 #[component]
 pub fn PageAtomDialog() -> impl IntoView {
     let is_open = RwSignal::new(false);
     let is_other_open = RwSignal::new(false);
     let count = RwSignal::new(0u32);
     let is_animated_open = RwSignal::new(false);
+    let is_autofocus_open = RwSignal::new(false);
 
     view! {
         <h1>"Dialog"</h1>
@@ -86,6 +89,17 @@ pub fn PageAtomDialog() -> impl IntoView {
                 </ModalContent>
             </ModalBackdrop>
         </DialogTrigger>
+        <button id="test-dialog-open-autofocus" on:click=move |_| is_autofocus_open.set(true)>
+            "Open auto focus"
+        </button>
+        <ModalBackdrop is_open=is_autofocus_open set_open=is_autofocus_open is_dismissable=true>
+            <ModalContent auto_focus=true>
+                <Dialog aria_label="Auto focus">
+                    <button id="test-dialog-autofocus-first">"First"</button>
+                    <button>"Second"</button>
+                </Dialog>
+            </ModalContent>
+        </ModalBackdrop>
         <div>"Open: " <span id="test-dialog-is-open">{move || is_open.get().to_string()}</span></div>
     }
 }

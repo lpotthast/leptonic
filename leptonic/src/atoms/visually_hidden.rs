@@ -14,7 +14,9 @@ use crate::{
 #[component]
 pub fn VisuallyHidden(
     #[prop(default = TextElement::Div)] element: TextElement,
-    #[prop(optional)] is_focusable: bool,
+    /// Show the content while focus is within it (e.g. a "skip to content" link).
+    #[prop(into, optional)]
+    is_focusable: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {

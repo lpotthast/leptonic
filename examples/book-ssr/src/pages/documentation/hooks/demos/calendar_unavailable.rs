@@ -1,18 +1,18 @@
 use leptonic::utils::CapturedElement;
 use leptonic::utils::date_time_formatter::DateTimeFormat;
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
         IntoAttrs,
         calendar::{
-            CalendarData, CommitBehavior, UseCalendarCellInput, UseCalendarCellReturn,
-            UseCalendarGridInput, UseCalendarInput, UseCalendarReturn, UseRangeCalendarStateInput,
+            CalendarData, CommitBehavior, DateAvailabilityQuery, UseCalendarCellInput, UseCalendarCellReturn,
+            UseCalendarGridInput, UseCalendarReturn, UseRangeCalendarInput,
+            UseRangeCalendarStateInput,
             use_calendar_cell, use_calendar_grid, use_range_calendar, use_range_calendar_state,
         },
         use_button,
     },
     jiff::civil::{Date, Weekday, date},
-    prelude::icondata,
     utils::{
         data_attributes::flag,
         date::{DateExt, DateRange},
@@ -35,12 +35,12 @@ pub fn CalendarUnavailableDemo() -> impl IntoView {
         min_value: Signal::stored(Some(date(2026, 3, 3))),
         max_value: Signal::stored(Some(date(2026, 4, 26))),
         // Also called with the first selected day of a range in progress, e.g. to limit the length of a stay.
-        is_date_unavailable: Some(Callback::new(|(date, _anchor): (Date, Option<Date>)| {
+        is_date_unavailable: Some(Callback::new(|query: DateAvailabilityQuery| {
             BOOKED
                 .iter()
-                .any(|(from, to)| (*from..=*to).contains(&date))
+                .any(|(from, to)| (*from..=*to).contains(&query.date))
         })),
-        first_day_of_week: Some(Weekday::Sunday),
+        first_day_of_week: Signal::stored(Some(Weekday::Sunday)),
         is_disabled: disabled.into(),
         ..Default::default()
     });
@@ -51,14 +51,15 @@ pub fn CalendarUnavailableDemo() -> impl IntoView {
         title,
         data,
         ..
-    } = use_range_calendar(
-        UseCalendarInput {
-            aria_label: "Stay".into(),
-            ..Default::default()
-        },
+    } = use_range_calendar(UseRangeCalendarInput {
         state,
-        CommitBehavior::Select,
-    );
+        commit_behavior: CommitBehavior::Select,
+        id: None,
+        aria_label: "Stay".into(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_details: None,
+    });
     let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
     let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
 
@@ -76,11 +77,11 @@ pub fn CalendarUnavailableDemo() -> impl IntoView {
         <div {..calendar_props.into_attrs()} class="demo-calendar demo-calendar-range">
             <header class="demo-calendar-header">
                 <button {..previous_attrs} style=previous_styles class="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronLeft/>
+                    <span aria-hidden="true">"\u{2039}"</span>
                 </button>
                 <h2 class="demo-calendar-title" aria-hidden="true">{title}</h2>
                 <button {..next_attrs} style=next_styles class="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronRight/>
+                    <span aria-hidden="true">"\u{203a}"</span>
                 </button>
             </header>
             <MonthGrid data/>
@@ -89,7 +90,10 @@ pub fn CalendarUnavailableDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

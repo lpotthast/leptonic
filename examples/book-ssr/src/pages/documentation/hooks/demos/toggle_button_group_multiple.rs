@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::{collections::Key, *},
 };
 use leptos::prelude::*;
@@ -43,7 +43,10 @@ pub fn ToggleButtonGroupMultipleDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

@@ -44,7 +44,6 @@ pub fn PageAtomFocusManagerProvider() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::prelude::*,
-                            components::prelude::Button,
                             hooks::{FocusManager as Manager, FocusManagerOptions},
                         };
 

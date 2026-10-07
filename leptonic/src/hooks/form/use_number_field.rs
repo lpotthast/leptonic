@@ -11,7 +11,9 @@ use web_sys::{ClipboardEvent, CompositionEvent, FocusEvent, InputEvent, WheelEve
 use super::{
     use_form_reset::{UseFormResetInput, use_form_reset},
     use_form_validation_state::{ValidationBehavior, ValidationResult, ValidityStateSnapshot},
-    use_formatted_text_field::{FormattedTextFieldHandlers, use_formatted_text_field},
+    use_formatted_text_field::{
+        FormattedTextFieldHandlers, UseFormattedTextFieldInput, use_formatted_text_field,
+    },
     use_label::UseLabelProps,
     use_number_field_state::{CommitBehavior, NumberFieldState},
     use_text_field::{
@@ -20,11 +22,9 @@ use super::{
     },
     use_text_field_state::TextFieldState,
 };
-use crate::hooks::InputType;
-use crate::hooks::TextFieldElement;
 use crate::{
     hooks::{
-        IntoAttrs, UseButtonInput,
+        InputType, IntoAttrs, TextFieldElement, UseButtonInput,
         focus::use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
         interactions::{
             use_keyboard::KeyboardEventWrapper,
@@ -34,8 +34,8 @@ use crate::{
         spinbutton::use_spin_button::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
-        CapturedElement, EventHandler, NumberValue, SlotProps,
-        aria::{AriaInvalid, AriaRole},
+        CapturedElement, EventAccessors, EventHandler, NumberValue, SlotProps,
+        aria::{AriaDisabled, AriaInvalid, AriaRole},
         focus::focus_event_target,
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
@@ -123,7 +123,7 @@ pub struct UseNumberFieldReturn {
 /// Props for the group around the input and its buttons.
 #[derive(Debug, Clone)]
 pub struct UseNumberFieldGroupProps {
-    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
@@ -131,7 +131,7 @@ pub struct UseNumberFieldGroupProps {
 
 pub type UseNumberFieldGroupAttrs = (
     Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
@@ -260,8 +260,8 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
     // On blur: commit, and announce the value if committing changed the text.
     let commit_and_announce = Callback::new(move |e: FocusEvent| {
         let old = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            .expect_target()
+            .dyn_into::<web_sys::HtmlInputElement>()
             .map(|input| input.value())
             .unwrap_or_default();
         state.commit(None);
@@ -280,7 +280,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
             return ShortcutOutcome::Ignored;
         }
         state.commit(None);
-        state.validation.commit_validation.run(());
+        state.validation.commit_validation();
         ShortcutOutcome::Custom {
             prevent_default: false,
             continue_propagation: false,
@@ -447,18 +447,11 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         on_beforeinput,
         on_compositionstart,
         on_compositionend,
-    } = use_formatted_text_field(
-        element,
-        Callback::new(move |text: String| state.validate(text)),
-        Callback::new(move |text: String| state.set_input_value(text)),
-    );
+    } = use_formatted_text_field(UseFormattedTextFieldInput { element, state });
 
     // Pasting over the whole text commits the pasted text right away, so it shows formatted.
     let on_paste = EventHandler::new(move |e: ClipboardEvent| {
-        let Some(input) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
-        else {
+        let Ok(input) = e.expect_target().dyn_into::<web_sys::HtmlInputElement>() else {
             return;
         };
         let start = input.selection_start().ok().flatten().unwrap_or(0);
@@ -518,7 +511,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         // The id is always rendered (it may be needed once a label appears).
         let own_id = button_id.clone();
         UseButtonInput {
-            id: Some(own_id.into()),
+            id: Some(own_id),
             aria_label: MaybeProp::derive(move || {
                 custom_label.get().or_else(|| {
                     Some(match field_label.get() {
@@ -562,7 +555,7 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
 
     UseNumberFieldReturn {
         group_props: UseNumberFieldGroupProps {
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some("true")),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             aria_invalid: Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True)),
             on_focusin: focus_within.on_focusin,
             on_focusout: focus_within.on_focusout,
@@ -614,14 +607,16 @@ fn use_native_range_validation<T: NumberValue>(
         if realtime.is_invalid || input.disabled() {
             return;
         }
-        let Some(probe) = use_document()
-            .as_ref()
-            .and_then(|d| d.create_element("input").ok())
-            .and_then(|el| el.dyn_into::<web_sys::HtmlInputElement>().ok())
-        else {
+        let Some(probe) = range_probe() else {
             return;
         };
-        probe.set_type("number");
+        let native = state.validation_behavior == ValidationBehavior::Native;
+        // Our own message from the last sync (react-aria: `useFormValidation` resets the custom
+        // validity after every render, before this runs). The realtime validation is valid, so
+        // there is no other custom message to keep.
+        if native {
+            input.set_custom_validity("");
+        }
         probe.set_min(&min.map(|v| v.to_string()).unwrap_or_default());
         probe.set_max(&max.map(|v| v.to_string()).unwrap_or_default());
         probe.set_step(&step.to_string());
@@ -632,7 +627,7 @@ fn use_native_range_validation<T: NumberValue>(
         let message = Some(input.validation_message().unwrap_or_default())
             .filter(|m| !m.is_empty())
             .or_else(|| probe.validation_message().ok().filter(|m| !m.is_empty()));
-        state.validation.update_validation.run(ValidationResult {
+        state.validation.update_validation(ValidationResult {
             is_invalid: !valid,
             validation_errors: message.into_iter().collect(),
             validation_details: ValidityStateSnapshot {
@@ -650,7 +645,7 @@ fn use_native_range_validation<T: NumberValue>(
             },
         });
         // Block native form submission (doesn't overwrite custom messages: checked above).
-        if state.validation_behavior == ValidationBehavior::Native && !range.valid() {
+        if native && !range.valid() {
             input.set_custom_validity(&probe.validation_message().unwrap_or_default());
         }
     };
@@ -672,4 +667,27 @@ fn use_native_range_validation<T: NumberValue>(
         .validation
         .native_validity_readers
         .register(Callback::new(move |()| sync()));
+}
+
+thread_local! {
+    /// The `<input type="number">` validating ranges and steps, shared by all number fields (as
+    /// react-aria's).
+    static RANGE_PROBE: std::cell::OnceCell<Option<web_sys::HtmlInputElement>> =
+        const { std::cell::OnceCell::new() };
+}
+
+/// The shared range probe, created on first use; `None` without a document.
+fn range_probe() -> Option<web_sys::HtmlInputElement> {
+    RANGE_PROBE.with(|probe| {
+        probe
+            .get_or_init(|| {
+                let probe = use_document()
+                    .as_ref()
+                    .and_then(|d| d.create_element("input").ok())
+                    .and_then(|el| el.dyn_into::<web_sys::HtmlInputElement>().ok())?;
+                probe.set_type("number");
+                Some(probe)
+            })
+            .clone()
+    })
 }

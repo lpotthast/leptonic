@@ -9,10 +9,17 @@ use leptos::prelude::*;
 ///   which has no room there and flips below.
 /// - "Above" (`#test-op-above-trigger`) below a 400px spacer: a 120x60 popover placed above with a
 ///   10px offset and an `OverlayArrow` (`.test-op-arrow`, 12x6).
+///
+/// `#test-op-shift` puts a 400px spacer above "Flip", so that its popover fits above it.
 #[component]
 pub fn PageAtomOverlayPosition() -> impl IntoView {
+    let shifted = RwSignal::new(false);
     view! {
         <div id="test-page-atom-overlay-position">
+            <button id="test-op-shift" on:click=move |_| shifted.update(|shifted| *shifted = !*shifted)>
+                "Shift"
+            </button>
+            <div style:height=move || if shifted.get() { "400px" } else { "0px" }></div>
             <DialogTrigger>
                 <Button attr:id="test-op-flip-trigger">"Flip"</Button>
                 <Popover

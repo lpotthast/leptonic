@@ -1,5 +1,5 @@
 use leptonic::{
-    atoms::prelude::{Button, Toolbar},
+    atoms::prelude::{Button, Checkbox, Link, ToggleButton, Toolbar},
     utils::{
         i18n::{I18nProvider, Locale},
         orientation::Orientation,
@@ -10,10 +10,13 @@ use leptos::prelude::*;
 /// Toolbar atoms (react-aria-components' `Toolbar.test.tsx` "supports keyboard navigation"
 /// setup): "Before", a "Tools" toolbar with an "Align text" and a "Zoom" toolbar (groups of it)
 /// separated by an `<hr>`, and "After". Further: a vertical toolbar ("Up 1", "Up 2") and a
-/// horizontal one in a right-to-left locale ("RTL 1", "RTL 2").
+/// horizontal one in a right-to-left locale ("RTL 1", "RTL 2"), a vertical one in a right-to-left
+/// locale ("RV 1", "RV 2"), and react-aria's example toolbar ("Input Before Toolbar", toggle
+/// buttons "B", "U", "I", a "Night Mode" checkbox and a "Help" link).
 #[component]
 pub fn PageAtomToolbar() -> impl IntoView {
     let rtl: Locale = "ar".parse().expect("a valid locale");
+    let rtl_vertical: Locale = "he-IL".parse().expect("a valid locale");
     view! {
         <div id="test-page-atom-toolbar">
             <Button>"Before"</Button>
@@ -42,6 +45,22 @@ pub fn PageAtomToolbar() -> impl IntoView {
                     <Button>"RTL 2"</Button>
                 </Toolbar>
             </I18nProvider>
+
+            <I18nProvider locale=rtl_vertical>
+                <Toolbar aria_label="Right to left vertical" orientation=Orientation::Vertical>
+                    <Button>"RV 1"</Button>
+                    <Button>"RV 2"</Button>
+                </Toolbar>
+            </I18nProvider>
+
+            <input aria-label="Input Before Toolbar" id="test-toolbar-input-before" />
+            <Toolbar aria_label="Text formatting">
+                <ToggleButton>"B"</ToggleButton>
+                <ToggleButton>"U"</ToggleButton>
+                <ToggleButton>"I"</ToggleButton>
+                <Checkbox>"Night Mode"</Checkbox>
+                <Link href="/atoms/toolbar#help">"Help"</Link>
+            </Toolbar>
         </div>
     }
 }

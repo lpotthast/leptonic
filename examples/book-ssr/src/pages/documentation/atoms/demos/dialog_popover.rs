@@ -1,10 +1,8 @@
-use leptonic::{
-    atoms::{
-        button::Button,
-        dialog::{Dialog, DialogTitle, DialogTrigger},
-        popover::Popover,
-    },
-    components::prelude::Checkbox,
+use leptonic::atoms::{
+    button::Button,
+    checkbox::Checkbox,
+    dialog::{Dialog, DialogTitle, DialogTrigger},
+    popover::Popover,
 };
 use leptos::prelude::*;
 
@@ -23,8 +21,14 @@ pub fn DialogPopoverDemo() -> impl IntoView {
                 <Dialog classes="demo-popover-dialog">
                     <DialogTitle classes="demo-overlay-title">"Notify me by"</DialogTitle>
                     <div class="demo-control-stack">
-                        <Checkbox is_selected=by_email set_selected=by_email>"Email"</Checkbox>
-                        <Checkbox is_selected=by_push set_selected=by_push>"Push message"</Checkbox>
+                        <Checkbox is_selected=by_email set_selected=by_email classes="demo-check">
+                            <span class="demo-check-box" aria-hidden="true"></span>
+                            "Email"
+                        </Checkbox>
+                        <Checkbox is_selected=by_push set_selected=by_push classes="demo-check">
+                            <span class="demo-check-box" aria-hidden="true"></span>
+                            "Push message"
+                        </Checkbox>
                     </div>
                 </Dialog>
             </Popover>

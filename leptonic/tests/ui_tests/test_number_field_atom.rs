@@ -1,4 +1,5 @@
 // Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
+// Upstream: @adobe/react-spectrum/test/numberfield/NumberField.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -37,10 +38,13 @@ impl BrowserTest<str> for NumberFieldAtomTests {
         deleting_the_first_digit_before_a_group_separator(&page).await?;
         typing_and_enter_commit(&page).await?;
         no_grouping_characters_without_grouping(&page).await?;
+        no_grouping_characters_in_german(&page).await?;
+        scroll_wheel(&page).await?;
         pasting_into_a_format(&page).await?;
         rejected_values_keep_the_text(&page).await?;
         server_errors_survive_an_unchanged_blur(&page).await?;
         validate_commit_behavior(&page).await?;
+        validate_commit_behavior_and_enter_submit(&page).await?;
         typed_values(&page).await?;
 
         Ok(())
@@ -309,6 +313,67 @@ async fn no_grouping_characters_without_grouping(page: &Page<'_>) -> Result<(), 
     wait_for_value(page, &input, "").await
 }
 
+/// "should not type the grouping characters when useGrouping is false and in German locale".
+async fn no_grouping_characters_in_german(page: &Page<'_>) -> Result<(), Report> {
+    let input = input(page, "nf-no-grouping-de").await?;
+    tab_into(page, &input).await?;
+    page.send_keys_to_active("102.4").await?;
+    wait_for_value(page, &input, "1024").await?;
+    clear(page, &input).await?;
+    paste(page, &input, "1.024").await?;
+    page.press_tab().await?;
+    // Unparsable pasted text keeps the previous (empty) value.
+    wait_for_value(page, &input, "").await
+}
+
+/// Dispatches a `wheel` event with `delta_y` (and the Ctrl key, for a pinch zoom) at `element`.
+async fn wheel(
+    page: &Page<'_>,
+    element: &WebElement,
+    delta_y: f64,
+    ctrl_key: bool,
+) -> Result<(), Report> {
+    page.driver
+        .execute(
+            "arguments[0].dispatchEvent(new WheelEvent('wheel', \
+                 {deltaY: arguments[1], ctrlKey: arguments[2], bubbles: true, cancelable: true}));",
+            vec![
+                element.to_json()?,
+                serde_json::Value::from(delta_y),
+                serde_json::Value::from(ctrl_key),
+            ],
+        )
+        .await?;
+    Ok(())
+}
+
+/// React Spectrum's scroll wheel tests: "cannot scroll to step when not focused", "increment
+/// value when scrolling upwards", "decrement value when scrolling downwards", "should not fire
+/// increment or decrement if it is a zoom event".
+async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
+    let input = input(page, "nf-wheel").await?;
+    page.driver
+        .execute("document.activeElement?.blur();", Vec::new())
+        .await?;
+    wheel(page, &input, -10.0, false).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert_that!(page.read_text_of("nf-wheel-changes").await?).is_equal_to(String::new());
+
+    tab_into(page, &input).await?;
+    wheel(page, &input, -10.0, false).await?;
+    page.wait_for_text("nf-wheel-changes", "-1").await?;
+    wait_for_value(page, &input, "-1").await?;
+    wheel(page, &input, 10.0, false).await?;
+    page.wait_for_text("nf-wheel-changes", "-1 0").await?;
+    // Mostly horizontal (a trackpad) or a zoom: no step.
+    wheel(page, &input, 10.0, true).await?;
+    wheel(page, &input, -10.0, true).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert_that!(page.read_text_of("nf-wheel-changes").await?).is_equal_to("-1 0".to_owned());
+    // The wheel doesn't blur the input.
+    page.wait_for_focus_on(&input, "the wheel input").await
+}
+
 /// "should support pasting into a format".
 async fn pasting_into_a_format(page: &Page<'_>) -> Result<(), Report> {
     let input = input(page, "nf-currency").await?;
@@ -400,6 +465,29 @@ async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
         .await
 }
 
+/// No upstream test: with `CommitBehavior::Validate` and native validation, Enter doesn't submit
+/// an out-of-range value, and submits once it is corrected (the range's custom validity is
+/// cleared).
+async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Result<(), Report> {
+    let input = input(page, "nf-validate-submit").await?;
+    tab_into(page, &input).await?;
+    clear(page, &input).await?;
+    page.send_keys_to_active("1024").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_selector("#nf-validate-submit input[aria-describedby]")
+        .await?;
+    assert_that!(is_valid(page, &input).await?).is_false();
+    assert_that!(page.read_text_of("nf-validate-submits").await?).is_equal_to("0".to_owned());
+
+    clear(page, &input).await?;
+    page.send_keys_to_active("30").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    page.wait_for_text("nf-validate-submits", "1").await?;
+    assert_that!(is_valid(page, &input).await?).is_true();
+    page.wait_for_no_selector("#nf-validate-submit input[aria-describedby]")
+        .await
+}
+
 /// Integers beyond `f64` stay exact; unsigned fields reject a minus sign.
 async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
     let big = input(page, "nf-u64").await?;
@@ -412,5 +500,15 @@ async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
     let unsigned = input(page, "nf-u8").await?;
     tab_into(page, &unsigned).await?;
     page.send_keys_to_active("-5").await?;
-    wait_for_value(page, &unsigned, "5").await
+    wait_for_value(page, &unsigned, "5").await?;
+
+    // A value beyond the type's range clamps to it, and stepping goes on from there.
+    clear(page, &unsigned).await?;
+    page.send_keys_to_active("300").await?;
+    page.send_keys_to_active(Key::Enter).await?;
+    wait_for_value(page, &unsigned, "255").await?;
+    clear(page, &unsigned).await?;
+    page.send_keys_to_active("1000").await?;
+    page.send_keys_to_active(Key::Up).await?;
+    wait_for_value(page, &unsigned, "255").await
 }

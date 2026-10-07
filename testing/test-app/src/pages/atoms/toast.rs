@@ -11,8 +11,9 @@ use leptos::prelude::*;
 
 /// Toasts of one queue (react-aria-components' `Toast.test.js` setup): "Toast" adds one without
 /// a timeout, "Timed toast" one closing after 1.5 seconds, "Slow toast" after 3 seconds, "Close
-/// newest" closes the newest
-/// programmatically. `#test-toast-closed` counts the `on_close` calls.
+/// newest" closes the newest programmatically. "Add, then close oldest" adds a toast after 1.5
+/// seconds and closes the oldest after 3 seconds (while the focus stays in a toast).
+/// `#test-toast-closed` counts the `on_close` calls.
 #[component]
 pub fn PageAtomToast() -> impl IntoView {
     let queue = ToastQueue::<(String, String)>::new(None);
@@ -60,6 +61,22 @@ pub fn PageAtomToast() -> impl IntoView {
             }
         >
             "Close newest"
+        </Button>
+        <Button
+            attr:id="test-toast-add-then-close-oldest"
+            on_press=move |_| {
+                set_timeout(move || add(None), Duration::from_millis(1500));
+                set_timeout(
+                    move || {
+                        if let Some(toast) = queue.visible_toasts.get_untracked().last() {
+                            queue.close(&toast.key);
+                        }
+                    },
+                    Duration::from_secs(3),
+                );
+            }
+        >
+            "Add, then close oldest"
         </Button>
         <p>"Closed: " <span id="test-toast-closed">{move || closed.get()}</span></p>
     }

@@ -1,8 +1,8 @@
-// Upstream: ../starters/docs/src/ListBox.css @ 99e610236
-// Upstream: ../starters/docs/src/ListBox.tsx @ 99e610236
+// Upstream: ../starters/docs/src/ListBox.css @ 99e6102368
+// Upstream: ../starters/docs/src/ListBox.tsx @ 99e6102368
 //
 // `ListBox`, `ListBoxItem` (with `ListBoxItemLabel`, `ListBoxItemDescription`) and
-// `ListBoxSection` (its heading as `leptonic-ListBoxSectionHeading`). Markup: an item's text in a
+// `ListBoxSection` (with its `ListBoxSectionHeading`). Markup: an item's text in a
 // `ListBoxItemLabel` (the starter wraps plain text in `<Text slot="label">`), optionally followed
 // by a `ListBoxItemDescription`.
 //
@@ -54,7 +54,7 @@ $dropdown-item: ':where(.leptonic-SelectPopover, .leptonic-ComboBoxPopover) .lep
   }
 }
 
-// The section's heading precedes its group (`leptonic-ListBoxSection`) in an unclassed wrapper.
+// The section's heading is the first child of its section (`leptonic-ListBoxSection`).
 .leptonic-ListBoxSectionHeading {
   position: sticky;
   top: -0.5px;

@@ -19,10 +19,10 @@ pub mod focus;
 pub mod focus_scope_tree;
 pub mod focusability;
 pub(crate) mod focusable_tree_walker;
+pub mod fraction;
 pub mod heading_level;
 pub mod i18n;
 pub mod id;
-pub(crate) mod interaction_rect;
 pub mod key;
 pub mod keyboard_shortcut;
 pub mod list_formatter;
@@ -43,17 +43,19 @@ pub mod point;
 pub mod pointer_type;
 pub(crate) mod prevent_focus;
 pub mod propagation_control;
+#[cfg(not(feature = "ssr"))]
 pub(crate) mod run_after_transition;
 pub(crate) mod scoped_context;
 pub mod scroll;
 pub mod scroll_behavior;
 pub(crate) mod shadow_dom;
 pub(crate) mod shadow_tree_walker;
-pub mod signals;
 pub mod slot_id;
 pub mod style;
 pub use leptos_styles as styles;
+#[cfg(not(feature = "ssr"))]
 pub(crate) mod synthetic_blur;
+#[cfg(not(feature = "ssr"))]
 pub(crate) mod text_selection;
 pub mod use_description;
 pub mod use_viewport_size;
@@ -69,14 +71,12 @@ pub mod syntax_highlight;
 pub use aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible};
 // Re-exports from dom_ext
 pub use dom_ext::ContainsTarget;
-pub(crate) use dom_ext::{
-    ElementExt, EventAccessors, EventTargetExt, node_contains, set_event_target,
-};
+#[cfg(not(feature = "ssr"))]
+pub(crate) use dom_ext::{ElementExt, set_event_target};
+pub(crate) use dom_ext::{EventAccessors, EventTargetExt, node_contains};
 pub use event_handler::EventHandler;
 pub use event_wrapper::EventWrapper;
 pub use focusability::will_open_keyboard;
-// Re-exports from interaction_rect
-pub use interaction_rect::{InteractionRect, RectPrecise, is_over};
 pub use leptos_element_capture as element_capture;
 pub use leptos_element_capture::{CapturedElement, ElementCaptureAttr, ElementCaptureCallback};
 pub use merge::{MergeWith, MergeWithExt};
@@ -86,7 +86,7 @@ pub use number_value::NumberValue;
 pub use point::Point;
 // Re-exports from propagation_control
 pub use propagation_control::{Propagation, PropagationControl};
-pub use slot_id::{Slot, SlotAttrs, SlotProps, join_slot_ids, use_slot, use_slot_id};
+pub use slot_id::{Slot, SlotAttrs, SlotProps, join_slot_ids, use_slot};
 pub use value_binding::ValueBinding;
 
 /// A warning about API misuse for developers, as react-aria's `NODE_ENV !== 'production'`

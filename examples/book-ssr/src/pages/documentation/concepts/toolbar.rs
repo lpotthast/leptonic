@@ -45,7 +45,7 @@ pub fn PageToolbarOverview() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Lay out buttons without changing their keyboard behavior"</TableCell>
-                        <TableCell><Link href=routes::doc::Stack.materialize()>"Stack"</Link></TableCell>
+                        <TableCell>"A "<Link href=format!("{}#stack", routes::doc::Layout.materialize())>"stack"</Link>" (CSS flexbox)"</TableCell>
                     </TableRow>
                 </DocTable>
                 <p>
@@ -72,7 +72,6 @@ pub fn PageToolbarOverview() -> impl IntoView {
                         <TableCell>"An unstyled "<Code inline=true>"Toolbar"</Code>", styled through data attributes."</TableCell>
                     </TableRow>
                 </DocTable>
-                <p>"There is no themed toolbar component yet."</p>
             </Section>
 
             <Section title="Quick Start">

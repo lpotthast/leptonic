@@ -15,9 +15,8 @@ use super::{
 };
 use crate::{
     hooks::form::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, VALID_VALIDITY_STATE,
-        ValidateFn, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
-        use_form_validation_state,
+        FormValidationState, UseFormValidationStateInput, VALID_VALIDITY_STATE, ValidateFn,
+        ValidationBehavior, ValidationResult, ValidityStateSnapshot, use_form_validation_state,
     },
     utils::{
         ValueBinding,
@@ -36,6 +35,8 @@ use crate::{
 // - Hook-owned value (C4): `default_value` + `on_change`, or a binding to app state.
 // - A `Copy` struct with signals and methods (C3); `set_segment` takes the era as its index.
 // - `hour_cycle`, `granularity`, `max_granularity`: enums (react-aria: numbers and strings).
+// - The format options (`placeholder_value`, `granularity`, `max_granularity`, `hour_cycle`,
+//   `hide_time_zone`, `should_force_leading_zeros`) are signals (C11).
 //
 // ## DIFFERENT BEHAVIOR
 // - A granularity finer than the value type has (a time for a `civil::Date`) is the day
@@ -70,21 +71,21 @@ pub struct UseDateFieldStateInput<V: DateValue> {
     /// Called with each new value.
     pub on_change: Option<Callback<Option<V>>>,
     /// The value the segments start from when edited (e.g. its time). Default: today, midnight.
-    pub placeholder_value: Option<V>,
+    pub placeholder_value: Signal<Option<V>>,
     pub min_value: Signal<Option<V>>,
     pub max_value: Signal<Option<V>>,
     /// Whether a date can't be chosen (it makes the value invalid).
     pub is_date_unavailable: Option<Callback<V, bool>>,
     /// The finest unit. Default: the minute for values with a time, else the day.
-    pub granularity: Option<Granularity>,
+    pub granularity: Signal<Option<Granularity>>,
     /// The coarsest unit. Default: the year.
-    pub max_granularity: MaxGranularity,
+    pub max_granularity: Signal<MaxGranularity>,
     /// 12 or 24 hours. Default: the locale's.
-    pub hour_cycle: Option<HourCycle>,
+    pub hour_cycle: Signal<Option<HourCycle>>,
     /// Hides the time zone of zoned values.
-    pub hide_time_zone: bool,
+    pub hide_time_zone: Signal<bool>,
     /// Pads months, days and hours to two digits.
-    pub should_force_leading_zeros: bool,
+    pub should_force_leading_zeros: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
@@ -94,7 +95,7 @@ pub struct UseDateFieldStateInput<V: DateValue> {
     pub name: Option<String>,
     /// The validation of an enclosing date picker, which owns it (react-aria's private
     /// validation state prop): used instead of the field's own.
-    pub validation: Option<UseFormValidationStateReturn>,
+    pub validation: Option<FormValidationState>,
 }
 
 impl<V: DateValue> Default for UseDateFieldStateInput<V> {
@@ -103,15 +104,15 @@ impl<V: DateValue> Default for UseDateFieldStateInput<V> {
             default_value: None,
             value: None,
             on_change: None,
-            placeholder_value: None,
+            placeholder_value: Signal::stored(None),
             min_value: Signal::stored(None),
             max_value: Signal::stored(None),
             is_date_unavailable: None,
-            granularity: None,
-            max_granularity: MaxGranularity::Year,
-            hour_cycle: None,
-            hide_time_zone: false,
-            should_force_leading_zeros: false,
+            granularity: Signal::stored(None),
+            max_granularity: Signal::stored(MaxGranularity::Year),
+            hour_cycle: Signal::stored(None),
+            hide_time_zone: Signal::stored(false),
+            should_force_leading_zeros: Signal::stored(false),
             is_disabled: Signal::stored(false),
             is_read_only: Signal::stored(false),
             is_required: Signal::stored(false),
@@ -156,13 +157,13 @@ pub struct DateFieldState<V: DateValue> {
     /// The shown value completed by the placeholder (for descriptions).
     pub date_value: Signal<V>,
     pub granularity: Signal<Granularity>,
-    pub max_granularity: MaxGranularity,
+    pub max_granularity: Signal<MaxGranularity>,
     pub is_disabled: Signal<bool>,
     pub is_read_only: Signal<bool>,
     pub is_required: Signal<bool>,
     /// Whether the shown validation fails.
     pub is_invalid: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     name: StoredValue<Option<String>>,
     binding: ValueBinding<Option<V>>,
@@ -376,6 +377,17 @@ impl<V: DateValue> DateFieldState<V> {
     }
 }
 
+/// The granularity of a value type: as given if the type has it (a time for a `civil::Date` is
+/// the day), else the minute for values with a time, the day for dates.
+pub(crate) fn resolve_granularity<V: DateValue>(granularity: Option<Granularity>) -> Granularity {
+    match granularity {
+        Some(granularity) if granularity.has_time() && !V::HAS_TIME => Granularity::Day,
+        Some(granularity) => granularity,
+        None if V::HAS_TIME => Granularity::Minute,
+        None => Granularity::Day,
+    }
+}
+
 /// The validation of a value against min, max and unavailable dates (react-stately's
 /// `getValidationResult`).
 pub(crate) fn validation_result<V: DateValue>(
@@ -515,14 +527,8 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
     let initial_value = binding.value.get_untracked();
 
     // The finest unit: as given, if the value type has it.
-    let granularity_signal = Signal::stored(match granularity {
-        Some(granularity) if granularity.has_time() && !V::HAS_TIME => Granularity::Day,
-        Some(granularity) => granularity,
-        None if V::HAS_TIME => Granularity::Minute,
-        None => Granularity::Day,
-    });
+    let granularity_signal = Signal::derive(move || resolve_granularity::<V>(granularity.get()));
     // The time zone of zoned values: the last value's (or the placeholder's).
-    let placeholder_value = StoredValue::new(placeholder_value);
     let last_time_zone = StoredValue::new(None::<TimeZone>);
     let time_zone = Memo::new(move |_| {
         let value = binding.value.get();
@@ -531,20 +537,25 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
             .and_then(|value| value.time_zone().cloned())
             .or_else(|| {
                 placeholder_value
-                    .with_value(|value| value.as_ref().and_then(|value| value.time_zone().cloned()))
+                    .with(|value| value.as_ref().and_then(|value| value.time_zone().cloned()))
             })
             .or_else(|| last_time_zone.get_value());
         last_time_zone.set_value(time_zone.clone());
         time_zone
     });
 
-    let hour_cycle = Memo::new(move |_| resolve_hour_cycle(&locale.get(), hour_cycle_preference));
+    let hour_cycle =
+        Memo::new(move |_| resolve_hour_cycle(&locale.get(), hour_cycle_preference.get()));
     let display_segments = Memo::new(move |_| {
-        display_segments(max_granularity, granularity_signal.get(), hour_cycle.get())
+        display_segments(
+            max_granularity.get(),
+            granularity_signal.get(),
+            hour_cycle.get(),
+        )
     });
     let placeholder = Memo::new(move |_| {
         placeholder_value
-            .get_value()
+            .get()
             .unwrap_or_else(|| V::today(time_zone.get().as_ref()))
     });
 
@@ -568,12 +579,12 @@ pub fn use_date_field_state<V: DateValue>(input: UseDateFieldStateInput<V>) -> D
 
     let format_options = Memo::new(move |_| FormatOptions {
         granularity: granularity_signal.get(),
-        max_granularity,
+        max_granularity: max_granularity.get(),
         time_zone: time_zone.get(),
-        hide_time_zone,
-        hour_cycle: hour_cycle_preference,
+        hide_time_zone: hide_time_zone.get(),
+        hour_cycle: hour_cycle_preference.get(),
         show_era: display.with(|display| display.era == Some(Era::Bc)),
-        should_force_leading_zeros,
+        should_force_leading_zeros: should_force_leading_zeros.get(),
     });
     let formatter = Memo::new(move |_| {
         let locale = locale.get();
@@ -677,7 +688,7 @@ mod tests {
         owner.with(|| {
             let changes = RwSignal::new(Vec::<Option<Date>>::new());
             let state = use_date_field_state(UseDateFieldStateInput {
-                placeholder_value: Some(date(2024, 1, 1)),
+                placeholder_value: Signal::stored(Some(date(2024, 1, 1))),
                 on_change: Some(Callback::new(move |value| {
                     changes.update(|changes| changes.push(value));
                 })),

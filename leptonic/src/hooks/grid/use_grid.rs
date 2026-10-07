@@ -34,7 +34,7 @@ use crate::{
 
 /// `handler`, inactive while keyboard navigation is disabled.
 fn unless_navigation_disabled<E: Clone + 'static>(
-    navigation_disabled: RwSignal<bool>,
+    navigation_disabled: Signal<bool>,
     handler: EventHandler<E>,
 ) -> EventHandler<E> {
     EventHandler::new(move |e: E| {
@@ -219,7 +219,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
     // While keyboard navigation is disabled (e.g. while a column is resized with the arrow keys),
     // the grid only tracks whether it is focused.
     let selection = state.list.selection;
-    let navigation_disabled = state.is_keyboard_navigation_disabled;
+    let navigation_disabled = state.is_keyboard_navigation_disabled();
     collection.on_keydown_capture =
         unless_navigation_disabled(navigation_disabled, collection.on_keydown_capture);
     collection.on_keydown = unless_navigation_disabled(navigation_disabled, collection.on_keydown);

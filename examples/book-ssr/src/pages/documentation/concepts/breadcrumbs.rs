@@ -67,7 +67,6 @@ pub fn PageBreadcrumbsOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>"There is no themed breadcrumbs component yet."</p>
             </Section>
 
             <Section title="Quick Start">

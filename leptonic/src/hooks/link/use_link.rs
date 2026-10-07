@@ -38,7 +38,8 @@ use crate::{
 //
 // ## DIFFERENT BEHAVIOR
 // - A disabled link renders no `href`: it can't be followed by any means (middle click, context
-//   menu) and leaves the tab order (react-aria-components renders a `<span>` instead).
+//   menu) and leaves the tab order (react-aria-components renders a `<span>` instead). Such an
+//   `<a>` gets `role="link"`, which it loses with its `href`.
 // - Like `use_button`, the hook merges a surrounding `PressResponder`'s trigger props
 //   (`aria-haspopup`, `aria-expanded`, `aria-controls`, its capture) and shortcuts, which
 //   react-aria's `usePress` merges for any pressable.
@@ -46,6 +47,10 @@ use crate::{
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Composes `use_hover` and `use_focus_ring` as well, so atoms get the state for their data
 //   attributes from one hook (as `use_button`).
+//
+// ## ADDITIONS
+// - `rel="noopener"` is added for `LinkTarget::Blank`, so that the new browsing context gets no
+//   access to this one (older browsers don't imply it). React-aria: `rel` as given.
 //
 // =============================================================================
 
@@ -111,7 +116,7 @@ pub struct UseLinkProps {
     pub href: Signal<Option<String>>,
     pub target: Option<Oco<'static, str>>,
     pub rel: Option<String>,
-    pub role: Option<AriaRole>,
+    pub role: Signal<Option<AriaRole>>,
     pub tabindex: Signal<Option<i32>>,
     pub aria_label: MaybeProp<String>,
     pub aria_current: Signal<Option<AriaCurrent>>,
@@ -144,7 +149,7 @@ pub type UseLinkAttrs = (
         Attr<attr::Href, Signal<Option<String>>>,
         Attr<attr::Target, Option<Oco<'static, str>>>,
         Attr<attr::Rel, Option<String>>,
-        Attr<attr::Role, Option<AriaRole>>,
+        Attr<attr::Role, Signal<Option<AriaRole>>>,
         Attr<attr::Tabindex, Signal<Option<i32>>>,
         Attr<attr::AriaLabel, MaybeProp<String>>,
         Attr<attr::AriaCurrent, Signal<Option<AriaCurrent>>>,
@@ -338,7 +343,8 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         href: Signal::derive(move || href.get().filter(|_| is_anchor && !is_disabled.get())),
         target: (is_anchor && target != LinkTarget::Same).then(|| target.to_oco()),
         rel: link_rel_to_string(&rel).filter(|_| is_anchor),
-        role: (!is_anchor).then_some(AriaRole::Link),
+        // An `<a>` without `href` (disabled) has no implicit role: keep it a link.
+        role: Signal::derive(move || (!is_anchor || is_disabled.get()).then_some(AriaRole::Link)),
         tabindex,
         aria_label,
         aria_current,

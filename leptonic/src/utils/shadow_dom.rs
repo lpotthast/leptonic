@@ -1,5 +1,5 @@
-// Upstream: react-aria/src/utils/shadowdom/DOMFunctions.ts @ 6f664fe911
-// Upstream: react-aria/src/utils/domHelpers.ts @ eef7319215
+// Upstream: react-aria/src/utils/shadowdom/DOMFunctions.ts @ 99e6102368
+// Upstream: react-aria/src/utils/domHelpers.ts @ 99e6102368
 //! Shadow DOM utilities for cross-shadow-boundary DOM operations.
 //!
 //! Provides functions for working with shadow DOM boundaries, including
@@ -30,7 +30,6 @@ pub fn get_active_element(doc: &web_sys::Document) -> Option<web_sys::Element> {
 
 /// Whether `node` contains `other` (or is it), across shadow roots and slots: a slotted element
 /// counts as inside its slot's parent, an element in a shadow root as inside its host.
-#[cfg_attr(feature = "ssr", allow(dead_code))]
 pub fn node_contains(node: &web_sys::Node, other: &web_sys::Node) -> bool {
     let mut current = Some(other.clone());
     while let Some(candidate) = current {
@@ -58,25 +57,27 @@ pub fn node_contains(node: &web_sys::Node, other: &web_sys::Node) -> bool {
 
 /// Get the true event target, accounting for shadow DOM retargeting.
 ///
-/// When an event originates inside a shadow root, `event.target` is retargeted
-/// to the shadow host. This function uses `event.composedPath()[0]` to get the
-/// original target element from within the shadow tree.
+/// When an event originates inside an open shadow root, `event.target` is retargeted to the shadow
+/// host. For a target that hosts a shadow root, this returns `event.composedPath()[0]`, the original
+/// target inside the shadow tree (react-aria's `getEventTarget`); otherwise `event.target`.
 pub fn get_event_target<E: AsRef<web_sys::Event>>(event: &E) -> Option<web_sys::EventTarget> {
     let event = event.as_ref();
-    let path = event.composed_path();
-    if path.length() > 0 {
-        let first = path.get(0);
-        if !first.is_undefined() && !first.is_null() {
-            return Some(first.unchecked_into());
-        }
+    let target = event.target();
+    let hosts_shadow_root = target
+        .as_ref()
+        .and_then(|target| target.dyn_ref::<web_sys::Element>())
+        .is_some_and(|element| element.shadow_root().is_some());
+    if hosts_shadow_root {
+        let first = event.composed_path().get(0);
+        return (!first.is_undefined() && !first.is_null()).then(|| first.unchecked_into());
     }
-    event.target()
+    target
 }
 
 /// The targets a listener for a non-composed event (`scroll`, `change`, ...) from inside `from`
 /// must be added to (react-aria's `getPropagationTargets`): `from`'s window, and every shadow root
 /// between `from` and the document, since such events don't cross shadow boundaries.
-#[cfg_attr(feature = "ssr", allow(dead_code))]
+#[cfg(not(feature = "ssr"))]
 pub fn propagation_targets(from: &web_sys::Element) -> Vec<web_sys::EventTarget> {
     let mut targets: Vec<web_sys::EventTarget> = from
         .owner_document()

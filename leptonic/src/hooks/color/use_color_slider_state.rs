@@ -3,7 +3,12 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::slider::{SliderState, UseSliderStateInput, use_slider_state},
-    utils::{ValueBinding, color::ColorValue, orientation::Orientation},
+    utils::{
+        ValueBinding,
+        color::ColorValue,
+        i18n::{Locale, use_locale},
+        orientation::Orientation,
+    },
 };
 
 // =============================================================================
@@ -48,6 +53,7 @@ pub struct ColorSliderState<C: ColorValue> {
     pub is_dragging: Signal<bool>,
     binding: ValueBinding<C>,
     default_value: StoredValue<C>,
+    locale: Signal<Locale>,
 }
 
 impl<C: ColorValue> ColorSliderState<C> {
@@ -65,13 +71,13 @@ impl<C: ColorValue> ColorSliderState<C> {
     /// `getDisplayColor`).
     pub fn display_color(&self) -> Signal<C> {
         let (value, channel) = (self.value, self.channel);
-        Signal::derive(move || value.get().get_display_color(channel))
+        Signal::derive(move || value.get().display_color(channel))
     }
 
-    /// The channel's value, formatted.
+    /// The channel's value, formatted for the locale.
     pub fn formatted_value(&self) -> Signal<String> {
-        let (value, channel) = (self.value, self.channel);
-        Signal::derive(move || value.get().format_channel_value(channel))
+        let (value, channel, locale) = (self.value, self.channel, self.locale);
+        Signal::derive(move || value.get().format_channel_value(channel, &locale.get()))
     }
 }
 
@@ -106,10 +112,11 @@ pub fn use_color_slider_state<C: ColorValue>(
         }),
     );
 
-    let range = C::get_channel_range(channel);
+    let locale = use_locale();
+    let range = C::channel_range(channel);
     let slider = use_slider_state(UseSliderStateInput {
         value: Some(ValueBinding::new(
-            Signal::derive(move || vec![color.get().get_channel_value(channel)]),
+            Signal::derive(move || vec![color.get().channel_value(channel)]),
             Callback::new(move |values: Vec<f64>| {
                 if let Some(&value) = values.first() {
                     binding.set(latest.get_value().with_channel_value(channel, value));
@@ -121,7 +128,7 @@ pub fn use_color_slider_state<C: ColorValue>(
         orientation,
         // The channel's formatting and page size (react-stately overrides both).
         value_label: Some(Callback::new(move |_| {
-            color.get().format_channel_value(channel)
+            color.get().format_channel_value(channel, &locale.get())
         })),
         page_size: Some(Signal::stored(range.page_size)),
         // `on_change` already ran with the color; this only reports the end.
@@ -146,5 +153,6 @@ pub fn use_color_slider_state<C: ColorValue>(
         is_dragging: Signal::derive(move || slider.is_thumb_dragging(0)),
         binding,
         default_value,
+        locale,
     }
 }

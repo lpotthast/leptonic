@@ -38,9 +38,6 @@ use crate::{
 //   option as `<a>` with them, or keep another element (links then open through a temporary
 //   `<a>`).
 //
-// ## OMITTED FEATURES
-// - Virtualization (`aria-posinset`/`aria-setsize`).
-//
 // =============================================================================
 
 /// Input of [`use_option`].

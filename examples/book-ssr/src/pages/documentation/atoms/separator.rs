@@ -25,8 +25,12 @@ pub fn PageAtomSeparator() -> impl IntoView {
 
             <Section title="Props">
                 <ApiTable kind=ApiKind::Props of="atoms::separator::Separator">
-                    <ApiRow name="orientation" ty="Orientation" default="Horizontal">"Whether the separator divides stacked or side-by-side content."</ApiRow>
+                    <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
+                        "Whether the separator divides stacked or side-by-side content: a value or any signal."
+                    </ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element id."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the separator."</ApiRow>
+                    <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the separator."</ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the separator element."</ApiRow>
                 </ApiTable>
             </Section>
@@ -56,15 +60,22 @@ pub fn PageAtomSeparator() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atom adds no classes. Vertical separators carry "<Code inline=true>"aria-orientation=\"vertical\""</Code>
-                    ", which you can select on:"
+                    "The atom brings no styles. It renders the class "<Code inline=true>"leptonic-Separator"</Code>
+                    " followed by the "<Code inline=true>"classes"</Code>" you pass. A horizontal separator is an "
+                    <Code inline=true>"<hr>"</Code>" (reset the browser\u{2019}s border); a vertical one carries "
+                    <Code inline=true>"aria-orientation=\"vertical\""</Code>", which you can select on. The book\u{2019}s "
+                    "demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-separator { border: none; border-top: 1px solid var(--border); }
-                        .my-separator[aria-orientation="vertical"] { border-top: none; border-left: 1px solid var(--border); align-self: stretch; }
+                        .my-separator { margin: 1em 0; border: none; border-top: 1px solid var(--border); }
+                        .my-separator[aria-orientation="vertical"] { align-self: stretch; margin: 0; border-top: none; border-left: 1px solid var(--border); }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <SeeAlso>

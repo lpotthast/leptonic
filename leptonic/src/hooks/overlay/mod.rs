@@ -15,23 +15,9 @@
 //! Additionally, `use_close_on_scroll` closes an overlay when the trigger's
 //! scrollable ancestors scroll (preventing stale positioning).
 //!
-//! ## React-aria Deviations
-//!
-//! This implementation is partially based on [React Aria's overlay hooks](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays)
-//! (rest in ./modal) but has the following deviations:
-//!
-//! ### Not Implemented
-//!
-//! - **Safari iOS `VoiceOver` workarounds**: React Aria includes specific workarounds for Safari
-//!   on iOS to prevent `VoiceOver` from escaping focus traps. These are not yet implemented.
-//!
-//! - **`usePreventScroll` iOS Safari handling**: React Aria has extensive iOS Safari workarounds
-//!   for scroll prevention. Our implementation may not work correctly on all iOS versions.
-//!
-//! ### Differences
-//!
-//! - **`FocusScope` as separate atom**: React Aria's `FocusScope` is a hook. In Leptonic, it's
-//!   provided as a component/atom (`<FocusScope>`) that wraps modal content.
+//! See each hook's deviation block for how it differs from react-aria. Module-wide: focus
+//! containment is the `FocusScope` atom (react-aria: the `FocusScope` component inside its
+//! `Overlay`), rendered by the overlay atoms.
 
 mod calculate_position;
 pub mod overlay_focus_contain;

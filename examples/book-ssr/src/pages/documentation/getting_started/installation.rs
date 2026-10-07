@@ -86,7 +86,7 @@ pub fn PageInstallation() -> impl IntoView {
                                 <TableCell><Code inline=true>"clipboard"</Code></TableCell>
                                 <TableCell>
                                     "Copying to the clipboard: the copy button of code blocks ("
-                                    <Link href=routes::doc::Typography.materialize()>"Code"</Link>") and "
+                                    "Code"") and "
                                     <Code inline=true>"leptonic::utils::clipboard::write_text"</Code>". Needs only "
                                     <Code inline=true>"hooks"</Code>"; the copy button also needs "<Code inline=true>"components"</Code>"."
                                 </TableCell>
@@ -98,14 +98,14 @@ pub fn PageInstallation() -> impl IntoView {
                             <TableRow>
                                 <TableCell><Code inline=true>"sanitize"</Code></TableCell>
                                 <TableCell>
-                                    <Link href=routes::doc::SanitizedHtml.materialize()>"Sanitized HTML"</Link>
+                                    <Link href=format!("{}#rich-content", routes::doc::Layout.materialize())>"Sanitized HTML"</Link>
                                     ", with ammonia."
                                 </TableCell>
                             </TableRow>
                             <TableRow>
                                 <TableCell><Code inline=true>"tiptap"</Code></TableCell>
                                 <TableCell>
-                                    "The "<Link href=routes::doc::RichTextEditor.materialize()>"Rich Text Editor"</Link>
+                                    "The "<Link href=format!("{}#rich-content", routes::doc::Layout.materialize())>"Rich Text Editor"</Link>
                                     ". Its JavaScript ships with the "<Code inline=true>"leptos-tiptap"</Code>" crate."
                                 </TableCell>
                             </TableRow>

@@ -6,16 +6,16 @@ use leptos::{
 use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
 use super::use_color_field_state::ColorFieldState;
-use crate::hooks::InputType;
-use crate::hooks::TextFieldElement;
 use crate::{
     hooks::{
-        IntoAttrs, UseFocusWithinInput, UseFocusWithinReturn, UseScrollWheelInput,
-        UseSpinButtonInput, UseSpinButtonReturn,
+        InputType, IntoAttrs, TextFieldElement, UseFocusWithinInput, UseFocusWithinReturn,
+        UseScrollWheelInput, UseSpinButtonInput, UseSpinButtonReturn,
         form::{
             use_form_reset::{UseFormResetInput, use_form_reset},
             use_form_validation_state::ValidityStateSnapshot,
-            use_formatted_text_field::{FormattedTextFieldHandlers, use_formatted_text_field},
+            use_formatted_text_field::{
+                FormattedTextFieldHandlers, UseFormattedTextFieldInput, use_formatted_text_field,
+            },
             use_label::UseLabelProps,
             use_text_field::{
                 UseTextFieldInput, UseTextFieldInputAttrs, UseTextFieldInputProps,
@@ -28,6 +28,7 @@ use crate::{
     },
     utils::{
         CapturedElement, EventHandler, SlotProps,
+        color::{ColorValue, RGB8},
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
@@ -45,8 +46,8 @@ use crate::{
 
 /// Input of [`use_color_field`].
 #[derive(Clone)]
-pub struct UseColorFieldInput {
-    pub state: ColorFieldState,
+pub struct UseColorFieldInput<C: ColorValue = RGB8> {
+    pub state: ColorFieldState<C>,
     /// The input's id. Generated when `None`.
     pub id: Option<String>,
     /// Whether a visible label is rendered (with `label_props`).
@@ -129,7 +130,7 @@ impl IntoAttrs for UseColorFieldInputProps {
 /// digits, the color is committed on blur and Enter, arrow keys, Page Up/Down, Home/End and the
 /// scroll wheel step it (a text field with a spin button's keys).
 #[allow(clippy::too_many_lines)]
-pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
+pub fn use_color_field<C: ColorValue>(input: UseColorFieldInput<C>) -> UseColorFieldReturn {
     let UseColorFieldInput {
         state,
         id,
@@ -157,7 +158,7 @@ pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
             return ShortcutOutcome::Ignored;
         }
         state.commit();
-        state.validation.commit_validation.run(());
+        state.validation.commit_validation();
         ShortcutOutcome::Custom {
             prevent_default: false,
             continue_propagation: false,
@@ -244,17 +245,20 @@ pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
         on_beforeinput,
         on_compositionstart,
         on_compositionend,
-    } = use_formatted_text_field(
-        element,
-        Callback::new(move |text: String| state.validate(&text)),
-        Callback::new(move |text: String| state.set_input_value(text)),
-    );
+    } = use_formatted_text_field(UseFormattedTextFieldInput { element, state });
 
     // The spin button's keys (arrows, Page Up/Down, Home/End), not its role: the input stays a
     // text box without value attributes (react-aria).
     let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
-        value: Signal::derive(move || state.color_value.get().map(|c| f64::from(c.to_hex_int()))),
-        text_value: Signal::derive(move || state.color_value.get().map(|c| format!("#{c:X}"))),
+        value: Signal::derive(move || {
+            state
+                .color_value
+                .get()
+                .map(|c| f64::from(c.to_rgb8().to_hex_int()))
+        }),
+        text_value: Signal::derive(move || {
+            state.color_value.get().map(|c| c.to_rgb8().to_string())
+        }),
         min_value: Signal::stored(Some(0.0)),
         max_value: Signal::stored(Some(f64::from(0xFF_FF_FF_u32))),
         is_disabled,

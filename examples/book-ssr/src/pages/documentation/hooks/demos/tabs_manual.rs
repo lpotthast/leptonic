@@ -19,7 +19,7 @@ const TABS: [(&str, &str, &str); 3] = [
 /// One tab, rendered with `use_tab`.
 #[component]
 fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput {
+    let UseTabReturn { props: tab_props, .. } = use_tab(UseTabInput {
         list,
         key: Key::from(key),
         is_disabled: Signal::stored(false),
@@ -53,10 +53,10 @@ pub fn TabsManualDemo() -> impl IntoView {
         aria_label: "Mailbox".into(),
         tabs: tabs.clone(),
         element: CapturedElement::new(),
-        orientation: Orientation::Horizontal,
+        orientation: Orientation::Horizontal.into(),
         aria_labelledby: None,
     });
-    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
+    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None, aria_describedby: None, aria_details: None });
 
     let selection = state.list.list.selection;
     let key_text =
@@ -74,7 +74,7 @@ pub fn TabsManualDemo() -> impl IntoView {
                 .map(|(key, label, _)| view! { <DemoTab list=data.clone() key=key label=label/> })
                 .collect_view()}
         </div>
-        <div {..panel.tab_panel_props.into_attrs()} class="demo-tab-panel">
+        <div {..panel.props.into_attrs()} class="demo-tab-panel">
             <p>{content}</p>
         </div>
 

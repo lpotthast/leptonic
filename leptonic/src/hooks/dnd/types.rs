@@ -4,7 +4,13 @@ use std::{collections::HashSet, sync::Arc};
 
 use send_wrapper::SendWrapper;
 
-use crate::hooks::collections::Key;
+use crate::{
+    hooks::collections::Key,
+    utils::{
+        key::{KeyboardEventKey, KeyboardKey},
+        point::Point,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -17,6 +23,9 @@ use crate::hooks::collections::Key;
 // - `TextDropItem` holds its data: `get_text` is synchronous (the data is available when the drop
 //   happens). File and directory items read asynchronously, as in react-aria.
 // - `DropTarget` is an enum (`Root` / `Item`), `DropOperation` an enum.
+// - `DragPreview.offset` is a `Point` (react-aria: `{x, y}`).
+// - The key presses a droppable collection passes on during keyboard drags are a
+//   `DropTargetKeyDownEvent` (react-aria: the `KeyboardEvent`).
 //
 // =============================================================================
 
@@ -591,7 +600,31 @@ pub struct DragPreview {
     pub element: SendWrapper<web_sys::Element>,
     /// The position of the pointer in the preview. Defaults to where the pointer is in the
     /// dragged element.
-    pub offset: Option<(f64, f64)>,
+    pub offset: Option<Point>,
+}
+
+/// A key pressed during a keyboard drag over a droppable collection, after the collection moved
+/// its drop target (react-aria's `onKeyDown`). The drag manager handles every key press of a
+/// keyboard drag itself: the event's default is prevented and its propagation stopped already.
+#[derive(Debug, Clone)]
+pub struct DropTargetKeyDownEvent {
+    /// The pressed key.
+    pub key: KeyboardKey,
+    event: SendWrapper<web_sys::KeyboardEvent>,
+}
+
+impl DropTargetKeyDownEvent {
+    pub(crate) fn new(event: &web_sys::KeyboardEvent) -> Self {
+        Self {
+            key: event.typed_key(),
+            event: SendWrapper::new(event.clone()),
+        }
+    }
+
+    /// The underlying event (modifier keys, ...).
+    pub fn event(&self) -> &web_sys::KeyboardEvent {
+        &self.event
+    }
 }
 
 #[cfg(test)]

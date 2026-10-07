@@ -1,5 +1,7 @@
 use leptonic::{
-    atoms::prelude::FocusScope, components::prelude::*, hooks::*, utils::CapturedElement,
+    atoms::prelude::{Button, FocusScope},
+    hooks::*,
+    utils::CapturedElement,
 };
 use leptos::prelude::*;
 
@@ -34,7 +36,7 @@ pub fn OverlayDismissDemo() -> impl IntoView {
     let UseOverlayTriggerReturn {
         props: trigger_props,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open.into(),
+        is_open: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -72,7 +74,7 @@ pub fn OverlayDismissDemo() -> impl IntoView {
                 <FocusScope restore_focus=true auto_focus=true>
                     <h4 id="overlay-quick-start-title" class="demo-overlay-title">"Shipping options"</h4>
                     <p class="demo-overlay-text">"Press Escape, click outside or tab out of this panel to close it."</p>
-                    <Button on_press=move |_| set_is_open.set(false)>"Done"</Button>
+                    <Button on_press=move |_| set_is_open.set(false) classes="demo-btn">"Done"</Button>
                 </FocusScope>
             </div>
         </Show>

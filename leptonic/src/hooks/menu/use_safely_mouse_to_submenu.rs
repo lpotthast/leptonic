@@ -49,7 +49,10 @@ mod client {
     use super::UseSafelyMouseToSubmenuInput;
     use crate::{
         hooks::focus::use_focus_visible::{Modality, use_interaction_modality},
-        utils::event_listeners::{Listener, listen_to},
+        utils::{
+            event_listeners::{Listener, listen_to},
+            pointer_type::PointerType,
+        },
     };
 
     /// Movements away from the submenu tolerated before the menu takes pointer events again.
@@ -167,7 +170,10 @@ mod client {
             };
             let menu_el = (*menu_el).clone();
             let on_pointer_move = move |e: PointerEvent| {
-                if matches!(e.pointer_type().as_str(), "touch" | "pen") {
+                if matches!(
+                    PointerType::from(e.pointer_type()),
+                    PointerType::Touch | PointerType::Pen
+                ) {
                     return;
                 }
                 let Some(submenu_rect) = submenu

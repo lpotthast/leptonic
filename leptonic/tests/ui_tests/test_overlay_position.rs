@@ -35,6 +35,9 @@ impl BrowserTest<str> for OverlayPositionTests {
         page.click_element_with_id("test-op-above-trigger").await?;
         page.wait_for_selector(".test-op-above-popover[data-placement=top]")
             .await?;
+        // Measured once its entry animation (a slide) ran.
+        page.wait_for_no_selector(".test-op-above-popover[data-entering]")
+            .await?;
         let trigger = rect(&page, "#test-op-above-trigger").await?;
         let popover = rect(&page, ".test-op-above-popover").await?;
         let arrow = rect(&page, ".test-op-arrow").await?;
@@ -80,6 +83,8 @@ impl BrowserTest<str> for OverlayPositionTests {
         page.click_element_with_id("test-op-flip-trigger").await?;
         page.wait_for_selector(".test-op-flip-popover[data-placement=bottom]")
             .await?;
+        page.wait_for_no_selector(".test-op-flip-popover[data-entering]")
+            .await?;
         let trigger = rect(&page, "#test-op-flip-trigger").await?;
         let popover = rect(&page, ".test-op-flip-popover").await?;
         assert_that!(popover[1])
@@ -87,6 +92,42 @@ impl BrowserTest<str> for OverlayPositionTests {
                 "the flipped popover starts below the trigger (default offset 8px)",
             )
             .is_close_to(trigger[3] + 8.0, 1.0);
+        page.click_element_with_id("test-op-flip-trigger").await?;
+        page.wait_for_no_selector(".test-op-flip-popover").await?;
+
+        // Reopened where it fits above, the popover doesn't start from the previous opening's
+        // position (below): it is inserted unplaced, then placed above.
+        page.click_element_with_id("test-op-shift").await?;
+        page.driver
+            .execute(
+                "window.scrollTo(0, 0);
+                window.__placements = [];
+                new MutationObserver(records => {
+                    for (const record of records) {
+                        if (record.target.matches?.('.test-op-flip-popover')) {
+                            window.__placements.push(record.oldValue ?? 'none');
+                        }
+                    }
+                }).observe(document.body, {
+                    subtree: true,
+                    attributes: true,
+                    attributeOldValue: true,
+                    attributeFilter: ['data-placement'],
+                });",
+                vec![],
+            )
+            .await?;
+        page.click_element_with_id("test-op-flip-trigger").await?;
+        page.wait_for_selector(".test-op-flip-popover[data-placement=top]")
+            .await?;
+        let placements: Vec<String> = page
+            .driver
+            .execute("return window.__placements;", vec![])
+            .await?
+            .convert()?;
+        assert_that!(placements)
+            .with_detail_message("the data-placement values the reopened popover had before")
+            .is_equal_to(vec!["none".to_owned()]);
         page.click_element_with_id("test-op-flip-trigger").await?;
         page.wait_for_no_selector(".test-op-flip-popover").await?;
         page.expect_no_page_errors().await

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use leptonic::{
-    components::button::{Button, ButtonVariant},
+    atoms::button::Button,
     hooks::{
         ButtonType, FormValidationContext, IntoAttrs, UseFieldInput, UseFieldReturn,
         UseFormResetInput, UseFormValidationInput, UseFormValidationStateInput, ValidationBehavior,
@@ -37,10 +37,10 @@ pub fn FormCouponDemo() -> impl IntoView {
         >
             <CouponField code/>
             <div class="demo-flex-center-row">
-                <Button button_type=ButtonType::Submit>"Apply"</Button>
-                <Button button_type=ButtonType::Reset variant=ButtonVariant::Outlined>"Reset"</Button>
+                <Button button_type=ButtonType::Submit classes="demo-btn-primary">"Apply"</Button>
+                <Button button_type=ButtonType::Reset classes="demo-btn">"Reset"</Button>
                 <Button
-                    variant=ButtonVariant::Flat
+                    classes="demo-btn"
                     on_press=move |_| server_errors.set(HashMap::from([(
                         "coupon".to_owned(),
                         vec!["This code has expired.".to_owned()],

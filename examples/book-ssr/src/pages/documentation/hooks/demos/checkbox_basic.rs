@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -46,14 +46,14 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Button
-                variant=ButtonVariant::Flat
-                size=ButtonSize::Small
-                on_press=move |_| set_is_indeterminate.update(|value| *value = !*value)
-            >
-                "Toggle indeterminate"
-            </Button>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=is_indeterminate set_selected=set_is_indeterminate classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Indeterminate"
+            </Checkbox>
         </div>
     }
 }

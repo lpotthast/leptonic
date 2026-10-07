@@ -1,6 +1,6 @@
-#![cfg_attr(feature = "ssr", allow(dead_code))]
-
-use wasm_bindgen::{JsCast, convert::FromWasmAbi};
+// No upstream: extension traits for DOM events and elements (react-aria's `nodeContains` and
+// `setEventTarget` live in `shadow_dom` and here).
+use wasm_bindgen::JsCast;
 
 /// Extension trait for accessing event targets inside DOM event handler closures,
 /// where `.target()` and `.current_target()` are guaranteed to be `Some`.
@@ -25,7 +25,9 @@ impl<T: AsRef<web_sys::Event>> EventAccessors for T {
 
 pub(crate) trait ElementExt {
     fn is_anchor_link(&self) -> bool;
+    #[cfg(not(feature = "ssr"))]
     fn disable_text_selection(&self);
+    #[cfg(not(feature = "ssr"))]
     fn restore_text_selection(&self);
 }
 
@@ -36,48 +38,44 @@ impl ElementExt for web_sys::Element {
         (&tag_name == "A" || &tag_name == "a") && self.has_attribute("href")
     }
 
+    #[cfg(not(feature = "ssr"))]
     fn disable_text_selection(&self) {
-        super::text_selection::disable_text_selection(self);
+        super::text_selection::disable_text_selection(Some(self));
     }
 
+    #[cfg(not(feature = "ssr"))]
     fn restore_text_selection(&self) {
-        super::text_selection::restore_text_selection(self);
+        super::text_selection::restore_text_selection(Some(self));
     }
 }
 
 pub(crate) trait EventTargetExt {
+    #[cfg(not(feature = "ssr"))]
     fn as_element(&self) -> Option<&web_sys::Element>;
     fn to_element(&self) -> Option<web_sys::Element>;
+    #[cfg(not(feature = "ssr"))]
     fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
     fn as_node(&self) -> Option<web_sys::Node>;
     /// The target's owner document, else the global document (`None` during SSR).
     fn get_owner_document(&self) -> Option<web_sys::Document>;
-    /// Adds a one-time event listener for the given event name.
-    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
-    where
-        E: FromWasmAbi + 'static;
-    /// Adds a one-time event listener that calls `prevent_default()` on the event.
-    fn prevent_default_once(&self, event_name: &str);
 }
 
 impl EventTargetExt for web_sys::EventTarget {
+    #[cfg(not(feature = "ssr"))]
     fn as_element(&self) -> Option<&web_sys::Element> {
-        use wasm_bindgen::JsCast;
         self.dyn_ref::<web_sys::Element>()
     }
 
     fn to_element(&self) -> Option<web_sys::Element> {
-        use wasm_bindgen::JsCast;
         self.clone().dyn_into::<web_sys::Element>().ok()
     }
 
+    #[cfg(not(feature = "ssr"))]
     fn as_html_element(&self) -> Option<web_sys::HtmlElement> {
-        use wasm_bindgen::JsCast;
         self.clone().dyn_into::<web_sys::HtmlElement>().ok()
     }
 
     fn as_node(&self) -> Option<web_sys::Node> {
-        use wasm_bindgen::JsCast;
         self.clone().dyn_into::<web_sys::Node>().ok()
     }
 
@@ -86,78 +84,16 @@ impl EventTargetExt for web_sys::EventTarget {
             .and_then(|el| el.owner_document())
             .or_else(|| leptos_use::use_document().as_ref().cloned())
     }
-
-    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
-    where
-        E: FromWasmAbi + 'static,
-    {
-        use wasm_bindgen::{JsCast, closure::Closure};
-
-        // Frees itself once called.
-        let function = Closure::once_into_js(callback);
-
-        let options = web_sys::AddEventListenerOptions::new();
-        options.set_once(true);
-
-        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
-            event_name,
-            function.unchecked_ref(),
-            &options,
-        );
-    }
-
-    fn prevent_default_once(&self, event_name: &str) {
-        self.listen_once(event_name, |e: web_sys::Event| {
-            e.prevent_default();
-        });
-    }
 }
 
-/// Check if `node` contains `other_node`, traversing shadow DOM boundaries.
-///
-/// This walks from `other_node` upwards through parent nodes, slot assignments,
-/// and shadow root host elements to determine containment. This correctly handles
-/// elements distributed into shadow DOM via `<slot>` elements.
-///
-/// Based on react-aria's `nodeContains` from `domHelpers.ts`.
+/// Whether `node` contains `other_node`, across shadow DOM boundaries (react-aria's
+/// `nodeContains`, see [`shadow_dom::node_contains`](super::shadow_dom::node_contains)). `None`
+/// when either is missing.
 pub(crate) fn node_contains(
     node: Option<&web_sys::Node>,
     other_node: Option<&web_sys::Node>,
 ) -> Option<bool> {
-    let node = node?;
-    let other_node = other_node?;
-
-    // Fast path: native contains works for same-tree nodes.
-    if node.contains(Some(other_node)) {
-        return Some(true);
-    }
-
-    // Slow path: walk up from other_node, crossing shadow boundaries.
-    let mut current: Option<web_sys::Node> = Some(other_node.clone());
-    while let Some(ref cur) = current {
-        if cur == node {
-            return Some(true);
-        }
-
-        // If the current node is a slotted element, follow its assigned slot.
-        if let Some(el) = cur.dyn_ref::<web_sys::Element>()
-            && let Some(slot) = el.assigned_slot()
-        {
-            let slot_node: web_sys::Node = slot.into();
-            current = Some(slot_node);
-            continue;
-        }
-
-        // If we've reached a shadow root, jump to its host element.
-        if let Some(shadow) = cur.dyn_ref::<web_sys::ShadowRoot>() {
-            current = Some(shadow.host().into());
-            continue;
-        }
-
-        current = cur.parent_node();
-    }
-
-    Some(false)
+    Some(super::shadow_dom::node_contains(node?, other_node?))
 }
 
 pub trait ContainsTarget {
@@ -180,8 +116,8 @@ impl ContainsTarget for web_sys::Event {
 ///
 /// Used for synthetic blur events in `use_focus_within` where we need the
 /// event to appear as if it originated from the tracked element.
-///
-/// Based on react-aria's `setEventTarget` approach.
+/// (react-aria's `setEventTarget`).
+#[cfg(not(feature = "ssr"))]
 pub(crate) fn set_event_target(
     event: &web_sys::Event,
     target: &web_sys::EventTarget,

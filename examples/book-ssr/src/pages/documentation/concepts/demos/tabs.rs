@@ -1,6 +1,8 @@
 use leptonic::{
-    atoms::tabs::{Tab, TabList, TabPanel, Tabs},
-    components::prelude::Checkbox,
+    atoms::{
+        checkbox::Checkbox,
+        tabs::{Tab, TabList, TabPanel, Tabs},
+    },
     hooks::{collections::Key, use_collection},
 };
 use leptos::prelude::*;
@@ -35,7 +37,10 @@ pub fn TabsConceptDemo() -> impl IntoView {
         </Tabs>
         <p class="demo-status">{move || format!("Selected tab: {}.", selected.get())}</p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

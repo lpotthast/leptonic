@@ -5,21 +5,22 @@ use leptonic::{
             CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
             CalendarNextButton, CalendarPreviousButton, CalendarWeek,
         },
+        checkbox::Checkbox,
         popover::Popover,
     },
-    components::prelude::{Checkbox, Icon},
     hooks::{
         IntoAttrs, Placement, UseButtonReturn,
         datepicker::{
-            DateFieldData, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
-            UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
-            UseDatePickerStateInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
+            DateFieldData, DateFieldOptions, DateFieldPicker, DatePickerOptions, DateSegment,
+            DateSegmentType, UseDateFieldInput, UseDateFieldReturn, UseDateFieldStateInput,
+            UseDatePickerInput, UseDatePickerReturn,
+            UseDatePickerStateInput, UseDateSegmentInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
             use_date_picker, use_date_picker_state, use_date_segment,
         },
         use_button,
     },
     jiff::civil::Date,
-    prelude::{ValueBinding, icondata},
+    prelude::ValueBinding,
     utils::{CapturedElement, id::use_id},
 };
 use leptos::prelude::*;
@@ -39,16 +40,16 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         button,
         dialog_labelledby,
         ..
-    } = use_date_picker(
-        UseDatePickerInput {
+    } = use_date_picker(UseDatePickerInput {
+        state,
+        group,
+        options: DatePickerOptions {
             has_label: true.into(),
             is_disabled: disabled.into(),
             dialog_id: Signal::stored(Some(dialog_id.clone())),
-            ..UseDatePickerInput::default()
+            ..DatePickerOptions::default()
         },
-        state,
-        group,
-    );
+    });
 
     // The field edits the picker's value and shares its validation.
     let field_state = use_date_field_state(UseDateFieldStateInput {
@@ -56,7 +57,7 @@ pub fn DatePickerHookDemo() -> impl IntoView {
             state.value,
             Callback::new(move |value| state.set_value(value)),
         )),
-        granularity: Some(state.granularity),
+        granularity: Signal::derive(move || Some(state.granularity.get())),
         is_disabled: disabled.into(),
         validation: Some(state.validation),
         ..UseDateFieldStateInput::default()
@@ -66,17 +67,19 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         input_props,
         mut data,
         ..
-    } = use_date_field(
-        UseDateFieldInput {
-            is_in_picker: true,
-            // Alt + ArrowDown in the field.
-            open: Some(Callback::new(move |()| state.set_open(true))),
-            ..UseDateFieldInput::default()
+    } = use_date_field(UseDateFieldInput {
+        state: field_state,
+        element: CapturedElement::new(),
+        input_element: CapturedElement::new(),
+        options: DateFieldOptions {
+            // Part of the picker: Alt + ArrowDown in the field opens its popover.
+            picker: Some(DateFieldPicker {
+                overlay: state.overlay,
+                focus_manager: None,
+            }),
+            ..DateFieldOptions::default()
         },
-        field_state,
-        CapturedElement::new(),
-        CapturedElement::new(),
-    );
+    });
     // The segments are named and described by the picker: its label, its description and its value.
     data.aria_labelledby = labelledby;
     data.aria_describedby = field_describedby;
@@ -116,7 +119,7 @@ pub fn DatePickerHookDemo() -> impl IntoView {
                     />
                 </div>
                 <button {..button_attrs} style=button_styles class="demo-date-picker-button">
-                    <Icon icon=icondata::BsCalendar3/>
+                    <span aria-hidden="true">"\u{25be}"</span>
                 </button>
             </div>
             <input {..input_props.into_attrs()}/>
@@ -144,11 +147,11 @@ pub fn DatePickerHookDemo() -> impl IntoView {
                 >
                     <header class="demo-calendar-header">
                         <CalendarPreviousButton classes="demo-calendar-nav">
-                            <Icon icon=icondata::BsChevronLeft/>
+                            <span aria-hidden="true">"\u{2039}"</span>
                         </CalendarPreviousButton>
                         <CalendarHeading classes="demo-calendar-title"/>
                         <CalendarNextButton classes="demo-calendar-nav">
-                            <Icon icon=icondata::BsChevronRight/>
+                            <span aria-hidden="true">"\u{203a}"</span>
                         </CalendarNextButton>
                     </header>
                     <CalendarGrid classes="demo-calendar-grid">
@@ -177,7 +180,10 @@ pub fn DatePickerHookDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }
@@ -194,7 +200,11 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         .into_any();
     }
     let UseDateSegmentReturn { segment_props } =
-        use_date_segment(segment, data, CapturedElement::new());
+        use_date_segment(UseDateSegmentInput {
+            segment,
+            data,
+            element: CapturedElement::new(),
+        });
     let (attrs, styles) = segment_props.into_parts();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>

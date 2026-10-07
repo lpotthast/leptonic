@@ -37,7 +37,7 @@ pub fn PageAtomColorPicker() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let color = RwSignal::new(Color::from(HSV { hue: 210.0, saturation: 0.6, value: 0.8 }));
+                        let color = RwSignal::new(Color::from(HSV { hue: 210.0, saturation: 0.6, brightness: 0.8 }));
 
                         view! {
                             <ColorPicker value=color set_value=color>
@@ -93,6 +93,30 @@ pub fn PageAtomColorPicker() -> impl IntoView {
 
             <Section title="Data Attributes">
                 <p>"The atom renders no element, so it has none. Style the atoms inside through theirs."</p>
+            </Section>
+
+            <Section title="Styling">
+                <p>
+                    <Code inline=true>"ColorPicker"</Code>" renders no element, so there is nothing to style: style the atoms inside it through their "
+                    "own classes and data attributes (see the "
+                    <Link href=format!("{}#styling", routes::doc::color_area::Atom.materialize())>"Color Area"</Link>", "
+                    <Link href=format!("{}#styling", routes::doc::color_slider::Atom.materialize())>"Color Slider"</Link>", "
+                    <Link href=format!("{}#styling", routes::doc::color_field::Atom.materialize())>"Color Field"</Link>" and "
+                    <Link href=format!("{}#styling", routes::doc::ColorSwatchPicker.materialize())>"Color Swatch Picker"</Link>" "
+                    "atoms), and arrange them with markup of your own. The demo above lays them out with this CSS:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .demo-color-atoms { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; }
+                        .demo-color-atoms-sliders { display: flex; flex-direction: column; gap: 1rem; width: 16em; max-width: 100%; }
+                        .demo-color-atoms-result { display: flex; align-items: flex-start; gap: 1rem; }
+                        .demo-color-atoms-swatch { width: 4em; height: 4em; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--border); }
+                    ")}
+                </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

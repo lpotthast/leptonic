@@ -15,6 +15,8 @@ use leptos::prelude::*;
 /// - `#test-virt-list`: 50 items ("Item 0", ...), 25px rows, 100 × 100 px.
 /// - `#test-virt-log`: a log of variable-height lines (every fifth is 60px, the others about 20px;
 ///   estimated 20px), 200px high, anchored to the end; `#test-virt-append` appends 10 lines.
+/// - `#test-virt-plain`: a list box of 30 items after the `Virtualizer`s, not inside one: it
+///   renders all of them (a `Virtualizer`'s context must not reach its siblings).
 #[component]
 pub fn PageAtomVirtualizer() -> impl IntoView {
     let items = use_list_collection(
@@ -28,6 +30,14 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
         |i| Key::from(format!("line-{i}")),
         |i| format!("Line {i}"),
     );
+    let plain = use_list_collection(
+        Signal::stored((0..30).collect::<Vec<usize>>()),
+        |i| Key::from(format!("plain-{i}")),
+        |i| format!("Plain {i}"),
+    );
+    let plain_box = Styles::new()
+        .add_unchecked("height", "100px")
+        .add_unchecked("overflow", "auto");
     let square = Styles::new()
         .add_unchecked("width", "100px")
         .add_unchecked("height", "100px");
@@ -69,5 +79,10 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
             </Virtualizer>
         </div>
         <button id="test-virt-append" on:click=move |_| lines.update(|lines| *lines += 10)>"Append"</button>
+        <div id="test-virt-plain">
+            <ListBox collection=plain aria_label="Plain" styles=plain_box>
+                <ListBoxItems let:node>{node.text_value.to_string()}</ListBoxItems>
+            </ListBox>
+        </div>
     }
 }

@@ -443,3 +443,71 @@ impl BrowserTest<str> for NarrowShellTests {
         Ok(())
     }
 }
+
+/// How many Markdown exports (`*.md`) the page has requested so far.
+const MARKDOWN_REQUESTS: &str = "return performance.getEntriesByType('resource')\
+    .filter(e => new URL(e.name).pathname.endsWith('.md')).length;";
+
+/// "Copy as Markdown": opening a page or navigating to another one downloads no Markdown; the first press downloads
+/// the page's export, a second press copies the cached one without downloading it again.
+pub struct CopyMarkdownTests {}
+
+#[async_trait]
+impl BrowserTest<str> for CopyMarkdownTests {
+    fn name(&self) -> Cow<'_, str> {
+        "copy_as_markdown_downloads_only_on_press_and_once".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        page.goto("/doc/overview").await?;
+        assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(0.0);
+
+        // A client-side navigation to another page doesn't download its export either. The book scrolls smoothly:
+        // bring the link into view instantly before clicking it.
+        let link = driver
+            .find(By::Css("article a[href=\"/doc/installation\"]"))
+            .await
+            .context("the overview links the installation guide")?;
+        driver
+            .execute(
+                "arguments[0].scrollIntoView({ behavior: 'instant', block: 'center' });",
+                vec![link.to_json()?],
+            )
+            .await?;
+        link.click().await?;
+        page.wait_until(
+            "the installation guide is shown",
+            "return location.pathname === '/doc/installation' && !!document.querySelector('.doc-copy-markdown');",
+        )
+        .await?;
+        assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(0.0);
+
+        // The first press downloads the export (copying itself may fail in a headless browser: either result counts).
+        let press_and_wait = async || -> Result<(), Report> {
+            driver
+                .find(By::Css(".doc-copy-markdown"))
+                .await
+                .context("the page has a Copy as Markdown button")?
+                .click()
+                .await?;
+            page.wait_until(
+                "the button reports the copy",
+                "return /Copied|Copy failed/.test(document.querySelector('.doc-copy-markdown').textContent);",
+            )
+            .await?;
+            page.wait_until(
+                "the button is ready again",
+                "return document.querySelector('.doc-copy-markdown').textContent.includes('Copy as Markdown');",
+            )
+            .await
+        };
+        press_and_wait().await?;
+        assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(1.0);
+
+        // The second press uses the cached export.
+        press_and_wait().await?;
+        assert_that!(page.number(MARKDOWN_REQUESTS).await?).is_equal_to(1.0);
+        Ok(())
+    }
+}

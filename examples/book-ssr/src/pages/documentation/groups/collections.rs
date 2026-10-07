@@ -92,7 +92,7 @@ pub fn PageCollections() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"Show a few static labels, not a navigable set"</TableCell>
-                        <TableCell><Link href=routes::doc::Chip.materialize()>"Chip"</Link></TableCell>
+                        <TableCell>"Styled "<Code inline=true>"<span>"</Code>"s (no behavior needed)"</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>

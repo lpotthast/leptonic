@@ -10,6 +10,7 @@ use crate::{
     },
     utils::{
         aria::AriaRole,
+        fraction::Fraction,
         math::percentage_in_range,
         number_formatter::{NumberFormatOptions, NumberStyle, use_number_formatter},
         number_value::NumberValue,
@@ -28,7 +29,7 @@ use crate::{
 // - `value_label` is a string (react-aria: any `ReactNode`, used as `aria-valuetext`).
 // - Of the DOM props react-aria passes through (`filterDOMProps` with labelable props), only `id`,
 //   `aria-label`, `aria-labelledby` and `aria-describedby` are offered.
-// - Also returns the `percentage` (0 to 100) and the `value_text`, which react-aria-components
+// - Also returns the `percentage` (a `Fraction`, C13) and the `value_text`, which react-aria-components
 //   computes in its `ProgressBar` for render props.
 //
 // =============================================================================
@@ -85,8 +86,9 @@ pub struct UseProgressBarReturn {
     pub props: UseProgressBarProps,
     /// For the visible label, a `<span>` (a progress bar isn't labelable by a `<label>`).
     pub label_props: UseLabelProps,
-    /// The progress in percent (0 to 100); `None` while indeterminate.
-    pub percentage: Signal<Option<f64>>,
+    /// The progress as a share of the range (`.as_percent()`: 0 to 100); `None` while
+    /// indeterminate.
+    pub percentage: Signal<Option<Fraction>>,
     /// The formatted value (or `value_label`); `None` while indeterminate.
     pub value_text: Signal<Option<String>>,
 }
@@ -222,7 +224,7 @@ pub(crate) fn progress<T: NumberValue>(
             aria_valuetext: value_text,
         },
         label_props: label.label_props,
-        percentage: Signal::derive(move || fraction.get().map(|fraction| fraction * 100.0)),
+        percentage: Signal::derive(move || fraction.get().map(Fraction::new)),
         value_text,
     }
 }
@@ -267,7 +269,13 @@ mod tests {
             assert_that!(progress.props.aria_valuenow.get_untracked())
                 .is_equal_to(Some("3".to_owned()));
             assert_that!(progress.value_text.get_untracked()).is_equal_to(Some("50%".to_owned()));
-            assert_that!(progress.percentage.get_untracked()).is_equal_to(Some(50.0));
+            assert_that!(
+                progress
+                    .percentage
+                    .get_untracked()
+                    .map(Fraction::as_percent)
+            )
+            .is_equal_to(Some(50.0));
         });
     }
 
@@ -280,7 +288,13 @@ mod tests {
             });
             assert_that!(progress.props.aria_valuenow.get_untracked())
                 .is_equal_to(Some("100".to_owned()));
-            assert_that!(progress.percentage.get_untracked()).is_equal_to(Some(100.0));
+            assert_that!(
+                progress
+                    .percentage
+                    .get_untracked()
+                    .map(Fraction::as_percent)
+            )
+            .is_equal_to(Some(100.0));
         });
     }
 
@@ -295,7 +309,13 @@ mod tests {
                 ..UseProgressBarInput::default()
             });
             assert_that!(progress.value_text.get_untracked()).is_equal_to(Some("0%".to_owned()));
-            assert_that!(progress.percentage.get_untracked()).is_equal_to(Some(0.0));
+            assert_that!(
+                progress
+                    .percentage
+                    .get_untracked()
+                    .map(Fraction::as_percent)
+            )
+            .is_equal_to(Some(0.0));
         });
     }
 

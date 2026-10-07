@@ -14,9 +14,8 @@ pub fn PageColorPickerOverview() -> impl IntoView {
                 "suits a different user: the area and the sliders for picking by eye, the fields for typing a known color."
             </p>
             <p>
-                "Each part also works on its own; the picker keeps them in sync. Leptonic offers a themed picker, an atom "
-                "that shares one color among the color atoms of a picker of your own design, and a shared state for parts "
-                "built from hooks."
+                "Each part also works on its own; the picker keeps them in sync. Leptonic offers an atom that shares one "
+                "color among the color atoms of a picker of your own design, and a shared state for parts built from hooks."
             </p>
 
             <Section title="When to Use">
@@ -70,12 +69,15 @@ pub fn PageColorPickerOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "Pass the themed component a "<Link href=format!("{}#color", routes::doc::Color.materialize())>"Color"</Link>
-                    " signal as "<Code inline=true>"value"</Code>" and "<Code inline=true>"set_value"</Code>". Read the color in "
-                    "the space you need with "<Code inline=true>"to"</Code>":"
+                    "Pass the "<Code inline=true>"ColorPicker"</Code>" atom a "
+                    <Link href=format!("{}#color", routes::doc::Color.materialize())>"Color"</Link>" signal as "
+                    <Code inline=true>"value"</Code>" and "<Code inline=true>"set_value"</Code>", and put the parts you want "
+                    "inside: here an area for saturation and brightness, a hue slider, a swatch and a hex field. Each part "
+                    "shows and changes the shared color in its own color space; read it in the space you need with "
+                    <Code inline=true>"to"</Code>". The CSS shown with the demo styles the parts."
                 </p>
                 <Demo
-                    description="Themed color picker kept in a signal, showing the color as HSL and by name"
+                    description="Color picker of the atoms kept in a signal, showing the color as HSL and by name"
                     source=include_str!("demos/color_picker.rs")
                     source_open=true
                 >
@@ -98,10 +100,9 @@ pub fn PageColorPickerOverview() -> impl IntoView {
                         "and swatches are images named after their color."
                     </li>
                     <li>
-                        "In the "<Code inline=true>"ColorPicker"</Code>" component, every part works with the keyboard and "
-                        "screen readers: the saturation and brightness area (named \u{201c}Color picker\u{201d}), the hue slider "
-                        "(named \u{201c}Hue\u{201d}), the fields labelled with their channels and \u{201c}Hex\u{201d}, and the "
-                        "preview named after the color."
+                        "Name every part: the area with "<Code inline=true>"aria_label"</Code>" (\u{201c}Saturation and "
+                        "brightness\u{201d} in the demo), sliders and fields with a "<Code inline=true>"Label"</Code>" "
+                        "(\u{201c}Hue\u{201d}, \u{201c}Hex\u{201d}). A swatch is named after its color."
                     </li>
                 </ul>
                 <KeyboardTable>

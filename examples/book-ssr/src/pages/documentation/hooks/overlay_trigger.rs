@@ -57,7 +57,7 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
 
 
                         let UseOverlayTriggerReturn { props: trigger_props } = use_overlay_trigger(UseOverlayTriggerInput {
-                            show: is_open.into(),
+                            is_open: is_open.into(),
                             overlay_id: id,
                             overlay_type: OverlayTriggerType::Dialog,
                         });

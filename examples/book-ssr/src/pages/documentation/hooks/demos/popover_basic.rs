@@ -39,7 +39,7 @@ pub fn BasicPopoverDemo() -> impl IntoView {
     let UseOverlayTriggerReturn {
         props: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open,
+        is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });

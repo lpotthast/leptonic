@@ -140,6 +140,7 @@ markup5ever_rcdom = { version = "0.38", optional = true }
 leptos_meta = { version = "0.8.6", features = [] }
 leptos_router = { version = "0.8.12", features = [] }
 ordered-float = "5.1.0"
+reqwest = { version = "0.13", default-features = false }
 ringbuf = "0.4.8"
 send_wrapper = "0.6"
 serde = { version = "1", features = ["derive"] }
@@ -152,7 +153,7 @@ tracing-subscriber = "0.3.22"
 tracing-wasm = "0.2.1"
 wasm-bindgen = "0.2.117"
 wasm-bindgen-futures = "0.4.64"
-web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Response"] }
+web-sys = { version = "0.3", features = ["Clipboard", "Navigator"] }
 itertools = "0.14.0"
 
 [dev-dependencies]

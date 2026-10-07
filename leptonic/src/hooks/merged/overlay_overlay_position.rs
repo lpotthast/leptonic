@@ -1,3 +1,5 @@
+// No upstream: merged `use_overlay` + `use_overlay_position` props on one element
+// (react-aria: `mergeProps`).
 use leptos::{
     attr,
     attr::Attr,

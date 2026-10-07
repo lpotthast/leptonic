@@ -30,7 +30,7 @@
     list-style: none;
 }
 
-// The `LinkButton` atom, on top of the shared `.demo-btn`: an anchor that looks like a button.
+// A `Link` atom that looks like a button, on top of the shared `.demo-btn`; the current page is styled as any button.
 .demo-link-button {
     display: inline-block;
     text-decoration: none;
@@ -160,8 +160,10 @@
 // Hook demos: the trigger's `disabled` attribute.
 .demo-hook-disclosure-trigger[disabled] { color: var(--book-muted-color); cursor: not-allowed; }
 
-// Turned while expanded: the atoms' `data-expanded` on the disclosure, the hook's `aria-expanded` on the trigger.
+// The demo's own icon, turned while expanded: the atoms' `data-expanded` on the disclosure, the hook's
+// `aria-expanded` on the trigger.
 .demo-disclosure-chevron {
+    display: flex;
     transition: transform var(--book-transition);
 
     .demo-disclosure[data-expanded] &,
@@ -257,11 +259,12 @@
     &[aria-disabled="true"] { color: var(--book-muted-color); opacity: 0.5; cursor: not-allowed; }
 }
 
-// The panel. Without tabbable content it is a tab stop itself, so it shows keyboard focus.
+// The panel. Without tabbable content it is a tab stop itself, so it shows keyboard focus: the atom's
+// `data-focus-visible`, the hook demos' plain `<div>` through `:focus-visible`.
 .demo-tab-panel {
     padding: var(--book-space-m) var(--book-space-xs) var(--book-space-xs);
 
-    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; border-radius: var(--book-radius-s); }
     h4 { margin: 0 0 var(--book-space-s) 0; }
     p { margin: 0; color: var(--book-muted-color); }
 }

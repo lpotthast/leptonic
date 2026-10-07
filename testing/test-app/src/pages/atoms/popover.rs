@@ -5,6 +5,7 @@ use leptonic::{
         popover::Popover,
     },
     hooks::PopoverModality,
+    utils::i18n::{I18nProvider, Locale},
 };
 use leptos::prelude::*;
 
@@ -14,6 +15,8 @@ use leptos::prelude::*;
 #[component]
 pub fn PageAtomPopover() -> impl IntoView {
     let inner_presses = RwSignal::new(0_u32);
+    let with_dialog = RwSignal::new(true);
+    let rtl: Locale = "ar-EG".parse().expect("a valid locale");
 
     view! {
         <h1>"Popover"</h1>
@@ -77,6 +80,50 @@ pub fn PageAtomPopover() -> impl IntoView {
             <Button attr:id="test-popover-standalone-trigger">"Standalone"</Button>
             <Popover>"Standalone content"</Popover>
         </DialogTrigger>
+
+        // A non-modal popover with a dialog inside only while `#test-popover-with-dialog` is
+        // checked: its focus containment is per opening.
+        <label>
+            <input
+                type="checkbox"
+                id="test-popover-with-dialog"
+                prop:checked=with_dialog
+                on:change=move |_| with_dialog.update(|with| *with = !*with)
+            />
+            "With dialog"
+        </label>
+        <DialogTrigger>
+            <Button attr:id="test-popover-toggled-trigger">"Toggled"</Button>
+            <Popover modality=PopoverModality::NonModal>
+                {move || {
+                    if with_dialog.get_untracked() {
+                        view! {
+                            <Dialog aria_label="Toggled">
+                                <button id="test-popover-toggled-first">"First"</button>
+                                <button id="test-popover-toggled-second">"Second"</button>
+                            </Dialog>
+                        }
+                            .into_any()
+                    } else {
+                        view! {
+                            <button id="test-popover-toggled-first">"First"</button>
+                            <button id="test-popover-toggled-second">"Second"</button>
+                        }
+                            .into_any()
+                    }
+                }}
+            </Popover>
+        </DialogTrigger>
+
+        // In a right-to-left subtree: the portalled popover keeps the direction.
+        <I18nProvider locale=rtl>
+            <DialogTrigger>
+                <Button attr:id="test-popover-rtl-trigger">"RTL"</Button>
+                <Popover classes="test-popover-rtl">
+                    <Dialog aria_label="RTL">"Right to left"</Dialog>
+                </Popover>
+            </DialogTrigger>
+        </I18nProvider>
 
         <button id="test-popover-outside">"Outside"</button>
     }

@@ -9,8 +9,10 @@ use crate::pages::{BaseActions, Page};
 
 /// `aria_hide_outside`: hides everything under the root except the targets (not traversing into
 /// hidden containers), keeps author-set `aria-hidden`, hides the cells of a hidden row as well,
-/// stacks hides restored in any order, hides a root that doesn't contain a target, and shows
-/// overlays registered from inside after its observer hid them.
+/// stacks hides restored in any order, hides a root that doesn't contain a target, shows
+/// overlays registered from inside after its observer hid them, follows elements added while it
+/// is active (outside, into hidden containers, inside a target, top-layer, reparented), and
+/// restores rows that were reordered while hidden.
 pub struct AriaHideOutsideTests {}
 
 async fn expect_hidden(page: &Page<'_>, hidden: &[&str], visible: &[&str]) -> Result<(), Report> {
@@ -151,6 +153,100 @@ impl BrowserTest<str> for AriaHideOutsideTests {
         .await?;
 
         assert_that!(page.count_matching("#test-aho-basic [aria-hidden]").await?).is_equal_to(1);
+
+        mutations(&page).await?;
+        unhide_after_reorder(&page).await?;
         page.expect_no_page_errors().await
     }
+}
+
+/// "should handle when a new element is added outside while active", "... added to an already
+/// hidden container", "... added inside a target element", "... added along with a top layer
+/// element", "... added and then reparented", "... reparented to a hidden container".
+async fn mutations(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-aho-hide-mo").await?;
+    expect_hidden(page, &["test-aho-mo-container"], &["test-aho-mo-target"]).await?;
+
+    page.click_element_with_id("test-aho-mo-outside-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-outside").await?;
+    expect_hidden(page, &["test-aho-mo-outside"], &["test-aho-mo-target"]).await?;
+
+    // In a hidden container: the container stays hidden, the new element isn't marked itself.
+    page.click_element_with_id("test-aho-mo-in-hidden-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-in-hidden").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    expect_hidden(page, &["test-aho-mo-container"], &["test-aho-mo-in-hidden"]).await?;
+
+    page.click_element_with_id("test-aho-mo-inside-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-inside").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    expect_hidden(page, &[], &["test-aho-mo-inside", "test-aho-mo-target"]).await?;
+
+    page.click_element_with_id("test-aho-mo-top-layer-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-top").await?;
+    expect_hidden(
+        page,
+        &["test-aho-mo-top-checkbox"],
+        &["test-aho-mo-top", "test-aho-mo-top-wrapper"],
+    )
+    .await?;
+
+    // Reparented into the target: visible; into the hidden container: hidden with it.
+    page.click_element_with_id("test-aho-mo-reparent-target-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-li-target").await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_that!(
+        page.count_matching("#test-aho-mo [aria-hidden] #test-aho-mo-li-target, #test-aho-mo-li-target[aria-hidden], #test-aho-mo-li-target-list[aria-hidden]")
+            .await?
+    )
+    .with_detail_message("the item reparented into the target is hidden")
+    .is_equal_to(0);
+    page.click_element_with_id("test-aho-mo-reparent-hidden-button")
+        .await?;
+    page.wait_for_selector("#test-aho-mo-li-hidden").await?;
+    assert_that!(
+        page.count_matching("[aria-hidden=true] #test-aho-mo-li-hidden")
+            .await?
+    )
+    .with_detail_message("the item reparented into the hidden container is hidden with it")
+    .is_equal_to(1);
+
+    // Reverted: everything added is visible.
+    page.click_element_with_id("test-aho-revert-mo").await?;
+    expect_hidden(
+        page,
+        &[],
+        &[
+            "test-aho-mo-container",
+            "test-aho-mo-outside",
+            "test-aho-mo-top-checkbox",
+            "test-aho-mo-top-wrapper",
+        ],
+    )
+    .await?;
+    assert_that!(page.count_matching("#test-aho-mo [aria-hidden]").await?).is_equal_to(0);
+    Ok(())
+}
+
+/// "should unhide after item reorder": rows moved while hidden are visible again after the
+/// revert.
+async fn unhide_after_reorder(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-aho-hide-reorder").await?;
+    page.wait_for_selector("#test-aho-reorder > [role=presentation][aria-hidden=true]")
+        .await?;
+    page.click_element_with_id("test-aho-reorder-button")
+        .await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    page.click_element_with_id("test-aho-reorder-button")
+        .await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    page.click_element_with_id("test-aho-revert-reorder")
+        .await?;
+    page.wait_for_no_selector("#test-aho-reorder [aria-hidden]")
+        .await
 }

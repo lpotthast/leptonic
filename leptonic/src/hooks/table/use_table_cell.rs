@@ -14,7 +14,9 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## DIFFERENT BEHAVIOR
+// - Every cell gets the id `TableData::cell_id(row, column)` (react-aria: row header cells), so
+//   that the id stays when the row header columns change.
 //
 // =============================================================================
 
@@ -39,8 +41,9 @@ pub struct UseTableCellReturn {
     pub is_pressed: Signal<bool>,
 }
 
-/// A body cell of a table. Cells of row header columns get `role="rowheader"` and the id the
-/// row's `aria-labelledby` refers to.
+/// A body cell of a table. Cells of row header columns get `role="rowheader"`; their ids are
+/// what the row's `aria-labelledby` refers to. The cell's role follows the table's row header
+/// columns; for a cell moving to another column, create the cell again with its new key.
 pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
     let UseTableCellInput {
         table,
@@ -49,16 +52,28 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         allows_arrow_navigation,
         should_select_on_press_up,
     } = input;
-    let row_header = table.state.table.with_untracked(|t| {
-        let column = t.cell_column(&key)?;
-        let row = t.collection().get(&key)?.parent_key.clone()?;
-        t.row_header_columns()
-            .contains(&column.key)
-            .then(|| (row, column.key.clone()))
+    // Every cell gets its row and column's id (react-aria: only row header cells, which label
+    // their row), so that a cell becoming a row header keeps its id.
+    let (row, column) = table.state.table.with_untracked(|t| {
+        (
+            t.collection().get(&key).and_then(|n| n.parent_key.clone()),
+            t.cell_column(&key).map(|c| c.key.clone()),
+        )
     });
-    let id = row_header
+    let id = row
         .as_ref()
+        .zip(column.as_ref())
         .map(|(row, column)| table.cell_id(row, column));
+    let state = table.state;
+    let is_row_header = {
+        let key = key.clone();
+        Memo::new(move |_| {
+            state.table.with(|t| {
+                t.cell_column(&key)
+                    .is_some_and(|column| t.row_header_columns().contains(&column.key))
+            })
+        })
+    };
     let UseGridCellReturn {
         grid_cell_props,
         is_pressed,
@@ -71,9 +86,13 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         key,
     });
     let (mut cell, styles) = grid_cell_props.into_inner();
-    if row_header.is_some() {
-        cell.role = AriaRole::Rowheader;
-    }
+    cell.role = Signal::derive(move || {
+        if is_row_header.get() {
+            AriaRole::Rowheader
+        } else {
+            AriaRole::Gridcell
+        }
+    });
     UseTableCellReturn {
         grid_cell_props: PropsWithStyles::new(cell, styles),
         is_pressed,

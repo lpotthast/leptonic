@@ -44,8 +44,9 @@ pub trait NumberValue:
     /// The exact decimal value; `None` for infinite and NaN floats.
     fn to_decimal(self) -> Option<Decimal>;
 
-    /// The value of `decimal`; `None` if this type can't hold it (out of range, or fraction
-    /// digits for integers).
+    /// The value of `decimal`, saturating at an integer type's bounds (a typed `300` is a `u8`'s
+    /// `255`, which the field then clamps as react-aria clamps a JS number). `None` for fraction
+    /// digits in integer types and for decimals beyond a float's range.
     fn from_decimal(decimal: &Decimal) -> Option<Self>;
 
     /// An approximation as `f64`, for APIs that take one (e.g. `aria-valuenow`).
@@ -87,12 +88,13 @@ pub trait NumberValue:
     }
 }
 
-/// Parses an integer from a decimal without fraction digits.
-fn integer_digits(decimal: &Decimal) -> Option<String> {
+/// The digits of a decimal without fraction digits, and whether it is negative.
+fn integer_digits(decimal: &Decimal) -> Option<(String, bool)> {
     let mut decimal = decimal.clone();
     decimal.absolute.trim_end();
+    let is_negative = decimal.sign == fixed_decimal::Sign::Negative;
     (decimal.absolute.nonzero_magnitude_end() >= 0 || decimal.absolute.is_zero())
-        .then(|| decimal.to_string())
+        .then(|| (decimal.to_string(), is_negative))
 }
 
 macro_rules! impl_integer {
@@ -158,7 +160,9 @@ macro_rules! impl_integer {
             }
 
             fn from_decimal(decimal: &Decimal) -> Option<Self> {
-                integer_digits(decimal)?.parse().ok()
+                let (digits, is_negative) = integer_digits(decimal)?;
+                // Only out-of-range values fail to parse: the digits are an integer.
+                Some(digits.parse().unwrap_or(if is_negative { <$t>::MIN } else { <$t>::MAX }))
             }
 
             #[allow(clippy::cast_precision_loss, clippy::cast_lossless)]
@@ -172,50 +176,6 @@ macro_rules! impl_integer {
 impl_integer!(
     i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize
 );
-
-/// react-aria's `roundToStepPrecision`: rounds to one digit more than `step` has.
-fn round_to_step_precision(value: f64, step: f64) -> f64 {
-    let step_string = step.to_string();
-    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    let precision = step_string
-        .find('.')
-        .map_or(0, |point| (step_string.len() - point) as i32);
-    if precision > 0 {
-        let pow = 10_f64.powi(precision);
-        (value * pow).round() / pow
-    } else {
-        value
-    }
-}
-
-/// react-aria's `snapValueToStep`.
-fn snap_float(value: f64, min: Option<f64>, max: Option<f64>, step: f64) -> f64 {
-    if step <= 0.0 || !step.is_finite() {
-        return value.clamp_to(min, max);
-    }
-    let remainder = (value - min.unwrap_or(0.0)) % step;
-    let mut snapped = round_to_step_precision(
-        if remainder.abs() * 2.0 >= step {
-            value + remainder.signum() * (step - remainder.abs())
-        } else {
-            value - remainder
-        },
-        step,
-    );
-    match (min, max) {
-        (Some(min), _) if snapped < min => snapped = min,
-        (Some(min), Some(max)) if snapped > max => {
-            snapped = round_to_step_precision((max - min) / step, step)
-                .floor()
-                .mul_add(step, min);
-        }
-        (None, Some(max)) if snapped > max => {
-            snapped = round_to_step_precision(max / step, step).floor() * step;
-        }
-        _ => {}
-    }
-    round_to_step_precision(snapped, step)
-}
 
 impl NumberValue for f64 {
     const BOUNDS: Option<(Self, Self)> = None;
@@ -242,7 +202,7 @@ impl NumberValue for f64 {
     }
 
     fn snap_to_step(self, min: Option<Self>, max: Option<Self>, step: Self) -> Self {
-        snap_float(self, min, max, step)
+        super::math::snap_value_to_step(self, min, max, step)
     }
 
     fn to_decimal(self) -> Option<Decimal> {
@@ -282,7 +242,12 @@ impl NumberValue for f32 {
     fn snap_to_step(self, min: Option<Self>, max: Option<Self>, step: Self) -> Self {
         // Through the shortest decimal representations, so that `0.1_f32` is 0.1, not 0.10000000149.
         let widen = |value: f32| value.to_string().parse::<f64>().unwrap_or(f64::from(value));
-        let snapped = snap_float(widen(self), min.map(widen), max.map(widen), widen(step));
+        let snapped = super::math::snap_value_to_step(
+            widen(self),
+            min.map(widen),
+            max.map(widen),
+            widen(step),
+        );
         snapped
             .to_decimal()
             .and_then(|decimal| f32::from_decimal(&decimal))
@@ -480,12 +445,19 @@ mod tests {
     }
 
     #[test]
-    fn integers_reject_fractions_and_out_of_range_values() {
+    fn integers_reject_fractions_and_saturate_out_of_range_values() {
         assert_that!(i32::from_decimal(&decimal("1.5"))).is_none();
         assert_that!(i32::from_decimal(&decimal("2.00"))).is_equal_to(Some(2));
-        assert_that!(u8::from_decimal(&decimal("256"))).is_none();
-        assert_that!(u8::from_decimal(&decimal("-1"))).is_none();
+        assert_that!(u8::from_decimal(&decimal("256"))).is_equal_to(Some(255));
+        assert_that!(u8::from_decimal(&decimal("-1"))).is_equal_to(Some(0));
         assert_that!(u8::from_decimal(&decimal("0"))).is_equal_to(Some(0));
+        assert_that!(i8::from_decimal(&decimal("-1000"))).is_equal_to(Some(-128));
+        assert_that!(u128::from_decimal(&decimal(&format!(
+            "1{}",
+            "0".repeat(40)
+        ))))
+        .is_equal_to(Some(u128::MAX));
+        assert_that!(i64::from_decimal(&decimal("-0"))).is_equal_to(Some(0));
     }
 
     #[test]

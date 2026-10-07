@@ -1,4 +1,5 @@
-//! Keyboard shortcuts for the whole document (react-aria has no equivalent: an addition).
+// No upstream: document-wide keyboard shortcuts (react-aria has no equivalent).
+//! Keyboard shortcuts for the whole document.
 use crate::utils::keyboard_shortcut::KeyboardShortcuts;
 
 /// Input of [`use_global_shortcuts`].

@@ -14,7 +14,7 @@ use super::{
     use_form_reset::{UseFormResetInput, use_form_reset},
     use_form_validation::{UseFormValidationInput, use_form_validation},
     use_form_validation_state::{
-        UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+        FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
         ValidityStateSnapshot, use_form_validation_state,
     },
     use_label::{LabelElementType, UseLabelProps},
@@ -181,7 +181,7 @@ pub struct UseTextFieldInput {
     /// The validation state of a field built on this text field (e.g. a number field, whose
     /// value isn't the text), replacing the text field's own (`is_invalid` and `validate` are
     /// then the composite field's business).
-    pub validation: Option<UseFormValidationStateReturn>,
+    pub validation: Option<FormValidationState>,
     pub name: Option<String>,
     pub form: Option<String>,
     pub placeholder: MaybeProp<String>,
@@ -487,16 +487,24 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
 
     let on_input = EventHandler::new(move |e: Event| {
         let target = e.expect_target();
-        let value = target
-            .dyn_ref::<web_sys::HtmlInputElement>()
+        let input = target.dyn_ref::<web_sys::HtmlInputElement>();
+        let text_area = target.dyn_ref::<web_sys::HtmlTextAreaElement>();
+        let Some(value) = input
             .map(web_sys::HtmlInputElement::value)
-            .or_else(|| {
-                target
-                    .dyn_ref::<web_sys::HtmlTextAreaElement>()
-                    .map(web_sys::HtmlTextAreaElement::value)
-            });
-        if let Some(value) = value {
-            state.set_value(value);
+            .or_else(|| text_area.map(web_sys::HtmlTextAreaElement::value))
+        else {
+            return;
+        };
+        state.set_value(value.clone());
+        // The state may have rejected or changed the text (a bound value): show what it holds,
+        // as React does for a controlled input.
+        let held = state.value.get_untracked();
+        if held != value {
+            if let Some(input) = input {
+                input.set_value(&held);
+            } else if let Some(text_area) = text_area {
+                text_area.set_value(&held);
+            }
         }
     });
 

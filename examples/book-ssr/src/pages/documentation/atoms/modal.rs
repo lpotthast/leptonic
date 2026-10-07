@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptos::prelude::*;
 
-use super::demos::modal_form::ModalFormDemo;
+use super::demos::{modal_drawer::ModalDrawerDemo, modal_form::ModalFormDemo};
 use crate::{kit::*, routes};
 
 /// A section of the modal hooks page.
@@ -29,10 +29,10 @@ pub fn PageAtomModal() -> impl IntoView {
                         ", outside clicks, overlay stacking, the scroll lock and the inert page."
                     </li>
                     <li>
-                        <AnchorLink href="#modalcontent"><Code inline=true>"ModalContent"</Code></AnchorLink>" calls "
-                        <Link href=hook_section("use-modal")>"use_modal"</Link>" and wraps its children in a "
-                        <Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
-                        " that contains, restores and auto-focuses focus."
+                        <AnchorLink href="#modalcontent"><Code inline=true>"ModalContent"</Code></AnchorLink>" wraps its "
+                        "children in a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
+                        " that contains and restores focus, and starts a dismissable modal with a "
+                        <Link href=routes::doc::overlay_behavior::DismissButton.materialize()>"DismissButton"</Link>"."
                     </li>
                 </ul>
             </Section>
@@ -99,8 +99,8 @@ pub fn PageAtomModal() -> impl IntoView {
 
             <Section title="ModalBackdrop">
                 <p>
-                    "Renders the modal into the document body while it is open, as a "<Code inline=true>"<div>"</Code>" with the class "
-                    <Code inline=true>"leptonic-modal-backdrop"</Code>" around its children. While open, it prevents page "
+                    "Renders the modal into the document body while it is open, as a "<Code inline=true>"<div>"</Code>" around its "
+                    "children. While open, it prevents page "
                     "scrolling and makes everything outside the "<Code inline=true>"ModalContent"</Code>" inert. It is "
                     "unmounted when it closes."
                 </p>
@@ -134,7 +134,7 @@ pub fn PageAtomModal() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the backdrop "<Code inline=true>"<div>"</Code>", added to "
-                            <Code inline=true>"leptonic-modal-backdrop"</Code>"."
+                            <Code inline=true>"leptonic-ModalBackdrop"</Code>"."
                         </ApiRow>
                         <ApiRow name="children" ty="ChildrenFn">
                             "A "<Code inline=true>"ModalContent"</Code>". Rendered anew each time the modal opens. Required."
@@ -152,24 +152,26 @@ pub fn PageAtomModal() -> impl IntoView {
 
             <Section title="ModalContent">
                 <p>
-                    "The modal panel: a "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"aria-modal=\"true\""</Code>
-                    " inside a "<Code inline=true>"FocusScope"</Code>". It must be a child of "
+                    "The modal panel: a "<Code inline=true>"<div>"</Code>" inside a "<Code inline=true>"FocusScope"</Code>
+                    ". The page outside it is inert while it is open, which makes it modal for assistive technology. In a "
+                    "dismissable backdrop, it starts with a visually hidden dismiss button for screen reader users who "
+                    "can\u{2019}t press "<Keys keys="Escape"/>". It must be a child of "
                     <Code inline=true>"ModalBackdrop"</Code>": the backdrop\u{2019}s Escape handling and outside-click "
                     "detection are attached to this element, so everything outside it counts as outside the modal."
                 </p>
                 <Section title="Props" id="modal-content-props">
                     <ApiTable kind=ApiKind::Props of="ModalContent">
-                        <ApiRow name="contain_focus" ty="bool" default="true">
+                        <ApiRow name="contain_focus" ty="Signal<bool>" default="true">
                             <Keys keys="Tab"/>" and "<Keys keys="Shift + Tab"/>" wrap around inside the modal, and focus that "
                             "leaves it is moved back."
                         </ApiRow>
-                        <ApiRow name="restore_focus" ty="bool" default="true">
+                        <ApiRow name="restore_focus" ty="Signal<bool>" default="true">
                             "When the modal closes, focus returns to the element that had it when the modal opened, "
-                            "typically the trigger."
+                            "typically the trigger. Read when the modal opens."
                         </ApiRow>
-                        <ApiRow name="auto_focus" ty="bool" default="true">
-                            "When the modal opens, the first focusable element inside it is focused. Without one, the "
-                            <Code inline=true>"Dialog"</Code>" focuses itself."
+                        <ApiRow name="auto_focus" ty="Signal<bool>" default="false">
+                            "When the modal opens, the first focusable element inside it is focused instead of the "
+                            <Code inline=true>"Dialog"</Code>", which focuses itself. Read when the modal opens."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the panel "<Code inline=true>"<div>"</Code>"."
@@ -192,24 +194,33 @@ pub fn PageAtomModal() -> impl IntoView {
                     </ApiRow>
                 </ApiTable>
                 <p>
-                    "The panel always has "<Code inline=true>"aria-modal=\"true\""</Code>"; the modal exists only while it "
-                    "is open or closing, so there is no closed state to style."
+                    "The modal exists only while it is open or closing, so there is no closed state to style."
                 </p>
             </Section>
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles of their own. Pass "<Code inline=true>"classes"</Code>" to each part: the "
-                    "backdrop needs to cover the viewport and center the panel. Style the "
-                    <Link href=format!("{}#styling", routes::doc::dialog::Atom.materialize())>"dialog"</Link>" inside it as well:"
+                    "The atoms bring no styles. "<Code inline=true>"ModalBackdrop"</Code>" renders the class "
+                    <Code inline=true>"leptonic-ModalBackdrop"</Code>", "<Code inline=true>"ModalContent"</Code>" the class "
+                    <Code inline=true>"leptonic-ModalContent"</Code>", each followed by the "<Code inline=true>"classes"</Code>
+                    " you pass. The backdrop has to cover the viewport and place the panel; the "
+                    <Link href=format!("{}#styling", routes::doc::dialog::Atom.materialize())>"dialog"</Link>
+                    " inside the panel draws the frame. The backdrop also sets the CSS variables "
+                    <Code inline=true>"--visual-viewport-height"</Code>" (the height left above an on-screen keyboard) and "
+                    <Code inline=true>"--page-height"</Code>", for panels that have to fit them. The book\u{2019}s demos "
+                    "use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
                         .my-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
-                        .my-backdrop { background: color-mix(in srgb, var(--muted) 60%, transparent); }
-                        .my-panel { width: 100%; max-width: 26em; }
+                        .my-backdrop { padding: 1em; background: color-mix(in srgb, var(--muted) 60%, transparent); }
+                        .my-panel { width: 100%; max-width: 26em; max-height: var(--visual-viewport-height); }
                     ")}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
                 <Section title="Animation">
                     <p>
                         "Animate the backdrop and the panel with "<Code inline=true>"data-entering"</Code>" and "
@@ -233,6 +244,22 @@ pub fn PageAtomModal() -> impl IntoView {
                         ")}
                     </Code>
                 </Section>
+            </Section>
+
+            <Section title="Drawer">
+                <p>
+                    "A drawer is a modal whose panel slides in from the left or right edge of the screen, such as a menu "
+                    "on small screens or a set of filters. It needs nothing beyond these atoms: the backdrop lays the panel "
+                    "out at one edge instead of the center, and the panel slides in while "<Code inline=true>"data-entering"</Code>
+                    " and out while "<Code inline=true>"data-exiting"</Code>". It behaves like any modal: the focus stays "
+                    "inside, "<Keys keys="Escape"/>" or a press outside closes it, and the page behind it can\u{2019}t be "
+                    "used or scrolled. Without a visible title, name the dialog with "<Code inline=true>"aria_label"</Code>
+                    "; give it a close button, as touch screen users have no "<Keys keys="Escape"/>". The book\u{2019}s own "
+                    "menus on small screens are built this way."
+                </p>
+                <Demo description="Folder menu sliding in from the left, with a status line" source=include_str!("demos/modal_drawer.rs")>
+                    <ModalDrawerDemo/>
+                </Demo>
             </Section>
 
             <Section title="Composition">

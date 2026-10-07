@@ -1,13 +1,10 @@
 use std::sync::Arc;
 
-use leptonic::hooks::InputType;
-use leptonic::hooks::TextFieldElement;
-use leptonic::hooks::ValidationBehavior;
 use leptonic::{
-    components::prelude::*,
+    atoms::{button::Button, checkbox::Checkbox},
     hooks::{
-        IntoAttrs, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput, use_text_field,
-        use_text_field_state,
+        InputType, IntoAttrs, TextFieldElement, UseTextFieldInput, UseTextFieldReturn,
+        UseTextFieldStateInput, ValidationBehavior, use_text_field, use_text_field_state,
     },
 };
 use leptos::prelude::*;
@@ -101,8 +98,11 @@ pub fn TextFieldBasicDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Button on_press=move |_| username.set_value(String::new())>"Clear"</Button>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Button on_press=move |_| username.set_value(String::new()) classes="demo-btn">"Clear"</Button>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

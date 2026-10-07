@@ -338,24 +338,43 @@ pub fn PageAtomMenu() -> impl IntoView {
                     <ApiRow name="data-pressed" ty="true">"The item is being pressed."</ApiRow>
                     <ApiRow name="data-has-submenu" ty="true">"The item opens a submenu (or a dialog)."</ApiRow>
                     <ApiRow name="data-open" ty="true">"The item\u{2019}s submenu is open."</ApiRow>
+                    <ApiRow name="data-selection-mode" ty="\"single\" / \"multiple\"">
+                        "The menu\u{2019}s selection mode, while items can be checked."
+                    </ApiRow>
                 </ApiTable>
+                <p>"On "<Code inline=true>"Menu"</Code>": "<Code inline=true>"data-empty"</Code>" while it has no items."</p>
             </Section>
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. Hovering an item focuses it, so "<Code inline=true>"[data-focused]"</Code>" highlights the "
-                    "item under the pointer and the arrow keys alike:"
+                    "The atoms bring no styles. "<Code inline=true>"Menu"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-Menu"</Code>", "
+                    <Code inline=true>"MenuItem"</Code>" one with "<Code inline=true>"leptonic-MenuItem"</Code>" (its label, description and shortcut are "<Code inline=true>"<span>"</Code>"s with "
+                    <Code inline=true>"leptonic-MenuItemLabel"</Code>", "<Code inline=true>"leptonic-MenuItemDescription"</Code>" and "<Code inline=true>"leptonic-MenuItemShortcut"</Code>"), "
+                    "and "<Code inline=true>"MenuSection"</Code>" a group with "<Code inline=true>"leptonic-MenuSection"</Code>" after its heading with "
+                    <Code inline=true>"leptonic-MenuSectionHeading"</Code>" ("<Code inline=true>"heading_classes"</Code>"). Your "<Code inline=true>"classes"</Code>" follow the default class. "
+                    "Hovering an item focuses it, so "<Code inline=true>"[data-focused]"</Code>" highlights the item under the pointer and the arrow keys "
+                    "alike. A check mark or a submenu arrow is your own markup, shown through the item\u{2019}s data attributes. The "
+                    "menu is rendered into a "<Code inline=true>"Popover"</Code>" in the document body, so style it through its own classes. The demos above "
+                    "use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-menu-item[data-focused], .my-menu-item[data-open] { background: var(--surface); }
-                        .my-menu-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-menu-item[data-selected] .my-check::before { content: "✓"; color: var(--accent); }
-                        .my-menu-item[data-disabled] { opacity: 0.5; }
+                        .demo-menu-list { min-width: 180px; padding: 0.25rem 0; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+                        .demo-menu-heading { display: block; padding: 0.5rem 1rem 0.25rem; color: var(--muted); font-size: 0.875rem; text-transform: uppercase; }
+                        .demo-menu-atom-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; outline: none; cursor: pointer; }
+                        .demo-menu-atom-item:is([data-focused], [data-open]) { background: var(--border); }
+                        .demo-menu-atom-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-menu-atom-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-menu-atom-check { width: 1em; color: var(--accent); }
+                        [data-selected] > .demo-menu-atom-check::before { content: "\2713"; }
+                        .demo-menu-atom-arrow { margin-left: auto; color: var(--muted); }
+                        .demo-menu-atom-shortcut { margin-left: auto; padding-left: 1.5rem; color: var(--muted); }
                     "#)}
                 </Code>
-                <p>"The popover is rendered into the document body: style it through its own classes."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">
@@ -370,6 +389,24 @@ pub fn PageAtomMenu() -> impl IntoView {
                     <Code inline=true>"role=\"separator\""</Code>". Inside a "<Code inline=true>"SubmenuTrigger"</Code>
                     " with "<Code inline=true>"SubmenuKind::Dialog"</Code>", the popover holds a dialog with any content."
                 </p>
+                <p>
+                    <Code inline=true>"MenuItem"</Code>" provides its state as "<Code inline=true>"MenuItemCtx"</Code>" context "
+                    "("<Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_focused"</Code>", "
+                    <Code inline=true>"is_focus_visible"</Code>", "<Code inline=true>"is_disabled"</Code>", "
+                    <Code inline=true>"is_pressed"</Code>", "<Code inline=true>"selection_mode"</Code>"). Leptos components "
+                    "inside an item can read it, e.g. a check mark:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::atoms::menu::MenuItemCtx;
+
+                        #[component]
+                        fn CheckMark() -> impl IntoView {
+                            let item = expect_context::<MenuItemCtx>();
+                            move || item.is_selected.get().then_some("\u{2713}")
+                        }
+                    "#)}
+                </Code>
             </Section>
 
             <SeeAlso>

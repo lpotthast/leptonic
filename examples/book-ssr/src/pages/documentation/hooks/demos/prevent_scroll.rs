@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 #[component]
@@ -11,7 +11,10 @@ pub fn PreventScrollDemo() -> impl IntoView {
     });
 
     view! {
-        <Checkbox is_selected=prevent_scroll set_selected=set_prevent_scroll>"Prevent scroll"</Checkbox>
+        <Checkbox is_selected=prevent_scroll set_selected=set_prevent_scroll classes="demo-check">
+            <span class="demo-check-box" aria-hidden="true"></span>
+            "Prevent scroll"
+        </Checkbox>
 
         <p class="demo-status">
             {move || {

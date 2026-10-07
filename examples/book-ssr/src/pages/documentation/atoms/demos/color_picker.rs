@@ -28,7 +28,7 @@ pub fn ColorPickerAtomDemo() -> impl IntoView {
     let color = RwSignal::new(Color::from(HSV {
         hue: 210.0,
         saturation: 0.6,
-        value: 0.8,
+        brightness: 0.8,
     }));
 
     view! {

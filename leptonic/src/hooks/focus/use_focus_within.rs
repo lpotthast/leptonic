@@ -1,57 +1,38 @@
-// Upstream: react-aria/src/interactions/useFocusWithin.ts @ 6f664fe911
-#![cfg_attr(feature = "ssr", allow(unused_imports))]
-
+// Upstream: react-aria/src/interactions/useFocusWithin.ts @ 99e6102368
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{
-        EventAccessors, EventHandler, EventTargetExt,
-        dom_ext::node_contains,
-        event_listeners::{Listener, listen_to},
-        set_event_target, synthetic_blur,
-    },
-};
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocusWithin.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Returns `is_focus_within: Signal<bool>` for views (react-aria keeps the state in a ref).
+// - The callbacks get a `FocusWithinEvent` wrapping the native event (react-aria: React's
+//   synthetic `FocusEvent`).
+//
 // ## DIFFERENT BEHAVIOR
+// - `is_disabled` is reactive: becoming disabled while focus is within ends the focus-within
+//   state (`on_focus_within_change(false)`) and removes the global listener. React-aria only
+//   detaches its handlers.
+// - Native `focusin`/`focusout` listeners (React's `onFocus`/`onBlur` are `focusin`/`focusout`
+//   under the hood).
 //
-// - `is_focus_within` reactive signal
-//   React-aria does not expose a signal for the current focus-within state.
-//   Leptonic returns `is_focus_within: Signal<bool>` for convenient reactive
-//   use in views (e.g., conditional styling).
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - The focus-out path reads signals with `try_get_untracked` and runs callbacks with `try_run`:
+//   removing a focused element blurs it after its owner was disposed ("Blur After Disposal").
 //
-// - Reactive `disabled` prop with auto-cleanup
-//   React-aria checks `disabled` only in handler closures.
-//   Leptonic additionally watches `disabled` reactively: when it transitions
-//   to `true`, any active focus-within state and global listener are cleaned up.
-//
-// - Native `focusin`/`focusout` events
-//   React-aria synthesises focus/blur callbacks from `onFocus`/`onBlur` React
-//   events (which are actually `focusin`/`focusout` under the hood). Leptonic
-//   attaches native `focusin`/`focusout` listeners directly.
-//
-// - Global `focusin` listener (bubbling) instead of capture-phase `focus`
-//   React-aria attaches a capture-phase `focus` listener on the document.
-//   Leptonic uses a bubbling `focusin` listener, which achieves the same
-//   document-level detection since `focusin` bubbles natively.
-//
-// - Defensive `try_get_untracked` in event handlers
-//   When an element is removed from the DOM (e.g., popover closed by scroll),
-//   the browser fires synthetic focusout events during teardown. By that point
-//   the Leptos reactive scope may already be disposed. We use
-//   `try_get_untracked().unwrap_or(...)` to treat a disposed signal as
-//   disabled/inactive rather than panicking. React-aria does not face this
-//   issue because React's synthetic event system defers cleanup.
+// =============================================================================
 
-/// Event fired when focus enters or leaves an element tree.
+/// Event fired when focus enters or leaves an element tree. Like react-aria's focus events, it
+/// doesn't stop propagation (other focus listeners above, e.g. an outer `use_focus_within`, must
+/// see it), so it has no `Propagation`.
 #[derive(Debug, Clone)]
 pub struct FocusWithinEvent {
     /// The underlying focus event.
@@ -150,7 +131,6 @@ pub type UseFocusWithinAttrs = (
 ///     </div>
 /// }
 /// ```
-#[allow(clippy::too_many_lines)]
 pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
     #[cfg(feature = "ssr")]
     {
@@ -167,6 +147,16 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
+        use wasm_bindgen::JsCast;
+
+        use crate::utils::{
+            EventAccessors, EventTargetExt,
+            event_listeners::{Listener, listen_to},
+            set_event_target,
+            shadow_dom::{get_active_element, get_event_target, node_contains},
+            synthetic_blur::SyntheticBlurObserver,
+        };
+
         let UseFocusWithinInput {
             is_disabled: disabled,
             on_focus_within,
@@ -179,21 +169,12 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         // The global focus listener while focus is within (removed when dropped).
         let global_listener: StoredValue<Option<Listener>, LocalStorage> =
             StoredValue::new_local(None);
-
-        let cleanup_global_listener = move || {
-            global_listener.try_update_value(Option::take);
-        };
-
-        // Store cleanup function for synthetic blur MutationObserver (Firefox workaround).
-        let blur_observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
+        // Blur events for a form element disabled while focused (Firefox fires none).
+        let blur_observer: StoredValue<Option<SyntheticBlurObserver>, LocalStorage> =
             StoredValue::new_local(None);
-
-        let cleanup_blur_observer = move || {
-            blur_observer_cleanup.update_value(|cleanup| {
-                if let Some(cleanup_fn) = cleanup.take() {
-                    cleanup_fn();
-                }
-            });
+        let stop_tracking = move || {
+            global_listener.try_update_value(Option::take);
+            blur_observer.try_update_value(Option::take);
         };
 
         let trigger_blur_within = move |e: FocusEvent| {
@@ -202,8 +183,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             }
 
             set_is_focus_within.set(false);
-            cleanup_global_listener();
-            cleanup_blur_observer();
+            stop_tracking();
 
             // Removing a focused element blurs it after its owner was disposed: the callbacks
             // may be gone then (`try_run`).
@@ -216,110 +196,75 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             }
         };
 
+        let contains =
+            |container: &web_sys::EventTarget, target: Option<&web_sys::EventTarget>| match (
+                container.dyn_ref::<web_sys::Node>(),
+                target.and_then(|target| target.dyn_ref::<web_sys::Node>()),
+            ) {
+                (Some(container), Some(target)) => node_contains(container, target),
+                _ => false,
+            };
+
         // Handle focus entering the element tree
-        let handle_focus_in = {
-            move |e: FocusEvent| {
-                if disabled.try_get_untracked().unwrap_or(true) {
-                    return;
-                }
-
-                // Ignore events bubbling through portals — use shadow-DOM-aware containment.
-                let current_target = e.expect_current_target();
-                let target = e.expect_target();
-
-                if !node_contains(
-                    current_target.dyn_ref::<web_sys::Node>(),
-                    target.dyn_ref::<web_sys::Node>(),
-                )
-                .unwrap_or(false)
-                {
-                    return;
-                }
-
-                // Check if focus is actually on the target.
-                // Use owner document from current_target to correctly handle iframes/shadow DOM.
-                let document = current_target
-                    .dyn_ref::<web_sys::Node>()
-                    .and_then(web_sys::Node::owner_document);
-                let active_element = document
-                    .as_ref()
-                    .and_then(crate::utils::shadow_dom::get_active_element);
-                let target_element = target.to_element();
-
-                if active_element != target_element {
-                    return;
-                }
-
-                if !is_focus_within.try_get_untracked().unwrap_or(true) {
-                    // Fire focus within event
-                    if let Some(on_focus_within) = on_focus_within {
-                        on_focus_within.run(FocusWithinEvent { event: e.clone() });
-                    }
-
-                    if let Some(on_focus_within_change) = on_focus_within_change {
-                        on_focus_within_change.run(true);
-                    }
-
-                    set_is_focus_within.set(true);
-
-                    // Set up focusin listener on the element's owner document to detect focus
-                    // moving outside. This handles cases where elements are removed from
-                    // DOM (which don't fire blur/focusout). We use `focusin` instead of
-                    // `focus` because `focus` does NOT bubble — a document-level `focus`
-                    // listener in the bubble phase would never fire.
-                    let document = current_target
-                        .dyn_ref::<web_sys::Node>()
-                        .and_then(web_sys::Node::owner_document);
-                    if let Some(document) = document {
-                        let listener =
-                            listen_to(&document, ev::focusin, false, move |focus_e: FocusEvent| {
-                                if !is_focus_within.try_get_untracked().unwrap_or(false) {
-                                    return;
-                                }
-
-                                // Check if the new focus target is outside our element.
-                                // Use shadow-DOM-aware containment check.
-                                let focus_target = focus_e.expect_target();
-                                let is_outside = !node_contains(
-                                    current_target.dyn_ref::<web_sys::Node>(),
-                                    focus_target.dyn_ref::<web_sys::Node>(),
-                                )
-                                .unwrap_or(false);
-
-                                if is_outside {
-                                    // Focus moved outside — synthesize a proper blur event
-                                    // (matching react-aria). The relatedTarget is the element
-                                    // that received focus outside our tree.
-                                    let blur_init = web_sys::FocusEventInit::new();
-                                    blur_init.set_related_target(focus_e.target().as_ref());
-                                    if let Ok(synthetic_blur) =
-                                        web_sys::FocusEvent::new_with_focus_event_init_dict(
-                                            "blur", &blur_init,
-                                        )
-                                    {
-                                        // Set target and currentTarget on the synthetic event
-                                        // to match the tracked element (react-aria's setEventTarget).
-                                        set_event_target(
-                                            &synthetic_blur,
-                                            &current_target,
-                                            &current_target,
-                                        );
-                                        trigger_blur_within(synthetic_blur);
-                                    }
-                                }
-                            });
-
-                        global_listener.set_value(Some(listener));
-                    }
-
-                    // Set up synthetic blur observer for form elements (Firefox workaround:
-                    // Firefox does not fire blur when a form element becomes disabled while focused).
-                    if let Some(el) = target.dyn_ref::<web_sys::Element>() {
-                        let cleanup = synthetic_blur::setup_synthetic_blur_observer(el);
-                        blur_observer_cleanup.set_value(Some(cleanup));
-                    }
-                }
+        let handle_focus_in = move |e: FocusEvent| {
+            if disabled.try_get_untracked().unwrap_or(true) {
+                return;
             }
+
+            // Ignore events bubbling through portals.
+            let current_target = e.expect_current_target();
+            let target = get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            if !contains(&current_target, Some(&target)) {
+                return;
+            }
+
+            // Double check that the active element is the target, in case a previously chained
+            // focus handler already moved focus elsewhere.
+            let Some(document) = target
+                .dyn_ref::<web_sys::Node>()
+                .and_then(web_sys::Node::owner_document)
+            else {
+                return;
+            };
+            if is_focus_within.try_get_untracked().unwrap_or(true)
+                || get_active_element(&document) != target.to_element()
+            {
+                return;
+            }
+
+            if let Some(on_focus_within) = on_focus_within {
+                on_focus_within.run(FocusWithinEvent { event: e.clone() });
+            }
+            if let Some(on_focus_within_change) = on_focus_within_change {
+                on_focus_within_change.run(true);
+            }
+            set_is_focus_within.set(true);
+
+            if let Some(element) = target.dyn_ref::<web_sys::Element>() {
+                blur_observer.set_value(SyntheticBlurObserver::observe(element));
+            }
+
+            // Browsers fire no blur when the focused element is removed from the DOM: a focus
+            // event outside the tracked element ends focus within then. A capture-phase `focus`
+            // listener (as react-aria), which a handler stopping `focusin` can't hide.
+            let listener = listen_to(&document, ev::focus, true, move |focus_e: FocusEvent| {
+                if !is_focus_within.try_get_untracked().unwrap_or(false) {
+                    return;
+                }
+                let focus_target = get_event_target(&focus_e);
+                if contains(&current_target, focus_target.as_ref()) {
+                    return;
+                }
+                // A blur event of the tracked element, with the newly focused element as its
+                // related target (react-aria's `setEventTarget`).
+                let init = web_sys::FocusEventInit::new();
+                init.set_related_target(focus_target.as_ref());
+                if let Ok(blur) = FocusEvent::new_with_focus_event_init_dict("blur", &init) {
+                    set_event_target(&blur, &current_target, &current_target);
+                    trigger_blur_within(blur);
+                }
+            });
+            global_listener.set_value(Some(listener));
         };
 
         // Handle focus leaving - but only if it's actually leaving the element tree
@@ -328,28 +273,15 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                 return;
             }
 
-            // Ignore events bubbling through portals — use shadow-DOM-aware containment.
+            // Ignore events bubbling through portals.
             let current_target = e.expect_current_target();
-            let target = e.expect_target();
-
-            if !node_contains(
-                current_target.dyn_ref::<web_sys::Node>(),
-                target.dyn_ref::<web_sys::Node>(),
-            )
-            .unwrap_or(false)
-            {
+            let target = get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            if !contains(&current_target, Some(&target)) {
                 return;
             }
 
-            // Check if focus is moving to another element within the same tree.
-            // If relatedTarget (where focus is going) is within current_target, don't trigger blur.
-            if let Some(related_target) = e.related_target()
-                && node_contains(
-                    current_target.dyn_ref::<web_sys::Node>(),
-                    related_target.dyn_ref::<web_sys::Node>(),
-                )
-                .unwrap_or(false)
-            {
+            // Focus moving within the tree is no blur within.
+            if contains(&current_target, e.related_target().as_ref()) {
                 return;
             }
 
@@ -361,8 +293,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         Effect::new(move |_| {
             if disabled.get() && is_focus_within.get_untracked() {
                 set_is_focus_within.set(false);
-                cleanup_global_listener();
-                cleanup_blur_observer();
+                stop_tracking();
 
                 if let Some(on_focus_within_change) = on_focus_within_change {
                     on_focus_within_change.run(false);
@@ -370,11 +301,7 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             }
         });
 
-        // Cleanup on unmount
-        on_cleanup(move || {
-            cleanup_global_listener();
-            cleanup_blur_observer();
-        });
+        on_cleanup(stop_tracking);
 
         UseFocusWithinReturn {
             props: UseFocusWithinProps {

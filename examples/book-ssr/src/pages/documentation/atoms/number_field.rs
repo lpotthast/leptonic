@@ -219,21 +219,38 @@ pub fn PageAtomNumberField() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
+                    "The atoms bring no styles. Their default classes are "<Code inline=true>"leptonic-NumberField"</Code>
+                    " (the field\u{2019}s "<Code inline=true>"<div>"</Code>"), "<Code inline=true>"leptonic-NumberFieldGroup"</Code>
+                    " (a "<Code inline=true>"<div>"</Code>" around the input and the buttons), "
+                    <Code inline=true>"leptonic-NumberFieldDecrementButton"</Code>", "
+                    <Code inline=true>"leptonic-NumberFieldIncrementButton"</Code>" and "<Code inline=true>"leptonic-Input"</Code>
+                    ". The buttons are named for assistive technology; their content is yours, e.g. a "
+                    <Code inline=true>"\u{2212}"</Code>" and a "<Code inline=true>"+"</Code>" in "
+                    <Code inline=true>"aria-hidden"</Code>" spans."
+                </p>
+                <p>
                     "Draw the field\u{2019}s border and focus ring on the group, which knows whether the input has keyboard "
-                    "focus, and leave the input inside it plain:"
+                    "focus, and leave the input inside it plain. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-group { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; }
-                        .my-group[data-hovered] { border-color: var(--accent); }
-                        .my-group[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
-                        .my-group[data-invalid] { border-color: var(--danger); }
-                        .my-input { border: none; background: transparent; }
-                        .my-stepper[data-pressed] { background: var(--surface); }
-                        .my-stepper[data-disabled] { opacity: 0.5; }
+                        .demo-number-field-group { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+                        .demo-number-field-group[data-hovered] { border-color: var(--accent); }
+                        .demo-number-field-group[data-invalid] { border-color: var(--danger); }
+                        .demo-number-field-group[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                        .demo-number-field-group[data-disabled] { opacity: 0.5; }
+
+                        .demo-number-field-input { width: 5em; padding: 0.5rem; border: none; background: transparent; font: inherit; text-align: center; }
+
+                        .demo-number-field-stepper { padding: 0 1rem; border: none; background: var(--surface); font: inherit; cursor: pointer; }
+                        .demo-number-field-stepper[data-hovered] { background: var(--border); }
+                        .demo-number-field-stepper[data-disabled] { opacity: 0.5; cursor: not-allowed; }
                     ")}
                 </Code>
-                <p>"The demo shows its complete styles under \u{201c}View styles\u{201d}."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <SeeAlso>

@@ -65,7 +65,7 @@ pub fn PageNumberFieldOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Number fields exist at all three layers. See "
+                    "Number fields exist as hooks and as atoms. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -91,7 +91,11 @@ pub fn PageNumberFieldOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "Pass the component a signal as "<Code inline=true>"value"</Code>" and its setter as "
+                    "Compose the "<Code inline=true>"NumberField"</Code>" atom from a "<Code inline=true>"Label"</Code>
+                    " and a "<Code inline=true>"NumberFieldGroup"</Code>" holding the "<Code inline=true>"Input"</Code>
+                    " and the stepper buttons (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::number_field::Atom.materialize())>"Number Field Atoms"</Link>
+                    " page). Pass it a signal as "<Code inline=true>"value"</Code>" and its setter as "
                     <Code inline=true>"set_value"</Code>". The signal\u{2019}s type decides the number type, here "
                     <Code inline=true>"u8"</Code>". Type a number and press "<Keys keys="Enter"/>", or step it with the "
                     "buttons or the arrow keys:"

@@ -124,7 +124,7 @@ pub fn HueSlider(
 fn channel_field<Ch: ColorChannel<Color: Default>>(channel: Ch) -> impl IntoView {
     view! {
         <ColorChannelField channel=channel classes=["leptonic-text-field", "leptonic-color-picker-field"]>
-            <Label classes="leptonic-field-label">{<Ch::Color as ColorValue>::get_channel_name(channel)}</Label>
+            <Label classes="leptonic-field-label">{<Ch::Color as ColorValue>::channel_name(channel)}</Label>
             <Input classes="leptonic-text-field-input" />
         </ColorChannelField>
     }

@@ -245,17 +245,17 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         channel,
     });
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
-    let mut input = UseColorChannelFieldInput {
+    let input = UseColorChannelFieldInput {
         state,
         field: UseNumberFieldInput {
             state: state.number,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            is_required: Signal::stored(false),
-            placeholder: MaybeProp::default(),
+            id,
+            has_label: label_presence.has_label,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            is_required,
+            placeholder,
             auto_focus: false,
             is_wheel_disabled: false,
             increment_aria_label: MaybeProp::default(),
@@ -267,13 +267,6 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
             on_key_up: None,
         },
     };
-    input.field.id = id;
-    input.field.has_label = label_presence.has_label;
-    input.field.aria_label = aria_label;
-    input.field.aria_labelledby = aria_labelledby;
-    input.field.aria_describedby = aria_describedby;
-    input.field.is_required = is_required;
-    input.field.placeholder = placeholder;
     let UseNumberFieldReturn {
         label_props,
         input_props,

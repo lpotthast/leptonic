@@ -1,9 +1,9 @@
 use leptonic::{
     atoms::{
+        checkbox::Checkbox,
         datepicker::{DateField, DateInput, DateSegment},
         field::Label,
     },
-    components::prelude::Checkbox,
     hooks::datepicker::HourCycle,
     jiff::{Zoned, civil::date},
 };
@@ -47,8 +47,14 @@ pub fn DateFieldZonedDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

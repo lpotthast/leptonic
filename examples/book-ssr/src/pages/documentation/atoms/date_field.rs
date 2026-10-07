@@ -239,20 +239,29 @@ pub fn PageAtomDateField() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms add no classes: style them through "<Code inline=true>"classes"</Code>" and the data attributes. "
-                    "A segment being edited has the focus, so mark it with a background rather than an outline, and the "
-                    "group with "<Code inline=true>"data-focus-within"</Code>"."
+                    "The atoms bring no styles. "<Code inline=true>"DateField"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-DateField"</Code>", "
+                    <Code inline=true>"DateInput"</Code>" the group of segments, a "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"leptonic-DateInput"</Code>", and "<Code inline=true>"DateSegment"</Code>" "
+                    "a "<Code inline=true>"<span>"</Code>" with "<Code inline=true>"leptonic-DateSegment"</Code>", each followed by the "<Code inline=true>"classes"</Code>" you pass; the "
+                    "label, description and error are the field atoms "<Code inline=true>"Label"</Code>", "<Code inline=true>"Description"</Code>" and "<Code inline=true>"FieldError"</Code>". "
+                    "A segment being edited has the focus, so mark it with a background rather than an outline, and the group with "
+                    <Code inline=true>"data-focus-within"</Code>". The demos above use this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-date-input { display: inline-flex; padding: 0.25em 0.5em; border: 1px solid var(--border); }
-                        .my-date-input[data-focus-within] { border-color: var(--focus); }
-                        .my-date-input[data-invalid] { border-color: var(--accent); }
-                        .my-segment { padding: 0 0.1em; outline: none; }
-                        .my-segment[data-placeholder], .my-segment[data-type="literal"] { color: var(--muted); }
-                        .my-segment[data-focused] { background: var(--accent); }
+                        .demo-date-field { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+                        .demo-date-input { display: inline-flex; flex-wrap: wrap; align-items: center; padding: 0.25rem 0.5rem; border: 1px solid var(--border); border-radius: 8px; font-variant-numeric: tabular-nums; }
+                        .demo-date-input[data-focus-within] { border-color: var(--focus); }
+                        .demo-date-input[data-disabled] { opacity: 0.5; }
+                        .demo-date-segment { padding: 0 0.1em; border-radius: 4px; outline: none; }
+                        .demo-date-segment:is([data-placeholder], [data-type="literal"]) { color: var(--muted); }
+                        .demo-date-segment[data-type="literal"] { white-space: pre; }
+                        .demo-date-segment[data-focused] { background: var(--accent); color: var(--surface); }
                     "#)}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

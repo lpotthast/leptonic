@@ -177,17 +177,41 @@ pub fn PageAtomTextField() -> impl IntoView {
             </Section>
 
             <Section title="Styling">
-                <p>"Select the states with attribute selectors on your classes:"</p>
+                <p>
+                    "The atoms bring no styles. "<Code inline=true>"TextField"</Code>" renders a "<Code inline=true>"<div>"</Code>
+                    " (default class "<Code inline=true>"leptonic-TextField"</Code>") around its children: a "
+                    <Code inline=true>"Label"</Code>", an "<Code inline=true>"Input"</Code>" ("<Code inline=true>"leptonic-Input"</Code>
+                    ") or "<Code inline=true>"TextArea"</Code>" ("<Code inline=true>"leptonic-TextArea"</Code>"), a "
+                    <Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" ("
+                    <Link href=format!("{}#styling", routes::doc::field::Atom.materialize())>"Field Atoms"</Link>
+                    "), with any markup between them."
+                </p>
+                <p>
+                    "Style the input through its own data attributes. The demos above use this CSS:"
+                </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-input { border: 1px solid var(--border); border-radius: 4px; }
-                        .my-input[data-hovered] { border-color: var(--accent); }
-                        .my-input[data-invalid] { border-color: var(--danger); }
-                        .my-input[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 1px; }
-                        .my-input[data-disabled] { opacity: 0.5; }
+                        .demo-field { display: flex; flex-direction: column; gap: 0.25rem; }
+
+                        .demo-atom-input {
+                            width: 250px;
+                            max-width: 100%;
+                            padding: 0.5rem;
+                            border: 1px solid var(--border);
+                            border-radius: 4px;
+                            background: var(--surface);
+                        }
+                        .demo-atom-input[data-hovered] { border-color: var(--accent); }
+                        .demo-atom-input[data-invalid] { border-color: var(--danger); }
+                        .demo-atom-input[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 1px; }
+                        .demo-atom-input[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
                     ")}
                 </Code>
-                <p>"The demo shows its complete styles under \u{201c}View styles\u{201d}."</p>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

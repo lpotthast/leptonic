@@ -1,4 +1,7 @@
-use leptonic::{atoms::prelude::FocusScope, components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::{button::Button, checkbox::Checkbox, focus_scope::FocusScope},
+    hooks::*,
+};
 use leptos::prelude::*;
 
 /// `use_overlay` alone: a panel that closes on Escape, on a press outside or when focus leaves it, as configured.
@@ -26,7 +29,7 @@ pub fn BasicOverlayDemo() -> impl IntoView {
     let overlay_attrs = StoredValue::new(props.into_attrs());
 
     view! {
-        <Button on_press=move |_| set_is_open.set(true)>"Open panel"</Button>
+        <Button on_press=move |_| set_is_open.set(true) classes="demo-btn">"Open panel"</Button>
 
         <Show when=move || is_open.get()>
             <div {..overlay_attrs.get_value()} role="dialog" aria-labelledby="use-overlay-demo-title" class="demo-overlay-inline-panel">
@@ -34,7 +37,7 @@ pub fn BasicOverlayDemo() -> impl IntoView {
                 <FocusScope restore_focus=true auto_focus=true>
                     <h4 id="use-overlay-demo-title" class="demo-overlay-title">"Panel"</h4>
                     <p class="demo-overlay-text">"Try Escape, a click outside or Tab."</p>
-                    <Button on_press=move |_| set_is_open.set(false)>"Close"</Button>
+                    <Button on_press=move |_| set_is_open.set(false) classes="demo-btn">"Close"</Button>
                 </FocusScope>
             </div>
         </Show>
@@ -49,9 +52,18 @@ pub fn BasicOverlayDemo() -> impl IntoView {
         // Settings take effect for the next opening; they can't be pressed while the panel is open, as that would
         // be a press outside.
         <div class="demo-controls">
-            <Checkbox is_selected=is_dismissable set_selected=is_dismissable is_disabled=is_open>"Close on press outside"</Checkbox>
-            <Checkbox is_selected=close_on_blur set_selected=close_on_blur is_disabled=is_open>"Close on blur"</Checkbox>
-            <Checkbox is_selected=escape_disabled set_selected=escape_disabled is_disabled=is_open>"Ignore Escape"</Checkbox>
+            <Checkbox is_selected=is_dismissable set_selected=is_dismissable is_disabled=is_open classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Close on press outside"
+            </Checkbox>
+            <Checkbox is_selected=close_on_blur set_selected=close_on_blur is_disabled=is_open classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Close on blur"
+            </Checkbox>
+            <Checkbox is_selected=escape_disabled set_selected=escape_disabled is_disabled=is_open classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Ignore Escape"
+            </Checkbox>
         </div>
     }
 }

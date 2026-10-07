@@ -52,13 +52,16 @@ use crate::{
 //   the submenu's `Menu` has its own collection (react-aria-components: the submenu's items are a
 //   branch of the parent menu's collection). Reason: collections are built flat per menu.
 //
+// - A `MenuSection` with a `selection_mode` of its own keeps the menu's disabled keys
+//   (react-aria-components' group selection drops them).
+//
 // ## OMITTED FEATURES
-// - Virtualized and render-prop item content, `onClose`/`shouldCloseOnSelect` per menu.
+// - Virtualized and render-prop item content.
 //
 // =============================================================================
 
 /// Context from a [`MenuTrigger`] to its [`Menu`].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct MenuTriggerContext {
     menu_props: UseMenuTriggerMenuProps,
     trigger: DialogTriggerContext,
@@ -77,6 +80,11 @@ struct ParentMenuElement(CapturedElement);
 /// see an outer trigger).
 #[derive(Debug, Clone)]
 struct SubmenuItemContext(Option<(Key, SubmenuTriggerItem)>);
+
+/// Whether activating an item closes the menu, as set by the [`Menu`] or [`MenuSection`] around
+/// (react-aria-components' `MenuItemContext`); an item's own setting wins.
+#[derive(Debug, Clone, Copy)]
+struct MenuCloseOnSelect(CloseOnSelect);
 
 /// From a [`SubmenuTrigger`] to the [`Menu`] it opens; `None` inside a menu.
 #[derive(Debug, Clone)]
@@ -278,7 +286,7 @@ pub fn ContextMenuTrigger(
     let menu_id = crate::utils::id::use_id("menu");
     let menu_context = MenuTriggerContext {
         menu_props: UseMenuTriggerMenuProps {
-            id: Signal::stored(menu_id),
+            id: menu_id,
             aria_labelledby: target_id.into(),
             auto_focus: Signal::derive(move || {
                 Some(match menu_state.focus_strategy() {
@@ -360,6 +368,10 @@ pub fn Menu(
     /// menu closes as well.
     #[prop(into, optional)]
     on_close: Option<Callback<()>>,
+    /// Whether activating an item closes the menu. Default: unless the menu allows multiple
+    /// selection, or the item was checked with Space. Sections and items can override it.
+    #[prop(into, optional)]
+    should_close_on_select: CloseOnSelect,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -391,7 +403,7 @@ pub fn Menu(
             collection,
             selection: SelectionOptions {
                 selection_mode,
-                selection_behavior: SelectionBehavior::Toggle,
+                selection_behavior: Signal::stored(SelectionBehavior::Toggle),
                 default_selection: Selection::keys(default_selected_keys),
                 selection,
                 on_selection_change,
@@ -404,8 +416,8 @@ pub fn Menu(
     // Inside a trigger: labelled by the trigger's rendered id, ensured once the menu is rendered
     // (before `use_menu` checks that the menu has a name).
     let trigger_id = RwSignal::new(None::<String>);
-    if let Some(ctx) = trigger_ctx {
-        Effect::new(move |_| trigger_id.set(ctx.trigger.ensure_trigger_id()));
+    if let Some(trigger) = trigger_ctx.as_ref().map(|ctx| ctx.trigger) {
+        Effect::new(move |_| trigger_id.set(trigger.ensure_trigger_id()));
     }
     let labelledby = MaybeProp::derive(move || {
         aria_labelledby.get().or_else(|| {
@@ -416,23 +428,26 @@ pub fn Menu(
                 .flatten()
         })
     });
-    let auto_focus = match (auto_focus, trigger_ctx) {
+    let auto_focus = match (auto_focus, trigger_ctx.as_ref()) {
         (Some(auto_focus), _) => Signal::stored(Some(auto_focus)),
         (None, Some(ctx)) => ctx.menu_props.auto_focus,
         (None, None) => Signal::stored(None),
     };
-    let on_close = match (on_close, trigger_ctx) {
-        (Some(own), Some(ctx)) => Some(Callback::new(move |()| {
+    let on_close = match (
+        on_close,
+        trigger_ctx.as_ref().map(|ctx| ctx.menu_props.on_close),
+    ) {
+        (Some(own), Some(trigger_close)) => Some(Callback::new(move |()| {
             own.run(());
-            ctx.menu_props.on_close.run(());
+            trigger_close.run(());
         })),
-        (own, ctx) => own.or(ctx.map(|ctx| ctx.menu_props.on_close)),
+        (own, trigger_close) => own.or(trigger_close),
     };
 
     let collection = state.collection;
     let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
     let UseMenuReturn { props, data } = use_menu(UseMenuInput {
-        id: trigger_ctx.map(|ctx| ctx.menu_props.id.get_untracked()),
+        id: trigger_ctx.as_ref().map(|ctx| ctx.menu_props.id.clone()),
         aria_label,
         aria_labelledby: labelledby,
         options: CollectionOptions {
@@ -454,6 +469,7 @@ pub fn Menu(
             // The items of this menu don't belong to an outer submenu trigger.
             <Provider value=SubmenuItemContext(None)>
             <Provider value=SubmenuMenuContext(None)>
+            <Provider value=MenuCloseOnSelect(should_close_on_select)>
             // Separators between the items are `<div role="separator">`s.
             <Provider value=SeparatorContext {
                 element_type: SeparatorElementType::Div,
@@ -461,6 +477,7 @@ pub fn Menu(
                 <div {..props.into_attrs()} class=classes style=styles data-empty=flag(is_empty)>
                     {children()}
                 </div>
+            </Provider>
             </Provider>
             </Provider>
             </Provider>
@@ -479,8 +496,8 @@ pub fn MenuItem(
     /// The item's key in the menu's collection.
     #[prop(into)]
     key: Key,
-    /// Whether activating the item closes the menu. Default: unless the menu allows multiple
-    /// selection, or the item was checked with Space.
+    /// Whether activating the item closes the menu. Default: as its `MenuSection` or `Menu` says,
+    /// else unless the menu allows multiple selection, or the item was checked with Space.
     #[prop(into, optional)]
     should_close_on_select: CloseOnSelect,
     #[prop(into, optional)] classes: Classes,
@@ -502,6 +519,12 @@ pub fn MenuItem(
             trigger
         });
     let has_submenu = submenu_trigger.is_some();
+    let should_close_on_select = match should_close_on_select {
+        CloseOnSelect::Auto => {
+            use_context::<MenuCloseOnSelect>().map_or(CloseOnSelect::Auto, |inherited| inherited.0)
+        }
+        own => own,
+    };
     let selection = menu.state.selection;
     let selection_mode = Signal::derive(move || selection.selection_mode());
     let is_open = submenu_trigger
@@ -749,15 +772,44 @@ fn slot(
     }
 }
 
-/// A group of items in a [`Menu`], for the collection section `key`. Renders the section's header
-/// (if the collection has one) followed by the children.
+/// A group of items in a [`Menu`], for the collection section `key`: a `<section role="group">`
+/// starting with the section's header (if the collection has one), as a `<header>` naming the
+/// group, followed by the children.
 ///
-/// Default class: `leptonic-MenuSection`.
+/// With a `selection_mode` of its own, the section's items have a selection of their own
+/// (react-aria-components' `MenuSection` selection props): e.g. a single choice next to a multiple
+/// choice in one menu. `should_close_on_select` applies to the section's items.
+///
+/// Default classes: `leptonic-MenuSection`, the header `leptonic-MenuSectionHeading`.
 #[component]
+#[allow(clippy::needless_pass_by_value, clippy::implicit_hasher)]
 pub fn MenuSection(
     /// The section's key in the menu's collection.
     #[prop(into)]
     key: Key,
+    /// A selection mode of the section's own; its items then have their own selection. Default:
+    /// the menu's selection.
+    #[prop(into, optional)]
+    selection_mode: Option<SelectionMode>,
+    /// The initially selected keys of the section's own selection.
+    #[prop(into, optional)]
+    default_selected_keys: Vec<Key>,
+    /// The section's own selection (controlled), replacing `default_selected_keys`: a value or
+    /// any signal.
+    #[prop(into, optional)]
+    selection: Option<Signal<Selection>>,
+    /// Receives the section's new selection: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selection: Option<Out<Selection>>,
+    /// Called with the section's new selection.
+    #[prop(into, optional)]
+    on_selection_change: Option<Callback<Selection>>,
+    /// Whether the section's own selection can't become empty.
+    #[prop(into, optional)]
+    disallow_empty_selection: Signal<bool>,
+    /// Whether activating one of the section's items closes the menu. Default: as the menu says.
+    #[prop(into, optional)]
+    should_close_on_select: CloseOnSelect,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(into, optional)] heading_classes: Classes,
@@ -767,25 +819,55 @@ pub fn MenuSection(
     let heading_classes = with_default_class("leptonic-MenuSectionHeading", heading_classes);
     let menu = expect_context::<MenuData>();
     let UseMenuSectionReturn {
-        item_props,
         heading_props,
         group_props,
         heading,
-    } = use_menu_section(UseMenuSectionInput { menu, key });
+        ..
+    } = use_menu_section(UseMenuSectionInput {
+        menu: menu.clone(),
+        key,
+    });
+    // The section's own selection, focus shared with the menu.
+    let section_menu = selection_mode.map(|mode| {
+        let (selection, on_selection_change) =
+            ValueBinding::from_state_props(selection, set_selection, on_selection_change);
+        let mut section_menu = menu.clone();
+        section_menu.state.selection = menu.state.selection.with_own_selection(SelectionOptions {
+            selection_mode: Signal::stored(mode),
+            selection_behavior: Signal::stored(SelectionBehavior::Toggle),
+            default_selection: Selection::keys(default_selected_keys),
+            selection,
+            on_selection_change,
+            disallow_empty_selection,
+            ..SelectionOptions::default()
+        });
+        section_menu
+    });
+    let close_on_select = match should_close_on_select {
+        CloseOnSelect::Auto => {
+            use_context::<MenuCloseOnSelect>().map_or(CloseOnSelect::Auto, |inherited| inherited.0)
+        }
+        own => own,
+    };
+    let heading = heading_props.map(|props| {
+        view! {
+            <header {..props.into_attrs()} class=heading_classes>
+                {heading}
+            </header>
+        }
+    });
 
     view! {
-        <div {..item_props.into_attrs()}>
-            {heading_props
-                .map(|props| {
-                    view! {
-                        <div {..props.into_attrs()} class=heading_classes>
-                            {heading}
-                        </div>
+        <section {..group_props.into_attrs()} class=classes style=styles>
+            {heading}
+            <Provider value=MenuCloseOnSelect(close_on_select)>
+                {match section_menu {
+                    Some(section_menu) => {
+                        view! { <Provider value=section_menu>{children()}</Provider> }.into_any()
                     }
-                })}
-            <div {..group_props.into_attrs()} class=classes style=styles>
-                {children()}
-            </div>
-        </div>
+                    None => children().into_any(),
+                }}
+            </Provider>
+        </section>
     }
 }

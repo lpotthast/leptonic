@@ -1,5 +1,5 @@
 // Upstream: react-aria/src/menu/useMenuTrigger.ts @ 99e6102368
-use leptos::{oco::Oco, prelude::*};
+use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::use_menu_trigger_state::MenuTriggerStateApi;
@@ -84,11 +84,11 @@ pub struct UseMenuTriggerReturn {
 }
 
 /// Props for the menu opened by this trigger.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UseMenuTriggerMenuProps {
     /// The unique ID for the menu element.
     /// This must be set on the menu so that `aria-controls` on the trigger points to it.
-    pub id: Signal<String>,
+    pub id: String,
 
     /// The id that labels this menu.
     pub aria_labelledby: Signal<String>,
@@ -115,21 +115,19 @@ pub struct UseMenuTriggerMenuProps {
 ///
 /// let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
 ///     menu_type: OverlayTriggerType::Menu,
-///     disabled: Signal::derive(|| false),
+///     is_disabled: Signal::stored(false),
 ///     trigger: MenuTriggerType::Press,
 ///     state,
 /// });
+/// let (button_attrs, button_styles) = use_button(menu_trigger.button).props.into_parts();
+/// let menu_props = menu_trigger.menu_props;
 ///
 /// view! {
-///     <button {..menu_trigger.props.into_attrs()}>
-///         "Open Menu"
-///     </button>
+///     <button {..button_attrs} style=button_styles>"Open Menu"</button>
 ///     <Show when=move || state.is_open()>
-///         <Menu
-///             aria_labelledby=menu_trigger.menu_props.aria_labelledby
-///             auto_focus=menu_trigger.menu_props.auto_focus
-///             on_close=menu_trigger.menu_props.on_close
-///         />
+///         // A menu built with `use_menu`, given `menu_props.id`, `aria_labelledby`,
+///         // `auto_focus` and `on_close`.
+///         <MyMenu props=menu_props.clone() />
 ///     </Show>
 /// }
 /// ```
@@ -147,8 +145,8 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
     let menu_id = use_id("menu");
 
     let overlay_trigger = use_overlay_trigger(UseOverlayTriggerInput {
-        show: Signal::derive(move || state.is_open()),
-        overlay_id: Oco::Owned(menu_id.clone()),
+        is_open: Signal::derive(move || state.is_open()),
+        overlay_id: menu_id.clone(),
         overlay_type: menu_type,
     });
 
@@ -246,13 +244,13 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
         // A context menu trigger isn't announced as opening a menu (it doesn't on activation), and
         // the keyboard opens it with the context menu shortcuts only.
         UseButtonInput {
-            id: Some(Oco::Owned(menu_trigger_id.clone())),
+            id: Some(menu_trigger_id.clone()),
             is_disabled: disabled,
             ..button
         }
     } else {
         UseButtonInput {
-            id: Some(Oco::Owned(menu_trigger_id.clone())),
+            id: Some(menu_trigger_id.clone()),
             is_disabled: disabled,
             aria_haspopup: Signal::stored(aria_haspopup),
             aria_expanded: overlay_trigger.props.aria_expanded,
@@ -269,7 +267,7 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
     UseMenuTriggerReturn {
         button,
         menu_props: UseMenuTriggerMenuProps {
-            id: Signal::stored(menu_id),
+            id: menu_id,
             aria_labelledby: Signal::stored(menu_trigger_id),
             auto_focus: Signal::derive(move || {
                 Some(match state.focus_strategy() {

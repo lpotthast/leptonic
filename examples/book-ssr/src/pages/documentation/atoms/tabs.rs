@@ -118,7 +118,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{components::prelude::Button, hooks::Key};
+                        use leptonic::{atoms::button::Button, hooks::Key};
 
                         let selected = RwSignal::new(Key::from("details"));
 
@@ -197,7 +197,11 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </p>
                 <Section title="Props" id="tab-props">
                     <ApiTable kind=ApiKind::Props of="atoms::tabs::Tab">
-                        <ApiRow name="key" ty="Key">"The tab\u{2019}s key in the collection."</ApiRow>
+                        <ApiRow name="key" ty="Key">"The tab\u{2019}s key in the collection. Required."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                            "Whether the tab is disabled: it joins the disabled keys, so that it can\u{2019}t be selected and "
+                            "the arrow keys skip it."
+                        </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the tab."</ApiRow>
                         <ApiRow name="children" ty="Children">"The tab\u{2019}s label."</ApiRow>
                     </ApiTable>
@@ -219,6 +223,9 @@ pub fn PageAtomTabs() -> impl IntoView {
                             "Keep the panel mounted while its tab isn\u{2019}t selected (inert, with "<Code inline=true>"data-inert"</Code>
                             "), so that state inside it survives switching tabs. Hide it with CSS."
                         </ApiRow>
+                        <ApiRow name="aria_describedby, aria_details" ty="Option<String>" default="None">
+                            "The ids of elements describing the panel, or holding details about it."
+                        </ApiRow>
                         <ApiRow name="children" ty="ChildrenFn">
                             "The panel content, rendered each time the tab is selected (once, with "<Code inline=true>"should_force_mount"</Code>")."
                         </ApiRow>
@@ -226,10 +233,33 @@ pub fn PageAtomTabs() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="TabPanels">
+                <p>
+                    "An optional "<Code inline=true>"<div>"</Code>" around the "<Code inline=true>"TabPanel"</Code>"s that "
+                    "animates its size when the selected tab changes: while it changes, "
+                    <Code inline=true>"--tab-panel-width"</Code>" and "<Code inline=true>"--tab-panel-height"</Code>
+                    " hold its size in pixels, from the old panel\u{2019}s to the new one\u{2019}s, otherwise "
+                    <Code inline=true>"auto"</Code>". Give it a CSS transition on "<Code inline=true>"height"</Code>
+                    " (or "<Code inline=true>"width"</Code>") set to these variables:"
+                </p>
+                <Code language=Language::Css>
+                    {indoc!(r"
+                        .my-tab-panels { height: var(--tab-panel-height); overflow: clip; transition: height 200ms; }
+                        @media (prefers-reduced-motion: reduce) { .my-tab-panels { transition: none; } }
+                    ")}
+                </Code>
+                <Section title="Props" id="tabpanels-props">
+                    <ApiTable kind=ApiKind::Props of="TabPanels">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the element."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"TabPanel"</Code>"s. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="Data Attributes">
                 <ApiTable kind=ApiKind::DataAttributes>
                     <ApiRow name="data-orientation" ty="horizontal | vertical">
-                        "On "<Code inline=true>"Tabs"</Code>": the orientation."
+                        "On "<Code inline=true>"Tabs"</Code>" and "<Code inline=true>"TabList"</Code>": the orientation."
                     </ApiRow>
                     <ApiRow name="data-selected" ty="true">"On "<Code inline=true>"Tab"</Code>": the tab is selected."</ApiRow>
                     <ApiRow name="data-focused" ty="true">
@@ -244,6 +274,10 @@ pub fn PageAtomTabs() -> impl IntoView {
                     <ApiRow name="data-focus-visible" ty="true">
                         "On "<Code inline=true>"Tab"</Code>": the tab has keyboard focus; draw a focus ring."
                     </ApiRow>
+                    <ApiRow name="data-focused, data-focus-visible" ty="true">
+                        "On "<Code inline=true>"TabPanel"</Code>": the panel itself has focus (from the keyboard, for "
+                        <Code inline=true>"data-focus-visible"</Code>"). A panel without focusable content is a tab stop."
+                    </ApiRow>
                     <ApiRow name="data-inert" ty="true">
                         "On a force-mounted "<Code inline=true>"TabPanel"</Code>": its tab isn\u{2019}t selected."
                     </ApiRow>
@@ -252,22 +286,31 @@ pub fn PageAtomTabs() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
-                    "selectors. "<Code inline=true>"data-focused"</Code>" is also set after a click, so draw focus rings with "
-                    <Code inline=true>"data-focus-visible"</Code>". Lay out a vertical tab list through the "
-                    <Code inline=true>"data-orientation"</Code>" of "<Code inline=true>"Tabs"</Code>":"
+                    "The atoms bring no styles. They render the classes "<Code inline=true>"leptonic-Tabs"</Code>", "
+                    <Code inline=true>"leptonic-TabList"</Code>", "<Code inline=true>"leptonic-Tab"</Code>", "
+                    <Code inline=true>"leptonic-TabPanel"</Code>" and "<Code inline=true>"leptonic-TabPanels"</Code>", each followed by the "<Code inline=true>"classes"</Code>
+                    " you pass. Target the state with the data attributes above. "<Code inline=true>"data-focused"</Code>
+                    " is also set after a click, so draw focus rings with "<Code inline=true>"data-focus-visible"</Code>
+                    ". Lay out a vertical tab list through "<Code inline=true>"data-orientation"</Code>". The book\u{2019}s "
+                    "demos use these rules:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r#"
-                        .my-tab-list { display: flex; border-bottom: 2px solid var(--border); }
-                        .my-tabs[data-orientation="vertical"] { display: flex; }
-                        .my-tabs[data-orientation="vertical"] .my-tab-list { flex-direction: column; }
-                        .my-tab[data-selected] { border-bottom: 2px solid var(--accent); }
-                        .my-tab[data-disabled] { color: var(--muted); }
-                        .my-tab[data-hovered] { color: var(--text); }
-                        .my-tab[data-focus-visible] { outline: 2px solid var(--focus); }
+                        .my-tab-list { display: flex; overflow-x: auto; box-shadow: inset 0 -2px 0 var(--border); }
+                        .my-tabs[data-orientation="vertical"] { display: flex; gap: 1em; }
+                        .my-tab-list[data-orientation="vertical"] { flex-direction: column; box-shadow: inset -2px 0 0 var(--border); }
+                        .my-tab { padding: 0.5em 1em; color: var(--muted); cursor: pointer; }
+                        .my-tab[data-selected] { color: var(--accent); font-weight: 600; box-shadow: inset 0 -3px 0 var(--accent); }
+                        .my-tab-list[data-orientation="vertical"] .my-tab[data-selected] { box-shadow: inset -3px 0 0 var(--accent); }
+                        .my-tab[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .my-tab[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -5px; }
+                        .my-tab-panel[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
                     "#)}
                 </Code>
+                <p>
+                    "Leptonic also ships an optional atom theme that styles the default classes, for apps that don\u{2019}t "
+                    "want to start from scratch: "<Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>"."
+                </p>
             </Section>
 
             <Section title="Composition">

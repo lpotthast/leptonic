@@ -10,9 +10,12 @@ use leptonic::{
         },
     },
     hooks::CommitBehavior,
-    utils::number_formatter::{NumberFormatOptions, NumberStyle},
+    utils::{
+        i18n::{I18nProvider, Locale},
+        number_formatter::{NumberFormatOptions, NumberStyle},
+    },
 };
-use leptos::prelude::*;
+use leptos::{ev::SubmitEvent, prelude::*};
 
 /// The group, decrement button, input and increment button of a number field.
 #[component]
@@ -42,6 +45,17 @@ pub fn PageAtomNumberField() -> impl IntoView {
     let record = move |value: Option<i32>| {
         changes.update(|c| c.push(value.map_or_else(|| "empty".to_owned(), |v| v.to_string())));
     };
+    let wheel_changes = RwSignal::new(Vec::<String>::new());
+    let record_wheel = move |value: Option<i32>| {
+        wheel_changes
+            .update(|c| c.push(value.map_or_else(|| "empty".to_owned(), |v| v.to_string())));
+    };
+    let submits = RwSignal::new(0_u32);
+    let on_submit = move |e: SubmitEvent| {
+        e.prevent_default();
+        submits.update(|n| *n += 1);
+    };
+    let german = "de-DE".parse::<Locale>().expect("a locale");
     let server_errors = Signal::stored(HashMap::from([(
         "testNumber".to_owned(),
         vec!["This field has an error.".to_owned()],
@@ -111,6 +125,27 @@ pub fn PageAtomNumberField() -> impl IntoView {
                 </NumberField<i32>>
             </div>
 
+            <div id="nf-no-grouping-de">
+                <I18nProvider locale=german>
+                    <NumberField<i32> format_options=NumberFormatOptions {
+                        use_grouping: false,
+                        ..NumberFormatOptions::default()
+                    }>
+                        <Label>"Breite"</Label>
+                        <Steppers />
+                    </NumberField<i32>>
+                </I18nProvider>
+            </div>
+
+            // The scroll wheel steps while the field has focus.
+            <div id="nf-wheel">
+                <NumberField default_value=0_i32 on_change=record_wheel>
+                    <Label>"Wheel"</Label>
+                    <Steppers />
+                </NumberField>
+            </div>
+            <div>"Wheel changes: " <span id="nf-wheel-changes">{move || wheel_changes.get().join(" ")}</span></div>
+
             <div id="nf-currency">
                 <NumberField default_value=200_i32 format_options=currency()>
                     <Label>"Price"</Label>
@@ -148,6 +183,23 @@ pub fn PageAtomNumberField() -> impl IntoView {
                     <FieldError />
                 </NumberField>
             </form>
+
+            // Validate mode in a form: Enter submits once the value is valid.
+            <form id="nf-validate-submit" on:submit=on_submit>
+                <NumberField
+                    default_value=20_i32
+                    min_value=10
+                    step=10
+                    max_value=50
+                    commit_behavior=CommitBehavior::Validate
+                >
+                    <Label>"Width"</Label>
+                    <Steppers />
+                    <FieldError />
+                </NumberField>
+                <button type="submit">"Submit"</button>
+            </form>
+            <div>"Submits: " <span id="nf-validate-submits">{submits}</span></div>
 
             // Typed values.
             <div id="nf-u64">

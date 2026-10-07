@@ -1,11 +1,12 @@
 use leptonic::{
     atoms::{
+        button::Button,
+        checkbox::Checkbox,
         combobox::{ComboBox, ComboBoxButton, ComboBoxPopover},
         field::Label,
         input::Input,
         listbox::{ListBox, ListBoxItems},
     },
-    components::prelude::{Button, ButtonColor, Checkbox},
     hooks::{
         collections::{Key, use_collection},
         use_contains_filter,
@@ -71,12 +72,14 @@ pub fn ComboBoxAtomDemo() -> impl IntoView {
             ". Typed: \u{201c}"{move || input_value.get()}"\u{201d}."
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
             // The app changes the selection by writing its state; the input then shows the country's name.
-            <Button on_press=move |_| value.set(vec![Key::from("se")]) color=ButtonColor::Secondary>
+            <Button on_press=move |_| value.set(vec![Key::from("se")]) classes="demo-btn">
                 "Ship to Sweden"
             </Button>
         </div>
-
     }
 }

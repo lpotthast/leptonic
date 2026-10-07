@@ -1,6 +1,5 @@
 use leptonic::{
     atoms::prelude::*,
-    components::prelude::{Button, ButtonSize, ButtonVariant, Checkbox},
     hooks::PressEvent,
 };
 use leptos::prelude::*;
@@ -37,12 +36,11 @@ pub fn PressResponderDemo() -> impl IntoView {
         </PressResponder>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Button
-                variant=ButtonVariant::Outlined
-                size=ButtonSize::Small
-                on_press=move |_| set_events.update(|events| { events.clear(); })
-            >
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Button on_press=move |_| set_events.update(|events| { events.clear(); }) classes="demo-btn">
                 "Clear log"
             </Button>
         </div>

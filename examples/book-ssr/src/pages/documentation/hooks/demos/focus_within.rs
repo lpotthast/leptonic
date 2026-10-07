@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
 
 fn times(count: u32) -> String {
@@ -36,8 +36,8 @@ pub fn FocusWithinDemo() -> impl IntoView {
                 "Search "
                 <input type="search" class="demo-focus-item"/>
             </label>
-            <Button>"Search"</Button>
-            <Button variant=ButtonVariant::Outlined>"Clear"</Button>
+            <button type="button" class="demo-btn-primary">"Search"</button>
+            <button type="button" class="demo-btn">"Clear"</button>
         </div>
 
         <p class="demo-status">
@@ -46,7 +46,10 @@ pub fn FocusWithinDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

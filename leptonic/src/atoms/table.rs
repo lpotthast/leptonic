@@ -14,7 +14,9 @@ use crate::{
         SortDirection, TableCollection, TableColumnResizeState, TableData, UseTableCellInput,
         UseTableCellReturn, UseTableColumnHeaderInput, UseTableColumnHeaderReturn,
         UseTableColumnResizeInput, UseTableColumnResizeReturn, UseTableColumnResizeStateInput,
-        UseTableInput, UseTableReturn, UseTableRowInput, UseTableRowReturn, UseTableStateInput,
+        UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn, UseTableRowInput,
+        UseTableRowReturn, UseTableSelectAllCheckboxInput, UseTableSelectionCheckboxInput,
+        UseTableStateInput,
         collections::{
             CollectionOptions, EscapeKeyBehavior, Key, NodeKind, Selection, SelectionOptions,
         },
@@ -37,8 +39,9 @@ use crate::{
     },
 };
 
-/// Column sizes reported by resizing (see [`ResizableTableContainer`]).
-type ColumnSizes = HashMap<Key, ColumnSize>;
+/// The size of each column, by column key, as [`ResizableTableContainer`]'s resize callbacks
+/// report them.
+pub type ColumnSizes = HashMap<Key, ColumnSize>;
 
 /// What a [`ResizableTableContainer`] tells the [`Table`] inside it.
 #[derive(Debug, Clone, Copy)]
@@ -148,8 +151,8 @@ pub fn Table(
     #[prop(into, optional)] on_selection_change: Option<Callback<Selection>>,
     #[prop(into, optional)] disabled_keys: Option<Signal<HashSet<Key>>>,
     /// Defaults to `DisabledBehavior::Selection`: disabled rows can be focused, not selected.
-    #[prop(optional)]
-    disabled_behavior: Option<DisabledBehavior>,
+    #[prop(default = DisabledBehavior::Selection)]
+    disabled_behavior: DisabledBehavior,
     #[prop(optional)] disallow_empty_selection: bool,
     #[prop(optional)] escape_key_behavior: EscapeKeyBehavior,
     /// The initial sorting. Ignored with `sort_descriptor`.
@@ -165,6 +168,9 @@ pub fn Table(
     #[prop(into, optional)]
     on_sort_change: Option<Callback<SortDescriptor>>,
     #[prop(optional)] keyboard_navigation_behavior: KeyboardNavigationBehavior,
+    /// Select rows when a press ends instead of when it starts (e.g. for draggable rows).
+    #[prop(optional)]
+    should_select_on_press_up: bool,
     /// Called with the key of an activated row.
     #[prop(into, optional)]
     on_row_action: Option<Callback<Key>>,
@@ -194,13 +200,13 @@ pub fn Table(
     let state = use_table_state(UseTableStateInput {
         selection: SelectionOptions {
             selection_mode,
-            selection_behavior,
+            selection_behavior: Signal::stored(selection_behavior),
             default_selection: Selection::keys(default_selected_keys),
             selection,
             on_selection_change,
             disallow_empty_selection: Signal::stored(disallow_empty_selection),
             disabled_keys: disabled_keys.unwrap_or_default(),
-            disabled_behavior: disabled_behavior.unwrap_or(DisabledBehavior::Selection),
+            disabled_behavior,
             ..SelectionOptions::default()
         },
         focus_mode,
@@ -225,7 +231,7 @@ pub fn Table(
         element: CapturedElement::new(),
         id: None,
         keyboard_delegate: None,
-        should_select_on_press_up: false,
+        should_select_on_press_up,
     });
 
     // In a resizable table container: fixed column widths.
@@ -301,8 +307,11 @@ pub fn TableHeader(
                                 children=move |(key, kind): (Key, NodeKind)| {
                                     if kind == NodeKind::Placeholder {
                                         let data = expect_context::<TableData>();
-                                        view! { <th {..use_table_header_placeholder(&data, &key).into_attrs()}></th> }
-                                            .into_any()
+                                        let placeholder = use_table_header_placeholder(UseTableHeaderPlaceholderInput {
+                                            table: data,
+                                            key,
+                                        });
+                                        view! { <th {..placeholder.into_attrs()}></th> }.into_any()
                                     } else {
                                         view! { <TableColumnHeader key /> }.into_any()
                                     }
@@ -323,17 +332,25 @@ pub fn TableHeader(
 fn TableColumnHeader(key: Key) -> impl IntoView {
     let data = expect_context::<TableData>();
     let state = data.state;
-    let (text, kind, allows_sorting, allows_resizing) = state.table.with_untracked(|t| {
-        t.column(&key)
-            .map_or((Arc::from(""), ColumnKind::Data, false, false), |c| {
-                (
-                    c.text_value.clone(),
-                    c.kind,
-                    c.allows_sorting,
-                    c.allows_resizing,
-                )
+    // The column follows the table (e.g. when columns change).
+    let column = {
+        let key = key.clone();
+        Memo::new(move |_| {
+            state.table.with(|t| {
+                t.column(&key)
+                    .map_or((Arc::from(""), ColumnKind::Data, false, false), |c| {
+                        (
+                            c.text_value.clone(),
+                            c.kind,
+                            c.allows_sorting,
+                            c.allows_resizing,
+                        )
+                    })
             })
-    });
+        })
+    };
+    let allows_sorting = Memo::new(move |_| column.with(|c| c.2));
+    let allows_resizing = Memo::new(move |_| column.with(|c| c.3));
     let sort_key = key.clone();
     let sort_direction = move || {
         state.sort_descriptor.with(|sort| match sort {
@@ -348,23 +365,39 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let focus_key = key.clone();
     let is_focused =
         move || (selection.is_focused() && selection.is_focused_key(&focus_key)).then_some("true");
-    let content = if kind == ColumnKind::SelectionCheckbox {
-        (selection.selection_mode() == SelectionMode::Multiple)
-            .then(|| {
-                let checkbox = use_checkbox(use_table_select_all_checkbox(&data));
-                let (attrs, styles) = checkbox.input_props.into_parts();
-                view! { <input {..attrs} style=styles /> }
-            })
-            .into_any()
-    } else {
-        text.to_string().into_any()
+    let is_selection_column =
+        Memo::new(move |_| column.with(|c| c.1 == ColumnKind::SelectionCheckbox));
+    let shows_select_all = Memo::new(move |_| {
+        is_selection_column.get() && selection.selection_mode() == SelectionMode::Multiple
+    });
+    let select_all_table = data.clone();
+    let content = move || {
+        if is_selection_column.get() {
+            shows_select_all
+                .get()
+                .then(|| {
+                    let checkbox = use_checkbox(use_table_select_all_checkbox(
+                        UseTableSelectAllCheckboxInput {
+                            table: select_all_table.clone(),
+                        },
+                    ));
+                    let (attrs, styles) = checkbox.input_props.into_parts();
+                    view! { <input {..attrs} style=styles /> }
+                })
+                .into_any()
+        } else {
+            (move || column.with(|c| c.0.to_string())).into_any()
+        }
     };
     // With column resizing: the column's width, and its resizer.
     let resize = use_context::<ColumnResizeContext>();
     let header = CapturedElement::new();
-    let resizer = resize.filter(|_| allows_resizing).map(|resize| {
-        view! { <ColumnResizer resize column=key.clone() trigger=header /> }
-    });
+    let resizer_key = key.clone();
+    let resizer = move || {
+        resize.filter(|_| allows_resizing.get()).map(|resize| {
+            view! { <ColumnResizer resize column=resizer_key.clone() trigger=header /> }
+        })
+    };
     let resizing_key = key.clone();
     let is_resizing = move || {
         resize
@@ -400,10 +433,10 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
             {..header.attr()}
             class="leptonic-TableColumnHeader"
             style=styles
-            data-allows-sorting=allows_sorting.then_some("true")
+            data-allows-sorting=flag(allows_sorting.into())
             data-sort-direction=sort_direction
             data-focused=is_focused
-            data-pressed=move || is_pressed.get().then_some("true")
+            data-pressed=flag(is_pressed)
             data-resizing=is_resizing
         >
             {content}
@@ -437,7 +470,7 @@ fn ColumnResizer(
         state,
         table: data,
         column: column.clone(),
-        aria_label: crate::hooks::RESIZER_LABEL.to_owned(),
+        aria_label: crate::hooks::RESIZER_LABEL.into(),
         element: CapturedElement::new(),
         is_disabled: Signal::stored(false),
     });
@@ -514,10 +547,14 @@ pub fn TableRow(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableRow", classes);
     let data = expect_context::<TableData>();
-    let selection_column = data.state.table.with_untracked(|t| {
-        t.column_at(0)
-            .filter(|c| c.kind == ColumnKind::SelectionCheckbox)
-            .map(|c| c.key.clone())
+    let table = data.state.table;
+    // Follows the table (the selection column can come and go).
+    let selection_column = Memo::new(move |_| {
+        table.with(|t| {
+            t.column_at(0)
+                .filter(|c| c.kind == ColumnKind::SelectionCheckbox)
+                .map(|c| c.key.clone())
+        })
     });
     let UseTableRowReturn {
         row_props,
@@ -546,7 +583,7 @@ pub fn TableRow(
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
             >
-                {selection_column.map(|column| view! { <TableCell column /> })}
+                {move || selection_column.get().map(|column| view! { <TableCell column /> })}
                 {children()}
             </tr>
         </Provider>
@@ -555,6 +592,9 @@ pub fn TableRow(
 
 /// A cell of a [`TableRow`], in the column `column`. Cells of the selection checkbox column
 /// render the row's checkbox.
+///
+/// The cell is rendered again (with its children) when its column moves, e.g. when columns
+/// before it are added or removed.
 ///
 /// Exposes `data-pressed` for styling.
 ///
@@ -568,45 +608,65 @@ pub fn TableCell(
     /// `KeyboardNavigationBehavior::Tab` and the child otherwise.
     #[prop(optional)]
     focus_mode: Option<CellFocusMode>,
+    /// Let ArrowLeft/ArrowRight move between the cell's children (and ArrowUp/ArrowDown between
+    /// rows) even with `KeyboardNavigationBehavior::Tab`.
+    #[prop(optional)]
+    allows_arrow_navigation: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
-    #[prop(optional)] children: Option<Children>,
+    #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-TableCell", classes);
     let data = expect_context::<TableData>();
     let row = expect_context::<RowContext>().key;
-    let (index, kind) = data.state.table.with_untracked(|t| {
-        t.column(&column)
-            .map_or((0, ColumnKind::Data), |c| (c.index, c.kind))
+    let table = data.state.table;
+    let row_key = row.clone();
+    // The row's cell in the column (cells spanning columns shift the cells after them), and
+    // the column's kind.
+    let cell = Memo::new(move |_| {
+        table.with(|t| {
+            let (index, kind) = t
+                .column(&column)
+                .map_or((0, ColumnKind::Data), |c| (c.index, c.kind));
+            let key = t
+                .collection()
+                .children(&row)
+                .find(|n| n.col_index.unwrap_or(n.index) == index)
+                .map_or_else(|| Key::cell(&row, index), |n| n.key.clone());
+            (key, kind)
+        })
     });
-    let content = if kind == ColumnKind::SelectionCheckbox {
-        let checkbox = use_checkbox(use_table_selection_checkbox(&data, row.clone()));
-        let (attrs, styles) = checkbox.input_props.into_parts();
-        Some(view! { <input {..attrs} style=styles /> }.into_any())
-    } else {
-        children.map(|children| children().into_any())
-    };
-    let UseTableCellReturn {
-        grid_cell_props,
-        is_pressed,
-    } = use_table_cell(UseTableCellInput {
-        focus_mode,
-        table: data,
-        key: Key::cell(&row, index),
-        allows_arrow_navigation: false,
-        should_select_on_press_up: false,
-    });
-    let (attrs, cell_styles) = grid_cell_props.into_parts();
-    let styles = cell_styles.merge(styles);
+    move || {
+        let (key, kind) = cell.get();
+        let content = if kind == ColumnKind::SelectionCheckbox {
+            let checkbox = use_checkbox(use_table_selection_checkbox(
+                UseTableSelectionCheckboxInput {
+                    table: data.clone(),
+                    key: row_key.clone(),
+                },
+            ));
+            let (attrs, styles) = checkbox.input_props.into_parts();
+            Some(view! { <input {..attrs} style=styles /> }.into_any())
+        } else {
+            children.as_ref().map(|children| children().into_any())
+        };
+        let UseTableCellReturn {
+            grid_cell_props,
+            is_pressed,
+        } = use_table_cell(UseTableCellInput {
+            focus_mode,
+            should_select_on_press_up: data.grid.should_select_on_press_up,
+            table: data.clone(),
+            key,
+            allows_arrow_navigation,
+        });
+        let (attrs, cell_styles) = grid_cell_props.into_parts();
+        let styles = cell_styles.merge(styles.clone());
 
-    view! {
-        <td
-            {..attrs}
-            class=classes
-            style=styles
-            data-pressed=move || is_pressed.get().then_some("true")
-        >
-            {content}
-        </td>
+        view! {
+            <td {..attrs} class=classes.clone() style=styles data-pressed=flag(is_pressed)>
+                {content}
+            </td>
+        }
     }
 }

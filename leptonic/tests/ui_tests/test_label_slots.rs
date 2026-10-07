@@ -1,3 +1,6 @@
+// Upstream: react-aria/test/label/useLabel.test.js @ 99e6102368
+// Upstream: react-aria/test/label/useField.test.js @ 99e6102368
+// Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
@@ -45,9 +48,19 @@ impl BrowserTest<str> for LabelSlotsTests {
                             .is_true();
                     }
                     None => {
-                        assert_that!(labelled_by.contains("label"))
+                        // Every reference resolves, and none to an element with the label's text.
+                        let referenced = referenced_texts(driver, &labelled_by).await?;
+                        assert_that!(referenced.iter().all(Option::is_some))
                             .with_detail_message(format!("{field}: {labelled_by:?}"))
-                            .is_false();
+                            .is_true();
+                        assert_that!(
+                            referenced
+                                .iter()
+                                .flatten()
+                                .any(|referenced| referenced == text)
+                        )
+                        .with_detail_message(format!("{field}: {labelled_by:?}"))
+                        .is_false();
                     }
                 }
             }
@@ -94,4 +107,16 @@ async fn labelled_by(driver: &WebDriver, field: &str, part: &str) -> Result<Stri
         )
         .await?;
     Ok(value.json().as_str().unwrap_or_default().to_owned())
+}
+
+/// The text content of each element `ids` (space-separated) refers to; `None` for a missing one.
+async fn referenced_texts(driver: &WebDriver, ids: &str) -> Result<Vec<Option<String>>, Report> {
+    let texts = driver
+        .execute(
+            "return arguments[0].split(' ').filter(Boolean) \
+                 .map(id => document.getElementById(id)?.textContent ?? null);",
+            vec![serde_json::Value::from(ids)],
+        )
+        .await?;
+    Ok(texts.convert()?)
 }

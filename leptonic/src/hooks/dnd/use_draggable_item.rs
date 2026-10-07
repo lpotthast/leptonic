@@ -23,7 +23,8 @@ use crate::{
 // ## API DIFFERENCES
 // - The drag button comes back as a `UseButtonInput` for `use_button`; its label (which changes
 //   with the selection) is the separate `drag_button_label` signal.
-// - Whether the item has a drag button or an action is fixed when the hook runs.
+// - Whether the item has a drag button or an action is fixed when the hook runs (the collection's
+//   selection mode is followed).
 //
 // =============================================================================
 
@@ -68,8 +69,8 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         drag_button,
         is_dragging,
     } = use_drag(UseDragInput {
-        get_items: Callback::new(move |()| item_key.with_value(|k| state.items(k))),
-        get_allowed_drop_operations: state.get_allowed_drop_operations,
+        items: Signal::derive(move || item_key.with_value(|k| state.items(k))),
+        allowed_drop_operations: state.allowed_drop_operations,
         preview: state.preview,
         on_drag_start: Some(Callback::new(move |e: DragStartEvent| {
             item_key.with_value(|k| state.start_drag(k, e));
@@ -94,26 +95,35 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
         keys_for_drag.get() > 1 && item_key.with_value(|k| selection.is_selected(k))
     });
     let modality = use_drag_modality();
+    // The item itself starts drags (no drag button) in a selectable collection: describe how; it
+    // has no click to start them (touch: long press; NVDA/JAWS are in forms mode in collections).
     let describes =
-        !has_drag_button && untrack(|| selection.selection_mode()) != SelectionMode::None;
-
-    if describes {
-        // The item itself starts drags: describe how (it has no click to start them).
-        let description = use_description(Signal::derive(move || {
+        move || !has_drag_button && selection.selection_mode() != SelectionMode::None;
+    let item_description = use_description(Signal::derive(move || {
+        describes().then(|| {
             let modality = modality.get();
             let alt = has_action && modality == DragModality::Keyboard;
             let count = is_selected.get().then(|| keys_for_drag.get());
-            Some(messages::drag_item_description(modality, count, alt))
-        }));
-        drag_props.aria_describedby = Signal::derive(move || {
-            if is_disabled.get() || (has_action && modality.get() == DragModality::Touch) {
-                None
-            } else {
-                description.get()
-            }
-        });
-        drag_props.on_click = EventHandler::empty();
-    }
+            messages::drag_item_description(modality, count, alt)
+        })
+    }));
+    let drag_description = drag_props.aria_describedby;
+    drag_props.aria_describedby = Signal::derive(move || {
+        // With an action, a long press selects the item on touch devices: no drag description.
+        if is_disabled.get() || (has_action && modality.get() == DragModality::Touch) {
+            None
+        } else if describes() {
+            item_description.get()
+        } else {
+            drag_description.get()
+        }
+    });
+    let click = drag_props.on_click;
+    drag_props.on_click = EventHandler::new(move |e: web_sys::MouseEvent| {
+        if !untrack(describes) {
+            click.call(e);
+        }
+    });
     if !has_drag_button && has_action {
         // Enter performs the action: keyboard drags start with Alt + Enter.
         let keydown = drag_props.on_keydown_capture;

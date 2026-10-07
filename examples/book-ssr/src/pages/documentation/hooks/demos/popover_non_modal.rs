@@ -1,9 +1,7 @@
-use leptonic::utils::CapturedElement;
 use leptonic::{
-    atoms::prelude::FocusScope,
-    components::prelude::{Button, ButtonVariant},
+    atoms::prelude::{Button, FocusScope},
     hooks::*,
-    utils::id::use_id,
+    utils::{CapturedElement, id::use_id},
 };
 use leptos::{portal::Portal, prelude::*};
 
@@ -44,7 +42,7 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
     let UseOverlayTriggerReturn {
         props: overlay_trigger,
     } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: is_open,
+        is_open,
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
@@ -71,7 +69,7 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
             </button>
             // A press on the page reaches it. Here it also moves focus out of the popover, which
             // closes it.
-            <Button variant=ButtonVariant::Outlined on_press=move |_| items.update(|n| *n += 1)>
+            <Button on_press=move |_| items.update(|n| *n += 1) classes="demo-btn">
                 "Add item"
             </Button>
         </div>

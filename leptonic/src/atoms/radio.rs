@@ -10,7 +10,7 @@ use crate::{
     atoms::field::LabelPresence,
     hooks::{
         IntoAttrs, Orientation, RadioGroupData, UseHoverInput, UseRadioGroupInput,
-        UseRadioGroupReturn, UseRadioGroupStateInput, UseRadioInput, ValidateFn,
+        UseRadioGroupReturn, UseRadioGroupStateInput, UseRadioInput, UseRadioReturn, ValidateFn,
         ValidationBehavior, collections::Key, use_hover, use_radio, use_radio_group,
         use_radio_group_state,
     },
@@ -29,6 +29,8 @@ use crate::{
 //   plus `default_value` and `on_change` (C4; react-aria: controlled/uncontrolled `value`).
 // - Values are collection `Key`s (react-aria: strings).
 // - Render props become `data-*` attributes plus plain children.
+// - `Radio` is kept beside `RadioField` + `RadioButton` (react-aria-components deprecates it):
+//   the one-element radio without a description of its own.
 //
 // =============================================================================
 
@@ -157,7 +159,8 @@ pub fn RadioGroup(
 }
 
 /// A headless radio in a [`RadioGroup`]: a `<label>` around a visually hidden
-/// `<input type="radio">` and the children.
+/// `<input type="radio">` and the children. For a description of its own, use a [`RadioField`]
+/// with a [`RadioButton`].
 ///
 /// Data attributes: `data-selected`, `data-pressed`, `data-hovered`, `data-focused`,
 /// `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`, `data-required`.
@@ -183,8 +186,150 @@ pub fn Radio(
 ) -> impl IntoView {
     let classes = with_default_class("leptonic-Radio", classes);
     let group = expect_context::<RadioGroupCtx>();
+    let radio = use_radio_atom(
+        &group,
+        RadioSetup {
+            value,
+            is_disabled,
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            auto_focus,
+            on_focus_change,
+        },
+    );
+    radio_button(group, radio, classes, styles, children)
+}
+
+/// A headless radio in a [`RadioGroup`] with a description of its own: a `<div>` around a
+/// [`RadioButton`] (the clickable `<label>`) and a [`Description`](super::field::Description).
+/// A [`FieldError`](super::field::FieldError) in it shows the group's errors.
+///
+/// Data attributes: `data-selected`, `data-disabled`, `data-readonly`, `data-invalid`,
+/// `data-required`.
+///
+/// Default class: `leptonic-RadioField`.
+#[component]
+pub fn RadioField(
+    /// The value the radio selects.
+    #[prop(into)]
+    value: Key,
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// The input's id.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(into, optional)] aria_label: MaybeProp<String>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] aria_describedby: Option<String>,
+    #[prop(optional)] auto_focus: bool,
+    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-RadioField", classes);
+    let group = expect_context::<RadioGroupCtx>();
     let state = group.data.state;
-    let radio = use_radio(UseRadioInput {
+    let radio = use_radio_atom(
+        &group,
+        RadioSetup {
+            value,
+            is_disabled,
+            id,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            auto_focus,
+            on_focus_change,
+        },
+    );
+    let (is_selected, is_disabled) = (radio.is_selected, radio.is_disabled);
+    // The radio's description; errors are the group's (react-aria-components keeps the group's
+    // `FieldErrorContext`).
+    let field = FieldContext {
+        description: radio.description_props.clone(),
+        ..expect_context::<FieldContext>()
+    };
+    let button = RadioButtonCtx {
+        radio: StoredValue::new(Some(radio)),
+    };
+
+    view! {
+        <Provider value=button>
+            <Provider value=field>
+                <div
+                    class=classes
+                    style=styles
+                    data-selected=flag(is_selected)
+                    data-disabled=flag(is_disabled)
+                    data-readonly=flag(state.is_read_only)
+                    data-invalid=flag(group.is_invalid)
+                    data-required=flag(state.is_required)
+                >
+                    {children()}
+                </div>
+            </Provider>
+        </Provider>
+    }
+}
+
+/// The clickable part of a [`RadioField`]: a `<label>` around a visually hidden
+/// `<input type="radio">` and the children.
+///
+/// Data attributes: `data-selected`, `data-pressed`, `data-hovered`, `data-focused`,
+/// `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`, `data-required`.
+///
+/// Default class: `leptonic-RadioButton`.
+#[component]
+pub fn RadioButton(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
+) -> impl IntoView {
+    let classes = with_default_class("leptonic-RadioButton", classes);
+    let group = expect_context::<RadioGroupCtx>();
+    let radio = use_context::<RadioButtonCtx>()
+        .expect("a <RadioButton> belongs in a <RadioField>")
+        .radio
+        .try_update_value(Option::take)
+        .flatten()
+        .expect("a <RadioField> has one <RadioButton>");
+    radio_button(group, radio, classes, styles, children)
+}
+
+/// What a [`RadioField`] hands its [`RadioButton`].
+#[derive(Clone)]
+struct RadioButtonCtx {
+    /// The radio, taken by the button.
+    radio: StoredValue<Option<UseRadioReturn>>,
+}
+
+/// The settings of a [`Radio`] or [`RadioField`].
+struct RadioSetup {
+    value: Key,
+    is_disabled: Signal<bool>,
+    id: Option<String>,
+    aria_label: MaybeProp<String>,
+    aria_labelledby: Option<String>,
+    aria_describedby: Option<String>,
+    auto_focus: bool,
+    on_focus_change: Option<Callback<bool>>,
+}
+
+/// The radio of a [`Radio`] or [`RadioField`] in `group`.
+fn use_radio_atom(group: &RadioGroupCtx, setup: RadioSetup) -> UseRadioReturn {
+    let RadioSetup {
+        value,
+        is_disabled,
+        id,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        auto_focus,
+        on_focus_change,
+    } = setup;
+    use_radio(UseRadioInput {
         is_disabled,
         id,
         aria_label,
@@ -201,12 +346,23 @@ pub fn Radio(
         on_press_up: None,
         on_press: None,
         on_press_change: None,
-    });
+    })
+}
+
+/// The `<label>` of a [`Radio`] or [`RadioButton`].
+fn radio_button(
+    group: RadioGroupCtx,
+    radio: UseRadioReturn,
+    classes: Classes,
+    styles: Styles,
+    children: Option<Children>,
+) -> impl IntoView {
+    let state = group.data.state;
+    let is_disabled = radio.is_disabled;
     let hover = use_hover(UseHoverInput {
-        is_disabled: radio.is_disabled,
+        is_disabled: Signal::derive(move || is_disabled.get() || state.is_read_only.get()),
         ..UseHoverInput::default()
     });
-
     let (label_attrs, label_styles) = radio.label_props.into_parts();
     let (input_attrs, input_styles) = radio.input_props.into_parts();
 

@@ -1,18 +1,17 @@
-use leptonic::{
-    atoms::{
-        field::Label,
-        slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
-    },
-    components::prelude::Checkbox,
+use leptonic::atoms::{
+    checkbox::Checkbox,
+    field::Label,
+    slider::{Slider, SliderFill, SliderOutput, SliderThumb, SliderTrack},
 };
 use leptos::prelude::*;
 
 #[component]
 pub fn SliderBasicDemo() -> impl IntoView {
+    let volume = RwSignal::new(vec![50_u8]);
     let disabled = RwSignal::new(false);
 
     view! {
-        <Slider min_value=0 max_value=100 default_values=vec![50_u8] is_disabled=disabled classes="demo-slider">
+        <Slider min_value=0 max_value=100 values=volume set_values=volume is_disabled=disabled classes="demo-slider">
             <Label classes="demo-slider-label">"Volume"</Label>
             <SliderTrack classes="demo-slider-track">
                 <SliderFill classes="demo-slider-fill"/>
@@ -21,8 +20,13 @@ pub fn SliderBasicDemo() -> impl IntoView {
             <SliderOutput classes="demo-slider-output"/>
         </Slider>
 
+        <p class="demo-status">{move || format!("Volume: {}.", volume.with(|v| v[0]))}</p>
+
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

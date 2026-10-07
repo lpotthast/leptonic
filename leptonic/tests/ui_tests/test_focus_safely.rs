@@ -8,7 +8,7 @@ use rootcause::Report;
 use crate::pages::{BaseActions, Page};
 
 /// `focus_safely` with virtual modality: "should focus on the element if it's connected",
-/// "should not focus on the element if it's no longer connected".
+/// "should not focus on the element if it's no longer connected"; SVG elements are focused too.
 pub struct FocusSafelyTests {}
 
 #[async_trait]
@@ -38,6 +38,10 @@ impl BrowserTest<str> for FocusSafelyTests {
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert_that!(page.active_element_id().await?)
             .is_equal_to(Some("test-focus-safely-remove".to_owned()));
+
+        page.click_element_with_id("test-focus-safely-focus-svg")
+            .await?;
+        page.wait_for_active_id("test-focus-safely-svg").await?;
 
         page.expect_no_page_errors().await
     }

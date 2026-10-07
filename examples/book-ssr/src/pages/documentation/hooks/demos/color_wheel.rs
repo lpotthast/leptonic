@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
@@ -11,6 +11,7 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorWheelDemo() -> impl IntoView {
+    let locale = leptonic::utils::i18n::use_locale();
     let disabled = RwSignal::new(false);
 
     let state = use_color_wheel_state(UseColorWheelStateInput {
@@ -18,10 +19,9 @@ pub fn ColorWheelDemo() -> impl IntoView {
         default_value: HSV {
             hue: 210.0,
             saturation: 1.0,
-            value: 1.0,
+            brightness: 1.0,
         },
         value: None,
-        channel: HsvChannel::Hue,
         on_change: None,
         on_change_end: None,
     });
@@ -52,7 +52,7 @@ pub fn ColorWheelDemo() -> impl IntoView {
     let (input_attrs, input_styles) = wheel.input_props.into_parts();
     let display_color = state.display_color();
     let thumb_styles = thumb_styles.add_reactive(move || {
-        BackgroundColorProperty.declare(CssColor::from(display_color.get().into_rgb8()))
+        BackgroundColorProperty.declare(CssColor::from(display_color.get().to_rgb8()))
     });
 
     view! {
@@ -65,10 +65,13 @@ pub fn ColorWheelDemo() -> impl IntoView {
         </div>
 
         <p class="demo-status">
-            {move || format!("Hue: {}", state.value.get().format_channel_value(HsvChannel::Hue))}
+            {move || format!("Hue: {}", state.value.get().format_channel_value(HsvChannel::Hue, &locale.get()))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

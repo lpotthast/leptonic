@@ -1,2 +1,5 @@
-// Screen Readers: demos of live_announcer, use_visually_hidden, VisuallyHidden and use_description. They have no
-// styles of their own yet; their demos use the classes of `_shared.scss`.
+// Screen Readers: demos of live_announcer, use_visually_hidden, VisuallyHidden and use_description. Most use the
+// classes of `_shared.scss`.
+
+// A button showing only an icon; its name is visually hidden text.
+.demo-icon-btn { display: inline-flex; align-items: center; justify-content: center; }

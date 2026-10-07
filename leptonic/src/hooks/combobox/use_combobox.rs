@@ -9,22 +9,21 @@ use leptos::{
 };
 use leptos_use::use_document;
 use wasm_bindgen::JsCast;
-use web_sys::{FocusEvent, MouseEvent, TouchEvent};
+use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
+use crate::hooks::collections::Key;
 use crate::hooks::InputType;
 use crate::hooks::TextFieldElement;
-use crate::hooks::ValidationBehavior;
 use crate::{
     hooks::{
         IntoAttrs,
         button::use_button::UseButtonInput,
         collections::{
             AutoFocus, CollectionOptions, FocusStrategy, KeyboardDelegate, LinkBehavior,
-            ListLayout, UseSelectableCollectionInput, use_list_keyboard_delegate,
-            use_selectable_collection,
+            ListLayout, UseListKeyboardDelegateInput, UseSelectableCollectionInput,
+            use_list_keyboard_delegate, use_selectable_collection,
         },
-        focus::use_focus_visible::{Modality, set_modality},
         form::{
             use_form_reset::{UseFormResetInput, use_form_reset},
             use_text_field::UseTextFieldInput,
@@ -58,32 +57,51 @@ use crate::{
 //   `UseTextFieldInput` for `use_text_field` (plus `input_props`), `button` the
 //   `UseButtonInput` for `use_button`, `listbox` the `UseListBoxInput` for `use_listbox`.
 // - `has_label` says whether a visible label is rendered.
-// - The button and listbox labels ("Show suggestions", "Suggestions") are English only.
+// - `name`, `is_read_only` and `validation_behavior` are read from the state (C8).
+// - `form_value` and the values of the hidden inputs (`form_values`) come from the hook
+//   (react-aria-components renders them in `ComboBox`).
+// - The button and listbox labels ("Show suggestions", "Suggestions") and the screen reader
+//   announcements are English only (react-aria: localized strings).
+//
+// ## DIFFERENT BEHAVIOR
+// - The group size in the focus announcement counts the section's options (react-aria counts its
+//   child nodes, the header included).
 //
 // ## OMITTED FEATURES
-// - Screen reader announcements (focused option, option count, selection on Apple devices):
-//   they need localized messages.
 // - The value description of multiple selection (`useValueId`).
 // - Item actions and links in the popover (`onAction`, `href` items).
 //
 // =============================================================================
 
+/// What a combo box submits with its form (react-aria-components: `formValue`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ComboBoxFormValue {
+    /// The selected keys, in hidden inputs named like the field.
+    #[default]
+    Key,
+    /// The input's text, under the field's name. Always used with `allows_custom_value`.
+    Text,
+}
+
 /// Input of [`use_combobox`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseComboBoxInput {
+    /// The state; the field's `name`, `is_read_only` and validation come from it.
     pub state: ComboBoxState,
     /// The input's id. Generated when `None`.
     pub id: Option<String>,
     pub is_disabled: Signal<bool>,
-    pub is_read_only: Signal<bool>,
-    pub is_required: bool,
+    pub is_required: Signal<bool>,
     /// Whether a visible label is rendered.
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
-    pub placeholder: Option<String>,
-    pub name: Option<String>,
+    pub placeholder: MaybeProp<String>,
+    /// What the form submits (`Text` when the state allows custom values).
+    pub form_value: ComboBoxFormValue,
+    /// The id of the form the combo box belongs to, if it is outside of it.
+    pub form: Option<String>,
     /// Arrow keys wrap around at the ends of the list.
     pub should_focus_wrap: bool,
     /// Replaces the list keyboard delegate.
@@ -96,8 +114,6 @@ pub struct UseComboBoxInput {
 
 /// Return value of [`use_combobox`].
 pub struct UseComboBoxReturn {
-    /// Focuses the input when clicked.
-    pub label_on_click: EventHandler<MouseEvent>,
     /// The text input's configuration, for `use_text_field`.
     pub input: UseTextFieldInput,
     /// Spread onto the input in addition to the text field's props.
@@ -106,6 +122,18 @@ pub struct UseComboBoxReturn {
     pub button: UseButtonInput,
     /// The popover's listbox, for `use_listbox`.
     pub listbox: UseListBoxInput,
+    /// With [`ComboBoxFormValue::Key`] and a `name`: render one `<input type="hidden">` per
+    /// entry, named like the field (with `form`): the selected keys, or one empty value without
+    /// a selection. Empty otherwise (the input submits its text).
+    pub form_values: Signal<Vec<String>>,
+}
+
+impl std::fmt::Debug for UseComboBoxReturn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseComboBoxReturn")
+            .field("input_props", &self.input_props)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Combo box props for the input, in addition to the text field's.
@@ -148,14 +176,14 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         state,
         id,
         is_disabled,
-        is_read_only,
         is_required,
         has_label,
         aria_label,
         aria_labelledby,
         aria_describedby,
         placeholder,
-        name,
+        form_value,
+        form,
         should_focus_wrap,
         keyboard_delegate,
         popover,
@@ -163,6 +191,13 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         on_blur,
     } = input;
 
+    let is_read_only = state.is_read_only_signal();
+    let form_value = if state.allows_custom_value() {
+        ComboBoxFormValue::Text
+    } else {
+        form_value
+    };
+    let name = state.name();
     let input_id = id.unwrap_or_else(|| use_id("combobox-input"));
     let label_id = use_id("combobox-label");
     let listbox_element = CapturedElement::new();
@@ -178,15 +213,16 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         trigger: MenuTriggerType::Press,
         state,
     });
-    let listbox_id = menu_trigger.menu_props.id.get_untracked();
+    let listbox_id = menu_trigger.menu_props.id.clone();
 
     let delegate = keyboard_delegate.unwrap_or_else(|| {
-        use_list_keyboard_delegate(
-            state.list,
-            listbox_element,
-            Orientation::Vertical,
-            ListLayout::Stack,
-        )
+        use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+            state: state.list,
+            element: listbox_element,
+            orientation: Orientation::Vertical,
+            layout: ListLayout::Stack,
+            layout_delegate: None,
+        })
     });
     // Arrow keys in the input move the (virtual) focus through the options.
     let collection = use_selectable_collection(UseSelectableCollectionInput {
@@ -269,12 +305,7 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         });
 
     // Focus moving between the input, the button and the popover keeps the combo box focused.
-    let button_id = menu_trigger
-        .button
-        .id
-        .clone()
-        .map(|id| id.to_string())
-        .unwrap_or_default();
+    let button_id = menu_trigger.button.id.clone().unwrap_or_default();
     let blur_button_id = button_id.clone();
     let on_input_blur = Callback::new(move |e: FocusEvent| {
         let related = e
@@ -349,6 +380,8 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         has_focused_item
     });
 
+    announce_changes(&state);
+
     let text_field_state = TextFieldState::new(
         state.input_value_signal(),
         Callback::new(move |value| state.set_input_value(value)),
@@ -359,14 +392,17 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         is_read_only,
         // In multiple mode, the selection satisfies `required` once it has a value.
         is_required: match state.selection_mode {
-            SelectMode::Single => Signal::stored(is_required),
+            SelectMode::Single => is_required,
             SelectMode::Multiple => {
-                Signal::derive(move || is_required && state.list.selection.is_empty())
+                Signal::derive(move || is_required.get() && state.list.selection.is_empty())
             }
         },
         is_invalid: state.validation.is_invalid,
-        name,
-        placeholder: placeholder.into(),
+        // The input carries the name only when it submits its text; else hidden inputs do.
+        name: (form_value == ComboBoxFormValue::Text)
+            .then(|| name.clone())
+            .flatten(),
+        placeholder,
         auto_complete: Some("off".to_owned()),
         auto_correct: Some(false),
         spell_check: Some(false),
@@ -393,10 +429,13 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         state: text_field_state,
         element: TextFieldElement::Input,
         input_type: Signal::stored(InputType::Text),
+        // The combo box validates its value and text together (react-aria:
+        // `privateValidationStateProp`): the input shows the state's validation, and in native
+        // mode reports it to the form.
         validate: None,
-        validation_behavior: ValidationBehavior::default(),
-        validation: None,
-        form: None,
+        validation_behavior: state.validation_behavior(),
+        validation: Some(state.validation),
+        form: form.clone(),
         pattern: None,
         min_length: None,
         max_length: None,
@@ -537,17 +576,6 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         on_cleanup(restore);
     }
 
-    let label_input_id = input_id.clone();
-    let label_on_click = EventHandler::new(move |_: MouseEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-        if let Some(input) = find_by_id(&label_input_id) {
-            focus_element(&input, false);
-            set_modality(Modality::Keyboard);
-        }
-    });
-
     let listbox = UseListBoxInput {
         id: Some(listbox_id),
         aria_label: "Suggestions".into(),
@@ -579,8 +607,20 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         on_focus_change: None,
     };
 
+    let form_values = Signal::derive(move || {
+        if form_value != ComboBoxFormValue::Key || name.is_none() {
+            return Vec::new();
+        }
+        let values: Vec<String> = state.value().iter().map(Key::to_string).collect();
+        if values.is_empty() {
+            vec![String::new()]
+        } else {
+            values
+        }
+    });
+
     UseComboBoxReturn {
-        label_on_click,
+        form_values,
         input: text_field,
         input_props: UseComboBoxInputProps {
             role: AriaRole::Combobox,
@@ -591,4 +631,127 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         button,
         listbox,
     }
+}
+
+/// Screen reader announcements (react-aria `useComboBox`): the number of options when the
+/// popover opens without a focused option or the number changes; on Apple devices, whose
+/// VoiceOver doesn't announce `aria-activedescendant` changes reliably, also the focused option
+/// (with the section it enters) and the selection.
+fn announce_changes(state: &ComboBoxState) {
+    use std::fmt::Write;
+
+    use crate::{
+        hooks::collections::NodeKind,
+        utils::{live_announcer::announce_assertive, platform::device::is_apple_device},
+    };
+
+    let state = *state;
+
+    let option_text = |node: &crate::hooks::collections::Node| {
+        node.aria_label
+            .as_deref()
+            .unwrap_or(&node.text_value)
+            .to_owned()
+    };
+    let options = |count: usize| {
+        if count == 1 {
+            "1 option".to_owned()
+        } else {
+            format!("{count} options")
+        }
+    };
+
+    // The focused option, and the section it is in.
+    let last_section = StoredValue::new(None::<Key>);
+    let last_item = StoredValue::new(None::<Key>);
+    Effect::new(move |_| {
+        let is_open = state.is_open();
+        let item_key = state.list.selection.focused_key();
+        let collection = state.list.collection.get();
+        untrack(|| {
+            let focused = item_key
+                .as_ref()
+                .filter(|_| is_open)
+                .and_then(|key| collection.get(key));
+            let section_key = focused.and_then(|node| node.parent_key.clone());
+            if is_apple_device()
+                && let Some(focused) = focused
+                && item_key != last_item.get_value()
+            {
+                let section = section_key
+                    .as_ref()
+                    .and_then(|key| collection.get(key))
+                    .filter(|node| node.kind == NodeKind::Section);
+                let mut announcement = String::new();
+                if let Some(section) = section
+                    && section_key != last_section.get_value()
+                {
+                    let title = section.aria_label.as_deref().map_or_else(
+                        || {
+                            collection
+                                .children(&section.key)
+                                .find(|node| node.kind == NodeKind::Header)
+                                .map(|header| header.text_value.to_string())
+                                .unwrap_or_default()
+                        },
+                        ToOwned::to_owned,
+                    );
+                    let count = collection
+                        .children(&section.key)
+                        .filter(|node| node.is_item())
+                        .count();
+                    let _ = write!(
+                        announcement,
+                        "Entered group {title}, with {}. ",
+                        options(count)
+                    );
+                }
+                announcement.push_str(&option_text(focused));
+                if state.list.selection.is_selected(&focused.key) {
+                    announcement.push_str(", selected");
+                }
+                announce_assertive(announcement);
+            }
+            last_section.set_value(section_key);
+            last_item.set_value(item_key);
+        });
+    });
+
+    // The number of options.
+    let last_size = StoredValue::new(None::<usize>);
+    let last_open = StoredValue::new(false);
+    Effect::new(move |_| {
+        let is_open = state.is_open();
+        let count = state.list.collection.with(|c| c.size());
+        let has_focused_key = state.list.selection.focused_key().is_some();
+        untrack(|| {
+            let did_open_without_focused_item = is_open != last_open.get_value()
+                && (!has_focused_key || is_apple_device());
+            if is_open
+                && (did_open_without_focused_item || last_size.get_value() != Some(count))
+            {
+                announce_assertive(format!("{} available.", options(count)));
+            }
+            last_size.set_value(Some(count));
+            last_open.set_value(is_open);
+        });
+    });
+
+    // The selection (other screen readers announce it themselves).
+    let last_selected = StoredValue::new(untrack(|| state.selected_key()));
+    Effect::new(move |_| {
+        let selected_key = state.selected_key();
+        let is_focused = state.is_focused();
+        untrack(|| {
+            if is_apple_device()
+                && is_focused
+                && selected_key.is_some()
+                && selected_key != last_selected.get_value()
+                && let Some(item) = state.selected_items().first()
+            {
+                announce_assertive(format!("{}, selected", option_text(item)));
+            }
+            last_selected.set_value(selected_key);
+        });
+    });
 }

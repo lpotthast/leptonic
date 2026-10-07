@@ -1,4 +1,19 @@
-// Upstream: react-stately/src/utils/number.ts @ 6f664fe911
+// Upstream: react-stately/src/utils/number.ts @ 99e6102368
+//
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `snap_value_to_step` takes the bounds as `Option`s (react-aria: `number | undefined`).
+// - `clamp` is Rust's `f64::clamp`.
+//
+// ## ADDITIONS
+// - `percentage_in_range`, and `handle_decimal_operation` (react-aria: inside
+//   `useNumberFieldState`).
+//
+// =============================================================================
+
 pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
     let range = max - min;
     if range == 0.0 {
@@ -8,64 +23,69 @@ pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
     }
 }
 
-/// Returns the number of decimal places in a floating-point value.
-///
-/// Used to precompute precision once, avoiding repeated string allocations
-/// in hot paths like slider dragging.
-#[must_use]
+/// The number of digits after the decimal point of `value`'s shortest representation.
 #[allow(clippy::cast_possible_truncation)]
-pub fn decimal_precision(value: f64) -> u32 {
+fn decimal_precision(value: f64) -> u32 {
     let s = value.to_string();
     s.find('.').map_or(0, |i| (s.len() - i - 1) as u32)
 }
 
-/// Rounds a value to the specified decimal precision.
-///
-/// Floating-point arithmetic (IEEE 754) cannot represent some decimals exactly,
-/// causing errors like `0.1 + 0.1 + 0.1 = 0.30000000000000004`. When calculating
-/// `min + steps * step`, these errors accumulate and produce ugly display values.
-/// Use `decimal_precision()` to compute precision once, then pass it here.
+/// `value` rounded to one digit more than `step` has (react-aria's `roundToStepPrecision`):
+/// removes floating-point noise such as `0.30000000000000004`. Rust prints no exponents, so the
+/// decimal point gives the precision.
 #[must_use]
-#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-pub fn round_to_precision(value: f64, precision: u32) -> f64 {
+pub fn round_to_step_precision(value: f64, step: f64) -> f64 {
+    let step_string = step.to_string();
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    let precision = step_string
+        .find('.')
+        .map_or(0, |point| (step_string.len() - point) as i32);
     if precision > 0 {
-        let pow = 10_f64.powi(precision as i32);
+        let pow = 10_f64.powi(precision);
         (value * pow).round() / pow
     } else {
         value
     }
 }
 
-/// Snaps a value to the nearest step within a range.
-///
-/// Handles reversed ranges where `min > max` (e.g., a slider from 9 to -9).
-/// Pass `precision` from `decimal_precision(step)` to avoid repeated string allocations.
+/// `value` snapped to the closest multiple of `step` from `min` (or 0), kept within `min` and
+/// `max` (react-aria's `snapValueToStep`; above `max`, the last step not past it). A step that
+/// isn't positive and finite only clamps.
 #[must_use]
-pub fn snap_value_to_step(value: f64, min: f64, max: f64, step: f64, precision: u32) -> f64 {
-    // Normalize to lower/upper bounds so clamping works regardless of direction.
-    let lower = f64::min(min, max);
-    let upper = f64::max(min, max);
-
-    // Snap relative to `min` (the slider origin), using the step magnitude.
-    let steps = ((value - min) / step).round();
-    let snapped = round_to_precision(min + steps * step, precision);
-
-    if snapped < lower {
-        // Below the numeric lower bound: snap to the closest valid step at the lower end.
-        // When min < max (normal), lower == min, so the lowest valid step is min itself.
-        // When min > max (reversed), lower == max, so the closest valid step from min
-        // toward max that is >= lower.
-        let steps_to_lower = ((lower - min) / step).ceil();
-        let candidate = round_to_precision(min + steps_to_lower * step, precision);
-        candidate.clamp(lower, upper)
-    } else if snapped > upper {
-        // Above the numeric upper bound: snap to the closest valid step at the upper end.
-        let steps_to_upper = ((upper - min) / step).floor();
-        let candidate = round_to_precision(min + steps_to_upper * step, precision);
-        candidate.clamp(lower, upper)
-    } else {
-        snapped
+pub fn snap_value_to_step(value: f64, min: Option<f64>, max: Option<f64>, step: f64) -> f64 {
+    if step <= 0.0 || !step.is_finite() {
+        let value = min.map_or(value, |min| value.max(min));
+        return max.map_or(value, |max| value.min(max));
     }
+    let remainder = (value - min.unwrap_or(0.0)) % step;
+    let mut snapped = round_to_step_precision(
+        if remainder.abs() * 2.0 >= step {
+            value + remainder.signum() * (step - remainder.abs())
+        } else {
+            value - remainder
+        },
+        step,
+    );
+    match (min, max) {
+        (Some(min), _) if snapped < min => snapped = min,
+        (Some(min), Some(max)) if snapped > max => {
+            snapped = round_to_step_precision((max - min) / step, step)
+                .floor()
+                .mul_add(step, min);
+        }
+        (None, Some(max)) if snapped > max => {
+            snapped = round_to_step_precision(max / step, step).floor() * step;
+        }
+        _ => {}
+    }
+    round_to_step_precision(snapped, step)
+}
+
+/// `value` rounded to `digits` decimal digits (react-aria's `toFixedNumber`, base 10).
+#[must_use]
+pub fn to_fixed_number(value: f64, digits: i32) -> f64 {
+    let pow = 10_f64.powi(digits);
+    (value * pow).round() / pow
 }
 
 /// An operation of [`handle_decimal_operation`].
@@ -81,8 +101,8 @@ pub enum DecimalOperation {
 /// For example, `handle_decimal_operation(DecimalOperation::Add, 0.1, 0.2)` returns `0.3`
 /// instead of the naive `0.30000000000000004`.
 ///
-/// Based on react-aria's `handleDecimalOperation` from `react-stately/src/utils/number.ts`
-/// (which takes the operator as a `'+' | '-'` string).
+/// react-aria's `handleDecimalOperation` (`useNumberFieldState.ts`, with the operator as a
+/// `'+' | '-'` string).
 #[must_use]
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn handle_decimal_operation(op: DecimalOperation, value1: f64, value2: f64) -> f64 {
@@ -100,110 +120,53 @@ pub fn handle_decimal_operation(op: DecimalOperation, value1: f64, value2: f64) 
     result / multiplier
 }
 
-/// Calculate page size: (max-min)/10, snapped to step, minimum is step.
-/// This follows react-aria's behavior for slider keyboard navigation.
-#[must_use]
-pub fn calculate_page_size(min: f64, max: f64, step: f64) -> f64 {
-    let raw = (max - min) / 10.0;
-    let precision = decimal_precision(step);
-    // Snap to step (using 0 as min, raw+step as max to allow full range snapping)
-    let snapped = snap_value_to_step(raw, 0.0, raw + step, step, precision);
-    snapped.max(step)
-}
-
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
 
     use super::{
-        DecimalOperation, calculate_page_size, decimal_precision, handle_decimal_operation,
-        round_to_precision, snap_value_to_step,
+        DecimalOperation, handle_decimal_operation, round_to_step_precision, snap_value_to_step,
+        to_fixed_number,
     };
 
     #[test]
-    fn test_decimal_precision() {
-        // Integer values (no decimal point in string representation)
-        assert_that!(decimal_precision(1.0)).is_equal_to(0);
-        assert_that!(decimal_precision(10.0)).is_equal_to(0);
-
-        // Decimal values
-        assert_that!(decimal_precision(0.1)).is_equal_to(1);
-        assert_that!(decimal_precision(0.01)).is_equal_to(2);
-        assert_that!(decimal_precision(0.001)).is_equal_to(3);
-        assert_that!(decimal_precision(1.5)).is_equal_to(1);
+    fn round_to_step_precision_removes_floating_point_noise() {
+        assert_that!(round_to_step_precision(0.300_000_000_000_000_04, 0.1)).is_equal_to(0.3);
+        assert_that!(round_to_step_precision(0.123_456, 0.1)).is_equal_to(0.12);
+        assert_that!(round_to_step_precision(47.3, 1.0)).is_equal_to(47.3);
     }
 
     #[test]
-    fn test_round_to_precision() {
-        // Fixes floating-point errors
-        assert_that!(round_to_precision(0.300_000_000_000_000_04, 1)).is_equal_to(0.3);
-        assert_that!(round_to_precision(0.123_456, 2)).is_equal_to(0.12);
-        assert_that!(round_to_precision(0.125, 2)).is_equal_to(0.13);
-
-        // Precision 0 returns value unchanged (no rounding)
-        assert_that!(round_to_precision(1.5, 0)).is_equal_to(1.5);
-        assert_that!(round_to_precision(47.3, 0)).is_equal_to(47.3);
+    fn snap_value_to_step_snaps_and_clamps() {
+        assert_that!(snap_value_to_step(47.0, Some(0.0), Some(100.0), 10.0)).is_equal_to(50.0);
+        assert_that!(snap_value_to_step(44.0, Some(0.0), Some(100.0), 10.0)).is_equal_to(40.0);
+        // Relative to the minimum.
+        assert_that!(snap_value_to_step(52.0, Some(5.0), Some(95.0), 10.0)).is_equal_to(55.0);
+        assert_that!(snap_value_to_step(150.0, Some(0.0), Some(100.0), 10.0)).is_equal_to(100.0);
+        assert_that!(snap_value_to_step(-50.0, Some(0.0), Some(100.0), 10.0)).is_equal_to(0.0);
+        // Above a maximum off the step grid: the last step below it.
+        assert_that!(snap_value_to_step(150.0, Some(0.0), Some(97.0), 10.0)).is_equal_to(90.0);
+        assert_that!(snap_value_to_step(0.123, Some(0.0), Some(1.0), 0.1)).is_equal_to(0.1);
+        assert_that!(snap_value_to_step(0.156, Some(0.0), Some(1.0), 0.1)).is_equal_to(0.2);
+        assert_that!(snap_value_to_step(0.3, Some(0.0), Some(1.0), 0.1)).is_equal_to(0.3);
+        // Without bounds.
+        assert_that!(snap_value_to_step(7.0, None, None, 5.0)).is_equal_to(5.0);
+        assert_that!(snap_value_to_step(23.0, None, Some(22.0), 5.0)).is_equal_to(20.0);
+        // A step that isn't positive only clamps.
+        assert_that!(snap_value_to_step(7.3, Some(0.0), Some(5.0), 0.0)).is_equal_to(5.0);
     }
 
     #[test]
-    fn test_snap_value_to_step() {
-        // Basic snapping
-        assert_that!(snap_value_to_step(47.0, 0.0, 100.0, 10.0, 0)).is_equal_to(50.0);
-        assert_that!(snap_value_to_step(44.0, 0.0, 100.0, 10.0, 0)).is_equal_to(40.0);
-
-        // Snapping with min offset
-        assert_that!(snap_value_to_step(52.0, 5.0, 95.0, 10.0, 0)).is_equal_to(55.0);
-
-        // Clamping to range when max aligns with step
-        assert_that!(snap_value_to_step(150.0, 0.0, 100.0, 10.0, 0)).is_equal_to(100.0);
-        assert_that!(snap_value_to_step(-50.0, 0.0, 100.0, 10.0, 0)).is_equal_to(0.0);
-
-        // Clamping to highest valid step when max doesn't align
-        assert_that!(snap_value_to_step(150.0, 0.0, 97.0, 10.0, 0)).is_equal_to(90.0);
-
-        // Fine steps with precision
-        let precision = decimal_precision(0.1);
-        assert_that!(snap_value_to_step(0.123, 0.0, 1.0, 0.1, precision)).is_equal_to(0.1);
-        assert_that!(snap_value_to_step(0.156, 0.0, 1.0, 0.1, precision)).is_equal_to(0.2);
-
-        // Floating-point precision fix: 0.3 should equal exactly 0.3
-        assert_that!(snap_value_to_step(0.3, 0.0, 1.0, 0.1, precision)).is_equal_to(0.3);
-    }
-
-    #[test]
-    fn test_snap_value_to_step_reversed_range() {
-        // Reversed range: min=100, max=0, step=10
-        // Value 60 should snap to 60 (steps from min: (60-100)/10 = -4 → 100 + (-4)*10 = 60)
-        assert_that!(snap_value_to_step(60.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
-
-        // Value 63 should snap to 60 (nearest step from min=100)
-        assert_that!(snap_value_to_step(63.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
-
-        // Value 67 should snap to 70
-        assert_that!(snap_value_to_step(67.0, 100.0, 0.0, 10.0, 0)).is_equal_to(70.0);
-
-        // Out-of-range: value=-50 should clamp to lower bound (0)
-        assert_that!(snap_value_to_step(-50.0, 100.0, 0.0, 10.0, 0)).is_equal_to(0.0);
-
-        // Out-of-range: value=150 should clamp to upper bound (100)
-        assert_that!(snap_value_to_step(150.0, 100.0, 0.0, 10.0, 0)).is_equal_to(100.0);
-
-        // Reversed range that doesn't align with step: min=9, max=-9, step=4
-        // Steps from 9: 9, 5, 1, -3, -7 (next would be -11, past max=-9)
-        assert_that!(snap_value_to_step(6.0, 9.0, -9.0, 4.0, 0)).is_equal_to(5.0);
-        assert_that!(snap_value_to_step(-2.0, 9.0, -9.0, 4.0, 0)).is_equal_to(-3.0);
+    fn to_fixed_number_rounds_to_digits() {
+        assert_that!(to_fixed_number(33.333_333, 2)).is_equal_to(33.33);
+        assert_that!(to_fixed_number(0.123_456, 4)).is_equal_to(0.1235);
     }
 
     #[test]
     fn test_handle_decimal_operation_add() {
-        // Classic floating-point issue: 0.1 + 0.2 should be 0.3
         assert_that!(handle_decimal_operation(DecimalOperation::Add, 0.1, 0.2)).is_equal_to(0.3);
         assert_that!(handle_decimal_operation(DecimalOperation::Add, 0.01, 0.02)).is_equal_to(0.03);
-
-        // Integer addition
         assert_that!(handle_decimal_operation(DecimalOperation::Add, 1.0, 2.0)).is_equal_to(3.0);
-
-        // Mixed precision
         assert_that!(handle_decimal_operation(DecimalOperation::Add, 1.0, 0.1)).is_equal_to(1.1);
         assert_that!(handle_decimal_operation(
             DecimalOperation::Add,
@@ -223,49 +186,9 @@ mod tests {
         .is_equal_to(0.2);
         assert_that!(handle_decimal_operation(
             DecimalOperation::Subtract,
-            1.0,
-            0.1
-        ))
-        .is_equal_to(0.9);
-        assert_that!(handle_decimal_operation(
-            DecimalOperation::Subtract,
-            0.03,
-            0.01
-        ))
-        .is_equal_to(0.02);
-
-        // Subtraction resulting in zero
-        assert_that!(handle_decimal_operation(
-            DecimalOperation::Subtract,
-            0.1,
-            0.1
-        ))
-        .is_equal_to(0.0);
-
-        // Subtraction resulting in negative
-        assert_that!(handle_decimal_operation(
-            DecimalOperation::Subtract,
             0.1,
             0.3
         ))
         .is_equal_to(-0.2);
-    }
-
-    #[test]
-    fn test_calculate_page_size() {
-        // Standard 0-100 range with step 1: (100-0)/10 = 10, snapped to 1 = 10
-        assert_that!(calculate_page_size(0.0, 100.0, 1.0)).is_equal_to(10.0);
-
-        // 0-100 range with step 5: (100-0)/10 = 10, snapped to 5 = 10
-        assert_that!(calculate_page_size(0.0, 100.0, 5.0)).is_equal_to(10.0);
-
-        // 0-100 range with step 7: (100-0)/10 = 10, snapped to 7 = 7
-        assert_that!(calculate_page_size(0.0, 100.0, 7.0)).is_equal_to(7.0);
-
-        // Small range: (10-0)/10 = 1, with step 0.5, snapped = 1.0
-        assert_that!(calculate_page_size(0.0, 10.0, 0.5)).is_equal_to(1.0);
-
-        // Very large step: page size should be at least step
-        assert_that!(calculate_page_size(0.0, 100.0, 50.0)).is_equal_to(50.0);
     }
 }

@@ -1,3 +1,5 @@
+// No upstream: react-aria has no tests of its own for the live announcer (only components
+// asserting announcements); this checks leptonic's regions and messages.
 use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;

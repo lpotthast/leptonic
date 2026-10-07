@@ -17,8 +17,8 @@ pub fn DndQuickStartDemo() -> impl IntoView {
         is_dragging,
         ..
     } = use_drag(UseDragInput {
-        get_items: Callback::new(|()| vec![DragItem::text("Water the plants")]),
-        get_allowed_drop_operations: None,
+        items: Signal::stored(vec![DragItem::text("Water the plants")]),
+        allowed_drop_operations: None,
         preview: None,
         on_drag_start: None,
         on_drag_move: None,

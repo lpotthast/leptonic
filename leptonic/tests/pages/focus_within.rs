@@ -58,18 +58,6 @@ impl FocusWithinPage<'_> {
         self.click_element_with_id("test-fw-disabled-input").await
     }
 
-    pub async fn read_disabled_is_focus_within(&self) -> Result<bool, Report> {
-        let text = self
-            .read_text_of("test-fw-disabled-is-focus-within")
-            .await?;
-        Ok(text.trim() == "true")
-    }
-
-    pub async fn read_disabled_focus_count(&self) -> Result<u32, Report> {
-        let text = self.read_text_of("test-fw-disabled-focus-count").await?;
-        Ok(text.trim().parse()?)
-    }
-
     // ---- Change callback section ----
 
     pub async fn click_change_input(&self) -> Result<(), Report> {
@@ -94,19 +82,5 @@ impl FocusWithinPage<'_> {
 
     pub async fn click_nested_input(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fw-nested-input").await
-    }
-
-    pub async fn read_nested_outer_is_focus_within(&self) -> Result<bool, Report> {
-        let text = self
-            .read_text_of("test-fw-nested-outer-is-focus-within")
-            .await?;
-        Ok(text.trim() == "true")
-    }
-
-    pub async fn read_nested_inner_is_focus_within(&self) -> Result<bool, Report> {
-        let text = self
-            .read_text_of("test-fw-nested-inner-is-focus-within")
-            .await?;
-        Ok(text.trim() == "true")
     }
 }

@@ -182,6 +182,8 @@
 
 .demo-field-error:empty { display: none; }
 
+.demo-field-description { margin: 0; font-size: var(--book-font-size-s); color: var(--book-muted-color); }
+
 .demo-input {
     padding: var(--book-space-s);
     border: 1px solid var(--book-border-color);
@@ -359,6 +361,8 @@ textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
 }
 
 // Placement options of the positioning demos.
+// The option groups side by side (they wrap on narrow screens).
+.demo-option-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(10em, 1fr)); gap: var(--book-space-s); margin-bottom: var(--book-space-m); }
+
 .demo-option-group { padding: var(--book-space-s); border: 1px solid var(--book-border-color); border-radius: var(--book-radius-s); }
 
-.demo-radio-list   { display: flex; flex-direction: column; gap: var(--book-space-xs); width: 100%; margin-top: var(--book-space-s); }

@@ -1,5 +1,10 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::{
+        field::Label,
+        input::Input,
+        radio::{Radio, RadioGroup},
+        text_field::TextField,
+    },
     hooks::{Orientation, collections::Key},
     utils::{
         i18n::Locale,
@@ -38,13 +43,31 @@ pub fn ListFormatterDemo() -> impl IntoView {
     };
 
     view! {
-        <RadioGroup label="Locale" orientation=Orientation::Horizontal default_value="en-US" on_change=on_locale_change>
-            <Radio value="en-US">"English (US)"</Radio>
-            <Radio value="es-ES">"Spanish"</Radio>
-            <Radio value="de-DE">"German"</Radio>
-            <Radio value="ja-JP">"Japanese"</Radio>
+        <RadioGroup orientation=Orientation::Horizontal default_value=Key::from("en-US") on_change=on_locale_change classes="demo-choice-group">
+            <Label classes="demo-choice-group-label">"Locale"</Label>
+            <div class="demo-choice-group-items">
+                <Radio value="en-US" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "English (US)"
+                </Radio>
+                <Radio value="es-ES" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Spanish"
+                </Radio>
+                <Radio value="de-DE" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "German"
+                </Radio>
+                <Radio value="ja-JP" classes="demo-radio">
+                    <span class="demo-radio-circle" aria-hidden="true"></span>
+                    "Japanese"
+                </Radio>
+            </div>
         </RadioGroup>
-        <TextField label="Items, separated by commas" value=text set_value=text/>
+        <TextField value=text set_value=text classes=["demo-field", "demo-mt-1"]>
+            <Label classes="demo-field-label">"Items, separated by commas"</Label>
+            <Input classes="demo-atom-input"/>
+        </TextField>
         <dl class="demo-format-list">
             <dt>"Conjunction"</dt>
             <dd>{format(ListFormatType::Conjunction, ListFormatStyle::Long)}</dd>

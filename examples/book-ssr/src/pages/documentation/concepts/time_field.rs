@@ -59,7 +59,6 @@ pub fn PageTimeFieldOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>"There is no themed time field component yet."</p>
             </Section>
 
             <Section title="Quick Start">

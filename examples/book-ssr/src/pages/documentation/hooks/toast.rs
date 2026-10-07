@@ -34,7 +34,12 @@ pub fn PageToastHooks() -> impl IntoView {
                         fn Notifications(queue: ToastQueue<String>) -> impl IntoView {
                             let element = CapturedElement::new();
                             let UseToastRegionReturn { region_props } =
-                                use_toast_region(UseToastRegionInput::default(), queue, element);
+                                use_toast_region(UseToastRegionInput {
+                                    queue,
+                                    element,
+                                    aria_label: MaybeProp::default(),
+                                    aria_labelledby: None,
+                                });
                             view! {
                                 <div {..region_props.into_attrs()} {..element.attr()}>
                                     <For
@@ -50,12 +55,13 @@ pub fn PageToastHooks() -> impl IntoView {
                         fn Notification(toast: QueuedToast<String>, queue: ToastQueue<String>) -> impl IntoView {
                             let message = toast.content.clone();
                             let input = UseToastInput {
+                                queue,
                                 toast,
                                 aria_label: MaybeProp::default(),
                                 aria_labelledby: None,
                                 aria_describedby: None,
                             };
-                            let UseToastReturn { toast_props, content_props, title_id, close_button, .. } = use_toast(input, queue);
+                            let UseToastReturn { toast_props, content_props, title_id, close_button, .. } = use_toast(input);
                             let (close_attrs, close_styles) = use_button(close_button).props.into_parts();
                             view! {
                                 <div {..toast_props.into_attrs()}>
@@ -100,7 +106,7 @@ pub fn PageToastHooks() -> impl IntoView {
                 </p>
 
                 <Section title="ToastQueue" id="use-toast-state-queue">
-                    <p>"The queue is a "<Code inline=true>"Copy"</Code>" handle: use it from any component and event handler."</p>
+                    <p>"The queue is a "<Code inline=true>"Copy"</Code>" handle: use it from any Leptos component and event handler."</p>
                     <ApiTable kind=ApiKind::Fields of="ToastQueue">
                         <ApiRow name="visible_toasts" ty="Memo<Vec<QueuedToast<T>>>">"The toasts shown: the newest first, up to the maximum."</ApiRow>
                     </ApiTable>
@@ -152,7 +158,7 @@ pub fn PageToastHooks() -> impl IntoView {
 
             <Section title="use_toast_region">
                 <p>
-                    <Code inline=true>"use_toast_region(input, queue, element)"</Code>" makes the element showing the "
+                    <Code inline=true>"use_toast_region"</Code>" makes the element showing the "
                     "toasts a "<Link href=routes::doc::focus::UseLandmark.materialize()>"landmark"</Link>" that "
                     <Keys keys="F6"/>" reaches. It pauses the timeouts while the region is hovered or has the focus, moves "
                     "the focus to the next toast when a focused one closes, and returns the focus to where it came from "
@@ -161,6 +167,8 @@ pub fn PageToastHooks() -> impl IntoView {
 
                 <Section title="Input" id="use-toast-region-input">
                     <ApiTable kind=ApiKind::Input of="UseToastRegionInput">
+                        <ApiRow name="queue" ty="ToastQueue<T>">"The toasts to show. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The region element; capture it with "<Code inline=true>"{..element.attr()}"</Code>". Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the region. Default: \u{201c}1 notification.\u{201d}, \u{201c}2 notifications.\u{201d}, \u{2026}"
                         </ApiRow>
@@ -181,7 +189,7 @@ pub fn PageToastHooks() -> impl IntoView {
 
             <Section title="use_toast">
                 <p>
-                    <Code inline=true>"use_toast(input, queue)"</Code>" gives a toast its role and names, starts its timeout "
+                    <Code inline=true>"use_toast"</Code>" gives a toast its role and names, starts its timeout "
                     "once it is shown, and returns the input of its close button."
                 </p>
 
@@ -189,6 +197,7 @@ pub fn PageToastHooks() -> impl IntoView {
                     <p>"Pass a "<Code inline=true>"UseToastInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
 
                     <ApiTable kind=ApiKind::Input of="UseToastInput">
+                        <ApiRow name="queue" ty="ToastQueue<T>">"The queue the toast is in; closing removes it from there. Required."</ApiRow>
                         <ApiRow name="toast" ty="QueuedToast<T>">"The toast, from "<Code inline=true>"visible_toasts"</Code>". Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the toast instead of its title."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of elements naming the toast. Default: its title."</ApiRow>

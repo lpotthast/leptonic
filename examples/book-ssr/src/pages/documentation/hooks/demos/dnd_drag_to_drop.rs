@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
         DragEndEvent, DragItem, DragType, DropEvent, DropItem, DropOperation, DropOperationQuery,
         IntoAttrs, UseDragInput, UseDragReturn, UseDropInput, UseDropReturn, use_drag, use_drop,
@@ -26,8 +26,8 @@ pub fn DragToDropDemo() -> impl IntoView {
             last_drag.set(format!("Note ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
-        get_items: Callback::new(|()| vec![DragItem::text("Water the plants")]),
-        get_allowed_drop_operations: None,
+        items: Signal::stored(vec![DragItem::text("Water the plants")]),
+        allowed_drop_operations: None,
         preview: None,
         on_drag_start: None,
         on_drag_move: None,
@@ -35,20 +35,19 @@ pub fn DragToDropDemo() -> impl IntoView {
     });
     // A link: a URL in two representations. Links can only be copied or linked, not moved.
     let link = use_drag(UseDragInput {
-        get_allowed_drop_operations: Some(Callback::new(|()| {
-            vec![DropOperation::Copy, DropOperation::Link]
-        })),
+        allowed_drop_operations: Some(Signal::stored(vec![
+            DropOperation::Copy,
+            DropOperation::Link,
+        ])),
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
             last_drag.set(format!("Link ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
-        get_items: Callback::new(|()| {
-            vec![
-                DragItem::new()
-                    .with("text/uri-list", URL)
-                    .with("text/plain", URL),
-            ]
-        }),
+        items: Signal::stored(vec![
+            DragItem::new()
+                .with("text/uri-list", URL)
+                .with("text/plain", URL),
+        ]),
         preview: None,
         on_drag_start: None,
         on_drag_move: None,
@@ -82,7 +81,10 @@ pub fn DragToDropDemo() -> impl IntoView {
         </div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
 
         <p class="demo-status">"Last drag ended: "{last_drag}</p>

@@ -4,7 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn SeparatorVerticalDemo() -> impl IntoView {
     let vertical_sep = use_separator(UseSeparatorInput {
-        orientation: Orientation::Vertical,
+        orientation: Orientation::Vertical.into(),
         element_type: SeparatorElementType::Div,
         ..UseSeparatorInput::default()
     });

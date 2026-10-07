@@ -1,20 +1,17 @@
-use leptonic::hooks::SelectMode;
-use leptonic::hooks::ValidationBehavior;
-use leptonic::hooks::collections::CloseOnSelect;
+use std::collections::HashSet;
+
 use leptonic::{
-    atoms::focus_scope::FocusScope,
-    components::prelude::*,
+    atoms::{checkbox::Checkbox, focus_scope::FocusScope},
     hooks::{
-        IntoAttrs, ListBoxData, UseHiddenSelectReturn, UseListBoxInput, UseListBoxReturn,
-        UseOptionInput, UseOptionReturn, UseOverlayInput, UseSelectInput, UseSelectReturn,
-        UseSelectStateInput,
-        collections::{Key, use_list_collection},
+        IntoAttrs, ListBoxData, SelectMode, UseHiddenSelectReturn, UseListBoxInput,
+        UseListBoxReturn, UseOptionInput, UseOptionReturn, UseOverlayInput, UseSelectInput,
+        UseSelectReturn, UseSelectStateInput, ValidationBehavior,
+        collections::{CloseOnSelect, Key, use_list_collection},
         use_button, use_hidden_select, use_listbox, use_option, use_overlay, use_select,
         use_select_state,
     },
 };
 use leptos::prelude::*;
-use std::collections::HashSet;
 
 const FRUITS: [(&str, &str); 4] = [
     ("apple", "Apple"),
@@ -40,11 +37,12 @@ pub fn SelectDemo() -> impl IntoView {
         should_close_on_select: CloseOnSelect::Auto,
         allows_empty_collection: false,
         default_open: false,
+        is_open: None,
         on_open_change: None,
         is_invalid: Signal::stored(false),
         validate: None,
         validation_behavior: ValidationBehavior::default(),
-        name: None,
+        name: Some("fruit".to_owned()),
     });
     let disabled = RwSignal::new(false);
 
@@ -59,10 +57,9 @@ pub fn SelectDemo() -> impl IntoView {
     } = use_select(UseSelectInput {
         has_label: true.into(),
         is_disabled: disabled.into(),
-        name: Some("fruit".to_owned()),
         state,
         id: None,
-        is_required: false,
+        is_required: Signal::stored(false),
         aria_label: MaybeProp::default(),
         aria_labelledby: None,
         aria_describedby: None,
@@ -71,7 +68,6 @@ pub fn SelectDemo() -> impl IntoView {
         on_blur: None,
         on_focus_change: None,
         form: None,
-        validation_behavior: ValidationBehavior::default(),
     });
 
     let button = use_button(trigger);
@@ -110,7 +106,10 @@ pub fn SelectDemo() -> impl IntoView {
             "Selected: "{move || state.selected_key().map_or_else(|| "none".to_owned(), |key| key.to_string())}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

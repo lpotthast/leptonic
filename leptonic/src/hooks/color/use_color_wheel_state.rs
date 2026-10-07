@@ -1,15 +1,21 @@
 // Upstream: react-stately/src/color/useColorWheelState.ts @ 99e6102368
 use leptos::prelude::*;
 
-use crate::utils::{ValueBinding, color::ColorValue};
+use crate::utils::{
+    ValueBinding,
+    color::{Color, ColorChannelRange, ColorValue, HSL, HslChannel},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - Generic over the color type (`ColorValue`); `channel` names its hue channel (react-aria
-//   converts the color to HSL and uses its hue).
+// - Generic over the color type (`ColorValue`). A color space with a hue channel (HSV, HSL)
+//   changes it; any other (RGB) changes the hue of its HSL form and converts back, keeping the
+//   color type (react-aria converts the color to HSL and emits HSL colors). The hue the wheel set
+//   last is remembered for the color it produced, so that the thumb stays put where RGB loses
+//   the hue (grays) or rounds it.
 // - Hook-owned value (C4): `default_value` + `on_change`, or `value` bound to app state.
 // - A `Copy` struct with signals and methods (C3).
 //
@@ -22,8 +28,6 @@ pub struct UseColorWheelStateInput<C: ColorValue> {
     pub default_value: C,
     /// The color as app state, replacing `default_value`.
     pub value: Option<ValueBinding<C>>,
-    /// The color type's hue channel, which the wheel changes.
-    pub channel: C::Channel,
     pub is_disabled: Signal<bool>,
     /// Called with the color whenever it changes, also while dragging.
     pub on_change: Option<Callback<C>>,
@@ -38,8 +42,6 @@ pub struct ColorWheelState<C: ColorValue> {
     pub value: Signal<C>,
     /// Its hue, in degrees.
     pub hue: Signal<f64>,
-    /// The hue channel.
-    pub channel: C::Channel,
     /// The hue's step.
     pub step: f64,
     /// The hue's page step (PageUp/PageDown, Shift + arrow keys).
@@ -50,8 +52,43 @@ pub struct ColorWheelState<C: ColorValue> {
     binding: ValueBinding<C>,
     default_value: StoredValue<C>,
     latest: StoredValue<C>,
+    /// The color the wheel set last, with the hue it set.
+    wheel_hue: RwSignal<Option<(C, f64)>>,
     dragging: RwSignal<bool>,
     on_change_end: Option<Callback<C>>,
+}
+
+/// The range, step and page size of a hue.
+fn hue_range() -> ColorChannelRange {
+    HSL::channel_range(HslChannel::Hue)
+}
+
+/// The hue of `color`: its hue channel, else its HSL form's.
+fn hue_of<C: ColorValue>(color: C) -> f64 {
+    if let Some(hue) = C::hue_channel() {
+        color.channel_value(hue)
+    } else {
+        let color: Color = color.into();
+        color.to::<HSL>().hue
+    }
+}
+
+/// `color` with `hue`: its hue channel, else through its HSL form (keeping the alpha).
+fn with_hue<C: ColorValue>(color: C, hue: f64) -> C {
+    if let Some(channel) = C::hue_channel() {
+        color.with_channel_value(channel, hue)
+    } else {
+        let color: Color = color.into();
+        let hsl = color.to::<HSL>().with_hue(hue);
+        C::from(Color::from(hsl).with_alpha(color.alpha))
+    }
+}
+
+/// The hue of `color`, as the wheel set it if it produced `color` (tracks `wheel_hue`).
+fn remembered_hue<C: ColorValue>(color: C, wheel_hue: RwSignal<Option<(C, f64)>>) -> f64 {
+    wheel_hue
+        .with(|set| set.filter(|(set, _)| *set == color).map(|(_, hue)| hue))
+        .unwrap_or_else(|| hue_of(color))
 }
 
 fn round_to_step(value: f64, step: f64) -> f64 {
@@ -88,7 +125,7 @@ impl<C: ColorValue> ColorWheelState<C> {
     }
 
     fn current_hue(&self) -> f64 {
-        self.latest.get_value().get_channel_value(self.channel)
+        untrack(|| remembered_hue(self.latest.get_value(), self.wheel_hue))
     }
 
     /// Sets the hue, snapped to the step (360 wraps around to 0).
@@ -96,11 +133,9 @@ impl<C: ColorValue> ColorWheelState<C> {
         let hue = if hue > 360.0 { 0.0 } else { hue };
         let hue = round_to_step(modulo(hue, 360.0), self.step);
         if hue != self.current_hue() {
-            self.set_value(
-                self.latest
-                    .get_value()
-                    .with_channel_value(self.channel, hue),
-            );
+            let color = with_hue(self.latest.get_value(), hue);
+            self.wheel_hue.set(Some((color, hue)));
+            self.set_value(color);
         }
     }
 
@@ -120,7 +155,7 @@ impl<C: ColorValue> ColorWheelState<C> {
     /// Increases the hue by `step` (at least the step), wrapping around.
     pub fn increment(&self, step: f64) {
         let step = step.max(self.step);
-        let range = C::get_channel_range(self.channel);
+        let range = hue_range();
         let mut hue = self.current_hue() + step;
         if hue >= range.max_value {
             hue = range.min_value;
@@ -154,8 +189,8 @@ impl<C: ColorValue> ColorWheelState<C> {
 
     /// The hue at full saturation, to draw the thumb with.
     pub fn display_color(&self) -> Signal<C> {
-        let (value, channel) = (self.value, self.channel);
-        Signal::derive(move || value.get().get_display_color(channel))
+        let hue = self.hue;
+        Signal::derive(move || C::from(Color::from(HSL::from_hue_fully_saturated(hue.get()))))
     }
 }
 
@@ -166,7 +201,6 @@ pub fn use_color_wheel_state<C: ColorValue>(
     let UseColorWheelStateInput {
         default_value,
         value,
-        channel,
         is_disabled,
         on_change,
         on_change_end,
@@ -186,13 +220,13 @@ pub fn use_color_wheel_state<C: ColorValue>(
             }
         }),
     );
-    let range = C::get_channel_range(channel);
+    let range = hue_range();
     let value = binding.value;
     let dragging = RwSignal::new(false);
+    let wheel_hue = RwSignal::new(None);
     ColorWheelState {
         value,
-        hue: Signal::derive(move || value.get().get_channel_value(channel)),
-        channel,
+        hue: Signal::derive(move || remembered_hue(value.get(), wheel_hue)),
         step: range.step,
         page_step: range.page_size,
         is_disabled,
@@ -200,6 +234,7 @@ pub fn use_color_wheel_state<C: ColorValue>(
         binding,
         default_value,
         latest,
+        wheel_hue,
         dragging,
         on_change_end,
     }
@@ -210,17 +245,16 @@ mod tests {
     use assertr::prelude::*;
 
     use super::*;
-    use crate::utils::color::{HSV, HsvChannel};
+    use crate::utils::color::{HSV, RGB8};
 
     fn wheel(hue: f64) -> ColorWheelState<HSV> {
         use_color_wheel_state(UseColorWheelStateInput {
             default_value: HSV {
                 hue,
                 saturation: 1.0,
-                value: 1.0,
+                brightness: 1.0,
             },
             value: None,
-            channel: HsvChannel::Hue,
             is_disabled: Signal::stored(false),
             on_change: None,
             on_change_end: None,
@@ -251,6 +285,47 @@ mod tests {
             // Below the center: 90° (clockwise).
             state.set_hue_from_point(0.0, 50.0, 50.0);
             assert_that!(state.hue.get_untracked()).is_equal_to(90.0);
+        });
+    }
+
+    #[test]
+    fn rgb_colors_change_the_hue_of_their_hsl_form() {
+        Owner::new().with(|| {
+            let state = use_color_wheel_state(UseColorWheelStateInput {
+                default_value: RGB8 { r: 255, g: 0, b: 0 },
+                value: None,
+                is_disabled: Signal::stored(false),
+                on_change: None,
+                on_change_end: None,
+            });
+            assert_that!(state.hue.get_untracked()).is_equal_to(0.0);
+            state.set_hue(120.0);
+            assert_that!(state.value.get_untracked()).is_equal_to(RGB8 { r: 0, g: 255, b: 0 });
+            // A hue that RGB rounds stays as the wheel set it.
+            state.set_hue(37.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(37.0);
+            state.increment(1.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(38.0);
+        });
+    }
+
+    #[test]
+    fn a_gray_rgb_color_keeps_the_hue_the_wheel_set() {
+        Owner::new().with(|| {
+            let state = use_color_wheel_state(UseColorWheelStateInput {
+                default_value: RGB8 {
+                    r: 128,
+                    g: 128,
+                    b: 128,
+                },
+                value: None,
+                is_disabled: Signal::stored(false),
+                on_change: None,
+                on_change_end: None,
+            });
+            state.set_hue(200.0);
+            assert_that!(state.hue.get_untracked()).is_equal_to(200.0);
+            assert_that!(state.thumb_position(100.0).1.round()).is_equal_to(-34.0);
         });
     }
 }

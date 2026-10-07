@@ -1,11 +1,11 @@
 use leptonic::{
     atoms::{
+        button::Button,
         field::Label,
         form::Form,
         listbox::{ListBox, ListBoxItems},
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
-    components::prelude::{Button, ButtonColor},
     hooks::{
         ButtonType,
         collections::{Key, use_list_collection},
@@ -62,8 +62,8 @@ pub fn SelectFormDemo() -> impl IntoView {
                 <HiddenSelect/>
             </Select>
             <div class="demo-flex-center-row">
-                <Button button_type=ButtonType::Submit>"Submit"</Button>
-                <Button button_type=ButtonType::Reset color=ButtonColor::Secondary>"Reset"</Button>
+                <Button button_type=ButtonType::Submit classes="demo-btn-primary">"Submit"</Button>
+                <Button button_type=ButtonType::Reset classes="demo-btn">"Reset"</Button>
             </div>
         </Form>
 

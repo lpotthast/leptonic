@@ -155,20 +155,40 @@ pub fn PageAtomGridList() -> impl IntoView {
                     <ApiRow name="data-pressed" ty="true">"The row is being pressed."</ApiRow>
                     <ApiRow name="data-disabled" ty="true">"The row is disabled."</ApiRow>
                 </ApiTable>
+                <p>
+                    "On "<Code inline=true>"GridList"</Code>": "<Code inline=true>"data-empty"</Code>" (no rows), "<Code inline=true>"data-focused"</Code>" and "<Code inline=true>"data-focus-visible"</Code>
+                    " (the list itself has the focus, which it only takes while empty) and "<Code inline=true>"data-layout"</Code>" ("<Code inline=true>"stack"</Code>" or "
+                    <Code inline=true>"grid"</Code>")."
+                </p>
             </Section>
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with "
-                    "attribute selectors. Interactive children style their own focus:"
+                    "The atoms bring no styles. "<Code inline=true>"GridList"</Code>" renders a "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-GridList"</Code>", "
+                    <Code inline=true>"GridListItem"</Code>" a row "<Code inline=true>"<div>"</Code>" with the class "<Code inline=true>"leptonic-GridListItem"</Code>", each followed by the "
+                    <Code inline=true>"classes"</Code>" you pass. The item\u{2019}s children go into its single cell, a "<Code inline=true>"display: contents"</Code>" element, "
+                    "so lay them out as children of the row. Target the state with the data attributes; interactive children, like "
+                    "the download buttons of the demo, style their own. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-row[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-row[data-selected] { background: var(--surface); }
-                        .my-row[data-disabled] { opacity: 0.5; }
+                        .demo-grid-list { max-width: 360px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; }
+                        .demo-grid-list-item { display: flex; align-items: center; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+                        .demo-grid-list-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
+                        .demo-grid-list-item[data-selected] { background: var(--surface); }
+                        .demo-grid-list-item[data-pressed] { background: var(--border); }
+                        .demo-grid-list-item[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-grid-list-cell { display: flex; align-items: center; gap: 0.5rem; width: 100%; }
+                        .demo-grid-list-name { flex: 1; }
+                        .demo-grid-list-action { padding: 0.25rem 0.5rem; border: none; border-radius: 4px; background: none; cursor: pointer; }
+                        .demo-grid-list-action[data-hovered] { background: var(--surface); }
+                        .demo-grid-list-action[data-focus-visible] { outline: 2px solid var(--focus); }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

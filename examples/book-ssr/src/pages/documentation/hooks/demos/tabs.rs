@@ -2,7 +2,7 @@ use leptonic::hooks::KeyboardActivation;
 use leptonic::hooks::Orientation;
 use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
-    components::prelude::*,
+    atoms::checkbox::Checkbox,
     hooks::{
         IntoAttrs, Key, TabListData, TabListItemData, UseTabInput, UseTabListInput,
         UseTabListReturn, UseTabListStateInput, UseTabPanelInput, UseTabReturn, use_collection,
@@ -22,7 +22,7 @@ const TABS: [(&str, &str); 4] = [
 /// One tab, rendered with `use_tab`. Its state shows in `aria-selected` and `aria-disabled`.
 #[component]
 fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput {
+    let UseTabReturn { props: tab_props, .. } = use_tab(UseTabInput {
         list,
         key: Key::from(key),
         is_disabled: Signal::stored(false),
@@ -58,12 +58,12 @@ pub fn TabsDemo() -> impl IntoView {
         aria_label: "Product".into(),
         tabs: tabs.clone(),
         element: CapturedElement::new(),
-        orientation: Orientation::Horizontal,
+        orientation: Orientation::Horizontal.into(),
         keyboard_activation: KeyboardActivation::Automatic,
         aria_labelledby: None,
     });
     // `key: None`: one panel that always shows the selected tab.
-    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
+    let panel = use_tab_panel(UseTabPanelInput { tabs, key: None, aria_describedby: None, aria_details: None });
 
     let content = move || {
         match state.selected_key().map(|key| key.to_string()).as_deref() {
@@ -75,7 +75,10 @@ pub fn TabsDemo() -> impl IntoView {
         Some("shipping") => view! {
             <h4>"Shipping"</h4>
             <p>"This panel contains a checkbox, so Tab moves to the checkbox instead of the panel."</p>
-            <Checkbox>"Express delivery"</Checkbox>
+            <Checkbox classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Express delivery"
+            </Checkbox>
         }
         .into_any(),
         _ => view! {
@@ -92,10 +95,13 @@ pub fn TabsDemo() -> impl IntoView {
                 .map(|(key, label)| view! { <DemoTab list=data.clone() key=key label=label/> })
                 .collect_view()}
         </div>
-        <div {..panel.tab_panel_props.into_attrs()} class="demo-tab-panel">{content}</div>
+        <div {..panel.props.into_attrs()} class="demo-tab-panel">{content}</div>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
         <p class="demo-status">
             "Selected: " {move || state.selected_key().map(|key| key.to_string()).unwrap_or_default()}

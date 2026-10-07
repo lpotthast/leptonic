@@ -17,6 +17,7 @@ use crate::{
 // - One landmark manager per wasm module (react-aria: a versioned singleton attached to the
 //   document, shared by copies of react-aria on a page).
 // - `LandmarkController` disposes itself when dropped (react-aria: `dispose()`).
+// - The landmark's element goes into the input (C8; react-aria: `ref`).
 //
 // =============================================================================
 
@@ -567,6 +568,8 @@ impl Drop for LandmarkController {
 /// Input of [`use_landmark`].
 #[derive(Clone)]
 pub struct UseLandmarkInput {
+    /// The landmark's element (captured by the caller).
+    pub element: CapturedElement,
     pub role: LandmarkRole,
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
@@ -609,8 +612,9 @@ impl IntoAttrs for UseLandmarkProps {
 
 /// A landmark (react-aria's `useLandmark`): a region of the page that F6 and Shift+F6 move
 /// between (Alt+F6 to the main one), returning to what had the focus there last.
-pub fn use_landmark(input: UseLandmarkInput, element: CapturedElement) -> UseLandmarkReturn {
+pub fn use_landmark(input: UseLandmarkInput) -> UseLandmarkReturn {
     let UseLandmarkInput {
+        element,
         role,
         aria_label,
         aria_labelledby,

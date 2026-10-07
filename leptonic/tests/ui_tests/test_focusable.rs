@@ -1,11 +1,17 @@
+// Upstream: react-aria/test/interactions/Focusable.test.js @ 99e6102368
 use std::borrow::Cow;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::WebDriver};
+use browser_test::{
+    BrowserTest, async_trait,
+    thirtyfour::{By, WebDriver},
+};
 use rootcause::Report;
 
 use crate::pages::{BaseActions, focusable::FocusablePage};
 
+/// `use_focusable`: tab index for disabled and excluded elements, auto focus, keyboard events and
+/// the focus handle ("supports isDisabled", "supports excludeFromTabOrder", "supports autoFocus").
 pub struct FocusableTests {}
 
 #[async_trait]
@@ -42,8 +48,7 @@ async fn test_tabindex_attributes(page: &FocusablePage<'_>) -> Result<(), Report
     assert_that!(page.read_excluded_tabindex().await?).is_equal_to(Some("-1".to_string()));
 
     // Auto-focus element is focused on page load
-    assert_that!(page.active_element_id().await?)
-        .is_equal_to(Some("test-fcbl-autofocus".to_string()));
+    page.wait_for_active_id("test-fcbl-autofocus").await?;
 
     Ok(())
 }
@@ -59,8 +64,8 @@ async fn test_keyboard_events(page: &FocusablePage<'_>) -> Result<(), Report> {
     assert_that!(page.read_keyup_count().await?).is_equal_to(0);
 
     page.send_keys_to_active("a").await?;
-    assert_that!(page.read_keydown_count().await?).is_equal_to(1);
-    assert_that!(page.read_keyup_count().await?).is_equal_to(1);
+    page.wait_for_text("test-fcbl-keydown-count", "1").await?;
+    page.wait_for_text("test-fcbl-keyup-count", "1").await?;
 
     Ok(())
 }
@@ -73,13 +78,12 @@ async fn test_tab_skip(page: &FocusablePage<'_>) -> Result<(), Report> {
 
     // Focus the normal element
     page.click_normal().await?;
-    assert_that!(page.active_element_id().await?).is_equal_to(Some("test-fcbl-normal".to_string()));
+    page.wait_for_active_id("test-fcbl-normal").await?;
 
     // Tab: should skip disabled (no tabindex) and excluded (tabindex=-1),
     // landing on the next tabbable element
     page.press_tab().await?;
-    assert_that!(page.active_element_id().await?)
-        .is_equal_to(Some("test-fcbl-tab-target".to_string()));
+    page.wait_for_active_id("test-fcbl-tab-target").await?;
 
     Ok(())
 }
@@ -93,7 +97,7 @@ async fn test_focus_handle(page: &FocusablePage<'_>) -> Result<(), Report> {
     page.click_focus_btn().await?;
 
     // The normal focusable element should now be focused
-    assert_that!(page.active_element_id().await?).is_equal_to(Some("test-fcbl-normal".to_string()));
+    page.wait_for_active_id("test-fcbl-normal").await?;
 
     Ok(())
 }
@@ -106,13 +110,15 @@ async fn test_dynamic_disabled_transition(page: &FocusablePage<'_>) -> Result<()
     // Initial: enabled, tabindex="0"
     assert_that!(page.read_dynamic_tabindex().await?).is_equal_to(Some("0".to_string()));
 
+    let dynamic = page.driver.find(By::Id("test-fcbl-dynamic")).await?;
+
     // Toggle to disabled: tabindex becomes None
     page.click_dynamic_toggle().await?;
-    assert_that!(page.read_dynamic_tabindex().await?).is_equal_to(None);
+    page.wait_for_attr(&dynamic, "tabindex", None).await?;
 
     // Toggle back to enabled: tabindex="0"
     page.click_dynamic_toggle().await?;
-    assert_that!(page.read_dynamic_tabindex().await?).is_equal_to(Some("0".to_string()));
+    page.wait_for_attr(&dynamic, "tabindex", Some("0")).await?;
 
     Ok(())
 }

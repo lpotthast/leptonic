@@ -1,12 +1,13 @@
 use leptonic::{
-    atoms::calendar::{
-        CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody, CalendarGridHeader,
-        CalendarHeaderCell, CalendarHeaderRow, CalendarHeading, CalendarNextButton,
-        CalendarPreviousButton, CalendarWeek, RangeCalendar,
+    atoms::{
+        calendar::{
+            CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody, CalendarGridHeader,
+            CalendarHeaderCell, CalendarHeaderRow, CalendarHeading, CalendarNextButton,
+            CalendarPreviousButton, CalendarWeek, RangeCalendar,
+        },
+        checkbox::Checkbox,
     },
-    components::prelude::*,
     jiff::civil::date,
-    prelude::icondata,
     utils::date::{DateDuration, DateRange},
 };
 use leptos::prelude::*;
@@ -47,10 +48,10 @@ pub fn AtomRangeCalendarDemo() -> impl IntoView {
         >
             <header class="demo-calendar-header">
                 <CalendarPreviousButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronLeft/>
+                    <span aria-hidden="true">"\u{2039}"</span>
                 </CalendarPreviousButton>
                 <CalendarNextButton classes="demo-calendar-nav">
-                    <Icon icon=icondata::BsChevronRight/>
+                    <span aria-hidden="true">"\u{203a}"</span>
                 </CalendarNextButton>
             </header>
             <div class="demo-calendar-months">
@@ -62,7 +63,10 @@ pub fn AtomRangeCalendarDemo() -> impl IntoView {
         <p class="demo-status">{status}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

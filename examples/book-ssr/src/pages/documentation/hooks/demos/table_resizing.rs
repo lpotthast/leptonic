@@ -208,7 +208,7 @@ fn Resizer(table: TableData, resize: TableColumnResizeState, column: Key) -> imp
         state: resize,
         table,
         column,
-        aria_label: "Resizer".to_owned(),
+        aria_label: "Resizer".into(),
         element: CapturedElement::new(),
         trigger: None,
         is_disabled: Signal::stored(false),

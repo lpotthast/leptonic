@@ -4,6 +4,7 @@ use leptos::{
     ev::{self, On, SharedEventCallback},
     prelude::*,
 };
+use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, PointerEvent};
 
 use super::use_toast_state::ToastQueue;
@@ -24,6 +25,11 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The region is marked `data-leptonic-top-layer` (react-aria: `data-react-aria-top-layer`).
+// - The queue and the region's element go into the input (C8; react-aria: `state` and `ref`).
+//
+// ## DIFFERENT BEHAVIOR
+// - The focused toast is tracked by its key (react-aria: its index), so a toast added while
+//   another is focused doesn't make the region lose it.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Removing the focused toast blurs it (React suppresses events while it commits, so
@@ -37,8 +43,12 @@ use crate::{
 // =============================================================================
 
 /// Input of [`use_toast_region`].
-#[derive(Clone, Default)]
-pub struct UseToastRegionInput {
+#[derive(Clone)]
+pub struct UseToastRegionInput<T: Clone + Send + Sync + 'static> {
+    /// The toasts to show.
+    pub queue: ToastQueue<T>,
+    /// The region's element (captured by the caller).
+    pub element: CapturedElement,
     /// Default: "1 notification." / "2 notifications.".
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
@@ -94,11 +104,11 @@ fn restore_focus(element: &web_sys::Element) {
 /// when the last one closes.
 #[allow(clippy::too_many_lines)]
 pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
-    input: UseToastRegionInput,
-    queue: ToastQueue<T>,
-    element: CapturedElement,
+    input: UseToastRegionInput<T>,
 ) -> UseToastRegionReturn {
     let UseToastRegionInput {
+        queue,
+        element,
         aria_label,
         aria_labelledby,
     } = input;
@@ -112,15 +122,13 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
             })
         })
     });
-    let landmark = use_landmark(
-        UseLandmarkInput {
-            aria_label: label.into(),
-            aria_labelledby,
-            role: LandmarkRole::Region,
-            focus: None,
-        },
+    let landmark = use_landmark(UseLandmarkInput {
         element,
-    );
+        aria_label: label.into(),
+        aria_labelledby,
+        role: LandmarkRole::Region,
+        focus: None,
+    });
 
     let is_hovered = StoredValue::new(false);
     let is_focused = StoredValue::new(false);
@@ -143,8 +151,9 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         ..UseHoverInput::default()
     });
 
-    // Where the focus came from, to return it to.
-    let last_focused = StoredValue::new_local(None::<web_sys::Element>);
+    // Where the focus came from, to return it to. Thread-safe storage: the hook may run during
+    // server-side rendering.
+    let last_focused = StoredValue::new(None::<SendWrapper<web_sys::Element>>);
     let leave = move || {
         // After the region's disposal ("Blur After Disposal").
         if is_focused.try_get_value().is_none() {
@@ -163,7 +172,7 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
                 // Coming from nowhere after a focused toast was removed: still from where it came
                 // before.
                 if !(came_from.is_none() && is_focused.get_value()) {
-                    last_focused.set_value(came_from);
+                    last_focused.set_value(came_from.map(SendWrapper::new));
                 }
                 is_focused.set_value(true);
                 update_timers();
@@ -189,8 +198,10 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
             ..UseFocusWithinInput::default()
         });
 
-    // The index of the focused toast (`None`: none has the focus).
-    let focused_toast = StoredValue::new(None::<usize>);
+    // The keys of the toasts as rendered last (newest first), and the key of the focused toast
+    // (`None`: none has the focus).
+    let previous = StoredValue::new(Vec::<String>::new());
+    let focused_toast = StoredValue::new(None::<String>);
     let query_toasts = move || -> Vec<web_sys::Element> {
         let Some(region) = element.get_untracked() else {
             return Vec::new();
@@ -207,9 +218,11 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         let toast = crate::utils::shadow_dom::get_event_target(&e)
             .and_then(|target| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(target).ok())
             .and_then(|target| target.closest("[role=alertdialog]").ok().flatten());
-        let index =
-            toast.and_then(|toast| query_toasts().iter().position(|element| *element == toast));
-        focused_toast.set_value(index);
+        // The rendered toasts are in the order of the visible toasts as processed last.
+        let key = toast
+            .and_then(|toast| query_toasts().iter().position(|element| *element == toast))
+            .and_then(|index| previous.with_value(|keys| keys.get(index).cloned()));
+        focused_toast.set_value(key);
     });
     let on_focusout = EventHandler::new(move |e: FocusEvent| {
         let removed = e.related_target().is_none().then(|| {
@@ -231,7 +244,6 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
 
     // A closing focused toast hands the focus to the next newer one (else the next older one);
     // with a pointer, the focus leaves the region (the timeouts would seem stuck).
-    let previous = StoredValue::new(Vec::<String>::new());
     Effect::new(move |_| {
         let visible: Vec<String> = queue
             .visible_toasts
@@ -247,6 +259,11 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
             .collect();
         let Some(removed_index) = focused_toast
             .get_value()
+            .and_then(|key| {
+                previous_visible
+                    .iter()
+                    .position(|previous| *previous == key)
+            })
             .filter(|index| removed.get(*index).copied().unwrap_or(false))
         else {
             return;
@@ -326,3 +343,4 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         },
     }
 }
+

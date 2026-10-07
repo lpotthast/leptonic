@@ -164,7 +164,7 @@ pub fn ToggleButtonGroup(
     let group = use_toggle_button_group(UseToggleButtonGroupInput {
         state,
         toolbar: UseToolbarInput {
-            orientation,
+            orientation: orientation.into(),
             aria_label,
             aria_labelledby,
         },

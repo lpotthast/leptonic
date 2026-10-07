@@ -6,6 +6,7 @@ use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
+    tachys::html::property::{Property, prop},
 };
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
@@ -25,7 +26,7 @@ use crate::{
         css::{ForcedColorAdjust, LengthPercentageAuto, TouchAction, computed_pct},
         event_listeners::{Listener, listen_to},
         focus::focus_element,
-        i18n::use_direction,
+        i18n::{use_direction, use_locale},
         id::use_id,
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
@@ -44,7 +45,7 @@ use crate::{
 // ## API DIFFERENCES
 // - The elements (area, inputs) are captured by the returned props instead of refs passed in.
 // - The gradient styles (`useColorAreaGradient`) are part of the returned props' styles; the
-//   gradient comes from the color type (`ColorValue::get_area_gradient`).
+//   gradient comes from the color type (`ColorValue::area_gradient`).
 //
 // ## OMITTED FEATURES
 // - Localized strings: "Color picker", "2D slider", "{name}: {value}" and the color names are
@@ -177,7 +178,8 @@ pub struct UseColorAreaInputProps {
     pub aria_orientation: AriaOrientation,
     pub aria_valuetext: Signal<String>,
     pub aria_hidden: Signal<Option<AriaHidden>>,
-    pub on_change: EventHandler<Event>,
+    /// Sets the channel from the input's value (e.g. by assistive technology).
+    pub on_input: EventHandler<Event>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
     pub element_capture: ElementCaptureAttr,
@@ -191,6 +193,7 @@ pub type UseColorAreaInputAttrs = (
         Attr<attr::Max, f64>,
         Attr<attr::Step, f64>,
         Attr<attr::Value, Signal<f64>>,
+        Property<&'static str, Signal<f64>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::Name, Option<String>>,
         Attr<attr::Form, Option<String>>,
@@ -207,7 +210,7 @@ pub type UseColorAreaInputAttrs = (
         Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
     ),
     (
-        On<ev::change, SharedEventCallback<Event>>,
+        On<ev::input, SharedEventCallback<Event>>,
         On<ev::focus, SharedEventCallback<FocusEvent>>,
         On<ev::blur, SharedEventCallback<FocusEvent>>,
         ElementCaptureAttr,
@@ -226,6 +229,9 @@ impl IntoAttrs for UseColorAreaInputProps {
                 Attr(attr::Max, self.max),
                 Attr(attr::Step, self.step),
                 Attr(attr::Value, self.value),
+                // The attribute is the initial value only: once changed (e.g. by assistive
+                // technology), the input follows its property.
+                prop("value", self.value),
                 Attr(attr::Disabled, self.is_disabled),
                 Attr(attr::Name, self.name),
                 Attr(attr::Form, self.form),
@@ -242,7 +248,7 @@ impl IntoAttrs for UseColorAreaInputProps {
                 Attr(attr::AriaHidden, self.aria_hidden),
             ),
             (
-                self.on_change.into_on(ev::change),
+                self.on_input.into_on(ev::input),
                 self.on_focus.into_on(ev::focus),
                 self.on_blur.into_on(ev::blur),
                 self.element_capture,
@@ -432,7 +438,6 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         on_move_start: Some(on_move_start),
         on_move: Some(on_move),
         on_move_end: Some(on_move_end),
-        ..UseMoveInput::default()
     })
     .props;
     // The area forwards its moves only while a press started on it.
@@ -454,7 +459,6 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 on_move_end.run(e);
             }
         })),
-        ..UseMoveInput::default()
     })
     .props;
 
@@ -491,7 +495,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         }
     };
     let ignored = |e: &PointerEvent| {
-        e.pointer_type() == "mouse"
+        PointerType::from(e.pointer_type()) == PointerType::Mouse
             && (e.button() != 0 || e.alt_key() || e.ctrl_key() || e.meta_key())
     };
     let on_thumb_down = EventHandler::new(move |e: PointerEvent| {
@@ -539,7 +543,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     });
 
     // -- Inputs --
-    let on_change = EventHandler::new(move |e: Event| {
+    let on_input = EventHandler::new(move |e: Event| {
         changed_via_input.set(true);
         let Some(target) = e
             .expect_target()
@@ -569,14 +573,17 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     let y_focus = input_focus(Axis::Y);
 
     let (x_channel, y_channel, z_channel) = (state.x_channel, state.y_channel, state.z_channel);
+    let locale = use_locale();
+    let display_color = state.display_color();
     let value_text = move |channel: C::Channel| {
         Signal::derive(move || {
-            let color = state.display_color().get();
+            let color = display_color.get();
+            let locale = locale.get();
             let name_and_value = |c: C::Channel| {
                 format!(
                     "{}: {}",
-                    C::get_channel_name(c),
-                    color.format_channel_value(c)
+                    C::channel_name(c),
+                    color.format_channel_value(c, &locale)
                 )
             };
             let text = if changed_via_input.get() || changed_via_keyboard.get() {
@@ -614,8 +621,8 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
     });
 
     let input_styles = || visually_hidden_full_size_styles();
-    let x_range = C::get_channel_range(x_channel);
-    let y_range = C::get_channel_range(y_channel);
+    let x_range = C::channel_range(x_channel);
+    let y_range = C::channel_range(y_channel);
     let x_id = use_id("color-area-x");
     let y_id = use_id("color-area-y");
     // So that only one "2D slider" is listed by screen readers, the unfocused input is hidden
@@ -647,7 +654,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 || changed_via_keyboard.get();
             (!shown).then_some(AriaHidden::True)
         }),
-        on_change: on_change.clone(),
+        on_input: on_input.clone(),
         on_focus: x_focus.on_focus,
         on_blur: x_focus.on_blur,
         element_capture: x_input.attr(),
@@ -675,7 +682,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
                 is_mobile || focused_input.get() == Some(Axis::Y) || changed_via_keyboard.get();
             (!shown).then_some(AriaHidden::True)
         }),
-        on_change,
+        on_input,
         on_focus: y_focus.on_focus,
         on_blur: y_focus.on_blur,
         element_capture: y_input.attr(),
@@ -686,7 +693,7 @@ pub fn use_color_area<C: ColorValue>(input: UseColorAreaInput<C>) -> UseColorAre
         state
             .value
             .get()
-            .get_area_gradient(x_channel, y_channel, direction.get())
+            .area_gradient(x_channel, y_channel, direction.get())
     });
     let area_styles = Styles::new()
         .add_unchecked("position", "relative")

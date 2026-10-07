@@ -88,14 +88,17 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <Section title="use_tooltip_trigger">
                 <p>
-                    "Takes the input and the state: "<Code inline=true>"use_tooltip_trigger(input, state)"</Code>
-                    ". Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>" onto the trigger and put "
+                    "Takes the state from "<Code inline=true>"use_tooltip_trigger_state"</Code>" in its input. Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>" onto the trigger and put "
                     <Code inline=true>"tooltip_props.id"</Code>" and "<Code inline=true>"tooltip_props.role"</Code>
                     " on the tooltip element."
                 </p>
 
                 <Section title="Input" id="use-tooltip-trigger-input">
                     <ApiTable kind=ApiKind::Input of="UseTooltipTriggerInput">
+                        <ApiRow name="state" ty="TooltipTriggerState">
+                            "The tooltip\u{2019}s state, from "<Code inline=true>"use_tooltip_trigger_state"</Code>
+                            "; its "<Code inline=true>"overlay.is_open"</Code>" tells whether the tooltip is open. Required."
+                        </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the tooltip never opens."</ApiRow>
                         <ApiRow name="trigger" ty="TooltipTriggerMode" default="Hover">
                             "What opens the tooltip, see "<AnchorLink href="#trigger-modes">"Trigger Modes"</AnchorLink>"."
@@ -116,9 +119,6 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                             "The "<Code inline=true>"id"</Code>" and the "<Code inline=true>"role"</Code>" ("
                             <Code inline=true>"tooltip"</Code>") of the tooltip element."
                         </ApiRow>
-                        <ApiRow name="is_open" ty="Signal<bool>">"Whether the tooltip is open."</ApiRow>
-                        <ApiRow name="trigger_id" ty="String">"The id of the trigger."</ApiRow>
-                        <ApiRow name="tooltip_id" ty="String">"The id of the tooltip."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -134,12 +134,6 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether hovering the tooltip is ignored."</ApiRow>
                         <ApiRow name="state" ty="Option<TooltipTriggerState>" default="None">
                             "The tooltip state: hovering the tooltip opens it right away, leaving it closes it after the close delay."
-                        </ApiRow>
-                        <ApiRow name="on_open" ty="Option<Callback<()>>" default="None">
-                            "Called when the pointer enters the tooltip, without a "<Code inline=true>"state"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="on_close" ty="Option<Callback<()>>" default="None">
-                            "Called when the pointer leaves the tooltip, without a "<Code inline=true>"state"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>

@@ -27,7 +27,8 @@ use crate::{
 //   `selection.disabled_behavior` (the table atoms use `DisabledBehavior::Selection`).
 //
 // ## OMITTED FEATURES
-// - Tree tables (`treeColumn`, `expandedKeys`): trees are grid lists (`hooks::tree`).
+// - Tree tables (`treeColumn`, `expandedKeys`): not built yet (planned; trees are grid lists
+//   meanwhile, `hooks::tree`).
 // - `UNSTABLE_useFilteredTableState`.
 //
 // =============================================================================
@@ -120,7 +121,8 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
         collection,
         selection,
         focus_mode,
-    });
+    })
+    .without_navigation_while_empty();
     let binding = sort_descriptor
         .unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_sort_descriptor)));
     TableState {

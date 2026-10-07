@@ -24,10 +24,16 @@ use crate::utils::{
 // - A `Copy` struct with signals and methods (C3).
 // - `page_behavior`, `selection_alignment`: enums (react-aria: strings).
 //
+// - The layout props (`visible_duration`, `page_behavior`, `selection_alignment`,
+//   `first_day_of_week`, `weeks_in_month`) are signals (C11); a changed visible duration re-aligns
+//   the visible range around the focused date, as react-aria does.
+//
 // ## LEPTOS-SPECIFIC ADAPTATIONS
-// - Without a value or focused date, the server renders the month of its own today, which the
-//   browser keeps when hydrating; near midnight, in another time zone, that is a neighboring month.
-//   (The today marks are set in the browser, see `utils::date::use_today`.)
+// - Without a value or focused date, the calendar starts at today. The server's today may be
+//   another date than the browser's (its time zone), and hydration keeps the server's markup: the
+//   browser hydrates with the server's date (a `SharedValue`), then moves the focused date to its
+//   own today after mounting, unless it was moved already. (The today marks are set in the
+//   browser, see `utils::date::use_today`.)
 //
 // ## OMITTED FEATURES
 // - `selectionMode: 'multiple'` (several selected dates).
@@ -78,14 +84,17 @@ pub struct UseCalendarStateInput {
     /// The focused date as app state, replacing `default_focused_value`.
     pub focused_value: Option<ValueBinding<Date>>,
     pub on_focus_change: Option<Callback<Date>>,
-    /// How much is visible at once. Default: one month.
-    pub visible_duration: DateDuration,
-    pub page_behavior: PageBehavior,
-    pub selection_alignment: SelectionAlignment,
-    /// The first day of the week. Default: the locale's.
-    pub first_day_of_week: Option<Weekday>,
+    /// How much is visible at once. Default: one month. A change re-aligns the visible range
+    /// around the focused date.
+    pub visible_duration: Signal<DateDuration>,
+    pub page_behavior: Signal<PageBehavior>,
+    /// Where the focused date is placed when the visible range is aligned (initially, and when
+    /// the visible duration changes).
+    pub selection_alignment: Signal<SelectionAlignment>,
+    /// The first day of the week. `None`: the locale's.
+    pub first_day_of_week: Signal<Option<Weekday>>,
     /// A fixed number of week rows per month (e.g. 6, so the calendar keeps its height).
-    pub weeks_in_month: Option<u8>,
+    pub weeks_in_month: Signal<Option<u8>>,
 }
 
 impl Default for UseCalendarStateInput {
@@ -104,11 +113,11 @@ impl Default for UseCalendarStateInput {
             default_focused_value: None,
             focused_value: None,
             on_focus_change: None,
-            visible_duration: DateDuration::months(1),
-            page_behavior: PageBehavior::Visible,
-            selection_alignment: SelectionAlignment::Center,
-            first_day_of_week: None,
-            weeks_in_month: None,
+            visible_duration: Signal::stored(DateDuration::months(1)),
+            page_behavior: Signal::stored(PageBehavior::Visible),
+            selection_alignment: Signal::stored(SelectionAlignment::Center),
+            first_day_of_week: Signal::stored(None),
+            weeks_in_month: Signal::stored(None),
         }
     }
 }
@@ -132,7 +141,7 @@ pub struct CalendarState {
     pub min_value: Signal<Option<Date>>,
     pub max_value: Signal<Option<Date>>,
     /// How much is visible at once.
-    pub visible_duration: DateDuration,
+    pub visible_duration: Signal<DateDuration>,
     /// The first day of the week.
     pub first_day_of_week: Signal<Weekday>,
     binding: ValueBinding<Option<Date>>,
@@ -140,8 +149,9 @@ pub struct CalendarState {
     start: RwSignal<Date>,
     focused: RwSignal<bool>,
     is_date_unavailable: Option<Callback<Date, bool>>,
-    page_duration: DateDuration,
-    weeks_in_month: Option<u8>,
+    page_behavior: Signal<PageBehavior>,
+    selection_alignment: Signal<SelectionAlignment>,
+    weeks_in_month: Signal<Option<u8>>,
 }
 
 /// The last visible date of a range starting at `start`.
@@ -167,26 +177,39 @@ impl CalendarState {
         self.first_day_of_week.get_untracked()
     }
 
+    fn duration(&self) -> DateDuration {
+        self.visible_duration.get_untracked()
+    }
+
+    /// The first visible date with `focused` placed per the selection alignment.
+    fn aligned_start(&self, focused: Date) -> Date {
+        let (min, max) = self.bounds();
+        let (duration, first_day) = (self.duration(), self.first_day());
+        match self.selection_alignment.get_untracked() {
+            SelectionAlignment::Start => align_start(focused, duration, first_day, min, max),
+            SelectionAlignment::End => align_end(focused, duration, first_day, min, max),
+            SelectionAlignment::Center => align_center(focused, duration, first_day, min, max),
+        }
+    }
+
+    /// Aligns the visible range around the focused date (react-aria: when the visible duration
+    /// changes).
+    fn realign(&self) {
+        self.start
+            .set(self.aligned_start(self.focused_date.get_untracked()));
+    }
+
     /// Moves the visible range so that it shows `focused`.
     fn show(&self, focused: Date) {
         let (min, max) = self.bounds();
         let start = self.start.get_untracked();
+        let duration = self.duration();
         if focused < start {
-            self.start.set(align_end(
-                focused,
-                self.visible_duration,
-                self.first_day(),
-                min,
-                max,
-            ));
-        } else if focused > end_of(start, self.visible_duration) {
-            self.start.set(align_start(
-                focused,
-                self.visible_duration,
-                self.first_day(),
-                min,
-                max,
-            ));
+            self.start
+                .set(align_end(focused, duration, self.first_day(), min, max));
+        } else if focused > end_of(start, duration) {
+            self.start
+                .set(align_start(focused, duration, self.first_day(), min, max));
         }
     }
 
@@ -249,7 +272,7 @@ impl CalendarState {
 
     /// The date a week later (in a day view: the next page).
     pub fn focus_next_row(&self) {
-        let duration = self.visible_duration;
+        let duration = self.duration();
         if duration.days != 0 {
             self.focus_next_page();
         } else if duration.weeks != 0 || duration.months != 0 || duration.years != 0 {
@@ -263,7 +286,7 @@ impl CalendarState {
 
     /// The date a week earlier (in a day view: the previous page).
     pub fn focus_previous_row(&self) {
-        let duration = self.visible_duration;
+        let duration = self.duration();
         if duration.days != 0 {
             self.focus_previous_page();
         } else if duration.weeks != 0 || duration.months != 0 || duration.years != 0 {
@@ -277,12 +300,21 @@ impl CalendarState {
 
     /// Shows the next page and moves the focused date by the same amount (keeping the day).
     pub fn focus_next_page(&self) {
-        self.page(self.page_duration);
+        self.page(self.page_duration());
     }
 
     /// Shows the previous page and moves the focused date by the same amount (keeping the day).
     pub fn focus_previous_page(&self) {
-        self.page(self.page_duration.negated());
+        self.page(self.page_duration().negated());
+    }
+
+    /// How far the previous and next buttons page.
+    fn page_duration(&self) -> DateDuration {
+        let duration = self.duration();
+        match self.page_behavior.get_untracked() {
+            PageBehavior::Visible => duration,
+            PageBehavior::Single => duration.unit(),
+        }
     }
 
     fn page(&self, duration: DateDuration) {
@@ -309,7 +341,7 @@ impl CalendarState {
 
     /// The first date of the focused section (week or month).
     pub fn focus_section_start(&self) {
-        let duration = self.visible_duration;
+        let duration = self.duration();
         let focused = self.focused_date.get_untracked();
         if duration.days != 0 {
             self.focus_cell(self.start.get_untracked());
@@ -322,7 +354,7 @@ impl CalendarState {
 
     /// The last date of the focused section (week or month).
     pub fn focus_section_end(&self) {
-        let duration = self.visible_duration;
+        let duration = self.duration();
         let focused = self.focused_date.get_untracked();
         if duration.days != 0 {
             self.focus_cell(end_of(self.start.get_untracked(), duration));
@@ -345,7 +377,7 @@ impl CalendarState {
     }
 
     fn section(&self, larger: bool, direction: i32) {
-        let duration = self.visible_duration;
+        let duration = self.duration();
         let focused = self.focused_date.get_untracked();
         let by =
             |step: DateDuration| focused.add(if direction < 0 { step.negated() } else { step });
@@ -380,12 +412,12 @@ impl CalendarState {
         self.set_value(Some(date));
     }
 
-    /// Sets whether the calendar's grid has focus.
     /// Whether the state still exists (not disposed with its calendar), for blur handlers.
     pub(crate) fn is_alive(&self) -> bool {
         self.focused.try_with_untracked(|_| ()).is_some()
     }
 
+    /// Sets whether the calendar's grid has focus.
     pub fn set_focused(&self, focused: bool) {
         self.focused.set(focused);
     }
@@ -443,7 +475,7 @@ impl CalendarState {
     pub fn dates_in_week(&self, week_index: u8, from: Option<Date>) -> Vec<Option<Date>> {
         let from = from.unwrap_or_else(|| self.visible_range.get().start);
         let mut date = from.add(DateDuration::weeks(i32::from(week_index)));
-        let days = match self.visible_duration.days {
+        let days = match self.visible_duration.get().days {
             days @ 1..7 => usize::try_from(days).unwrap_or(7),
             _ => 7,
         };
@@ -468,12 +500,12 @@ impl CalendarState {
 
     /// The number of week rows of the month of `from` (default: the visible range's start).
     pub fn weeks_in_month(&self, from: Option<Date>) -> u8 {
-        let duration = self.visible_duration;
+        let duration = self.visible_duration.get();
         if duration.weeks != 0 || duration.days != 0 {
             let days_weeks = u8::try_from((duration.days.max(0) + 6) / 7).unwrap_or(0);
             return u8::try_from(duration.weeks.max(0)).unwrap_or(0) + days_weeks;
         }
-        self.weeks_in_month.unwrap_or_else(|| {
+        self.weeks_in_month.get().unwrap_or_else(|| {
             let from = from.unwrap_or_else(|| self.visible_range.get().start);
             from.weeks_in_month(self.first_day_of_week.get())
         })
@@ -506,7 +538,9 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
 
     let locale = use_locale();
     let first_day_of_week = Signal::derive(move || {
-        first_day_override.unwrap_or_else(|| first_day_of_week(&locale.get()))
+        first_day_override
+            .get()
+            .unwrap_or_else(|| first_day_of_week(&locale.get()))
     });
 
     let owned_value = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
@@ -521,9 +555,15 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
     );
 
     let (min, max) = (min_value.get_untracked(), max_value.get_untracked());
+    // Without a value or focused date: today, the server's while hydrating (see the deviations).
+    let starts_today = default_focused_value.is_none()
+        && focused_value.is_none()
+        && binding.value.get_untracked().is_none();
+    let initial_today = starts_today.then(|| SharedValue::new_str(today).into_inner());
     let initial_focus = constrain_value(
         default_focused_value
             .or_else(|| binding.value.get_untracked())
+            .or(initial_today)
             .unwrap_or_else(today),
         min,
         max,
@@ -544,27 +584,20 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
 
     let first_day = first_day_of_week.get_untracked();
     let focused_now = focus.value.get_untracked();
-    let start = RwSignal::new(match selection_alignment {
-        SelectionAlignment::Start => {
-            align_start(focused_now, visible_duration, first_day, min, max)
-        }
-        SelectionAlignment::End => align_end(focused_now, visible_duration, first_day, min, max),
-        SelectionAlignment::Center => {
-            align_center(focused_now, visible_duration, first_day, min, max)
-        }
+    let duration = visible_duration.get_untracked();
+    let start = RwSignal::new(match selection_alignment.get_untracked() {
+        SelectionAlignment::Start => align_start(focused_now, duration, first_day, min, max),
+        SelectionAlignment::End => align_end(focused_now, duration, first_day, min, max),
+        SelectionAlignment::Center => align_center(focused_now, duration, first_day, min, max),
     });
     let visible_range = Signal::derive(move || {
         let start = start.get();
         DateRange {
             start,
-            end: end_of(start, visible_duration),
+            end: end_of(start, visible_duration.get()),
         }
     });
     let focused = RwSignal::new(auto_focus);
-    let page_duration = match page_behavior {
-        PageBehavior::Visible => visible_duration,
-        PageBehavior::Single => visible_duration.unit(),
-    };
 
     let is_value_invalid = Signal::derive(move || {
         is_marked_invalid.get()
@@ -591,9 +624,31 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
         start,
         focused,
         is_date_unavailable,
-        page_duration,
+        page_behavior,
+        selection_alignment,
         weeks_in_month,
     };
+
+    // A changed visible duration re-aligns the visible range around the focused date.
+    Effect::watch(
+        move || visible_duration.get(),
+        move |_, _, _| state.realign(),
+        false,
+    );
+
+    // Hydrated with the server's today: the browser's, once mounted (unless moved meanwhile).
+    if let Some(server_today) = initial_today {
+        Effect::new(move |_| {
+            untrack(|| {
+                let browser_today = today();
+                if browser_today != server_today && state.focused_date.get() == initial_focus {
+                    let (min, max) = state.bounds();
+                    state.focus.set(constrain_value(browser_today, min, max));
+                    state.realign();
+                }
+            });
+        });
+    }
 
     // A focused date moved from outside (app state, min/max changes) stays within min and max
     // and visible (react-aria checks this while rendering).
@@ -619,7 +674,7 @@ mod tests {
 
     fn state(input: UseCalendarStateInput) -> CalendarState {
         use_calendar_state(UseCalendarStateInput {
-            first_day_of_week: Some(Weekday::Sunday),
+            first_day_of_week: Signal::stored(Some(Weekday::Sunday)),
             ..input
         })
     }

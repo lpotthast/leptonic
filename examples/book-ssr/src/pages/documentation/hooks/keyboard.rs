@@ -200,7 +200,7 @@ pub fn PageUseKeyboard() -> impl IntoView {
                             <TableCell>
                                 "The keys to show for the shortcut, as "<Code inline=true>"KeyboardKey"</Code>"s: the modifiers in the "
                                 "order of the platform (Apple\u{2019}s when "<Code inline=true>"apple"</Code>" is true), then the key. The "
-                                <Link href=routes::doc::kbd::Atom.materialize()><Code inline=true>"ShortcutKeys"</Code></Link>
+                                <Link href=format!("{}#shortcutkeys", routes::doc::Kbd.materialize())><Code inline=true>"ShortcutKeys"</Code></Link>
                                 " atom shows them."
                             </TableCell>
                         </TableRow>
@@ -245,7 +245,7 @@ pub fn PageUseKeyboard() -> impl IntoView {
                 <li><Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link></li>
                 <li><Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
-                <li><Link href=routes::doc::kbd::Atom.materialize()>"Kbd Atom"</Link></li>
+                <li><Link href=routes::doc::Kbd.materialize()>"Kbd Atoms"</Link></li>
                 <li><Link href=routes::doc::EventPropagation.materialize()>"Event Propagation"</Link></li>
             </SeeAlso>
         </DocPage>

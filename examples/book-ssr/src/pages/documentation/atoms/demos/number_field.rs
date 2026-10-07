@@ -1,12 +1,10 @@
-use leptonic::{
-    atoms::{
-        field::{Description, FieldError, Label},
-        input::Input,
-        number_field::{
-            NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
-        },
+use leptonic::atoms::{
+    checkbox::Checkbox,
+    field::{Description, FieldError, Label},
+    input::Input,
+    number_field::{
+        NumberField, NumberFieldDecrementButton, NumberFieldGroup, NumberFieldIncrementButton,
     },
-    components::prelude::Checkbox,
 };
 use leptos::prelude::*;
 
@@ -39,7 +37,10 @@ pub fn NumberFieldAtomDemo() -> impl IntoView {
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

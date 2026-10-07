@@ -201,16 +201,29 @@ pub fn PageAtomGrid() -> impl IntoView {
 
             <Section title="Styling">
                 <p>
-                    "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with "
-                    "attribute selectors. Keyboard focus is on a row or on a cell, so give both a focus ring:"
+                    "The atoms bring no styles. Each renders a "<Code inline=true>"<div>"</Code>" with its default class ("<Code inline=true>"leptonic-Grid"</Code>", "
+                    <Code inline=true>"leptonic-GridRowGroup"</Code>", "<Code inline=true>"leptonic-GridRow"</Code>", "<Code inline=true>"leptonic-GridCell"</Code>"), followed by the "
+                    <Code inline=true>"classes"</Code>" you pass; the cells hold your content. Lay the grid out yourself (as a CSS table, as in the demo, "
+                    "or as a CSS grid) and target the state with the data attributes. Keyboard focus is on a row or, after "
+                    <Keys keys="ArrowRight"/>", on a cell, so give both a focus ring. The demo above uses this CSS:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
-                        .my-row[data-selected] { background: var(--surface); }
-                        .my-row[data-focus-visible], .my-cell[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
-                        .my-row[data-disabled] { opacity: 0.5; }
+                        .demo-messages { display: table; width: 100%; max-width: 32em; border-collapse: collapse; }
+                        .demo-messages > .leptonic-GridRowGroup { display: table-row-group; }
+                        .demo-messages-row { display: table-row; cursor: pointer; }
+                        .demo-messages-row[data-selected] { background: var(--surface); }
+                        .demo-messages-row[data-pressed] { background: var(--border); }
+                        .demo-messages-row[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+                        .demo-messages-cell { display: table-cell; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+                        .demo-messages-row[data-focus-visible],
+                        .demo-messages-cell[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
                     ")}
                 </Code>
+                <p>
+                    "Apps that don\u{2019}t want to style from scratch can load leptonic\u{2019}s optional atom theme, "
+                    <Code inline=true>"@use \"leptonic/leptonic-atoms\";"</Code>", which styles the default classes."
+                </p>
             </Section>
 
             <Section title="Composition">

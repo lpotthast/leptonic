@@ -36,7 +36,9 @@ use crate::{
 // - Render props become `data-*` attributes plus plain children; `SliderOutput` shows the
 //   formatted values without children.
 // - Label, description and error message are the field parts (C14): `Label`, `Description`,
-//   `FieldError` inside the slider.
+//   `FieldError` inside the slider. A `Label` inside a `SliderThumb` names that thumb (as
+//   upstream's thumb `LabelContext`).
+// - `is_required` also on the `Slider` (every thumb; react-aria-components: per thumb only).
 //
 // ## DIFFERENT BEHAVIOR
 // - `SliderFill` sets its position and its size along the track, not its size across it
@@ -72,10 +74,16 @@ struct SliderContext {
 struct ThumbOptions {
     index: usize,
     is_disabled: Signal<bool>,
+    is_required: Signal<bool>,
+    is_invalid: Signal<bool>,
     name: Option<String>,
     form: Option<String>,
+    has_label: Signal<bool>,
     aria_label: MaybeProp<String>,
     aria_labelledby: Option<String>,
+    aria_describedby: Option<String>,
+    aria_errormessage: Option<String>,
+    aria_details: Option<String>,
 }
 
 fn expect_slider() -> Option<SliderContext> {
@@ -128,6 +136,9 @@ pub fn Slider<T: NumberValue>(
         Orientation,
     >,
     #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Whether a value is required (`aria-required` on every thumb).
+    #[prop(into, optional)]
+    is_required: Signal<bool>,
     /// Whether the value is invalid (shows a `FieldError`).
     #[prop(into, optional)]
     is_invalid: Signal<bool>,
@@ -138,6 +149,12 @@ pub fn Slider<T: NumberValue>(
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Further elements describing every thumb (next to a `Description`).
+    #[prop(into, optional)]
+    aria_describedby: Option<String>,
+    /// Elements with details about every thumb.
+    #[prop(into, optional)]
+    aria_details: Option<String>,
     /// Called with the values whenever they change, also while dragging.
     #[prop(into, optional)]
     on_change: Option<Callback<Vec<T>>>,
@@ -167,12 +184,13 @@ pub fn Slider<T: NumberValue>(
         on_change_end,
     });
     let slider = use_slider(UseSliderInput {
+        state,
         id,
         has_label,
         aria_label,
         aria_labelledby,
-        state,
-        aria_describedby: None,
+        aria_describedby,
+        aria_details,
     });
     let UseSliderReturn {
         label_props,
@@ -229,10 +247,16 @@ pub fn Slider<T: NumberValue>(
             let ThumbOptions {
                 index,
                 is_disabled,
+                is_required: thumb_required,
+                is_invalid: thumb_invalid,
                 name,
                 form,
+                has_label,
                 aria_label,
                 aria_labelledby,
+                aria_describedby,
+                aria_errormessage,
+                aria_details,
             } = options;
             let thumb = use_slider_thumb(UseSliderThumbInput {
                 state,
@@ -242,12 +266,14 @@ pub fn Slider<T: NumberValue>(
                 is_disabled,
                 name,
                 form,
-                has_label: Signal::stored(false),
+                has_label,
                 aria_label,
                 aria_labelledby,
-                aria_describedby: None,
-                is_required: Signal::default(),
-                is_invalid,
+                aria_describedby,
+                aria_errormessage,
+                aria_details,
+                is_required: Signal::derive(move || is_required.get() || thumb_required.get()),
+                is_invalid: Signal::derive(move || is_invalid.get() || thumb_invalid.get()),
             });
             (
                 thumb,
@@ -411,7 +437,8 @@ struct SliderThumbContext {
 }
 
 /// A thumb of the [`Slider`] around it, inside its `SliderTrack`: dragged with a pointer, moved
-/// with the keyboard through its visually hidden `<input type="range">`.
+/// with the keyboard through its visually hidden `<input type="range">`. A `Label` inside it
+/// names this thumb (next to the slider's label).
 ///
 /// Data attributes: `data-dragging`, `data-hovered`, `data-focused`, `data-focus-visible`,
 /// `data-disabled`.
@@ -425,6 +452,12 @@ pub fn SliderThumb(
     /// Disables this thumb only.
     #[prop(into, optional)]
     is_disabled: Signal<bool>,
+    /// Whether this thumb's value is required (next to the slider's `is_required`).
+    #[prop(into, optional)]
+    is_required: Signal<bool>,
+    /// Whether this thumb's value is invalid (next to the slider's `is_invalid`).
+    #[prop(into, optional)]
+    is_invalid: Signal<bool>,
     /// The input's name, for forms.
     #[prop(into, optional)]
     name: Option<String>,
@@ -433,6 +466,15 @@ pub fn SliderThumb(
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
+    /// Further elements describing this thumb (next to the slider's description).
+    #[prop(into, optional)]
+    aria_describedby: Option<String>,
+    /// The element with this thumb's error message.
+    #[prop(into, optional)]
+    aria_errormessage: Option<String>,
+    /// Further elements with details about this thumb.
+    #[prop(into, optional)]
+    aria_details: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
@@ -441,22 +483,31 @@ pub fn SliderThumb(
     let Some(slider) = expect_slider() else {
         return ().into_any();
     };
+    // A `Label` inside the thumb names it (react-aria-components' `LabelContext` of the thumb).
+    let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let (thumb, label) = (slider.thumb)(ThumbOptions {
         index,
         is_disabled,
+        is_required,
+        is_invalid,
         name,
         form,
+        has_label: label_presence.has_label,
         aria_label,
         aria_labelledby,
+        aria_describedby,
+        aria_errormessage,
+        aria_details,
     });
     let UseSliderThumbReturn {
         thumb_props,
         input_props,
+        label_props,
         is_dragging,
         is_disabled,
         is_focused,
-        ..
     } = thumb;
+    let thumb_label = LabelContext::label(label_props).with_presence(label_presence);
     let hover = use_hover(UseHoverInput {
         is_disabled,
         ..UseHoverInput::default()
@@ -489,7 +540,9 @@ pub fn SliderThumb(
             <VisuallyHidden>
                 <input {..input_props.into_attrs()} {..input_focus} />
             </VisuallyHidden>
-            <Provider value=thumb_context>{children.map(|children| children())}</Provider>
+            <Provider value=thumb_context>
+                <Provider value=thumb_label>{children.map(|children| children())}</Provider>
+            </Provider>
         </div>
     }
     .into_any()
@@ -608,6 +661,10 @@ pub fn SliderMark(
         return ().into_any();
     };
     let vertical = move || orientation.get() == Orientation::Vertical;
+    let in_range = {
+        let mark = mark.clone();
+        move || mark.is_in_range().then_some("true")
+    };
     let position = format!("{}%", mark.percentage * 100.0);
     let bottom = position.clone();
     let styles = Styles::new()
@@ -621,7 +678,7 @@ pub fn SliderMark(
         <div
             class=classes
             style=styles
-            data-in-range=flag(mark.in_range)
+            data-in-range=in_range
             data-orientation=move || orientation.get().as_str()
         >
             {children()}

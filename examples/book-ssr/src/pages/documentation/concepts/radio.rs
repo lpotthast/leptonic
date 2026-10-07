@@ -67,10 +67,12 @@ pub fn PageRadioOverview() -> impl IntoView {
 
             <Section title="Quick Start">
                 <p>
-                    "A "<Code inline=true>"RadioGroup"</Code>" with a label holds the selected key; pass it an "
-                    <Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"value"</Code>" and "<Code inline=true>"set_value"</Code>
-                    " to keep the selection in your app. Each "<Code inline=true>"Radio"</Code>" has a "
-                    <Code inline=true>"value"</Code>" and its label as children."
+                    "A "<Code inline=true>"RadioGroup"</Code>" atom with a "<Code inline=true>"Label"</Code>" holds the "
+                    "selected key; pass it an "<Code inline=true>"RwSignal"</Code>" as "<Code inline=true>"value"</Code>" and "
+                    <Code inline=true>"set_value"</Code>" to keep the selection in your app. Each "<Code inline=true>"Radio"</Code>
+                    " has a "<Code inline=true>"value"</Code>" and its label as children, next to the circle you draw "
+                    "yourself (the CSS is on the "
+                    <Link href=format!("{}#styling", routes::doc::radio::Atom.materialize())>"Radio Atoms"</Link>" page):"
                 </p>
                 <Demo
                     description="Radio group with two labeled shipping options, the current selection and a disabled toggle"

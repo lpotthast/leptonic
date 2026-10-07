@@ -6,10 +6,9 @@ use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, IntoAttrs, TextFieldElement,
-        UseButtonInput, UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput,
-        UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_search_field,
-        use_text_field_state,
+        AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseButtonInput,
+        UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput, UseTextFieldStateInput,
+        ValidateFn, ValidationBehavior, use_button, use_search_field, use_text_field_state,
     },
     utils::{
         classes::Classes, data_attributes::flag, default_class::with_default_class,
@@ -121,50 +120,47 @@ pub fn SearchField(
         on_submit,
         on_clear,
         text_field: UseTextFieldInput {
-            input_type: Signal::stored(InputType::Search),
-            ..UseTextFieldInput {
-                id,
-                input_type,
-                is_disabled,
-                is_read_only,
-                is_required,
-                is_invalid,
-                validate,
-                validation_behavior: use_validation_behavior(validation_behavior),
-                name,
-                form,
-                placeholder,
-                pattern,
-                min_length,
-                max_length,
-                auto_complete,
-                auto_capitalize,
-                auto_correct,
-                spell_check,
-                input_mode,
-                enter_key_hint,
-                auto_focus,
-                has_label,
-                aria_label,
-                aria_labelledby,
-                aria_describedby,
-                on_focus_change,
-                state,
-                element: TextFieldElement::Input,
-                validation: None,
-                exclude_from_tab_order: false,
-                label_id: None,
-                aria_errormessage: None,
-                aria_activedescendant: Signal::stored(None),
-                aria_autocomplete: None,
-                aria_haspopup: None,
-                aria_controls: Signal::stored(None),
-                on_focus: None,
-                on_blur: None,
-                on_key_down: None,
-                on_key_up: None,
-                shortcuts: None,
-            }
+            id,
+            input_type,
+            is_disabled,
+            is_read_only,
+            is_required,
+            is_invalid,
+            validate,
+            validation_behavior: use_validation_behavior(validation_behavior),
+            name,
+            form,
+            placeholder,
+            pattern,
+            min_length,
+            max_length,
+            auto_complete,
+            auto_capitalize,
+            auto_correct,
+            spell_check,
+            input_mode,
+            enter_key_hint,
+            auto_focus,
+            has_label,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            on_focus_change,
+            state,
+            element: TextFieldElement::Input,
+            validation: None,
+            exclude_from_tab_order: false,
+            label_id: None,
+            aria_errormessage: None,
+            aria_activedescendant: Signal::stored(None),
+            aria_autocomplete: None,
+            aria_haspopup: None,
+            aria_controls: Signal::stored(None),
+            on_focus: None,
+            on_blur: None,
+            on_key_down: None,
+            on_key_up: None,
+            shortcuts: None,
         },
     });
     let is_invalid = text_field.is_invalid;
@@ -201,7 +197,8 @@ pub fn SearchField(
 /// from the keyboard) and keeps focus in the input. Hide it while the field is empty with the
 /// field's `data-empty`.
 ///
-/// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+/// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
+/// `data-disabled`.
 ///
 /// Default class: `leptonic-SearchFieldClearButton`.
 #[component]
@@ -213,23 +210,18 @@ pub fn SearchFieldClearButton(
     let classes = with_default_class("leptonic-SearchFieldClearButton", classes);
     let ctx = expect_context::<SearchFieldCtx>();
     let input = ctx.clear_button.get_value();
-    let is_disabled = input.is_disabled;
     let button = use_button(input);
-    let hover = crate::hooks::use_hover(crate::hooks::UseHoverInput {
-        is_disabled,
-        ..crate::hooks::UseHoverInput::default()
-    });
     let (attrs, button_styles) = button.props.into_parts();
 
     view! {
         <button
             {..attrs}
-            {..hover.props.into_attrs()}
             class=classes
             style=button_styles.merge(styles)
             data-pressed=flag(button.is_pressed)
-            data-hovered=flag(hover.is_hovered)
-            data-disabled=flag(is_disabled)
+            data-hovered=flag(button.is_hovered)
+            data-focused=flag(button.is_focused)
+            data-disabled=flag(button.is_disabled)
         >
             {children()}
         </button>

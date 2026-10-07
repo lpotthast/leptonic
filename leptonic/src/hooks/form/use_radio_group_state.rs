@@ -2,7 +2,7 @@
 use leptos::prelude::*;
 
 use super::use_form_validation_state::{
-    UseFormValidationStateInput, UseFormValidationStateReturn, ValidateFn, ValidationBehavior,
+    FormValidationState, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
     use_form_validation_state,
 };
 use crate::{hooks::collections::Key, utils::id::use_id};
@@ -80,7 +80,7 @@ pub struct RadioGroupState {
     pub is_required: Signal<bool>,
     /// Whether the group's displayed validation is invalid.
     pub is_invalid: Signal<bool>,
-    pub validation: UseFormValidationStateReturn,
+    pub validation: FormValidationState,
     pub validation_behavior: ValidationBehavior,
     name: StoredValue<String>,
     default_selected_value: StoredValue<Option<Key>>,
@@ -119,7 +119,7 @@ impl RadioGroupState {
                 on_change.run(value);
             }
         }
-        self.validation.commit_validation.run(());
+        self.validation.commit_validation();
     }
 
     /// Record the radio focused last.

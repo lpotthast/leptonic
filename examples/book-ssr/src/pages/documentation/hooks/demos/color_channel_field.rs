@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::Checkbox,
+    atoms::checkbox::Checkbox,
     hooks::*,
     utils::{
         color::{ColorValue, HSV, HsvChannel},
@@ -19,7 +19,7 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
         default_value: Some(HSV {
             hue: 210.0,
             saturation: 0.6,
-            value: 0.8,
+            brightness: 0.8,
         }),
         is_disabled: disabled.into(),
         value: None,
@@ -62,7 +62,7 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
     let preview_styles = Styles::new().add_optional(move || {
         color
             .get()
-            .map(|c| BackgroundColorProperty.declare(CssColor::from(c.into_rgb8())))
+            .map(|c| BackgroundColorProperty.declare(CssColor::from(c.to_rgb8())))
     });
 
     view! {
@@ -84,7 +84,10 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
             {move || color.get().map_or_else(|| "No color".to_owned(), |c| format!("Color: {}", c.to_css_string()))}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
         </div>
     }
 }

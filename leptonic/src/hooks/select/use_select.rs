@@ -17,8 +17,8 @@ use crate::{
         button::use_button::UseButtonInput,
         collections::{
             AutoFocus, CollectionOptions, FocusStrategy, KeyboardDelegate, LinkBehavior,
-            ListLayout, NavigationOptions, UseTypeSelectInput, UseTypeSelectProps,
-            use_list_keyboard_delegate, use_type_select,
+            ListLayout, NavigationOptions, UseListKeyboardDelegateInput, UseTypeSelectInput,
+            UseTypeSelectProps, use_list_keyboard_delegate, use_type_select,
         },
         focus::{
             use_focus_visible::{Modality, set_modality},
@@ -26,7 +26,6 @@ use crate::{
         },
         form::{
             use_field::{UseFieldInput, UseFieldReturn, use_field},
-            use_form_validation_state::ValidationBehavior,
             use_label::LabelElementType,
         },
         interactions::use_keyboard::KeyboardEventWrapper,
@@ -50,19 +49,20 @@ use crate::{
 //   props. Likewise `listbox` is the `UseListBoxInput` for the popover's `use_listbox`, and
 //   `hidden_select` the input of `use_hidden_select`.
 // - `has_label` says whether a visible label is rendered (react-aria: the `label` content).
+// - `name` and `validation_behavior` are read from the state (C8).
 // - ArrowLeft/ArrowRight on the trigger don't repeat while held (button shortcuts ignore key
 //   repeats).
 //
 // =============================================================================
 
 /// Input of [`use_select`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UseSelectInput {
     pub state: SelectState,
     /// The trigger element's id. Generated when `None`.
     pub id: Option<String>,
     pub is_disabled: Signal<bool>,
-    pub is_required: bool,
+    pub is_required: Signal<bool>,
     /// Whether a visible label is rendered (with `label_props`).
     pub has_label: Signal<bool>,
     pub aria_label: MaybeProp<String>,
@@ -75,11 +75,8 @@ pub struct UseSelectInput {
     /// Called when focus leaves the select.
     pub on_blur: Option<Callback<FocusEvent>>,
     pub on_focus_change: Option<Callback<bool>>,
-    /// The form field name.
-    pub name: Option<String>,
     /// The id of the form the select belongs to, if it is outside of it.
     pub form: Option<String>,
-    pub validation_behavior: ValidationBehavior,
 }
 
 /// Return value of [`use_select`].
@@ -174,19 +171,18 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         on_focus,
         on_blur,
         on_focus_change,
-        name,
         form,
-        validation_behavior,
     } = input;
 
     let listbox_element = CapturedElement::new();
     let delegate = keyboard_delegate.unwrap_or_else(|| {
-        use_list_keyboard_delegate(
-            state.list,
-            listbox_element,
-            Orientation::Vertical,
-            ListLayout::Stack,
-        )
+        use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+            state: state.list,
+            element: listbox_element,
+            orientation: Orientation::Vertical,
+            layout: ListLayout::Stack,
+            layout_delegate: None,
+        })
     });
 
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
@@ -239,7 +235,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     };
 
     // -- Labelling --
-    let has_aria_label = aria_label.get_untracked().is_some();
+    let has_aria_label = Signal::derive(move || aria_label.with(Option::is_some));
     let UseFieldReturn {
         label_props,
         field_props,
@@ -267,7 +263,8 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     let self_label = {
         let trigger_id = trigger_id.clone();
         move || {
-            (has_aria_label && field_labelledby.with(Option::is_none)).then(|| trigger_id.clone())
+            (has_aria_label.get() && field_labelledby.with(Option::is_none))
+                .then(|| trigger_id.clone())
         }
     };
     let trigger_labelledby = {
@@ -320,7 +317,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     });
 
     let trigger = UseButtonInput {
-        id: Some(trigger_id.clone().into()),
+        id: Some(trigger_id.clone()),
         aria_label,
         aria_labelledby: trigger_labelledby,
         aria_describedby: field_props.aria_describedby,
@@ -350,7 +347,7 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
     });
 
     let listbox = UseListBoxInput {
-        id: Some(menu_trigger.menu_props.id.get_untracked()),
+        id: Some(menu_trigger.menu_props.id.clone()),
         aria_labelledby: listbox_labelledby,
         options: CollectionOptions {
             auto_focus: Signal::derive(move || {
@@ -393,13 +390,12 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         listbox,
         hidden_select: UseHiddenSelectInput {
             state,
-            name,
             form,
             auto_complete: None,
             is_disabled,
             is_required,
-            validation_behavior,
             trigger: None,
+            label: aria_label,
         },
         is_invalid: state.validation.is_invalid,
         validation_errors: state.validation.validation_errors,

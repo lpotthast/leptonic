@@ -23,7 +23,7 @@ pub fn PageSeparatorOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Separators exist at all three layers. See "
+                    "Separators exist as a hook and as an atom. See "
                     <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                     " for how the layers relate."
                 </p>
@@ -44,7 +44,11 @@ pub fn PageSeparatorOverview() -> impl IntoView {
             </Section>
 
             <Section title="Quick Start">
-                <p>"The themed component draws the line for you:"</p>
+                <p>
+                    "The atom renders an "<Code inline=true>"<hr>"</Code>"; your CSS draws the line. The class is the "
+                    "book\u{2019}s own; the "<Link href=format!("{}#styling", routes::doc::separator::Atom.materialize())>"styling section"</Link>
+                    " of the atom shows its CSS:"
+                </p>
 
                 <Demo description="Horizontal separator between two paragraphs" source=include_str!("demos/separator.rs") source_open=true>
                     <SeparatorConceptDemo/>
