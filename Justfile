@@ -131,9 +131,8 @@ book-serve-isolated port="4300":
     LEPTOS_RELOAD_PORT=$(({{port}} + 1)) \
     cargo leptos serve
 
-# The book bakes only the ICU4X data of the locales its demos format with, so that the wasm doesn't carry every
-# locale's data (3.6 MB). Needs `icu4x-datagen` of the book's ICU4X version (the script says which).
-# Regenerate the book's ICU4X data (`examples/book-ssr/icu4x-data`), after updating ICU4X or using another locale.
+# Regenerate the book's ICU4X data (`examples/book-ssr/icu4x-data`): after every ICU4X update (old data breaks the
+# build) and for another locale. The book bakes only the data of the locales its demos format with (3.6 MB less wasm).
 book-icu-data:
   ./scripts/icu-datagen.sh examples/book-ssr examples/book-ssr/icu4x-data ^en ^en-GB ^de ^ar ^ar-EG ^es ^fr ^hi ^ja ^pt ^pt-BR ^sv
 

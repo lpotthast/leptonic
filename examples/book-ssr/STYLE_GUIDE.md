@@ -160,8 +160,9 @@ element's font size, so smaller text gets tighter spacing. Use them for padding,
 A demo is code readers copy. It shows one thing well, and everything around the demonstrated element uses leptonic.
 
 - **State is visible:** a `<p class="demo-status">` below the demo shows the current value or the last event ("Last
-  action: copy."), with correct grammar ("1 time", "2 times"). Event logs use `ringbuf::HeapRb` capped at 50 entries
-  in a `demo-event-log`. No other status classes.
+  action: copy."), with correct grammar ("1 time", "2 times"). Event logs keep a `VecDeque` (newest entry
+  first: `push_front` + `truncate(50)`; std only, so readers can copy the demo) in a `demo-event-log`. No other
+  status classes.
 - **Disabling:** where the concept supports disabling, the standard demo control (a `Checkbox` atom, see "Demo
   controls" below) labelled "Disabled" in a `demo-controls` row below the demo toggles it. Further switches of a demo
   (read-only, orientation, ...) go into the same row.

@@ -1,19 +1,18 @@
+use std::collections::VecDeque;
+
 use leptonic::{atoms::checkbox::Checkbox, hooks::*};
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn FocusDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let (is_focused, set_is_focused) = signal(false);
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
 
     let log = move |entry: String| {
         set_events.update(|events| {
-            events.push_overwrite(entry);
+            events.push_front(entry);
+            events.truncate(50);
         });
     };
 
@@ -43,9 +42,9 @@ pub fn FocusDemo() -> impl IntoView {
             </Checkbox>
         </div>
 
-        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

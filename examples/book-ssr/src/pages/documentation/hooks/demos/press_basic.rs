@@ -1,24 +1,23 @@
+use std::collections::VecDeque;
+
 use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn PressBasicDemo() -> impl IntoView {
     let (count, set_count) = signal(0);
     let (dbl_count, set_dbl_count) = signal(0);
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
     let (disabled, set_disabled) = signal(false);
     let (press_state, set_press_state) = signal(false);
 
     let log = move |name: &'static str, e: &PressEvent| {
         set_events.update(|events| {
-            events.push_overwrite(format!(
+            events.push_front(format!(
                 "{name}: pointer_type={:?}, key={:?}, x={:?}, y={:?}",
                 e.pointer_type, e.key, e.x, e.y,
             ));
+            events.truncate(50);
         });
     };
 
@@ -75,9 +74,9 @@ pub fn PressBasicDemo() -> impl IntoView {
             )}
         </p>
 
-        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

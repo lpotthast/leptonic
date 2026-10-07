@@ -1,7 +1,7 @@
 # `build.rustflags` come from the repository's `.cargo/config.toml`; cargo appends the ones below.
 
 [build]
-# ICU4X uses the book's own data (`ICU4X_DATA_DIR` below) instead of the data of every locale: 3.6 MB less wasm.
+# ICU4X uses the book's own data (`ICU4X_DATA_DIR` below) instead of the data of every locale.
 rustflags = ["--cfg=icu4x_custom_data"]
 
 [target.aarch64-apple-darwin]

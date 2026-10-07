@@ -175,15 +175,16 @@ wall / CPU (user + sys) of single-edit rebuilds.
 
 - **ICU4X data subset** (−20% raw, −17% brotli): ICU4X reads custom baked data at compile time when the crates are
   built with `--cfg icu4x_custom_data` and `ICU4X_DATA_DIR=<dir>`. Generate the directory with `icu4x-datagen`
-  (same minor version as the `icu_*` crates; build it with `cargo install icu4x-datagen@2.2.0 --locked`):
-  `icu4x-datagen --format baked --markers all --locales <...> --out <dir>`. `--markers all` is required:
-  `--markers-for-bin` leaves out markers the ICU crates reference at compile time (errors like "cannot find macro
-  `impl_normalizer_nfc_v1`"). That directory is 17-18 MB of Rust sources, mostly segmenter dictionaries no crate of
-  the book uses: `scripts/icu-datagen.sh` passes the markers of the `icu_*_data` crates in the app's dependency tree
-  instead (the file names of their baked data), leaving out the few that need an `unstable` datagen: 5.8 MB of
-  sources (0.9 MB gzipped), same wasm. Data is decided by the app, leptonic needs no change; unsupported locales
-  fall back to their parent or the root locale. Combined with route splitting the main module would be about
-  6.5 MB (wasm-split keeps all data in the main module).
+  of the same minor version as the `icu_*` crates (`scripts/icu-datagen.sh` checks it):
+  `icu4x-datagen --format baked --markers all --segmenter-models none --locales <...> --out <dir>`. `--markers all`
+  is required: `--markers-for-bin` leaves out markers the ICU crates reference at compile time (errors like "cannot
+  find macro `impl_normalizer_nfc_v1`"). Without `--segmenter-models none` the directory is 17-18 MB of Rust
+  sources, mostly segmenter dictionaries; with it 6.2 MB, same wasm (the linker drops unused markers). The data
+  breaks the build when the `icu_*` crates move to another minor version (2.2 data with the 2.3 crates: "cannot find
+  `provider` in `locale`", the markers moved to `icu_locale_fallback`): regenerate it with every ICU4X update.
+  Data is decided by the app, leptonic needs no change; unsupported locales fall back to their parent or the root
+  locale. Combined with route splitting the main module would be about 6.5 MB (wasm-split keeps all data in the main
+  module).
 - **syntect on the client**: anything that calls `utils::syntax_highlight` in the wasm links syntect, its syntax
   definitions and regex (1.35 MB raw, 0.58 MB brotli: the definitions barely compress). Leaving the call out isn't
   enough while leptonic's `components::typography::Code` exists in the wasm: it highlights on the client whenever the

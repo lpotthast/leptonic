@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::checkbox::Checkbox,
     hooks::*,
@@ -10,10 +12,6 @@ use leptonic::{
 };
 use leptos::{html, prelude::*};
 use leptos_use::use_element_bounding;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 /// A pixel offset. Measured sizes are `NaN` before the first layout, which renders as `0px`.
 fn offset(px: f64) -> LengthPercentageAuto {
@@ -22,7 +20,7 @@ fn offset(px: f64) -> LengthPercentageAuto {
 
 #[component]
 pub fn BasicMovementExample() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
     let (left, set_left) = signal(0.0);
     let (top, set_top) = signal(0.0);
     // Shown to CSS as `data-moving`.
@@ -44,17 +42,19 @@ pub fn BasicMovementExample() -> impl IntoView {
         on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
             is_moving.set(true);
             set_events.update(|events| {
-                events.push_overwrite(format!("MoveStart {{ pointer: {} }}", e.pointer_type));
+                events.push_front(format!("MoveStart {{ pointer: {} }}", e.pointer_type));
+                events.truncate(50);
             });
         })),
         on_move: Some(Callback::new(move |e: MoveEvent| {
             set_left.update(|l| *l += e.delta_x);
             set_top.update(|t| *t += e.delta_y);
             set_events.update(|events| {
-                events.push_overwrite(format!(
+                events.push_front(format!(
                     "Move {{ dx: {}, dy: {}, pointer: {} }}",
                     e.delta_x, e.delta_y, e.pointer_type
                 ));
+                events.truncate(50);
             });
         })),
         on_move_end: Some(Callback::new(move |e: MoveEndEvent| {
@@ -63,7 +63,8 @@ pub fn BasicMovementExample() -> impl IntoView {
             set_left.update(|l| *l = l.clamp(0.0, max_left()));
             set_top.update(|t| *t = t.clamp(0.0, max_top()));
             set_events.update(|events| {
-                events.push_overwrite(format!("MoveEnd {{ pointer: {} }}", e.pointer_type));
+                events.push_front(format!("MoveEnd {{ pointer: {} }}", e.pointer_type));
+                events.truncate(50);
             });
         })),
     });
@@ -94,9 +95,9 @@ pub fn BasicMovementExample() -> impl IntoView {
             </Checkbox>
         </div>
 
-        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

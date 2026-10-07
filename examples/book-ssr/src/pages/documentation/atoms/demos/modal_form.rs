@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::{
         button::Button,
@@ -10,10 +12,6 @@ use leptonic::{
     hooks::ButtonType,
 };
 use leptos::{ev, prelude::*};
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 /// A dialog with a form, opened through a `DialogTrigger`. Focus moves to the input when it opens and back to the
 /// trigger when it closes, as the focus log shows. Clicking the backdrop or pressing Escape closes it without saving.
@@ -22,7 +20,7 @@ pub fn ModalFormDemo() -> impl IntoView {
     let is_open = RwSignal::new(false);
     let (name, set_name) = signal(String::from("Leptonic"));
     let draft = RwSignal::new(String::new());
-    let (focus_log, set_focus_log) = signal(HeapRb::<String>::new(50));
+    let (focus_log, set_focus_log) = signal(VecDeque::<String>::new());
 
     // Runs for every change of the open state, also when the user dismisses the modal.
     let set_open = move |open: bool| {
@@ -52,7 +50,8 @@ pub fn ModalFormDemo() -> impl IntoView {
             _ => return,
         };
         set_focus_log.update(|log| {
-            log.push_overwrite(format!("Focus moved to {what}"));
+            log.push_front(format!("Focus moved to {what}"));
+            log.truncate(50);
         });
     };
 
@@ -89,7 +88,7 @@ pub fn ModalFormDemo() -> impl IntoView {
                         if log.is_empty() {
                             "Open the dialog to see where focus moves.".to_owned()
                         } else {
-                            log.iter().rev().cloned().collect::<Vec<_>>().join("\n")
+                            log.iter().cloned().collect::<Vec<_>>().join("\n")
                         }
                     })
             }}

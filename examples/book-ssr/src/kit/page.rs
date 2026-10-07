@@ -237,10 +237,15 @@ fn cache_markdown(url: &str, text: String) {
 
 /// Downloads `path` (a path of this site) as text. `None` if the request fails.
 async fn fetch_text(path: &str) -> Option<String> {
-    // `reqwest` needs an absolute URL; in the browser, this page's origin.
-    let origin = leptos_use::use_window().as_ref()?.location().origin().ok()?;
-    let response = reqwest::get(format!("{origin}{path}")).await.ok()?.error_for_status().ok()?;
-    response.text().await.ok()
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+
+    let promise = leptos_use::use_window().as_ref()?.fetch_with_str(path);
+    let response: web_sys::Response = JsFuture::from(promise).await.ok()?.dyn_into().ok()?;
+    if !response.ok() {
+        return None;
+    }
+    JsFuture::from(response.text().ok()?).await.ok()?.as_string()
 }
 
 #[cfg(test)]

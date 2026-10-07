@@ -1,27 +1,27 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::prelude::*,
     hooks::PressEvent,
 };
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, RingBuffer},
-};
 
 /// A `PressResponder` injects an `on_press` handler and a disabled state into the `Pressable` inside it.
 #[component]
 pub fn PressResponderDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<&'static str>::new(50));
+    let (events, set_events) = signal(VecDeque::<&'static str>::new());
     let disabled = RwSignal::new(false);
 
     let parent_on_press = Callback::new(move |_: PressEvent| {
         set_events.update(|events| {
-            events.push_overwrite("Parent on_press (from the PressResponder)");
+            events.push_front("Parent on_press (from the PressResponder)");
+            events.truncate(50);
         });
     });
     let child_on_press = Callback::new(move |_: PressEvent| {
         set_events.update(|events| {
-            events.push_overwrite("Child on_press (from the Pressable)");
+            events.push_front("Child on_press (from the Pressable)");
+            events.truncate(50);
         });
     });
 
@@ -46,7 +46,7 @@ pub fn PressResponderDemo() -> impl IntoView {
         </div>
 
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().copied().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().rev().copied().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

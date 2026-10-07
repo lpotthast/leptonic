@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use std::time::Duration;
 
 use leptonic::{
@@ -13,15 +15,11 @@ use leptonic::{
     utils::data_attributes::flag,
 };
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn PressLongDemo() -> impl IntoView {
     let (lp_count, set_lp_count) = signal(0);
-    let (lp_events, set_lp_events) = signal(HeapRb::<String>::new(50));
+    let (lp_events, set_lp_events) = signal(VecDeque::<String>::new());
     let (lp_disabled, set_lp_disabled) = signal(false);
     let threshold_ms = RwSignal::new(Some(500_u64));
     let threshold =
@@ -31,27 +29,30 @@ pub fn PressLongDemo() -> impl IntoView {
         is_disabled: lp_disabled.into(),
         on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
             set_lp_events.update(|events| {
-                events.push_overwrite(format!(
+                events.push_front(format!(
                     "LongPressStart: pointer_type={:?}, x={:?}, y={:?}",
                     e.pointer_type, e.x, e.y,
                 ));
+                events.truncate(50);
             });
         })),
         on_long_press: Some(Callback::new(move |e: LongPressEvent| {
             set_lp_count.update(|c| *c += 1);
             set_lp_events.update(|events| {
-                events.push_overwrite(format!(
+                events.push_front(format!(
                     "LongPress: pointer_type={:?}, x={:?}, y={:?}",
                     e.pointer_type, e.x, e.y,
                 ));
+                events.truncate(50);
             });
         })),
         on_long_press_end: Some(Callback::new(move |e: LongPressEvent| {
             set_lp_events.update(|events| {
-                events.push_overwrite(format!(
+                events.push_front(format!(
                     "LongPressEnd: pointer_type={:?}, x={:?}, y={:?}",
                     e.pointer_type, e.x, e.y,
                 ));
+                events.truncate(50);
             });
         })),
         long_press_threshold: Some(threshold),
@@ -102,9 +103,9 @@ pub fn PressLongDemo() -> impl IntoView {
             </NumberField>
         </div>
 
-        <p>"Last " {move || lp_events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || lp_events.with(VecDeque::len)} " events:"</p>
         <pre class="demo-event-log">
-            {move || lp_events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || lp_events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

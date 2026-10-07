@@ -1,16 +1,15 @@
+use std::collections::VecDeque;
+
 use leptonic::{hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, RingBuffer},
-};
 
 #[component]
 pub fn PressCancelDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
     let log = move |message: String| {
         set_events.update(|events| {
-            events.push_overwrite(message);
+            events.push_front(message);
+            events.truncate(50);
         });
     };
 
@@ -33,7 +32,7 @@ pub fn PressCancelDemo() -> impl IntoView {
         <p class="demo-caption">"Press the button, drag the pointer out and release: the press is cancelled."</p>
 
         <pre class="demo-event-log demo-interactions-log-short">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

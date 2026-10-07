@@ -1,19 +1,17 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::{button::Button, checkbox::Checkbox},
     hooks::*,
 };
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn FocusableDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
     let exclude_from_tab_order = RwSignal::new(false);
     let (is_focused, set_is_focused) = signal(false);
-    let (keys, set_keys) = signal(HeapRb::<String>::new(50));
+    let (keys, set_keys) = signal(VecDeque::<String>::new());
 
     // A scrollable region must be focusable, so keyboard users can scroll it with the arrow keys.
     let UseFocusableReturn {
@@ -26,7 +24,8 @@ pub fn FocusableDemo() -> impl IntoView {
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             // The hook doesn't prevent the default: the arrow keys still scroll the region.
             set_keys.update(|keys| {
-                keys.push_overwrite(e.key_value());
+                keys.push_front(e.key_value());
+                keys.truncate(50);
             });
         })),
         ..Default::default()
@@ -57,9 +56,9 @@ pub fn FocusableDemo() -> impl IntoView {
             {move || if is_focused.get() { "The notes have focus." } else { "The notes don\u{2019}t have focus." }}
         </p>
 
-        <p>"Last " {move || keys.with(Observer::occupied_len)} " keys:"</p>
+        <p>"Last " {move || keys.with(VecDeque::len)} " keys:"</p>
         <pre class="demo-event-log">
-            {move || keys.with(|keys| keys.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || keys.with(|keys| keys.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

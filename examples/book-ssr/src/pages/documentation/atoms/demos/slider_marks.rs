@@ -6,7 +6,6 @@ use leptonic::{
     hooks::SliderMarks as Marks,
 };
 use leptos::prelude::*;
-use ordered_float::OrderedFloat;
 
 #[component]
 pub fn SliderMarksDemo() -> impl IntoView {
@@ -28,7 +27,7 @@ pub fn SliderMarksDemo() -> impl IntoView {
             </SliderTrack>
             // One mark per step, named by its value. The children receive the computed marks.
             <SliderMarks marks=Marks::Automatic { create_names: true } classes="demo-slider-marks" let:marks>
-                <For each=move || marks.get() key=|mark| OrderedFloat::from(mark.percentage) let:mark>
+                <For each=move || marks.get() key=|mark| mark.percentage.to_bits() let:mark>
                     <SliderMark mark=mark.clone() classes="demo-slider-mark">{mark.name.unwrap_or_default()}</SliderMark>
                 </For>
             </SliderMarks>

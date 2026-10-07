@@ -1,25 +1,25 @@
+use std::collections::VecDeque;
+
 use leptonic::{atoms::checkbox::Checkbox, hooks::*, utils::data_attributes::flag};
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn HoverDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
     let disabled = RwSignal::new(false);
 
     let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput {
         is_disabled: disabled.into(),
         on_hover_start: Some(Callback::new(move |e: HoverStartEvent| {
             set_events.update(|events| {
-                events.push_overwrite(format!("HoverStart: pointer_type={:?}", e.pointer_type));
+                events.push_front(format!("HoverStart: pointer_type={:?}", e.pointer_type));
+                events.truncate(50);
             });
         })),
         on_hover_end: Some(Callback::new(move |e: HoverEndEvent| {
             set_events.update(|events| {
-                events.push_overwrite(format!("HoverEnd: pointer_type={:?}", e.pointer_type));
+                events.push_front(format!("HoverEnd: pointer_type={:?}", e.pointer_type));
+                events.truncate(50);
             });
         })),
         ..Default::default()
@@ -42,9 +42,9 @@ pub fn HoverDemo() -> impl IntoView {
             {move || if is_hovered.get() { "Hovered." } else { "Not hovered." }}
         </p>
 
-        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

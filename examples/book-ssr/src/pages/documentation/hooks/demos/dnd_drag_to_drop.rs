@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::checkbox::Checkbox,
     hooks::{
@@ -7,10 +9,6 @@ use leptonic::{
     utils::CapturedElement,
 };
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, RingBuffer},
-};
 
 const URL: &str = "https://leptos.dev";
 
@@ -116,7 +114,7 @@ fn Target(
     get_drop_operation: Option<Callback<DropOperationQuery, DropOperation>>,
 ) -> impl IntoView {
     // The last 50 drops.
-    let dropped = RwSignal::new(HeapRb::<String>::new(50));
+    let dropped = RwSignal::new(VecDeque::<String>::new());
     let UseDropReturn {
         drop_props,
         is_drop_target,
@@ -127,7 +125,8 @@ fn Target(
             let operation = e.drop_operation;
             dropped.update(|dropped| {
                 for item in &e.items {
-                    dropped.push_overwrite(format!("{} ({operation:?})", describe(item)));
+                    dropped.push_front(format!("{} ({operation:?})", describe(item)));
+                    dropped.truncate(50);
                 }
             });
         })),
@@ -155,7 +154,7 @@ fn Target(
                 <span class="demo-caption">{hint}</span>
             </div>
             <ul class="demo-dnd-dropped" aria-label=format!("Dropped on {title}")>
-                {move || dropped.with(|dropped| dropped.iter().cloned().map(|entry| view! { <li>{entry}</li> }).collect_view())}
+                {move || dropped.with(|dropped| dropped.iter().rev().cloned().map(|entry| view! { <li>{entry}</li> }).collect_view())}
             </ul>
         </div>
     }

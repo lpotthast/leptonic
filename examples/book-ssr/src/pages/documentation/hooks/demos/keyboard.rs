@@ -1,22 +1,20 @@
+use std::collections::VecDeque;
+
 use leptonic::{
     atoms::{checkbox::Checkbox, focus_ring::FocusRing}, hooks::*, utils::Propagation,
 };
 use leptos::prelude::*;
-use ringbuf::{
-    HeapRb,
-    traits::{Consumer, Observer, RingBuffer},
-};
 
 #[component]
 pub fn KeyboardDemo() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<String>::new(50));
+    let (events, set_events) = signal(VecDeque::<String>::new());
     let (disabled, set_disabled) = signal(false);
 
     let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
         is_disabled: disabled.into(),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             set_events.update(|events| {
-                events.push_overwrite(format!(
+                events.push_front(format!(
                     "KeyDown: key={}, code={}, shift={}, ctrl={}, alt={}, meta={}",
                     e.key_value(),
                     e.code(),
@@ -25,12 +23,14 @@ pub fn KeyboardDemo() -> impl IntoView {
                     e.alt_key(),
                     e.meta_key()
                 ));
+                events.truncate(50);
             });
             e.continue_propagation();
         })),
         on_key_up: Some(Callback::new(move |e: KeyboardEventWrapper| {
             set_events.update(|events| {
-                events.push_overwrite(format!("KeyUp: key={}, code={}", e.key_value(), e.code()));
+                events.push_front(format!("KeyUp: key={}, code={}", e.key_value(), e.code()));
+                events.truncate(50);
             });
             e.continue_propagation();
         })),
@@ -51,10 +51,10 @@ pub fn KeyboardDemo() -> impl IntoView {
             </Checkbox>
         </div>
 
-        <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
+        <p>"Last " {move || events.with(VecDeque::len)} " events:"</p>
 
         <pre class="demo-event-log">
-            {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
+            {move || events.with(|events| events.iter().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
     }
 }

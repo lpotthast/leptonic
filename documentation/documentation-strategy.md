@@ -225,8 +225,8 @@ pub fn PageUseButton() -> impl IntoView {
   The source must be meaningful on its own: readers copy it.
 - Don't repeat a demo's code as a separate snippet; use `source_open` where the code matters as much as the demo.
   A separate snippet is fine when it shows something different (a minimal setup, a configuration variant).
-- Demos show their state ("Pressed 3 times", event logs capped with `ringbuf::HeapRb` at 50 entries) and include a
-  disabled toggle where the concept supports disabling.
+- Demos show their state ("Pressed 3 times", event logs: a `VecDeque`, newest entry first, capped at 50 entries) and
+  include a disabled toggle where the concept supports disabling.
 - Demos are keyboard accessible and work in light and dark theme.
 - Demos are built with leptonic and styled with the book's tokens: see `examples/book-ssr/STYLE_GUIDE.md` (which
   leptonic piece to use, design tokens, demo stylesheets).
