@@ -3,10 +3,8 @@ use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::JsCast;
 
 use crate::{
-    components::{
-        prelude::ToastRoot,
-        theme::{Theme, ThemeProvider},
-    },
+    atoms::theme::{Theme, ThemeProvider},
+    components::prelude::ToastRoot,
     signal_ls,
 };
 
@@ -89,8 +87,9 @@ where
         is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
     });
 
+    let (stored_theme, set_stored_theme) = signal_ls("theme", default_theme);
     view! {
-        <ThemeProvider theme=signal_ls("theme", default_theme)>
+        <ThemeProvider theme=stored_theme set_theme=set_stored_theme>
             <ToastRoot>
                 {children()}
             </ToastRoot>

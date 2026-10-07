@@ -25,21 +25,15 @@ pub struct UseToggleButtonInput {
     pub button: UseButtonInput,
 }
 
-impl UseToggleButtonInput {
-    pub fn new(state: ToggleState) -> Self {
-        Self {
-            state,
-            button: UseButtonInput::default(),
-        }
-    }
-}
-
 /// A button that toggles `state` when pressed (`aria-pressed`). Returns the input of
 /// [`use_button`](super::use_button):
 ///
 /// ```ignore
 /// let state = use_toggle_state(UseToggleStateInput::default());
-/// let button = use_button(use_toggle_button(UseToggleButtonInput::new(state)));
+/// let button = use_button(use_toggle_button(UseToggleButtonInput {
+///     state,
+///     button: UseButtonInput::default(),
+/// }));
 /// ```
 pub fn use_toggle_button(input: UseToggleButtonInput) -> UseButtonInput {
     let UseToggleButtonInput { state, mut button } = input;

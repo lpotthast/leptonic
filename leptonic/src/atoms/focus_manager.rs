@@ -2,11 +2,13 @@ use leptos::{context::Provider, prelude::*};
 
 use crate::{
     hooks::*,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, default_class::with_default_class, styles::Styles},
 };
 
 /// A container providing a [`FocusManager`] for the elements inside it (as a context, and to its
 /// children function): moving focus with `focus_next`, `focus_first`, ... without containing it.
+///
+/// Default class: `leptonic-FocusManagerProvider`.
 #[component]
 pub fn FocusManagerProvider<C, V>(
     #[prop(into, optional)] classes: Classes,
@@ -17,6 +19,7 @@ where
     C: Fn(FocusManager) -> V + Send + Sync + 'static,
     V: IntoView + 'static,
 {
+    let classes = with_default_class("leptonic-FocusManagerProvider", classes);
     let UseFocusManagerReturn {
         focus_manager,
         props,

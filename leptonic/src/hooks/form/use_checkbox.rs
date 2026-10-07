@@ -29,16 +29,6 @@ pub struct UseCheckboxInput {
     pub options: ToggleOptions,
 }
 
-impl UseCheckboxInput {
-    pub fn new(state: ToggleState) -> Self {
-        Self {
-            state,
-            is_indeterminate: Signal::stored(false),
-            options: ToggleOptions::default(),
-        }
-    }
-}
-
 /// Output of [`use_checkbox`].
 pub type UseCheckboxReturn = UseToggleReturn;
 
@@ -47,7 +37,11 @@ pub type UseCheckboxReturn = UseToggleReturn;
 ///
 /// ```ignore
 /// let state = use_toggle_state(UseToggleStateInput::default());
-/// let checkbox = use_checkbox(UseCheckboxInput::new(state));
+/// let checkbox = use_checkbox(UseCheckboxInput {
+///     state,
+///     is_indeterminate: Signal::stored(false),
+///     options: ToggleOptions::default(),
+/// });
 /// let (label_attrs, label_styles) = checkbox.label_props.into_parts();
 /// let (input_attrs, input_styles) = checkbox.input_props.into_parts();
 /// view! {

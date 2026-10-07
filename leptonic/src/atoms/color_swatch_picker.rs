@@ -17,6 +17,7 @@ use crate::{
         ValueBinding,
         classes::Classes,
         color::{Color, ColorValue, RGB8},
+        default_class::with_default_class,
         styles::Styles,
     },
 };
@@ -33,9 +34,11 @@ use crate::{
 //
 // =============================================================================
 
-/// An item's key: the color as hex (react-aria-components: as `hexa`).
+/// An item's key: the color as hex with alpha (react-aria-components' `hexa`).
 fn color_key(color: Color) -> Key {
-    Key::from(format!("#{:X}", color.to::<RGB8>()))
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let alpha = (color.alpha.clamp(0.0, 1.0) * 255.0).round() as u8;
+    Key::from(format!("#{:X}{alpha:02X}", color.to::<RGB8>()))
 }
 
 /// What the items of a [`ColorSwatchPicker`] need from it.
@@ -58,6 +61,8 @@ pub struct ColorSwatchPickerItemContext(pub Color);
 ///     <ColorSwatchPickerItems />
 /// </ColorSwatchPicker>
 /// ```
+///
+/// Default class: `leptonic-ColorSwatchPicker`.
 #[component]
 pub fn ColorSwatchPicker<C: ColorValue>(
     /// The colors to pick from (distinct as hex).
@@ -87,6 +92,7 @@ pub fn ColorSwatchPicker<C: ColorValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSwatchPicker", classes);
     let collection = use_list_collection(
         colors,
         |color: &C| color_key((*color).into()),
@@ -163,6 +169,8 @@ pub fn ColorSwatchPicker<C: ColorValue>(
 /// color; put a [`ColorSwatch`] in it (which shows this color).
 ///
 /// Data attributes: those of `ListBoxItem` (`data-selected`, `data-disabled`, ...).
+///
+/// Default class: `leptonic-ColorSwatchPickerItem`.
 #[component]
 pub fn ColorSwatchPickerItem(
     /// The color, one of the picker's `colors`: any color value.
@@ -175,8 +183,16 @@ pub fn ColorSwatchPickerItem(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSwatchPickerItem", classes);
     let key = color_key(color);
     if let Some(PickerContext { disabled, .. }) = use_context::<PickerContext>() {
+        // Registered while rendering (so the server renders the item disabled too), then kept in
+        // sync.
+        if is_disabled.get_untracked() {
+            disabled.update(|keys| {
+                keys.insert(key.clone());
+            });
+        }
         let registered = key.clone();
         Effect::new(move |_| {
             let is_disabled = is_disabled.get();

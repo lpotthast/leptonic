@@ -17,7 +17,17 @@ pub fn RadioDemo() -> impl IntoView {
     });
     let group = use_radio_group(UseRadioGroupInput {
         has_label: true.into(),
-        ..UseRadioGroupInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_errormessage: None,
+        orientation: Orientation::Vertical,
+        form: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     let data = group.data;
 
@@ -53,7 +63,24 @@ pub fn RadioDemo() -> impl IntoView {
 
 #[component]
 fn SizeRadio(group: RadioGroupData, value: &'static str, label: &'static str) -> impl IntoView {
-    let radio = use_radio(UseRadioInput::new(group, value));
+    let radio = use_radio(UseRadioInput {
+        group,
+        value: value.into(),
+        is_disabled: Signal::stored(false),
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        auto_focus: false,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_up: None,
+        on_press: None,
+        on_press_change: None,
+    });
     let (label_attrs, label_styles) = radio.label_props.into_parts();
     let (input_attrs, input_styles) = radio.input_props.into_parts();
     let is_focus_visible = radio.is_focus_visible;

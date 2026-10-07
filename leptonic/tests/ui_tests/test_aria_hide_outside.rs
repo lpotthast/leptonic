@@ -9,7 +9,8 @@ use crate::pages::{BaseActions, Page};
 
 /// `aria_hide_outside`: hides everything under the root except the targets (not traversing into
 /// hidden containers), keeps author-set `aria-hidden`, hides the cells of a hidden row as well,
-/// stacks hides restored in any order, and hides a root that doesn't contain a target.
+/// stacks hides restored in any order, hides a root that doesn't contain a target, and shows
+/// overlays registered from inside after its observer hid them.
 pub struct AriaHideOutsideTests {}
 
 async fn expect_hidden(page: &Page<'_>, hidden: &[&str], visible: &[&str]) -> Result<(), Report> {
@@ -112,6 +113,42 @@ impl BrowserTest<str> for AriaHideOutsideTests {
         expect_hidden(&page, &["test-aho-outer-root"], &[]).await?;
         page.click_element_with_id("test-aho-revert-outer").await?;
         expect_hidden(&page, &[], &["test-aho-outer-root"]).await?;
+
+        // Overlays opened from inside a hide, registered only after its observer hid them
+        // (Leptos effects run after the observer's callback; agnite dev-ui's combo box in a
+        // modal): they become visible again, the rest stays hidden.
+        page.click_element_with_id("test-aho-hide-late").await?;
+        expect_hidden(&page, &["test-aho-late-outside"], &["test-aho-late-dialog"]).await?;
+        page.click_element_with_id("test-aho-late-open-popover")
+            .await?;
+        page.wait_for_selector("#test-aho-late-popover").await?;
+        expect_hidden(
+            &page,
+            &["test-aho-late-outside"],
+            &["test-aho-late-popover-portal", "test-aho-late-popover"],
+        )
+        .await?;
+        page.click_element_with_id("test-aho-late-open-modal")
+            .await?;
+        page.wait_for_selector("#test-aho-late-modal").await?;
+        expect_hidden(
+            &page,
+            &["test-aho-late-outside", "test-aho-late-dialog"],
+            &["test-aho-late-modal-portal", "test-aho-late-modal"],
+        )
+        .await?;
+        page.click_element_with_id("test-aho-revert-late").await?;
+        expect_hidden(
+            &page,
+            &[],
+            &[
+                "test-aho-late-outside",
+                "test-aho-late-dialog",
+                "test-aho-late-popover-portal",
+                "test-aho-late-modal-portal",
+            ],
+        )
+        .await?;
 
         assert_that!(page.count_matching("#test-aho-basic [aria-hidden]").await?).is_equal_to(1);
         page.expect_no_page_errors().await

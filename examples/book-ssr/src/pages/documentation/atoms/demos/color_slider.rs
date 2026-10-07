@@ -1,5 +1,7 @@
 use leptonic::{
-    atoms::prelude::{ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb, Label},
+    atoms::prelude::{
+        ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch, ColorThumb, Label,
+    },
     components::prelude::Checkbox,
     utils::color::{ColorValue, HSL, HslChannel},
 };
@@ -16,27 +18,31 @@ pub fn ColorSliderAtomDemo() -> impl IntoView {
     let committed = RwSignal::new(color.get_untracked());
     let disabled = RwSignal::new(false);
 
-    let sliders = [HslChannel::Hue, HslChannel::Saturation, HslChannel::Lightness]
-        .into_iter()
-        .map(|channel| {
-            view! {
-                <ColorSlider
-                    channel
-                    value=color
-                    set_value=color
-                    on_change_end=move |c| committed.set(c)
-                    is_disabled=disabled
-                    classes="demo-color-atoms-slider"
-                >
-                    <Label>{HSL::get_channel_name(channel)}</Label>
-                    <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
-                    <ColorSliderTrack classes="demo-color-atoms-slider-track">
-                        <ColorThumb classes="demo-color-atoms-thumb"/>
-                    </ColorSliderTrack>
-                </ColorSlider>
-            }
-        })
-        .collect_view();
+    let sliders = [
+        HslChannel::Hue,
+        HslChannel::Saturation,
+        HslChannel::Lightness,
+    ]
+    .into_iter()
+    .map(|channel| {
+        view! {
+            <ColorSlider
+                channel
+                value=color
+                set_value=color
+                on_change_end=move |c| committed.set(c)
+                is_disabled=disabled
+                classes="demo-color-atoms-slider"
+            >
+                <Label>{HSL::get_channel_name(channel)}</Label>
+                <ColorSliderOutput classes="demo-color-atoms-slider-output"/>
+                <ColorSliderTrack classes="demo-color-atoms-slider-track">
+                    <ColorThumb classes="demo-color-atoms-thumb"/>
+                </ColorSliderTrack>
+            </ColorSlider>
+        }
+    })
+    .collect_view();
 
     view! {
         <div class="demo-color-atoms">

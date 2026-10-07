@@ -238,3 +238,31 @@ button.demo-focus-plain { cursor: pointer; font-weight: 600; }
         background: var(--brand-color-subtle);
     }
 }
+
+// -- Landmarks --
+
+.demo-landmarks { display: flex; flex-wrap: wrap; gap: var(--book-space-m); }
+
+// A landmark of the use_landmark demo. While F6 has focused the landmark itself, the hook sets `tabindex`.
+.demo-landmark {
+    display: flex;
+    flex: 1 1 12em;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--book-space-s);
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    &:focus { outline: none; }
+
+    &[tabindex] {
+        outline: 2px solid var(--book-focus-color);
+        outline-offset: 2px;
+    }
+
+    p { margin: 0; }
+}
+
+.demo-landmark-title { font-weight: 600; }

@@ -1,0 +1,26 @@
+// Upstream: ../starters/docs/src/CheckboxGroup.css @ 99e610236
+// Upstream: ../starters/docs/src/CheckboxGroup.tsx @ 99e610236
+//
+// `CheckboxGroup`. Markup: a `Label`, the checkboxes in a `<div class="checkbox-items">`, then
+// a `Description` and a `FieldError`. Orientation (as the starter's `orientation` prop):
+// `attr:data-orientation="horizontal"`; vertical without (or `"vertical"`).
+
+.leptonic-CheckboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+
+  .checkbox-items {
+    display: flex;
+    gap: var(--spacing-3);
+    flex-direction: column;
+  }
+
+  &[data-orientation='vertical'] .checkbox-items {
+    flex-direction: column;
+  }
+
+  &[data-orientation='horizontal'] .checkbox-items {
+    flex-direction: row;
+  }
+}

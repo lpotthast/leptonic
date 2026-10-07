@@ -2,11 +2,14 @@
 
 @use "theme" as *;
 
+// Centered in the window below the app bar, so that the page doesn't end in an empty lower half.
 .book-welcome {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: var(--book-space-l);
   max-width: var(--book-article-max-width);
+  min-height: calc(100dvh - var(--book-app-bar-height));
   margin: 0 auto;
   padding: var(--book-space-m) var(--book-space-m) var(--book-space-xxl);
 }
@@ -61,56 +64,92 @@
   gap: var(--book-space-m);
 }
 
-// Three cards per row; one per row on small screens (never two and an orphan).
-.book-welcome-cards {
+// The install command below the buttons: a quiet, copyable line.
+.book-welcome-install {
+  margin: var(--book-space-xl) 0 0;
+  max-width: 100%;
+  // Room for the copy button at the end of the line.
+  padding-inline-end: 3em;
+}
+
+// The live components below the hero: one quiet panel, two columns of fields (one on small screens).
+.book-welcome-showcase {
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--book-space-l);
+  border: 1px solid var(--book-border-color);
+  border-radius: var(--book-radius-l);
+  background-color: var(--book-surface-color);
+}
+
+.book-welcome-showcase-title {
+  margin: 0 0 var(--book-space-l);
+  color: var(--book-muted-color);
+  font-size: var(--book-font-size-s);
+  font-weight: 400;
+  text-align: center;
+}
+
+.book-welcome-showcase-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--book-space-l);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  align-items: center;
 
   @media (width <= $small) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.book-welcome-card {
-  padding: var(--book-space-l);
-  border: 1px solid var(--book-border-color);
-  border-top: 4px solid var(--brand-color);
-  border-radius: var(--book-radius-m);
-  background-color: var(--book-surface-color);
+.book-welcome-showcase-volume {
+  display: flex;
+  flex-direction: column;
+  gap: var(--book-space-xs);
+}
 
+.book-welcome-showcase-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--book-space-m);
+  margin-top: var(--book-space-l);
+}
+
+// The selling points: three text columns without boxes; one per row on small screens.
+.book-welcome-features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--book-space-xl);
+  margin: 0;
+  padding: var(--book-space-xl) 0 0;
+  border-top: 1px solid var(--book-border-color);
+  list-style: none;
+
+  @media (width <= $small) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--book-space-l);
+  }
+}
+
+.book-welcome-feature {
   h2 {
-    margin: 0 0 var(--book-space-s);
+    margin: var(--book-space-s) 0 var(--book-space-xs);
     font-size: var(--book-font-size-l);
   }
 
   p {
     margin: 0;
     color: var(--book-muted-color);
-    line-height: 1.5;
+    font-size: var(--book-font-size-m);
+    line-height: 1.6;
+    hyphens: none;
   }
 }
 
-// Further links of a card, e.g. the concept groups.
-.book-welcome-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--book-space-xs) var(--book-space-m);
-  margin: var(--book-space-m) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.book-welcome,
-.book-404 {
-  .leptonic-link[data-focus-visible] {
-    outline: 2px solid var(--book-focus-color);
-    outline-offset: 2px;
-    border-radius: var(--book-radius-s);
-  }
+.book-welcome-feature-icon {
+  width: 1.75em;
+  height: 1.75em;
+  color: var(--brand-color);
 }
 
 .book-404 {

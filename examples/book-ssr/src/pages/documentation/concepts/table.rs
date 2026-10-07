@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::table::TableConceptDemo;
@@ -23,10 +22,6 @@ pub fn PageTableOverview() -> impl IntoView {
             <Section title="When to Use">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow><TableCell>"Show records with the same fields, to sort, compare and select"</TableCell><TableCell><b>"Table"</b></TableCell></TableRow>
-                    <TableRow>
-                        <TableCell>"Show tabular data in the theme\u{2019}s look, without cell navigation or row selection"</TableCell>
-                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link>" (a styled HTML table)"</TableCell>
-                    </TableRow>
                     <TableRow>
                         <TableCell>"Navigate a two-dimensional arrangement without column headers (a calendar, a palette)"</TableCell>
                         <TableCell><Link href=routes::doc::Grid.materialize()>"Grid"</Link></TableCell>
@@ -63,13 +58,6 @@ pub fn PageTableOverview() -> impl IntoView {
                             "headers and selection checkboxes, you render the rows and cells and style them through data "
                             "attributes. A "<Code inline=true>"ResizableTableContainer"</Code>" around the table makes its "
                             "columns resizable."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></TableCell>
-                        <TableCell>
-                            "A themed HTML table with pressable, sortable column headers. It is not built on the table "
-                            "hooks: it has no keyboard navigation between cells and no row selection."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -138,7 +126,7 @@ pub fn PageTableOverview() -> impl IntoView {
                         "On a sortable column header: sort by it (again to reverse the order). On a row: run its action, or "
                         "select it if it has none."
                     </KeyRow>
-                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Any character">"Move to the next row whose text starts with the typed characters."</KeyRow>
                     <KeyRow keys="Enter">
@@ -149,15 +137,14 @@ pub fn PageTableOverview() -> impl IntoView {
                 </KeyboardTable>
 
                 <p>
-                    "The sort is not announced to screen reader users yet; they hear the new "<Code inline=true>"aria-sort"</Code>
-                    " state when they move to the column header."
+                    "The table describes its sort (\u{201c}sorted by column Type in ascending order\u{201d}) and announces "
+                    "each change of it right away. The texts are English for now."
                 </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></li>
                 <li><Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link></li>
-                <li><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></li>
                 <li><Link href=routes::doc::Grid.materialize()>"Grid"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>

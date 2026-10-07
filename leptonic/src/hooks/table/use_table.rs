@@ -1,10 +1,10 @@
 // Upstream: react-aria/src/table/useTable.ts @ 99e6102368
 // Upstream: react-aria/src/table/utils.ts @ 99e6102368
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use leptos::prelude::*;
 
-use super::{TableKeyboardDelegate, TableState};
+use super::{SortDirection, TableKeyboardDelegate, TableState};
 use crate::{
     hooks::{
         GridData, GridKeyboardDelegate, KeyboardNavigationBehavior, UseGridInput, UseGridProps,
@@ -17,6 +17,8 @@ use crate::{
         filter::{Collator, CollatorOptions},
         i18n::{use_direction, use_locale},
         id::use_id,
+        live_announcer::{Assertiveness, announce_with_timeout},
+        use_description::use_description,
     },
 };
 
@@ -29,8 +31,8 @@ use crate::{
 //   `WeakMap`s keyed by the state).
 //
 // ## OMITTED FEATURES
-// - The sort description (`aria-describedby`) and the sort announcement: they need localized
-//   messages. Column headers carry `aria-sort`.
+// - Localized strings: the sort is described and announced in English ("sorted by column Name
+//   in ascending order").
 // - Virtualization (`aria-rowcount`), tree tables (`role="treegrid"`).
 //
 // =============================================================================
@@ -56,25 +58,6 @@ pub struct UseTableInput {
     pub on_row_action: Option<Callback<Key>>,
     /// Called with the key of an activated cell.
     pub on_cell_action: Option<Callback<Key>>,
-}
-
-impl UseTableInput {
-    /// A table for `state`, with all other settings at their defaults.
-    pub fn new(state: TableState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            keyboard_delegate: None,
-            options: CollectionOptions::default(),
-            keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
-            should_select_on_press_up: false,
-            on_row_action: None,
-            on_cell_action: None,
-        }
-    }
 }
 
 /// What rows, cells and column headers need to know about their table. Pass it to
@@ -192,6 +175,42 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         on_row_action,
         on_cell_action,
     });
+
+    // The sort, described to the table and announced when it changes (not initially: focusing
+    // the table describes it).
+    let sort_description = Memo::new(move |_| {
+        state.sort_descriptor.get().map(|sort| {
+            let column = state.table.with(|table| {
+                table
+                    .columns()
+                    .find(|column| column.key == sort.column)
+                    .map(|column| column.text_value.to_string())
+                    .unwrap_or_default()
+            });
+            let order = match sort.direction {
+                SortDirection::Ascending => "ascending",
+                SortDirection::Descending => "descending",
+            };
+            format!("sorted by column {column} in {order} order")
+        })
+    });
+    Effect::new(move |previous: Option<Option<String>>| {
+        let description = sort_description.get();
+        if previous.is_some()
+            && let Some(description) = &description
+        {
+            announce_with_timeout(
+                description.clone(),
+                Assertiveness::Assertive,
+                Duration::from_millis(500),
+            );
+        }
+        description
+    });
+    let props = UseGridProps {
+        aria_describedby: use_description(sort_description.into()),
+        ..props
+    };
 
     UseTableReturn {
         props,

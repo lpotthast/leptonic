@@ -1,0 +1,72 @@
+// Upstream: ../starters/docs/src/ToggleButtonGroup.css @ 99e610236
+// Upstream: ../starters/docs/src/ToggleButtonGroup.tsx @ 99e610236
+//
+// `ToggleButtonGroup`: joins its `ToggleButton`s (horizontal or vertical, from the group's
+// `data-orientation`). Markup: the buttons as direct children, each with its `<span>` (see
+// `toggle-button.scss`).
+
+.leptonic-ToggleButtonGroup {
+  display: flex;
+
+  > .leptonic-ToggleButton {
+    z-index: 1;
+
+    > span {
+      transition: scale 200ms;
+    }
+
+    &[data-pressed] {
+      scale: 1;
+
+      > span {
+        scale: 0.9;
+      }
+    }
+
+    &[data-disabled] {
+      z-index: 0;
+    }
+
+    &[data-selected],
+    &[data-focus-visible] {
+      z-index: 2;
+    }
+  }
+}
+
+.leptonic-ToggleButtonGroup[data-orientation='horizontal'] {
+  flex-direction: row;
+
+  > .leptonic-ToggleButton {
+    margin-inline-start: -1px;
+    border-radius: 0;
+
+    &:first-child {
+      border-radius: var(--radius) 0 0 var(--radius);
+      margin-inline-start: 0;
+    }
+
+    &:last-child {
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+  }
+}
+
+.leptonic-ToggleButtonGroup[data-orientation='vertical'] {
+  flex-direction: column;
+  width: fit-content;
+
+  > .leptonic-ToggleButton {
+    margin-block-start: -1px;
+    border-radius: 0;
+
+    &:first-child {
+      border-radius: var(--radius) var(--radius) 0 0;
+      margin-block-start: 0;
+    }
+
+    &:last-child {
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+  }
+}

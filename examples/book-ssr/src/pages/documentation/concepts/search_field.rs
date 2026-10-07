@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::search_field::SearchFieldConceptDemo;
@@ -52,10 +51,6 @@ pub fn PageSearchFieldOverview() -> impl IntoView {
                             <Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link>", styled through data attributes."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::search_field::Component.materialize()>"Search Field Component"</Link></TableCell>
-                        <TableCell>"A themed search field taking its label, description and validation as props."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -104,7 +99,6 @@ pub fn PageSearchFieldOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::search_field::Hook.materialize()>"use_search_field"</Link></li>
                 <li><Link href=routes::doc::search_field::Atom.materialize()>"Search Field Atoms"</Link></li>
-                <li><Link href=routes::doc::search_field::Component.materialize()>"Search Field Component"</Link></li>
                 <li><Link href=routes::doc::TextField.materialize()>"Text Field"</Link></li>
                 <li><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></li>
                 <li><Link href=routes::doc::Field.materialize()>"Field"</Link></li>

@@ -105,10 +105,63 @@ pub enum DateTimeStyle {
     Short,
 }
 
+/// The length of an ICU4X field set.
+/// The CLDR pattern of a date with only one of weekday, year, month or day (standalone forms).
+fn single_field_pattern(options: &DateTimeFormatOptions) -> Option<&'static str> {
+    match (options.weekday, options.year, options.month, options.day) {
+        (Some(weekday), None, None, None) => Some(match weekday {
+            DateTimeFormat::Long => "cccc",
+            DateTimeFormat::Short => "ccc",
+            DateTimeFormat::Narrow => "ccccc",
+        }),
+        (None, None, Some(month), None) => Some(match month {
+            MonthFormat::Numeric => "L",
+            MonthFormat::TwoDigit => "LL",
+            MonthFormat::Short => "LLL",
+            MonthFormat::Long => "LLLL",
+            MonthFormat::Narrow => "LLLLL",
+        }),
+        (None, Some(year), None, None) => Some(match year {
+            NumericFormat::Numeric => "y",
+            NumericFormat::TwoDigit => "yy",
+        }),
+        (None, None, None, Some(day)) => Some(match day {
+            NumericFormat::Numeric => "d",
+            NumericFormat::TwoDigit => "dd",
+        }),
+        _ => None,
+    }
+}
+
+fn format_pattern(
+    prefs: icu_datetime::DateTimeFormatterPreferences,
+    pattern: &str,
+    date: icu_calendar::Date<icu_calendar::Gregorian>,
+) -> Option<String> {
+    let pattern: icu_datetime::pattern::DateTimePattern = pattern.parse().ok()?;
+    let mut names = icu_datetime::pattern::FixedCalendarDateTimeNames::<
+        icu_calendar::Gregorian,
+        icu_datetime::fieldsets::enums::DateFieldSet,
+    >::try_new(prefs)
+    .ok()?;
+    let formatter = names.include_for_pattern(&pattern).ok()?;
+    writeable::TryWriteable::try_write_to_string(&formatter.format(&date))
+        .ok()
+        .map(std::borrow::Cow::into_owned)
+}
+
+/// The length of an ICU4X field set.
+#[derive(Clone, Copy)]
+enum Length {
+    Long,
+    Medium,
+    Short,
+}
+
 /// A locale-aware date/time formatter backed by ICU4X.
 ///
 /// Uses `icu_datetime` for locale-aware date and time formatting.
-/// Accepts `time::OffsetDateTime` and converts internally to ICU4X types.
+/// Accepts a `jiff::civil::DateTime` and converts internally to ICU4X types.
 #[derive(Debug, Clone)]
 pub struct DateTimeFormatter {
     locale: IcuLocale,
@@ -125,9 +178,72 @@ impl DateTimeFormatter {
         }
     }
 
+    /// Formats a date according to the date options (weekday, year, month, day), localized with
+    /// the ICU4X field set that has them (react-aria: `Intl.DateTimeFormat` with these options),
+    /// e.g. "March 2024" (year and long month) or "Thursday, March 14, 2024" (all four, long).
+    /// The length follows the month's or the weekday's format; narrow weekdays and months are
+    /// their first letter. Without any date option, the date's ISO form.
+    #[must_use]
+    pub fn format_date(&self, date: jiff::civil::Date) -> String {
+        let (Ok(month), Ok(day)) = (u8::try_from(date.month()), u8::try_from(date.day())) else {
+            return date.to_string();
+        };
+        let Ok(icu_date) =
+            icu_calendar::Date::try_new_gregorian(i32::from(date.year()), month, day)
+        else {
+            return date.to_string();
+        };
+        let options = &self.options;
+        let prefs = icu_datetime::DateTimeFormatterPreferences::from(&self.locale);
+        // A single field: as a standalone name or number (narrow names, a day without the
+        // locale's suffix like "日"), as `Intl.DateTimeFormat#formatToParts` gives it.
+        if let Some(pattern) = single_field_pattern(options) {
+            return format_pattern(prefs, pattern, icu_date).unwrap_or_else(|| date.to_string());
+        }
+        let length = match (options.month, options.weekday) {
+            (Some(MonthFormat::Long), _) | (None, Some(DateTimeFormat::Long)) => Length::Long,
+            (Some(MonthFormat::Short), _) | (None, Some(DateTimeFormat::Short)) => Length::Medium,
+            _ => Length::Short,
+        };
+        macro_rules! format_with {
+            ($fieldset:ident) => {{
+                let fieldset = match length {
+                    Length::Long => icu_datetime::fieldsets::$fieldset::long(),
+                    Length::Medium => icu_datetime::fieldsets::$fieldset::medium(),
+                    Length::Short => icu_datetime::fieldsets::$fieldset::short(),
+                };
+                icu_datetime::FixedCalendarDateTimeFormatter::<icu_calendar::Gregorian, _>::try_new(
+                    prefs, fieldset,
+                )
+                .map(|formatter| formatter.format(&icu_date).to_string())
+                .ok()
+            }};
+        }
+        let (weekday, year, month, day) = (
+            options.weekday.is_some(),
+            options.year.is_some(),
+            options.month.is_some(),
+            options.day.is_some(),
+        );
+        let formatted = match (weekday, year, month, day) {
+            (true, true, true, true) => format_with!(YMDE),
+            (_, true, true, true) => format_with!(YMD),
+            (true, _, true, true) => format_with!(MDE),
+            (_, _, true, true) => format_with!(MD),
+            (true, _, _, true) => format_with!(DE),
+            (_, _, _, true) => format_with!(D),
+            (_, true, true, false) => format_with!(YM),
+            (true, false, false, false) => format_with!(E),
+            (_, false, true, false) => format_with!(M),
+            (_, true, false, false) => format_with!(Y),
+            (false, false, false, false) => None,
+        };
+        formatted.unwrap_or_else(|| date.to_string())
+    }
+
     /// Formats a date/time according to the formatter's options.
     #[must_use]
-    pub fn format(&self, dt: &time::OffsetDateTime) -> String {
+    pub fn format(&self, dt: &jiff::civil::DateTime) -> String {
         // Try ICU4X formatting for date_style/time_style
         if (self.options.date_style.is_some() || self.options.time_style.is_some())
             && let Some(result) = self.try_format_with_icu(dt)
@@ -140,10 +256,20 @@ impl DateTimeFormatter {
     }
 
     /// Attempts to format using ICU4X with length-based styles.
-    fn try_format_with_icu(&self, dt: &time::OffsetDateTime) -> Option<String> {
-        let icu_date =
-            icu_calendar::Date::try_new_gregorian(dt.year(), dt.month() as u8, dt.day()).ok()?;
-        let icu_time = icu_time::Time::try_new(dt.hour(), dt.minute(), dt.second(), 0).ok()?;
+    fn try_format_with_icu(&self, dt: &jiff::civil::DateTime) -> Option<String> {
+        let icu_date = icu_calendar::Date::try_new_gregorian(
+            i32::from(dt.year()),
+            dt.month().unsigned_abs(),
+            dt.day().unsigned_abs(),
+        )
+        .ok()?;
+        let icu_time = icu_time::Time::try_new(
+            dt.hour().unsigned_abs(),
+            dt.minute().unsigned_abs(),
+            dt.second().unsigned_abs(),
+            0,
+        )
+        .ok()?;
         let icu_dt = icu_time::DateTime {
             date: icu_date,
             time: icu_time,
@@ -217,7 +343,7 @@ impl DateTimeFormatter {
     }
 
     /// Formats using individual component options (weekday, month, day, year, etc.).
-    fn format_components(&self, dt: &time::OffsetDateTime) -> String {
+    fn format_components(&self, dt: &jiff::civil::DateTime) -> String {
         let mut parts = Vec::new();
 
         if let Some(weekday) = self.options.weekday {
@@ -253,13 +379,13 @@ impl DateTimeFormatter {
 
         if parts.is_empty() {
             // Default to ISO format
-            format!("{:04}-{:02}-{:02}", dt.year(), dt.month() as u8, dt.day())
+            format!("{:04}-{:02}-{:02}", dt.year(), dt.month(), dt.day())
         } else {
             parts.join(" ")
         }
     }
 
-    fn format_weekday(&self, dt: &time::OffsetDateTime, format: DateTimeFormat) -> String {
+    fn format_weekday(&self, dt: &jiff::civil::DateTime, format: DateTimeFormat) -> String {
         if let Some(name) = self.try_icu_weekday_name(dt, format) {
             return name;
         }
@@ -273,11 +399,15 @@ impl DateTimeFormatter {
 
     fn try_icu_weekday_name(
         &self,
-        dt: &time::OffsetDateTime,
+        dt: &jiff::civil::DateTime,
         format: DateTimeFormat,
     ) -> Option<String> {
-        let icu_date =
-            icu_calendar::Date::try_new_gregorian(dt.year(), dt.month() as u8, dt.day()).ok()?;
+        let icu_date = icu_calendar::Date::try_new_gregorian(
+            i32::from(dt.year()),
+            dt.month().unsigned_abs(),
+            dt.day().unsigned_abs(),
+        )
+        .ok()?;
 
         let fieldset = match format {
             DateTimeFormat::Long => icu_datetime::fieldsets::E::long(),
@@ -296,10 +426,10 @@ impl DateTimeFormatter {
         }
     }
 
-    fn format_month(&self, dt: &time::OffsetDateTime, format: MonthFormat) -> String {
+    fn format_month(&self, dt: &jiff::civil::DateTime, format: MonthFormat) -> String {
         match format {
-            MonthFormat::Numeric => format!("{}", dt.month() as u8),
-            MonthFormat::TwoDigit => format!("{:02}", dt.month() as u8),
+            MonthFormat::Numeric => format!("{}", dt.month()),
+            MonthFormat::TwoDigit => format!("{:02}", dt.month()),
             MonthFormat::Long | MonthFormat::Short | MonthFormat::Narrow => {
                 if let Some(name) = self.try_icu_month_name(dt, format) {
                     return name;
@@ -315,9 +445,17 @@ impl DateTimeFormatter {
         }
     }
 
-    fn try_icu_month_name(&self, dt: &time::OffsetDateTime, format: MonthFormat) -> Option<String> {
-        let icu_date =
-            icu_calendar::Date::try_new_gregorian(dt.year(), dt.month() as u8, dt.day()).ok()?;
+    fn try_icu_month_name(
+        &self,
+        dt: &jiff::civil::DateTime,
+        format: MonthFormat,
+    ) -> Option<String> {
+        let icu_date = icu_calendar::Date::try_new_gregorian(
+            i32::from(dt.year()),
+            dt.month().unsigned_abs(),
+            dt.day().unsigned_abs(),
+        )
+        .ok()?;
 
         let fieldset = match format {
             MonthFormat::Long => icu_datetime::fieldsets::M::long(),
@@ -336,7 +474,7 @@ impl DateTimeFormatter {
         }
     }
 
-    fn format_hour(&self, dt: &time::OffsetDateTime, format: NumericFormat) -> String {
+    fn format_hour(&self, dt: &jiff::civil::DateTime, format: NumericFormat) -> String {
         let hour12 = self.options.hour12.unwrap_or(false);
         let hour = if hour12 {
             let h = dt.hour();
@@ -358,43 +496,43 @@ impl DateTimeFormatter {
     }
 }
 
-fn format_day(dt: &time::OffsetDateTime, format: NumericFormat) -> String {
+fn format_day(dt: &jiff::civil::DateTime, format: NumericFormat) -> String {
     match format {
         NumericFormat::Numeric => format!("{}", dt.day()),
         NumericFormat::TwoDigit => format!("{:02}", dt.day()),
     }
 }
 
-fn format_year(dt: &time::OffsetDateTime, format: NumericFormat) -> String {
+fn format_year(dt: &jiff::civil::DateTime, format: NumericFormat) -> String {
     match format {
         NumericFormat::Numeric => format!("{}", dt.year()),
         NumericFormat::TwoDigit => format!("{:02}", dt.year() % 100),
     }
 }
 
-fn format_minute(dt: &time::OffsetDateTime, format: NumericFormat) -> String {
+fn format_minute(dt: &jiff::civil::DateTime, format: NumericFormat) -> String {
     match format {
         NumericFormat::Numeric => format!("{}", dt.minute()),
         NumericFormat::TwoDigit => format!("{:02}", dt.minute()),
     }
 }
 
-fn format_second(dt: &time::OffsetDateTime, format: NumericFormat) -> String {
+fn format_second(dt: &jiff::civil::DateTime, format: NumericFormat) -> String {
     match format {
         NumericFormat::Numeric => format!("{}", dt.second()),
         NumericFormat::TwoDigit => format!("{:02}", dt.second()),
     }
 }
 
-fn weekday_name_en(weekday: time::Weekday, short: bool) -> String {
+fn weekday_name_en(weekday: jiff::civil::Weekday, short: bool) -> String {
     let name = match weekday {
-        time::Weekday::Monday => ("Monday", "Mon"),
-        time::Weekday::Tuesday => ("Tuesday", "Tue"),
-        time::Weekday::Wednesday => ("Wednesday", "Wed"),
-        time::Weekday::Thursday => ("Thursday", "Thu"),
-        time::Weekday::Friday => ("Friday", "Fri"),
-        time::Weekday::Saturday => ("Saturday", "Sat"),
-        time::Weekday::Sunday => ("Sunday", "Sun"),
+        jiff::civil::Weekday::Monday => ("Monday", "Mon"),
+        jiff::civil::Weekday::Tuesday => ("Tuesday", "Tue"),
+        jiff::civil::Weekday::Wednesday => ("Wednesday", "Wed"),
+        jiff::civil::Weekday::Thursday => ("Thursday", "Thu"),
+        jiff::civil::Weekday::Friday => ("Friday", "Fri"),
+        jiff::civil::Weekday::Saturday => ("Saturday", "Sat"),
+        jiff::civil::Weekday::Sunday => ("Sunday", "Sun"),
     };
 
     if short {
@@ -404,25 +542,103 @@ fn weekday_name_en(weekday: time::Weekday, short: bool) -> String {
     }
 }
 
-fn month_name_en(month: time::Month, short: bool) -> String {
-    let name = match month {
-        time::Month::January => ("January", "Jan"),
-        time::Month::February => ("February", "Feb"),
-        time::Month::March => ("March", "Mar"),
-        time::Month::April => ("April", "Apr"),
-        time::Month::May => ("May", "May"),
-        time::Month::June => ("June", "Jun"),
-        time::Month::July => ("July", "Jul"),
-        time::Month::August => ("August", "Aug"),
-        time::Month::September => ("September", "Sep"),
-        time::Month::October => ("October", "Oct"),
-        time::Month::November => ("November", "Nov"),
-        time::Month::December => ("December", "Dec"),
+fn month_name_en(month: i8, short: bool) -> String {
+    const NAMES: [(&str, &str); 12] = [
+        ("January", "Jan"),
+        ("February", "Feb"),
+        ("March", "Mar"),
+        ("April", "Apr"),
+        ("May", "May"),
+        ("June", "Jun"),
+        ("July", "Jul"),
+        ("August", "Aug"),
+        ("September", "Sep"),
+        ("October", "Oct"),
+        ("November", "Nov"),
+        ("December", "Dec"),
+    ];
+    let Some(name) = usize::from(month.unsigned_abs())
+        .checked_sub(1)
+        .and_then(|index| NAMES.get(index))
+    else {
+        return month.to_string();
     };
-
     if short {
         name.1.to_string()
     } else {
         name.0.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+    use jiff::civil::date;
+
+    use super::*;
+
+    fn format(locale: &str, options: DateTimeFormatOptions) -> String {
+        let locale = locale.parse::<Locale>().expect("a locale");
+        DateTimeFormatter::new(&locale, options).format_date(date(2024, 3, 14))
+    }
+
+    #[test]
+    fn formats_dates_with_the_matching_field_set() {
+        let month_year = DateTimeFormatOptions {
+            month: Some(MonthFormat::Long),
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", month_year.clone())).is_equal_to("March 2024".to_owned());
+        assert_that!(format("de-DE", month_year)).is_equal_to("März 2024".to_owned());
+        let full = DateTimeFormatOptions {
+            weekday: Some(DateTimeFormat::Long),
+            month: Some(MonthFormat::Long),
+            day: Some(NumericFormat::Numeric),
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", full.clone()))
+            .is_equal_to("Thursday, March 14, 2024".to_owned());
+        assert_that!(format("de-DE", full)).is_equal_to("Donnerstag, 14. März 2024".to_owned());
+        let day = DateTimeFormatOptions {
+            day: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", day)).is_equal_to("14".to_owned());
+        let weekday = |format| DateTimeFormatOptions {
+            weekday: Some(format),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", weekday(DateTimeFormat::Long)))
+            .is_equal_to("Thursday".to_owned());
+        assert_that!(format("en-US", weekday(DateTimeFormat::Narrow))).is_equal_to("T".to_owned());
+    }
+
+    /// A single field is a standalone name or number: CLDR's narrow names (distinct in zh, where
+    /// cutting "周四" would leave "周" for every day), a day without the locale's suffix.
+    #[test]
+    fn formats_a_single_field_standalone() {
+        let weekday = DateTimeFormatOptions {
+            weekday: Some(DateTimeFormat::Narrow),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("zh-CN", weekday)).is_equal_to("四".to_owned());
+        let day = DateTimeFormatOptions {
+            day: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("ja-JP", day.clone())).is_equal_to("14".to_owned());
+        assert_that!(format("ko-KR", day)).is_equal_to("14".to_owned());
+        let month = DateTimeFormatOptions {
+            month: Some(MonthFormat::Narrow),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", month)).is_equal_to("M".to_owned());
+        let year = DateTimeFormatOptions {
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        };
+        assert_that!(format("en-US", year)).is_equal_to("2024".to_owned());
     }
 }

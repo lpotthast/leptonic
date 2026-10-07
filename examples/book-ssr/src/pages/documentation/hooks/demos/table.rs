@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use leptonic::hooks::GridFocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     hooks::{
         ColumnKind, DisabledBehavior, IntoAttrs, NodeKind, SelectionMode, SortDescriptor,
@@ -124,11 +127,22 @@ pub fn TableHookDemo() -> impl IntoView {
         },
         default_sort_descriptor: sort.get_untracked(),
         on_sort_change: Some(Callback::new(move |descriptor| sort.set(Some(descriptor)))),
-        ..UseTableStateInput::new(table)
+        table,
+        focus_mode: GridFocusMode::Row,
+        sort_descriptor: None,
     });
     let UseTableReturn { props, data } = use_table(UseTableInput {
         aria_label: "Books".into(),
-        ..UseTableInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: None,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
+        on_row_action: None,
+        on_cell_action: None,
     });
 
     // The header rows: a row for the "Inventory" group (with placeholders above the other columns), then the
@@ -228,7 +242,11 @@ fn ColumnHeader(table: TableData, column: Key) -> impl IntoView {
     } else {
         text.into_any()
     };
-    let header = use_table_column_header(UseTableColumnHeaderInput::new(table, column));
+    let header = use_table_column_header(UseTableColumnHeaderInput {
+        table,
+        key: column,
+        allows_arrow_navigation: false,
+    });
     let (attrs, styles) = header.column_header_props.into_parts();
 
     view! { <th {..attrs} style=styles>{content}</th> }
@@ -240,6 +258,7 @@ fn BookRow(table: TableData, book: Book) -> impl IntoView {
     let row = use_table_row(UseTableRowInput {
         table: table.clone(),
         key: key.clone(),
+        on_context_menu: None,
     });
     let allows_selection = row.allows_selection;
     let (attrs, styles) = row.row_props.into_parts();
@@ -267,7 +286,13 @@ fn Cell(
     #[prop(optional)] number: bool,
     children: Children,
 ) -> impl IntoView {
-    let cell = use_table_cell(UseTableCellInput::new(table, key));
+    let cell = use_table_cell(UseTableCellInput {
+        table,
+        key,
+        focus_mode: None,
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
+    });
     let (attrs, styles) = cell.grid_cell_props.into_parts();
 
     view! {

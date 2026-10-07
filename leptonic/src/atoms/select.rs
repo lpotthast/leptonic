@@ -15,11 +15,12 @@ use crate::{
         UseLabelProps, UseListBoxInput, UsePopoverInput, UsePopoverReturn, UseSelectInput,
         UseSelectReturn, UseSelectStateInput, UseSelectTriggerProps, ValidateFn,
         ValidationBehavior,
-        collections::{CollectionMemo, Key},
+        collections::{CloseOnSelect, CollectionMemo, Key},
         use_button, use_hidden_select, use_popover, use_select, use_select_state,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -62,6 +63,8 @@ impl SelectCtx {
 /// [`SelectTrigger`] (containing [`SelectValue`]), [`SelectPopover`] (containing a `ListBox` with
 /// one `ListBoxItem` per option), a [`Description`](super::field::Description), a
 /// [`FieldError`](super::field::FieldError) and [`HiddenSelect`] (for forms).
+///
+/// Default class: `leptonic-Select`.
 #[component]
 #[allow(
     clippy::too_many_lines,
@@ -92,8 +95,8 @@ pub fn Select(
     #[prop(into, optional)] on_open_change: Option<Callback<bool>>,
     #[prop(optional)] allows_empty_collection: bool,
     /// Close the popover when an option is selected. Default: in `Single` mode.
-    #[prop(optional)]
-    should_close_on_select: Option<bool>,
+    #[prop(into, optional)]
+    should_close_on_select: CloseOnSelect,
     /// Labels the select when there is no `Label` inside.
     #[prop(into, optional)]
     aria_label: MaybeProp<String>,
@@ -112,6 +115,7 @@ pub fn Select(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Select", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let state = use_select_state(UseSelectStateInput {
@@ -128,7 +132,7 @@ pub fn Select(
         validate,
         validation_behavior,
         name: name.clone(),
-        ..UseSelectStateInput::new(collection)
+        collection,
     });
 
     // As in react-aria-components: a visible label is expected unless an ARIA label is given.
@@ -155,7 +159,12 @@ pub fn Select(
         name,
         form,
         validation_behavior,
-        ..UseSelectInput::new(state)
+        state,
+        id: None,
+        aria_describedby: None,
+        keyboard_delegate: None,
+        on_focus: None,
+        on_blur: None,
     });
 
     let ctx = SelectCtx {
@@ -211,12 +220,15 @@ pub fn Select(
 
 /// The button opening the select's popover. Exposes `data-open`, `data-invalid`,
 /// `data-disabled`, `data-pressed` and (from `use_button`) `data-focus-visible` for styling.
+///
+/// Default class: `leptonic-SelectTrigger`.
 #[component]
 pub fn SelectTrigger(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SelectTrigger", classes);
     let ctx = expect_context::<SelectCtx>();
     let (input, trigger_props) = ctx.part(|p| (p.trigger.clone(), p.trigger_props.clone()));
     let button = use_button(input);
@@ -243,12 +255,15 @@ pub fn SelectTrigger(
 
 /// The text of the selected option(s), or `placeholder`. Exposes `data-placeholder` while
 /// nothing is selected.
+///
+/// Default class: `leptonic-SelectValue`.
 #[component]
 pub fn SelectValue(
     #[prop(into, optional)] placeholder: Option<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SelectValue", classes);
     let ctx = expect_context::<SelectCtx>();
     let state = ctx.state;
     let id = ctx.parts.with_value(|p| p.value_id.clone());
@@ -282,6 +297,8 @@ pub fn SelectValue(
 /// [`ListBox`](super::listbox::ListBox); mounted while open. Modal, as react-aria-components'
 /// select popover: focus stays inside and the rest of the page is hidden from assistive
 /// technology until it closes.
+///
+/// Default class: `leptonic-SelectPopover`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn SelectPopover(
@@ -305,6 +322,7 @@ pub fn SelectPopover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SelectPopover", classes);
     let ctx = expect_context::<SelectCtx>();
     let ctx_labelledby = ctx.listbox_input().aria_labelledby;
     let UsePopoverReturn {
@@ -321,7 +339,16 @@ pub fn SelectPopover(
         cross_offset,
         container_padding,
         should_flip,
-        ..UsePopoverInput::new(ctx.state)
+        state: ctx.state,
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        boundary: None,
+        target_rect: Signal::stored(None),
+        modality: PopoverModality::Modal,
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
+        is_submenu: false,
     });
     render_popover(
         ctx.state,

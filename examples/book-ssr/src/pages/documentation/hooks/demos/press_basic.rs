@@ -42,7 +42,13 @@ pub fn PressBasicDemo() -> impl IntoView {
     });
     let (attrs, styles) = props.into_parts();
 
-    let times = |n: i32| if n == 1 { "1 time".to_owned() } else { format!("{n} times") };
+    let times = |n: i32| {
+        if n == 1 {
+            "1 time".to_owned()
+        } else {
+            format!("{n} times")
+        }
+    };
 
     view! {
         <p>"Press the button with mouse, touch or keyboard (Tab to focus, Enter or Space to press)."</p>

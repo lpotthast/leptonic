@@ -20,7 +20,7 @@ use crate::utils::{
 //
 // =============================================================================
 
-/// Input of [`use_color_area_state`]. Start from [`UseColorAreaStateInput::new`].
+/// Input of [`use_color_area_state`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseColorAreaStateInput<C: ColorValue> {
     /// The initial color.
@@ -39,22 +39,6 @@ pub struct UseColorAreaStateInput<C: ColorValue> {
     pub on_change: Option<Callback<C>>,
     /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
-}
-
-impl<C: ColorValue> UseColorAreaStateInput<C> {
-    /// An area starting at `default_value`, with the color space's default axes.
-    pub fn new(default_value: C) -> Self {
-        Self {
-            default_value,
-            value: None,
-            x_channel: None,
-            y_channel: None,
-            x_channel_step: None,
-            y_channel_step: None,
-            on_change: None,
-            on_change_end: None,
-        }
-    }
 }
 
 /// The state of a 2D color area: the color, and the two channels its axes change.
@@ -289,7 +273,12 @@ mod tests {
         use_color_area_state(UseColorAreaStateInput {
             x_channel: Some(HsvChannel::Saturation),
             y_channel: Some(HsvChannel::Brightness),
-            ..UseColorAreaStateInput::new(color)
+            default_value: color,
+            value: None,
+            x_channel_step: None,
+            y_channel_step: None,
+            on_change: None,
+            on_change_end: None,
         })
     }
 
@@ -333,11 +322,17 @@ mod tests {
             let ends = RwSignal::new(Vec::new());
             let area = use_color_area_state(UseColorAreaStateInput {
                 on_change_end: Some(Callback::new(move |c: HSV| ends.update(|e| e.push(c)))),
-                ..UseColorAreaStateInput::new(HSV {
+                default_value: HSV {
                     hue: 0.0,
                     saturation: 0.5,
                     value: 0.5,
-                })
+                },
+                value: None,
+                x_channel: None,
+                y_channel: None,
+                x_channel_step: None,
+                y_channel_step: None,
+                on_change: None,
             });
             area.set_dragging(true);
             area.set_color_from_point(1.0, 0.0);

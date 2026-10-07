@@ -1,0 +1,55 @@
+// Upstream: ../starters/docs/src/ToggleButton.css @ 99e610236
+// Upstream: ../starters/docs/src/ToggleButton.tsx @ 99e610236
+//
+// `ToggleButton`. Markup: the children inside one `<span>`, as the starter renders them
+// (`<span>"Bold"</span>`; icon only: `<span><svg .. /></span>`, which makes the button round).
+// Variants (as the starter's `variant` prop): `attr:data-variant="secondary"` or `"quiet"`;
+// primary without.
+@use "utilities";
+
+@layer utilities {
+  .leptonic-ToggleButton {
+    @include utilities.button-base;
+  }
+}
+
+.leptonic-ToggleButton {
+  border: none;
+  forced-color-adjust: none;
+  border-radius: var(--radius);
+  appearance: none;
+  vertical-align: middle;
+  font: var(--font-size) system-ui;
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+  height: var(--spacing-8);
+  padding: 0 var(--spacing-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition-property: background, box-shadow, text-shadow, scale;
+  transition-duration: 200ms;
+  -webkit-tap-highlight-color: transparent;
+
+  > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  > span > svg {
+    width: var(--spacing-4);
+    height: var(--spacing-4);
+  }
+
+  &:has(> span > svg:only-child) {
+    width: var(--spacing-8);
+    padding: 0;
+    border-radius: 9999px;
+  }
+
+  &[data-pressed] {
+    scale: 0.95;
+  }
+}

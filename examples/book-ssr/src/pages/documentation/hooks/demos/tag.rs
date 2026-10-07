@@ -6,7 +6,8 @@ use leptonic::{
         IntoAttrs, SelectionMode, TagGroupData, UseTagGroupInput, UseTagGroupReturn, UseTagInput,
         UseTagReturn,
         collections::{
-            Key, Selection, SelectionOptions, UseListStateInput, use_list_collection, use_list_state,
+            Key, Selection, SelectionOptions, UseListStateInput, use_list_collection,
+            use_list_state,
         },
         use_button, use_tag, use_tag_group,
     },
@@ -43,7 +44,14 @@ pub fn TagDemo() -> impl IntoView {
         on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
             tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
         })),
-        ..UseTagGroupInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        keyboard_delegate: None,
+        on_action: None,
     });
 
     let status = move || {

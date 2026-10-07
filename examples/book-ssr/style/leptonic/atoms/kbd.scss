@@ -1,0 +1,27 @@
+// A leptonic addition: react-aria-components has no keys atom, so this file has no upstream
+// stylesheet. It gives `Keys` and `ShortcutKeys` the look of the starter's shortcuts (the `kbd`
+// in its `Button.css` and `Menu.css`): one small box per shortcut.
+//
+// `Keys`, `ShortcutKeys`. Markup: the atom's own, an outer `<kbd>` holding one `<kbd>` per key,
+// with `[data-separator]` spans ("+") between them.
+
+.leptonic-Keys,
+.leptonic-ShortcutKeys {
+  display: inline-flex;
+  align-items: center;
+  font: var(--font-size-sm) system-ui;
+  color: inherit;
+  background: var(--highlight-hover);
+  border: 0.5px solid var(--tint-500);
+  padding: 0 var(--spacing-1);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+
+  kbd {
+    font: inherit;
+  }
+
+  [data-separator] {
+    margin-inline: 0.2em;
+  }
+}

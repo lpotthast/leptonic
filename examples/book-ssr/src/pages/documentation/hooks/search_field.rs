@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::search_field::SearchFieldDemo;
@@ -19,9 +18,10 @@ pub fn PageUseSearchField() -> impl IntoView {
 
             <Section title="Input">
                 <p>
-                    "Create the input with "<Code inline=true>"UseSearchFieldInput::new(UseTextFieldInput { .. })"</Code>
-                    ", which sets the text field\u{2019}s "<Code inline=true>"input_type"</Code>" to "
-                    <Code inline=true>"Search"</Code>". The value state is a "<Code inline=true>"TextFieldState"</Code>
+                    "Pass a "<Code inline=true>"UseSearchFieldInput"</Code>" with every field named, and set the text field\u{2019}s "
+                    <Code inline=true>"input_type"</Code>" to "<Code inline=true>"Search"</Code>". The value state is a "
+                    <Code inline=true>"TextFieldState"</Code>
+
                     " from "<Link href=format!("{}#use-text-field-state", routes::doc::text_field::Hook.materialize())>"use_text_field_state"</Link>"."
                 </p>
 
@@ -85,7 +85,6 @@ pub fn PageUseSearchField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::SearchField.materialize()>"Search Field overview"</Link></li>
                 <li><Link href=routes::doc::search_field::Atom.materialize()>"Search Field Atoms"</Link></li>
-                <li><Link href=routes::doc::search_field::Component.materialize()>"Search Field Component"</Link></li>
                 <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
             </SeeAlso>

@@ -9,8 +9,8 @@ use crate::{
         ValidationBehavior, use_hover, use_switch, use_toggle_state,
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
+        styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -31,6 +31,8 @@ use crate::{
 ///
 /// Data attributes: `data-selected`, `data-pressed`, `data-hovered`, `data-focused`,
 /// `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`, `data-required`.
+///
+/// Default class: `leptonic-Switch`.
 #[allow(clippy::too_many_arguments)]
 #[component]
 pub fn Switch(
@@ -69,6 +71,7 @@ pub fn Switch(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Switch", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let (value, on_change) = ValueBinding::from_state_props(is_selected, set_selected, on_change);
     let state = use_toggle_state(UseToggleStateInput {
@@ -96,7 +99,7 @@ pub fn Switch(
             on_focus_change,
             ..ToggleOptions::default()
         },
-        ..UseSwitchInput::new(state)
+        state,
     });
     let hover = use_hover(UseHoverInput {
         is_disabled: switch.is_disabled,

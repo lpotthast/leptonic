@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{dialog_popover::DialogPopoverDemo, modal_alert::ModalAlertDemo};
@@ -257,10 +256,6 @@ pub fn PageAtomDialog() -> impl IntoView {
                         }
                     "#)}
                 </Code>
-                <p>
-                    "The "<Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link>" are built this way: "
-                    <Code inline=true>"ModalTitle"</Code>" is a themed "<Code inline=true>"DialogTitle"</Code>"."
-                </p>
             </Section>
 
             <SeeAlso>

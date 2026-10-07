@@ -67,6 +67,11 @@ impl Collection {
         self.nodes.contains_key(key)
     }
 
+    /// The keys of all nodes (sections, headers, items, cells, ...), in no particular order.
+    pub fn keys(&self) -> impl Iterator<Item = &Key> {
+        self.nodes.keys()
+    }
+
     /// The first top-level node.
     pub fn first_key(&self) -> Option<&Key> {
         self.first_key.as_ref()

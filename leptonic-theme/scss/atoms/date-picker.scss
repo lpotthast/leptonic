@@ -1,0 +1,43 @@
+// Upstream: ../starters/docs/src/DatePicker.css @ 99e610236
+// Upstream: ../starters/docs/src/DatePicker.tsx @ 99e610236
+//
+// `DatePicker`, `DatePickerGroup`, `DatePickerButton`. The `DateInput` and `DateSegment`s are
+// styled by `date-field.scss`, the button's look by the field button rule of `form.scss`, the
+// calendar by `calendar.scss`.
+//
+// Markup (as the starter):
+//   <DatePicker>
+//     <Label />
+//     <DatePickerGroup>
+//       <DateInput>{|segment| <DateSegment segment /> }</DateInput>
+//       <DatePickerButton>(chevron-down svg)</DatePickerButton>
+//     </DatePickerGroup>
+//     <Description /> <FieldError />
+//     <Popover>(no arrow) <Dialog><Calendar /></Dialog></Popover>
+//   </DatePicker>
+
+.leptonic-DatePicker {
+  max-width: 100%;
+
+  .leptonic-DatePickerGroup {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    height: var(--spacing-8);
+    border-radius: var(--radius);
+    overflow: clip;
+  }
+
+  .leptonic-DateInput {
+    flex: 1;
+    min-width: 0;
+    padding-right: var(--spacing-10);
+    overflow-x: auto;
+    overflow-y: clip;
+    scrollbar-width: none;
+  }
+
+  .leptonic-DatePickerButton {
+    margin-right: var(--spacing-1);
+  }
+}

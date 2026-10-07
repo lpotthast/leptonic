@@ -1,0 +1,33 @@
+// Upstream: ../starters/docs/src/Toolbar.css @ 99e610236
+// Upstream: ../starters/docs/src/Toolbar.tsx @ 99e610236
+//
+// `Toolbar`, and the `Separator`s in it. The starter's toolbar orients its separators across
+// itself and its toggle button groups along itself; here the app sets their `orientation`
+// (a horizontal toolbar: vertical separators, horizontal `ToggleButtonGroup`s).
+//
+// Leptonic has no `Group` atom (react-aria-components' `Group`, which the starter's toolbars
+// group buttons with), so its rule is left out.
+
+.leptonic-Toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-1);
+  width: fit-content;
+
+  &[data-orientation='horizontal'] {
+    flex-direction: row;
+  }
+
+  &[data-orientation='vertical'] {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .leptonic-Separator {
+    &[aria-orientation='vertical'] {
+      height: auto;
+      margin: 0px var(--spacing-1);
+    }
+  }
+}

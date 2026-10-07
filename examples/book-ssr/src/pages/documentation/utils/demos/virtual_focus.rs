@@ -99,7 +99,9 @@ pub fn VirtualFocusDemo() -> impl IntoView {
         on_blur: Some(Callback::new(move |_| {
             log.update(|log| log.push("the input lost focus".to_owned()));
         })),
-        on_focus_change: Some(Callback::new(move |is_focused| set_input_focused.set(is_focused))),
+        on_focus_change: Some(Callback::new(move |is_focused| {
+            set_input_focused.set(is_focused);
+        })),
         ..Default::default()
     });
 

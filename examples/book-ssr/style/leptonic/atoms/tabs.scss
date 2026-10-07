@@ -1,0 +1,123 @@
+// Upstream: ../starters/docs/src/Tabs.css @ 99e610236
+// Upstream: ../starters/docs/src/Tabs.tsx @ 99e610236
+//
+// `Tabs`, `TabList`, `Tab` and `TabPanel`. Markup: each tab's content followed by its selection
+// indicator (the starter's `SelectionIndicator`; shown on the selected tab only):
+//
+//   <Tab key=..>"Overview"<span class="selection-indicator"></span></Tab>
+//
+// The layout follows `data-orientation` (`horizontal`, `vertical`) of the tabs and the tab list.
+
+.leptonic-Tabs {
+  display: flex;
+  gap: var(--spacing-2);
+  color: var(--text-color);
+  max-width: 100%;
+
+  &[data-orientation='horizontal'] {
+    flex-direction: column;
+  }
+
+  &[data-orientation='vertical'] {
+    flex-direction: row;
+    width: 100%;
+    .leptonic-TabPanel {
+      flex: 1;
+    }
+  }
+}
+
+.leptonic-TabList {
+  display: flex;
+
+  .selection-indicator {
+    background: var(--border-color);
+  }
+
+  &[data-orientation='horizontal'] {
+    border-bottom: 0.5px solid var(--border-color);
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: clip;
+    scrollbar-width: none;
+
+    .selection-indicator {
+      left: 0;
+      bottom: 0px;
+      width: 100%;
+      height: 3px;
+      transition-property: translate, width;
+    }
+  }
+
+  &[data-orientation='vertical'] {
+    flex-direction: column;
+    border-inline-end: 1px solid var(--border-color);
+
+    .selection-indicator {
+      top: 0;
+      right: 0px;
+      height: 100%;
+      width: 3px;
+      transition-property: translate, height;
+    }
+  }
+}
+
+.leptonic-Tab {
+  padding: 10px;
+  cursor: default;
+  outline: none;
+  position: relative;
+  font: var(--font-size) system-ui;
+  color: var(--text-color);
+  transition: color 200ms;
+  --border-color: transparent;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &[data-hovered],
+  &[data-focus-visible] {
+    color: var(--text-color-hover);
+  }
+
+  .selection-indicator {
+    position: absolute;
+    transition-duration: 200ms;
+    border-radius: 3px;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &[data-selected] {
+    --border-color: var(--highlight-background);
+    color: var(--text-color-hover);
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+    &[data-selected] {
+      --border-color: var(--text-color-disabled);
+    }
+  }
+
+  &[data-focus-visible] {
+    border-radius: calc(var(--radius-sm) + 8px);
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -8px;
+  }
+}
+
+.leptonic-TabPanel {
+  padding: var(--spacing-3);
+  border-radius: var(--radius);
+  outline: none;
+  box-sizing: border-box;
+  transition: opacity 400ms;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+  }
+}

@@ -1,8 +1,7 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-/// All five transitions side by side, driven by one signal. Grow, Slide and Zoom get their animation from the
-/// demo's classes (see "View styles"); the theme only styles Collapse and Fade.
+/// All five transitions side by side, driven by one signal. The theme animates them.
 #[component]
 pub fn TransitionsCompareDemo() -> impl IntoView {
     let (shown, set_shown) = signal(true);
@@ -15,31 +14,31 @@ pub fn TransitionsCompareDemo() -> impl IntoView {
             <div class="demo-transitions-grid">
                 <div class="demo-transitions-cell">
                     <span class="demo-transitions-label">"Collapse"</span>
-                    <Collapse show=shown>
+                    <Collapse is_shown=shown>
                         <div class="demo-transitions-tile">"Collapse"</div>
                     </Collapse>
                 </div>
                 <div class="demo-transitions-cell">
                     <span class="demo-transitions-label">"Fade"</span>
-                    <Fade inn=shown>
+                    <Fade is_shown=shown>
                         <div class="demo-transitions-tile">"Fade"</div>
                     </Fade>
                 </div>
                 <div class="demo-transitions-cell">
                     <span class="demo-transitions-label">"Grow"</span>
-                    <Grow inn=shown.into() classes="demo-transitions-grow">
+                    <Grow is_shown=shown>
                         <div class="demo-transitions-tile">"Grow"</div>
                     </Grow>
                 </div>
                 <div class="demo-transitions-cell demo-transitions-clip">
                     <span class="demo-transitions-label">"Slide"</span>
-                    <Slide inn=shown.into() classes="demo-transitions-slide">
+                    <Slide is_shown=shown>
                         <div class="demo-transitions-tile">"Slide"</div>
                     </Slide>
                 </div>
                 <div class="demo-transitions-cell">
                     <span class="demo-transitions-label">"Zoom"</span>
-                    <Zoom inn=shown.into() classes="demo-transitions-zoom">
+                    <Zoom is_shown=shown>
                         <div class="demo-transitions-tile">"Zoom"</div>
                     </Zoom>
                 </div>

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{tabs::TabsDemo, tabs_manual::TabsManualDemo, tabs_vertical::TabsVerticalDemo};
@@ -69,8 +68,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Input" id="use-tab-list-state-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseTabListStateInput::new(collection)"</Code>
-                        " and change the fields you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseTabListStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabListStateInput">
                         <ApiRow name="collection" ty="CollectionMemo">"The tabs. Required."</ApiRow>
@@ -115,9 +114,12 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             use leptos::logging::log;
 
                             let state = use_tab_list_state(UseTabListStateInput {
+                                collection,
                                 default_selected_key: Some(Key::from("shipping")),
+                                selected_key: None,
                                 on_selection_change: Some(Callback::new(|key: Key| log!("selected {key}"))),
-                                ..UseTabListStateInput::new(collection)
+                                disabled_keys: Signal::default(),
+                                is_disabled: Signal::stored(false),
                             });
 
                             // Select a tab from code:
@@ -145,8 +147,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Input" id="use-tab-list-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseTabListInput::new(tabs, element)"</Code>
-                        " and change the fields you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseTabListInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabListInput">
                         <ApiRow name="tabs" ty="TabListData">"The tab list, from "<Code inline=true>"TabListData::new(state)"</Code>". Required."</ApiRow>
@@ -180,14 +182,21 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             use leptonic::{
-                                hooks::{IntoAttrs, TabListData, UseTabListInput, UseTabListReturn, use_tab_list},
+                                hooks::{
+                                    IntoAttrs, KeyboardActivation, Orientation, TabListData, UseTabListInput, UseTabListReturn,
+                                    use_tab_list,
+                                },
                                 utils::CapturedElement,
                             };
 
                             let tabs = TabListData::new(state);
                             let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
+                                tabs: tabs.clone(),
+                                element: CapturedElement::new(),
+                                orientation: Orientation::Horizontal,
+                                keyboard_activation: KeyboardActivation::Automatic,
                                 aria_label: "Product".into(),
-                                ..UseTabListInput::new(tabs.clone(), CapturedElement::new())
+                                aria_labelledby: None,
                             });
 
                             view! {
@@ -208,7 +217,8 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 <Section title="Input" id="use-tab-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseTabInput::new(data, key)"</Code>"."
+                        "Pass a "<Code inline=true>"UseTabInput"</Code>" with every field named; the Default column gives the "
+                        "value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseTabInput">
                         <ApiRow name="list" ty="TabListItemData">"The tab list, from "<Code inline=true>"use_tab_list"</Code>". Required."</ApiRow>
@@ -217,9 +227,9 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             "Disables this tab. The arrow keys only skip tabs disabled in the collection or through "
                             <Code inline=true>"disabled_keys"</Code>", so prefer those."
                         </ApiRow>
-                        <ApiRow name="should_select_on_press_up" ty="Option<bool>" default="None">
-                            "Select when the press ends instead of when it starts. "<Code inline=true>"None"</Code>
-                            ": only for tabs that are links in the collection."
+                        <ApiRow name="should_select_on_press_up" ty="SelectOnPressUp" default="Auto">
+                            "Select when the press ends instead of when it starts: "<Code inline=true>"Always"</Code>", "
+                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (only for tabs that are links in the collection)."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -250,11 +260,18 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <Section title="Example" id="use-tab-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, TabListItemData, UseTabInput, use_tab};
+                            use leptonic::hooks::{Key, TabListItemData, UseTabInput, collections::SelectOnPressUp, use_tab};
 
                             #[component]
                             fn MyTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-                                let (attrs, styles) = use_tab(UseTabInput::new(list, Key::from(key))).tab_props.into_parts();
+                                let input = UseTabInput {
+                                    list,
+                                    key: Key::from(key),
+                                    is_disabled: Signal::stored(false),
+                                    should_select_on_press_up: SelectOnPressUp::Auto,
+                                };
+                                let (attrs, styles) = use_tab(input).tab_props.into_parts();
+
                                 // Style the state through `[aria-selected="true"]` and `[aria-disabled="true"]`.
                                 view! { <div {..attrs} style=styles class="my-tab">{label}</div> }
                             }
@@ -344,7 +361,6 @@ pub fn PageUseTabsHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
                 <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></li>
-                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
                 <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
             </SeeAlso>

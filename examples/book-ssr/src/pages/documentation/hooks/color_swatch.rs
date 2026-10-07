@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_swatch::ColorSwatchDemo;
@@ -20,8 +19,8 @@ pub fn PageUseColorSwatch() -> impl IntoView {
             <Section title="Input">
                 <ApiTable kind=ApiKind::Input of="UseColorSwatchInput">
                     <ApiRow name="color" ty="Signal<Color>">
-                        "The color to display. Required. "<Code inline=true>"UseColorSwatchInput::new"</Code>" takes any "
-                        "color value or a signal of one (a "<Code inline=true>"ColorProp"</Code>", see "
+                        "The color to display. Required. Convert a color value with "<Code inline=true>"Color::from"</Code>
+                        ", or a signal of one with "<Code inline=true>"ColorProp::from(signal).0"</Code>" (see "
                         <Link href=format!("{}#colorvalue", routes::doc::Color.materialize())><Code inline=true>"Color Values"</Code></Link>")."
                     </ApiRow>
                     <ApiRow name="color_name" ty="MaybeProp<String>" default="None">
@@ -50,13 +49,20 @@ pub fn PageUseColorSwatch() -> impl IntoView {
             <Section title="Example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::color::RGB8};
+                        use leptonic::{
+                            hooks::*,
+                            utils::color::{Color, RGB8},
+                        };
                         use leptos::prelude::*;
 
                         let swatch = use_color_swatch(UseColorSwatchInput {
+                            color: Signal::stored(Color::from(RGB8 { r: 66, g: 135, b: 245 })),
                             color_name: "Ocean blue".into(),
-                            ..UseColorSwatchInput::new(Signal::stored(RGB8 { r: 66, g: 135, b: 245 }))
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            id: None,
                         });
+
                         let (props, styles) = swatch.color_swatch_props.into_inner();
 
                         view! { <div {..props.into_attrs()} class="swatch" style=styles></div> }

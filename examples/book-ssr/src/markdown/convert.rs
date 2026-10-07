@@ -116,8 +116,32 @@ pub fn convert_page(html: &str) -> Option<ConvertedPage> {
 
 /// Elements whose start and end separate words.
 const BLOCK_ELEMENTS: &[&str] = &[
-    "article", "section", "div", "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "dl", "dt", "dd",
-    "table", "thead", "tbody", "tr", "th", "td", "pre", "blockquote", "br", "hr",
+    "article",
+    "section",
+    "div",
+    "p",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "dl",
+    "dt",
+    "dd",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "th",
+    "td",
+    "pre",
+    "blockquote",
+    "br",
+    "hr",
 ];
 
 /// Appends the text a reader sees in `element`: without demos (`Demo`), buttons and the `#` anchors of headings.
@@ -171,7 +195,7 @@ fn heading_text(heading: ElementRef<'_>) -> String {
 
 fn is_anchor_link(element: ElementRef<'_>) -> bool {
     element.value().has_class(
-        "leptonic-anchor-link",
+        "doc-heading-anchor",
         scraper::CaseSensitivity::CaseSensitive,
     )
 }
@@ -289,11 +313,11 @@ fn text_content(node: &Node) -> String {
     }
 }
 
-/// leptonic's `Code` renders a bare `<code>` (no `<pre>`) for both inline code and blocks; `data-inline` tells them
-/// apart, `data-language` names the language of a block.
+/// The kit's `Code` renders a bare `<code class="doc-code">` (no `<pre>`) for both inline code and blocks; `data-inline`
+/// tells them apart, `data-language` names the language of a block.
 #[allow(clippy::needless_pass_by_value)] // Signature required by `ElementHandler`.
 fn handle_code(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerResult> {
-    if !has_class(&element, "leptonic-code") {
+    if !has_class(&element, "doc-code") {
         return handlers.fallback(element);
     }
     let content = handlers.walk_children(element.node).content;
@@ -304,10 +328,10 @@ fn handle_code(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerR
     Some(format!("\n\n```{language}\n{}\n```\n\n", content.trim_matches('\n')).into())
 }
 
-/// Drops the `#` anchors next to headings; links to documentation pages point to their Markdown export.
+/// Drops the `#` anchors next to headings (`doc-heading-anchor`); links to documentation pages point to their Markdown export.
 #[allow(clippy::needless_pass_by_value)] // Signature required by `ElementHandler`.
 fn handle_anchor(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerResult> {
-    if has_class(&element, "leptonic-anchor-link") {
+    if has_class(&element, "doc-heading-anchor") {
         return Some(String::new().into());
     }
     match attr(&element, "href") {
@@ -319,15 +343,23 @@ fn handle_anchor(handlers: &dyn Handlers, element: Element<'_>) -> Option<Handle
     }
 }
 
-/// Keys (leptonic's `KbdKey`, a `<kbd>`) become inline code. A key combination (`KbdShortcutRoot`, a `<kbd>` around
-/// the keys) keeps its keys apart: `Shift + Tab` becomes `` `⇧` + `↹` ``.
+/// Keys (the kit's `Keys`, leptonic's `Keys` atom: a `<kbd class="doc-keys">` around a `<kbd>` per key) become inline
+/// code, a combination keeps its keys apart: `Shift + Tab` becomes `` `⇧` + `↹` ``. A key shown as a glyph keeps the
+/// glyph (its `aria-hidden` part), not its visually hidden name.
 #[allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)] // Signature required by `ElementHandler`.
 fn handle_kbd(handlers: &dyn Handlers, element: Element<'_>) -> Option<HandlerResult> {
-    let content = handlers.walk_children(element.node).content;
-    if has_class(&element, "leptonic-kbd-shortcut") {
+    if has_class(&element, "doc-keys") {
+        let content = handlers.walk_children(element.node).content;
         return Some(content.trim().replace('+', " + ").into());
     }
-    Some(format!("`{}`", content.trim()).into())
+    let shown = find_element(element.node, &|node| {
+        element_attr(node, "aria-hidden").as_deref() == Some("true")
+    })
+    .map_or_else(
+        || handlers.walk_children(element.node).content,
+        |glyph| text_content(&glyph),
+    );
+    Some(format!("`{}`", shown.trim()).into())
 }
 
 #[cfg(test)]
@@ -346,9 +378,9 @@ mod tests {
     #[test]
     fn extracts_title_sections_and_description_without_anchor_links() {
         let page = page(
-            r##"<h1 id="use-button">use_button<a class="leptonic-anchor-link" href="#use-button">#</a></h1>
+            r##"<h1 id="use-button">use_button<a class="doc-link doc-heading-anchor" href="#use-button">#</a></h1>
             <p>The   use_button hook.</p>
-            <section><h2 id="input">Input<a class="leptonic-anchor-link" href="#input">#</a></h2><p>x</p></section>"##,
+            <section><h2 id="input">Input<a class="doc-link doc-heading-anchor" href="#input">#</a></h2><p>x</p></section>"##,
         );
         assert_that!(page.title).is_equal_to("use_button");
         assert_that!(page.description).is_equal_to("The use_button hook.");
@@ -363,7 +395,7 @@ mod tests {
     #[test]
     fn see_also_links_point_to_markdown_exports() {
         let page = page(
-            r##"<h1>T</h1><section><h2 id="see-also">See Also<a class="leptonic-anchor-link" href="#see-also">#</a></h2><ul>
+            r##"<h1>T</h1><section><h2 id="see-also">See Also<a class="doc-link doc-heading-anchor" href="#see-also">#</a></h2><ul>
             <li><a href="/doc/button">Button overview</a></li>
             <li><a href="/doc/focus/use-focus-ring#keyboard">use_focus_ring</a></li>
             </ul></section>"##,
@@ -387,10 +419,10 @@ mod tests {
             r#"<h1>T</h1>
             <div class="doc-demo"><div class="demo" data-demo-description="Press counter"><button>x</button></div>
             <div class="doc-disclosure"><button aria-expanded="false">View source</button>
-            <div aria-hidden="true"><code class="leptonic-code" data-language="rust">fn demo() {}</code></div></div></div>
-            <p><code class="leptonic-code" data-inline="true">use_press</code> and <kbd class="leptonic-kbd-key">Enter</kbd></p>
-            <p><kbd class="leptonic-kbd-shortcut"><kbd class="leptonic-kbd-key">⇧</kbd><span class="leptonic-kbd-concatenate">+</span><kbd class="leptonic-kbd-key">↹</kbd></kbd></p>
-            <code class="leptonic-code" data-language="rust">let x = 1;</code>"#,
+            <div aria-hidden="true"><code class="doc-code" data-language="rust">fn demo() {}</code></div></div></div>
+            <p><code class="doc-code" data-inline="true">use_press</code> and <kbd class="leptonic-Keys doc-keys"><kbd>Enter</kbd></kbd></p>
+            <p><kbd class="leptonic-Keys doc-keys"><kbd><span aria-hidden="true">⇧</span><span style="position:absolute">Shift</span></kbd><span data-separator="" aria-hidden="true">+</span><kbd>↹</kbd></kbd></p>
+            <code class="doc-code" data-language="rust">let x = 1;</code>"#,
         );
         assert_that!(page.markdown.as_str())
             .contains("*\\[Interactive Demo: Press counter\\]*\n\n```rust\nfn demo() {}\n```");
@@ -402,7 +434,7 @@ mod tests {
     #[test]
     fn plain_text_separates_blocks_and_leaves_out_demos_and_anchors() {
         let page = page(
-            r##"<div class="doc-article-header"><h1 id="t">Title<a class="leptonic-anchor-link" href="#t">#</a></h1>
+            r##"<div class="doc-article-header"><h1 id="t">Title<a class="doc-link doc-heading-anchor" href="#t">#</a></h1>
             <button>Copy as Markdown</button></div><p>The <code>use_press</code>es hook.</p>
             <div class="doc-demo"><div class="demo" data-demo-description="Counter"><button>Press</button><p>Pressed 0 times</p></div></div>
             <section><h2 id="input">Input</h2><ul><li>One</li><li>Two</li></ul></section>"##,

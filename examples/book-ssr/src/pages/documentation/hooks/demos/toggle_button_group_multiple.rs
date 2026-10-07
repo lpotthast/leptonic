@@ -26,7 +26,7 @@ pub fn ToggleButtonGroupMultipleDemo() -> impl IntoView {
             aria_label: "Text formatting".into(),
             ..UseToolbarInput::default()
         },
-        ..UseToggleButtonGroupInput::new(state)
+        state,
     });
 
     view! {
@@ -51,7 +51,11 @@ pub fn ToggleButtonGroupMultipleDemo() -> impl IntoView {
 #[component]
 fn FormatButton(group: ToggleGroupState, format: &'static str) -> impl IntoView {
     let button = use_button(use_toggle_button_group_item(
-        UseToggleButtonGroupItemInput::new(group, format),
+        UseToggleButtonGroupItemInput {
+            group,
+            key: format.into(),
+            button: UseButtonInput::default(),
+        },
     ));
     let (attrs, styles) = button.props.into_parts();
     // Styled through `aria-pressed`.

@@ -1,67 +1,108 @@
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{
+    components::prelude::Checkbox,
+    hooks::{
+        IntoAttrs,
+        datepicker::{
+            DateFieldData, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
+            UseDateSegmentReturn, UseTimeFieldStateInput, use_date_segment, use_time_field,
+            use_time_field_state,
+        },
+    },
+    jiff::civil::{DateTime, Time, time},
+    utils::CapturedElement,
+};
 use leptos::prelude::*;
 
-// leptonic has no segment atom yet: the demos share this component built from `use_date_segment`.
-use super::date_segments::{DateSegments, SegmentControls};
-
 #[component]
-pub fn TimeFieldDemo() -> impl IntoView {
-    let (value, set_value) = signal(Some(TimeValue::hm(14, 30)));
-    let hour_cycle_24 = RwSignal::new(true);
-    let show_seconds = RwSignal::new(false);
+pub fn TimeFieldHookDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
+    let state = use_time_field_state(UseTimeFieldStateInput::<Time> {
+        default_value: Some(time(10, 0, 0, 0)),
+        min_value: Signal::stored(Some(time(8, 0, 0, 0))),
+        max_value: Signal::stored(Some(time(18, 0, 0, 0))),
+        is_disabled: disabled.into(),
+        ..UseTimeFieldStateInput::default()
+    });
+    // A time field is a date field of hours and minutes: `state.field` edits the time on a date.
+    let UseDateFieldReturn {
+        label_props,
+        field_props,
+        input_props,
+        error_message_props,
+        data,
+        ..
+    } = use_time_field(
+        UseDateFieldInput {
+            has_label: true.into(),
+            ..UseDateFieldInput::default()
+        },
+        state,
+        CapturedElement::new(),
+        CapturedElement::new(),
+    );
+    let (field_attrs, field_styles) = field_props.into_parts();
+    let segments = state.field.segments;
+    let errors = state.field.validation.validation_errors;
 
     view! {
-        // The hour cycle and the seconds segment are fixed when the field is created: re-create it when they change.
-        // The value lives outside of the field and carries over.
-        {move || {
-            let hour_cycle_24 = hour_cycle_24.get();
-            let show_seconds = show_seconds.get();
-            view! { <TimeField value set_value hour_cycle_24 show_seconds disabled/> }
-        }}
+        <div class="demo-date-field">
+            <span {..label_props.into_attrs()} class="demo-field-label">"Pickup time"</span>
+            <div {..field_attrs} style=field_styles class="demo-date-input">
+                <For
+                    each=move || {
+                        segments.with(|segments| {
+                            segments.iter().enumerate().map(|(index, segment)| (index, segment.kind)).collect::<Vec<_>>()
+                        })
+                    }
+                    key=|key| *key
+                    children=move |(index, kind)| {
+                        let initial = segments.with_untracked(|segments| segments[index].clone());
+                        let segment = Signal::derive(move || {
+                            segments.with(|segments| {
+                                segments.get(index).filter(|segment| segment.kind == kind).cloned()
+                            })
+                            .unwrap_or_else(|| initial.clone())
+                        });
+                        view! { <Segment segment data/> }
+                    }
+                />
+            </div>
+            <input {..input_props.into_attrs()}/>
+            <span {..error_message_props.into_attrs()} class="demo-field-error">{move || errors.get().join(" ")}</span>
+        </div>
 
         <p class="demo-status">
-            {move || match value.get() {
-                None => "No time entered".to_owned(),
-                Some(time) if show_seconds.get() => format!("Meeting at {}", time.format_hms()),
-                Some(time) => format!("Meeting at {}", time.format_hm()),
+            {move || {
+                let invalid = if errors.with(Vec::is_empty) { "" } else { " (invalid)" };
+                state.value.get().map_or_else(
+                    || "No time entered.".to_owned(),
+                    |time| format!("Pickup at {}{invalid}.", time.strftime("%H:%M")),
+                )
             }}
         </p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=hour_cycle_24 set_selected=hour_cycle_24>"24-hour clock"</Checkbox>
-            <Checkbox is_selected=show_seconds set_selected=show_seconds>"Show seconds"</Checkbox>
             <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
 }
 
+/// An editable segment, or a literal between them. The field edits a `DateTime`.
 #[component]
-fn TimeField(
-    value: ReadSignal<Option<TimeValue>>,
-    set_value: WriteSignal<Option<TimeValue>>,
-    hour_cycle_24: bool,
-    show_seconds: bool,
-    disabled: RwSignal<bool>,
-) -> impl IntoView {
-    let field = use_time_field(UseTimeFieldInput {
-        value: value.into(),
-        is_disabled: disabled.into(),
-        label: Some("Meeting time".to_owned()),
-        hour_cycle_24,
-        show_seconds,
-        on_change: Some(Callback::new(move |new_value| set_value.set(new_value))),
-        ..Default::default()
-    });
-
-    let controls = SegmentControls::from(&field);
-
-    view! {
-        <div class="demo-date-field">
-            <span id=field.label_props.id class="demo-date-field-label">"Meeting time"</span>
-            <div {..field.field_props.into_attrs()} class="demo-date-field-input">
-                <DateSegments controls is_disabled=disabled is_read_only=false is_invalid=false/>
-            </div>
-        </div>
+fn Segment(segment: Signal<DateSegment>, data: DateFieldData<DateTime>) -> impl IntoView {
+    let kind = segment.with_untracked(|segment| segment.kind);
+    let text = move || segment.with(|segment| segment.text.clone());
+    if kind == DateSegmentType::Literal {
+        return view! {
+            <span aria-hidden="true" class="demo-date-segment" data-type=kind.as_str()>{text}</span>
+        }
+        .into_any();
     }
+    let UseDateSegmentReturn { segment_props } =
+        use_date_segment(segment, data, CapturedElement::new());
+    let (attrs, styles) = segment_props.into_parts();
+    view! {
+        <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>
+    }
+    .into_any()
 }

@@ -19,6 +19,7 @@ use web_sys::{
 
 use crate::{
     hooks::{IntoAttrs, PropsWithStyles},
+    utils::prevent_focus::prevent_focus,
     utils::{
         CapturedElement, ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers,
         EventTargetExt, Modifiers, Propagation,
@@ -1318,16 +1319,17 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
             let target = e.expect_target();
 
-            if !allow_text_selection_on_press.get_untracked()
-                && let Some(target) = target.as_element()
-            {
-                target.disable_text_selection();
-            }
-
             // As react-aria: a press that is already active keeps its listeners (it ends with its
             // own pointer up or click) and stops the event; a disabled element lets it propagate.
             let mut should_stop = !disabled.get_untracked();
             if !disabled.get_untracked() && state.with_value(Option::is_none) {
+                // On the pressed element (react-aria's `state.target`), which the press restores.
+                if !allow_text_selection_on_press.get_untracked()
+                    && let Some(element) = e.expect_current_target().as_element()
+                {
+                    element.disable_text_selection();
+                }
+
                 // Release pointer capture to enable pointerleave/pointerenter on touch.
                 // By default, the browser captures pointer events to the original target,
                 // which prevents these events from firing correctly.
@@ -1483,10 +1485,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         // Prevent focus on mousedown when prevent_focus_on_press is enabled.
         let handle_mousedown = move |e: MouseEvent| {
-            if prevent_focus_on_press.get_untracked() {
-                e.prevent_default();
+            if !e.current_target_contains_target() || e.button() != 0 {
+                return;
             }
-            if !force_propagation && e.button() == 0 {
+            // Keep the focus where it is (react-aria's `preventFocus`, which, unlike
+            // `preventDefault`, leaves text selection and dragging alone).
+            if prevent_focus_on_press.get_untracked() {
+                prevent_focus(e.target().and_then(|target| target.dyn_into().ok()));
+            }
+            if !force_propagation {
                 e.stop_propagation();
             }
         };

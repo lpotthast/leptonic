@@ -1,0 +1,49 @@
+// Upstream: ../starters/docs/src/ColorPicker.css @ 99e610236
+// Upstream: ../starters/docs/src/ColorPicker.tsx @ 99e610236
+//
+// The starter's color picker: the `ColorPicker` atom renders no element, so these classes go on
+// the app's markup: the trigger (upstream: an unstyled react-aria `Button` showing a `ColorSwatch`
+// and a label, with `data-focus-visible`) gets `color-picker`, the `Popover` gets
+// `color-picker-dialog` (a column of the color atoms, its direct children).
+//
+// Markup (as the starter):
+//   <ColorPicker>
+//     <DialogTrigger>
+//       (trigger button, class `color-picker`) <ColorSwatch /> <span>{label}</span>
+//       <Popover classes="color-picker-dialog">(no arrow, placement bottom start)
+//         <ColorArea x_channel=Saturation y_channel=Brightness><ColorThumb /></ColorArea>
+//         <ColorSlider channel=Hue>..</ColorSlider>
+//         <ColorField><Label>"Hex"</Label><Input /></ColorField>
+//       </Popover>
+//     </DialogTrigger>
+//   </ColorPicker>
+
+.color-picker {
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  outline: none;
+  appearance: none;
+  vertical-align: middle;
+  font: var(--font-size) system-ui;
+  color: var(--text-color);
+  -webkit-tap-highlight-color: transparent;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+}
+
+.leptonic-Popover.color-picker-dialog {
+  padding: var(--spacing-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 192px;
+  max-height: inherit;
+  overflow: auto;
+}

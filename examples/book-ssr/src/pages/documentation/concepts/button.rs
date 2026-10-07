@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::button_basic::ButtonConceptDemo;
@@ -31,7 +30,7 @@ pub fn PageButtonOverview() -> impl IntoView {
 
                 <p>
                     "An element that looks like a button but navigates is a link: use a "
-                    <Link href=format!("{}#linkbutton", routes::doc::link::Component.materialize())><Code inline=true>"LinkButton"</Code></Link>
+                    <Link href=format!("{}#linkbutton", routes::doc::link::Atom.materialize())><Code inline=true>"LinkButton"</Code></Link>
                     ". An element that looks like a link but triggers an action is a button."
                 </p>
             </Section>
@@ -51,10 +50,6 @@ pub fn PageButtonOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></TableCell>
                         <TableCell>"An unstyled "<Code inline=true>"<button>"</Code>" with that behavior, styled through data attributes."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::button::Component.materialize()>"Button Components"</Link></TableCell>
-                        <TableCell>"A themed button with colors, variants and sizes, and layouts for rows of buttons."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
@@ -105,7 +100,6 @@ pub fn PageButtonOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
                 <li><Link href=routes::doc::button::Atom.materialize()>"Button Atom"</Link></li>
-                <li><Link href=routes::doc::button::Component.materialize()>"Button Components"</Link></li>
                 <li><Link href=routes::doc::ToggleButton.materialize()>"Toggle Button overview"</Link></li>
                 <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>

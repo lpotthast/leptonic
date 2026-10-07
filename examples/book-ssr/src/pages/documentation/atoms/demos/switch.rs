@@ -1,4 +1,4 @@
-use leptonic::{atoms::switch, components::prelude::Checkbox};
+use leptonic::atoms::{checkbox::Checkbox, switch};
 use leptos::prelude::*;
 
 #[component]
@@ -19,8 +19,14 @@ pub fn SwitchAtomDemo() -> impl IntoView {
         <p class="demo-status">{move || if wifi.get() { "Wi-Fi is on." } else { "Wi-Fi is off." }}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
+            <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </Checkbox>
+            <Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </Checkbox>
         </div>
     }
 }

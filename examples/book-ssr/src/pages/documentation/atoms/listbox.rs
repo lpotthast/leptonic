@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::listbox::ListBoxAtomDemo;
@@ -21,7 +20,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                         <TableCell><Code inline=true>"ListBox"</Code></TableCell>
                         <TableCell>
                             <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"use_list_state"</Link>
-                            " (unless you pass a "<Code inline=true>"ListState"</Code>" as "<Code inline=true>"state"</Code>"), "
+                            ", "
                             <Link href=hook_section("use-listbox")>"use_listbox"</Link>
                         </TableCell>
                     </TableRow>
@@ -120,12 +119,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="ListBox">
                         <ApiRow name="collection" ty="Option<CollectionMemo>" default="None">
                             "The options, from "<Code inline=true>"use_collection"</Code>" or "
-                            <Code inline=true>"use_list_collection"</Code>". Required unless "<Code inline=true>"state"</Code>
-                            " is given or the listbox is inside a select or combobox."
-                        </ApiRow>
-                        <ApiRow name="state" ty="Option<ListState>" default="None">
-                            "Use an existing list state, e.g. to change the selection from outside. "
-                            <Code inline=true>"collection"</Code>" and the selection props are then ignored."
+                            <Code inline=true>"use_list_collection"</Code>". Required unless the listbox is inside a select or "
+                            "combobox, which provides it."
                         </ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             "Whether nothing, one or many options can be selected. "<Code inline=true>"None"</Code>
@@ -143,7 +138,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                             "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">
-                            "Called with the new selection. Selecting all ("<Keys keys="Control + A"/>", "<Keys keys="Command + A"/>" on macOS) reports "
+                            "Called with the new selection. Selecting all ("<Keys keys="Control + A"/>", "<Keys keys="Meta + A"/>" on macOS) reports "
                             <Code inline=true>"Selection::All"</Code>"."
                         </ApiRow>
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
@@ -216,6 +211,10 @@ pub fn PageAtomListBox() -> impl IntoView {
                     "content from its collection "<Code inline=true>"Node"</Code>" ("<Code inline=true>"let:node"</Code>"). "
                     "It renders no sections: for a collection with sections, render "<Code inline=true>"ListBoxSection"</Code>
                     "s yourself."
+                </p>
+                <p>
+                    "Inside a "<Link href=routes::doc::collection_state::Virtualizer.materialize()>"Virtualizer"</Link>
+                    ", it renders only the options in view, for listboxes of thousands of options."
                 </p>
                 <Section title="Props" id="listbox-items-props">
                     <ApiTable kind=ApiKind::Props of="ListBoxItems">
@@ -385,6 +384,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                 <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
                 <li><Link href=routes::doc::combobox::Atom.materialize()>"Combobox Atoms"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+                <li><Link href=routes::doc::collection_state::Virtualizer.materialize()>"Virtualizer"</Link></li>
             </SeeAlso>
         </DocPage>
     }

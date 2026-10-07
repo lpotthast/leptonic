@@ -1,0 +1,95 @@
+// Upstream: ../starters/docs/src/SearchField.css @ 99e610236
+// Upstream: ../starters/docs/src/SearchField.tsx @ 99e610236
+//
+// `SearchField`, `SearchFieldClearButton` (hidden while the field is `data-empty`). Its `Input`
+// is styled as a text field's (`text-field.scss`). Markup, as the starter (the icons are
+// lucide's `search`, 18px, with its class `lucide-search`, and `x`, 14px):
+//
+//   <SearchField ..>
+//     <Label>..</Label>
+//     <svg class="lucide-search" ..>..</svg>
+//     <Input />
+//     <SearchFieldClearButton><svg ..>..</svg></SearchFieldClearButton>
+//     <Description>..</Description>
+//     <FieldError />
+//   </SearchField>
+@use "utilities";
+
+@layer utilities {
+  .leptonic-SearchField .leptonic-Input {
+    @include utilities.inset;
+  }
+}
+
+.leptonic-SearchField {
+  display: grid;
+  grid-template-areas:
+    'label label label'
+    'icon input button'
+    'help help  help';
+  grid-template-columns: 0px 1fr auto;
+  align-items: center;
+  width: auto;
+  color: var(--text-color);
+
+  .lucide-search {
+    grid-area: icon;
+    z-index: 2;
+    margin-inline-start: var(--spacing-2);
+  }
+
+  &[data-disabled] .lucide-search {
+    color: var(--text-color-disabled);
+  }
+
+  .leptonic-Label {
+    grid-area: label;
+  }
+
+  .leptonic-Input {
+    grid-area: input;
+    width: 100%;
+    border-radius: 9999px;
+    padding: 0 var(--spacing-8);
+
+    &::-webkit-search-cancel-button,
+    &::-webkit-search-decoration {
+      -webkit-appearance: none;
+    }
+  }
+
+  .leptonic-SearchFieldClearButton {
+    all: unset;
+    grid-area: button;
+    width: var(--spacing-4);
+    height: var(--spacing-4);
+    border-radius: 9999px;
+    margin-left: calc(-1 * var(--spacing-6));
+    text-align: center;
+    background: var(--gray-700);
+    color: var(--gray-50);
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+
+    &[data-pressed] {
+      background: var(--gray-800);
+    }
+
+    &[data-disabled] {
+      background: var(--text-color-disabled);
+    }
+  }
+
+  &[data-empty] .leptonic-SearchFieldClearButton {
+    display: none;
+  }
+
+  .leptonic-FieldError,
+  .leptonic-Description {
+    grid-area: help;
+  }
+}

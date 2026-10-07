@@ -45,6 +45,7 @@ pub mod use_table_selection_checkbox;
 /// Table state: rows, columns, selection, focus and sorting.
 pub mod use_table_state;
 
+pub(crate) use messages::RESIZER as RESIZER_LABEL;
 pub use table_collection::*;
 pub use table_column_layout::{ColumnWidths, DEFAULT_MIN_WIDTH, DefaultMinWidth, DefaultWidth};
 pub use table_keyboard_delegate::*;

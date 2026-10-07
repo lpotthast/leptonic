@@ -74,25 +74,6 @@ pub struct UseSubmenuTriggerInput {
     pub delay: Duration,
 }
 
-impl UseSubmenuTriggerInput {
-    pub fn new(
-        state: SubmenuTriggerState,
-        trigger: CapturedElement,
-        parent_menu: CapturedElement,
-        submenu: CapturedElement,
-    ) -> Self {
-        Self {
-            state,
-            trigger,
-            parent_menu,
-            submenu,
-            kind: SubmenuKind::Menu,
-            is_disabled: Signal::stored(false),
-            delay: Duration::from_millis(200),
-        }
-    }
-}
-
 /// What the trigger item needs (pass it to `use_menu_item`).
 #[derive(Debug, Clone)]
 pub struct SubmenuTriggerItem {

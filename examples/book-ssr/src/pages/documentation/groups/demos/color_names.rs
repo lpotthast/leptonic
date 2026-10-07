@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::prelude::ColorSwatch,
     components::prelude::*,
-    utils::color::{Color, ColorValue, HSV, RGB8},
+    utils::color::{Color, ColorValue, HSV},
 };
 use leptos::prelude::*;
 
@@ -15,30 +15,34 @@ pub fn ColorNamesDemo() -> impl IntoView {
         <div class="demo-color-names">
             <TextField
                 label="Color"
-                description="#rgb, #rrggbb, rgb(r, g, b), hsb(h, s%, b%) or hsl(h, s%, l%)"
+                description="#rgb, #rrggbb, rgb(r, g, b), hsb(h, s%, b%), hsl(h, s%, l%), or with alpha: #rrggbbaa, rgba(..), hsla(..)"
                 value=text
                 set_value=text
             />
             <Show when=move || color.get().is_some()>
-                <ColorSwatch
-                    color=Signal::derive(move || color.get().unwrap_or_default().to::<RGB8>())
-                    classes="demo-color-names-swatch"
-                />
+                // The checkerboard behind the swatch shows transparency.
+                <div class="demo-color-checkerboard">
+                    <ColorSwatch
+                        color=Signal::derive(move || color.get().unwrap_or_default())
+                        classes="demo-color-names-swatch"
+                    />
+                </div>
             </Show>
         </div>
         <p class="demo-status">
             {move || match color.get() {
                 Some(color) => {
+                    // `Color::color_name` includes the transparency; the hue comes from HSV.
                     let hsv = color.to::<HSV>();
                     format!(
-                        "{}: {} (hue: {}, {:.0}\u{00b0})",
-                        color.to::<RGB8>(),
-                        hsv.color_name(),
+                        "{}: {} (hue: {}, {:.0}\u{00b0}).",
+                        color.to_css_string(),
+                        color.color_name(),
                         hsv.hue_name(),
                         hsv.hue,
                     )
                 }
-                None => "Not a color".to_owned(),
+                None => "Not a color.".to_owned(),
             }}
         </p>
     }

@@ -13,13 +13,15 @@ pub fn DismissButtonDemo() -> impl IntoView {
 
     let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
-        ..UseOverlayInput::new(
-            is_open.into(),
-            Callback::new(move |()| {
-                set_closed_by.set(Some("Escape or a press outside"));
-                set_is_open.set(false);
-            }),
-        )
+        is_open: is_open.into(),
+        on_close: Callback::new(move |()| {
+            set_closed_by.set(Some("Escape or a press outside"));
+            set_is_open.set(false);
+        }),
+        should_close_on_blur: Signal::stored(false),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
     });
     let overlay_attrs = StoredValue::new(props.into_attrs());
     let dismiss = Callback::new(move |()| {

@@ -27,7 +27,7 @@ use crate::utils::{
 //
 // =============================================================================
 
-/// Input of [`use_slider_state`]. Start from [`UseSliderStateInput::new`].
+/// Input of [`use_slider_state`].
 #[derive(Debug, Clone)]
 pub struct UseSliderStateInput<T: NumberValue> {
     /// The initial values, one per thumb, in ascending order. Default: one thumb at
@@ -52,26 +52,6 @@ pub struct UseSliderStateInput<T: NumberValue> {
     pub on_change: Option<Callback<Vec<T>>>,
     /// Called with the values when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<Vec<T>>>,
-}
-
-impl<T: NumberValue> UseSliderStateInput<T> {
-    /// A slider from `min_value` to `max_value` in steps of 1.
-    pub fn new(min_value: T, max_value: T) -> Self {
-        Self {
-            default_values: None,
-            value: None,
-            min_value: Signal::stored(min_value),
-            max_value: Signal::stored(max_value),
-            step: Signal::stored(T::ONE),
-            is_disabled: Signal::default(),
-            orientation: Signal::stored(Orientation::Horizontal),
-            format_options: Signal::default(),
-            value_label: None,
-            page_size: None,
-            on_change: None,
-            on_change_end: None,
-        }
-    }
 }
 
 /// The state of a slider with one or more thumbs.
@@ -459,7 +439,16 @@ mod tests {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(5),
                 default_values: Some(vec![12, 90]),
-                ..UseSliderStateInput::new(0, 100)
+                value: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(100),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
             });
             // Each value snaps relative to its neighbor's (react-stately's `restrictValues`): 90
             // above 12 in steps of 5 is 92.
@@ -478,7 +467,17 @@ mod tests {
             let app = RwSignal::new(vec![20, 80]);
             let slider = state(UseSliderStateInput {
                 value: Some(ValueBinding::from(app)),
-                ..UseSliderStateInput::new(0, 100)
+                default_values: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(100),
+                step: Signal::stored(1),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
             });
             assert_that!(slider.default_values()).is_equal_to(vec![20, 80]);
             // A step on one thumb keeps the other thumb's value as the app set it.
@@ -493,7 +492,17 @@ mod tests {
         Owner::new().with(|| {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(2.0),
-                ..UseSliderStateInput::new(0.0, 50.0)
+                default_values: None,
+                value: None,
+                min_value: Signal::stored(0.0),
+                max_value: Signal::stored(50.0),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
             });
             assert_that!(slider.page_size()).is_equal_to(6.0);
             slider.increment_thumb(0, None);
@@ -510,7 +519,17 @@ mod tests {
         Owner::new().with(|| {
             let slider = state(UseSliderStateInput {
                 step: Signal::stored(10u8),
-                ..UseSliderStateInput::new(0, 200)
+                default_values: None,
+                value: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(200),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
             });
             assert_that!(slider.percent_value(0.26)).is_equal_to(Some(50));
             slider.set_thumb_percent(0, 0.5);
@@ -525,7 +544,16 @@ mod tests {
             let slider = state(UseSliderStateInput {
                 default_values: Some(vec![10, 20]),
                 on_change_end: Some(Callback::new(move |values| ended.set(Some(values)))),
-                ..UseSliderStateInput::new(0, 100)
+                value: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(100),
+                step: Signal::stored(1),
+                is_disabled: Signal::default(),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
             });
             slider.set_thumb_dragging(0, true);
             slider.set_thumb_value(0, 15);
@@ -541,7 +569,17 @@ mod tests {
             let disabled = RwSignal::new(false);
             let slider = state(UseSliderStateInput {
                 is_disabled: disabled.into(),
-                ..UseSliderStateInput::new(0, 10)
+                default_values: None,
+                value: None,
+                min_value: Signal::stored(0),
+                max_value: Signal::stored(10),
+                step: Signal::stored(1),
+                orientation: Signal::stored(Orientation::Horizontal),
+                format_options: Signal::default(),
+                value_label: None,
+                page_size: None,
+                on_change: None,
+                on_change_end: None,
             });
             slider.set_thumb_editable(0, false);
             slider.set_thumb_value(0, 5);

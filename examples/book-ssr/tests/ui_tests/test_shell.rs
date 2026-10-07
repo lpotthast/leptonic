@@ -1,6 +1,6 @@
 //! Checks the book's shell: the documentation search, the small-screen menu and the demo source toggle.
 
-use std::borrow::Cow;
+use std::{borrow::Cow, time::Duration};
 
 use assertr::prelude::*;
 use browser_test::{
@@ -59,7 +59,10 @@ impl BrowserTest<str> for SearchTests {
             .await
             .context("the search has a field")?;
         input.send_keys("button").await?;
-        page.wait_until("results are listed", HAS_RESULTS).await?;
+        // The first search waits until the server has converted every page to Markdown, which takes a while right
+        // after the server started, under the load of the parallel tests.
+        page.wait_until_within("results are listed", HAS_RESULTS, Duration::from_secs(60))
+            .await?;
 
         // Snippets are plain text with the query highlighted: no Markdown, no frontmatter.
         let snippets = page
@@ -336,11 +339,7 @@ impl BrowserTest<str> for ShellStructureTests {
         assert_that!(duplicates).is_empty();
 
         // The skip link is the first stop of Tab, and moves focus into the page content.
-        driver
-            .action_chain()
-            .send_keys(Key::Tab)
-            .perform()
-            .await?;
+        driver.action_chain().send_keys(Key::Tab).perform().await?;
         page.wait_until(
             "Tab focuses the skip link first, which shows",
             "const a = document.activeElement; return !!a && a.textContent.trim() === 'Skip to content' \
@@ -387,7 +386,7 @@ impl BrowserTest<str> for NarrowShellTests {
             .with_detail_message("the copy button doesn't cover the title")
             .is_equal_to(0.0);
 
-        page.goto("/doc/button/component").await?;
+        page.goto("/doc/button/atom").await?;
         let rows = page
             .number(
                 "return new Set([...document.querySelectorAll('.doc-concept-tab')].map(t => t.offsetTop)).size;",

@@ -79,6 +79,9 @@ pub enum KeyboardKey {
     CapsLock,
     Command,
     Option,
+    /// Control as Apple keyboards label it (⌃), next to [`Command`](Self::Command) and
+    /// [`Option`](Self::Option). Events report it as `Control`.
+    ControlSymbol,
     Tab,
     Tilde,
     Fn,
@@ -124,7 +127,7 @@ impl KeyboardKey {
             Self::Option => "Option",
             Self::Tab => "Tab",
             Self::Escape => "Escape",
-            Self::Control => "Control",
+            Self::Control | Self::ControlSymbol => "Control",
             Self::Fn => "Function",
             Self::PageUp => "Page Up",
             Self::PageDown => "Page Down",
@@ -212,6 +215,7 @@ impl KeyboardKey {
             Self::CapsLock => "⇪",
             Self::Command => "⌘",
             Self::Option => "⌥",
+            Self::ControlSymbol => "⌃",
             Self::Tab => "↹",
             Self::Tilde => "~",
             Self::Fn => "fn",

@@ -63,9 +63,11 @@ fn rules_for<'a>(rules: &[&'a str], source: &str) -> Vec<&'a str> {
     };
     let selected: Vec<&str> = rules.iter().copied().filter(|rule| used(rule)).collect();
     let animates_selected = |rule: &str| {
-        keyframes_names(rule)
-            .iter()
-            .any(|name| selected.iter().any(|selected| contains_word(selected, name)))
+        keyframes_names(rule).iter().any(|name| {
+            selected
+                .iter()
+                .any(|selected| contains_word(selected, name))
+        })
     };
     rules
         .iter()
@@ -265,8 +267,10 @@ mod tests {
             "@media (prefers-reduced-motion: reduce) { @keyframes demo-fade { from { opacity: 0; } } }"
         ))
         .is_equal_to(Vec::<&str>::new());
-        assert_that!(primary_classes("@keyframes demo-fade { from { opacity: 0; } }"))
-            .is_equal_to(Vec::<&str>::new());
+        assert_that!(primary_classes(
+            "@keyframes demo-fade { from { opacity: 0; } }"
+        ))
+        .is_equal_to(Vec::<&str>::new());
     }
 
     #[test]
@@ -369,14 +373,20 @@ mod tests {
             &mut source,
         );
         let used = kebab_case_words(&source);
-        for rule in RULES.iter() {
-            let classes = primary_classes(rule);
-            assert_that!(
-                classes.is_empty() || classes.iter().any(|class| used.binary_search(class).is_ok())
-            )
-            .with_detail_message(format!("unused demo style rule:\n{rule}"))
-            .is_true();
-        }
+        let unused: Vec<&str> = RULES
+            .iter()
+            .copied()
+            .filter(|rule| {
+                let classes = primary_classes(rule);
+                !classes.is_empty()
+                    && !classes
+                        .iter()
+                        .any(|class| used.binary_search(class).is_ok())
+            })
+            .collect();
+        assert_that!(unused)
+            .with_detail_message("unused demo style rules")
+            .is_empty();
     }
 
     #[test]

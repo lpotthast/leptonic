@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focus_scope::FocusScopeDemo;
@@ -99,6 +98,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                             components::prelude::Button,
                             hooks::FocusManagerOptions,
                         };
+                        use leptos::prelude::*;
 
                         #[component]
                         fn NextButton() -> impl IntoView {

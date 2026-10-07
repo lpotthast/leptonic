@@ -1,244 +1,101 @@
-// Upstream: react-aria/src/calendar/useCalendarGrid.ts @ 6f664fe911
+// Upstream: react-aria/src/calendar/useCalendarGrid.ts @ 99e6102368
+use jiff::civil::Date;
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
+    ev::{self, On, SharedEventCallback},
     prelude::*,
 };
+use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
+use super::states::{CalendarData, CalendarStates, visible_range_description};
+use crate::hooks::form::use_label::labels;
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{IntoAttrs, UseKeyboardInput, use_keyboard},
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaHidden, AriaMultiselectable, AriaReadonly, AriaRole},
+        EventAccessors, EventHandler,
+        aria::AriaRole,
+        date::{DateDuration, DateExt, DateRange, today},
+        date_time_formatter::{DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter},
+        focusability::is_focusable,
+        i18n::{use_direction, use_locale},
         id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        locale::WritingDirection,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/calendar/useCalendarGrid.ts
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Takes the calendar's `CalendarData` (react-aria: the state, with the calendar's data in a
+//   `WeakMap`).
+// - `weekday_style` is a `DateTimeFormat` (react-aria: a string).
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - A focused cell losing the focus because paging made it unfocusable doesn't unfocus the
+//   calendar (see `is_focus_fixup`); disabling the calendar does.
+//
+// =============================================================================
 
-//
-// 1. No RTL support: react-aria swaps ArrowLeft/ArrowRight based on
-//    `useLocale().direction`. We always assume LTR because leptonic does not
-//    yet have a locale/direction system.
-//
-// 2. Callback-based navigation instead of state object: react-aria receives a
-//    `CalendarState | RangeCalendarState` object and calls methods like
-//    `state.focusPreviousDay()`. We accept individual `Callback` fields so the
-//    hook stays decoupled from any specific state implementation.
-//
-// 3. No locale-aware weekday formatting: react-aria uses `useDateFormatter`
-//    with a `weekdayStyle` prop. We accept pre-formatted `weekday_labels`.
-//
-// 4. No `startDate`/`endDate` props for multi-grid calendars: react-aria
-//    supports displaying multiple months by passing different date ranges to
-//    each grid. We assume a single grid per calendar.
-//
-// 5. No `weeksInMonth` return: react-aria computes `getWeeksInMonth(...)` and
-//    returns it. Our week data is computed in the state hook instead.
-//
-// 6. No `aria-label` / `aria-labelledby` with visible range description:
-//    react-aria computes a label from the visible date range. We accept an
-//    optional `aria_label` string directly.
-//
-
-/// Input parameters for the `use_calendar_grid` hook.
-#[derive(Debug, Clone)]
+/// Input of [`use_calendar_grid`].
+#[derive(Clone)]
 pub struct UseCalendarGridInput {
-    /// Whether the calendar is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the calendar is read-only.
-    pub is_read_only: Signal<bool>,
-
-    /// The start day of the week (0 = Monday, 6 = Sunday).
-    pub start_of_week: u8,
-
-    /// Labels for the days of the week.
-    pub weekday_labels: Vec<String>,
-
-    /// An accessible label for the grid.
-    pub aria_label: MaybeProp<String>,
-
-    /// Whether the grid supports multi-selection (for range calendars).
-    pub is_range: bool,
-
-    // --- Keyboard navigation callbacks (called from grid-level keydown) ---
-    /// Called on `Enter`/`Space` to select the currently focused date.
-    pub on_select_focused_date: Option<Callback<()>>,
-
-    /// Called on `ArrowLeft` to move focus to the previous day.
-    pub on_focus_previous_day: Option<Callback<()>>,
-
-    /// Called on `ArrowRight` to move focus to the next day.
-    pub on_focus_next_day: Option<Callback<()>>,
-
-    /// Called on `ArrowUp` to move focus to the previous week (row).
-    pub on_focus_previous_week: Option<Callback<()>>,
-
-    /// Called on `ArrowDown` to move focus to the next week (row).
-    pub on_focus_next_week: Option<Callback<()>>,
-
-    /// Called on `PageUp` to move focus to the previous section.
-    /// The bool argument is `true` when Shift is held (year-level navigation).
-    pub on_focus_previous_section: Option<Callback<bool>>,
-
-    /// Called on `PageDown` to move focus to the next section.
-    /// The bool argument is `true` when Shift is held (year-level navigation).
-    pub on_focus_next_section: Option<Callback<bool>>,
-
-    /// Called on `Home` to move focus to the start of the current section.
-    pub on_focus_section_start: Option<Callback<()>>,
-
-    /// Called on `End` to move focus to the end of the current section.
-    pub on_focus_section_end: Option<Callback<()>>,
-
-    /// Called on `Escape` to cancel range selection (range calendars only).
-    pub on_cancel_selection: Option<Callback<()>>,
-
-    // --- Focus callbacks ---
-    /// Called when the grid receives focus.
-    pub on_focus: Option<Callback<()>>,
-
-    /// Called when the grid loses focus.
-    pub on_blur: Option<Callback<()>>,
+    pub data: CalendarData,
+    /// The first date of the grid's month. Default: the start of the visible range (set it for
+    /// the further months of a calendar showing several).
+    pub start_date: Option<Signal<Date>>,
+    /// The grid's last date. Default: the end of the visible range.
+    pub end_date: Option<Signal<Date>>,
+    /// How the weekday names in the header are formatted. Default: narrow ("M").
+    pub weekday_style: DateTimeFormat,
 }
 
-impl UseCalendarGridInput {
-    /// Create a `UseCalendarGridInput` wired to a `UseCalendarStateReturn`.
-    ///
-    /// This convenience method connects all navigation callbacks from the grid
-    /// to the corresponding methods on the calendar state.
-    #[must_use]
-    pub fn from_calendar_state(state: super::use_calendar_state::UseCalendarStateReturn) -> Self {
-        Self {
-            is_disabled: state.is_disabled,
-            is_read_only: state.is_read_only,
-            on_select_focused_date: Some(state.select_focused_date),
-            on_focus_previous_day: Some(state.focus_previous_day),
-            on_focus_next_day: Some(state.focus_next_day),
-            on_focus_previous_week: Some(state.focus_previous_row),
-            on_focus_next_week: Some(state.focus_next_row),
-            on_focus_previous_section: Some(state.focus_previous_section),
-            on_focus_next_section: Some(state.focus_next_section),
-            on_focus_section_start: Some(state.focus_section_start),
-            on_focus_section_end: Some(state.focus_section_end),
-            on_focus: Some(Callback::new(move |()| state.set_focused.run(true))),
-            on_blur: Some(Callback::new(move |()| {
-                state.set_focused.try_run(false);
-            })),
-            ..Default::default()
-        }
-    }
-
-    /// Create a `UseCalendarGridInput` wired to a `UseRangeCalendarStateReturn`.
-    ///
-    /// This connects navigation callbacks from the underlying calendar state,
-    /// and wires range-specific behaviors:
-    /// - `select_focused_date` uses the range state's version (handles anchor/finalize)
-    /// - `cancel_selection` clears the anchor date on Escape
-    /// - `on_blur` finalizes the selection if an anchor is set
-    #[must_use]
-    pub fn from_range_calendar_state(
-        state: super::use_range_calendar_state::UseRangeCalendarStateReturn,
-    ) -> Self {
-        let cal = state.calendar;
-        let select_focused = state.select_focused_date;
-        let set_anchor = state.set_anchor_date;
-        let anchor_date = state.anchor_date;
-
-        Self {
-            is_disabled: cal.is_disabled,
-            is_read_only: cal.is_read_only,
-            is_range: true,
-            on_select_focused_date: Some(select_focused),
-            on_focus_previous_day: Some(cal.focus_previous_day),
-            on_focus_next_day: Some(cal.focus_next_day),
-            on_focus_previous_week: Some(cal.focus_previous_row),
-            on_focus_next_week: Some(cal.focus_next_row),
-            on_focus_previous_section: Some(cal.focus_previous_section),
-            on_focus_next_section: Some(cal.focus_next_section),
-            on_focus_section_start: Some(cal.focus_section_start),
-            on_focus_section_end: Some(cal.focus_section_end),
-            on_cancel_selection: Some(Callback::new(move |()| {
-                set_anchor.run(None);
-            })),
-            on_focus: Some(Callback::new(move |()| cal.set_focused.run(true))),
-            on_blur: Some(Callback::new(move |()| {
-                // Finalize selection when focus leaves the grid.
-                if anchor_date.get_untracked().is_some() {
-                    select_focused.run(());
-                }
-                cal.set_focused.run(false);
-            })),
-            ..Default::default()
-        }
-    }
-}
-
-impl Default for UseCalendarGridInput {
-    fn default() -> Self {
-        Self {
-            is_disabled: Signal::derive(|| false),
-            is_read_only: Signal::derive(|| false),
-            start_of_week: 0, // Monday
-            weekday_labels: vec![
-                "Mon".to_string(),
-                "Tue".to_string(),
-                "Wed".to_string(),
-                "Thu".to_string(),
-                "Fri".to_string(),
-                "Sat".to_string(),
-                "Sun".to_string(),
-            ],
-            aria_label: MaybeProp::default(),
-            is_range: false,
-            on_select_focused_date: None,
-            on_focus_previous_day: None,
-            on_focus_next_day: None,
-            on_focus_previous_week: None,
-            on_focus_next_week: None,
-            on_focus_previous_section: None,
-            on_focus_next_section: None,
-            on_focus_section_start: None,
-            on_focus_section_end: None,
-            on_cancel_selection: None,
-            on_focus: None,
-            on_blur: None,
-        }
-    }
-}
-
-/// The return value of the `use_calendar_grid` hook.
+/// Return value of [`use_calendar_grid`].
 pub struct UseCalendarGridReturn {
-    /// Props for the grid (table) element. Call `.into_attrs()` for view spreading.
+    /// For the grid (a `table`).
     pub grid_props: UseCalendarGridProps,
-
-    /// Props for the header row element.
-    pub header_props: UseCalendarGridHeaderProps,
-
-    /// The weekday labels for column headers.
-    pub weekday_labels: Vec<String>,
-
-    /// The ID of the grid.
-    pub grid_id: String,
+    /// The grid's first date (its month's first day).
+    pub start_date: Signal<Date>,
+    /// The names of the weekdays, for the column headers (hidden from assistive technology: each
+    /// cell's label names its weekday).
+    pub week_days: Signal<Vec<String>>,
+    /// The number of week rows.
+    pub weeks_in_month: Signal<u8>,
 }
 
-/// Props from `use_calendar_grid` for the grid element.
-#[derive(Debug)]
+/// Props of the calendar's grid.
+#[derive(Debug, Clone)]
 pub struct UseCalendarGridProps {
+    /// Part of the grid's `aria-labelledby` when the calendar is labelled by other elements.
     pub id: String,
     pub role: AriaRole,
-    pub aria_label: MaybeProp<String>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub aria_readonly: Signal<Option<AriaReadonly>>,
-    pub aria_multiselectable: Option<AriaMultiselectable>,
+    pub aria_label: Signal<Option<String>>,
+    pub aria_labelledby: Option<String>,
+    pub aria_readonly: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_multiselectable: Option<&'static str>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focus: EventHandler<FocusEvent>,
-    pub on_blur: EventHandler<FocusEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
 }
+
+pub type UseCalendarGridAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLabel, Signal<Option<String>>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
+    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+    Attr<attr::AriaMultiselectable, Option<&'static str>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+);
 
 impl IntoAttrs for UseCalendarGridProps {
     type Attrs = UseCalendarGridAttrs;
@@ -248,249 +105,197 @@ impl IntoAttrs for UseCalendarGridProps {
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaReadonly, self.aria_readonly),
+            Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
             self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            self.on_keyup.into_on(ev::keyup),
         )
     }
 }
 
-/// Attributes for the calendar grid element.
-pub type UseCalendarGridAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabel, MaybeProp<String>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-);
-
-/// Props for the calendar grid header row.
-#[derive(Debug)]
-pub struct UseCalendarGridHeaderProps {
-    /// The role for the header row.
-    pub role: AriaRole,
-    /// Column headers are hidden from screen readers. Day names are already
-    /// included in each cell's aria-label, so announcing them again is redundant
-    /// and makes touch screen reader navigation harder.
-    pub aria_hidden: AriaHidden,
-}
-
-impl IntoAttrs for UseCalendarGridHeaderProps {
-    type Attrs = UseCalendarGridHeaderAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaHidden, self.aria_hidden),
+/// The keyboard shortcuts of a calendar grid: arrows move by a day or a week, Page Up/Down by a
+/// month (with Shift: a year), Home/End to the section's ends, Enter/Space select, Escape
+/// cancels a range being selected.
+fn shortcuts(state: &CalendarStates, direction: Signal<WritingDirection>) -> KeyboardShortcuts {
+    let state = *state;
+    let calendar = state.calendar();
+    // Home, End and Escape don't repeat (react-aria: a separate `useKeyboard` without repeats).
+    let once = |action: fn(&CalendarStates)| {
+        move |e: &KeyboardEvent| {
+            if e.repeat() {
+                ShortcutOutcome::Ignored
+            } else {
+                action(&state);
+                ShortcutOutcome::Handled
+            }
+        }
+    };
+    KeyboardShortcuts::new()
+        .on(
+            Shortcut::key("End"),
+            once(|state| state.calendar().focus_section_end()),
         )
-    }
+        .on(
+            Shortcut::key("Home"),
+            once(|state| state.calendar().focus_section_start()),
+        )
+        .on(Shortcut::key("Escape"), move |e: &KeyboardEvent| {
+            if e.repeat() {
+                return ShortcutOutcome::Ignored;
+            }
+            // Cancels a range being selected; the Escape key goes on (e.g. to close a popover).
+            if let Some(range) = state.range() {
+                range.set_anchor_date(None);
+            }
+            ShortcutOutcome::Ignored
+        })
+        .on(Shortcut::key("Enter"), move |_| state.select_focused_date())
+        .on(Shortcut::key(" "), move |_| state.select_focused_date())
+        .on(Shortcut::key("PageUp"), move |_| {
+            calendar.focus_previous_section(false);
+        })
+        .on(Shortcut::key("PageUp").shift(), move |_| {
+            calendar.focus_previous_section(true);
+        })
+        .on(Shortcut::key("PageDown"), move |_| {
+            calendar.focus_next_section(false);
+        })
+        .on(Shortcut::key("PageDown").shift(), move |_| {
+            calendar.focus_next_section(true);
+        })
+        .on(Shortcut::key("ArrowLeft"), move |_| {
+            if direction.get_untracked() == WritingDirection::Rtl {
+                calendar.focus_next_day();
+            } else {
+                calendar.focus_previous_day();
+            }
+        })
+        .on(Shortcut::key("ArrowRight"), move |_| {
+            if direction.get_untracked() == WritingDirection::Rtl {
+                calendar.focus_previous_day();
+            } else {
+                calendar.focus_next_day();
+            }
+        })
+        .on(Shortcut::key("ArrowUp"), move |_| {
+            calendar.focus_previous_row();
+        })
+        .on(Shortcut::key("ArrowDown"), move |_| {
+            calendar.focus_next_row();
+        })
 }
 
-/// Attributes for the calendar grid header row.
-pub type UseCalendarGridHeaderAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaHidden, AriaHidden>,
-);
+/// Whether a cell lost the focus because it can't have it any more: paging (or new min/max)
+/// moved it to another month (disabling it) or removed its row. The browser then blurs it (focus fixup) before the
+/// newly focused cell takes the focus, which isn't the user leaving the grid. (react-aria
+/// decides which cell is focused while rendering, before the browser blurs.)
+fn is_focus_fixup(e: &FocusEvent) -> bool {
+    if e.related_target().is_some() {
+        return false;
+    }
+    let Ok(target) = e.expect_target().dyn_into::<web_sys::Element>() else {
+        return false;
+    };
+    !target.is_connected() || !is_focusable(&target)
+}
 
-/// Provides the behavior and accessibility for a calendar grid.
-///
-/// A calendar grid displays a month of dates in a table format, with each week
-/// as a row and each day as a cell. All keyboard navigation is centralized at
-/// this grid level — individual cells do not handle keyboard events.
-///
-/// # Example
-///
-/// ```ignore
-/// let calendar = use_calendar_state(UseCalendarStateInput {
-///     initial_value: time::OffsetDateTime::now_utc(),
-///     min: None,
-///     max: None,
-/// });
-///
-/// let grid = use_calendar_grid(UseCalendarGridInput {
-///     on_select_focused_date: Some(Callback::new(move |_| {
-///         // select the currently focused date
-///     })),
-///     on_focus_previous_day: Some(Callback::new(move |_| {
-///         // move focus to previous day
-///     })),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <table {..grid.grid_props.into_attrs()}>
-///         <thead {..grid.header_props.into_attrs()}>
-///             <tr>
-///                 {grid.weekday_labels.iter().map(|label| {
-///                     view! { <th>{label}</th> }
-///                 }).collect_view()}
-///             </tr>
-///         </thead>
-///         <tbody>
-///             // Render weeks and days...
-///         </tbody>
-///     </table>
-/// }
-/// ```
-#[allow(clippy::too_many_lines)]
+/// Behavior and accessibility of a calendar's grid of dates: keyboard navigation, its label, the
+/// weekday names and the number of week rows.
 pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     let UseCalendarGridInput {
-        is_disabled: disabled,
-        is_read_only,
-        start_of_week,
-        weekday_labels,
-        aria_label,
-        is_range,
-        on_select_focused_date,
-        on_focus_previous_day,
-        on_focus_next_day,
-        on_focus_previous_week,
-        on_focus_next_week,
-        on_focus_previous_section,
-        on_focus_next_section,
-        on_focus_section_start,
-        on_focus_section_end,
-        on_cancel_selection,
-        on_focus,
-        on_blur,
+        data,
+        start_date,
+        end_date,
+        weekday_style,
     } = input;
+    let state = data.state;
+    let calendar = state.calendar();
+    let locale = use_locale();
+    let direction = use_direction();
 
-    let grid_id = use_id("calendar-grid");
+    let start_date =
+        start_date.unwrap_or_else(|| Signal::derive(move || calendar.visible_range.get().start));
+    let end_date =
+        end_date.unwrap_or_else(|| Signal::derive(move || calendar.visible_range.get().end));
+    let range = Signal::derive(move || DateRange {
+        start: start_date.get(),
+        end: end_date.get(),
+    });
 
-    // Reorder weekday labels based on start_of_week
-    let mut weekday_labels = weekday_labels;
-    if start_of_week > 0 {
-        let start = start_of_week as usize % 7;
-        weekday_labels.rotate_left(start);
-    }
+    let keyboard = use_keyboard(UseKeyboardInput {
+        shortcuts: Some(shortcuts(&state, direction)),
+        allow_repeats: true,
+        ..UseKeyboardInput::default()
+    });
 
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
+    let id = use_id("calendar-grid");
+    let aria_label = data.aria_label;
+    let labelledby = data.aria_labelledby.clone();
+    let own_id = id.clone();
+    let label = Signal::derive(move || {
+        let label = [
+            aria_label.get(),
+            Some(visible_range_description(range.get(), &locale.get())),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|label| !label.is_empty())
+        .collect::<Vec<_>>()
+        .join(", ");
+        labels(&own_id, Some(label), labelledby.clone()).0
+    });
+    let (_, aria_labelledby) = labels(&id, Some(String::new()), data.aria_labelledby);
 
-    // Compute aria-readonly
-    let aria_readonly = Signal::derive(move || is_read_only.get().then_some(AriaReadonly::True));
-
-    // aria-multiselectable for range calendars
-    let aria_multiselectable = is_range.then_some(AriaMultiselectable::True);
-
-    // Handle keyboard navigation within the grid.
-    // This centralizes all keyboard handling, matching react-aria's architecture.
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
-            return;
-        }
-
-        let key = e.key();
-        match key.as_str() {
-            "Enter" | " " => {
-                e.prevent_default();
-                if let Some(cb) = on_select_focused_date {
-                    cb.run(());
-                }
-            }
-            "ArrowLeft" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_previous_day {
-                    cb.run(());
-                }
-            }
-            "ArrowRight" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_next_day {
-                    cb.run(());
-                }
-            }
-            "ArrowUp" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_previous_week {
-                    cb.run(());
-                }
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_next_week {
-                    cb.run(());
-                }
-            }
-            "PageUp" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_previous_section {
-                    cb.run(e.shift_key());
-                }
-            }
-            "PageDown" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_next_section {
-                    cb.run(e.shift_key());
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_section_start {
-                    cb.run(());
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(cb) = on_focus_section_end {
-                    cb.run(());
-                }
-            }
-            "Escape" => {
-                if let Some(cb) = on_cancel_selection {
-                    e.prevent_default();
-                    cb.run(());
-                }
-            }
-            _ => {}
-        }
-    };
-
-    // Handle focus/blur to track whether the grid has focus.
-    let handle_focus = move |_e: FocusEvent| {
-        if let Some(cb) = on_focus {
-            cb.run(());
-        }
-    };
-
-    let handle_blur = move |_e: FocusEvent| {
-        if let Some(cb) = on_blur {
-            cb.run(());
-        }
-    };
+    let week_days = Signal::derive(move || {
+        let formatter = DateTimeFormatter::new(
+            &locale.get(),
+            DateTimeFormatOptions {
+                weekday: Some(weekday_style),
+                ..DateTimeFormatOptions::default()
+            },
+        );
+        let days = calendar.visible_duration.days;
+        let (first, count) = if (1..7).contains(&days) {
+            (start_date.get(), days)
+        } else {
+            (today().start_of_week(calendar.first_day_of_week.get()), 7)
+        };
+        (0..count)
+            .map(|day| formatter.format_date(first.add(DateDuration::days(day))))
+            .collect()
+    });
+    let weeks_in_month = Signal::derive(move || calendar.weeks_in_month(Some(start_date.get())));
 
     UseCalendarGridReturn {
         grid_props: UseCalendarGridProps {
-            id: grid_id.clone(),
+            id,
             role: AriaRole::Grid,
-            aria_label,
-            aria_disabled,
-            aria_readonly,
-            aria_multiselectable,
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: EventHandler::new(handle_focus),
-            on_blur: EventHandler::new(handle_blur),
+            aria_label: label,
+            aria_labelledby,
+            aria_readonly: Signal::derive(move || calendar.is_read_only.get().then_some("true")),
+            aria_disabled: Signal::derive(move || calendar.is_disabled.get().then_some("true")),
+            aria_multiselectable: state.range().is_some().then_some("true"),
+            on_focusin: EventHandler::new(move |_: FocusEvent| calendar.set_focused(true)),
+            on_focusout: EventHandler::new(move |e: FocusEvent| {
+                // After the calendar's disposal (a removed focused cell): nothing to update
+                // ("Blur After Disposal").
+                if !calendar.is_alive() {
+                    return;
+                }
+                // Disabling the calendar takes the focus for real.
+                if calendar.is_disabled.get_untracked() || !is_focus_fixup(&e) {
+                    calendar.set_focused(false);
+                }
+            }),
+            on_keydown: keyboard.props.on_keydown,
+            on_keyup: keyboard.props.on_keyup,
         },
-        header_props: UseCalendarGridHeaderProps {
-            role: AriaRole::Row,
-            aria_hidden: AriaHidden::True,
-        },
-        weekday_labels,
-        grid_id,
+        start_date,
+        week_days,
+        weeks_in_month,
     }
 }

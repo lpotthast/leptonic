@@ -196,7 +196,9 @@ pub fn use_hidden_select(input: UseHiddenSelectInput) -> UseHiddenSelectReturn {
                 let _ = trigger.focus();
             }
         })),
-        ..UseFormValidationInput::new(select_element, state.validation, validation_behavior)
+        element: select_element,
+        state: state.validation,
+        validation_behavior,
     });
 
     // Autofill picks options of the native select.

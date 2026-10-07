@@ -50,6 +50,9 @@ pub struct UseOptionInput {
     pub list: ListBoxData,
     /// The option's key in the listbox's collection.
     pub key: Key,
+    /// Called when a context menu is requested on the option (right click, Shift+F10, the context
+    /// menu key; a long press on iOS unless it selects).
+    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_option`].
@@ -82,6 +85,10 @@ pub struct UseOptionProps {
     pub aria_label: Option<String>,
     pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
+    /// In a virtualized listbox: the option's position (from 1) ...
+    pub aria_posinset: Signal<Option<usize>>,
+    /// ... and the number of options.
+    pub aria_setsize: Signal<Option<usize>>,
     pub item: UseSelectableItemProps,
     pub hover: UseHoverProps,
 }
@@ -93,6 +100,8 @@ pub type UseOptionAttrs = (
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Signal<Option<String>>>,
     Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaPosinset, Signal<Option<usize>>>,
+    Attr<attr::AriaSetsize, Signal<Option<usize>>>,
     UseSelectableItemAttrs,
     UseHoverAttrs,
 );
@@ -108,6 +117,8 @@ impl IntoAttrs for UseOptionProps {
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaPosinset, self.aria_posinset),
+            Attr(attr::AriaSetsize, self.aria_setsize),
             self.item.into_attrs(),
             self.hover.into_attrs(),
         )
@@ -129,7 +140,11 @@ pub fn option_id(list_id: &str, key: &Key) -> String {
 /// and `role="option"` with its ARIA state.
 pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     crate::hooks::track_interaction_modality();
-    let UseOptionInput { list, key } = input;
+    let UseOptionInput {
+        list,
+        key,
+        on_context_menu,
+    } = input;
     let ListBoxData {
         state,
         id: list_id,
@@ -139,6 +154,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         link_behavior,
         on_action,
         should_use_virtual_focus,
+        is_virtualized,
     } = list;
     let selection = state.selection;
 
@@ -151,6 +167,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         .and_then(|n| n.aria_label.as_deref().map(str::to_owned));
     let link = node.and_then(|n| n.link);
 
+    let position_key = StoredValue::new(key.clone());
     let label = use_slot("label");
     let description = use_slot("description");
 
@@ -180,6 +197,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         link_behavior,
         focus: None,
         should_use_virtual_focus,
+        on_context_menu,
     });
 
     let hover_key = key.clone();
@@ -213,6 +231,20 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
                 aria_label,
                 aria_labelledby: label.referenced_id,
                 aria_describedby: description.referenced_id,
+                aria_posinset: Signal::derive(move || {
+                    is_virtualized
+                        .then(|| {
+                            position_key.with_value(|key| {
+                                state
+                                    .collection
+                                    .with(|c| c.get(key).map(|node| node.index + 1))
+                            })
+                        })
+                        .flatten()
+                }),
+                aria_setsize: Signal::derive(move || {
+                    is_virtualized.then(|| state.collection.with(|c| c.size()))
+                }),
                 item: item_props,
                 hover,
             },

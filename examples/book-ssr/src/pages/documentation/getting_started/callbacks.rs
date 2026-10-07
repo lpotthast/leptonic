@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -9,7 +8,7 @@ pub fn PageCallbacks() -> impl IntoView {
     view! {
         <DocPage title="Callbacks">
             <p>
-                "leptonic\u{2019}s atoms and components accept functions through three prop types: Leptos\u{2019} "
+                "Leptonic\u{2019}s atoms and components accept functions through three prop types: Leptos\u{2019} "
                 <Code inline=true>"Callback"</Code>" for events, leptonic\u{2019}s "<Code inline=true>"Out"</Code>
                 " for values they hand back to you, and "<Code inline=true>"ViewCallback"</Code>" / "
                 <Code inline=true>"ViewProducer"</Code>" for functions that render views. All of them are "
@@ -129,11 +128,9 @@ pub fn PageCallbacks() -> impl IntoView {
                         <Code inline=true>"signal"</Code>" or "<Code inline=true>"RwSignal::new"</Code>", whose values are "
                         <Code inline=true>"Send + Sync"</Code>"; "<Code inline=true>"LocalStorage"</Code>" for "
                         <Code inline=true>"signal_local"</Code>" and "<Code inline=true>"RwSignal::new_local"</Code>
-                        ". Almost every prop uses the default. A prop whose values can\u{2019}t be sent between threads, "
-                        "such as the "<Code inline=true>"web_sys::MouseEvent"</Code>" a "
-                        <Link href=routes::doc::Chip.materialize()>"Chip"</Link>" hands to "
-                        <Code inline=true>"dismissible"</Code>", is an "<Code inline=true>"Out<MouseEvent, LocalStorage>"</Code>
-                        ": pass a closure, or a local signal."
+                        ". Every leptonic prop uses the default. Use "<Code inline=true>"Out<T, LocalStorage>"</Code>
+                        " in your own components for values that can\u{2019}t be sent between threads, such as a "
+                        <Code inline=true>"web_sys::MouseEvent"</Code>": callers then pass a closure or a local signal."
                     </p>
                 </Section>
 

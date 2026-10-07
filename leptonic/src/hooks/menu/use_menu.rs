@@ -62,28 +62,6 @@ pub struct UseMenuInput {
     pub submenu: Option<super::SubmenuProps>,
 }
 
-impl UseMenuInput {
-    /// A menu for `state` whose arrow keys wrap around, with all other settings at their
-    /// defaults.
-    pub fn new(state: ListState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: MaybeProp::default(),
-            options: CollectionOptions {
-                should_focus_wrap: true,
-                ..CollectionOptions::default()
-            },
-            keyboard_delegate: None,
-            on_action: None,
-            on_close: None,
-            submenu: None,
-        }
-    }
-}
-
 /// What items need to know about their menu. Pass it to `use_menu_item`.
 #[derive(Debug, Clone)]
 pub struct MenuData {
@@ -193,6 +171,7 @@ pub fn use_menu(input: UseMenuInput) -> UseMenuReturn {
         element,
         orientation: Orientation::Vertical,
         layout: ListLayout::Stack,
+        layout_delegate: None,
         keyboard_delegate,
         options,
     })

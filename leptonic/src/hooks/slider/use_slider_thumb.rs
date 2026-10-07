@@ -16,7 +16,7 @@ use crate::{
         UseFocusableInput, UseFocusableReturn, UseFormResetInput, UseLabelInput, UseLabelProps,
         UseLabelReturn, UseMoveInput,
         interactions::use_move::MoveAxis,
-        slider::{SliderData, SliderState, UseSliderReturn},
+        slider::{SliderData, SliderState},
         use_focusable, use_form_reset, use_label, use_move,
     },
     utils::{
@@ -42,8 +42,8 @@ use crate::{
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - The slider's `SliderData` and track come in with `UseSliderThumbInput::new(state, &slider)`;
-//   the input element is captured by its props instead of an `inputRef`.
+// - The slider's `SliderData` and track come in as fields of `UseSliderThumbInput`; the input
+//   element is captured by its props instead of an `inputRef`.
 // - The thumb's orientation is the slider's (react-aria allows overriding it per thumb).
 // - `isRequired`/`isInvalid` are signals; no `validationState`.
 //
@@ -52,7 +52,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_slider_thumb`]. Start from [`UseSliderThumbInput::new`].
+/// Input of [`use_slider_thumb`].
 #[derive(Debug)]
 pub struct UseSliderThumbInput<T: NumberValue> {
     pub state: SliderState<T>,
@@ -75,27 +75,6 @@ pub struct UseSliderThumbInput<T: NumberValue> {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
-}
-
-impl<T: NumberValue> UseSliderThumbInput<T> {
-    /// The first thumb of `slider`.
-    pub fn new(state: SliderState<T>, slider: &UseSliderReturn) -> Self {
-        Self {
-            state,
-            slider: slider.data.clone(),
-            track: slider.track_element,
-            index: 0,
-            is_disabled: Signal::default(),
-            is_required: Signal::default(),
-            is_invalid: Signal::default(),
-            name: None,
-            form: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-        }
-    }
 }
 
 /// Return value of [`use_slider_thumb`].

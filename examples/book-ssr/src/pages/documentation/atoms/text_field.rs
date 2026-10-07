@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::text_field::TextFieldAtomDemo;
@@ -141,13 +140,15 @@ pub fn PageAtomTextField() -> impl IntoView {
                     "(a "<Code inline=true>"TextField"</Code>", a "<Link href=routes::doc::search_field::Atom.materialize()>"SearchField"</Link>
                     ", a "<Link href=routes::doc::number_field::Atom.materialize()>"NumberField"</Link>" or a "
                     <Link href=routes::doc::combobox::Atom.materialize()>"ComboBox"</Link>"; a "<Code inline=true>"TextArea"</Code>
-                    " needs a text field). They take only classes and styles; everything else comes from the field."
+                    " needs a text field). They take only a node ref, classes and styles; everything else comes from the field."
                 </p>
                 <Section title="Props" id="input-props">
                     <ApiTable kind=ApiKind::Props of="atoms::input::Input">
+                        <ApiRow name="node_ref" ty="NodeRef<Input>" default="unset">"The "<Code inline=true>"<input>"</Code>" element, e.g. to focus it from a shortcut."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<input>"</Code>"."</ApiRow>
                     </ApiTable>
                     <ApiTable kind=ApiKind::Props of="atoms::input::TextArea">
+                        <ApiRow name="node_ref" ty="NodeRef<Textarea>" default="unset">"The "<Code inline=true>"<textarea>"</Code>" element, e.g. to focus it."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<textarea>"</Code>"."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -235,7 +236,6 @@ pub fn PageAtomTextField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link></li>
                 <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
-                <li><Link href=routes::doc::text_field::Component.materialize()>"Text Field Component"</Link></li>
                 <li><Link href=routes::doc::search_field::Atom.materialize()>"Search Field Atoms"</Link></li>
                 <li><Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>

@@ -64,29 +64,6 @@ pub struct UseRadioInput {
     pub on_press_change: Option<Callback<bool>>,
 }
 
-impl UseRadioInput {
-    pub fn new(group: RadioGroupData, value: impl Into<Key>) -> Self {
-        Self {
-            group,
-            value: value.into(),
-            is_disabled: Signal::stored(false),
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            auto_focus: false,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_press_start: None,
-            on_press_end: None,
-            on_press_up: None,
-            on_press: None,
-            on_press_change: None,
-        }
-    }
-}
-
 /// Output of [`use_radio`].
 #[derive(Debug)]
 pub struct UseRadioReturn {
@@ -355,11 +332,12 @@ pub fn use_radio(input: UseRadioInput) -> UseRadioReturn {
         initial_value: state.default_selected_value(),
         on_reset: Callback::new(move |value| state.set_selected_value(value)),
     });
-    use_form_validation(UseFormValidationInput::new(
+    use_form_validation(UseFormValidationInput {
         element,
-        state.validation,
+        state: state.validation,
         validation_behavior,
-    ));
+        focus: None,
+    });
 
     let description = use_slot("description");
     let group_error = Signal::derive(move || {

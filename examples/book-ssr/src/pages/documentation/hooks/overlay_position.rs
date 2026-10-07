@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::overlay_position::PositioningDemo;
@@ -19,8 +18,8 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
 
             <Section title="Input">
                 <p>
-                    "Create the input with "<Code inline=true>"UseOverlayPositionInput::new(target, is_open)"</Code>
-                    " and override what you need with struct update syntax."
+                    "Pass a "<Code inline=true>"UseOverlayPositionInput"</Code>" with every field named; the Default column "
+                    "gives the value for fields you don\u{2019}t need."
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseOverlayPositionInput">
@@ -102,10 +101,23 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                         let (is_open, set_is_open) = signal(false);
 
                         let UseOverlayPositionReturn { props, .. } = use_overlay_position(UseOverlayPositionInput {
+                            target,
+                            is_open: is_open.into(),
                             placement: Signal::stored(Placement::BottomStart),
+                            container_padding: Signal::stored(12.0),
                             offset: Signal::stored(4.0),
-                            ..UseOverlayPositionInput::new(target, is_open.into())
+                            cross_offset: Signal::stored(0.0),
+                            should_flip: Signal::stored(true),
+                            boundary: None,
+                            max_height: Signal::stored(None),
+                            arrow_size: Signal::stored(None),
+                            arrow_boundary_offset: Signal::stored(0.0),
+                            should_update_position: Signal::stored(true),
+                            target_rect: Signal::stored(None),
+                            scroll: None,
+                            on_close: None,
                         });
+
                         let (attrs, styles) = props.into_parts();
 
                         view! {

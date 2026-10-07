@@ -5,7 +5,8 @@ use super::link::{CurrentMatch, LinkContext};
 use crate::{
     hooks::{IntoAttrs, PressEvent, UseBreadcrumbsInput, collections::Key, use_breadcrumbs},
     utils::{
-        aria::AriaCurrent, classes::Classes, data_attributes::flag, id::use_id, styles::Styles,
+        aria::AriaCurrent, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, id::use_id, styles::Styles,
     },
 };
 
@@ -41,6 +42,8 @@ struct BreadcrumbsContext {
 /// ```
 ///
 /// Data attributes: `data-disabled`.
+///
+/// Default class: `leptonic-Breadcrumbs`.
 #[component]
 pub fn Breadcrumbs(
     /// Names the breadcrumbs. Default: "Breadcrumbs".
@@ -56,6 +59,7 @@ pub fn Breadcrumbs(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Breadcrumbs", classes);
     let breadcrumbs = use_breadcrumbs(UseBreadcrumbsInput { aria_label });
     let context = BreadcrumbsContext {
         is_disabled,
@@ -78,6 +82,8 @@ pub fn Breadcrumbs(
 /// disabled.
 ///
 /// Data attributes: `data-current`, `data-disabled`.
+///
+/// Default class: `leptonic-Breadcrumb`.
 #[component]
 pub fn Breadcrumb(
     /// The item's key for the breadcrumbs' `on_action`. Default: generated.
@@ -90,6 +96,7 @@ pub fn Breadcrumb(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Breadcrumb", classes);
     let Some(breadcrumbs) = use_context::<BreadcrumbsContext>() else {
         crate::utils::dev_warn!("A <Breadcrumb> must be inside <Breadcrumbs>.");
         return children().into_any();

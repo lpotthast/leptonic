@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::link::LinkConceptDemo;
@@ -64,13 +63,6 @@ pub fn PageLinkOverview() -> impl IntoView {
                             " and "<Code inline=true>"LinkButton"</Code>" navigate with leptos_router and mark the current page."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></TableCell>
-                        <TableCell>
-                            "The atoms with leptonic\u{2019}s theme; "<Code inline=true>"LinkButton"</Code>" takes the variants, "
-                            "colors and sizes of the "<Link href=routes::doc::button::Component.materialize()>"Button Component"</Link>"."
-                        </TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -120,7 +112,6 @@ pub fn PageLinkOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></li>
                 <li><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></li>
-                <li><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></li>
                 <li><Link href=routes::doc::Breadcrumbs.materialize()>"Breadcrumbs"</Link></li>
                 <li><Link href=routes::doc::Button.materialize()>"Button"</Link></li>
             </SeeAlso>

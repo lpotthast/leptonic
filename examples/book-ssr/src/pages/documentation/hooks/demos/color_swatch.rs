@@ -17,7 +17,10 @@ const GREEN: RGB8 = RGB8 {
 fn Swatch(color: RGB8, #[prop(optional, into)] color_name: MaybeProp<String>) -> impl IntoView {
     let swatch = use_color_swatch(UseColorSwatchInput {
         color_name,
-        ..UseColorSwatchInput::new(Signal::stored(color))
+        color: Into::<leptonic::utils::color::ColorProp>::into(Signal::stored(color)).0,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        id: None,
     });
     // The props carry the swatch's background color as a style.
     let (props, styles) = swatch.color_swatch_props.into_inner();

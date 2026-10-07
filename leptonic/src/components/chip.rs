@@ -48,6 +48,9 @@ pub fn Chip(
     /// Names the dismiss button. Default: "Dismiss".
     #[prop(into, optional)]
     dismiss_label: MaybeProp<String>,
+    /// Disables the dismiss button.
+    #[prop(into, optional)]
+    is_disabled: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -62,6 +65,7 @@ pub fn Chip(
                 <Button
                     classes="leptonic-chip-dismiss"
                     aria_label=dismiss_label
+                    is_disabled=is_disabled
                     on_press=move |_| on_dismiss.run(())
                 >
                     <Icon icon=icondata::BsXCircleFill />

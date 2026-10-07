@@ -1,0 +1,19 @@
+// `VirtualList`: a leptonic addition (react-aria-components has no such component and the starter
+// styles no stylesheet for it), in the look of the starter's list box. The list element scrolls:
+// give it a height. The atom has no `data-focus-visible`, so its focus ring (when the app makes
+// it focusable, `attr:tabindex="0"`) uses `:focus-visible`.
+
+.leptonic-VirtualList {
+  box-sizing: border-box;
+  border: 0.5px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--overlay-background);
+  color: var(--text-color);
+  font: var(--font-size) system-ui;
+  outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -1px;
+  }
+}

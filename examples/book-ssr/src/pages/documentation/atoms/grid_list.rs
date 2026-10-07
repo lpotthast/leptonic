@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid_file_list::GridFileListDemo;
@@ -21,7 +20,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                         <TableCell><Code inline=true>"GridList"</Code></TableCell>
                         <TableCell>
                             <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"use_list_state"</Link>
-                            " (unless you pass a "<Code inline=true>"state"</Code>"), "
+                            ", "
                             <Link href=hook_section("use-grid-list")>"use_grid_list"</Link>
                         </TableCell>
                     </TableRow>
@@ -64,7 +63,7 @@ pub fn PageAtomGridList() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A file list with the "<Code inline=true>"Replace"</Code>" selection behavior: a click selects a file ("
-                    <Keys keys="Control"/>" + click, "<Keys keys="Command"/>" + click on macOS, adds to the selection), and a "
+                    <Keys keys="Control"/>" + click, "<Keys keys="Meta"/>" + click on macOS, adds to the selection), and a "
                     "double click or "<Keys keys="Enter"/>" opens it. "<Keys keys="ArrowRight"/>" moves to a row\u{2019}s "
                     "download button, "<Keys keys="ArrowLeft"/>" back to the row. Archive.zip is disabled."
                 </p>
@@ -75,16 +74,12 @@ pub fn PageAtomGridList() -> impl IntoView {
 
             <Section title="GridList">
                 <p>
-                    "Creates the list state from "<Code inline=true>"collection"</Code>" and the selection props (or takes "
-                    "your "<Code inline=true>"state"</Code>") and renders the "<Code inline=true>"role=\"grid\""</Code>" element."
+                    "Creates the list state from "<Code inline=true>"collection"</Code>" and the selection props and renders "
+                    "the "<Code inline=true>"role=\"grid\""</Code>" element."
                 </p>
                 <Section title="Props" id="gridlist-props">
                     <ApiTable kind=ApiKind::Props of="GridList">
-                        <ApiRow name="collection" ty="Option<CollectionMemo>" default="None">"The rows. Required unless "<Code inline=true>"state"</Code>" is given."</ApiRow>
-                        <ApiRow name="state" ty="Option<ListState>" default="None">
-                            "An existing "<Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"list state"</Link>
-                            ", used instead of the collection and selection props."
-                        </ApiRow>
+                        <ApiRow name="collection" ty="CollectionMemo">"The rows. Required."</ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>" rows."
                         </ApiRow>
@@ -182,9 +177,8 @@ pub fn PageAtomGridList() -> impl IntoView {
                     "don\u{2019}t select the row. For a selection checkbox per row, use "
                     <Link href=format!("{}#use-grid-selection-checkbox", routes::doc::grid::Hook.materialize())>
                         "use_grid_selection_checkbox"
-                    </Link>". To share the selection with other parts of your app, create the "
-                    <Link href=format!("{}#use-list-state", routes::doc::CollectionState.materialize())>"list state"</Link>
-                    " yourself and pass it as "<Code inline=true>"state"</Code>"."
+                    </Link>". To share the selection with other parts of your app, bind "<Code inline=true>"selection"</Code>
+                    " and "<Code inline=true>"set_selection"</Code>" to your own signal."
                 </p>
             </Section>
 

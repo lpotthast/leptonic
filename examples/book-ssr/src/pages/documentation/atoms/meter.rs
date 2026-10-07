@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::meter::MeterAtomDemo;
@@ -121,7 +120,6 @@ pub fn PageAtomMeter() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Meter.materialize()>"Meter overview"</Link></li>
                 <li><Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link></li>
-                <li><Link href=routes::doc::meter::Component.materialize()>"Meter Component"</Link></li>
                 <li><Link href=routes::doc::progress_bar::Atom.materialize()>"Progress Bar Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>

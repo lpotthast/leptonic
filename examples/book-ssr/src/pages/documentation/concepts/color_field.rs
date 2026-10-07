@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_field::ColorFieldConceptDemo;
@@ -59,7 +58,7 @@ pub fn PageColorFieldOverview() -> impl IntoView {
                         <TableCell><Link href=routes::doc::color_field::Hook.materialize()>"Color Field Hooks"</Link></TableCell>
                         <TableCell>
                             "The states of a hex field and of a channel field, and the attributes of the label and the input, "
-                            "for markup you write yourself; the channel field adds stepper buttons."
+                            "for markup you write yourself; the channel field hook also returns stepper buttons, which the atom doesn\u{2019}t render."
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -71,11 +70,6 @@ pub fn PageColorFieldOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>
-                    "There is no color field component of its own; the "
-                    <Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link>
-                    " include themed channel fields and a hex field."
-                </p>
             </Section>
 
             <Section title="Quick Start">

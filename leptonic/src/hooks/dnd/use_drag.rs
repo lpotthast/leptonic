@@ -69,21 +69,6 @@ pub struct UseDragInput {
     pub is_disabled: Signal<bool>,
 }
 
-impl UseDragInput {
-    pub fn new(get_items: Callback<(), Vec<DragItem>>) -> Self {
-        Self {
-            get_items,
-            get_allowed_drop_operations: None,
-            preview: None,
-            on_drag_start: None,
-            on_drag_move: None,
-            on_drag_end: None,
-            has_drag_button: false,
-            is_disabled: Signal::stored(false),
-        }
-    }
-}
-
 /// Return value of [`use_drag`].
 pub struct UseDragReturn {
     pub drag_props: UseDragProps,

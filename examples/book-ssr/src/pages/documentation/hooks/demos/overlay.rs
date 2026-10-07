@@ -14,13 +14,13 @@ pub fn BasicOverlayDemo() -> impl IntoView {
         is_dismissable: is_dismissable.into(),
         should_close_on_blur: close_on_blur.into(),
         is_keyboard_dismiss_disabled: escape_disabled.into(),
-        ..UseOverlayInput::new(
-            is_open.into(),
-            Callback::new(move |()| {
-                dismissals.update(|count| *count += 1);
-                set_is_open.set(false);
-            }),
-        )
+        is_open: is_open.into(),
+        on_close: Callback::new(move |()| {
+            dismissals.update(|count| *count += 1);
+            set_is_open.set(false);
+        }),
+        should_close_on_interact_outside: None,
+        group: None,
     });
     // The panel renders again on every opening, so its attributes are stored and cloned per render.
     let overlay_attrs = StoredValue::new(props.into_attrs());

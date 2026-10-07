@@ -24,7 +24,10 @@ pub fn FocusManagerBasicDemo() -> impl IntoView {
     };
     let report = move |focused: Option<web_sys::Element>| {
         set_status.set(match focused {
-            Some(el) => format!("Focused \u{201c}{}\u{201d}.", el.text_content().unwrap_or_default().trim()),
+            Some(el) => format!(
+                "Focused \u{201c}{}\u{201d}.",
+                el.text_content().unwrap_or_default().trim()
+            ),
             None => "No element to focus.".to_string(),
         });
     };

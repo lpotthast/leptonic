@@ -3,7 +3,10 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{IntoAttrs, SeparatorElementType, UseSeparatorInput, use_separator},
-    utils::{classes::Classes, orientation::Orientation, styles::Styles},
+    utils::{
+        classes::Classes, default_class::with_default_class, orientation::Orientation,
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -27,6 +30,8 @@ pub(crate) struct SeparatorContext {
 
 /// A separator dividing content: an `<hr>` (horizontal), or a `<div>` with `role="separator"` when
 /// vertical or inside a [`Menu`](super::menu::Menu).
+///
+/// Default class: `leptonic-Separator`.
 #[component]
 pub fn Separator(
     #[prop(default = Orientation::Horizontal)] orientation: Orientation,
@@ -34,6 +39,7 @@ pub fn Separator(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Separator", classes);
     let element_type = use_context::<SeparatorContext>().map_or(
         match orientation {
             Orientation::Horizontal => SeparatorElementType::Hr,

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -58,13 +57,41 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                         let state = use_slider_state(UseSliderStateInput {
                             default_values: Some(vec![50_u8]),
-                            ..UseSliderStateInput::new(0, 100)
+                            value: None,
+                            min_value: Signal::stored(0),
+                            max_value: Signal::stored(100),
+                            step: Signal::stored(1),
+                            is_disabled: Signal::default(),
+                            orientation: Signal::stored(Orientation::Horizontal),
+                            format_options: Signal::default(),
+                            value_label: None,
+                            page_size: None,
+                            on_change: None,
+                            on_change_end: None,
                         });
                         let slider = use_slider(UseSliderInput {
+                            state,
+                            id: None,
+                            has_label: Signal::stored(false),
                             aria_label: "Volume".into(),
-                            ..UseSliderInput::new(state)
+                            aria_labelledby: None,
+                            aria_describedby: None,
                         });
-                        let thumb = use_slider_thumb(UseSliderThumbInput::new(state, &slider));
+                        let thumb = use_slider_thumb(UseSliderThumbInput {
+                            state,
+                            slider: slider.data.clone(),
+                            track: slider.track_element,
+                            index: 0,
+                            is_disabled: Signal::default(),
+                            is_required: Signal::default(),
+                            is_invalid: Signal::default(),
+                            name: None,
+                            form: None,
+                            has_label: Signal::stored(false),
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                        });
                         let (track_attrs, track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
                         let fill_styles = Styles::new().add_reactive(move || {
@@ -167,11 +194,11 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                 <Section title="Input" id="use-slider-state-input">
                     <p>
-                        "Create it with "<Code inline=true>"UseSliderStateInput::new(min, max)"</Code>
-                        " and change the rest with struct update syntax."
+                        "Pass a "<Code inline=true>"UseSliderStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseSliderStateInput">
-                        <ApiRow name="min_value, max_value" ty="Signal<T>">"The range. Required (arguments of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<T>">"The range. Required."</ApiRow>
                         <ApiRow name="step" ty="Signal<T>" default="1">"The step values snap to."</ApiRow>
                         <ApiRow name="default_values" ty="Option<Vec<T>>" default="None">
                             "The initial values, one per thumb, in ascending order. "<Code inline=true>"None"</Code>": one thumb at the minimum."
@@ -229,9 +256,18 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         {indoc!(r"
                             let price = RwSignal::new(vec![20.0, 80.0]);
                             let state = use_slider_state(UseSliderStateInput {
+                                default_values: None,
                                 value: Some(ValueBinding::from(price)),
+                                min_value: Signal::stored(0.0),
+                                max_value: Signal::stored(100.0),
                                 step: Signal::stored(5.0),
-                                ..UseSliderStateInput::new(0.0, 100.0)
+                                is_disabled: Signal::default(),
+                                orientation: Signal::stored(Orientation::Horizontal),
+                                format_options: Signal::default(),
+                                value_label: None,
+                                page_size: None,
+                                on_change: None,
+                                on_change_end: None,
                             });
                         ")}
                     </Code>
@@ -242,9 +278,9 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <p>"The group around label, track and output, and the track: a press on it moves the closest thumb there and drags it."</p>
 
                 <Section title="Input" id="use-slider-input">
-                    <p>"Create it with "<Code inline=true>"UseSliderInput::new(state)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseSliderInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseSliderInput">
-                        <ApiRow name="state" ty="SliderState<T>">"The slider state. Required (argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="state" ty="SliderState<T>">"The slider state. Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id; the thumbs\u{2019} ids derive from it. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether a visible label is rendered (with "<Code inline=true>"label_props"</Code>")."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when there is no visible label."</ApiRow>
@@ -274,8 +310,12 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             let slider = use_slider(UseSliderInput {
+                                state,
+                                id: None,
                                 has_label: Signal::stored(true),
-                                ..UseSliderInput::new(state)
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
                             });
 
                             view! {
@@ -298,12 +338,12 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                 <Section title="Input" id="use-slider-thumb-input">
                     <p>
-                        "Create it with "<Code inline=true>"UseSliderThumbInput::new(state, &slider)"</Code>
-                        ", which takes "<Code inline=true>"slider"</Code>" and "<Code inline=true>"track"</Code>
-                        " from the return of "<Code inline=true>"use_slider"</Code>"."
+                        "Pass a "<Code inline=true>"UseSliderThumbInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need. "<Code inline=true>"slider"</Code>" and "
+                        <Code inline=true>"track"</Code>" come from the return of "<Code inline=true>"use_slider"</Code>"."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseSliderThumbInput">
-                        <ApiRow name="state" ty="SliderState<T>">"The slider state. Required (argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="state" ty="SliderState<T>">"The slider state. Required."</ApiRow>
                         <ApiRow name="slider" ty="SliderData">"What the slider passes its thumbs ("<Code inline=true>"UseSliderReturn::data"</Code>"). Required."</ApiRow>
                         <ApiRow name="track" ty="CapturedElement">"The track ("<Code inline=true>"UseSliderReturn::track_element"</Code>"). Required."</ApiRow>
                         <ApiRow name="index" ty="usize" default="0">"The thumb\u{2019}s value in the slider\u{2019}s values."</ApiRow>
@@ -341,11 +381,21 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             let maximum = use_slider_thumb(UseSliderThumbInput {
+                                state,
+                                slider: slider.data.clone(),
+                                track: slider.track_element,
                                 index: 1,
-                                aria_label: "Maximum".into(),
+                                is_disabled: Signal::default(),
+                                is_required: Signal::default(),
+                                is_invalid: Signal::default(),
                                 name: Some("max-price".to_owned()),
-                                ..UseSliderThumbInput::new(state, &slider)
+                                form: None,
+                                has_label: Signal::stored(false),
+                                aria_label: "Maximum".into(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
                             });
+
                             let (thumb_attrs, thumb_styles) = maximum.thumb_props.into_parts();
 
                             view! {
@@ -437,7 +487,6 @@ pub fn PageUseSliderHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Slider.materialize()>"Slider overview"</Link></li>
                 <li><Link href=routes::doc::slider::Atom.materialize()>"Slider Atoms"</Link></li>
-                <li><Link href=routes::doc::slider::Component.materialize()>"Slider Components"</Link></li>
                 <li><Link href=routes::doc::ColorSlider.materialize()>"Color Slider"</Link></li>
                 <li><Link href=routes::doc::interactions::UseMove.materialize()>"use_move"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::collator::CollatorDemo;
@@ -130,38 +129,5 @@ pub fn PageCollator() -> impl IntoView {
                 <li><Link href=routes::doc::Table.materialize()>"Table"</Link>" \u{2014} sorts its rows"</li>
             </SeeAlso>
         </DocPage>
-    }
-}
-
-#[cfg(test)]
-mod tmp_filter_check {
-    use leptonic::utils::{
-        filter::{Collator, CollatorOptions, CollatorSensitivity, Filter},
-        i18n::{Locale, locale},
-    };
-
-    #[test]
-    fn tmp_check() {
-        let de = Locale::from(locale!("de-DE"));
-        let filter = Filter::new(&de, &CollatorOptions::default());
-        eprintln!("contains(Äpfel, apf) = {}", filter.contains("Äpfel", "apf"));
-        eprintln!("contains(café, cafe) = {}", filter.contains("café", "cafe"));
-        eprintln!("contains(Zürich, zurich) = {}", filter.contains("Zürich", "zurich"));
-        eprintln!("contains(Zebra, zeb) = {}", filter.contains("Zebra", "zeb"));
-        let case = Collator::new(
-            &de,
-            &CollatorOptions { sensitivity: CollatorSensitivity::Case, ..Default::default() },
-        );
-        eprintln!("case: a vs á = {:?}", case.compare("a", "á"));
-        let punct = Collator::new(&de, &CollatorOptions { ignore_punctuation: true, ..Default::default() });
-        eprintln!("punct: ab vs a-b = {:?}", punct.compare("ab", "a-b"));
-        let sv = Locale::from(locale!("sv-SE"));
-        let c = Collator::new(&sv, &CollatorOptions::default());
-        let mut w = vec!["Zebra", "Äpfel", "olive", "Ångström", "apple", "Öl", "Orange"];
-        w.sort_by(|a, b| c.compare(a, b));
-        eprintln!("sv: {w:?}");
-        let c = Collator::new(&de, &CollatorOptions::default());
-        w.sort_by(|a, b| c.compare(a, b));
-        eprintln!("de: {w:?}");
     }
 }

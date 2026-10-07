@@ -38,16 +38,6 @@ pub struct UseTableColumnHeaderInput {
     pub allows_arrow_navigation: bool,
 }
 
-impl UseTableColumnHeaderInput {
-    pub fn new(table: TableData, key: Key) -> Self {
-        Self {
-            table,
-            key,
-            allows_arrow_navigation: false,
-        }
-    }
-}
-
 /// Return value of [`use_table_column_header`].
 pub struct UseTableColumnHeaderReturn {
     pub column_header_props: PropsWithStyles<UseTableColumnHeaderProps>,
@@ -107,7 +97,9 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         id: Some(table.column_header_id(&key)),
         focus_mode: Some(CellFocusMode::Child),
         allows_arrow_navigation,
-        ..UseGridCellInput::new(table.grid.clone(), key.clone())
+        grid: table.grid.clone(),
+        key: key.clone(),
+        should_select_on_press_up: false,
     });
     let (mut cell, cell_styles) = grid_cell_props.into_inner();
     cell.role = AriaRole::Columnheader;

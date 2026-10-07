@@ -37,17 +37,6 @@ pub struct UseEnterAnimationInput {
     pub on_enter: Option<Callback<SendWrapper<web_sys::Element>>>,
 }
 
-impl UseEnterAnimationInput {
-    /// Tracks the entry of `element`, ready at once.
-    pub fn new(element: CapturedElement) -> Self {
-        Self {
-            element,
-            is_ready: Signal::stored(true),
-            on_enter: None,
-        }
-    }
-}
-
 /// Return value of [`use_enter_animation`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseEnterAnimationReturn {
@@ -66,7 +55,11 @@ pub struct UseEnterAnimationReturn {
 /// ```ignore
 /// let element = CapturedElement::new();
 /// let UseEnterAnimationReturn { is_entering } =
-///     use_enter_animation(UseEnterAnimationInput::new(element));
+///     use_enter_animation(UseEnterAnimationInput {
+///         element,
+///         is_ready: Signal::stored(true),
+///         on_enter: None,
+///     });
 /// // .overlay[data-entering] { animation: fade-in 200ms; }
 /// ```
 pub fn use_enter_animation(input: UseEnterAnimationInput) -> UseEnterAnimationReturn {

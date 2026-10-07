@@ -1,29 +1,38 @@
-// Design tokens of the book (see `STYLE_GUIDE.md`). Leptonic's theme variables (`--brand-color`, `--danger-color`,
-// `--typography-*`, ...) are used where they fit; the `--book-*` variables cover what is specific to the documentation.
-// Colors are defined per theme, everything else once in `:root`.
+// Design tokens of the book (see `STYLE_GUIDE.md`): the `--book-*` variables and a few general names the book's styles
+// and demos share (`--brand-color`, `--main-color`, `--danger-color`, ...). The book defines all of them itself; the
+// component themes (`leptonic-themes`, loaded only while component demos remain) get the same values where they share
+// a name. Colors are defined per theme, everything else once in `:root`.
 //
 // Text colors meet WCAG AA in both themes (4.5:1, 3:1 for large text). The ratios are listed next to the colors and
-// checked by the browser tests (`tests/ui_tests/test_contrast.rs`).
+// checked by the unit test `contrast_check` and the browser tests (`tests/ui_tests/test_contrast.rs`).
 
 // Breakpoints. `$small` is coupled with `SMALL_SCREEN_MAX_WIDTH` in `src/app.rs`, which switches the app bar and the
 // navigation menu at the same width: change both together.
 $small: 800px; // Up to this width: the sidebar becomes a menu, tables stack into cards.
 $medium: 1200px; // Up to this width: the table of contents is hidden.
 
-// Overrides of leptonic's theme, the same in both themes.
+// The same in both themes. Declared on every `[data-theme]`, so that they win over the component themes' values
+// (this stylesheet comes after them).
 [data-theme] {
   --font-family: 'Roboto', sans-serif;
   --typography-code-font-family: 'JetBrains Mono', monospace;
 
-  // The book's text-safe brand color for links: leptonic's light-theme link color reaches 4.7:1 on the book's
-  // background, but only 4.1:1 on hovered table rows and list items.
+  --brand-color: #e66956;
+  --info-color: #2181d4;
+  --success-color: #4bb24b;
+  --warn-color: #f29826;
+  --danger-color: #d9534f;
+
+  // Links of the component demos: the book's text-safe brand color. Leptonic's light-theme link color reaches 4.7:1 on
+  // the book's background, but only 4.1:1 on hovered table rows and list items.
   --link-color: var(--book-brand-text-color);
 }
 
 [data-theme="light"] {
   color-scheme: light;
 
-  --main-color: var(--std-text-dark);
+  // 14.2:1 on the background.
+  --main-color: #1d1d1d;
   --main-background-color: #efebe8;
 
   --brand-color-subtle: rgba(230, 105, 86, 0.12);
@@ -41,6 +50,11 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
   --book-focus-color: #0066cc;
   --book-backdrop-color: rgba(0, 0, 0, 0.5);
 
+  --book-app-bar-background-color: #f9f7f6;
+  --book-app-bar-shadow: 6px 0px 30px -15px #c09575;
+  // The track of a switch that is off (the theme toggle).
+  --book-switch-off-color: #cccccc;
+
   // Distinguishing series in demos.
   --book-categorical-1: #4a90d9;
   --book-categorical-2: #27ae60;
@@ -49,16 +63,31 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
 
   // The slogan of the welcome page: at least 4.5:1 on the background along the whole gradient.
   --book-brand-gradient: linear-gradient(90deg, #b3326a 0%, #9a5b00 100%);
+
+  // Code (the kit's `Code`) and its highlighting (`syn-*` classes, see `_code.scss`).
+  --book-code-background-color: #d3d3d3;
+  --book-code-color: #3a3732;
+  --book-syntax-keyword: #c2185b;
+  --book-syntax-comment: #5c5c5c;
+  --book-syntax-string: #7a6100;
+  --book-syntax-storage: #c2185b;
+  --book-syntax-entity: #2e7d32;
+  --book-syntax-variable: #d84315;
+  --book-syntax-constant: #6a1b9a;
+  --book-syntax-support: #0277bd;
+  --book-syntax-function: var(--book-code-color);
+  --book-syntax-punctuation: #3a3732;
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --main-color: var(--std-text-bright);
+  // 16.2:1 on the background.
+  --main-color: #f0f0f0;
   --main-background-color: #141414;
 
-  --app-bar-background-color: #141414;
-  --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
+  --book-app-bar-background-color: #141414;
+  --book-app-bar-shadow: 1px 0px 15px 0px #0a0a0a;
 
   --brand-color-subtle: rgba(230, 105, 86, 0.16);
   // 7.6:1 on the background, 6.2:1 on raised surfaces.
@@ -75,6 +104,8 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
   --book-focus-color: #5aa2ff;
   --book-backdrop-color: rgba(0, 0, 0, 0.65);
 
+  --book-switch-off-color: #4a4a4a;
+
   --book-categorical-1: #5b9ee6;
   --book-categorical-2: #2ecc71;
   --book-categorical-3: #a66bbe;
@@ -82,11 +113,26 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
 
   // 4.0:1 and 8.9:1 on the background.
   --book-brand-gradient: linear-gradient(90deg, #d53369 0%, #daae51 100%);
+
+  --book-code-background-color: #2d2f34;
+  --book-code-color: #fff5e2;
+  --book-syntax-keyword: #ff6188;
+  --book-syntax-comment: #9a9a9a; // 4.8:1 on the code background
+  --book-syntax-string: #ffd866;
+  --book-syntax-storage: #ff6188;
+  --book-syntax-entity: #a9dc76;
+  --book-syntax-variable: #fc9867;
+  --book-syntax-constant: #ab9df2;
+  --book-syntax-support: #78dce8;
+  --book-syntax-function: #71cc5c;
+  --book-syntax-punctuation: #fcfcfa;
 }
 
 :root {
   // Text on `--brand-color` (5.2:1) or on a badge color (at least 6.2:1), in both themes.
   --book-on-brand-color: #1d1d1d;
+  // The knob of a switch, on its track in both states (the icon on it: `--book-on-brand-color`).
+  --book-switch-knob-color: #ffffff;
 
   // Layer badges and layer markers in the sidebar, behind `--book-on-brand-color`.
   --book-badge-hook-color: #60a5fa;
@@ -117,10 +163,19 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
 
   --book-transition: 0.15s ease;
 
+  // Code (the kit's `Code`), relative to the surrounding text.
+  --book-code-font-size: 0.9em;
+  --book-code-padding: 1em;
+  --book-inline-code-padding: 0.28em;
+
   --book-z-sticky: 10;
+  // The app bar, fixed above the page.
+  --book-z-app-bar: 1000;
   // Backdrops (and panels positioned like them) of demo overlays. Leptonic layers popovers and tooltips itself, but
-  // not backdrops; they must cover the app bar, which leptonic's theme layers at 1000.
+  // not backdrops; they must cover the app bar.
   --book-z-backdrop: 1000;
+  // The book's own modal overlays (the menus of small screens, the search) and its toasts: above everything.
+  --book-z-modal: 9000;
 
   // Layout sizes, in rem: they are used by elements of different font sizes (headings, the sidebar) and must
   // resolve to the same length everywhere.
@@ -135,4 +190,23 @@ $medium: 1200px; // Up to this width: the table of contents is hidden.
   // Width of a documentation page's `<article>`, including its inline padding.
   --book-article-max-width: 75rem;
   --book-article-padding: 1.5rem;
+}
+
+// A key cap (`<kbd>`): the keys of the kit's `Keys` and of the search button's shortcut.
+@mixin key-cap {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 1.5em;
+  padding: 0.15em 0.4em;
+  border-style: solid;
+  border-width: 0.1em 0.15em 0.2em 0.1em;
+  border-color: var(--book-border-color);
+  border-radius: var(--book-radius-s);
+  background-color: var(--book-surface-color-raised);
+  color: var(--main-color);
+  font-family: var(--typography-code-font-family);
+  font-size: var(--book-font-size-s);
+  font-weight: 400;
+  line-height: 1.2;
 }

@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::modal::ModalConceptDemo;
@@ -35,7 +34,7 @@ pub fn PageModalOverview() -> impl IntoView {
                             <Link href=routes::doc::Toast.materialize()>"Toast"</Link>
                         </TableCell>
                     </TableRow>
-                    <TableRow><TableCell>"Show a side panel next to the content"</TableCell><TableCell><Link href=routes::doc::Drawer.materialize()>"Drawer"</Link></TableCell></TableRow>
+                    <TableRow><TableCell>"Slide a panel over the page from its edge, such as a menu"</TableCell><TableCell><Link href=routes::doc::Drawer.materialize()>"Drawer"</Link></TableCell></TableRow>
                 </DocTable>
 
                 <p>
@@ -69,10 +68,6 @@ pub fn PageModalOverview() -> impl IntoView {
                             <Link href=routes::doc::dialog::Atom.materialize()>"Dialog"</Link>
                             ". A "<Code inline=true>"DialogTrigger"</Code>" opens them from a button. For modals in your own design."
                         </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link></TableCell>
-                        <TableCell>"The atoms with leptonic\u{2019}s theme: a styled modal with header, body and footer."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
@@ -132,7 +127,6 @@ pub fn PageModalOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::modal::Hook.materialize()>"Modal Hooks"</Link></li>
                 <li><Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link></li>
-                <li><Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link></li>
                 <li><Link href=routes::doc::Dialog.materialize()>"Dialog overview"</Link></li>
                 <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
                 <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>

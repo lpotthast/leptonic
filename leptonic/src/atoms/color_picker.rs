@@ -24,6 +24,17 @@ use crate::{
 //
 // =============================================================================
 
+/// The picker's new color: `color`, keeping the picker's alpha when `color` has none (an opaque
+/// slider doesn't make the color opaque).
+fn merged<C: ColorValue>(state: ColorPickerState, color: C) -> Color {
+    let color: Color = color.into();
+    if C::HAS_ALPHA {
+        color
+    } else {
+        color.with_alpha(state.color.get_untracked().alpha)
+    }
+}
+
 /// The [`ColorPicker`] around a color atom.
 #[derive(Debug, Clone, Copy)]
 pub struct ColorPickerContext(pub ColorPickerState);
@@ -34,7 +45,7 @@ impl ColorPickerContext {
         let Self(state) = use_context::<Self>()?;
         Some(ValueBinding::new(
             Signal::derive(move || state.color.get().to::<C>()),
-            Callback::new(move |color: C| state.set_color(color.into())),
+            Callback::new(move |color: C| state.set_color(merged(state, color))),
         ))
     }
 
@@ -46,7 +57,7 @@ impl ColorPickerContext {
             Signal::derive(move || Some(state.color.get().to::<C>())),
             Callback::new(move |color: Option<C>| {
                 if let Some(color) = color {
-                    state.set_color(color.into());
+                    state.set_color(merged(state, color));
                 }
             }),
         ))

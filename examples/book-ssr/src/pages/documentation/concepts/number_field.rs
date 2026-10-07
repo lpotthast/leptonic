@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::number_field::NumberFieldConceptDemo;
@@ -87,15 +86,6 @@ pub fn PageNumberFieldOverview() -> impl IntoView {
                             "and error message. Styled through data attributes."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell>
-                            <Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link>
-                        </TableCell>
-                        <TableCell>
-                            "A themed "<Code inline=true>"NumberField"</Code>" with its label, description, stepper buttons and "
-                            "validation errors."
-                        </TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -162,7 +152,6 @@ pub fn PageNumberFieldOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link></li>
                 <li><Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link></li>
-                <li><Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link></li>
                 <li><Link href=routes::doc::Slider.materialize()>"Slider"</Link></li>
                 <li><Link href=routes::doc::TextField.materialize()>"Text Field"</Link></li>
                 <li><Link href=routes::doc::utilities::UseSpinButton.materialize()>"use_spin_button"</Link></li>

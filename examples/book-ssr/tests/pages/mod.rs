@@ -115,13 +115,23 @@ impl BookPage<'_> {
 
     /// Polls `script` (which returns a boolean) until it returns `true`.
     pub async fn wait_until(&self, what: &str, script: &str) -> Result<(), Report> {
-        self.poll_until(what, script)
+        self.wait_until_within(what, script, POLL_TIMEOUT).await
+    }
+
+    /// [`Self::wait_until`] with its own `timeout`, for steps that wait on slow server work.
+    pub async fn wait_until_within(
+        &self,
+        what: &str,
+        script: &str,
+        timeout: Duration,
+    ) -> Result<(), Report> {
+        self.poll_until(what, script, timeout)
             .step("wait_until")
             .detail(what)
             .await
     }
 
-    async fn poll_until(&self, what: &str, script: &str) -> Result<(), Report> {
+    async fn poll_until(&self, what: &str, script: &str, timeout: Duration) -> Result<(), Report> {
         let start = Instant::now();
         loop {
             let value = self
@@ -132,7 +142,7 @@ impl BookPage<'_> {
             if value.json().as_bool() == Some(true) {
                 return Ok(());
             }
-            if start.elapsed() > POLL_TIMEOUT {
+            if start.elapsed() > timeout {
                 bail!("timed out waiting until {what}");
             }
             tokio::time::sleep(POLL_INTERVAL).await;

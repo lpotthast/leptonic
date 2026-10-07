@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -23,8 +22,9 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 
             <Section title="Input">
                 <p>
-                    <Code inline=true>"UsePopoverInput::new(state)"</Code>" sets the defaults below (modal, below the "
-                    "trigger and centered on it); change single fields with struct update syntax."
+                    "Pass a "<Code inline=true>"UsePopoverInput"</Code>" with every field named. The Default column gives the "
+                    "value for fields you don\u{2019}t need: a modal popover below the trigger, centered on it."
+
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UsePopoverInput">
@@ -272,7 +272,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
                 <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
-                <li><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></li>
                 <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>
                 <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
             </SeeAlso>

@@ -18,7 +18,10 @@ fn declarations(scss: &str, selector: &str) -> HashMap<String, String> {
         let block = &block[..block.find("\n}").unwrap_or(block.len())];
         for line in block.lines() {
             let line = line.trim();
-            if let Some((name, value)) = line.strip_prefix("--").and_then(|line| line.split_once(':')) {
+            if let Some((name, value)) = line
+                .strip_prefix("--")
+                .and_then(|line| line.split_once(':'))
+            {
                 found.insert(
                     format!("--{name}"),
                     value.trim().trim_end_matches(';').trim().to_owned(),
@@ -29,17 +32,16 @@ fn declarations(scss: &str, selector: &str) -> HashMap<String, String> {
     found
 }
 
-/// The variables of one theme: leptonic's theme, then the book's overrides and tokens.
+/// The variables of one theme: the book's tokens, then those of the theme.
 struct Theme(HashMap<String, String>);
 
 impl Theme {
     fn read(name: &str) -> Self {
-        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("style");
-        let leptonic = fs::read_to_string(dir.join(format!("leptonic/themes/{name}.scss")))
-            .expect("leptonic's theme is copied into style/leptonic by its build script");
-        let book = fs::read_to_string(dir.join("book/_theme.scss")).expect("the book's theme is readable");
-        let mut variables = declarations(&leptonic, &format!("[data-theme=\"{name}\"]"));
-        variables.extend(declarations(&book, ":root"));
+        let book = fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("style/book/_theme.scss"),
+        )
+        .expect("the book's theme is readable");
+        let mut variables = declarations(&book, ":root");
         variables.extend(declarations(&book, "[data-theme]"));
         variables.extend(declarations(&book, &format!("[data-theme=\"{name}\"]")));
         Self(variables)
@@ -120,10 +122,16 @@ fn token_colors_meet_wcag_aa_in_both_themes() {
         let mut check = |text: [u8; 3], text_name: &str, background: &str, minimum: f64| {
             let ratio = contrast(text, theme.color(background));
             if ratio < minimum {
-                problems.push(format!("{name}: {text_name} on {background}: {ratio:.2} < {minimum}"));
+                problems.push(format!(
+                    "{name}: {text_name} on {background}: {ratio:.2} < {minimum}"
+                ));
             }
         };
-        for text in ["--main-color", "--book-brand-text-color", "--book-muted-color", "--link-color"] {
+        for text in [
+            "--main-color",
+            "--book-brand-text-color",
+            "--book-muted-color",
+        ] {
             for background in backgrounds {
                 check(theme.color(text), text, background, TEXT);
             }
@@ -135,13 +143,28 @@ fn token_colors_meet_wcag_aa_in_both_themes() {
             "--book-badge-comp-color",
             "--book-badge-util-color",
         ] {
-            check(theme.color("--book-on-brand-color"), "--book-on-brand-color", background, TEXT);
+            check(
+                theme.color("--book-on-brand-color"),
+                "--book-on-brand-color",
+                background,
+                TEXT,
+            );
         }
-        check(theme.color("--book-focus-color"), "--book-focus-color", "--main-background-color", LARGE);
+        check(
+            theme.color("--book-focus-color"),
+            "--book-focus-color",
+            "--main-background-color",
+            LARGE,
+        );
         let stops = theme.stops("--book-brand-gradient");
         assert_that!(stops.len()).is_greater_or_equal_to(2);
         for stop in stops {
-            check(stop, "a --book-brand-gradient stop", "--main-background-color", LARGE);
+            check(
+                stop,
+                "a --book-brand-gradient stop",
+                "--main-background-color",
+                LARGE,
+            );
         }
     }
     assert_that!(problems).is_empty();

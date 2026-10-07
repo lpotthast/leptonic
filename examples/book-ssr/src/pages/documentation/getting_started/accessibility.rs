@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -165,7 +165,8 @@ pub fn PageAccessibility() -> impl IntoView {
                     </li>
                     <li>
                         <b>"Structure the page."</b>" Use headings in order, landmarks ("<Code inline=true>"<main>"</Code>", "
-                        <Code inline=true>"<nav>"</Code>"), a meaningful page title, and text alternatives for images."
+                        <Code inline=true>"<nav>"</Code>"; with "<Link href=routes::doc::focus::UseLandmark.materialize()>"use_landmark"</Link>
+                        ", "<Keys keys="F6"/>" moves between them), a meaningful page title, and text alternatives for images."
                     </li>
                     <li>
                         <b>"Set the document language and direction."</b>" Render "<Code inline=true>"lang"</Code>" and "

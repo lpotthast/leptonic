@@ -1,4 +1,5 @@
-// The app shell: skip link, app bar, page area and the menus covering the page on small screens.
+// The app shell: skip link, app bar, page area, the menus covering the page on small screens, toasts, and the pieces
+// the whole book shares (links, buttons, icons).
 
 html {
   // The user's font size, not a fixed one: every rem of the book scales with it.
@@ -17,17 +18,129 @@ body {
   background-color: var(--main-background-color);
 }
 
+// Icons (the kit's `Icon`): a square of the text's size unless a rule sizes them.
+.doc-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  user-select: none;
+
+  svg {
+    display: block;
+  }
+}
+
+// Links (leptonic's `Link` and `AnchorLink` atoms): the link color, no underline. The kit's `Link` in page texts and
+// the links of the app bar and its menu.
+.doc-link,
+.book-docs-link,
+.book-version-link,
+.book-github-link {
+  color: var(--book-brand-text-color);
+  text-decoration: none;
+  cursor: pointer;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+    border-radius: var(--book-radius-s);
+  }
+}
+
+// Buttons of the book's pages (leptonic's `Button` and `LinkButton` atoms): filled with the brand color, or outlined
+// (`data-variant="secondary"`).
+.book-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.85em 1.5em;
+  border: 0.125em solid var(--brand-color);
+  border-radius: var(--book-radius-s);
+  background-color: var(--brand-color);
+  color: var(--book-on-brand-color);
+  font: inherit;
+  font-size: var(--book-font-size-l);
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--book-transition), border-color var(--book-transition);
+
+  &[data-hovered] {
+    border-color: color-mix(in srgb, black 7%, var(--brand-color));
+    background-color: color-mix(in srgb, black 7%, var(--brand-color));
+    color: var(--book-on-brand-color);
+  }
+
+  &[data-variant="secondary"] {
+    border-color: var(--book-border-color);
+    background-color: transparent;
+    color: var(--main-color);
+
+    &[data-hovered] {
+      background-color: var(--book-hover-background-color);
+    }
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+// Icon-only buttons (menu triggers, close buttons): the icon in the surrounding text color.
+.book-icon-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--book-space-s);
+  border: none;
+  border-radius: var(--book-radius-m);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--book-font-size-xl);
+  cursor: pointer;
+  transition: background-color var(--book-transition), color var(--book-transition);
+
+  &[data-hovered] {
+    color: var(--book-brand-text-color);
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+// The app bar: the page's `<header>`, fixed so that pages scroll underneath; `#book-page` makes room for it.
 #book-app-bar {
-  // Fixed instead of the theme's sticky, so that pages scroll underneath; `#book-page` makes room for it.
-  --app-bar-height: var(--book-app-bar-height);
-
   position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--book-z-app-bar);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--book-space-m);
+  height: var(--book-app-bar-height);
+  padding: 0 var(--book-space-m);
+  background-color: var(--book-app-bar-background-color);
+  box-shadow: var(--book-app-bar-shadow);
+  color: var(--main-color);
 
-  #book-app-bar-content {
+  .book-app-bar-group {
     display: flex;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 var(--book-space-m);
+    align-items: center;
+    gap: 0.5em;
+    min-width: 0;
+  }
+
+  .book-app-bar-end {
+    gap: 1em;
   }
 
   #book-logo {
@@ -36,23 +149,88 @@ body {
     width: 2.5rem;
   }
 
+  .book-logo-link {
+    display: flex;
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--book-focus-color);
+      outline-offset: 2px;
+      border-radius: var(--book-radius-s);
+    }
+  }
+
   .book-docs-link {
     font-size: var(--book-font-size-l);
     font-weight: 700;
   }
 
   .book-github-link {
+    display: flex;
     font-size: var(--book-font-size-xl);
   }
 }
 
-// Links and buttons of the shell show the book's focus ring.
-#book-app-bar,
-.book-main-menu {
-  .leptonic-link[data-focus-visible] {
-    outline: 2px solid var(--book-focus-color);
-    outline-offset: 2px;
-    border-radius: var(--book-radius-s);
+// The theme toggle (leptonic's `Switch` atom): a track with a knob showing the sun or the moon, the knob on the right
+// while the dark theme is selected.
+.book-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+
+  .book-theme-toggle-track {
+    display: inline-flex;
+    align-items: center;
+    width: 3.5em;
+    height: 1.75em;
+    border-radius: 1.75em;
+    background-color: var(--book-switch-off-color);
+    transition: background-color var(--book-transition);
+  }
+
+  .book-theme-toggle-knob {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 1.5em;
+    height: 1.5em;
+    margin-left: 0.125em;
+    border-radius: 50%;
+    background-color: var(--book-switch-knob-color);
+    color: var(--book-on-brand-color);
+    transition: transform var(--book-transition);
+
+    .doc-icon {
+      width: 1em;
+      height: 1em;
+    }
+  }
+
+  &[data-selected] {
+    .book-theme-toggle-track {
+      background-color: var(--brand-color);
+    }
+
+    .book-theme-toggle-knob {
+      transform: translateX(1.75em);
+    }
+  }
+
+  // The ring goes around the track, not the whole label.
+  &[data-focus-visible] {
+    outline: none;
+
+    .book-theme-toggle-track {
+      outline: 2px solid var(--book-focus-color);
+      outline-offset: 2px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .book-theme-toggle-track,
+    .book-theme-toggle-knob {
+      transition: none;
+    }
   }
 }
 
@@ -62,24 +240,12 @@ body {
   padding: var(--book-space-xs) var(--book-space-s);
   border-radius: var(--book-radius-s);
   background-color: var(--book-surface-color);
+  color: var(--book-brand-text-color);
   white-space: nowrap;
 
   &[data-focus-visible] {
     outline: 2px solid var(--book-focus-color);
     outline-offset: 2px;
-  }
-}
-
-// Icon-only buttons (menu triggers, close buttons): flat leptonic buttons in the surrounding text color.
-.leptonic-btn.book-icon-button {
-  padding: var(--book-space-s);
-  color: inherit;
-  font-size: var(--book-font-size-xl);
-  text-transform: none;
-
-  &:hover {
-    color: var(--book-brand-text-color);
-    background-color: var(--book-hover-background-color);
   }
 }
 
@@ -97,52 +263,101 @@ body {
   }
 }
 
-// Menus covering the page on small screens (`Sheet`): a panel at one side of the screen above leptonic's modal
-// backdrop.
-.leptonic-modal-backdrop.book-sheet-backdrop {
+// The menus of small screens (`MenuDrawer`, leptonic's modal atoms): a panel covering the page from one side,
+// sliding in and out (the exit waits for the animation).
+.book-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--book-z-modal);
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: stretch;
   padding: 0;
   background: var(--book-backdrop-color);
-  backdrop-filter: none;
+  backdrop-filter: blur(5px);
+
+  &[data-entering] {
+    animation: book-fade-in var(--book-transition);
+  }
+
+  &[data-exiting] {
+    animation: book-fade-in var(--book-transition) reverse forwards;
+  }
 }
 
-.book-sheet {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  width: min(20rem, 85vw);
-  overflow-y: auto;
-  color: var(--main-color);
-  background-color: var(--book-surface-color);
+.book-menu {
+  display: flex;
+  flex-direction: column;
+  width: 20rem;
+  max-width: 85vw;
+  height: 100%;
+  overflow: auto;
+  background-color: var(--book-surface-color-raised);
   box-shadow: var(--book-shadow);
+  outline: none;
 
-  &.book-sheet-left {
-    left: 0;
-    animation: book-sheet-from-left 0.2s ease-out;
+  // Physical sides, also in right-to-left pages.
+  &.book-menu-left {
+    --book-menu-from: -100%;
+
+    margin-right: auto;
   }
 
-  &.book-sheet-right {
-    right: 0;
-    animation: book-sheet-from-right 0.2s ease-out;
+  &.book-menu-right {
+    --book-menu-from: 100%;
+
+    margin-left: auto;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    animation: none !important;
+  &[data-entering] {
+    animation: book-menu-slide var(--book-transition);
+  }
+
+  &[data-exiting] {
+    animation: book-menu-slide var(--book-transition) reverse forwards;
   }
 }
 
-@keyframes book-sheet-from-left {
+.book-menu-dialog {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  outline: none;
+}
+
+@keyframes book-menu-slide {
   from {
-    transform: translateX(-100%);
+    transform: translateX(var(--book-menu-from));
+  }
+
+  to {
+    transform: translateX(0);
   }
 }
 
-@keyframes book-sheet-from-right {
+@keyframes book-fade-in {
   from {
-    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 
-.book-sheet-header {
+@media (prefers-reduced-motion: reduce) {
+  .book-menu-backdrop,
+  .book-menu {
+    &[data-entering],
+    &[data-exiting] {
+      animation: none;
+    }
+  }
+}
+
+// The close button at the top of a menu.
+.book-menu-header {
   display: flex;
   justify-content: flex-end;
   padding: var(--book-space-s);
@@ -157,6 +372,69 @@ body {
   padding: var(--book-space-m) 0;
 
   .book-github-link {
-    font-size: calc(2 * var(--book-font-size-xl));
+    display: flex;
+
+    .doc-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+}
+
+// The book's toasts (leptonic's toast atoms), at the bottom right of the window; the newest nearest to the edge.
+.book-toast-region {
+  position: fixed;
+  right: var(--book-space-m);
+  bottom: var(--book-space-m);
+  z-index: var(--book-z-modal);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--book-space-s);
+  max-width: calc(100vw - 2 * var(--book-space-m));
+
+  &:focus {
+    outline: none;
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+}
+
+.book-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--book-space-m);
+  width: 22em;
+  max-width: 100%;
+  padding: var(--book-space-m);
+  border: 1px solid var(--book-border-color);
+  border-left: 4px solid var(--success-color);
+  border-radius: var(--book-radius-m);
+  background-color: var(--book-surface-color-raised);
+  color: var(--main-color);
+  box-shadow: var(--book-shadow);
+
+  &:focus {
+    outline: none;
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+
+  .book-toast-content {
+    flex: 1;
+  }
+
+  .book-toast-title {
+    font-weight: 600;
+  }
+
+  .book-icon-button {
+    padding: var(--book-space-xs);
+    font-size: var(--book-font-size-m);
   }
 }

@@ -1,7 +1,9 @@
 use leptonic::{
     atoms::prelude::*,
     components::prelude::{Button, ButtonVariant},
-    hooks::{FocusManager as Manager, FocusManagerOptions, IntoAttrs, UseKeyboardInput, use_keyboard},
+    hooks::{
+        FocusManager as Manager, FocusManagerOptions, IntoAttrs, UseKeyboardInput, use_keyboard,
+    },
     utils::keyboard_shortcut::{KeyboardShortcuts, Shortcut},
 };
 use leptos::prelude::*;
@@ -31,7 +33,8 @@ fn EditButtons(manager: Manager, set_action: WriteSignal<Option<&'static str>>) 
         wrap: true,
         ..FocusManagerOptions::default()
     };
-    let (next, previous, first, last) = (manager.clone(), manager.clone(), manager.clone(), manager);
+    let (next, previous, first, last) =
+        (manager.clone(), manager.clone(), manager.clone(), manager);
 
     let keyboard = use_keyboard(UseKeyboardInput {
         shortcuts: Some(

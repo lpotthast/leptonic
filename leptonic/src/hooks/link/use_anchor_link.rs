@@ -76,17 +76,6 @@ pub struct UseAnchorLinkInput {
     pub link: UseLinkInput,
 }
 
-impl UseAnchorLinkInput {
-    /// A link to `href`, scrolling smoothly by default.
-    pub fn new(href: impl Into<Href>) -> Self {
-        Self {
-            href: href.into(),
-            scroll_behavior: Some(ScrollBehavior::default()),
-            link: UseLinkInput::default(),
-        }
-    }
-}
-
 /// Update the browser URL hash without a page reload.
 fn update_url(href: &Href) {
     if let Some(window) = use_window().as_ref() {

@@ -1,0 +1,116 @@
+@use "input" as input;
+
+// The themed date picker (`DatePicker`): label, a group of segments with a button, description,
+// error message, and a `DateSelector` in a popover. State comes as data attributes.
+.leptonic-date-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  width: 100%;
+
+  .leptonic-date-picker-group {
+    display: flex;
+    align-items: center;
+  }
+
+  .leptonic-date-picker-input {
+    @include input.input-field();
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+    // The segments carry the focus; the field shows it.
+    &:focus-within {
+      border-color: var(--input-focused-border-color);
+    }
+  }
+
+  .leptonic-date-picker-segment {
+    padding: 0 0.1em;
+    border-radius: 0.2em;
+    font-variant-numeric: tabular-nums;
+    text-align: end;
+    outline: none;
+    caret-color: transparent;
+
+    &[data-placeholder] {
+      opacity: 0.6;
+    }
+
+    &[data-type="literal"] {
+      padding: 0;
+    }
+
+    &:focus {
+      color: var(--std-text-bright);
+      background-color: var(--brand-color);
+      opacity: 1;
+    }
+  }
+
+  .leptonic-date-picker-button {
+    display: inline-flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 0 0.6em;
+    color: var(--input-color);
+    background-color: var(--input-background-color);
+    border: var(--input-border);
+    border-inline-start: none;
+    border-start-end-radius: var(--input-border-radius);
+    border-end-end-radius: var(--input-border-radius);
+    cursor: pointer;
+
+    &[data-hovered] {
+      border-color: var(--input-focused-border-color);
+    }
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--brand-color);
+      outline-offset: -2px;
+    }
+
+    &[data-disabled] {
+      cursor: not-allowed;
+    }
+  }
+
+  &[data-invalid] {
+    .leptonic-date-picker-input,
+    .leptonic-date-picker-button {
+      border-color: var(--danger-color);
+    }
+  }
+
+  &[data-disabled] .leptonic-date-picker-group {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .leptonic-field-description {
+    font-size: 0.875em;
+    opacity: 0.8;
+  }
+
+  .leptonic-field-error {
+    font-size: 0.875em;
+    color: var(--danger-color);
+  }
+}
+
+// Portaled: outside `.leptonic-date-picker`.
+.leptonic-date-picker-popover {
+  padding: 0.75em;
+  background-color: var(--date-picker-popover-background-color);
+  border-radius: 0.5em;
+  box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px;
+  z-index: 9000;
+
+  .leptonic-date-picker-dialog {
+    outline: none;
+  }
+}

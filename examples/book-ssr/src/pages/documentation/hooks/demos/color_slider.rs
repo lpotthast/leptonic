@@ -16,14 +16,16 @@ pub fn ColorSliderDemo() -> impl IntoView {
     // Disabled and orientation live on the state; the slider changes the hue of a blue.
     let state = use_color_slider_state(UseColorSliderStateInput {
         is_disabled: disabled.into(),
-        ..UseColorSliderStateInput::new(
-            HSV {
-                hue: 210.0,
-                saturation: 0.6,
-                value: 0.8,
-            },
-            HsvChannel::Hue,
-        )
+        default_value: HSV {
+            hue: 210.0,
+            saturation: 0.6,
+            value: 0.8,
+        },
+        value: None,
+        channel: HsvChannel::Hue,
+        orientation: Signal::stored(Orientation::Horizontal),
+        on_change: None,
+        on_change_end: None,
     });
     let UseColorSliderReturn {
         slider,
@@ -32,7 +34,12 @@ pub fn ColorSliderDemo() -> impl IntoView {
         input_styles,
     } = use_color_slider(UseColorSliderInput {
         has_label: true.into(),
-        ..UseColorSliderInput::new(state)
+        state,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        name: None,
+        form: None,
     });
 
     // The focus is on the hidden input inside the thumb: `within` reports it on the thumb as

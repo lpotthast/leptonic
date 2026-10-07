@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::spin_button::SpinButtonDemo;
@@ -141,7 +140,7 @@ pub fn PageUseSpinButton() -> impl IntoView {
                     ", or hold one of the buttons."
                 </p>
                 <Demo
-                    description="Custom spin button with a value from 0 to 10, two stepper buttons and a Disabled switch"
+                    description="Custom spin button with a value from 0 to 10, two stepper buttons and a Disabled checkbox"
                     source=include_str!("demos/spin_button.rs")
                 >
                     <SpinButtonDemo/>

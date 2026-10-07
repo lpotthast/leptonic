@@ -1,81 +1,68 @@
+use leptonic::utils::CapturedElement;
+use leptonic::utils::date_time_formatter::DateTimeFormat;
 use leptonic::{
     components::prelude::*,
-    hooks::*,
+    hooks::{
+        IntoAttrs,
+        calendar::{
+            CalendarData, UseCalendarCellInput, UseCalendarCellReturn, UseCalendarGridInput,
+            UseCalendarInput, UseCalendarReturn, UseCalendarStateInput, use_calendar,
+            use_calendar_cell, use_calendar_grid, use_calendar_state,
+        },
+        use_button,
+    },
+    jiff::civil::{Date, date},
     prelude::icondata,
-    utils::time::{Day, InMonth},
+    utils::{data_attributes::flag, date::DateExt},
 };
-use leptos::{html, prelude::*};
-use time::macros::{datetime, format_description};
-
-// A stopgap until the calendar cells move the browser focus themselves.
-use super::calendar_focus::{follow_focused_date, week_key};
+use leptos::prelude::*;
 
 #[component]
 pub fn CalendarSingleDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let state = use_calendar_state(UseCalendarStateInput {
-        default_focused_value: Some(datetime!(2026-03-12 0:00 UTC)),
+        default_value: Some(date(2026, 3, 12)),
         is_disabled: disabled.into(),
         ..Default::default()
     });
-
-    let grid = use_calendar_grid(UseCalendarGridInput {
-        aria_label: "Appointment date".into(),
-        ..UseCalendarGridInput::from_calendar_state(state)
-    });
-
-    let grid_ref = NodeRef::<html::Table>::new();
-    follow_focused_date(state.focused_date, grid_ref, false);
+    let UseCalendarReturn {
+        calendar_props,
+        previous_button,
+        next_button,
+        title,
+        data,
+        ..
+    } = use_calendar(
+        UseCalendarInput {
+            aria_label: "Appointment date".into(),
+            ..Default::default()
+        },
+        state,
+    );
+    let (previous_attrs, previous_styles) = use_button(previous_button).props.into_parts();
+    let (next_attrs, next_styles) = use_button(next_button).props.into_parts();
 
     let selected = move || {
         state.value.get().map_or_else(
             || "No date selected".to_owned(),
-            |date| {
-                let format = format_description!("[weekday], [month repr:long] [day padding:none], [year]");
-                format!("Selected: {}", date.format(format).unwrap_or_default())
-            },
+            |date| format!("Selected: {}", date.strftime("%A, %B %-d, %Y")),
         )
     };
 
     view! {
-        <div class="demo-calendar">
-            <div class="demo-calendar-header">
-                <Button
-                    on_press=move |_| state.focus_previous_page.run(())
-                    variant=ButtonVariant::Flat
-                    is_disabled=Signal::derive(move || disabled.get() || state.is_previous_visible_range_invalid.get())
-                    attr:aria-label="Previous month"
-                >
+        <div {..calendar_props.into_attrs()} class="demo-calendar">
+            <header class="demo-calendar-header">
+                <button {..previous_attrs} style=previous_styles class="demo-calendar-nav">
                     <Icon icon=icondata::BsChevronLeft/>
-                </Button>
-                <span class="demo-calendar-title">
-                    {move || format!("{} {}", state.focused_month_name.get(), state.focused_year.get())}
-                </span>
-                <Button
-                    on_press=move |_| state.focus_next_page.run(())
-                    variant=ButtonVariant::Flat
-                    is_disabled=Signal::derive(move || disabled.get() || state.is_next_visible_range_invalid.get())
-                    attr:aria-label="Next month"
-                >
+                </button>
+                // The calendar's label names the month already.
+                <h2 class="demo-calendar-title" aria-hidden="true">{title}</h2>
+                <button {..next_attrs} style=next_styles class="demo-calendar-nav">
                     <Icon icon=icondata::BsChevronRight/>
-                </Button>
-            </div>
-
-            <table node_ref=grid_ref class="demo-calendar-grid" {..grid.grid_props.into_attrs()}>
-                <thead>
-                    <tr {..grid.header_props.into_attrs()}>
-                        {grid.weekday_labels.into_iter().map(|label| view! { <th>{label}</th> }).collect_view()}
-                    </tr>
-                </thead>
-                <tbody>
-                    <For each=move || state.weeks.get() key=week_key let(week)>
-                        <tr>
-                            {week.days.into_iter().map(|day| view! { <DayCell state day/> }).collect_view()}
-                        </tr>
-                    </For>
-                </tbody>
-            </table>
+                </button>
+            </header>
+            <MonthGrid data/>
         </div>
 
         <p class="demo-status">{selected}</p>
@@ -86,42 +73,77 @@ pub fn CalendarSingleDemo() -> impl IntoView {
     }
 }
 
-/// One day: a grid cell with a button inside.
+/// The grid of the visible month: a row of weekday names, then a row per week.
 #[component]
-fn DayCell(state: UseCalendarStateReturn, day: Day) -> impl IntoView {
-    let date = day.date_time;
+fn MonthGrid(data: CalendarData) -> impl IntoView {
+    let calendar = data.state.calendar();
+    let grid = use_calendar_grid(UseCalendarGridInput {
+        data: data.clone(),
+        start_date: None,
+        end_date: None,
+        weekday_style: DateTimeFormat::Narrow,
+    });
+    let month = grid.start_date;
+    let data = StoredValue::new(data);
+
+    view! {
+        <table {..grid.grid_props.into_attrs()} class="demo-calendar-grid">
+            // Each day's label names its weekday: the header is for sighted users only.
+            <thead aria-hidden="true">
+                <tr>{move || grid.week_days.get().into_iter().map(|day| view! { <th>{day}</th> }).collect_view()}</tr>
+            </thead>
+            <tbody>
+                <For each=move || 0..grid.weeks_in_month.get() key=|week| *week let(week)>
+                    <tr>
+                        <For
+                            each=move || calendar.dates_in_week(week, Some(month.get())).into_iter().flatten()
+                            key=|date| *date
+                            let(date)
+                        >
+                            <DayCell
+                                data=data.get_value()
+                                date
+                                is_outside_month=Signal::derive(move || !date.is_same_month(month.get()))
+                            />
+                        </For>
+                    </tr>
+                </For>
+            </tbody>
+        </table>
+    }
+}
+
+/// A day: a grid cell with a focusable button inside.
+#[component]
+fn DayCell(data: CalendarData, date: Date, is_outside_month: Signal<bool>) -> impl IntoView {
     let UseCalendarCellReturn {
         cell_props,
         button_props,
+        is_selected,
         is_today,
-        is_outside_month,
         formatted_date,
         ..
     } = use_calendar_cell(UseCalendarCellInput {
-        day,
-        is_focused: Signal::derive(move || state.is_cell_focused.run(date)),
-        is_selected: Signal::derive(move || state.is_selected.run(date)),
-        is_disabled: state.is_disabled,
-        on_select: Some(Callback::new(move |day: Day| state.select_date.run(day.date_time))),
-        // Moving the cursor to a day of another month on mousedown would switch the month before the click
-        // lands. Those days are selected (and focused) by `on_select` instead.
-        on_focus: Some(Callback::new(move |day: Day| {
-            if day.in_month == InMonth::Current {
-                state.set_focused_date.run(day.date_time);
-            }
-        })),
+        is_outside_month,
+        data,
+        date: date.into(),
+        is_disabled: Signal::stored(false),
+        element: CapturedElement::new(),
     });
+    let (button_attrs, button_styles) = button_props.into_parts();
 
     view! {
         <td {..cell_props.into_attrs()}>
-            <button
+            <div
+                {..button_attrs}
+                style=button_styles
                 class="demo-calendar-day"
-                data-today=is_today.then_some("")
-                data-outside-month=is_outside_month.then_some("")
-                {..button_props.into_attrs()}
+                data-selected=flag(is_selected)
+                data-today=flag(is_today)
+                data-outside-month=flag(is_outside_month)
             >
                 {formatted_date}
-            </button>
+            </div>
         </td>
     }
 }

@@ -1,0 +1,16 @@
+// Upstream: ../starters/docs/src/TimeField.css @ 99e610236
+// Upstream: ../starters/docs/src/TimeField.tsx @ 99e610236
+//
+// `TimeField`. Its `DateInput` and `DateSegment`s are styled by `date-field.scss`.
+//
+// Markup (as the starter):
+//   <TimeField>
+//     <Label />
+//     <DateInput>{|segment| <DateSegment segment /> }</DateInput>
+//     <Description /> <FieldError />
+//   </TimeField>
+
+.leptonic-TimeField {
+  display: flex;
+  flex-direction: column;
+}

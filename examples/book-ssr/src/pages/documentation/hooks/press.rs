@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -175,7 +174,12 @@ pub fn PageUsePress() -> impl IntoView {
                     <PressCancelDemo/>
                 </Demo>
 
-                <p>"With "<Code inline=true>"prevent_focus_on_press"</Code>", pressing the button leaves the focus where it was."</p>
+                <p>
+                    "With "<Code inline=true>"prevent_focus_on_press"</Code>", pressing the button leaves the focus where it was, "
+                    "e.g. in a text editor next to a toolbar. The hook doesn\u{2019}t cancel the "
+                    <Code inline=true>"mousedown"</Code>" for this but stops the focus change itself, so text selection and "
+                    "dragging keep working."
+                </p>
 
                 <Demo description="A button that does not take focus when pressed" source=include_str!("demos/press_no_focus.rs")>
                     <PressNoFocusDemo/>

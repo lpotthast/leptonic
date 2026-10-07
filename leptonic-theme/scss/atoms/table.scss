@@ -1,0 +1,241 @@
+// Upstream: ../starters/docs/src/Table.css @ 99e610236
+// Upstream: ../starters/docs/src/Table.tsx @ 99e610236
+//
+// `Table`, `TableHeader` with its column headers (`leptonic-TableColumnHeader`, styled as a
+// button, and their `leptonic-ColumnResizer`), `TableBody`, `TableRow`, `TableCell` and
+// `ResizableTableContainer`. The header renders the column headers itself (their text only), so
+// there is no markup to add; an image in a cell is shown as a small square thumbnail.
+
+@use "utilities";
+
+@layer utilities {
+  .leptonic-TableColumnHeader {
+    @include utilities.button-base;
+  }
+}
+
+.leptonic-Table {
+  border: 0.5px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--overlay-background);
+  overflow: clip;
+  outline: none;
+  border-spacing: 0;
+  align-self: start;
+  width: 100%;
+  word-break: break-word;
+  forced-color-adjust: none;
+  font: var(--font-size) system-ui;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+  }
+
+  &:has(.leptonic-TableBody[data-empty]) {
+    height: 100%;
+    min-height: 100px;
+  }
+
+  .leptonic-TableHeader {
+    color: var(--text-color);
+  }
+
+  .leptonic-TableBody {
+    padding: var(--spacing-1);
+
+    &[data-empty] {
+      text-align: center;
+      font-style: italic;
+    }
+  }
+}
+
+.leptonic-TableRow {
+  outline: none;
+  cursor: default;
+  color: var(--text-color);
+  position: relative;
+  transform: scale(1);
+  transition-property: background, color;
+  transition-duration: 200ms;
+  -webkit-tap-highlight-color: transparent;
+
+  &:last-child {
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -2px;
+  }
+
+  &[data-pressed] {
+    background: var(--gray-100);
+  }
+
+  &:nth-child(2n) {
+    background: var(--gray-100);
+    &[data-pressed] {
+      background: var(--gray-200);
+    }
+  }
+
+  &[data-selected] {
+    background: var(--highlight-background);
+    color: var(--highlight-foreground);
+    --focus-ring-color: var(--highlight-foreground);
+
+    &[data-focus-visible],
+    .leptonic-TableCell[data-focus-visible] {
+      outline-offset: -4px;
+    }
+
+    &[data-pressed] {
+      background: var(--highlight-background-pressed);
+    }
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+  }
+}
+
+.leptonic-TableCell,
+.leptonic-TableColumnHeader {
+  padding: var(--spacing-2);
+  text-align: left;
+  outline: none;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+
+  &:is(.leptonic-TableRow:last-child > :first-child) {
+    border-end-start-radius: var(--radius);
+  }
+
+  &:is(.leptonic-TableRow:last-child > :last-child) {
+    border-end-end-radius: var(--radius);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -2px;
+  }
+}
+
+.leptonic-TableColumnHeader {
+  --button-color: var(--gray);
+  --button-border: transparent;
+  --button-shadow: transparent;
+  --button-border-size: 0px;
+  cursor: default;
+  border-bottom: 0.5px solid var(--border-color);
+  border-inline-end: 0.5px solid var(--border-color);
+  position: relative;
+  z-index: calc(sibling-count() - sibling-index());
+
+  &:last-child {
+    border-inline-end: none;
+  }
+
+  &[data-pressed] {
+    background: var(--gray-200);
+  }
+
+  &[data-sort-direction] {
+    --button-color: var(--tint);
+
+    &[data-pressed] {
+      background: var(--tint-200);
+    }
+  }
+}
+
+.leptonic-ColumnResizer {
+  width: 1px;
+  border-radius: var(--radius-sm);
+  background-color: var(--gray-500);
+  padding: 0 var(--spacing-2);
+  translate: var(--spacing-4) 0;
+  height: 32px;
+  margin: -16px 0;
+  flex: 0 0 auto;
+  touch-action: none;
+  box-sizing: content-box;
+  background-clip: content-box;
+
+  &[data-resizable-direction='both'] {
+    cursor: ew-resize;
+  }
+
+  &[data-resizable-direction='left'] {
+    cursor: e-resize;
+  }
+
+  &[data-resizable-direction='right'] {
+    cursor: w-resize;
+  }
+
+  &[data-focus-visible] {
+    background-color: var(--focus-ring-color);
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -2px;
+  }
+
+  &[data-resizing] {
+    width: 2px;
+    background-color: var(--highlight-background);
+  }
+}
+
+.leptonic-TableCell {
+  transform: translateZ(0);
+  --border-color: var(--gray-300);
+  tr:not(:last-child) & {
+    border-bottom: 0.5px solid var(--border-color);
+  }
+
+  [data-selected]:has(+ [data-selected]) & {
+    --border-color: rgb(255 255 255 / 0.3);
+  }
+
+  @media (forced-colors: active) {
+    --border-color: ButtonBorder;
+  }
+}
+
+.leptonic-ResizableTableContainer {
+  width: 100%;
+  overflow: auto;
+  position: relative;
+  border: 0.5px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--overlay-background);
+
+  .leptonic-Table {
+    border: none;
+    border-radius: 0;
+
+    &:has(.leptonic-TableBody[data-empty]) {
+      height: 100%;
+    }
+  }
+
+  .leptonic-TableHeader {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .leptonic-TableCell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.leptonic-TableCell img {
+  height: 30px;
+  width: 30px;
+  object-fit: cover;
+  display: block;
+}

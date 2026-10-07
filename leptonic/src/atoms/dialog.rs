@@ -16,6 +16,7 @@ use crate::{
         CapturedElement,
         aria::AriaExpanded,
         classes::Classes,
+        default_class::with_default_class,
         dev_warn,
         heading_level::HeadingLevel,
         id::{ensure_element_id, use_id},
@@ -51,6 +52,8 @@ struct DialogContext {
 /// A dialog: `role="dialog"` (or `alertdialog`), named by its [`DialogTitle`] (or `aria_label`),
 /// an alert dialog described by its [`DialogDescription`], focused when it opens. Render it in a
 /// [`ModalContent`](super::modal::ModalContent) for a modal dialog.
+///
+/// Default class: `leptonic-Dialog`.
 #[component]
 pub fn Dialog(
     #[prop(optional)] role: DialogRole,
@@ -68,6 +71,7 @@ pub fn Dialog(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Dialog", classes);
     let trigger = use_context::<DialogTriggerContext>();
     // Without a title, `aria_label` or `aria_labelledby`, the trigger names the dialog
     // (react-aria-components). Its id is ensured once the dialog is rendered, before the hook
@@ -85,7 +89,9 @@ pub fn Dialog(
         aria_label,
         aria_labelledby,
         aria_describedby,
-        fallback_aria_labelledby: trigger_id.into(),
+        fallback_aria_labelledby: trigger
+            .and_then(|trigger| trigger.dialog_labelledby)
+            .unwrap_or_else(|| trigger_id.into()),
         ..UseDialogInput::default()
     });
     // A dialog opened by a `DialogTrigger` is what its trigger controls (react-aria-components passes
@@ -106,6 +112,8 @@ pub fn Dialog(
 }
 
 /// The title of the [`Dialog`] around it: a heading (`level`, default `<h2>`) naming the dialog.
+///
+/// Default class: `leptonic-DialogTitle`.
 #[component]
 pub fn DialogTitle(
     #[prop(optional)] level: HeadingLevel,
@@ -113,6 +121,7 @@ pub fn DialogTitle(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-DialogTitle", classes);
     let props = use_context::<DialogContext>().map_or_else(
         || {
             dev_warn!("A <DialogTitle> must be inside a <Dialog>.");
@@ -128,12 +137,15 @@ pub fn DialogTitle(
 }
 
 /// The description of the [`Dialog`] around it (an alert dialog's `aria-describedby`).
+///
+/// Default class: `leptonic-DialogDescription`.
 #[component]
 pub fn DialogDescription(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-DialogDescription", classes);
     let props = use_context::<DialogContext>().map_or_else(
         || {
             dev_warn!("A <DialogDescription> must be inside a <Dialog>.");
@@ -181,6 +193,9 @@ pub struct DialogTriggerContext {
     pub overlay_id: RwSignal<Option<String>>,
     /// The id the trigger element gets when it has none (see [`Self::ensure_trigger_id`]).
     generated_trigger_id: StoredValue<String>,
+    /// What names an untitled dialog instead of the trigger (e.g. a date picker's button and
+    /// label).
+    pub(crate) dialog_labelledby: Option<Signal<Option<String>>>,
 }
 
 impl DialogTriggerContext {
@@ -191,7 +206,15 @@ impl DialogTriggerContext {
             trigger,
             overlay_id: RwSignal::new(None),
             generated_trigger_id: StoredValue::new(use_id("dialog-trigger")),
+            dialog_labelledby: None,
         }
+    }
+
+    /// An untitled dialog is named by `labelledby` instead of the trigger.
+    #[must_use]
+    pub(crate) fn with_dialog_labelledby(mut self, labelledby: Signal<Option<String>>) -> Self {
+        self.dialog_labelledby = Some(labelledby);
+        self
     }
 
     /// The trigger element's id, once rendered: its own (`attr:id`), else a generated one it gets

@@ -9,7 +9,11 @@ const FRUITS: [&str; 5] = ["Apple", "Banana", "Cherry", "Grape", "Orange"];
 #[component]
 pub fn ListboxConceptDemo() -> impl IntoView {
     // The options: a key and a text (for type-ahead) each.
-    let fruits = use_list_collection(Signal::stored(FRUITS.to_vec()), |fruit| Key::from(*fruit), |fruit| (*fruit).to_owned());
+    let fruits = use_list_collection(
+        Signal::stored(FRUITS.to_vec()),
+        |fruit| Key::from(*fruit),
+        |fruit| (*fruit).to_owned(),
+    );
     // App state: the selected fruits.
     let selection = RwSignal::new(Selection::keys([Key::from("Cherry")]));
 
@@ -19,7 +23,11 @@ pub fn ListboxConceptDemo() -> impl IntoView {
             Selection::Keys(keys) => keys.iter().map(ToString::to_string).collect(),
         });
         names.sort();
-        if names.is_empty() { "Nothing selected.".to_owned() } else { format!("Selected: {}.", names.join(", ")) }
+        if names.is_empty() {
+            "Nothing selected.".to_owned()
+        } else {
+            format!("Selected: {}.", names.join(", "))
+        }
     };
 
     view! {

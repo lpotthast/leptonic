@@ -18,7 +18,7 @@ use crate::{
         use_slider_state, use_slider_thumb,
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag,
+        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
         number_formatter::NumberFormatOptions, number_value::NumberValue, orientation::Orientation,
         styles::Styles,
     },
@@ -102,6 +102,8 @@ fn expect_slider() -> Option<SliderContext> {
 /// ```
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
+///
+/// Default class: `leptonic-Slider`.
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn Slider<T: NumberValue>(
@@ -146,6 +148,7 @@ pub fn Slider<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Slider", classes);
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let has_label = label_presence.has_label;
     let (value, on_change) = ValueBinding::from_state_props(values, set_values, on_change);
@@ -168,7 +171,8 @@ pub fn Slider<T: NumberValue>(
         has_label,
         aria_label,
         aria_labelledby,
-        ..UseSliderInput::new(state)
+        state,
+        aria_describedby: None,
     });
     let UseSliderReturn {
         label_props,
@@ -289,12 +293,15 @@ pub fn Slider<T: NumberValue>(
 /// The track of the [`Slider`] around it: pressing it moves the closest thumb there.
 ///
 /// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
+///
+/// Default class: `leptonic-SliderTrack`.
 #[component]
 pub fn SliderTrack(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderTrack", classes);
     let Some(slider) = expect_slider() else {
         return children().into_any();
     };
@@ -325,6 +332,8 @@ pub fn SliderTrack(
 /// (e.g. `height: 100%`).
 ///
 /// Data attributes: `data-hovered`, `data-orientation`, `data-disabled`.
+///
+/// Default class: `leptonic-SliderFill`.
 #[component]
 pub fn SliderFill(
     /// Where the fill of a one-thumb slider starts, as a value of the range (e.g. 0 in a range
@@ -334,6 +343,7 @@ pub fn SliderFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderFill", classes);
     let Some(slider) = expect_slider() else {
         return ().into_any();
     };
@@ -405,6 +415,8 @@ struct SliderThumbContext {
 ///
 /// Data attributes: `data-dragging`, `data-hovered`, `data-focused`, `data-focus-visible`,
 /// `data-disabled`.
+///
+/// Default class: `leptonic-SliderThumb`.
 #[component]
 pub fn SliderThumb(
     /// The thumb's value in the slider's values.
@@ -425,6 +437,7 @@ pub fn SliderThumb(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderThumb", classes);
     let Some(slider) = expect_slider() else {
         return ().into_any();
     };
@@ -496,12 +509,15 @@ pub enum SliderPopover {
 
 /// A tooltip with the value of the `SliderThumb` around it. Shown as `popover` says: style it
 /// hidden without `data-visible`.
+///
+/// Default class: `leptonic-SliderThumbTooltip`.
 #[component]
 pub fn SliderThumbTooltip(
     #[prop(optional)] popover: SliderPopover,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderThumbTooltip", classes);
     let Some(thumb) = use_context::<SliderThumbContext>() else {
         crate::utils::dev_warn!("A <SliderThumbTooltip> must be inside a <SliderThumb>.");
         return ().into_any();
@@ -525,11 +541,14 @@ pub fn SliderThumbTooltip(
 /// An `<output>` with the formatted values of the [`Slider`] around it ("10", "10 – 20").
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
+///
+/// Default class: `leptonic-SliderOutput`.
 #[component]
 pub fn SliderOutput(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderOutput", classes);
     let Some(slider) = expect_slider() else {
         return ().into_any();
     };
@@ -549,6 +568,8 @@ pub fn SliderOutput(
 }
 
 /// The marks of the [`Slider`] around it; render each with a [`SliderMark`].
+///
+/// Default class: `leptonic-SliderMarks`.
 #[component]
 pub fn SliderMarks<C, V>(
     #[prop(into)] marks: SliderMarks,
@@ -560,6 +581,7 @@ where
     C: Fn(Signal<Vec<ComputedSliderMark>>) -> V,
     V: IntoView + 'static,
 {
+    let classes = with_default_class("leptonic-SliderMarks", classes);
     let Some(slider) = expect_slider() else {
         return ().into_any();
     };
@@ -572,6 +594,8 @@ where
 /// (mirrored right to left), `bottom` when vertical.
 ///
 /// Data attributes: `data-in-range` while selected, `data-orientation`.
+///
+/// Default class: `leptonic-SliderMark`.
 #[component]
 pub fn SliderMark(
     mark: ComputedSliderMark,
@@ -579,6 +603,7 @@ pub fn SliderMark(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SliderMark", classes);
     let Some(SliderContext { orientation, .. }) = expect_slider() else {
         return ().into_any();
     };

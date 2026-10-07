@@ -1,0 +1,56 @@
+// Upstream: ../starters/docs/src/Select.css @ 99e610236
+// Upstream: ../starters/docs/src/Select.tsx @ 99e610236
+//
+// `Select`, `SelectTrigger` (styled as a secondary `Button`, see `button.scss`), `SelectValue`
+// and `SelectPopover` (a popover as wide as the trigger; its list box is styled in
+// `list-box.scss`). Markup, as the starter's:
+//
+//   <Select ..>
+//     <Label>..</Label>
+//     <SelectTrigger>
+//       <SelectValue />
+//       <svg class="lucide-chevron-down" ..>..</svg>
+//     </SelectTrigger>
+//     <Description>..</Description>
+//     <FieldError />
+//     <SelectPopover><ListBox>..</ListBox></SelectPopover>
+//   </Select>
+
+.leptonic-Select {
+  color: var(--text-color);
+  position: relative;
+  width: 200px;
+
+  .leptonic-SelectTrigger {
+    --button-color: var(--gray);
+    padding: 0 var(--spacing-2) 0 var(--spacing-3);
+    width: 100%;
+    min-width: 0;
+
+    &[data-pressed] {
+      scale: 1;
+    }
+  }
+
+  .leptonic-SelectValue {
+    flex: 1;
+    text-align: start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &[data-placeholder] {
+      color: var(--text-color-placeholder);
+      font-weight: normal;
+    }
+  }
+
+  .lucide-chevron-down {
+    margin-inline-start: var(--spacing-2);
+  }
+}
+
+.leptonic-SelectPopover[data-trigger='Select'] {
+  width: var(--trigger-width);
+  padding: 0;
+}

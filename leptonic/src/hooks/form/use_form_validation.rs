@@ -43,21 +43,6 @@ pub struct UseFormValidationInput {
     pub focus: Option<Callback<()>>,
 }
 
-impl UseFormValidationInput {
-    pub fn new(
-        element: CapturedElement,
-        state: UseFormValidationStateReturn,
-        validation_behavior: ValidationBehavior,
-    ) -> Self {
-        Self {
-            element,
-            state,
-            validation_behavior,
-            focus: None,
-        }
-    }
-}
-
 /// Connects a field's validation state to the browser's constraint validation:
 /// - in `Native` mode, sets the element's custom validity from the realtime validation and reads
 ///   the native validity back,

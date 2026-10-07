@@ -47,8 +47,10 @@ name):
 - UsePressAttrs
 
 `*Input` types should derive `Debug` and `Clone`. They may implement `Copy` but do not have to. When the hook needs
-something without a sensible default (its state, an element, a key), provide `UseFooInput::new(required..)` and let
-callers set the rest with struct update syntax: `UseFooInput { on_bar: Some(cb), ..UseFooInput::new(state) }`.
+something without a sensible default (its state, an element, a key), callers write a struct literal naming every field:
+`UseFooInput { state, on_bar: Some(cb), is_disabled: Signal::stored(false) }`. Never add `new(..)` (or similar)
+constructors to `*Input` types (the user's rule, 2026-10-07): creating an input stays explicit and its field names
+visible.
 Implement `Default` only when every field has a meaningful default ("everything off": optional callbacks as
 `Option<Callback<_>>`, flags as `Signal<bool>` defaulting to `false`). Never add placeholder defaults that build an
 invalid configuration (an empty state, a never-attached element).
@@ -92,21 +94,21 @@ react-aria defines the behavior; the API shape is ours (see "Based On React-Aria
 hook input/return and atom prop. They are project-wide deviations from react-aria, recorded once as global entries
 in `leptonic/src/hooks/mod.rs`; a hook's own deviation block only lists what goes beyond them.
 
-| #   | Convention | Why |
-|-----|------------|-----|
-| C1  | State flags are `is_disabled`, `is_read_only`, `is_required`, `is_invalid: Signal<bool>` (default `false`), in hook inputs and atom props alike. DOM-level `*Props` keep DOM attribute names (`disabled`, `aria_disabled`). | react-aria's names (`isDisabled`); one name per concept across hooks and atoms. |
-| C2  | Ids, `name`, `form`: `Option<String>`. User-visible text (`aria_label`, placeholders, value labels): `MaybeProp<String>`. | Text must be able to change at runtime (e.g. with the locale); `MaybeProp` accepts constants, `String`s and signals via `into`. `&'static str` rules out dynamic values. |
-| C3  | `use_foo_state(..) -> FooState`: a `Copy` struct with read-only `Signal`s and methods (`set_value`, `toggle`, ...). | Methods are discoverable and typed; a struct of `Callback` fields with tuple arguments is a JavaScript props-bag shape. |
-| C4  | Hook-owned state: `default_*` + `on_*_change` + state methods; no controlled inputs (see "Hook-Owned State"). `is_invalid: Signal<bool>` is OR-ed into validation results. | Callers can't bypass the hook's invariants; one source of truth. |
-| C5  | Hooks read locale and writing direction from the i18n context (`use_locale()`, `use_direction()`); they never take `is_rtl`, `writing_direction` or `locale` inputs. Locale-derived defaults are `Option<_>` meaning "from the locale". | react-aria's `useLocale()` does the same; per-hook flags drift apart from the actual locale. |
-| C6  | One `Orientation` enum (no `Default`; each `new` picks react-aria's default for its hook). | No near-identical per-module copies. |
-| C7  | `new(required..)` + struct update; `Default` only when everything has a meaningful default. | See above. |
-| C8  | A hook takes one `*Input`; the state it works on goes into it (`UseFooInput::new(state, ..)`). Settings that live on the state are read from it, never repeated on the hook input. | One place per setting; they can't disagree. |
-| C9  | The element the hook is named after gets `props`, other elements `<part>_props`. Label, description and error message come from `use_field` (`SlotProps`). | Uniform shapes; no per-hook label/error variants. |
-| C10 | Callbacks: `Option<Callback<NamedEvent>>`. `Arc<dyn Fn(&T) -> R>` aliases only for predicates over borrowed data. No tuple arguments, no bools meaning modes, no `Callback<()>` for configuration. Delays are `Duration`; keys are `utils::key::KeyboardKey`, pointer types `PointerType`. | Typed, self-describing call sites; no string comparisons. |
-| C11 | Anything a user could change at runtime is a `Signal<T>` with a default. `Option<Signal<T>>` only for "inherit vs. override", documented on the field. | Reactivity is the Leptos way to change configuration. |
-| C12 | ARIA attributes use the typed enums from `utils/aria.rs`; `tabindex` is `i32`. | See "ARIA Attribute Types". |
-| C13 | Units: `Fraction` (0..=1) for percentages, `Point { x, y }` for coordinates, `Duration` for time. | Units in the type, not in naming conventions. |
+| #   | Convention                                                                                                                                                                                                                                                                                 | Why                                                                                                                                                                      |
+|-----|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| C1  | State flags are `is_disabled`, `is_read_only`, `is_required`, `is_invalid: Signal<bool>` (default `false`), in hook inputs and atom props alike. DOM-level `*Props` keep DOM attribute names (`disabled`, `aria_disabled`).                                                                | react-aria's names (`isDisabled`); one name per concept across hooks and atoms.                                                                                          |
+| C2  | Ids, `name`, `form`: `Option<String>`. User-visible text (`aria_label`, placeholders, value labels): `MaybeProp<String>`.                                                                                                                                                                  | Text must be able to change at runtime (e.g. with the locale); `MaybeProp` accepts constants, `String`s and signals via `into`. `&'static str` rules out dynamic values. |
+| C3  | `use_foo_state(..) -> FooState`: a `Copy` struct with read-only `Signal`s and methods (`set_value`, `toggle`, ...).                                                                                                                                                                        | Methods are discoverable and typed; a struct of `Callback` fields with tuple arguments is a JavaScript props-bag shape.                                                  |
+| C4  | Hook-owned state: `default_*` + `on_*_change` + state methods; no controlled inputs (see "Hook-Owned State"). `is_invalid: Signal<bool>` is OR-ed into validation results.                                                                                                                 | Callers can't bypass the hook's invariants; one source of truth.                                                                                                         |
+| C5  | Hooks read locale and writing direction from the i18n context (`use_locale()`, `use_direction()`); they never take `is_rtl`, `writing_direction` or `locale` inputs. Locale-derived defaults are `Option<_>` meaning "from the locale".                                                    | react-aria's `useLocale()` does the same; per-hook flags drift apart from the actual locale.                                                                             |
+| C6  | One `Orientation` enum (no `Default`; callers name it, the docs give react-aria's default for each hook).                                                                                                                                                                                  | No near-identical per-module copies.                                                                                                                                     |
+| C7  | No constructors on `*Input` types: struct literals naming every field; `Default` (and struct update) only when everything has a meaningful default.                                                                                                                                        | Creation stays explicit, field names visible (the user's rule).                                                                                                          |
+| C8  | A hook takes one `*Input`; the state it works on goes into it (`UseFooInput { state, .. }`). Settings that live on the state are read from it, never repeated on the hook input.                                                                                                           | One place per setting; they can't disagree.                                                                                                                              |
+| C9  | The element the hook is named after gets `props`, other elements `<part>_props`. Label, description and error message come from `use_field` (`SlotProps`).                                                                                                                                 | Uniform shapes; no per-hook label/error variants.                                                                                                                        |
+| C10 | Callbacks: `Option<Callback<NamedEvent>>`. `Arc<dyn Fn(&T) -> R>` aliases only for predicates over borrowed data. No tuple arguments, no bools meaning modes, no `Callback<()>` for configuration. Delays are `Duration`; keys are `utils::key::KeyboardKey`, pointer types `PointerType`. | Typed, self-describing call sites; no string comparisons.                                                                                                                |
+| C11 | Anything a user could change at runtime is a `Signal<T>` with a default. `Option<Signal<T>>` only for "inherit vs. override", documented on the field.                                                                                                                                     | Reactivity is the Leptos way to change configuration.                                                                                                                    |
+| C12 | ARIA attributes use the typed enums from `utils/aria.rs`; `tabindex` is `i32`.                                                                                                                                                                                                             | See "ARIA Attribute Types".                                                                                                                                              |
+| C13 | Units: `Fraction` (0..=1) for percentages, `Point { x, y }` for coordinates, `Duration` for time.                                                                                                                                                                                          | Units in the type, not in naming conventions.                                                                                                                            |
 
 ## Input Destructuring
 
@@ -753,6 +755,23 @@ nothing is left to notify then. (Other events can't reach a removed element, so 
 **Reference**: `use_focus`, `use_focus_within`, `use_focus_ring`; browser test `select_components_tests`
 (dismissing a focused chip).
 
+### Effect Read Order
+
+An effect reading several memos must read upstream ones before memos derived from them (a collection before its
+filtered memo). reactive_graph 0.2 checks an effect's sources in read order, with the effect as observer: a memo
+that recomputes while a downstream memo is being checked doesn't mark the effect dirty (it assumes the observer
+triggered it), and when the effect checks that memo itself, it is already clean. If the downstream memo came out
+unchanged, the effect doesn't run, although an upstream value it reads changed. App values often reach a hook
+through memos (a value and a collection derived from one app memo), so this applies to every reconciling effect.
+
+So: read the app's inputs (bindings, collections, signals passed in) first, then the hook's own memos; read every
+source up front rather than only in some branches. No order helps when one input is an app memo and another a
+derived signal of the same upstream memo: there, read the inputs through hook-local memos, so that the effect isn't
+a direct subscriber of an app memo (the skip only spares direct subscribers).
+
+**Reference**: `use_combobox_state`'s reconciliation effect; browser test `combobox_tests` (agnite dev-ui's log
+source picker: value and items derived from one memo, with a filter).
+
 ## Hook-Owned State (React Aria Deviation)
 
 React Aria's state hooks (e.g., `useOverlayTriggerState`) use `useControlledState` to support both
@@ -935,7 +954,7 @@ Use exactly these categories, in this order, and only the ones that apply. **Eve
 | `API DIFFERENCES`             | Naming or structural changes (Rust-native API shapes)                 |
 | `DIFFERENT BEHAVIOR`          | Same feature, different approach                                      |
 | `LEPTOS-SPECIFIC ADAPTATIONS` | Changes required by Rust/Leptos (event model, SSR, ownership)         |
-| `ADDITIONS`                   | Functionality react-aria doesn't have                                  |
+| `ADDITIONS`                   | Functionality react-aria doesn't have                                 |
 | `OMITTED FEATURES`            | Not implemented: intentionally (say why) or not yet (say what blocks) |
 
 A hook without deviations says so in one line: `// No deviations from react-aria beyond the project-wide API

@@ -15,7 +15,22 @@ pub fn NumberFieldBasicDemo() -> impl IntoView {
 
     let field = use_number_field(UseNumberFieldInput {
         has_label: true.into(),
-        ..UseNumberFieldInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        is_required: Signal::stored(false),
+        placeholder: MaybeProp::default(),
+        auto_focus: false,
+        is_wheel_disabled: false,
+        increment_aria_label: MaybeProp::default(),
+        decrement_aria_label: MaybeProp::default(),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
     });
 
     // The stepper buttons come as `UseButtonInput`s: render them with `use_button`. They are named

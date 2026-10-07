@@ -9,42 +9,82 @@ pub fn PositioningDemo() -> impl IntoView {
     let side_key = RwSignal::new(Some(Side::Top.to_key()));
     let align_key = RwSignal::new(Some(Align::End.to_key()));
     let placement = Signal::derive(move || {
-        let side = Side::ALL.into_iter().find(|side| side_key.get() == Some(side.to_key())).unwrap_or(Side::Top);
-        let align = Align::ALL.into_iter().find(|align| align_key.get() == Some(align.to_key())).unwrap_or(Align::End);
+        let side = Side::ALL
+            .into_iter()
+            .find(|side| side_key.get() == Some(side.to_key()))
+            .unwrap_or(Side::Top);
+        let align = Align::ALL
+            .into_iter()
+            .find(|align| align_key.get() == Some(align.to_key()))
+            .unwrap_or(Align::End);
         side.placement(align)
     });
 
     let target = CapturedElement::new();
     let (is_open, set_is_open) = signal(false);
 
-    let UseOverlayReturn { props: overlay_props, id, .. } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn {
+        props: overlay_props,
+        id,
+        ..
+    } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
         // The trigger toggles the overlay itself, so presses on it must not count as "outside".
-        should_close_on_interact_outside: Some(InteractOutsideFilter::new(move |el: &web_sys::Element| {
-            !target.with_untracked(|target| target.is_some_and(|target| target.contains(Some(el.as_ref()))))
-        })),
-        ..UseOverlayInput::new(is_open.into(), Callback::new(move |()| set_is_open.set(false)))
+        should_close_on_interact_outside: Some(InteractOutsideFilter::new(
+            move |el: &web_sys::Element| {
+                !target.with_untracked(|target| {
+                    target.is_some_and(|target| target.contains(Some(el.as_ref())))
+                })
+            },
+        )),
+        is_open: is_open.into(),
+        on_close: Callback::new(move |()| set_is_open.set(false)),
+        should_close_on_blur: Signal::stored(false),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        group: None,
     });
     let overlay_attrs = StoredValue::new(overlay_props.into_attrs());
 
-    let UseOverlayTriggerReturn { props: trigger_props } = use_overlay_trigger(UseOverlayTriggerInput {
+    let UseOverlayTriggerReturn {
+        props: trigger_props,
+    } = use_overlay_trigger(UseOverlayTriggerInput {
         show: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
 
-    let UseOverlayPositionReturn { props: position_props, placement: opened_on, .. } =
-        use_overlay_position(UseOverlayPositionInput {
-            placement,
-            offset: Signal::stored(8.0),
-            ..UseOverlayPositionInput::new(target, is_open.into())
-        });
+    let UseOverlayPositionReturn {
+        props: position_props,
+        placement: opened_on,
+        ..
+    } = use_overlay_position(UseOverlayPositionInput {
+        placement,
+        offset: Signal::stored(8.0),
+        target,
+        is_open: is_open.into(),
+        container_padding: Signal::stored(12.0),
+        cross_offset: Signal::stored(0.0),
+        should_flip: Signal::stored(true),
+        boundary: None,
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        should_update_position: Signal::stored(true),
+        target_rect: Signal::stored(None),
+        scroll: None,
+        on_close: None,
+    });
     let (position_attrs, position_styles) = position_props.into_parts();
     let position_attrs = StoredValue::new(position_attrs);
     let position_styles = StoredValue::new(position_styles);
 
-    let UseButtonReturn { props: button_props, .. } = use_button(UseButtonInput {
-        on_press: Some(Callback::new(move |_| set_is_open.update(|open| *open = !*open))),
+    let UseButtonReturn {
+        props: button_props,
+        ..
+    } = use_button(UseButtonInput {
+        on_press: Some(Callback::new(move |_| {
+            set_is_open.update(|open| *open = !*open);
+        })),
         ..UseButtonInput::default()
     });
     let (button_attrs, button_styles) = button_props.into_parts();
@@ -117,7 +157,14 @@ enum Side {
 }
 
 impl Side {
-    const ALL: [Self; 6] = [Self::Top, Self::Bottom, Self::Left, Self::Right, Self::Start, Self::End];
+    const ALL: [Self; 6] = [
+        Self::Top,
+        Self::Bottom,
+        Self::Left,
+        Self::Right,
+        Self::Start,
+        Self::End,
+    ];
 
     /// The placement for this side and alignment (top and bottom align horizontally, the other sides vertically).
     fn placement(self, align: Align) -> Placement {

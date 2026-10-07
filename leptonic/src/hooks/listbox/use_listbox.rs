@@ -7,8 +7,8 @@ use crate::{
     hooks::{
         IntoAttrs, Orientation,
         collections::{
-            CollectionOptions, Key, KeyboardDelegate, LinkBehavior, ListLayout, ListState,
-            SelectionBehavior, SelectionMode, UseSelectableCollectionAttrs,
+            CollectionOptions, Key, KeyboardDelegate, LayoutDelegate, LinkBehavior, ListLayout,
+            ListState, SelectionBehavior, SelectionMode, UseSelectableCollectionAttrs,
             UseSelectableCollectionProps, UseSelectableListInput, use_selectable_list,
         },
         focus::use_focus_within::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
@@ -30,9 +30,6 @@ use crate::{
 // - No built-in visible label (`label` prop): render the label yourself and pass its id as
 //   `aria_labelledby`.
 //
-// ## OMITTED FEATURES
-// - Virtualization.
-//
 // =============================================================================
 
 /// Input of [`use_listbox`].
@@ -53,6 +50,12 @@ pub struct UseListBoxInput {
     pub layout: ListLayout,
     /// Replaces the list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Where the options are, for the list keyboard delegate. Default: measured in the DOM (a
+    /// virtualizer's layout knows options that aren't rendered).
+    pub layout_delegate: Option<Arc<dyn LayoutDelegate>>,
+    /// Whether only the visible options are rendered: options tell their position and the
+    /// number of options (`aria-posinset`, `aria-setsize`).
+    pub is_virtualized: bool,
     /// Keyboard and focus behavior. `link_behavior` defaults to `Override` in `Toggle` selection
     /// behavior (pressing a link item opens it, selection needs a checkbox).
     pub options: CollectionOptions,
@@ -70,32 +73,11 @@ pub struct UseListBoxInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
-impl UseListBoxInput {
-    /// A vertical listbox for `state`, with all other settings at their defaults.
-    pub fn new(state: ListState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: Signal::stored(None),
-            orientation: Orientation::Vertical,
-            layout: ListLayout::Stack,
-            keyboard_delegate: None,
-            options: CollectionOptions::default(),
-            should_select_on_press_up: false,
-            should_focus_on_hover: false,
-            on_action: None,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        }
-    }
-}
-
 /// What options need to know about their listbox. Pass it to `use_option` (atoms provide it as
 /// context).
 #[derive(Debug, Clone)]
+// Independent flags (react-aria's list data).
+#[allow(clippy::struct_excessive_bools)]
 pub struct ListBoxData {
     pub state: ListState,
     /// The listbox element id; option ids derive from it.
@@ -108,6 +90,8 @@ pub struct ListBoxData {
     pub on_action: Option<Callback<Key>>,
     /// Options are focused virtually (`CollectionOptions::should_use_virtual_focus`).
     pub should_use_virtual_focus: bool,
+    /// Only the visible options are rendered.
+    pub is_virtualized: bool,
 }
 
 /// Return value of [`use_listbox`].
@@ -169,16 +153,36 @@ impl IntoAttrs for UseListBoxProps {
 ///     selection_mode: Signal::stored(SelectionMode::Multiple), ..SelectionOptions::default() } });
 /// let element = CapturedElement::new();
 /// let listbox = use_listbox(UseListBoxInput {
-///     aria_label: Some("Fruits".to_owned()),
-///     ..UseListBoxInput::new(state, element)
+///     state,
+///     element,
+///     id: None,
+///     aria_label: "Fruits".into(),
+///     aria_labelledby: Signal::stored(None),
+///     orientation: Orientation::Vertical,
+///     layout: ListLayout::Stack,
+///     keyboard_delegate: None,
+///     layout_delegate: None,
+///     is_virtualized: false,
+///     options: CollectionOptions::default(),
+///     should_select_on_press_up: false,
+///     should_focus_on_hover: false,
+///     on_action: None,
+///     on_focus: None,
+///     on_blur: None,
+///     on_focus_change: None,
 /// });
 /// let data = listbox.data.clone();
 /// view! {
 ///     <ul {..listbox.props.into_attrs()}>
 ///         <For each=move || fruits.get() key=|f| f.id let:fruit>
 ///             {
-///                 let option = use_option(UseOptionInput { list: data.clone(), key: fruit.id.into() });
-///                 view! { <li {..option.props.into_attrs()}>{fruit.name}</li> }
+///                 let option = use_option(UseOptionInput {
+///                     list: data.clone(),
+///                     key: fruit.id.into(),
+///                     on_context_menu: None,
+///                 });
+///                 let (attrs, styles) = option.props.into_parts();
+///                 view! { <li {..attrs} style=styles>{fruit.name}</li> }
 ///             }
 ///         </For>
 ///     </ul>
@@ -194,6 +198,8 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         orientation,
         layout,
         keyboard_delegate,
+        layout_delegate,
+        is_virtualized,
         mut options,
         should_select_on_press_up,
         should_focus_on_hover,
@@ -218,6 +224,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         orientation,
         layout,
         keyboard_delegate,
+        layout_delegate,
         options,
     })
     .props;
@@ -241,6 +248,7 @@ pub fn use_listbox(input: UseListBoxInput) -> UseListBoxReturn {
         link_behavior: options.link_behavior,
         on_action,
         should_use_virtual_focus: options.should_use_virtual_focus,
+        is_virtualized,
     };
 
     UseListBoxReturn {

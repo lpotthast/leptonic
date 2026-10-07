@@ -1,5 +1,5 @@
 use leptonic::{
-    components::prelude::{AnchorLink, Button, ButtonColor, ButtonSize, ButtonVariant},
+    atoms::prelude::{AnchorLink, Button},
     utils::{clipboard::write_text, live_announcer::announce_polite},
 };
 use leptos::{context::Provider, prelude::*};
@@ -8,7 +8,7 @@ use leptos_router::hooks::use_location;
 
 use super::section::{Parent, heading, slug};
 use crate::{
-    app::{MAIN_ID, SITE_DESCRIPTION},
+    app::{MainLandmark, NavLandmark, SITE_DESCRIPTION},
     nav::nav,
 };
 
@@ -75,7 +75,7 @@ pub fn DocPage(
     view! {
         <Title text=format!("{title} \u{2013} Leptonic")/>
         <Meta name="description" content=description/>
-        <main id=MAIN_ID class="doc-main" tabindex="-1">
+        <MainLandmark class="doc-main">
             {header}
             <article class="doc-article">
                 <div class="doc-article-header">
@@ -84,7 +84,7 @@ pub fn DocPage(
                 </div>
                 {content}
             </article>
-        </main>
+        </MainLandmark>
         <TableOfContents entries=toc.0.get_value()/>
     }
 }
@@ -122,9 +122,10 @@ fn list(items: &[&str]) -> String {
 fn lowercase_first(text: &str) -> String {
     let mut chars = text.chars();
     match (chars.next(), chars.next()) {
-        (Some(first), Some(second)) if first.is_uppercase() && second.is_lowercase() => {
-            first.to_lowercase().chain(text[first.len_utf8()..].chars()).collect()
-        }
+        (Some(first), Some(second)) if first.is_uppercase() && second.is_lowercase() => first
+            .to_lowercase()
+            .chain(text[first.len_utf8()..].chars())
+            .collect(),
         _ => text.to_owned(),
     }
 }
@@ -132,7 +133,7 @@ fn lowercase_first(text: &str) -> String {
 #[component]
 fn TableOfContents(entries: Vec<TocEntry>) -> impl IntoView {
     view! {
-        <nav id="book-toc" aria-label="Table of contents">
+        <NavLandmark id="book-toc" label="Table of contents">
             <h2>"Contents"</h2>
             <ul>
                 {entries
@@ -140,13 +141,13 @@ fn TableOfContents(entries: Vec<TocEntry>) -> impl IntoView {
                     .map(|TocEntry { level, id, title }| {
                         view! {
                             <li data-level=level>
-                                <AnchorLink href=format!("#{id}")>{title}</AnchorLink>
+                                <AnchorLink href=format!("#{id}") classes="doc-toc-link">{title}</AnchorLink>
                             </li>
                         }
                     })
                     .collect_view()}
             </ul>
-        </nav>
+        </NavLandmark>
     }
 }
 
@@ -165,10 +166,7 @@ enum CopyState {
 /// press, not after awaiting a download.
 #[component]
 fn CopyAsMarkdownButton() -> impl IntoView {
-    let md_url = StoredValue::new(format!(
-        "{}.md",
-        use_location().pathname.get_untracked()
-    ));
+    let md_url = StoredValue::new(format!("{}.md", use_location().pathname.get_untracked()));
     let markdown = StoredValue::new(None::<String>);
     let state = RwSignal::new(CopyState::Idle);
 
@@ -211,13 +209,7 @@ fn CopyAsMarkdownButton() -> impl IntoView {
     };
 
     view! {
-        <Button
-            on_press=copy
-            variant=ButtonVariant::Outlined
-            color=ButtonColor::Secondary
-            size=ButtonSize::Small
-            classes="doc-copy-markdown"
-        >
+        <Button on_press=copy classes="doc-copy-markdown">
             {move || match state.get() {
                 CopyState::Idle => "Copy as Markdown",
                 CopyState::Copied => "Copied",
@@ -281,9 +273,9 @@ mod tests {
         for page in nav().pages() {
             let description = page_description(page, "Title");
             if description == SITE_DESCRIPTION
-                && !nav()
-                    .groups()
-                    .any(|group| group.overview.as_deref() == Some(page) && group.entries.is_empty())
+                && !nav().groups().any(|group| {
+                    group.overview.as_deref() == Some(page) && group.entries.is_empty()
+                })
             {
                 missing.push(page);
             }

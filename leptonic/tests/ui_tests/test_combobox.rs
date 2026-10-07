@@ -15,7 +15,8 @@ const LISTBOX: &str = "[role=listbox]";
 
 /// Behavior of the `ComboBox` atoms: filtering while typing, virtual focus (DOM focus stays in
 /// the input, `aria-activedescendant` points at the focused option), keyboard and pointer
-/// selection, and reverting with Escape.
+/// selection, reverting with Escape, a controlled value changed from outside, and a combo box
+/// in a modal dialog.
 pub struct ComboBoxTests {}
 
 #[async_trait]
@@ -34,6 +35,8 @@ impl BrowserTest<str> for ComboBoxTests {
         button_shows_all_options_and_click_selects(&page).await?;
         arrow_down_opens_with_the_selected_option_focused(&page).await?;
         clearing_the_input_clears_the_value(&page).await?;
+        externally_changed_value_shows_in_the_input(&page).await?;
+        popover_in_a_modal_stays_interactive(&page).await?;
 
         Ok(())
     }
@@ -129,11 +132,7 @@ async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), Repo
     // The combo box hides the rest of the page from screen readers (react-aria's `useComboBox`),
     // but not its input, and leaves the page usable: `aria-hidden`, nothing inert.
     assert_that!(page.count_matching("[aria-hidden=true]").await?).is_greater_than(0);
-    assert_that!(
-        page.count_matching("[role=combobox]:is([aria-hidden=true], [aria-hidden=true] *)")
-            .await?
-    )
-    .is_equal_to(0);
+    assert_that!(within(page, &input, "[aria-hidden=true]").await?).is_false();
     assert_that!(page.count_matching("[inert]").await?).is_equal_to(0);
 
     input.send_keys(Key::Down).await?;
@@ -222,4 +221,113 @@ async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), Repo
     input.send_keys(Key::Control + "a").await?;
     input.send_keys(Key::Backspace).await?;
     page.wait_for_text("test-cb-value", "").await
+}
+
+/// The input of the combo box labelled `label`.
+async fn input_labelled(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
+    let label = page
+        .driver
+        .find(By::XPath(format!("//label[normalize-space()='{label}']")))
+        .await?;
+    let id = label.attr("for").await?.unwrap_or_default();
+    page.element(&id).await
+}
+
+async fn wait_for_input_value(input: &WebElement, expected: &str) -> Result<(), Report> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    loop {
+        let value = input.prop("value").await?.unwrap_or_default();
+        if value == expected {
+            return Ok(());
+        }
+        if std::time::Instant::now() > deadline {
+            leptos_browser_test::bail!("expected input value {expected:?}, got {value:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// A controlled value changed from outside resets the input to the selected item's text
+/// (upstream resets it whenever the selected key changes), also for an item added to the
+/// collection in the same update.
+async fn externally_changed_value_shows_in_the_input(page: &Page<'_>) -> Result<(), Report> {
+    let input = input_labelled(page, "Controlled fruit").await?;
+    wait_for_input_value(&input, "Apple").await?;
+    page.click_element_with_id("test-cb-controlled-set").await?;
+    wait_for_input_value(&input, "Banana").await?;
+    page.click_element_with_id("test-cb-controlled-add").await?;
+    wait_for_input_value(&input, "Fig").await?;
+    page.click_element_with_id("test-cb-controlled-select-then-add")
+        .await?;
+    wait_for_input_value(&input, "Grape").await?;
+
+    // Value and items derived from one app signal; the previous item leaves as the new one
+    // comes (agnite dev-ui's log source picker).
+    let input = input_labelled(page, "Logs of").await?;
+    wait_for_input_value(&input, "Orchestration").await?;
+    page.click_element_with_id("test-cb-derived-1").await?;
+    wait_for_input_value(&input, "Process 1").await?;
+    page.click_element_with_id("test-cb-derived-2").await?;
+    wait_for_input_value(&input, "Process 2").await?;
+    // All options show: the input's text is the selection, not a filter.
+    input
+        .find(By::XPath("following-sibling::button"))
+        .await?
+        .click()
+        .await?;
+    expect_options(page, &["Orchestration", "Process 2"]).await?;
+    input.send_keys(Key::Escape).await?;
+
+    // Changed by a timer, with no event around it (agnite dev-ui's minimal case): the input
+    // follows, and the next button press opens the popover.
+    let input = input_labelled(page, "Timed fruit").await?;
+    page.click_element_with_id("test-cb-timed-start").await?;
+    wait_for_input_value(&input, "Banana").await?;
+    input
+        .find(By::XPath("following-sibling::button"))
+        .await?
+        .click()
+        .await?;
+    page.wait_for_selector(LISTBOX).await?;
+    input.send_keys(Key::Escape).await?;
+    page.wait_for_no_selector(LISTBOX).await?;
+    // Written while an effect runs.
+    page.click_element_with_id("test-cb-timed-effect").await?;
+    wait_for_input_value(&input, "Cherry").await?;
+    input
+        .find(By::XPath("following-sibling::button"))
+        .await?
+        .click()
+        .await?;
+    page.wait_for_selector(LISTBOX).await?;
+    input.send_keys(Key::Escape).await?;
+    Ok(())
+}
+
+/// A combo box in a modal: its popover is portaled next to the modal, which hides everything
+/// outside it, but the popover opened from inside stays interactive (agnite dev-ui's report).
+async fn popover_in_a_modal_stays_interactive(page: &Page<'_>) -> Result<(), Report> {
+    page.click_element_with_id("test-cb-modal-open").await?;
+    page.wait_for_selector("[role=dialog] [role=combobox]")
+        .await?;
+    page.css("[role=dialog] button").await?.click().await?;
+    expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
+    let option = page.by_role_and_text("option", "Durian").await?;
+    assert_that!(within(page, &option, "[inert]").await?).is_false();
+    option.click().await?;
+    page.wait_for_text("test-cb-modal-value", "Durian").await?;
+    page.send_keys_to_active(Key::Escape).await?;
+    page.wait_for_no_selector("[role=dialog]").await
+}
+
+/// Whether `element` is or is inside an element matching `selector`.
+async fn within(page: &Page<'_>, element: &WebElement, selector: &str) -> Result<bool, Report> {
+    Ok(page
+        .driver
+        .execute(
+            "return arguments[0].closest(arguments[1]) !== null;",
+            vec![element.to_json()?, serde_json::Value::from(selector)],
+        )
+        .await?
+        .convert::<bool>()?)
 }

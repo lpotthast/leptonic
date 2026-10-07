@@ -221,8 +221,8 @@
     .demo-tab-panel { flex: 1; min-width: 0; padding-top: var(--book-space-s); }
 }
 
-// A tab: the layout, shared by the atom (`.demo-tab`) and hook (`.demo-hook-tab`) demos. Tabs have no hovered or
-// focus-visible attribute yet, hence `:hover` and `:focus-visible`.
+// A tab: the layout, shared by the atom (`.demo-tab`) and hook (`.demo-hook-tab`) demos. The atom sets
+// `data-hovered` and `data-focus-visible`; the hook demos render plain elements, hence `:hover` and `:focus-visible`.
 .demo-tab,
 .demo-hook-tab {
     flex: none;
@@ -232,6 +232,14 @@
     cursor: pointer;
     user-select: none;
 
+}
+
+.demo-tab {
+    &[data-hovered] { color: var(--main-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -5px; }
+}
+
+.demo-hook-tab {
     &:hover { color: var(--main-color); }
     &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -5px; }
 }

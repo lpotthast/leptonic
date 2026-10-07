@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -87,7 +87,8 @@ pub fn PageInstallation() -> impl IntoView {
                                 <TableCell>
                                     "Copying to the clipboard: the copy button of code blocks ("
                                     <Link href=routes::doc::Typography.materialize()>"Code"</Link>") and "
-                                    <Code inline=true>"leptonic::utils::clipboard::write_text"</Code>"."
+                                    <Code inline=true>"leptonic::utils::clipboard::write_text"</Code>". Needs only "
+                                    <Code inline=true>"hooks"</Code>"; the copy button also needs "<Code inline=true>"components"</Code>"."
                                 </TableCell>
                             </TableRow>
                             <TableRow>
@@ -105,7 +106,7 @@ pub fn PageInstallation() -> impl IntoView {
                                 <TableCell><Code inline=true>"tiptap"</Code></TableCell>
                                 <TableCell>
                                     "The "<Link href=routes::doc::RichTextEditor.materialize()>"Rich Text Editor"</Link>
-                                    ". The build script copies its JavaScript into your app."
+                                    ". Its JavaScript ships with the "<Code inline=true>"leptos-tiptap"</Code>" crate."
                                 </TableCell>
                             </TableRow>
                             <TableRow>

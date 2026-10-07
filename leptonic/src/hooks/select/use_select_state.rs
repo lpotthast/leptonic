@@ -1,6 +1,7 @@
 // Upstream: react-stately/src/select/useSelectState.ts @ 99e6102368
 use std::collections::HashSet;
 
+use crate::hooks::collections::CloseOnSelect;
 use leptos::prelude::*;
 
 use crate::{
@@ -58,7 +59,7 @@ pub struct UseSelectStateInput {
     pub on_change: Option<Callback<Vec<Key>>>,
     pub disabled_keys: Signal<HashSet<Key>>,
     /// Close the popover when an option is selected. `None`: in `Single` mode.
-    pub should_close_on_select: Option<bool>,
+    pub should_close_on_select: CloseOnSelect,
     /// Allow opening the popover without options (e.g. to show an empty state).
     pub allows_empty_collection: bool,
     pub default_open: bool,
@@ -70,28 +71,6 @@ pub struct UseSelectStateInput {
     pub validation_behavior: ValidationBehavior,
     /// The form field name (matches server-side validation errors).
     pub name: Option<String>,
-}
-
-impl UseSelectStateInput {
-    /// A single-selection select over `collection`, with nothing selected.
-    pub fn new(collection: CollectionMemo) -> Self {
-        Self {
-            collection,
-            selection_mode: SelectMode::Single,
-            default_value: Vec::new(),
-            value: None,
-            on_change: None,
-            disabled_keys: Signal::stored(HashSet::new()),
-            should_close_on_select: None,
-            allows_empty_collection: false,
-            default_open: false,
-            on_open_change: None,
-            is_invalid: Signal::stored(false),
-            validate: None,
-            validation_behavior: ValidationBehavior::default(),
-            name: None,
-        }
-    }
 }
 
 /// The state of a select: its options and selection, whether its popover is open, focus and
@@ -237,7 +216,7 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
         name,
     } = input;
     let should_close_on_select =
-        should_close_on_select.unwrap_or(selection_mode == SelectMode::Single);
+        should_close_on_select.resolve(|| selection_mode == SelectMode::Single);
 
     let menu_trigger = use_menu_trigger_state(UseMenuTriggerStateInput {
         default_open,
@@ -310,6 +289,7 @@ pub fn use_select_state(input: UseSelectStateInput) -> SelectState {
 
     let selection = list.selection;
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value: Signal::derive(move || ordered(collection, selection.selected_keys())),
         validate,
@@ -360,7 +340,18 @@ mod tests {
             let state = use_select_state(UseSelectStateInput {
                 default_value: vec![Key::from("b")],
                 on_change: Some(Callback::new(move |v| changes.update(|c| c.push(v)))),
-                ..UseSelectStateInput::new(fruits(&["a", "b", "c"]))
+                collection: fruits(&["a", "b", "c"]),
+                selection_mode: SelectMode::Single,
+                value: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
             });
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             state.list.selection.select(&Key::from("b"), None);
@@ -375,7 +366,19 @@ mod tests {
             let value = RwSignal::new(vec![Key::from("b")]);
             let state = use_select_state(UseSelectStateInput {
                 value: Some(value.into()),
-                ..UseSelectStateInput::new(fruits(&["a", "b", "c"]))
+                collection: fruits(&["a", "b", "c"]),
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
             });
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             // Selecting writes the app state.
@@ -392,7 +395,22 @@ mod tests {
     #[test]
     fn selecting_closes_in_single_mode() {
         Owner::new().with(|| {
-            let state = use_select_state(UseSelectStateInput::new(fruits(&["a", "b"])));
+            let state = use_select_state(UseSelectStateInput {
+                collection: fruits(&["a", "b"]),
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                value: None,
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
+            });
             state.open(None);
             assert_that!(state.menu_trigger.overlay.is_open.get_untracked()).is_true();
             state.list.selection.select(&Key::from("a"), None);
@@ -405,7 +423,19 @@ mod tests {
         Owner::new().with(|| {
             let state = use_select_state(UseSelectStateInput {
                 selection_mode: SelectMode::Multiple,
-                ..UseSelectStateInput::new(fruits(&["a", "b", "c"]))
+                collection: fruits(&["a", "b", "c"]),
+                default_value: Vec::new(),
+                value: None,
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
             });
             state.open(None);
             state.set_value(vec![Key::from("c"), Key::from("a")]);
@@ -418,7 +448,22 @@ mod tests {
     #[test]
     fn single_mode_keeps_one_key() {
         Owner::new().with(|| {
-            let state = use_select_state(UseSelectStateInput::new(fruits(&["a", "b"])));
+            let state = use_select_state(UseSelectStateInput {
+                collection: fruits(&["a", "b"]),
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                value: None,
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
+            });
             state.set_value(vec![Key::from("b"), Key::from("a")]);
             assert_that!(untrack(|| state.value())).is_equal_to(vec![Key::from("b")]);
         });
@@ -427,12 +472,39 @@ mod tests {
     #[test]
     fn does_not_open_without_options() {
         Owner::new().with(|| {
-            let state = use_select_state(UseSelectStateInput::new(fruits(&[])));
+            let state = use_select_state(UseSelectStateInput {
+                collection: fruits(&[]),
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                value: None,
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                allows_empty_collection: false,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
+            });
             state.open(None);
             assert_that!(state.menu_trigger.overlay.is_open.get_untracked()).is_false();
             let state = use_select_state(UseSelectStateInput {
                 allows_empty_collection: true,
-                ..UseSelectStateInput::new(fruits(&[]))
+                collection: fruits(&[]),
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                value: None,
+                on_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                should_close_on_select: CloseOnSelect::Auto,
+                default_open: false,
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
             });
             state.open(None);
             assert_that!(state.menu_trigger.overlay.is_open.get_untracked()).is_true();

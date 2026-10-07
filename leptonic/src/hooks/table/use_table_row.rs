@@ -28,6 +28,9 @@ pub struct UseTableRowInput {
     pub table: TableData,
     /// The row's key.
     pub key: Key,
+    /// Called when a context menu is requested on the row (right click, Shift+F10, the context
+    /// menu key; a long press on iOS unless it selects).
+    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_table_row`].
@@ -64,7 +67,11 @@ impl IntoAttrs for UseTableRowProps {
 
 /// A body row of a table, labelled by its row header cells.
 pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
-    let UseTableRowInput { table, key } = input;
+    let UseTableRowInput {
+        table,
+        key,
+        on_context_menu,
+    } = input;
     let aria_labelledby = table.row_labelledby(&key);
     let UseGridRowReturn {
         row_props,
@@ -77,6 +84,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     } = use_grid_row(UseGridRowInput {
         grid: table.grid,
         key,
+        on_context_menu,
     });
     let (row, styles) = row_props.into_inner();
     UseTableRowReturn {

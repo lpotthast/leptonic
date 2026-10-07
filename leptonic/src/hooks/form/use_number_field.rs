@@ -20,6 +20,8 @@ use super::{
     },
     use_text_field_state::TextFieldState,
 };
+use crate::hooks::InputType;
+use crate::hooks::TextFieldElement;
 use crate::{
     hooks::{
         IntoAttrs, UseButtonInput,
@@ -94,30 +96,6 @@ pub struct UseNumberFieldInput<T: NumberValue> {
     pub on_focus_change: Option<Callback<bool>>,
     pub on_key_down: Option<Callback<KeyboardEventWrapper>>,
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
-}
-
-impl<T: NumberValue> UseNumberFieldInput<T> {
-    pub fn new(state: NumberFieldState<T>) -> Self {
-        Self {
-            state,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            is_required: Signal::stored(false),
-            placeholder: MaybeProp::default(),
-            auto_focus: false,
-            is_wheel_disabled: false,
-            increment_aria_label: MaybeProp::default(),
-            decrement_aria_label: MaybeProp::default(),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_key_down: None,
-            on_key_up: None,
-        }
-    }
 }
 
 /// Return value of [`use_number_field`].
@@ -222,7 +200,25 @@ impl IntoAttrs for UseNumberFieldInputProps {
 ///
 /// ```ignore
 /// let state = use_number_field_state(UseNumberFieldStateInput::<u8>::default());
-/// let field = use_number_field(UseNumberFieldInput { has_label: true, ..UseNumberFieldInput::new(state) });
+/// let field = use_number_field(UseNumberFieldInput {
+///     state,
+///     id: None,
+///     has_label: Signal::stored(true),
+///     aria_label: MaybeProp::default(),
+///     aria_labelledby: None,
+///     aria_describedby: None,
+///     is_required: Signal::stored(false),
+///     placeholder: MaybeProp::default(),
+///     auto_focus: false,
+///     is_wheel_disabled: false,
+///     increment_aria_label: MaybeProp::default(),
+///     decrement_aria_label: MaybeProp::default(),
+///     on_focus: None,
+///     on_blur: None,
+///     on_focus_change: None,
+///     on_key_down: None,
+///     on_key_up: None,
+/// });
 /// let increment = use_button(field.increment_button);
 /// view! {
 ///     <label {..field.label_props.into_attrs()}>"Quantity"</label>
@@ -363,7 +359,25 @@ pub fn use_number_field<T: NumberValue>(input: UseNumberFieldInput<T>) -> UseNum
         on_key_down,
         on_key_up,
         shortcuts: Some(shortcuts),
-        ..UseTextFieldInput::new(text_state)
+        state: text_state,
+        element: TextFieldElement::Input,
+        input_type: Signal::stored(InputType::Text),
+        is_invalid: Signal::stored(false),
+        validate: None,
+        name: None,
+        form: None,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        auto_capitalize: None,
+        enter_key_hint: None,
+        exclude_from_tab_order: false,
+        label_id: None,
+        aria_errormessage: None,
+        aria_activedescendant: Signal::stored(None),
+        aria_autocomplete: None,
+        aria_haspopup: None,
+        aria_controls: Signal::stored(None),
     });
 
     use_form_reset(UseFormResetInput {
@@ -643,12 +657,13 @@ fn use_native_range_validation<T: NumberValue>(
     // When the value or range changes, and right before each commit (react-aria: in a layout
     // effect, which runs before the commit's effect). Registered after the text field's reader,
     // so its merged result wins.
+    // The inputs before the validation memo derived from them ("Effect Read Order").
     Effect::new(move |_| {
-        state.validation.realtime_validation.track();
         state.number_value.track();
         state.min_value.track();
         state.max_value.track();
         state.step.track();
+        state.validation.realtime_validation.track();
         if element.get().is_some() {
             sync();
         }

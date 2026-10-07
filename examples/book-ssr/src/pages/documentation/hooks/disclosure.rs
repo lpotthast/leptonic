@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::disclosure::DisclosureDemo;
@@ -33,8 +32,8 @@ pub fn PageUseDisclosure() -> impl IntoView {
             <Section title="use_disclosure">
                 <Section title="Input" id="use-disclosure-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseDisclosureInput::new(state)"</Code>" from a "
-                        <AnchorLink href="#use-disclosure-state">"use_disclosure_state"</AnchorLink>"."
+                        "Pass a "<Code inline=true>"UseDisclosureInput"</Code>" with both fields named; "<Code inline=true>"state"</Code>
+                        " is the result of "<AnchorLink href="#use-disclosure-state">"use_disclosure_state"</AnchorLink>"."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseDisclosureInput">
@@ -70,7 +69,8 @@ pub fn PageUseDisclosure() -> impl IntoView {
                             };
 
                             let state = use_disclosure_state(UseDisclosureStateInput::default());
-                            let disclosure = use_disclosure(UseDisclosureInput::new(state));
+                            let disclosure = use_disclosure(UseDisclosureInput { state, is_disabled: false.into() });
+
                             let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
 
                             view! {
@@ -192,7 +192,6 @@ pub fn PageUseDisclosure() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure overview"</Link></li>
                 <li><Link href=routes::doc::disclosure::Atom.materialize()>"Disclosure Atoms"</Link></li>
-                <li><Link href=routes::doc::disclosure::Component.materialize()>"Disclosure Components"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
             </SeeAlso>
         </DocPage>

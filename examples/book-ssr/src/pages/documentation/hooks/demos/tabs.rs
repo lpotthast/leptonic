@@ -1,3 +1,6 @@
+use leptonic::hooks::KeyboardActivation;
+use leptonic::hooks::Orientation;
+use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
     components::prelude::*,
     hooks::{
@@ -19,7 +22,12 @@ const TABS: [(&str, &str); 4] = [
 /// One tab, rendered with `use_tab`. Its state shows in `aria-selected` and `aria-disabled`.
 #[component]
 fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
+    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput {
+        list,
+        key: Key::from(key),
+        is_disabled: Signal::stored(false),
+        should_select_on_press_up: SelectOnPressUp::Auto,
+    });
     let (attrs, styles) = tab_props.into_parts();
 
     view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
@@ -38,18 +46,27 @@ pub fn TabsDemo() -> impl IntoView {
     // Without a `default_selected_key`, the first enabled tab is selected.
     let state = use_tab_list_state(UseTabListStateInput {
         is_disabled: disabled.into(),
-        ..UseTabListStateInput::new(collection)
+        collection,
+        default_selected_key: None,
+        selected_key: None,
+        on_selection_change: None,
+        disabled_keys: Signal::default(),
     });
     let tabs = TabListData::new(state);
 
     let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
         aria_label: "Product".into(),
-        ..UseTabListInput::new(tabs.clone(), CapturedElement::new())
+        tabs: tabs.clone(),
+        element: CapturedElement::new(),
+        orientation: Orientation::Horizontal,
+        keyboard_activation: KeyboardActivation::Automatic,
+        aria_labelledby: None,
     });
     // `key: None`: one panel that always shows the selected tab.
     let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
 
-    let content = move || match state.selected_key().map(|key| key.to_string()).as_deref() {
+    let content = move || {
+        match state.selected_key().map(|key| key.to_string()).as_deref() {
         Some("specs") => view! {
             <h4>"Specs"</h4>
             <p>"Aluminium frame, 1.2 kg, USB-C charging."</p>
@@ -66,6 +83,7 @@ pub fn TabsDemo() -> impl IntoView {
             <p>"A lightweight, foldable reading lamp."</p>
         }
         .into_any(),
+    }
     };
 
     view! {

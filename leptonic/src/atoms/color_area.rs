@@ -9,7 +9,8 @@ use crate::{
     atoms::color_thumb::{AreaThumbParts, ColorThumbContext, ThumbParts},
     hooks::{UseColorAreaInput, UseColorAreaStateInput, use_color_area, use_color_area_state},
     utils::{
-        ValueBinding, classes::Classes, color::ColorValue, data_attributes::flag, styles::Styles,
+        ValueBinding, classes::Classes, color::ColorValue, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -34,6 +35,8 @@ use crate::{
 /// ```
 ///
 /// Data attributes: `data-disabled`.
+///
+/// Default class: `leptonic-ColorArea`.
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn ColorArea<C: ColorValue + Default>(
@@ -78,6 +81,7 @@ pub fn ColorArea<C: ColorValue + Default>(
     /// The `ColorThumb`, and anything else to draw on the area.
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorArea", classes);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<C>);
     let state = use_color_area_state(UseColorAreaStateInput {
@@ -86,7 +90,9 @@ pub fn ColorArea<C: ColorValue + Default>(
         y_channel,
         on_change,
         on_change_end,
-        ..UseColorAreaStateInput::new(default_value.unwrap_or_default())
+        default_value: default_value.unwrap_or_default(),
+        x_channel_step: None,
+        y_channel_step: None,
     });
     let area = use_color_area(UseColorAreaInput {
         is_disabled,
@@ -96,7 +102,8 @@ pub fn ColorArea<C: ColorValue + Default>(
         x_name,
         y_name,
         form,
-        ..UseColorAreaInput::new(state)
+        state,
+        aria_details: None,
     });
     let color = state.display_color();
     let context = ColorThumbContext::new(

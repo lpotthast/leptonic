@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{field_custom::FieldCustomDemo, field_parts::FieldPartsDemo};

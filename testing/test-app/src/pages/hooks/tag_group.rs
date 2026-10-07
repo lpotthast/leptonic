@@ -34,7 +34,14 @@ pub fn PageHookTagGroup() -> impl IntoView {
         on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
             tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
         })),
-        ..UseTagGroupInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        keyboard_delegate: None,
+        on_action: None,
     });
 
     view! {

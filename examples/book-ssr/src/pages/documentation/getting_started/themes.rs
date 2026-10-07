@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -66,24 +66,36 @@ pub fn PageThemes() -> impl IntoView {
                 </p>
                 <p>
                     "Render one of your own to give a part of the page a different theme, e.g. a dark preview inside a "
-                    "light page. Without "<Code inline=true>"theme"</Code>", it starts with the theme type\u{2019}s "
-                    <Code inline=true>"Default"</Code>"; pass a signal pair to control it, as "<Code inline=true>"<Root>"</Code>
-                    " does with "<Code inline=true>"signal_ls"</Code>":"
+                    "light page. Without "<Code inline=true>"theme"</Code>", it keeps the theme itself, starting with "
+                    <Code inline=true>"default_theme"</Code>" (or the theme type\u{2019}s "<Code inline=true>"Default"</Code>
+                    "); pass "<Code inline=true>"theme"</Code>" and "<Code inline=true>"set_theme"</Code>" to control it. "
+                    <Code inline=true>"<Root>"</Code>" controls its provider with "<Code inline=true>"signal_ls"</Code>
+                    ", which starts with the default, as the server renders, and loads the stored theme right after "
+                    "hydration:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         view! {
-                            <ThemeProvider theme=signal(LeptonicTheme::Dark)>
+                            <ThemeProvider default_theme=LeptonicTheme::Dark>
                                 <Card>"Always dark"</Card>
                             </ThemeProvider>
                         }
                     "#)}
                 </Code>
                 <ApiTable kind=ApiKind::Props of="ThemeProvider">
-                    <ApiRow name="theme" ty="Option<(ReadSignal<T>, WriteSignal<T>)>" default="None">
-                        "The theme and its setter. Without it, the provider keeps the theme in a signal of its own, "
-                        "starting at "<Code inline=true>"T::default()"</Code>"."
+                    <ApiRow name="theme" ty="Option<Signal<T>>" default="None">
+                        "The theme (controlled): a value or any signal."
                     </ApiRow>
+                    <ApiRow name="set_theme" ty="Option<Out<T>>" default="None">
+                        "Receives a new theme, e.g. from a "<Code inline=true>"ThemeToggle"</Code>": an "
+                        <Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "
+                        <Code inline=true>"Callback"</Code>", \u{2026}"
+                    </ApiRow>
+                    <ApiRow name="default_theme" ty="Option<T>" default="None">
+                        "The theme to start with when "<Code inline=true>"theme"</Code>" isn\u{2019}t set. Default: "
+                        <Code inline=true>"T::default()"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="on_theme_change" ty="Option<Callback<T>>" default="None">"Called with every new theme."</ApiRow>
                     <ApiRow name="children" ty="Children">"The themed content. Required."</ApiRow>
                 </ApiTable>
             </Section>
@@ -92,7 +104,8 @@ pub fn PageThemes() -> impl IntoView {
                 <p>
                     <Code inline=true>"LeptonicTheme"</Code>" describes the two built-in themes. For themes of your own, define "
                     "a type implementing the "<Code inline=true>"Theme"</Code>" trait: a name, used as the "
-                    <Code inline=true>"data-theme"</Code>" value, and an icon for "<Code inline=true>"ThemeToggle"</Code>". "
+                    <Code inline=true>"data-theme"</Code>" value. For "<Code inline=true>"ThemeToggle"</Code>", also implement "
+                    <Code inline=true>"ThemeIcon"</Code>" (the components\u{2019} trait for its icons). "
                     "The trait requires "<Code inline=true>"Default"</Code>" (the provider\u{2019}s initial theme), "
                     <Code inline=true>"Clone + Copy + PartialEq"</Code>", "<Code inline=true>"Send + Sync"</Code>", and "
                     "serde\u{2019}s "<Code inline=true>"Serialize"</Code>" and "<Code inline=true>"DeserializeOwned"</Code>
@@ -119,7 +132,9 @@ pub fn PageThemes() -> impl IntoView {
                                     Self::HighContrast => "high-contrast",
                                 }
                             }
+                        }
 
+                        impl ThemeIcon for AppTheme {
                             fn icon(&self) -> icondata::Icon {
                                 match self {
                                     Self::Light => icondata::BsSun,

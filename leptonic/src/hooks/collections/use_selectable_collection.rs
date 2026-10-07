@@ -2,6 +2,7 @@
 // Upstream: react-aria/src/selection/useSelectableList.ts @ 99e6102368
 use std::sync::Arc;
 
+use super::selection::SelectOnFocus;
 use leptos::{
     attr,
     attr::{
@@ -51,8 +52,8 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - `auto_focus` is `Option<FocusStrategy>` (react-aria: `boolean | 'first' | 'last'`).
-// - `select_on_focus: Option<bool>`: `None` selects on focus exactly when the selection behavior
-//   is `Replace` (react-aria's default).
+// - `select_on_focus: SelectOnFocus` (`Auto`, `Always`, `Never`; react-aria: an optional
+//   boolean): `Auto` selects on focus exactly when the selection behavior is `Replace`.
 // - Item elements are looked up in the `ItemElements` registry instead of `[data-key]` queries.
 //
 // ## OMITTED FEATURES
@@ -103,7 +104,7 @@ pub struct CollectionOptions {
     pub escape_key_behavior: EscapeKeyBehavior,
     /// Select items as keyboard focus moves to them. `None`: when the selection behavior is
     /// `Replace`.
-    pub select_on_focus: Option<bool>,
+    pub select_on_focus: SelectOnFocus,
     pub disallow_type_ahead: bool,
     /// Let Tab move between focusable elements inside items, instead of leaving the collection.
     pub allows_tab_navigation: bool,
@@ -231,9 +232,8 @@ pub fn use_selectable_collection(
     let collection_id = crate::utils::id::use_id("collection");
     let delegate = move || delegate_signal.get_untracked();
     let select_on_focus = move || {
-        select_on_focus.unwrap_or_else(|| {
-            untrack(|| selection.selection_behavior()) == SelectionBehavior::Replace
-        })
+        select_on_focus
+            .resolve(|| untrack(|| selection.selection_behavior()) == SelectionBehavior::Replace)
     };
     let focused = move || untrack(|| selection.focused_key());
 
@@ -632,28 +632,37 @@ pub fn use_selectable_collection(
             if is_focused
                 && let Some(key) = &current
                 && (Some(key) != last_focused.get_value().as_ref() || did_auto_focus.get_value())
-                && (get_modality() == Modality::Keyboard || did_auto_focus.get_value())
                 && let Some(container) = element.get_untracked()
-                && let Some(item) = item_elements.get(key)
             {
-                let item = (*item).clone();
-                let container = (*container).clone();
-                request_animation_frame(move || {
-                    if let (Some(container_html), Some(item_html)) = (
-                        container.dyn_ref::<web_sys::HtmlElement>(),
-                        item.dyn_ref::<web_sys::HtmlElement>(),
-                    ) {
-                        scroll_into_view(container_html, item_html, ScrollIntoViewOpts::default());
-                    }
-                    if get_modality() != Modality::Virtual {
-                        scroll_into_viewport(
-                            Some(&item),
-                            &ScrollIntoViewportOpts {
-                                containing_element: Some(container),
-                            },
-                        );
-                    }
-                });
+                // Not rendered yet (e.g. a virtualizer renders the focused item next): run again
+                // once it is, without recording the key (as react-aria).
+                let Some(item) = item_elements.get_tracked(key) else {
+                    return;
+                };
+                if get_modality() == Modality::Keyboard || did_auto_focus.get_value() {
+                    let item = (*item).clone();
+                    let container = (*container).clone();
+                    request_animation_frame(move || {
+                        if let (Some(container_html), Some(item_html)) = (
+                            container.dyn_ref::<web_sys::HtmlElement>(),
+                            item.dyn_ref::<web_sys::HtmlElement>(),
+                        ) {
+                            scroll_into_view(
+                                container_html,
+                                item_html,
+                                ScrollIntoViewOpts::default(),
+                            );
+                        }
+                        if get_modality() != Modality::Virtual {
+                            scroll_into_viewport(
+                                Some(&item),
+                                &ScrollIntoViewportOpts {
+                                    containing_element: Some(container),
+                                },
+                            );
+                        }
+                    });
+                }
             }
             // The focused item disappeared while focus was inside: keep focus in the collection.
             if is_focused

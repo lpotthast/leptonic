@@ -22,14 +22,36 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
             value: 0.8,
         }),
         is_disabled: disabled.into(),
-        ..UseColorChannelFieldStateInput::new(HsvChannel::Hue)
+        value: None,
+        channel: HsvChannel::Hue,
+        is_read_only: Signal::stored(false),
+        is_invalid: Signal::stored(false),
+        validate: None,
+        validation_behavior: ValidationBehavior::default(),
+        name: None,
+        on_change: None,
     });
     let field = use_color_channel_field(UseColorChannelFieldInput {
         field: UseNumberFieldInput {
             has_label: true.into(),
-            ..UseNumberFieldInput::new(state.number)
+            state: state.number,
+            id: None,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            is_required: Signal::stored(false),
+            placeholder: MaybeProp::default(),
+            auto_focus: false,
+            is_wheel_disabled: false,
+            increment_aria_label: MaybeProp::default(),
+            decrement_aria_label: MaybeProp::default(),
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
         },
-        ..UseColorChannelFieldInput::new(state)
+        state,
     });
 
     // The stepper buttons come as `UseButtonInput`s: render them with `use_button`.
@@ -37,8 +59,11 @@ pub fn ColorChannelFieldDemo() -> impl IntoView {
     let (increment_attrs, increment_styles) = use_button(field.increment_button).props.into_parts();
 
     let color = state.color_value;
-    let preview_styles =
-        Styles::new().add_optional(move || color.get().map(|c| BackgroundColorProperty.declare(CssColor::from(c.into_rgb8()))));
+    let preview_styles = Styles::new().add_optional(move || {
+        color
+            .get()
+            .map(|c| BackgroundColorProperty.declare(CssColor::from(c.into_rgb8())))
+    });
 
     view! {
         <div class="demo-field">

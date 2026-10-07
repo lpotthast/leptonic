@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::slider::SliderConceptDemo;
@@ -49,11 +48,6 @@ pub fn PageSliderOverview() -> impl IntoView {
                     <TableRow>
                         <TableCell><Link href=routes::doc::slider::Atom.materialize()>"Slider Atoms"</Link></TableCell>
                         <TableCell>"An unstyled "<Code inline=true>"Slider"</Code>" with track, fill, thumb, output and mark parts that position themselves."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::slider::Component.materialize()>"Slider Components"</Link></TableCell>
-                        <TableCell>"Themed "<Code inline=true>"Slider"</Code>" and "<Code inline=true>"RangeSlider"</Code>
-                            " with marks, value popovers and variants."</TableCell>
                     </TableRow>
                 </DocTable>
             </Section>
@@ -108,7 +102,6 @@ pub fn PageSliderOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::slider::Hook.materialize()>"Slider Hooks"</Link></li>
                 <li><Link href=routes::doc::slider::Atom.materialize()>"Slider Atoms"</Link></li>
-                <li><Link href=routes::doc::slider::Component.materialize()>"Slider Components"</Link></li>
                 <li><Link href=routes::doc::NumberField.materialize()>"Number Field"</Link></li>
                 <li><Link href=routes::doc::ColorSlider.materialize()>"Color Slider"</Link></li>
             </SeeAlso>

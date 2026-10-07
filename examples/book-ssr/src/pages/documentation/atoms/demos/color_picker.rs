@@ -1,7 +1,7 @@
 use leptonic::{
     atoms::prelude::{
-        ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderOutput, ColorSliderTrack, ColorSwatch,
-        ColorSwatchPicker, ColorSwatchPickerItems, ColorThumb, Input, Label,
+        ColorArea, ColorField, ColorPicker, ColorSlider, ColorSliderOutput, ColorSliderTrack,
+        ColorSwatch, ColorSwatchPicker, ColorSwatchPickerItems, ColorThumb, Input, Label,
     },
     utils::color::{Color, ColorValue, HSV, HsvChannel, RGB8},
 };
@@ -9,9 +9,17 @@ use leptos::prelude::*;
 
 const PRESETS: [RGB8; 4] = [
     RGB8 { r: 170, g: 0, b: 0 },
-    RGB8 { r: 255, g: 136, b: 0 },
+    RGB8 {
+        r: 255,
+        g: 136,
+        b: 0,
+    },
     RGB8 { r: 0, g: 136, b: 0 },
-    RGB8 { r: 0, g: 136, b: 255 },
+    RGB8 {
+        r: 0,
+        g: 136,
+        b: 255,
+    },
 ];
 
 #[component]

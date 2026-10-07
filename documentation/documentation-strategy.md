@@ -192,8 +192,10 @@ pub fn PageUseButton() -> impl IntoView {
   `<Keys keys="Control + A"/>" (" <Keys keys="Meta + A"/>" on macOS)"` — leptonic matches `Command` on Apple devices.
 - Code examples compile against the current API: include imports that aren't in the preludes, and never use book
   helpers in them.
-- Input and Props tables fill the Default column from the `Default` implementation (or the constructor that sets
-  defaults) and mark required fields with "Required." in the description.
+- Input and Props tables fill the Default column from the `Default` implementation (for inputs without one: the value
+  a caller writes when they don't need the field) and mark required fields with "Required." in the description.
+  Inputs have no constructors: samples write them as struct literals with every field named, or with
+  `..Default::default()` where the type implements `Default`.
 - A library gap is never described as intended behavior. Say it in one sentence where it affects the reader ("The
   arrow keys currently move the thumb by one pixel."), and record it in `PLAN.md`.
 
@@ -319,7 +321,12 @@ the guide "Forms & Validation" is `/doc/forms`). When a page moves, add a `<Redi
 - `just book-browser-test` (`examples/book-ssr/tests/`): visits every page of the navigation and fails on page
   errors, demos unreadable in the dark theme, internal links or anchors that don't resolve, pages wider than a 390px
   screen, and pages missing from the Markdown export. Add checks there, in Rust, in the style of the library's browser
-  tests.
+  tests. `BOOK_TEST_PAGES=<text>` limits the page checks to matching pages. Never run two book suites at the same time:
+  they share the app's build directory.
+- Clippy for both builds, zero findings: `cargo clippy --features ssr --tests` and
+  `cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown`.
+- Screenshots of the affected pages when changing visuals (`just book-serve-isolated` serves a second instance).
+- Checks build against the live library, as the user's `just serve` does, in the shared agent target directory.
 
 ## Markdown Export (LLM-native docs)
 

@@ -2,8 +2,8 @@ use leptonic::{
     components::prelude::Checkbox,
     hooks::*,
     utils::{
-        data_attributes::flag,
         css::{LengthPercentageAuto, computed_px},
+        data_attributes::flag,
         style::{LeftProperty, TopProperty},
         styles::Styles,
     },

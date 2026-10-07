@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::switch::SwitchAtomDemo;
@@ -133,7 +132,6 @@ pub fn PageAtomSwitch() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch overview"</Link></li>
                 <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
-                <li><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></li>
                 <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
             </SeeAlso>
         </DocPage>

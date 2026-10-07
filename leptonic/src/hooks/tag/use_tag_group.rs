@@ -66,24 +66,6 @@ pub struct UseTagGroupInput {
     pub on_action: Option<Callback<Key>>,
 }
 
-impl UseTagGroupInput {
-    /// A tag group for `state`, with all other settings at their defaults.
-    pub fn new(state: ListState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            keyboard_delegate: None,
-            on_remove: None,
-            on_action: None,
-        }
-    }
-}
-
 /// What tags need to know about their group. Pass it to `use_tag`.
 #[derive(Debug, Clone)]
 pub struct TagGroupData {
@@ -187,7 +169,11 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         },
         keyboard_navigation_behavior: KeyboardNavigationBehavior::Tab,
         on_action,
-        ..UseGridListInput::new(state, element)
+        state,
+        element,
+        layout: ListLayout::Stack,
+        should_select_on_press_up: false,
+        tree: None,
     });
     let is_empty = Signal::derive(move || state.collection.with(|c| c.size() == 0));
     grid.role = Signal::derive(move || {

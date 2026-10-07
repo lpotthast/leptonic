@@ -9,7 +9,7 @@ use leptonic::{
         input::Input,
     },
     utils::{
-        color::{Color, HSV, HsvChannel, RGB8},
+        color::{AlphaChannel, Color, HSV, HsvChannel, RGB8},
         styles::Styles,
     },
 };
@@ -29,7 +29,7 @@ pub fn PageAtomColorPicker() -> impl IntoView {
         <div id="test-page-atom-color-picker">
             <h1>"Color picker"</h1>
             <ColorPicker
-                default_value=Color::Rgb(RGB8::from_hex_int(0xFF_00_00))
+                default_value=Color::from(RGB8::from_hex_int(0xFF_00_00))
                 on_change=move |c: Color| log.update(|l| l.push(format!("{:X}", c.to::<RGB8>())))
             >
                 <div id="test-cp-swatch"><ColorSwatch styles=size("20px", "20px") /></div>
@@ -44,6 +44,13 @@ pub fn PageAtomColorPicker() -> impl IntoView {
                 </div>
                 <div id="test-cp-hue">
                     <ColorSlider channel=HsvChannel::Hue>
+                        <ColorSliderTrack styles=size("100px", "20px")>
+                            <ColorThumb />
+                        </ColorSliderTrack>
+                    </ColorSlider>
+                </div>
+                <div id="test-cp-alpha">
+                    <ColorSlider channel={AlphaChannel::<HsvChannel>::Alpha}>
                         <ColorSliderTrack styles=size("100px", "20px")>
                             <ColorThumb />
                         </ColorSliderTrack>

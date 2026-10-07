@@ -28,6 +28,7 @@ impl BrowserTest<str> for PressTests {
         disabled_element_ignores_presses(&page).await?;
         becoming_disabled_cancels_active_press(&page).await?;
         enter_on_checkbox_submits_form(&page).await?;
+        prevent_focus_on_press_keeps_the_focus(&page).await?;
         nested_press_stops_by_default(&page).await?;
         nested_press_propagates_when_continued(&page).await?;
 
@@ -48,6 +49,12 @@ async fn mouse_click_fires_all_events_in_order(page: &Page<'_>) -> Result<(), Re
     page.wait_for_text(LOG, "start:mouse,up:mouse,end:mouse,press:mouse")
         .await?;
     assert_that!(page.read_bool("test-press-is-pressed").await?).is_false();
+    // Text selection is disabled on the pressed element (not on the text inside it) and restored
+    // (react-aria's `state.target`).
+    let label = page.element("test-press-label").await?;
+    assert_that!(label.attr("style").await?).is_none();
+    let target = page.element("test-press-target").await?;
+    assert_that!(target.attr("data-leptonic-saved-user-select").await?).is_none();
     Ok(())
 }
 
@@ -184,5 +191,16 @@ async fn nested_press_propagates_when_continued(page: &Page<'_>) -> Result<(), R
         "start:mouse,up:mouse,end:mouse,press:mouse",
     )
     .await?;
+    Ok(())
+}
+
+/// "should not focus the element on click if preventFocusOnPress is true": the focus stays on
+/// the previously focused input, which sees no blur, and the press still happens.
+async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.element("test-press-keep-input").await?.focus().await?;
+    page.click_element_with_id("test-press-keep").await?;
+    page.wait_for_text("test-press-keep-presses", "1").await?;
+    page.wait_for_active_id("test-press-keep-input").await?;
+    assert_that!(page.read_text_of("test-press-keep-blurs").await?).is_equal_to("0".to_owned());
     Ok(())
 }

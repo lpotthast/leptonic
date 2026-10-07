@@ -1,15 +1,18 @@
-use leptonic::{atoms::prelude as atoms, components::prelude::*, prelude::icondata};
+use leptonic::atoms::{
+    prelude as atoms,
+    prelude::{CurrentMatch, Link},
+};
 use leptos::prelude::*;
 use leptos_router::{components::Outlet, hooks::use_location};
 
 use crate::{
-    app::AppLayoutContext,
+    app::{AppLayoutContext, MenuDrawer, MenuSide, NavLandmark},
+    kit::Icon,
     nav::{Layer, NavEntry, NavGroup, NavPart, PartKind, nav},
-    sheet::{Sheet, SheetSide},
 };
 
 /// Layout of all documentation pages: the navigation next to the routed page. Small screens hide the sidebar; the
-/// navigation opens as a menu [`Sheet`] from the app bar instead.
+/// navigation opens as a menu ([`MenuDrawer`]) from the app bar instead.
 ///
 /// The routed page renders the `<main>` (and its table of contents next to it), see
 /// [`DocPage`](crate::kit::DocPage).
@@ -23,14 +26,14 @@ pub fn DocLayout() -> impl IntoView {
                 <DocNav/>
             </div>
 
-            <Sheet
-                is_open=Signal::derive(move || app_layout.is_small.get() && app_layout.doc_menu_open.get())
-                on_close=move |()| app_layout.doc_menu_open.set(false)
+            <MenuDrawer
+                side=MenuSide::Left
                 label="Documentation"
-                side=SheetSide::Left
+                is_open=Signal::derive(move || app_layout.is_small.get() && app_layout.doc_menu_open.get())
+                open=app_layout.doc_menu_open
             >
                 <DocNav/>
-            </Sheet>
+            </MenuDrawer>
 
             <Outlet/>
         </div>
@@ -40,9 +43,9 @@ pub fn DocLayout() -> impl IntoView {
 #[component]
 fn DocNav() -> impl IntoView {
     view! {
-        <nav class="book-doc-nav" aria-label="Documentation">
+        <NavLandmark class="book-doc-nav" label="Documentation">
             {nav().parts.iter().map(|part| view! { <SidebarPart part/> }).collect_view()}
-        </nav>
+        </NavLandmark>
     }
 }
 
@@ -101,7 +104,8 @@ fn SidebarGroup(group: &'static NavGroup, part: PartKind) -> impl IntoView {
     });
 
     // Built inside the `Disclosure`: the trigger takes its context.
-    let header = move || match overview_link("book-nav-group-title") {
+    let header = move || {
+        match overview_link("book-nav-group-title") {
         // The toggle sits next to the overview link, so it needs a name of its own ("Fields pages", next to the link
         // "Fields").
         Some(link) => view! {
@@ -122,6 +126,7 @@ fn SidebarGroup(group: &'static NavGroup, part: PartKind) -> impl IntoView {
             </atoms::DisclosureTrigger>
         }
         .into_any(),
+    }
     };
 
     view! {

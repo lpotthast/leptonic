@@ -56,6 +56,28 @@ impl BrowserTest<str> for ColorPickerTests {
         assert_that!(field.prop("value").await?).is_equal_to(Some("#0000FF".to_owned()));
         page.wait_for_text("test-cp-log", "0000FF").await?;
 
+        // Alpha (react-aria's colors all have one): an alpha slider's value text names no color,
+        // the swatch says how transparent the color is, and opaque parts keep the alpha.
+        let alpha = driver
+            .find(By::Css("#test-cp-alpha input[type=range]"))
+            .await?;
+        assert_that!(alpha.attr("aria-valuetext").await?).is_equal_to(Some("100%".to_owned()));
+        alpha.focus().await?;
+        page.send_keys_to_active(Key::PageDown).await?;
+        page.wait_for_attr(&alpha, "aria-valuetext", Some("90%"))
+            .await?;
+        page.wait_for_attr(
+            &swatch,
+            "aria-label",
+            Some("dark vibrant blue, 10% transparent"),
+        )
+        .await?;
+        hue.focus().await?;
+        page.send_keys_to_active(Key::Home).await?;
+        page.wait_for_attr(&swatch, "aria-label", Some("vibrant red, 10% transparent"))
+            .await?;
+        assert_that!(alpha.attr("aria-valuetext").await?).is_equal_to(Some("90%".to_owned()));
+
         page.expect_no_page_errors().await
     }
 }

@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use leptonic::hooks::Orientation;
+use leptonic::hooks::collections::ListLayout;
 use leptonic::{
     hooks::{
         IntoAttrs, ListBoxData, SelectionMode, UseListBoxInput, UseListBoxReturn, UseOptionInput,
@@ -34,6 +36,7 @@ fn ListboxOption(list: ListBoxData, key: &'static str, label: &'static str) -> i
     } = use_option(UseOptionInput {
         list,
         key: Key::from(key),
+        on_context_menu: None,
     });
     let (attrs, styles) = props.into_parts();
 
@@ -76,7 +79,21 @@ pub fn ListboxDemo() -> impl IntoView {
             should_focus_wrap: true,
             ..CollectionOptions::default()
         },
-        ..UseListBoxInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: Signal::stored(None),
+        orientation: Orientation::Vertical,
+        layout: ListLayout::Stack,
+        layout_delegate: None,
+        is_virtualized: false,
+        keyboard_delegate: None,
+        should_select_on_press_up: false,
+        should_focus_on_hover: false,
+        on_action: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
 
     let selected = move || {
@@ -87,7 +104,11 @@ pub fn ListboxDemo() -> impl IntoView {
             .map(ToString::to_string)
             .collect();
         keys.sort();
-        if keys.is_empty() { "Nothing selected.".to_owned() } else { format!("Selected: {}.", keys.join(", ")) }
+        if keys.is_empty() {
+            "Nothing selected.".to_owned()
+        } else {
+            format!("Selected: {}.", keys.join(", "))
+        }
     };
 
     view! {

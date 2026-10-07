@@ -1,0 +1,61 @@
+// Upstream: ../starters/docs/src/Breadcrumbs.css @ 99e610236
+// Upstream: ../starters/docs/src/Breadcrumbs.tsx @ 99e610236
+//
+// `Breadcrumbs`, `Breadcrumb` and the `Link` in it. Markup, as the starter: each breadcrumb
+// holds its link, followed by a separator icon in all but the current (last) one (lucide's
+// `chevron-right`, 14px):
+//
+//   <Breadcrumbs>
+//     <Breadcrumb><Link href="/">"Home"</Link><svg ..>..</svg></Breadcrumb>
+//     <Breadcrumb is_current=true><Link href="/docs">"Docs"</Link></Breadcrumb>
+//   </Breadcrumbs>
+//
+// The current link is selected by its breadcrumb's `data-current` (upstream: the link's own,
+// which `Link` lacks).
+
+.leptonic-Breadcrumbs {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-color);
+
+  .leptonic-Breadcrumb {
+    display: flex;
+    align-items: center;
+  }
+
+  .leptonic-Link {
+    font: var(--font-size) system-ui;
+    color: var(--link-color-secondary);
+    outline: none;
+    position: relative;
+    text-decoration: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &[data-hovered],
+    &[data-focus-visible] {
+      text-decoration: underline;
+    }
+
+    &[data-focus-visible] {
+      border-radius: var(--radius-sm);
+      outline: 2px solid var(--focus-ring-color);
+    }
+
+    &[data-disabled] {
+      cursor: default;
+    }
+  }
+
+  .leptonic-Breadcrumb[data-current] > .leptonic-Link {
+    color: var(--text-color);
+    font-weight: 600;
+  }
+
+  .leptonic-Breadcrumb:not([data-current]) > .leptonic-Link[data-disabled] {
+    color: var(--text-color-disabled);
+  }
+}

@@ -33,18 +33,6 @@ pub struct UseTableCellInput {
     pub should_select_on_press_up: bool,
 }
 
-impl UseTableCellInput {
-    pub fn new(table: TableData, key: Key) -> Self {
-        Self {
-            table,
-            key,
-            focus_mode: None,
-            allows_arrow_navigation: false,
-            should_select_on_press_up: false,
-        }
-    }
-}
-
 /// Return value of [`use_table_cell`].
 pub struct UseTableCellReturn {
     pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
@@ -79,7 +67,8 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         focus_mode,
         allows_arrow_navigation,
         should_select_on_press_up,
-        ..UseGridCellInput::new(table.grid, key)
+        grid: table.grid,
+        key,
     });
     let (mut cell, styles) = grid_cell_props.into_inner();
     if row_header.is_some() {

@@ -10,11 +10,14 @@ use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, UseTextFieldInput, UseTextFieldReturn,
-        UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_text_field,
+        AutoCapitalize, EnterKeyHint, InputMode, InputType, TextFieldElement, UseTextFieldInput,
+        UseTextFieldReturn, UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_text_field,
         use_text_field_state,
     },
-    utils::{classes::Classes, data_attributes::flag, scoped_context::scoped_view, styles::Styles},
+    utils::{
+        classes::Classes, data_attributes::flag, default_class::with_default_class,
+        scoped_context::scoped_view, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -36,6 +39,8 @@ use crate::{
 /// [`Description`](super::field::Description) and a [`FieldError`](super::field::FieldError).
 ///
 /// Data attributes: `data-disabled`, `data-invalid`, `data-readonly`, `data-required`.
+///
+/// Default class: `leptonic-TextField`.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn TextField(
@@ -90,6 +95,7 @@ pub fn TextField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TextField", classes);
     let (value, on_change) =
         crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_text_field_state(UseTextFieldStateInput {
@@ -127,7 +133,21 @@ pub fn TextField(
         aria_labelledby,
         aria_describedby,
         on_focus_change,
-        ..UseTextFieldInput::new(state)
+        state,
+        element: TextFieldElement::Input,
+        validation: None,
+        exclude_from_tab_order: false,
+        label_id: None,
+        aria_errormessage: None,
+        aria_activedescendant: Signal::stored(None),
+        aria_autocomplete: None,
+        aria_haspopup: None,
+        aria_controls: Signal::stored(None),
+        on_focus: None,
+        on_blur: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
     });
     let is_invalid = field.is_invalid;
 

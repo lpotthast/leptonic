@@ -1,6 +1,7 @@
-use leptonic::{atoms::prelude::FocusScope, components::prelude::*, hooks::*};
+use leptonic::{
+    atoms::prelude::FocusScope, components::prelude::*, hooks::*, utils::CapturedElement,
+};
 use leptos::prelude::*;
-use leptos_element_capture::CapturedElement;
 
 /// A button that opens a panel: `use_overlay` dismisses it, `use_overlay_trigger` connects the button to it.
 #[component]
@@ -8,25 +9,43 @@ pub fn OverlayDismissDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
     let trigger = CapturedElement::new();
 
-    let UseOverlayReturn { props: overlay_props, id, .. } = use_overlay(UseOverlayInput {
+    let UseOverlayReturn {
+        props: overlay_props,
+        id,
+        ..
+    } = use_overlay(UseOverlayInput {
         is_dismissable: Signal::stored(true),
         should_close_on_blur: Signal::stored(true),
         // The trigger toggles the panel itself, so presses on it must not count as "outside".
-        should_close_on_interact_outside: Some(InteractOutsideFilter::new(move |el: &web_sys::Element| {
-            !trigger.with_untracked(|trigger| trigger.is_some_and(|trigger| trigger.contains(Some(el.as_ref()))))
-        })),
-        ..UseOverlayInput::new(is_open.into(), Callback::new(move |()| set_is_open.set(false)))
+        should_close_on_interact_outside: Some(InteractOutsideFilter::new(
+            move |el: &web_sys::Element| {
+                !trigger.with_untracked(|trigger| {
+                    trigger.is_some_and(|trigger| trigger.contains(Some(el.as_ref())))
+                })
+            },
+        )),
+        is_open: is_open.into(),
+        on_close: Callback::new(move |()| set_is_open.set(false)),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        group: None,
     });
     let overlay_attrs = StoredValue::new(overlay_props.into_attrs());
 
-    let UseOverlayTriggerReturn { props: trigger_props } = use_overlay_trigger(UseOverlayTriggerInput {
+    let UseOverlayTriggerReturn {
+        props: trigger_props,
+    } = use_overlay_trigger(UseOverlayTriggerInput {
         show: is_open.into(),
         overlay_id: id,
         overlay_type: OverlayTriggerType::Dialog,
     });
 
-    let UseButtonReturn { props: button_props, .. } = use_button(UseButtonInput {
-        on_press: Some(Callback::new(move |_| set_is_open.update(|open| *open = !*open))),
+    let UseButtonReturn {
+        props: button_props,
+        ..
+    } = use_button(UseButtonInput {
+        on_press: Some(Callback::new(move |_| {
+            set_is_open.update(|open| *open = !*open);
+        })),
         ..UseButtonInput::default()
     });
     let (button_attrs, button_styles) = button_props.into_parts();

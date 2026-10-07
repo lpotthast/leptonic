@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::progress_bar::ProgressBarConceptDemo;
@@ -52,10 +51,6 @@ pub fn PageProgressBarOverview() -> impl IntoView {
                             ", labelled by a "<Code inline=true>"Label"</Code>" and styled through data attributes."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::progress_bar::Component.materialize()>"Progress Bar Component"</Link></TableCell>
-                        <TableCell>"A themed progress bar showing the percentage, with an animated indeterminate state."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -85,7 +80,6 @@ pub fn PageProgressBarOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::progress_bar::Hook.materialize()>"use_progress_bar"</Link></li>
                 <li><Link href=routes::doc::progress_bar::Atom.materialize()>"Progress Bar Atoms"</Link></li>
-                <li><Link href=routes::doc::progress_bar::Component.materialize()>"Progress Bar Component"</Link></li>
                 <li><Link href=routes::doc::Meter.materialize()>"Meter"</Link></li>
                 <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
             </SeeAlso>

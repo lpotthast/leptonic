@@ -37,21 +37,6 @@ pub struct UseDraggableCollectionStateInput {
     pub is_disabled: Signal<bool>,
 }
 
-impl UseDraggableCollectionStateInput {
-    pub fn new(list: ListState, get_items: Callback<HashSet<Key>, Vec<DragItem>>) -> Self {
-        Self {
-            list,
-            get_items,
-            preview: None,
-            get_allowed_drop_operations: None,
-            on_drag_start: None,
-            on_drag_move: None,
-            on_drag_end: None,
-            is_disabled: Signal::stored(false),
-        }
-    }
-}
-
 /// The state of a collection whose items can be dragged.
 #[derive(Clone, Copy)]
 pub struct DraggableCollectionState {
@@ -230,14 +215,20 @@ mod tests {
                     ..SelectionOptions::default()
                 },
             });
-            let state = use_draggable_collection_state(UseDraggableCollectionStateInput::new(
+            let state = use_draggable_collection_state(UseDraggableCollectionStateInput {
                 list,
-                Callback::new(|keys: HashSet<Key>| {
+                get_items: Callback::new(|keys: HashSet<Key>| {
                     let mut keys: Vec<String> = keys.iter().map(ToString::to_string).collect();
                     keys.sort();
                     keys.into_iter().map(DragItem::text).collect()
                 }),
-            ));
+                preview: None,
+                get_allowed_drop_operations: None,
+                on_drag_start: None,
+                on_drag_move: None,
+                on_drag_end: None,
+                is_disabled: Signal::stored(false),
+            });
             let mut keys: Vec<String> = state
                 .keys_for_drag(&Key::from("b"))
                 .iter()

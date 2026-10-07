@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -42,10 +41,10 @@ pub fn PageOverlays() -> impl IntoView {
                         "it opens on hover or keyboard focus, never takes the focus and holds no interactive content."
                     </li>
                     <li>
-                        <Link href=routes::doc::Drawer.materialize()>"Drawer"</Link>" is a styled panel that slides in from "
-                        "the left or right when a signal changes. It has no overlay behavior of its own: it doesn\u{2019}t "
-                        "contain focus, close on "<Keys keys="Escape"/>" or lock scrolling. For a panel that covers the "
-                        "page, compose the "<Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link>" instead."
+                        <Link href=routes::doc::Drawer.materialize()>"Drawer"</Link>" is a modal dialog at the left or "
+                        "right edge of the screen that slides in and out. It behaves like a modal: it keeps the focus inside, "
+                        "closes on "<Keys keys="Escape"/>" or a press outside, and makes the page behind it inert and "
+                        "unscrollable. Use it for menus on small screens and side panels such as filters."
                     </li>
                     <li>
                         "Other concepts open overlays too: a "<Link href=routes::doc::Menu.materialize()>"menu"</Link>
@@ -75,12 +74,8 @@ pub fn PageOverlays() -> impl IntoView {
                         <TableCell><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell>"Slide a side panel in and out next to the content"</TableCell>
+                        <TableCell>"Slide a panel over the page from its edge, such as a menu on small screens"</TableCell>
                         <TableCell><Link href=routes::doc::Drawer.materialize()>"Drawer"</Link></TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Cover the page with a panel, such as a menu on small screens"</TableCell>
-                        <TableCell><Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link></TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Offer a list of actions from a button"</TableCell>

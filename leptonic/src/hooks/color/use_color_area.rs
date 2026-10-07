@@ -53,7 +53,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_area`]. Start from [`UseColorAreaInput::new`].
+/// Input of [`use_color_area`].
 #[derive(Debug, Clone)]
 pub struct UseColorAreaInput<C: ColorValue> {
     pub state: ColorAreaState<C>,
@@ -69,22 +69,6 @@ pub struct UseColorAreaInput<C: ColorValue> {
     pub y_name: Option<String>,
     /// The id of a `<form>` the inputs belong to.
     pub form: Option<String>,
-}
-
-impl<C: ColorValue> UseColorAreaInput<C> {
-    pub fn new(state: ColorAreaState<C>) -> Self {
-        Self {
-            state,
-            is_disabled: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            aria_details: None,
-            x_name: None,
-            y_name: None,
-            form: None,
-        }
-    }
 }
 
 /// Return value of [`use_color_area`].

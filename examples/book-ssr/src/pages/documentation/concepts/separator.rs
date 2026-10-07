@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::separator::SeparatorConceptDemo;
@@ -41,10 +40,6 @@ pub fn PageSeparatorOverview() -> impl IntoView {
                         <TableCell><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></TableCell>
                         <TableCell>"An unstyled separator in the right element for its orientation (and inside menus)."</TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></TableCell>
-                        <TableCell>"A themed line, horizontal or vertical."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -83,7 +78,6 @@ pub fn PageSeparatorOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
                 <li><Link href=routes::doc::separator::Atom.materialize()>"Separator Atom"</Link></li>
-                <li><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></li>
                 <li><Link href=routes::doc::Toolbar.materialize()>"Toolbar"</Link></li>
                 <li><Link href=routes::doc::Menu.materialize()>"Menu"</Link></li>
             </SeeAlso>

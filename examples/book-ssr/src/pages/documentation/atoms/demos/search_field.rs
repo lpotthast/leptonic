@@ -15,9 +15,10 @@ pub fn SearchFieldAtomDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let status = move || {
-        let submitted = submitted
-            .get()
-            .map_or_else(|| "Nothing submitted yet.".to_owned(), |query| format!("Submitted: \u{201c}{query}\u{201d}."));
+        let submitted = submitted.get().map_or_else(
+            || "Nothing submitted yet.".to_owned(),
+            |query| format!("Submitted: \u{201c}{query}\u{201d}."),
+        );
         let cleared = match cleared.get() {
             0 => "Never cleared.".to_owned(),
             1 => "Cleared 1 time.".to_owned(),

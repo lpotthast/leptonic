@@ -1,5 +1,6 @@
 pub mod breadcrumbs;
 pub mod button;
+pub mod calendar;
 pub mod checkbox;
 pub mod color_area;
 pub mod color_field;
@@ -10,6 +11,7 @@ pub mod color_swatch_picker;
 pub mod color_thumb;
 pub mod color_wheel;
 pub mod combobox;
+pub mod datepicker;
 pub mod dialog;
 pub mod disclosure;
 pub mod dismiss_button;
@@ -23,6 +25,7 @@ pub mod grid;
 pub mod grid_list;
 pub mod hoverable;
 pub mod input;
+pub mod kbd;
 pub mod link;
 pub mod listbox;
 pub mod menu;
@@ -41,10 +44,14 @@ pub mod slider;
 pub mod switch;
 pub mod table;
 pub mod tabs;
+pub mod tag_group;
 pub mod text_field;
+pub mod theme;
+pub mod toast;
 pub mod toggle_button;
 pub mod toolbar;
 pub mod tooltip;
+pub mod virtualizer;
 pub mod visually_hidden;
 
 pub mod prelude {
@@ -78,14 +85,16 @@ pub mod prelude {
         grid_list::{GridList, GridListItem},
         hoverable::Hoverable,
         input::{Input, InputContext, InputState, TextArea},
+        kbd::{Keys, ShortcutKeys},
         link::{AnchorLink, CurrentMatch, Link, LinkRel},
         listbox::{
             ListBox, ListBoxItem, ListBoxItemCtx, ListBoxItemDescription, ListBoxItemLabel,
             ListBoxItems, ListBoxParent, ListBoxSection,
         },
         menu::{
-            Menu, MenuItem, MenuItemDescription, MenuItemLabel, MenuItemShortcut, MenuItems,
-            MenuSection, MenuTrigger, SubmenuTrigger,
+            ContextMenuTrigger, Menu, MenuItem, MenuItemDescription, MenuItemLabel,
+            MenuItemShortcut, MenuItems, MenuSection, MenuTrigger, SubmenuTrigger,
+            use_context_menu_target,
         },
         meter::{Meter, MeterFill, MeterValueText},
         modal::{ModalBackdrop, ModalContent},
@@ -106,6 +115,8 @@ pub mod prelude {
         },
         switch::Switch,
         text_field::TextField,
+        theme::{LeptonicTheme, Theme, ThemeContext, ThemeProvider, use_theme},
+        toast::{Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion, ToastTitle},
         toggle_button::{ToggleButton, ToggleButtonGroup},
         toolbar::Toolbar,
         tooltip::{Tooltip, TooltipTrigger},

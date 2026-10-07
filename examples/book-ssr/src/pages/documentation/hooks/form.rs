@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::form_coupon::FormCouponDemo;
@@ -49,7 +48,12 @@ pub fn PageFormHooks() -> impl IntoView {
                             validation_behavior: ValidationBehavior::Native,
                             name: Some("coupon".to_owned()),
                         });
-                        use_form_validation(UseFormValidationInput::new(element, validation, ValidationBehavior::Native));
+                        use_form_validation(UseFormValidationInput {
+                            element,
+                            state: validation,
+                            validation_behavior: ValidationBehavior::Native,
+                            focus: None,
+                        });
                         use_form_reset(UseFormResetInput {
                             element,
                             initial_value: code.get_untracked(),
@@ -109,6 +113,11 @@ pub fn PageFormHooks() -> impl IntoView {
                             "Checks the value: "<Code inline=true>"Ok(())"</Code>" when valid, else "
                             <Code inline=true>"Err"</Code>" with the error messages. "<Code inline=true>"ValidateFn<T>"</Code>" is an "
                             <Code inline=true>"Arc<dyn Fn(&T) -> Result<(), Vec<String>>>"</Code>". Required ("<Code inline=true>"None"</Code>" for no check)."
+                        </ApiRow>
+                        <ApiRow name="builtin_validation" ty="Signal<Option<ValidationResult>>">
+                            "The field\u{2019}s own validation, e.g. a date outside its "<Code inline=true>"min"</Code>" and "
+                            <Code inline=true>"max"</Code>"; it counts after "<Code inline=true>"validate"</Code>"\u{2019}s result. "
+                            "Required ("<Code inline=true>"Signal::default()"</Code>" for none)."
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">
                             <Code inline=true>"Aria"</Code>" shows every error as the value changes; "<Code inline=true>"Native"</Code>
@@ -184,8 +193,9 @@ pub fn PageFormHooks() -> impl IntoView {
 
                 <Section title="Input" id="use-form-validation-input">
                     <p>
-                        "Create it with "<Code inline=true>"UseFormValidationInput::new(element, state, validation_behavior)"</Code>
-                        ", which sets "<Code inline=true>"focus"</Code>" to "<Code inline=true>"None"</Code>"."
+                        "Pass a "<Code inline=true>"UseFormValidationInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
+
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseFormValidationInput">
                         <ApiRow name="element" ty="CapturedElement">

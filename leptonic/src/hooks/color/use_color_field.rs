@@ -6,6 +6,8 @@ use leptos::{
 use web_sys::{CompositionEvent, FocusEvent, InputEvent, WheelEvent};
 
 use super::use_color_field_state::ColorFieldState;
+use crate::hooks::InputType;
+use crate::hooks::TextFieldElement;
 use crate::{
     hooks::{
         IntoAttrs, UseFocusWithinInput, UseFocusWithinReturn, UseScrollWheelInput,
@@ -41,7 +43,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_field`]. Start from [`UseColorFieldInput::new`].
+/// Input of [`use_color_field`].
 #[derive(Clone)]
 pub struct UseColorFieldInput {
     pub state: ColorFieldState,
@@ -64,30 +66,6 @@ pub struct UseColorFieldInput {
     pub on_focus_change: Option<Callback<bool>>,
     pub on_key_down: Option<Callback<KeyboardEventWrapper>>,
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
-}
-
-impl UseColorFieldInput {
-    pub fn new(state: ColorFieldState) -> Self {
-        Self {
-            state,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            is_disabled: Signal::stored(false),
-            is_read_only: Signal::stored(false),
-            is_required: Signal::stored(false),
-            placeholder: MaybeProp::default(),
-            auto_focus: false,
-            is_wheel_disabled: false,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_key_down: None,
-            on_key_up: None,
-        }
-    }
 }
 
 /// Return value of [`use_color_field`].
@@ -234,7 +212,26 @@ pub fn use_color_field(input: UseColorFieldInput) -> UseColorFieldReturn {
         on_key_down,
         on_key_up,
         shortcuts: Some(shortcuts),
-        ..UseTextFieldInput::new(text_state)
+        state: text_state,
+        element: TextFieldElement::Input,
+        input_type: Signal::stored(InputType::Text),
+        is_invalid: Signal::stored(false),
+        validate: None,
+        name: None,
+        form: None,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        auto_capitalize: None,
+        input_mode: None,
+        enter_key_hint: None,
+        exclude_from_tab_order: false,
+        label_id: None,
+        aria_errormessage: None,
+        aria_activedescendant: Signal::stored(None),
+        aria_autocomplete: None,
+        aria_haspopup: None,
+        aria_controls: Signal::stored(None),
     });
 
     use_form_reset(UseFormResetInput {

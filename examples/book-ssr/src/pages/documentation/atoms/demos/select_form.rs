@@ -6,7 +6,10 @@ use leptonic::{
         select::{HiddenSelect, Select, SelectPopover, SelectTrigger, SelectValue},
     },
     components::prelude::{Button, ButtonColor},
-    hooks::{ButtonType, collections::{Key, use_list_collection}},
+    hooks::{
+        ButtonType,
+        collections::{Key, use_list_collection},
+    },
 };
 use leptos::{ev::SubmitEvent, prelude::*, wasm_bindgen::JsCast};
 
@@ -30,7 +33,10 @@ pub fn SelectFormDemo() -> impl IntoView {
     // Reads the submitted value the way a server would receive it: from the form data.
     let on_submit = move |e: SubmitEvent| {
         e.prevent_default();
-        let Some(form) = e.current_target().and_then(|target| target.dyn_into::<web_sys::HtmlFormElement>().ok()) else {
+        let Some(form) = e
+            .current_target()
+            .and_then(|target| target.dyn_into::<web_sys::HtmlFormElement>().ok())
+        else {
             return;
         };
         let Ok(data) = web_sys::FormData::new_with_form(&form) else {

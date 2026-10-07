@@ -10,7 +10,7 @@ pub fn TransitionsFadeDemo() -> impl IntoView {
             <Button on_press=move |_| set_visible.update(|visible| *visible = !*visible)>
                 {move || if visible.get() { "Fade out" } else { "Fade in" }}
             </Button>
-            <Fade inn=visible>
+            <Fade is_shown=visible>
                 <div class="demo-transitions-panel">"Fade animates the opacity. The panel keeps its space while hidden."</div>
             </Fade>
         </div>

@@ -1,6 +1,7 @@
 // Upstream: react-aria/src/tree/useTreeItem.ts @ 99e6102368
 use leptos::prelude::*;
 
+use crate::hooks::FocusMode;
 use crate::hooks::{
     button::use_button::UseButtonInput,
     collections::Key,
@@ -55,7 +56,13 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
             .collection
             .with(|c| c.get(&key).is_some_and(|n| n.has_child_nodes))
     });
-    let item = use_grid_list_item(UseGridListItemInput::new(tree, key.clone()));
+    let item = use_grid_list_item(UseGridListItemInput {
+        list: tree,
+        key: key.clone(),
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let is_disabled = item.is_disabled;
 
     let key = StoredValue::new(key);

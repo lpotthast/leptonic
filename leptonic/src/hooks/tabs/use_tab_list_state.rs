@@ -40,19 +40,6 @@ pub struct UseTabListStateInput {
     pub is_disabled: Signal<bool>,
 }
 
-impl UseTabListStateInput {
-    pub fn new(collection: CollectionMemo) -> Self {
-        Self {
-            collection,
-            default_selected_key: None,
-            selected_key: None,
-            on_selection_change: None,
-            disabled_keys: Signal::default(),
-            is_disabled: Signal::stored(false),
-        }
-    }
-}
-
 /// The state of a tab list: its tabs, the selected tab and keyboard focus.
 #[derive(Debug, Clone, Copy)]
 pub struct TabListState {
@@ -110,6 +97,9 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
     // list doesn't have focus.
     let selection = list.list.selection;
     Effect::new(move |last_selected: Option<Option<Key>>| {
+        // Every source up front, the app's inputs before what derives from them ("Effect Read
+        // Order"): the disabled keys are otherwise read only without a valid selection.
+        disabled_keys.track();
         let mut selected = list.selected_key();
         let exists = selected
             .as_ref()
@@ -169,7 +159,11 @@ mod tests {
             let selected = RwSignal::new(Key::from("b"));
             let state = use_tab_list_state(UseTabListStateInput {
                 selected_key: Some(selected.into()),
-                ..UseTabListStateInput::new(tabs(&["a", "b", "c"]))
+                collection: tabs(&["a", "b", "c"]),
+                default_selected_key: None,
+                on_selection_change: None,
+                disabled_keys: Signal::default(),
+                is_disabled: Signal::stored(false),
             });
             assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
             // Selecting writes the app state.

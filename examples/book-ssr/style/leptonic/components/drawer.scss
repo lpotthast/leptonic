@@ -1,139 +1,84 @@
+// The themed `Drawer`: a modal panel at a side of the screen, sliding in and out
+// (`data-entering`/`data-exiting` of the modal atoms; the exit waits for the animation).
+.leptonic-modal-backdrop.leptonic-drawer-backdrop {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 0;
+
+    &[data-entering] {
+        animation: leptonic-drawer-fade-in 0.2s ease-out;
+    }
+
+    &[data-exiting] {
+        animation: leptonic-drawer-fade-in 0.2s ease-in reverse forwards;
+    }
+}
+
 .leptonic-drawer {
     display: flex;
     flex-direction: column;
-    width: 17em;
-    max-height: 100%;
+    width: var(--drawer-width, 17em);
+    max-width: 85vw;
+    height: 100%;
+    overflow: auto;
     background-color: var(--drawer-background-color);
     box-shadow: var(--drawer-box-shadow);
-    z-index: 999;
+    outline: none;
 
-    transform: translateX(0%);
-    -webkit-transform: translateX(0%);
-
-    &[data-side="left"] {
-        margin: auto auto auto 0;
+    // Physical sides, also in right-to-left pages.
+    &.leptonic-drawer-left {
+        margin-right: auto;
+        --leptonic-drawer-from: -100%;
     }
 
-    &[data-side="right"] {
-        margin: auto 0 auto auto;
+    &.leptonic-drawer-right {
+        margin-left: auto;
+        --leptonic-drawer-from: 100%;
     }
 
-    &.shown {
-        transform: translateX(0%);
-        -webkit-transform: translateX(0%);
+    &[data-entering] {
+        animation: leptonic-drawer-slide 0.2s ease-out;
     }
 
-    &.showing {
-        &[data-side="left"] {
-            --animation: slide-in-left;
-        }
-        &[data-side="right"] {
-            --animation: slide-in-right;
-        }
-
-        transform: translateX(100%);
-        -webkit-transform: translateX(100%);
-        animation: var(--animation) 0.2s forwards;
-        -webkit-animation: var(--animation) 0.2s forwards;
+    &[data-exiting] {
+        animation: leptonic-drawer-slide 0.2s ease-in reverse forwards;
     }
 
-    &.hiding {
-        &[data-side="left"] {
-            --animation: slide-out-left;
-        }
-        &[data-side="right"] {
-            --animation: slide-out-right;
-        }
+    .leptonic-drawer-dialog {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        outline: none;
+    }
+}
 
-        transform: translateX(100%);
-        -webkit-transform: translateX(100%);
-        animation: var(--animation) 0.2s forwards;
-        -webkit-animation: var(--animation) 0.2s forwards;
+@keyframes leptonic-drawer-slide {
+    from {
+        transform: translateX(var(--leptonic-drawer-from));
     }
 
-    &.hidden {
-        transform: translateX(100%);
-        -webkit-transform: translateX(100%);
-        display: none;
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes leptonic-drawer-fade-in {
+    from {
+        opacity: 0;
     }
 
-    @keyframes slide-in-left {
-        0% {
-            transform: translateX(-100%);
-        }
-
-        100% {
-            transform: translateX(0%);
-        }
+    to {
+        opacity: 1;
     }
+}
 
-    @-webkit-keyframes slide-in-left {
-        0% {
-            transform: translateX(-100%);
-        }
-
-        100% {
-            -webkit-transform: translateX(0%);
-        }
-    }
-
-    @keyframes slide-in-right {
-        0% {
-            transform: translateX(100%);
-        }
-
-        100% {
-            transform: translateX(0%);
-        }
-    }
-
-    @-webkit-keyframes slide-in-right {
-        0% {
-            transform: translateX(100%);
-        }
-
-        100% {
-            -webkit-transform: translateX(0%);
-        }
-    }
-
-    @keyframes slide-out-left {
-        0% {
-            transform: translateX(0%);
-        }
-
-        100% {
-            transform: translateX(-100%);
-        }
-    }
-
-    @-webkit-keyframes slide-out-left {
-        0% {
-            -webkit-transform: translateX(0%);
-        }
-
-        100% {
-            -webkit-transform: translateX(-100%);
-        }
-    }
-
-    @keyframes slide-out-right {
-        0% {
-            transform: translateX(0%);
-        }
-
-        100% {
-            transform: translateX(100%);
-        }
-    }
-
-    @-webkit-keyframes slide-out-right {
-        0% {
-            -webkit-transform: translateX(0%);
-        }
-
-        100% {
-            -webkit-transform: translateX(100%);
+@media (prefers-reduced-motion: reduce) {
+    .leptonic-modal-backdrop.leptonic-drawer-backdrop,
+    .leptonic-drawer {
+        &[data-entering],
+        &[data-exiting] {
+            animation: none;
         }
     }
 }

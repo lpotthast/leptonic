@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::app_bar::AppBarDemo;
@@ -28,6 +27,9 @@ pub fn PageAppBar() -> impl IntoView {
                         "The bar height. Sets "<Code inline=true>"--app-bar-height"</Code>
                         " on the element; without it, the theme\u{2019}s value applies."
                     </ApiRow>
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
+                        "Names the banner landmark, e.g. when a page has more than one."
+                    </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Additional classes and styles."
                     </ApiRow>
@@ -37,10 +39,10 @@ pub fn PageAppBar() -> impl IntoView {
 
             <Section title="Accessibility">
                 <p>
-                    "Rendered outside of "<Code inline=true>"<main>"</Code>", "<Code inline=true>"<article>"</Code>", "
-                    <Code inline=true>"<nav>"</Code>" and similar elements, a "<Code inline=true>"<header>"</Code>
-                    " is the page\u{2019}s "<Code inline=true>"banner"</Code>" landmark, which screen reader users jump to "
-                    "directly. Put the app bar next to your "<Code inline=true>"<main>"</Code>", not inside it, and wrap its "
+                    "The app bar is the page\u{2019}s "<Code inline=true>"banner"</Code>" landmark: screen reader users jump "
+                    "to it directly, and "<Keys keys="F6"/>" and "<Keys keys="Shift + F6"/>" reach it among the page\u{2019}s "
+                    <Link href=routes::doc::focus::UseLandmark.materialize()>"landmarks"</Link>". Put the app bar next to "
+                    "your "<Code inline=true>"<main>"</Code>", not inside it, and wrap its "
                     "links in a "<Code inline=true>"<nav>"</Code>". Icon-only buttons need an "
                     <Code inline=true>"aria-label"</Code>", as in the demo: the "<Link href=routes::doc::Icon.materialize()>"Icon"</Link>
                     " inside is hidden from screen readers."

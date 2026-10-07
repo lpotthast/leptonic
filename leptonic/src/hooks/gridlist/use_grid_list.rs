@@ -80,26 +80,6 @@ pub struct UseGridListInput {
     pub tree: Option<TreeExpansion>,
 }
 
-impl UseGridListInput {
-    /// A grid list for `state`, with all other settings at their defaults.
-    pub fn new(state: ListState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: Signal::stored(None),
-            layout: ListLayout::Stack,
-            keyboard_delegate: None,
-            options: CollectionOptions::default(),
-            keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
-            should_select_on_press_up: false,
-            on_action: None,
-            tree: None,
-        }
-    }
-}
-
 /// What rows need to know about their grid list. Pass it to `use_grid_list_item`.
 #[derive(Debug, Clone)]
 pub struct GridListData {
@@ -208,6 +188,7 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
         element,
         orientation: Orientation::Vertical,
         layout,
+        layout_delegate: None,
         keyboard_delegate,
         options,
     })

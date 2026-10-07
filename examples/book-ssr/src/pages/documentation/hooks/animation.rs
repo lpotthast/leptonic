@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::animation::AnimationDemo;
@@ -51,7 +50,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell>"State"</TableCell>
-                        <TableCell><Code inline=true>"data-in"</Code>" attribute (Fade, Grow, Slide, Zoom) or inline size (Collapse)"</TableCell>
+                        <TableCell><Code inline=true>"data-shown"</Code>" attribute; hidden content is "<Code inline=true>"inert"</Code></TableCell>
                         <TableCell><Code inline=true>"data-entering"</Code>", "<Code inline=true>"data-exiting"</Code>", "<Code inline=true>"ExitState"</Code></TableCell>
                     </TableRow>
                     <TableRow>
@@ -100,8 +99,8 @@ pub fn PageAnimationHooks() -> impl IntoView {
 
                 <Section title="Input" id="use-enter-animation-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseEnterAnimationInput::new(element)"</Code>
-                        " and change single fields with struct update syntax."
+                        "Pass a "<Code inline=true>"UseEnterAnimationInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseEnterAnimationInput">
                         <ApiRow name="element" ty="CapturedElement">
@@ -136,7 +135,7 @@ pub fn PageAnimationHooks() -> impl IntoView {
 
                             let element = CapturedElement::new();
                             let UseEnterAnimationReturn { is_entering } =
-                                use_enter_animation(UseEnterAnimationInput::new(element));
+                                use_enter_animation(UseEnterAnimationInput { element, is_ready: true.into(), on_enter: None });
 
                             view! {
                                 <div {..element.attr()} class="panel" data-entering=move || is_entering.get().then_some("")>
@@ -164,8 +163,8 @@ pub fn PageAnimationHooks() -> impl IntoView {
 
                 <Section title="Input" id="use-exit-animation-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseExitAnimationInput::new(element, is_open)"</Code>
-                        " and change single fields with struct update syntax."
+                        "Pass a "<Code inline=true>"UseExitAnimationInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseExitAnimationInput">
                         <ApiRow name="element" ty="CapturedElement">"The animated element. Required."</ApiRow>
@@ -204,7 +203,8 @@ pub fn PageAnimationHooks() -> impl IntoView {
                             // `is_open: Signal<bool>` is your overlay's state.
                             let element = CapturedElement::new();
                             let UseExitAnimationReturn { is_exiting, .. } =
-                                use_exit_animation(UseExitAnimationInput::new(element, is_open));
+                                use_exit_animation(UseExitAnimationInput { element, is_open, on_exit: None });
+
 
                             view! {
                                 <Show when=move || is_open.get() || is_exiting.get()>

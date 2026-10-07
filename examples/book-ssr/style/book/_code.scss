@@ -1,0 +1,123 @@
+// Code in sentences and code blocks (the kit's `Code`), and the colors of highlighted code (leptonic's
+// `syntax_highlight`: a `syn-*` class per part of a token's scope, e.g. `syn-keyword syn-control`).
+
+.doc-code {
+  display: block;
+  position: relative;
+  margin: var(--book-space-m) 0;
+  padding: var(--book-code-padding);
+  border-radius: var(--book-radius-s);
+  background-color: var(--book-code-background-color);
+  color: var(--book-code-color);
+  font-family: var(--typography-code-font-family);
+  font-size: var(--book-code-font-size);
+  font-weight: 400;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+
+  // Leptonic's theme gives every element the text font.
+  * {
+    font-family: inherit;
+  }
+
+  // Inline code may wrap: a long expression in a sentence would otherwise widen the page on phones. Long identifiers
+  // break only where nothing else fits.
+  &[data-inline="true"] {
+    display: inline;
+    margin: 0;
+    padding: var(--book-inline-code-padding);
+    line-height: 1em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+}
+
+.doc-code-text {
+  display: block;
+  white-space: pre;
+  overflow: auto;
+}
+
+// The copy button of a block (leptonic's `Button` atom with the kit's `Icon`), in its top right corner.
+.doc-code-copy {
+  display: inline-flex;
+  position: absolute;
+  top: calc(0.5 * var(--book-code-padding));
+  right: calc(0.5 * var(--book-code-padding));
+  align-items: center;
+  justify-content: center;
+  padding: var(--book-space-s) 0.75em;
+  border: none;
+  border-radius: var(--book-radius-s);
+  background: none;
+  color: inherit;
+  font-size: 1em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--book-transition);
+
+  &[data-hovered],
+  &[data-pressed] {
+    background-color: color-mix(in srgb, currentColor 15%, transparent);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
+
+  .doc-icon {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+.doc-code-text {
+  .syn-keyword {
+    color: var(--book-syntax-keyword);
+  }
+
+  .syn-string {
+    color: var(--book-syntax-string);
+  }
+
+  .syn-storage {
+    color: var(--book-syntax-storage);
+  }
+
+  .syn-entity {
+    color: var(--book-syntax-entity);
+  }
+
+  .syn-variable {
+    color: var(--book-syntax-variable);
+  }
+
+  .syn-constant {
+    color: var(--book-syntax-constant);
+  }
+
+  .syn-support {
+    color: var(--book-syntax-support);
+  }
+
+  .syn-function {
+    color: var(--book-syntax-function);
+  }
+
+  .syn-punctuation {
+    color: var(--book-syntax-punctuation);
+  }
+
+  .syn-meta,
+  .syn-source {
+    color: inherit;
+  }
+
+  .syn-comment {
+    color: var(--book-syntax-comment);
+    font-style: italic;
+  }
+}

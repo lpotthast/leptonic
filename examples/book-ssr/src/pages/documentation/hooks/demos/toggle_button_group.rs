@@ -24,7 +24,7 @@ pub fn ToggleButtonGroupDemo() -> impl IntoView {
             aria_label: "Text alignment".into(),
             ..UseToolbarInput::default()
         },
-        ..UseToggleButtonGroupInput::new(state)
+        state,
     });
 
     view! {
@@ -46,7 +46,11 @@ pub fn ToggleButtonGroupDemo() -> impl IntoView {
 #[component]
 fn AlignmentButton(group: ToggleGroupState, alignment: &'static str) -> impl IntoView {
     let button = use_button(use_toggle_button_group_item(
-        UseToggleButtonGroupItemInput::new(group, alignment),
+        UseToggleButtonGroupItemInput {
+            group,
+            key: alignment.into(),
+            button: UseButtonInput::default(),
+        },
     ));
     let (attrs, styles) = button.props.into_parts();
     // Styled through `aria-checked` (`aria-pressed` in a multiple-selection group) and `data-focus-visible`.

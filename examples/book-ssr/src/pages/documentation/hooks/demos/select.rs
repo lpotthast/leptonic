@@ -1,3 +1,6 @@
+use leptonic::hooks::SelectMode;
+use leptonic::hooks::ValidationBehavior;
+use leptonic::hooks::collections::CloseOnSelect;
 use leptonic::{
     atoms::focus_scope::FocusScope,
     components::prelude::*,
@@ -11,6 +14,7 @@ use leptonic::{
     },
 };
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 const FRUITS: [(&str, &str); 4] = [
     ("apple", "Apple"),
@@ -26,7 +30,22 @@ pub fn SelectDemo() -> impl IntoView {
         |(key, _)| Key::from(*key),
         |(_, label)| (*label).to_owned(),
     );
-    let state = use_select_state(UseSelectStateInput::new(collection));
+    let state = use_select_state(UseSelectStateInput {
+        collection,
+        selection_mode: SelectMode::Single,
+        default_value: Vec::new(),
+        value: None,
+        on_change: None,
+        disabled_keys: Signal::stored(HashSet::new()),
+        should_close_on_select: CloseOnSelect::Auto,
+        allows_empty_collection: false,
+        default_open: false,
+        on_open_change: None,
+        is_invalid: Signal::stored(false),
+        validate: None,
+        validation_behavior: ValidationBehavior::default(),
+        name: None,
+    });
     let disabled = RwSignal::new(false);
 
     let UseSelectReturn {
@@ -41,7 +60,18 @@ pub fn SelectDemo() -> impl IntoView {
         has_label: true.into(),
         is_disabled: disabled.into(),
         name: Some("fruit".to_owned()),
-        ..UseSelectInput::new(state)
+        state,
+        id: None,
+        is_required: false,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        keyboard_delegate: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        form: None,
+        validation_behavior: ValidationBehavior::default(),
     });
 
     let button = use_button(trigger);
@@ -91,7 +121,11 @@ fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView 
     let overlay = use_overlay(UseOverlayInput {
         is_dismissable: true.into(),
         should_close_on_blur: true.into(),
-        ..UseOverlayInput::new(Signal::stored(true), close)
+        is_open: Signal::stored(true),
+        on_close: close,
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
     });
     let UseListBoxReturn { props, data } = use_listbox(listbox);
 
@@ -114,12 +148,11 @@ fn FruitPopover(listbox: UseListBoxInput, close: Callback<()>) -> impl IntoView 
 #[component]
 fn FruitOption(list: ListBoxData, key: &'static str, label: &'static str) -> impl IntoView {
     let UseOptionReturn {
-        props,
-        is_focused,
-        ..
+        props, is_focused, ..
     } = use_option(UseOptionInput {
         list,
         key: Key::from(key),
+        on_context_menu: None,
     });
     let (attrs, styles) = props.into_parts();
 

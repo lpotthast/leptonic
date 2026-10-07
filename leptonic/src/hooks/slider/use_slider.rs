@@ -51,7 +51,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_slider`]. Start from [`UseSliderInput::new`].
+/// Input of [`use_slider`].
 #[derive(Debug)]
 pub struct UseSliderInput<T: NumberValue> {
     pub state: SliderState<T>,
@@ -64,19 +64,6 @@ pub struct UseSliderInput<T: NumberValue> {
     pub aria_labelledby: Option<String>,
     /// Further elements describing every thumb (next to a rendered description).
     pub aria_describedby: Option<String>,
-}
-
-impl<T: NumberValue> UseSliderInput<T> {
-    pub fn new(state: SliderState<T>) -> Self {
-        Self {
-            state,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-        }
-    }
 }
 
 /// What the thumbs need from their slider.

@@ -4,9 +4,8 @@ use leptonic::{
     components::button::{Button, ButtonVariant},
     hooks::{
         ButtonType, FormValidationContext, IntoAttrs, UseFieldInput, UseFieldReturn,
-        UseFormResetInput, UseFormValidationInput, UseFormValidationStateInput,
-        ValidationBehavior, use_field, use_form_reset, use_form_validation,
-        use_form_validation_state,
+        UseFormResetInput, UseFormValidationInput, UseFormValidationStateInput, ValidationBehavior,
+        use_field, use_form_reset, use_form_validation, use_form_validation_state,
     },
     utils::CapturedElement,
 };
@@ -64,25 +63,34 @@ fn CouponField(code: RwSignal<String>) -> impl IntoView {
     let element = CapturedElement::new();
 
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid: false.into(),
         value: code.into(),
         // An empty field is left to the native `required` constraint.
         validate: Some(Arc::new(|code: &String| {
-            if code.is_empty() || (code.len() == 8 && code.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())) {
+            if code.is_empty()
+                || (code.len() == 8
+                    && code
+                        .chars()
+                        .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()))
+            {
                 Ok(())
             } else {
-                Err(vec!["A coupon code has eight capital letters or digits.".to_owned()])
+                Err(vec![
+                    "A coupon code has eight capital letters or digits.".to_owned(),
+                ])
             }
         })),
         validation_behavior: ValidationBehavior::Native,
         // Matches the server errors for this field.
         name: Some("coupon".to_owned()),
     });
-    use_form_validation(UseFormValidationInput::new(
+    use_form_validation(UseFormValidationInput {
         element,
-        validation,
-        ValidationBehavior::Native,
-    ));
+        state: validation,
+        validation_behavior: ValidationBehavior::Native,
+        focus: None,
+    });
     use_form_reset(UseFormResetInput {
         element,
         initial_value: code.get_untracked(),

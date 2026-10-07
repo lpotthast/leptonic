@@ -1,0 +1,52 @@
+// Upstream: ../starters/docs/src/ColorSwatchPicker.css @ 99e610236
+// Upstream: ../starters/docs/src/ColorSwatchPicker.tsx @ 99e610236
+//
+// `ColorSwatchPicker`, `ColorSwatchPickerItem` (a list box and its options: they also carry
+// `leptonic-ListBox`/`leptonic-ListBoxItem`, which `list-box.scss` leaves alone here). States as
+// data attributes: an item's `data-selected`, `data-focus-visible`, `data-disabled`; the picker's
+// `data-layout` (`"stack"`: a column).
+//
+// Markup (as the starter):
+//   <ColorSwatchPicker>
+//     <ColorSwatchPickerItem color><ColorSwatch /></ColorSwatchPickerItem> (or <ColorSwatchPickerItems />)
+//   </ColorSwatchPicker>
+
+.leptonic-ColorSwatchPicker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.leptonic-ColorSwatchPickerItem {
+  position: relative;
+  outline: none;
+  border-radius: 9999px;
+  width: fit-content;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  &[data-selected]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid black;
+    outline: 2px solid white;
+    outline-offset: -4px;
+    border-radius: inherit;
+  }
+
+  &[data-disabled] {
+    opacity: 0.2;
+  }
+}
+
+.leptonic-ColorSwatchPicker {
+  &[data-layout='stack'] {
+    flex-direction: column;
+  }
+}

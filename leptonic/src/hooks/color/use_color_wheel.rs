@@ -45,7 +45,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_wheel`]. Start from [`UseColorWheelInput::new`].
+/// Input of [`use_color_wheel`].
 #[derive(Debug, Clone)]
 pub struct UseColorWheelInput<C: ColorValue> {
     pub state: ColorWheelState<C>,
@@ -62,22 +62,6 @@ pub struct UseColorWheelInput<C: ColorValue> {
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
     pub form: Option<String>,
-}
-
-impl<C: ColorValue> UseColorWheelInput<C> {
-    pub fn new(state: ColorWheelState<C>, outer_radius: f64, inner_radius: f64) -> Self {
-        Self {
-            state,
-            outer_radius,
-            inner_radius,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            aria_details: None,
-            name: None,
-            form: None,
-        }
-    }
 }
 
 /// Return value of [`use_color_wheel`].

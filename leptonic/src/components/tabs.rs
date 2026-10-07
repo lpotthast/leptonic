@@ -1,188 +1,132 @@
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    Mount,
-    components::tab::TabData,
+    Mount, Out,
+    atoms::tabs::{Tab as TabAtom, TabList, TabPanel, Tabs as TabsAtom},
+    hooks::{
+        KeyboardActivation, Orientation,
+        collections::{Key, use_list_collection},
+    },
     utils::{classes::Classes, styles::Styles},
 };
 
-#[derive(Debug, Clone)]
-pub struct TabHistory {
-    active: Option<Oco<'static, str>>,
-    previous: Option<Oco<'static, str>>,
+/// A tab declared by a [`Tab`](super::tab::Tab).
+#[derive(Clone)]
+pub(crate) struct TabSpec {
+    pub(crate) name: String,
+    pub(crate) label: ViewFn,
+    pub(crate) is_disabled: Signal<bool>,
+    pub(crate) mount: Option<Mount>,
+    pub(crate) content: ChildrenFn,
 }
 
-impl TabHistory {
-    pub const fn new() -> Self {
-        Self {
-            active: None,
-            previous: None,
-        }
-    }
+/// The tabs declared inside a [`Tabs`], in declaration order.
+#[derive(Clone, Copy)]
+pub(crate) struct TabsRegistry(pub(crate) RwSignal<Vec<TabSpec>>);
 
-    pub const fn get_active(&self) -> Option<&Oco<'static, str>> {
-        self.active.as_ref()
-    }
-
-    pub const fn get_previous(&self) -> Option<&Oco<'static, str>> {
-        self.previous.as_ref()
-    }
-
-    pub fn push(&mut self, active: Oco<'static, str>) {
-        self.previous = self.active.take();
-        self.active = Some(active);
-    }
-
-    pub fn pop(&mut self) {
-        self.active = self.previous.take();
-    }
-}
-
-impl Default for TabHistory {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub(crate) struct TabsContext {
-    pub tabs: ReadSignal<Vec<TabData>>,
-    pub set_tabs: WriteSignal<Vec<TabData>>,
-
-    pub history: ReadSignal<TabHistory>,
-    pub set_history: WriteSignal<TabHistory>,
-
-    /// Default mount option when not otherwise specified for an individual tab.
-    pub default_mount_type: Option<Mount>,
-}
-
-impl TabsContext {
-    /// Register a tab with the given label.
-    /// Automatically set this to be the active tab when no other tab is currently active.
-    pub(crate) fn register(&self, tab: TabData) {
-        let name = tab.name.clone();
-
-        self.set_tabs.update(|tabs| {
-            tabs.push(tab);
-        });
-
-        if self.history.get_untracked().get_active().is_none() {
-            self.set_history.update(|history| {
-                history.push(name);
-            });
-        }
-    }
-
-    pub(crate) fn deregister(&self, tab_id: &str) {
-        self.set_tabs.update(|labels| {
-            if let Some(idx) = labels.iter().position(|tab| tab.id == tab_id) {
-                labels.remove(idx);
-            }
-        });
-
-        if self.history.get_untracked().get_active().is_none() {
-            self.set_history.update(|history| {
-                history.pop();
-            });
-        }
-    }
-}
-
-pub(crate) fn use_tabs() -> TabsContext {
-    expect_context::<TabsContext>()
-}
-
+/// Tabs: a tab list and the selected tab's panel, built on the tabs atoms. Declare the tabs as
+/// [`Tab`](super::tab::Tab) children.
+///
+/// ```ignore
+/// <Tabs>
+///     <Tab name="overview" label=|| "Overview">"A short summary."</Tab>
+///     <Tab name="activity" label=|| "Activity">"The latest changes."</Tab>
+/// </Tabs>
+/// ```
 #[component]
+#[allow(clippy::too_many_arguments)]
 pub fn Tabs(
-    #[prop(optional)] mount: Option<Mount>,
+    /// The initially selected tab's name. Default: the first enabled tab.
+    #[prop(into, optional)]
+    default_selected_key: Option<String>,
+    /// The selected tab's name (controlled): a value or any signal.
+    #[prop(into, optional)]
+    selected_key: Option<Signal<String>>,
+    /// Receives the selected tab's name: an `RwSignal`, `WriteSignal`, closure, `Callback`, ...
+    #[prop(into, optional)]
+    set_selected_key: Option<Out<String>>,
+    /// Called with the name of the tab the user selects.
+    #[prop(into, optional)]
+    on_selection_change: Option<Callback<String>>,
+    /// Whether hidden panels stay mounted (keeping their state). Default: [`Mount::Once`].
+    #[prop(optional)]
+    mount: Option<Mount>,
+    #[prop(default = Orientation::Horizontal)] orientation: Orientation,
+    /// Whether focusing a tab with the arrow keys selects it.
+    #[prop(optional)]
+    keyboard_activation: KeyboardActivation,
+    /// Names the tab list.
+    #[prop(into, optional)]
+    aria_label: MaybeProp<String>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let (history, set_history) = signal(TabHistory::new());
-    let (tabs, set_tabs) = signal(Vec::new());
+    let tabs = RwSignal::new(Vec::<TabSpec>::new());
+    // The `Tab`s register while the children are created, before the tab list renders (so the
+    // server renders every tab).
+    let declarations = view! { <Provider value=TabsRegistry(tabs)>{children()}</Provider> };
+
+    let specs = Signal::derive(move || tabs.get());
+    let collection = use_list_collection(
+        specs,
+        |tab: &TabSpec| Key::from(tab.name.clone()),
+        |tab: &TabSpec| tab.name.clone(),
+    );
+    let disabled_keys = Signal::derive(move || {
+        tabs.with(|tabs| {
+            tabs.iter()
+                .filter(|tab| tab.is_disabled.get())
+                .map(|tab| Key::from(tab.name.clone()))
+                .collect()
+        })
+    });
+    let mount = mount.unwrap_or_default();
 
     view! {
-        <div class=classes.add("leptonic-tabs") style=styles>
-            <Provider value=TabsContext {
-                history,
-                set_history,
-                tabs,
-                set_tabs,
-                default_mount_type: mount,
-            }>
-                <TabsContent children />
-            </Provider>
-        </div>
-    }
-}
-
-#[component]
-pub(crate) fn TabsContent(children: Children) -> impl IntoView {
-    let ctx = use_tabs();
-
-    // Note: Rendering out the children first is important for reliable SSR.
-    // Children are `Tab`s, which register themselves in the previously constructed `TabsContext`.
-    // Rendering the children inline in the `view!` macro would send down an empty `TabSelectors`
-    // which would then result in hydration errors!
-    let children = children();
-
-    view! {
-        <TabSelectors tabs=ctx.tabs history=ctx.history set_history=ctx.set_history />
-        {children}
-    }
-}
-
-#[component]
-pub(crate) fn TabSelectors(
-    tabs: ReadSignal<Vec<TabData>>,
-    history: ReadSignal<TabHistory>,
-    set_history: WriteSignal<TabHistory>,
-) -> impl IntoView {
-    view! {
-        <div class="leptonic-tab-selectors" role="tablist">
+        <TabsAtom
+            collection=collection
+            nostrip:default_selected_key=default_selected_key.map(Key::from)
+            nostrip:selected_key=selected_key.map(|name| Signal::derive(move || Key::from(name.get())))
+            nostrip:set_selected_key=set_selected_key
+                .map(|out| Out::new_callback(move |key: Key| out.set(key.to_string())))
+            nostrip:on_selection_change=on_selection_change
+                .map(|callback| Callback::new(move |key: Key| callback.run(key.to_string())))
+            disabled_keys=disabled_keys
+            orientation=orientation
+            keyboard_activation=keyboard_activation
+            classes=classes.add("leptonic-tabs")
+            styles=styles
+        >
+            {declarations}
+            <TabList classes="leptonic-tab-selectors" aria_label=aria_label>
+                <For
+                    each=move || tabs.get()
+                    key=|tab| tab.name.clone()
+                    children=|tab| {
+                        view! {
+                            <TabAtom key=tab.name.clone() classes="leptonic-tab-selector">
+                                {tab.label.run()}
+                            </TabAtom>
+                        }
+                    }
+                />
+            </TabList>
             <For
                 each=move || tabs.get()
-                key=|tab| tab.id.clone()
+                key=|tab| tab.name.clone()
                 children=move |tab| {
-                    let n1 = tab.name.clone();
-                    let n2 = tab.name.clone();
                     view! {
-                        <TabSelector
-                            is_active=move || history.get().get_active() == Some(&n1.clone())
-                            set_active=move || {
-                                set_history.update(|history| history.push(n2.clone()));
-                            }
-                            name=tab.name.clone()
-                            label=tab.label.clone()
-                        />
+                        <TabPanel
+                            key=tab.name.clone()
+                            should_force_mount=tab.mount.unwrap_or(mount) == Mount::Once
+                            classes="leptonic-tab"
+                        >
+                            {(tab.content)()}
+                        </TabPanel>
                     }
                 }
             />
-        </div>
-    }
-}
-
-#[component]
-fn TabSelector<A, S>(
-    is_active: A,
-    set_active: S,
-    name: Oco<'static, str>,
-    label: ViewFn,
-) -> impl IntoView
-where
-    A: Fn() -> bool + Send + Sync + 'static,
-    S: Fn() + 'static,
-{
-    view! {
-        <div
-            class="leptonic-tab-selector"
-            data:for-name=name
-            class:active=is_active
-            on:click=move |_event| set_active()
-            role="tab"
-        >
-            {label.run()}
-        </div>
+        </TabsAtom>
     }
 }

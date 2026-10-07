@@ -1,3 +1,5 @@
+use leptonic::hooks::KeyboardActivation;
+use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
     hooks::{
         IntoAttrs, Key, Orientation, TabListData, TabListItemData, UseTabInput, UseTabListInput,
@@ -21,9 +23,14 @@ const TABS: [(&str, &str, &str); 3] = [
 /// One tab, rendered with `use_tab`.
 #[component]
 fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let (attrs, styles) = use_tab(UseTabInput::new(list, Key::from(key)))
-        .tab_props
-        .into_parts();
+    let (attrs, styles) = use_tab(UseTabInput {
+        list,
+        key: Key::from(key),
+        is_disabled: Signal::stored(false),
+        should_select_on_press_up: SelectOnPressUp::Auto,
+    })
+    .tab_props
+    .into_parts();
 
     view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
 }
@@ -55,14 +62,24 @@ pub fn TabsVerticalDemo() -> impl IntoView {
             b.item(key, label);
         }
     });
-    let state = use_tab_list_state(UseTabListStateInput::new(collection));
+    let state = use_tab_list_state(UseTabListStateInput {
+        collection,
+        default_selected_key: None,
+        selected_key: None,
+        on_selection_change: None,
+        disabled_keys: Signal::default(),
+        is_disabled: Signal::stored(false),
+    });
     let tabs = TabListData::new(state);
 
     // Vertical: Arrow Up and Arrow Down move between the tabs (Arrow Left and Arrow Right still work).
     let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
         orientation: Orientation::Vertical,
         aria_label: "Settings".into(),
-        ..UseTabListInput::new(tabs.clone(), CapturedElement::new())
+        tabs: tabs.clone(),
+        element: CapturedElement::new(),
+        keyboard_activation: KeyboardActivation::Automatic,
+        aria_labelledby: None,
     });
 
     view! {

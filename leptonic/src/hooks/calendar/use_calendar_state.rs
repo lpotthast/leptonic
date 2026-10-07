@@ -1,779 +1,735 @@
-// Upstream: react-stately/src/calendar/useCalendarState.ts @ 6f664fe911
+// Upstream: react-stately/src/calendar/useCalendarState.ts @ 99e6102368
+use jiff::civil::{Date, Weekday};
 use leptos::prelude::*;
-use time::macros::format_description;
 
+use super::utils::{
+    align_center, align_end, align_start, constrain_start, constrain_value, is_invalid,
+    previous_available_date,
+};
 use crate::utils::{
-    live_announcer::announce_polite,
-    time::{
-        Day, InMonth, Month, SaveReplaceYear, Week, Year, is_in_range, start_of_next_month,
-        start_of_previous_month, whole_days_in,
-    },
+    ValueBinding,
+    date::{DateDuration, DateExt, DateRange, first_day_of_week, min_date, today},
+    i18n::use_locale,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// 1. Focus/selection separation: Matches react-aria. `focused_date` is the
-//    keyboard cursor; `value` is the confirmed selection. Arrow keys move
-//    focus without selecting.
+// ## API DIFFERENCES
+// - Dates are `jiff::civil::Date` (Gregorian; see `utils::date`); the value has no time part
+//   (react-aria keeps a `CalendarDateTime`'s time).
+// - Hook-owned value and focused date (C4): `default_value`/`default_focused_value` +
+//   `on_change`/`on_focus_change`, or bindings to app state.
+// - A `Copy` struct with signals and methods (C3).
+// - `page_behavior`, `selection_alignment`: enums (react-aria: strings).
 //
-// 2. Year/month picker grids: Leptonic-specific addition for navigating
-//    years/months via grid UI. Not present in react-aria.
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Without a value or focused date, the server renders the month of its own today, which the
+//   browser keeps when hydrating; near midnight, in another time zone, that is a neighboring month.
+//   (The today marks are set in the browser, see `utils::date::use_today`.)
 //
-// 3. No calendar system abstraction: We use `time::OffsetDateTime` directly
-//    rather than react-aria's `@internationalized/date` calendar system.
+// ## OMITTED FEATURES
+// - `selectionMode: 'multiple'` (several selected dates).
+// - Calendar systems other than the Gregorian.
 //
-// 4. No multi-month visible duration, selection alignment, locale-aware
-//    formatting, autoFocus, or pageBehavior.
-//
-// 5. English-only month names: `format_description!("[month repr:long]")`
-//    produces English month names only. i18n would need a custom formatter.
-//
-// 6. Simplified validation model: `previous_available_date` searches backward
-//    up to `min` or 365 days. React-aria uses a more sophisticated search
-//    with calendar-system-aware iteration.
-//
+// =============================================================================
 
-/// Input parameters for the `use_calendar_state` hook.
-#[derive(Debug, Clone, Copy)]
+/// How the previous and next buttons page (react-aria's `pageBehavior`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum PageBehavior {
+    /// By the whole visible duration (e.g. three months).
+    #[default]
+    Visible,
+    /// By one unit of it (e.g. one month).
+    Single,
+}
+
+/// Where the initially focused date sits in the visible range (react-aria's
+/// `selectionAlignment`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectionAlignment {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+/// Input of [`use_calendar_state`].
+#[derive(Clone)]
 pub struct UseCalendarStateInput {
-    /// The initial selected value. `None` means no date is selected.
-    pub default_value: Option<time::OffsetDateTime>,
-
-    /// The minimum selectable date.
-    pub min: Option<time::OffsetDateTime>,
-
-    /// The maximum selectable date.
-    pub max: Option<time::OffsetDateTime>,
-
-    /// Whether the calendar is disabled.
+    /// The initially selected date.
+    pub default_value: Option<Date>,
+    /// The selected date as app state, replacing `default_value`.
+    pub value: Option<ValueBinding<Option<Date>>>,
+    /// Called with the newly selected date.
+    pub on_change: Option<Callback<Option<Date>>>,
+    pub min_value: Signal<Option<Date>>,
+    pub max_value: Signal<Option<Date>>,
+    /// Whether a date can't be selected (e.g. booked out).
+    pub is_date_unavailable: Option<Callback<Date, bool>>,
     pub is_disabled: Signal<bool>,
-
-    /// Whether the calendar is read-only (can focus but not select).
     pub is_read_only: Signal<bool>,
-
-    /// Callback to check if a specific date is unavailable.
-    pub is_date_unavailable: Option<Callback<time::OffsetDateTime, bool>>,
-
-    /// Called when the selected value changes.
-    pub on_change: Option<Callback<Option<time::OffsetDateTime>>>,
-
-    /// Called when the focused date changes.
-    pub on_focus_change: Option<Callback<time::OffsetDateTime>>,
-
-    /// The initial focused date. Defaults to `default_value` or now.
-    pub default_focused_value: Option<time::OffsetDateTime>,
-
-    /// External validity signal (e.g. from form validation).
     pub is_invalid: Signal<bool>,
-
-    /// The first day of the week. Defaults to Monday.
-    pub first_day_of_week: time::Weekday,
+    /// Whether the calendar starts focused.
+    pub auto_focus: bool,
+    /// The initially focused date. Default: the value, else today (within min and max).
+    pub default_focused_value: Option<Date>,
+    /// The focused date as app state, replacing `default_focused_value`.
+    pub focused_value: Option<ValueBinding<Date>>,
+    pub on_focus_change: Option<Callback<Date>>,
+    /// How much is visible at once. Default: one month.
+    pub visible_duration: DateDuration,
+    pub page_behavior: PageBehavior,
+    pub selection_alignment: SelectionAlignment,
+    /// The first day of the week. Default: the locale's.
+    pub first_day_of_week: Option<Weekday>,
+    /// A fixed number of week rows per month (e.g. 6, so the calendar keeps its height).
+    pub weeks_in_month: Option<u8>,
 }
 
 impl Default for UseCalendarStateInput {
     fn default() -> Self {
         Self {
             default_value: None,
-            min: None,
-            max: None,
-            is_disabled: Signal::derive(|| false),
-            is_read_only: Signal::derive(|| false),
-            is_date_unavailable: None,
+            value: None,
             on_change: None,
-            on_focus_change: None,
-            default_focused_value: None,
+            min_value: Signal::stored(None),
+            max_value: Signal::stored(None),
+            is_date_unavailable: None,
+            is_disabled: Signal::stored(false),
+            is_read_only: Signal::stored(false),
             is_invalid: Signal::stored(false),
-            first_day_of_week: time::Weekday::Monday,
+            auto_focus: false,
+            default_focused_value: None,
+            focused_value: None,
+            on_focus_change: None,
+            visible_duration: DateDuration::months(1),
+            page_behavior: PageBehavior::Visible,
+            selection_alignment: SelectionAlignment::Center,
+            first_day_of_week: None,
+            weeks_in_month: None,
         }
     }
 }
 
-/// The return value of the `use_calendar_state` hook.
+/// The state of a calendar: the selected date, the focused date (the keyboard cursor) and the
+/// visible range, which follows the focused date.
 #[derive(Clone, Copy)]
-pub struct UseCalendarStateReturn {
-    // Core state
-    /// The currently selected date, if any.
-    pub value: Signal<Option<time::OffsetDateTime>>,
-    /// The currently focused date (keyboard cursor). Always set.
-    pub focused_date: Signal<time::OffsetDateTime>,
-    /// Whether the calendar grid currently has focus.
+pub struct CalendarState {
+    /// The selected date.
+    pub value: Signal<Option<Date>>,
+    /// The focused date: the date the keyboard moves from.
+    pub focused_date: Signal<Date>,
+    /// The visible dates.
+    pub visible_range: Signal<DateRange>,
+    /// Whether the calendar's grid has focus.
     pub is_focused: Signal<bool>,
-    /// Whether the calendar is disabled.
     pub is_disabled: Signal<bool>,
-    /// Whether the calendar is read-only.
     pub is_read_only: Signal<bool>,
-    /// Whether the current value is invalid (out of range, unavailable, or externally invalid).
+    /// Whether the value is invalid: out of range, unavailable, or marked invalid.
     pub is_value_invalid: Signal<bool>,
-
-    // Derived display
-    /// The year of the focused date.
-    pub focused_year: Memo<i32>,
-    /// The month name of the focused date.
-    pub focused_month_name: Memo<String>,
-
-    // Pre-computed grids
-    /// The weeks grid for the focused month.
-    pub weeks: Signal<Vec<Week>>,
-    /// The months grid for year selection.
-    pub months: Signal<Vec<Month>>,
-    /// The years grid.
-    pub years: Signal<Vec<Year>>,
-    /// A display string for the years range (e.g. "2020 - 2031").
-    pub years_range: Signal<String>,
-
-    // Boundary checks
-    /// Whether navigating to the previous visible range (month) is invalid (past min).
-    pub is_previous_visible_range_invalid: Signal<bool>,
-    /// Whether navigating to the next visible range (month) is invalid (past max).
-    pub is_next_visible_range_invalid: Signal<bool>,
-
-    // Selection
-    /// Set the selected value directly.
-    pub set_value: Callback<Option<time::OffsetDateTime>>,
-    /// Select the currently focused date.
-    pub select_focused_date: Callback<()>,
-    /// Select a specific date.
-    pub select_date: Callback<time::OffsetDateTime>,
-
-    // Focus navigation
-    /// Set the focused date directly.
-    pub set_focused_date: Callback<time::OffsetDateTime>,
-    /// Set whether the calendar has focus.
-    pub set_focused: Callback<bool>,
-    /// Move focus to the next day (+1 day).
-    pub focus_next_day: Callback<()>,
-    /// Move focus to the previous day (-1 day).
-    pub focus_previous_day: Callback<()>,
-    /// Move focus to the next row (+7 days).
-    pub focus_next_row: Callback<()>,
-    /// Move focus to the previous row (-7 days).
-    pub focus_previous_row: Callback<()>,
-    /// Move focus to the next page (+1 month).
-    pub focus_next_page: Callback<()>,
-    /// Move focus to the previous page (-1 month).
-    pub focus_previous_page: Callback<()>,
-    /// Move focus to the start of the current section (first day of month).
-    pub focus_section_start: Callback<()>,
-    /// Move focus to the end of the current section (last day of month).
-    pub focus_section_end: Callback<()>,
-    /// Move focus to the next section. If `larger` (bool arg) is true, +1 year; else +1 month.
-    pub focus_next_section: Callback<bool>,
-    /// Move focus to the previous section. If `larger` (bool arg) is true, -1 year; else -1 month.
-    pub focus_previous_section: Callback<bool>,
-
-    // Year/month picker (leptonic-specific)
-    /// Navigate the years grid backward by one page.
-    pub navigate_years_backward: Callback<()>,
-    /// Navigate the years grid forward by one page.
-    pub navigate_years_forward: Callback<()>,
-    /// Focus a specific year (updates focused date to that year).
-    pub focus_year: Callback<i32>,
-    /// Focus a specific month (updates focused date to that month).
-    pub focus_month: Callback<time::Month>,
-
-    // Query methods
-    /// Check if a date is the currently selected date.
-    pub is_selected: Callback<time::OffsetDateTime, bool>,
-    /// Check if a date is the currently focused date.
-    pub is_cell_focused: Callback<time::OffsetDateTime, bool>,
-    /// Check if a date is disabled (out of min/max range or calendar disabled).
-    pub is_cell_disabled: Callback<time::OffsetDateTime, bool>,
-    /// Check if a date is unavailable (from `is_date_unavailable` callback).
-    pub is_cell_unavailable: Callback<time::OffsetDateTime, bool>,
+    pub min_value: Signal<Option<Date>>,
+    pub max_value: Signal<Option<Date>>,
+    /// How much is visible at once.
+    pub visible_duration: DateDuration,
+    /// The first day of the week.
+    pub first_day_of_week: Signal<Weekday>,
+    binding: ValueBinding<Option<Date>>,
+    focus: ValueBinding<Date>,
+    start: RwSignal<Date>,
+    focused: RwSignal<bool>,
+    is_date_unavailable: Option<Callback<Date, bool>>,
+    page_duration: DateDuration,
+    weeks_in_month: Option<u8>,
 }
 
-/// Clamp a date to the [min, max] range.
-fn constrain_value(
-    date: time::OffsetDateTime,
-    min: Option<time::OffsetDateTime>,
-    max: Option<time::OffsetDateTime>,
-) -> time::OffsetDateTime {
-    let date = if let Some(min) = min {
-        if date < min { min } else { date }
+/// The last visible date of a range starting at `start`.
+fn end_of(start: Date, duration: DateDuration) -> Date {
+    let mut shortened = duration;
+    if shortened.days == 0 {
+        shortened.days = -1;
     } else {
-        date
-    };
-    if let Some(max) = max {
-        if date > max { max } else { date }
-    } else {
-        date
+        shortened.days -= 1;
+    }
+    start.add(shortened)
+}
+
+impl CalendarState {
+    fn bounds(&self) -> (Option<Date>, Option<Date>) {
+        (
+            self.min_value.get_untracked(),
+            self.max_value.get_untracked(),
+        )
+    }
+
+    fn first_day(&self) -> Weekday {
+        self.first_day_of_week.get_untracked()
+    }
+
+    /// Moves the visible range so that it shows `focused`.
+    fn show(&self, focused: Date) {
+        let (min, max) = self.bounds();
+        let start = self.start.get_untracked();
+        if focused < start {
+            self.start.set(align_end(
+                focused,
+                self.visible_duration,
+                self.first_day(),
+                min,
+                max,
+            ));
+        } else if focused > end_of(start, self.visible_duration) {
+            self.start.set(align_start(
+                focused,
+                self.visible_duration,
+                self.first_day(),
+                min,
+                max,
+            ));
+        }
+    }
+
+    /// Focuses `date` (within min and max) and shows the focused date: a controlled focused
+    /// value may not take it.
+    fn focus_cell(&self, date: Date) {
+        let (min, max) = self.bounds();
+        self.focus.set(constrain_value(date, min, max));
+        self.show(self.focus.value.get_untracked());
+    }
+
+    /// `date` as a value: within min and max, else the previous available date (react-aria's
+    /// `normalizeValue`).
+    fn normalize(&self, date: Date) -> Option<Date> {
+        let (min, max) = self.bounds();
+        let constrained = constrain_value(date, min, max);
+        let lower = min.unwrap_or_else(|| min_date(constrained, self.start.get_untracked()));
+        let is_unavailable = self
+            .is_date_unavailable
+            .map(|callback| move |date: Date| callback.run(date));
+        previous_available_date(
+            constrained,
+            lower,
+            is_unavailable.as_ref().map(|f| f as &dyn Fn(Date) -> bool),
+        )
+    }
+
+    /// Sets the value (unless disabled or read-only): a date within min and max, else the
+    /// previous available one; `None` clears it.
+    pub fn set_value(&self, value: Option<Date>) {
+        if self.is_disabled.get_untracked() || self.is_read_only.get_untracked() {
+            return;
+        }
+        match value {
+            None => self.binding.set(None),
+            Some(date) => {
+                if let Some(date) = self.normalize(date) {
+                    self.binding.set(Some(date));
+                }
+            }
+        }
+    }
+
+    /// Focuses `date` (within min and max).
+    pub fn set_focused_date(&self, date: Date) {
+        self.focus_cell(date);
+    }
+
+    pub fn focus_next_day(&self) {
+        self.focus_cell(self.focused_date.get_untracked().add(DateDuration::days(1)));
+    }
+
+    pub fn focus_previous_day(&self) {
+        self.focus_cell(
+            self.focused_date
+                .get_untracked()
+                .subtract(DateDuration::days(1)),
+        );
+    }
+
+    /// The date a week later (in a day view: the next page).
+    pub fn focus_next_row(&self) {
+        let duration = self.visible_duration;
+        if duration.days != 0 {
+            self.focus_next_page();
+        } else if duration.weeks != 0 || duration.months != 0 || duration.years != 0 {
+            self.focus_cell(
+                self.focused_date
+                    .get_untracked()
+                    .add(DateDuration::weeks(1)),
+            );
+        }
+    }
+
+    /// The date a week earlier (in a day view: the previous page).
+    pub fn focus_previous_row(&self) {
+        let duration = self.visible_duration;
+        if duration.days != 0 {
+            self.focus_previous_page();
+        } else if duration.weeks != 0 || duration.months != 0 || duration.years != 0 {
+            self.focus_cell(
+                self.focused_date
+                    .get_untracked()
+                    .subtract(DateDuration::weeks(1)),
+            );
+        }
+    }
+
+    /// Shows the next page and moves the focused date by the same amount (keeping the day).
+    pub fn focus_next_page(&self) {
+        self.page(self.page_duration);
+    }
+
+    /// Shows the previous page and moves the focused date by the same amount (keeping the day).
+    pub fn focus_previous_page(&self) {
+        self.page(self.page_duration.negated());
+    }
+
+    fn page(&self, duration: DateDuration) {
+        let (min, max) = self.bounds();
+        let focused = self.focused_date.get_untracked();
+        let start = self.start.get_untracked().add(duration);
+        self.focus
+            .set(constrain_value(focused.add(duration), min, max));
+        let page =
+            if duration.years < 0 || duration.months < 0 || duration.weeks < 0 || duration.days < 0
+            {
+                duration.negated()
+            } else {
+                duration
+            };
+        self.start.set(align_start(
+            constrain_start(focused, start, page, self.first_day(), min, max),
+            page,
+            self.first_day(),
+            None,
+            None,
+        ));
+    }
+
+    /// The first date of the focused section (week or month).
+    pub fn focus_section_start(&self) {
+        let duration = self.visible_duration;
+        let focused = self.focused_date.get_untracked();
+        if duration.days != 0 {
+            self.focus_cell(self.start.get_untracked());
+        } else if duration.weeks != 0 {
+            self.focus_cell(focused.start_of_week(self.first_day()));
+        } else if duration.months != 0 || duration.years != 0 {
+            self.focus_cell(focused.first_of_month());
+        }
+    }
+
+    /// The last date of the focused section (week or month).
+    pub fn focus_section_end(&self) {
+        let duration = self.visible_duration;
+        let focused = self.focused_date.get_untracked();
+        if duration.days != 0 {
+            self.focus_cell(end_of(self.start.get_untracked(), duration));
+        } else if duration.weeks != 0 {
+            self.focus_cell(focused.end_of_week(self.first_day()));
+        } else if duration.months != 0 || duration.years != 0 {
+            self.focus_cell(focused.last_of_month());
+        }
+    }
+
+    /// The same date one section later: a month (`larger`: a year) in a month view, a week (a
+    /// month) in a week view, a page in a day view.
+    pub fn focus_next_section(&self, larger: bool) {
+        self.section(larger, 1);
+    }
+
+    /// The same date one section earlier.
+    pub fn focus_previous_section(&self, larger: bool) {
+        self.section(larger, -1);
+    }
+
+    fn section(&self, larger: bool, direction: i32) {
+        let duration = self.visible_duration;
+        let focused = self.focused_date.get_untracked();
+        let by =
+            |step: DateDuration| focused.add(if direction < 0 { step.negated() } else { step });
+        if !larger && duration.days == 0 {
+            self.focus_cell(by(duration.unit()));
+        } else if duration.days != 0 {
+            if direction < 0 {
+                self.focus_previous_page();
+            } else {
+                self.focus_next_page();
+            }
+        } else if duration.weeks != 0 {
+            self.focus_cell(by(DateDuration::months(1)));
+        } else if duration.months != 0 || duration.years != 0 {
+            self.focus_cell(by(DateDuration::years(1)));
+        }
+    }
+
+    /// Selects the focused date, unless it is unavailable.
+    pub fn select_focused_date(&self) {
+        let focused = self.focused_date.get_untracked();
+        if !self.is_cell_unavailable_untracked(focused) {
+            self.select_date(focused);
+        }
+    }
+
+    /// Selects `date` (unless disabled or read-only).
+    pub fn select_date(&self, date: Date) {
+        if self.is_disabled.get_untracked() || self.is_read_only.get_untracked() {
+            return;
+        }
+        self.set_value(Some(date));
+    }
+
+    /// Sets whether the calendar's grid has focus.
+    /// Whether the state still exists (not disposed with its calendar), for blur handlers.
+    pub(crate) fn is_alive(&self) -> bool {
+        self.focused.try_with_untracked(|_| ()).is_some()
+    }
+
+    pub fn set_focused(&self, focused: bool) {
+        self.focused.set(focused);
+    }
+
+    /// Whether `date` lies outside min and max.
+    pub fn is_invalid(&self, date: Date) -> bool {
+        is_invalid(date, self.min_value.get(), self.max_value.get())
+    }
+
+    /// Whether `date` is the selected date (and selectable).
+    pub fn is_selected(&self, date: Date) -> bool {
+        self.value.get() == Some(date)
+            && !self.is_cell_disabled(date)
+            && !self.is_cell_unavailable(date)
+    }
+
+    /// Whether `date` is focused (the grid has focus and it is the focused date).
+    pub fn is_cell_focused(&self, date: Date) -> bool {
+        self.is_focused.get() && self.focused_date.get() == date
+    }
+
+    /// Whether `date` can't be focused or selected: the calendar is disabled, or the date is not
+    /// visible or outside min and max.
+    pub fn is_cell_disabled(&self, date: Date) -> bool {
+        let range = self.visible_range.get();
+        self.is_disabled.get() || !range.contains(date) || self.is_invalid(date)
+    }
+
+    /// Whether `date` is unavailable (`is_date_unavailable`).
+    pub fn is_cell_unavailable(&self, date: Date) -> bool {
+        self.is_date_unavailable
+            .is_some_and(|is_unavailable| is_unavailable.run(date))
+    }
+
+    fn is_cell_unavailable_untracked(&self, date: Date) -> bool {
+        untrack(|| self.is_cell_unavailable(date))
+    }
+
+    /// Whether the previous page would show only dates before min.
+    pub fn is_previous_visible_range_invalid(&self) -> bool {
+        let start = self.visible_range.get().start;
+        let previous = start.subtract(DateDuration::days(1));
+        previous == start || self.is_invalid(previous)
+    }
+
+    /// Whether the next page would show only dates after max.
+    pub fn is_next_visible_range_invalid(&self) -> bool {
+        let end = self.visible_range.get().end;
+        let next = end.add(DateDuration::days(1));
+        next == end || self.is_invalid(next)
+    }
+
+    /// The dates of the week `week_index` weeks after `from` (default: the visible range's start),
+    /// `None` where the representable range ends.
+    pub fn dates_in_week(&self, week_index: u8, from: Option<Date>) -> Vec<Option<Date>> {
+        let from = from.unwrap_or_else(|| self.visible_range.get().start);
+        let mut date = from.add(DateDuration::weeks(i32::from(week_index)));
+        let days = match self.visible_duration.days {
+            days @ 1..7 => usize::try_from(days).unwrap_or(7),
+            _ => 7,
+        };
+        let mut dates = Vec::with_capacity(days);
+        if days == 7 {
+            let first_day = self.first_day_of_week.get();
+            date = date.start_of_week(first_day);
+            // The representable range may start in the middle of a week.
+            dates.extend((0..date.day_of_week(first_day)).map(|_| None));
+        }
+        while dates.len() < days {
+            dates.push(Some(date));
+            let next = date.add(DateDuration::days(1));
+            if next == date {
+                break;
+            }
+            date = next;
+        }
+        dates.resize(days, None);
+        dates
+    }
+
+    /// The number of week rows of the month of `from` (default: the visible range's start).
+    pub fn weeks_in_month(&self, from: Option<Date>) -> u8 {
+        let duration = self.visible_duration;
+        if duration.weeks != 0 || duration.days != 0 {
+            let days_weeks = u8::try_from((duration.days.max(0) + 6) / 7).unwrap_or(0);
+            return u8::try_from(duration.weeks.max(0)).unwrap_or(0) + days_weeks;
+        }
+        self.weeks_in_month.unwrap_or_else(|| {
+            let from = from.unwrap_or_else(|| self.visible_range.get().start);
+            from.weeks_in_month(self.first_day_of_week.get())
+        })
     }
 }
 
-/// Creates internal state for a calendar, separating focus (keyboard cursor)
-/// from selection (confirmed value).
-#[allow(
-    clippy::too_many_lines,
-    clippy::needless_pass_by_value,
-    clippy::missing_panics_doc
-)]
-pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateReturn {
+/// Creates the state of a calendar: the selected date, the focused date and the visible range
+/// following it.
+pub fn use_calendar_state(input: UseCalendarStateInput) -> CalendarState {
     let UseCalendarStateInput {
         default_value,
-        min,
-        max,
+        value,
+        on_change,
+        min_value,
+        max_value,
+        is_date_unavailable,
         is_disabled,
         is_read_only,
-        is_date_unavailable,
-        on_change,
-        on_focus_change,
+        is_invalid: is_marked_invalid,
+        auto_focus,
         default_focused_value,
-        is_invalid,
-        first_day_of_week,
+        focused_value,
+        on_focus_change,
+        visible_duration,
+        page_behavior,
+        selection_alignment,
+        first_day_of_week: first_day_override,
+        weeks_in_month,
     } = input;
 
-    // --- Core state ---
-
-    let (value, set_value_signal) = signal(default_value);
-
-    let initial_focused = default_focused_value
-        .or(default_value)
-        .unwrap_or_else(now_local_or_utc);
-    let initial_focused = constrain_value(initial_focused, min, max);
-    let (focused_date, set_focused_date_signal) = signal(initial_focused);
-
-    let (is_focused_signal, set_is_focused_signal) = signal(false);
-
-    // Years grid start offset
-    let years_start = RwSignal::new(initial_focused.year() - 4);
-
-    // --- Live announcement on month/year navigation ---
-    let prev_month = StoredValue::new(initial_focused.month());
-    let prev_year = StoredValue::new(initial_focused.year());
-    Effect::new(move |_| {
-        let fd = focused_date.get();
-        let new_month = fd.month();
-        let new_year = fd.year();
-        if new_month != prev_month.get_value() || new_year != prev_year.get_value() {
-            prev_month.set_value(new_month);
-            prev_year.set_value(new_year);
-            announce_polite(format!("{new_month} {new_year}"));
-        }
+    let locale = use_locale();
+    let first_day_of_week = Signal::derive(move || {
+        first_day_override.unwrap_or_else(|| first_day_of_week(&locale.get()))
     });
 
-    // --- Helpers ---
-
-    let update_focused = move |new_date: time::OffsetDateTime| {
-        let constrained = constrain_value(new_date, min, max);
-        set_focused_date_signal.set(constrained);
-        // Keep years grid in sync
-        years_start.set(constrained.year() - 4);
-        if let Some(cb) = on_focus_change {
-            cb.run(constrained);
-        }
-    };
-
-    let try_select = move |date: time::OffsetDateTime| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-        if !is_in_range(&date, min.as_ref(), max.as_ref()) {
-            return;
-        }
-        // If the requested date is unavailable, find the nearest previous available date.
-        let date = if is_date_unavailable.is_some_and(|cb| cb.run(date)) {
-            let Some(available) = previous_available_date(date, min, is_date_unavailable) else {
-                return;
-            };
-            available
-        } else {
-            date
-        };
-        set_value_signal.set(Some(date));
-        if let Some(cb) = on_change {
-            cb.run(Some(date));
-        }
-    };
-
-    // --- Derived display ---
-
-    let focused_year = Memo::new(move |_| focused_date.get().year());
-    let focused_month_name = Memo::new(move |_| focused_date.get().month().to_string());
-
-    // --- Pre-computed grids ---
-
-    let years = Signal::derive(move || {
-        let focused = focused_date.get();
-        let selected = value.get();
-        create_years(
-            focused,
-            selected.as_ref(),
-            years_start.get(),
-            min.as_ref(),
-            max.as_ref(),
-        )
-    });
-    let years_range = Signal::derive(move || {
-        years.with(|years| {
-            if years.is_empty() {
-                "ERR: no years".to_owned()
-            } else {
-                format!("{} - {}", years[0].number, years[years.len() - 1].number)
+    let owned_value = value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(default_value)));
+    let binding = ValueBinding::new(
+        owned_value.value,
+        Callback::new(move |date: Option<Date>| {
+            owned_value.set(date);
+            if let Some(on_change) = on_change {
+                on_change.run(date);
             }
-        })
-    });
-    let months = Signal::derive(move || {
-        let focused = focused_date.get();
-        let selected = value.get();
-        create_months(focused, selected.as_ref(), min.as_ref(), max.as_ref())
-    });
-    let weeks = Signal::derive(move || {
-        let focused = focused_date.get();
-        let selected = value.get();
-        create_weeks(
-            &focused,
-            selected.as_ref(),
-            min.as_ref(),
-            max.as_ref(),
-            is_date_unavailable,
-            first_day_of_week,
-        )
-    });
+        }),
+    );
 
-    // --- Boundary checks ---
+    let (min, max) = (min_value.get_untracked(), max_value.get_untracked());
+    let initial_focus = constrain_value(
+        default_focused_value
+            .or_else(|| binding.value.get_untracked())
+            .unwrap_or_else(today),
+        min,
+        max,
+    );
+    let owned_focus =
+        focused_value.unwrap_or_else(|| ValueBinding::from(RwSignal::new(initial_focus)));
+    let focus = ValueBinding::new(
+        owned_focus.value,
+        Callback::new(move |date: Date| {
+            if owned_focus.value.get_untracked() != date {
+                owned_focus.set(date);
+                if let Some(on_focus_change) = on_focus_change {
+                    on_focus_change.run(date);
+                }
+            }
+        }),
+    );
 
-    let is_previous_visible_range_invalid = Signal::derive(move || {
-        if let Some(min) = min {
-            let focused = focused_date.get();
-            let first_of_month = focused.replace_day(1).unwrap();
-            first_of_month <= min
-        } else {
-            false
+    let first_day = first_day_of_week.get_untracked();
+    let focused_now = focus.value.get_untracked();
+    let start = RwSignal::new(match selection_alignment {
+        SelectionAlignment::Start => {
+            align_start(focused_now, visible_duration, first_day, min, max)
+        }
+        SelectionAlignment::End => align_end(focused_now, visible_duration, first_day, min, max),
+        SelectionAlignment::Center => {
+            align_center(focused_now, visible_duration, first_day, min, max)
         }
     });
-
-    let is_next_visible_range_invalid = Signal::derive(move || {
-        if let Some(max) = max {
-            let focused = focused_date.get();
-            let days_in_month = whole_days_in(focused.year(), focused.month());
-            let last_of_month = focused.replace_day(days_in_month).unwrap();
-            last_of_month >= max
-        } else {
-            false
+    let visible_range = Signal::derive(move || {
+        let start = start.get();
+        DateRange {
+            start,
+            end: end_of(start, visible_duration),
         }
     });
-
-    // --- Validation ---
+    let focused = RwSignal::new(auto_focus);
+    let page_duration = match page_behavior {
+        PageBehavior::Visible => visible_duration,
+        PageBehavior::Single => visible_duration.unit(),
+    };
 
     let is_value_invalid = Signal::derive(move || {
-        if is_invalid.get() {
-            return true;
-        }
-        if let Some(val) = value.get() {
-            if !is_in_range(&val, min.as_ref(), max.as_ref()) {
-                return true;
-            }
-            if let Some(ref unavailable) = is_date_unavailable
-                && unavailable.run(val)
-            {
-                return true;
-            }
-        }
-        false
-    });
-
-    // --- Selection callbacks ---
-
-    let set_value_cb = Callback::new(move |new_value: Option<time::OffsetDateTime>| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-        set_value_signal.set(new_value);
-        if let Some(cb) = on_change {
-            cb.run(new_value);
-        }
-    });
-
-    let select_focused_date = Callback::new(move |()| {
-        let date = focused_date.get_untracked();
-        try_select(date);
-    });
-
-    let select_date = Callback::new(move |date: time::OffsetDateTime| {
-        // Also move focus to the selected date
-        update_focused(date);
-        try_select(date);
-    });
-
-    // --- Focus navigation callbacks ---
-
-    let set_focused_date_cb = Callback::new(move |date: time::OffsetDateTime| {
-        update_focused(date);
-    });
-
-    let set_focused_cb = Callback::new(move |focused: bool| {
-        set_is_focused_signal.set(focused);
-    });
-
-    let focus_next_day = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(current + time::Duration::days(1));
-    });
-
-    let focus_previous_day = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(current - time::Duration::days(1));
-    });
-
-    let focus_next_row = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(current + time::Duration::days(7));
-    });
-
-    let focus_previous_row = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(current - time::Duration::days(7));
-    });
-
-    let focus_next_page = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(start_of_next_month(current));
-    });
-
-    let focus_previous_page = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(start_of_previous_month(current));
-    });
-
-    let focus_section_start = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        update_focused(current.replace_day(1).unwrap());
-    });
-
-    let focus_section_end = Callback::new(move |()| {
-        let current = focused_date.get_untracked();
-        let last_day = whole_days_in(current.year(), current.month());
-        update_focused(current.replace_day(last_day).unwrap());
-    });
-
-    let focus_next_section = Callback::new(move |larger: bool| {
-        let current = focused_date.get_untracked();
-        if larger {
-            // +1 year
-            // At the end of the supported range, stay.
-            if let Ok(next) = current.save_replace_year(current.year() + 1) {
-                update_focused(next);
-            }
-        } else {
-            // +1 month
-            update_focused(start_of_next_month(current));
-        }
-    });
-
-    let focus_previous_section = Callback::new(move |larger: bool| {
-        let current = focused_date.get_untracked();
-        if larger {
-            // -1 year
-            // At the start of the supported range, stay.
-            if let Ok(previous) = current.save_replace_year(current.year() - 1) {
-                update_focused(previous);
-            }
-        } else {
-            // -1 month
-            update_focused(start_of_previous_month(current));
-        }
-    });
-
-    // --- Year/month picker (leptonic-specific) ---
-
-    let navigate_years_backward = Callback::new(move |()| {
-        years.with(|years| {
-            years_start.update(|starting| {
-                *starting = match years.len() {
-                    0 => focused_date.get_untracked().year() - 5,
-                    _ => years[0].number - 12,
-                };
-            });
-        });
-    });
-
-    let navigate_years_forward = Callback::new(move |()| {
-        years.with(|years| {
-            years_start.update(|starting| {
-                *starting = match years.len() {
-                    0 => focused_date.get_untracked().year() + 1,
-                    _ => years[years.len() - 1].number + 1,
-                };
-            });
-        });
-    });
-
-    // Years outside the range `time` supports are ignored.
-    let focus_year_cb = Callback::new(move |year: i32| {
-        if let Ok(date) = focused_date.get_untracked().save_replace_year(year) {
-            update_focused(date);
-        }
-    });
-
-    let focus_month_cb = Callback::new(move |month: time::Month| {
-        if let Ok(date) = focused_date.get_untracked().save_replace_month(month) {
-            update_focused(date);
-        }
-    });
-
-    // --- Query methods ---
-
-    let is_selected_cb = Callback::new(move |date: time::OffsetDateTime| -> bool {
-        value.with(|val| {
-            val.is_some_and(|v| {
-                v.year() == date.year() && v.month() == date.month() && v.day() == date.day()
+        is_marked_invalid.get()
+            || binding.value.get().is_some_and(|date| {
+                is_date_unavailable.is_some_and(|is_unavailable| is_unavailable.run(date))
+                    || is_invalid(date, min_value.get(), max_value.get())
             })
-        })
     });
 
-    let is_cell_focused_cb = Callback::new(move |date: time::OffsetDateTime| -> bool {
-        focused_date
-            .with(|f| f.year() == date.year() && f.month() == date.month() && f.day() == date.day())
-    });
-
-    let is_cell_disabled_cb = Callback::new(move |date: time::OffsetDateTime| -> bool {
-        is_disabled.get_untracked() || !is_in_range(&date, min.as_ref(), max.as_ref())
-    });
-
-    let is_cell_unavailable_cb = Callback::new(move |date: time::OffsetDateTime| -> bool {
-        is_date_unavailable.is_some_and(|cb| cb.run(date))
-    });
-
-    UseCalendarStateReturn {
-        value: value.into(),
-        focused_date: focused_date.into(),
-        is_focused: is_focused_signal.into(),
+    let state = CalendarState {
+        value: binding.value,
+        focused_date: focus.value,
+        visible_range,
+        is_focused: focused.into(),
         is_disabled,
         is_read_only,
         is_value_invalid,
+        min_value,
+        max_value,
+        visible_duration,
+        first_day_of_week,
+        binding,
+        focus,
+        start,
+        focused,
+        is_date_unavailable,
+        page_duration,
+        weeks_in_month,
+    };
 
-        focused_year,
-        focused_month_name,
-
-        weeks,
-        months,
-        years,
-        years_range,
-
-        is_previous_visible_range_invalid,
-        is_next_visible_range_invalid,
-
-        set_value: set_value_cb,
-        select_focused_date,
-        select_date,
-
-        set_focused_date: set_focused_date_cb,
-        set_focused: set_focused_cb,
-        focus_next_day,
-        focus_previous_day,
-        focus_next_row,
-        focus_previous_row,
-        focus_next_page,
-        focus_previous_page,
-        focus_section_start,
-        focus_section_end,
-        focus_next_section,
-        focus_previous_section,
-
-        navigate_years_backward,
-        navigate_years_forward,
-        focus_year: focus_year_cb,
-        focus_month: focus_month_cb,
-
-        is_selected: is_selected_cb,
-        is_cell_focused: is_cell_focused_cb,
-        is_cell_disabled: is_cell_disabled_cb,
-        is_cell_unavailable: is_cell_unavailable_cb,
-    }
-}
-
-/// Tries local timezone; falls back to UTC in SSR or sandboxed environments.
-fn now_local_or_utc() -> time::OffsetDateTime {
-    time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc())
-}
-
-/// Find the nearest available date on or before `date`, searching back up to `min` or 365 days.
-fn previous_available_date(
-    date: time::OffsetDateTime,
-    min: Option<time::OffsetDateTime>,
-    is_date_unavailable: Option<Callback<time::OffsetDateTime, bool>>,
-) -> Option<time::OffsetDateTime> {
-    let is_unavailable =
-        |d: &time::OffsetDateTime| -> bool { is_date_unavailable.is_some_and(|cb| cb.run(*d)) };
-
-    if !is_unavailable(&date) {
-        return Some(date);
-    }
-
-    let min_date = min.unwrap_or_else(|| date - time::Duration::days(365));
-    let mut current = date;
-    while current >= min_date {
-        if !is_unavailable(&current) {
-            return Some(current);
+    // A focused date moved from outside (app state, min/max changes) stays within min and max
+    // and visible (react-aria checks this while rendering).
+    Effect::new(move |_| {
+        let date = focus.value.get();
+        let (min, max) = (min_value.get(), max_value.get());
+        if is_invalid(date, min, max) {
+            focus.set(constrain_value(date, min, max));
+        } else {
+            untrack(|| state.show(date));
         }
-        current -= time::Duration::days(1);
-    }
-    None
+    });
+
+    state
 }
 
-pub fn create_years(
-    focused: time::OffsetDateTime,
-    selected: Option<&time::OffsetDateTime>,
-    starting_year: i32,
-    min: Option<&time::OffsetDateTime>,
-    max: Option<&time::OffsetDateTime>,
-) -> Vec<Year> {
-    let amount = 3 * 4; // 4 rows of 3 year numbers each.
-    let mut years = Vec::<Year>::with_capacity(amount);
-    let now = now_local_or_utc();
-    let this_year = now.year();
-    let focused_year = focused.year();
-    let selected_year = selected.map(|s| s.year());
-    let min_year = min.map_or(i32::MIN, |it| it.year());
-    let max_year = max.map_or(i32::MAX, |it| it.year());
+#[cfg(test)]
+mod tests {
+    use assertr::prelude::*;
+    use jiff::civil::date;
 
-    for i in 0..amount {
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let year_number = starting_year + i as i32;
-        years.push(Year {
-            number: year_number,
-            is_focused: year_number == focused_year,
-            is_selected: selected_year == Some(year_number),
-            is_now: year_number == this_year,
-            disabled: year_number < min_year || year_number > max_year,
+    use super::*;
+
+    fn state(input: UseCalendarStateInput) -> CalendarState {
+        use_calendar_state(UseCalendarStateInput {
+            first_day_of_week: Some(Weekday::Sunday),
+            ..input
+        })
+    }
+
+    #[test]
+    fn shows_the_month_of_the_value() {
+        Owner::new().with(|| {
+            let calendar = state(UseCalendarStateInput {
+                default_value: Some(date(2024, 5, 15)),
+                ..UseCalendarStateInput::default()
+            });
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2024, 5, 15));
+            assert_that!(calendar.visible_range.get_untracked()).is_equal_to(DateRange {
+                start: date(2024, 5, 1),
+                end: date(2024, 5, 31),
+            });
+            assert_that!(calendar.weeks_in_month(None)).is_equal_to(5);
+            assert_that!(calendar.dates_in_week(0, None)[0]).is_equal_to(Some(date(2024, 4, 28)));
         });
     }
-    years
-}
 
-/// # Panics
-///
-/// Panics if a month index cannot be converted or if date replacement fails.
-pub fn create_months(
-    focused: time::OffsetDateTime,
-    selected: Option<&time::OffsetDateTime>,
-    min: Option<&time::OffsetDateTime>,
-    max: Option<&time::OffsetDateTime>,
-) -> Vec<Month> {
-    let now = now_local_or_utc();
-    let this_year = now.year();
-    let this_month = now.month();
-    let focused_year = focused.year();
-    let focused_month = focused.month();
-    let mut months = Vec::<Month>::with_capacity(12);
-    let mut month_of_year = time::Month::January;
-    for _ in 0..12 {
-        let Ok(month) = focused.save_replace_month(month_of_year) else {
-            continue;
-        };
-        let month_year = month.year();
-        let month_month = month.month();
-        months.push(Month {
-            month: month_of_year,
-            // English-only; i18n would need a custom formatter
-            name: month
-                .format(format_description!("[month repr:long]"))
-                .unwrap(),
-            is_focused: focused_year == month_year && focused_month == month_month,
-            is_selected: selected
-                .is_some_and(|s| s.year() == month_year && s.month() == month_month),
-            is_now: this_year == month_year && this_month == month_month,
-            disabled: !is_in_range(&month, min, max),
+    #[test]
+    fn paging_keeps_the_day() {
+        Owner::new().with(|| {
+            let calendar = state(UseCalendarStateInput {
+                default_value: Some(date(2024, 5, 15)),
+                ..UseCalendarStateInput::default()
+            });
+            calendar.focus_next_page();
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2024, 6, 15));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2024, 6, 1));
+            calendar.focus_previous_section(true);
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2023, 6, 15));
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2023, 6, 1));
+            calendar.focus_section_end();
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2023, 6, 30));
+            calendar.focus_next_day();
+            assert_that!(calendar.visible_range.get_untracked().start)
+                .is_equal_to(date(2023, 7, 1));
         });
-        month_of_year = month_of_year.next();
     }
-    debug_assert_eq!(months.len(), 12);
-    months
-}
 
-/// # Panics
-///
-/// Panics if a day replacement on a date fails.
-pub fn create_weeks(
-    focused: &time::OffsetDateTime,
-    selected: Option<&time::OffsetDateTime>,
-    min: Option<&time::OffsetDateTime>,
-    max: Option<&time::OffsetDateTime>,
-    is_date_unavailable: Option<Callback<time::OffsetDateTime, bool>>,
-    first_day_of_week: time::Weekday,
-) -> Vec<Week> {
-    const WEEKS_TO_DISPLAY: u8 = 6;
-    const DAYS_PER_WEEK: u8 = 7;
-
-    let now = now_local_or_utc();
-
-    let current_year = now.year();
-    let current_month = now.month();
-    let current_day = now.day();
-    let focused_day = focused.day();
-
-    // Calculate offset from Monday for the configured first day of week
-    let first_day_offset = first_day_of_week.number_days_from_monday(); // 0 = Monday, 6 = Sunday
-
-    let raw_weekday_index = (*focused)
-        .replace_day(1)
-        .unwrap()
-        .weekday()
-        .number_days_from_monday(); // in range [0..6]
-    // Adjust for first_day_of_week
-    let first_weekday_index = (raw_weekday_index + 7 - first_day_offset) % 7;
-
-    let number_of_days_in_month = whole_days_in(focused.year(), focused.month());
-    let index_of_last_day_in_month = first_weekday_index + number_of_days_in_month;
-
-    let prev_month = start_of_previous_month(*focused);
-    let this_month = focused;
-    let next_month = start_of_next_month(*focused);
-
-    let days_in_previous_month = whole_days_in(prev_month.year(), prev_month.month());
-
-    let mut weeks = Vec::<Week>::with_capacity(WEEKS_TO_DISPLAY as usize);
-    for w in 0..WEEKS_TO_DISPLAY {
-        let mut week = Week {
-            days: Vec::with_capacity(DAYS_PER_WEEK as usize),
-        };
-        for d in 0..DAYS_PER_WEEK {
-            let i = d + w * DAYS_PER_WEEK;
-
-            let in_month = if i < first_weekday_index {
-                InMonth::Previous
-            } else if i < index_of_last_day_in_month {
-                InMonth::Current
-            } else {
-                InMonth::Next
-            };
-
-            // base 1 (!)
-            let day_in_month = match in_month {
-                InMonth::Previous => days_in_previous_month - first_weekday_index + i + 1,
-                InMonth::Current => i - first_weekday_index + 1,
-                InMonth::Next => i - index_of_last_day_in_month + 1,
-            };
-
-            let relevant_month = match in_month {
-                InMonth::Previous => &prev_month,
-                InMonth::Current => this_month,
-                InMonth::Next => &next_month,
-            };
-            let date_time: time::OffsetDateTime = relevant_month.replace_day(day_in_month).unwrap();
-            let disabled = !is_in_range(&date_time, min, max);
-            let unavailable = is_date_unavailable.is_some_and(|cb| cb.run(date_time));
-            let is_focused_day = in_month == InMonth::Current && day_in_month == focused_day;
-            let is_selected_day = selected.is_some_and(|s| {
-                s.year() == date_time.year()
-                    && s.month() == date_time.month()
-                    && s.day() == date_time.day()
+    #[test]
+    fn selection_respects_min_max_and_unavailable_dates() {
+        Owner::new().with(|| {
+            let weekend = Callback::new(|date: Date| {
+                matches!(date.weekday(), Weekday::Saturday | Weekday::Sunday)
             });
-
-            week.days.push(Day {
-                index: day_in_month,
-                in_month,
-                date_time,
-                disabled,
-                unavailable,
-                highlighted: false,
-                is_focused: is_focused_day,
-                is_selected: is_selected_day,
-                is_now: current_month == relevant_month.month()
-                    && current_year == relevant_month.year()
-                    && current_day == day_in_month,
+            let calendar = state(UseCalendarStateInput {
+                default_focused_value: Some(date(2024, 5, 15)),
+                min_value: Signal::stored(Some(date(2024, 5, 10))),
+                is_date_unavailable: Some(weekend),
+                ..UseCalendarStateInput::default()
             });
-        }
-        weeks.push(week);
+            // An unavailable date selects the previous available one (react-aria's
+            // `normalizeValue`); keyboard selection of an unavailable date does nothing.
+            calendar.select_date(date(2024, 5, 19));
+            assert_that!(calendar.value.get_untracked()).is_equal_to(Some(date(2024, 5, 17)));
+            calendar.set_focused_date(date(2024, 5, 18));
+            calendar.select_focused_date();
+            assert_that!(calendar.value.get_untracked()).is_equal_to(Some(date(2024, 5, 17)));
+            // Below min: constrained.
+            calendar.set_focused_date(date(2024, 5, 1));
+            assert_that!(calendar.focused_date.get_untracked()).is_equal_to(date(2024, 5, 10));
+            assert_that!(calendar.is_previous_visible_range_invalid()).is_true();
+        });
     }
-    weeks
+
+    /// From react-stately's `useCalendarState.test.ts` ("selectDate").
+    #[test]
+    fn selects_dates_outside_the_visible_range_and_the_nearest_available() {
+        Owner::new().with(|| {
+            let selected = date(2026, 4, 15);
+            let never = Callback::new(|_: Date| false);
+            for forward in [true, false] {
+                let calendar = state(UseCalendarStateInput {
+                    is_date_unavailable: Some(never),
+                    default_focused_value: Some(selected),
+                    ..UseCalendarStateInput::default()
+                });
+                if forward {
+                    calendar.focus_next_page();
+                    assert_that!(calendar.visible_range.get_untracked().start > selected).is_true();
+                } else {
+                    calendar.focus_previous_page();
+                    assert_that!(calendar.visible_range.get_untracked().end < selected).is_true();
+                }
+                calendar.select_date(selected);
+                assert_that!(calendar.value.get_untracked()).is_equal_to(Some(selected));
+            }
+
+            let fifteenth = Callback::new(|date: Date| date.day() == 15);
+            let calendar = state(UseCalendarStateInput {
+                is_date_unavailable: Some(fifteenth),
+                default_focused_value: Some(date(2026, 4, 20)),
+                ..UseCalendarStateInput::default()
+            });
+            calendar.select_date(selected);
+            assert_that!(calendar.value.get_untracked()).is_equal_to(Some(date(2026, 4, 14)));
+
+            let first_half = Callback::new(|date: Date| date.day() <= 15);
+            let calendar = state(UseCalendarStateInput {
+                is_date_unavailable: Some(first_half),
+                default_focused_value: Some(date(2026, 4, 20)),
+                ..UseCalendarStateInput::default()
+            });
+            calendar.select_date(selected);
+            assert_that!(calendar.value.get_untracked()).is_none();
+        });
+    }
 }

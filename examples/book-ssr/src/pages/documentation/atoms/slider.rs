@@ -1,11 +1,10 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
     slider_basic::SliderBasicDemo, slider_callbacks::SliderCallbacksDemo,
-    slider_marks::SliderMarksDemo, slider_offset::SliderOffsetDemo,
-    slider_range::SliderRangeDemo, slider_vertical::SliderVerticalDemo,
+    slider_marks::SliderMarksDemo, slider_offset::SliderOffsetDemo, slider_range::SliderRangeDemo,
+    slider_vertical::SliderVerticalDemo,
 };
 use crate::{kit::*, routes};
 
@@ -338,7 +337,6 @@ pub fn PageAtomSlider() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Slider.materialize()>"Slider overview"</Link></li>
                 <li><Link href=routes::doc::slider::Hook.materialize()>"Slider Hooks"</Link></li>
-                <li><Link href=routes::doc::slider::Component.materialize()>"Slider Components"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
                 <li><Link href=routes::doc::NumberField.materialize()>"Number Field"</Link></li>
             </SeeAlso>

@@ -94,6 +94,13 @@
             border-color: var(--select-focused-border-color);
         }
 
+        // The trigger fills the box: the box shows its keyboard focus.
+        &:has(> .leptonic-multiselect-trigger[data-focus-visible]) {
+            border-color: var(--select-focused-border-color);
+            outline: 2px solid var(--select-focused-border-color);
+            outline-offset: 1px;
+        }
+
         .leptonic-chip.leptonic-select-option {
             margin: 0.1em 0.4em 0.1em 0;
             border-radius: 0.8em;

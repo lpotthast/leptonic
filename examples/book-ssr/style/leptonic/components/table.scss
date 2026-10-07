@@ -116,12 +116,11 @@
 
     .leptonic-table-cell,
     .leptonic-table-header-cell {
-      //border: 0.05em solid;
-      border-color: var(--table-border-color);
+      border: 1px solid var(--table-border-color);
     }
 
     .leptonic-table-header-cell {
-      border-bottom: 0.15em solid;
+      border-bottom-width: 0.15em;
     }
   }
 

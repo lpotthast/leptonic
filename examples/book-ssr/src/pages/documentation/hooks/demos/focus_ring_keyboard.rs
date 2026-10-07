@@ -2,7 +2,11 @@ use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
 
 fn times(count: u32) -> String {
-    if count == 1 { "1 time".to_string() } else { format!("{count} times") }
+    if count == 1 {
+        "1 time".to_string()
+    } else {
+        format!("{count} times")
+    }
 }
 
 #[component]

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::tree::TreeDemo;
@@ -36,7 +35,7 @@ pub fn PageUseTree() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-tree-state-input">
-                    <p>"Create the input with "<Code inline=true>"UseTreeStateInput::new(collection)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseTreeStateInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseTreeStateInput">
                         <ApiRow name="collection" ty="CollectionMemo">"The items, nested with "<Code inline=true>".children(..)"</Code>". Required."</ApiRow>
                         <ApiRow name="selection" ty="SelectionOptions" default="SelectionOptions::default()">
@@ -65,7 +64,10 @@ pub fn PageUseTree() -> impl IntoView {
                         {indoc!(r#"
                             use std::collections::HashSet;
 
-                            use leptonic::hooks::{Key, UseTreeStateInput, use_collection, use_tree_state};
+                            use leptonic::hooks::{
+                                Key, UseTreeStateInput, collections::SelectionOptions, use_collection, use_tree_state,
+                            };
+
 
                             let collection = use_collection(|b| {
                                 b.item("documents", "Documents").children(|c| {
@@ -74,8 +76,10 @@ pub fn PageUseTree() -> impl IntoView {
                                 b.item("notes", "notes.txt");
                             });
                             let state = use_tree_state(UseTreeStateInput {
+                                collection,
+                                selection: SelectionOptions::default(),
                                 default_expanded_keys: HashSet::from([Key::from("documents")]),
-                                ..UseTreeStateInput::new(collection)
+                                on_expanded_change: None,
                             });
 
                             // Render one item per visible entry:
@@ -88,7 +92,8 @@ pub fn PageUseTree() -> impl IntoView {
             <Section title="use_tree">
                 <p>"The tree element: a grid list with the "<Code inline=true>"treegrid"</Code>" role, whose rows expand and collapse."</p>
                 <Section title="Input" id="use-tree-input">
-                    <p>"Create the input with "<Code inline=true>"UseTreeInput::new(state, element)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseTreeInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseTreeInput">
                         <ApiRow name="state" ty="TreeState">"From "<Code inline=true>"use_tree_state"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The tree element; the props capture it. Required."</ApiRow>

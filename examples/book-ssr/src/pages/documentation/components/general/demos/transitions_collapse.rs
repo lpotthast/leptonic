@@ -13,7 +13,7 @@ pub fn TransitionsCollapseDemo() -> impl IntoView {
             >
                 {move || if expanded.get() { "Hide details" } else { "Show details" }}
             </Button>
-            <Collapse show=expanded>
+            <Collapse is_shown=expanded>
                 <div class="demo-transitions-panel">
                     <p>"Collapse animates the height of this panel from zero to its content height and back."</p>
                     <p>"Content below the panel moves along with it."</p>

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::forms::FormsDemo;
@@ -23,7 +22,7 @@ pub fn PageForms() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A "<Link href=routes::doc::Form.materialize()>"Form"</Link>" atom with two "
-                    <Link href=routes::doc::text_field::Component.materialize()>"TextField"</Link>"s, both required. The "
+                    <Link href=routes::doc::text_field::Atom.materialize()>"TextField"</Link>"s, both required. The "
                     "username shows errors as you type; the email field waits for submission and uses the browser\u{2019}s "
                     "constraint validation (try submitting an invalid address). \u{201c}Simulate server error\u{201d} "
                     "reports an error for the username field, as a server action would; it shows until the value changes."
@@ -49,15 +48,55 @@ pub fn PageForms() -> impl IntoView {
                         use std::sync::Arc;
 
                         use leptonic::hooks::*;
+                        use leptos::prelude::*;
 
                         let state = use_text_field_state(UseTextFieldStateInput::default());
+
                         let field = use_text_field(UseTextFieldInput {
+                            state,
                             name: Some("username".to_owned()),
                             is_required: true.into(),
                             validate: Some(Arc::new(|value: &String| {
                                 if value.chars().count() >= 3 { Ok(()) } else { Err(vec!["At least 3 characters.".to_owned()]) }
                             })),
-                            ..UseTextFieldInput::new(state)
+                            validation_behavior: ValidationBehavior::Aria,
+                            // Everything else off:
+                            validation: None,
+                            is_invalid: false.into(),
+                            id: None,
+                            element: TextFieldElement::Input,
+                            input_type: Signal::stored(InputType::Text),
+                            is_disabled: false.into(),
+                            is_read_only: false.into(),
+                            form: None,
+                            placeholder: MaybeProp::default(),
+                            pattern: None,
+                            min_length: None,
+                            max_length: None,
+                            auto_complete: None,
+                            auto_capitalize: None,
+                            auto_correct: None,
+                            spell_check: None,
+                            input_mode: None,
+                            enter_key_hint: None,
+                            auto_focus: false,
+                            exclude_from_tab_order: false,
+                            label_id: None,
+                            has_label: false.into(),
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            aria_errormessage: None,
+                            aria_activedescendant: Signal::stored(None),
+                            aria_autocomplete: None,
+                            aria_haspopup: None,
+                            aria_controls: Signal::stored(None),
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
+                            on_key_down: None,
+                            on_key_up: None,
+                            shortcuts: None,
                         });
                     "#)}
                 </Code>

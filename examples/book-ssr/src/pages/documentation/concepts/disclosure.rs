@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::disclosure::DisclosureConceptDemo;
@@ -23,9 +22,7 @@ pub fn PageDisclosureOverview() -> impl IntoView {
                         <TableCell>
                             <b>"Disclosure"</b>" in a group: the "
                             <Link href=format!("{}#disclosuregroup", routes::doc::disclosure::Atom.materialize())>"DisclosureGroup"</Link>
-                            " atom or the "
-                            <Link href=format!("{}#collapsibles", routes::doc::disclosure::Component.materialize())>"Collapsibles"</Link>
-                            " component"
+                            " atom"
                         </TableCell>
                     </TableRow>
                     <TableRow><TableCell>"Switch between parallel content panels"</TableCell><TableCell><Link href=routes::doc::Tabs.materialize()>"Tabs"</Link></TableCell></TableRow>
@@ -54,13 +51,6 @@ pub fn PageDisclosureOverview() -> impl IntoView {
                             <Code inline=true>"Disclosure"</Code>", "<Code inline=true>"DisclosureTrigger"</Code>" (around a "
                             "Button atom), "<Code inline=true>"DisclosurePanel"</Code>" and "<Code inline=true>"DisclosureGroup"</Code>
                             ": the complete behavior, unstyled and styled through data attributes."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::disclosure::Component.materialize()>"Disclosure Components"</Link></TableCell>
-                        <TableCell>
-                            "A themed "<Code inline=true>"Collapsible"</Code>" with header and body slots, groupable "
-                            "into an accordion with "<Code inline=true>"Collapsibles"</Code>"."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -105,7 +95,6 @@ pub fn PageDisclosureOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::disclosure::Hook.materialize()>"Disclosure Hooks"</Link></li>
                 <li><Link href=routes::doc::disclosure::Atom.materialize()>"Disclosure Atoms"</Link></li>
-                <li><Link href=routes::doc::disclosure::Component.materialize()>"Disclosure Components"</Link></li>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs"</Link></li>
             </SeeAlso>
         </DocPage>

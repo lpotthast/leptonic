@@ -77,3 +77,101 @@
 .demo-alert-title-icon {
     margin-left: var(--book-space-s);
 }
+
+// -- Toast --
+
+// The toasts of the hook demo, in the demo frame. The hook sets no focus attributes on the region and the toasts.
+.demo-hook-toast-region {
+    display: flex;
+    flex-direction: column;
+    gap: var(--book-space-s);
+    max-width: 24em;
+    margin-top: var(--book-space-m);
+
+    &:focus { outline: none; }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-hook-toast {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--book-space-m);
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    box-shadow: var(--book-shadow-s);
+
+    &:focus { outline: none; }
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-hook-toast-title { font-weight: 600; }
+
+.demo-hook-toast-close {
+    display: flex;
+    padding: var(--book-space-xs);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: inherit;
+    font-size: var(--book-font-size-l);
+    cursor: pointer;
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); }
+}
+
+// The toasts of the atom demo: the region is rendered at the end of the page, fixed at the bottom of the window.
+// The newest toast comes first in the DOM and shows nearest to the bottom edge.
+.demo-toast-region {
+    position: fixed;
+    right: var(--book-space-m);
+    bottom: var(--book-space-m);
+    z-index: var(--book-z-backdrop);
+    display: flex;
+    flex-direction: column-reverse;
+    gap: var(--book-space-s);
+    max-width: calc(100vw - 2 * var(--book-space-m));
+
+    &:focus { outline: none; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--book-space-m);
+    width: 20em;
+    max-width: 100%;
+    padding: var(--book-space-m);
+    border: 1px solid var(--book-border-color);
+    border-left: 4px solid var(--success-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color-raised);
+    color: var(--main-color);
+    box-shadow: var(--book-shadow);
+
+    &:focus { outline: none; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-toast-content { flex: 1; }
+
+.demo-toast-title { font-weight: 600; }
+
+.demo-toast-close {
+    display: flex;
+    padding: var(--book-space-xs);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: inherit;
+    font-size: var(--book-font-size-l);
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &:focus { outline: none; }
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); }
+}

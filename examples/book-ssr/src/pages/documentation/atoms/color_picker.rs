@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_picker::ColorPickerAtomDemo;
@@ -113,8 +112,7 @@ pub fn PageAtomColorPicker() -> impl IntoView {
                     <li><Link href=routes::doc::ColorSwatchPicker.materialize()><Code inline=true>"ColorSwatchPicker"</Code></Link></li>
                 </ul>
                 <p>
-                    "The themed "<Link href=routes::doc::color_picker::Component.materialize()>"ColorPicker component"</Link>
-                    " is this atom with themed parts. Atoms of your own read the picker with "
+                    "Atoms of your own read the picker with "
                     <Code inline=true>"use_context::<ColorPickerContext>()"</Code>": its "<Code inline=true>"ColorPickerState"</Code>
                     " has the color and "<Code inline=true>"set_color"</Code>"."
                 </p>
@@ -123,7 +121,6 @@ pub fn PageAtomColorPicker() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::ColorPicker.materialize()>"Color Picker"</Link></li>
                 <li><Link href=routes::doc::color_picker::Hook.materialize()>"use_color_picker_state"</Link></li>
-                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
                 <li><Link href=routes::doc::color_area::Atom.materialize()>"Color Area Atoms"</Link></li>
                 <li><Link href=routes::doc::ColorSwatchPicker.materialize()>"Color Swatch Picker Atoms"</Link></li>
             </SeeAlso>

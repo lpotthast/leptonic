@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::separator::SeparatorAtomDemo;
@@ -71,7 +70,6 @@ pub fn PageAtomSeparator() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Separator.materialize()>"Separator overview"</Link></li>
                 <li><Link href=routes::doc::separator::Hook.materialize()>"use_separator"</Link></li>
-                <li><Link href=routes::doc::separator::Component.materialize()>"Separator Component"</Link></li>
                 <li><Link href=routes::doc::toolbar::Atom.materialize()>"Toolbar Atom"</Link></li>
             </SeeAlso>
         </DocPage>

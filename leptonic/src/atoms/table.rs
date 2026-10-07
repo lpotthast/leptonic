@@ -28,6 +28,7 @@ use crate::{
         classes::Classes,
         css::{Size, computed_px, computed_size},
         data_attributes::flag,
+        default_class::with_default_class,
         i18n::use_direction,
         locale::WritingDirection,
         scoped_context::scoped_view,
@@ -70,6 +71,8 @@ struct ColumnResizeContext {
 ///
 /// The container measures its own width; let it scroll (`overflow: auto`) for tables wider than
 /// it.
+///
+/// Default class: `leptonic-ResizableTableContainer`.
 #[component]
 pub fn ResizableTableContainer(
     /// Called with the column sizes when a resizing starts.
@@ -85,6 +88,7 @@ pub fn ResizableTableContainer(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ResizableTableContainer", classes);
     let container = NodeRef::<html::Div>::new();
     let (width, set_width) = signal(0.0);
     let measure = move || {
@@ -119,6 +123,8 @@ pub fn ResizableTableContainer(
 /// The columns and rows come from `table` (built with `TableCollection::build`): render a
 /// [`TableHeader`] (it renders the column headers itself) and a [`TableBody`] with one
 /// [`TableRow`] per row, holding one [`TableCell`] per data column.
+///
+/// Default class: `leptonic-Table`.
 #[component]
 #[allow(clippy::too_many_lines, clippy::implicit_hasher)]
 pub fn Table(
@@ -171,6 +177,7 @@ pub fn Table(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Table", classes);
     // Without `sort_descriptor`, the table owns the sorting and `set_sort_descriptor` receives
     // each change, like `on_sort_change`.
     let on_sort_change = match (sort_descriptor, set_sort_descriptor) {
@@ -201,7 +208,7 @@ pub fn Table(
         sort_descriptor: sort_descriptor
             .map(|value| ValueBinding::from_props(value, set_sort_descriptor)),
         on_sort_change,
-        ..UseTableStateInput::new(table)
+        table,
     });
 
     let UseTableReturn { props, data } = use_table(UseTableInput {
@@ -214,15 +221,21 @@ pub fn Table(
         keyboard_navigation_behavior,
         on_row_action,
         on_cell_action,
-        ..UseTableInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        keyboard_delegate: None,
+        should_select_on_press_up: false,
     });
 
     // In a resizable table container: fixed column widths.
     let column_resize = use_context::<ResizableTableContainerContext>().map(|container| {
-        let state = use_table_column_resize_state(UseTableColumnResizeStateInput::new(
-            state,
-            container.table_width,
-        ));
+        let state = use_table_column_resize_state(UseTableColumnResizeStateInput {
+            table_state: state,
+            table_width: container.table_width,
+            default_width: None,
+            default_min_width: None,
+        });
         ColumnResizeContext { state, container }
     });
     let styles = if column_resize.is_some() {
@@ -255,11 +268,14 @@ pub fn Table(
 ///
 /// Column headers expose `data-allows-sorting`, `data-sort-direction` (`ascending` /
 /// `descending`), `data-focused` and `data-pressed` for styling.
+///
+/// Default class: `leptonic-TableHeader`.
 #[component]
 pub fn TableHeader(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TableHeader", classes);
     let data = expect_context::<TableData>();
     let row_group = use_grid_row_group();
     let rows = data.state.table;
@@ -301,6 +317,8 @@ pub fn TableHeader(
 }
 
 /// A column header of a [`Table`], rendered by [`TableHeader`].
+///
+/// Default class: `leptonic-TableColumnHeader`.
 #[component]
 fn TableColumnHeader(key: Key) -> impl IntoView {
     let data = expect_context::<TableData>();
@@ -361,7 +379,11 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let UseTableColumnHeaderReturn {
         column_header_props,
         is_pressed,
-    } = use_table_column_header(UseTableColumnHeaderInput::new(data, key));
+    } = use_table_column_header(UseTableColumnHeaderInput {
+        table: data,
+        key,
+        allows_arrow_navigation: false,
+    });
     let (attrs, styles) = column_header_props.into_parts();
     let styles = match resize {
         Some(resize) => styles.add_reactive(move || {
@@ -376,6 +398,7 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         <th
             {..attrs}
             {..header.attr()}
+            class="leptonic-TableColumnHeader"
             style=styles
             data-allows-sorting=allows_sorting.then_some("true")
             data-sort-direction=sort_direction
@@ -391,6 +414,8 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
 
 /// The resizer of a resizable column, rendered by [`TableColumnHeader`] (see
 /// [`ResizableTableContainer`]).
+///
+/// Default class: `leptonic-ColumnResizer`.
 #[component]
 fn ColumnResizer(
     resize: ColumnResizeContext,
@@ -409,7 +434,12 @@ fn ColumnResizer(
         on_resize_start: resize.container.on_resize_start,
         on_resize: resize.container.on_resize,
         on_resize_end: resize.container.on_resize_end,
-        ..UseTableColumnResizeInput::new(state, data, column.clone(), CapturedElement::new())
+        state,
+        table: data,
+        column: column.clone(),
+        aria_label: crate::hooks::RESIZER_LABEL.to_owned(),
+        element: CapturedElement::new(),
+        is_disabled: Signal::stored(false),
     });
     // `left` at the minimum width, `right` at the maximum (react-aria-components' values).
     let direction = use_direction();
@@ -432,6 +462,7 @@ fn ColumnResizer(
         <div
             role="presentation"
             {..attrs}
+            class="leptonic-ColumnResizer"
             style=styles
             data-column-resizer="true"
             data-resizing=move || is_resizing.get().then_some("true")
@@ -443,12 +474,15 @@ fn ColumnResizer(
 }
 
 /// The body of a [`Table`]: its rows.
+///
+/// Default class: `leptonic-TableBody`.
 #[component]
 pub fn TableBody(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TableBody", classes);
     let row_group = use_grid_row_group();
     view! {
         <tbody {..row_group.row_group_props.into_attrs()} class=classes style=styles>
@@ -467,6 +501,8 @@ struct RowContext {
 /// renders the selection cell itself; add one [`TableCell`] per data column.
 ///
 /// Exposes `data-selected`, `data-focused`, `data-disabled` and `data-pressed` for styling.
+///
+/// Default class: `leptonic-TableRow`.
 #[component]
 pub fn TableRow(
     /// The row's key in the table's collection.
@@ -476,6 +512,7 @@ pub fn TableRow(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TableRow", classes);
     let data = expect_context::<TableData>();
     let selection_column = data.state.table.with_untracked(|t| {
         t.column_at(0)
@@ -490,6 +527,8 @@ pub fn TableRow(
         is_pressed,
         ..
     } = use_table_row(UseTableRowInput {
+        // Inside a `ContextMenuTrigger`: its menu opens on this row.
+        on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
         table: data,
         key: key.clone(),
     });
@@ -518,6 +557,8 @@ pub fn TableRow(
 /// render the row's checkbox.
 ///
 /// Exposes `data-pressed` for styling.
+///
+/// Default class: `leptonic-TableCell`.
 #[component]
 pub fn TableCell(
     /// The key of the cell's column.
@@ -531,6 +572,7 @@ pub fn TableCell(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TableCell", classes);
     let data = expect_context::<TableData>();
     let row = expect_context::<RowContext>().key;
     let (index, kind) = data.state.table.with_untracked(|t| {
@@ -549,7 +591,10 @@ pub fn TableCell(
         is_pressed,
     } = use_table_cell(UseTableCellInput {
         focus_mode,
-        ..UseTableCellInput::new(data, Key::cell(&row, index))
+        table: data,
+        key: Key::cell(&row, index),
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
     });
     let (attrs, cell_styles) = grid_cell_props.into_parts();
     let styles = cell_styles.merge(styles);

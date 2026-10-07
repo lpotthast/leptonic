@@ -79,6 +79,9 @@ pub struct FocusManager {
     get_scope: Arc<SendWrapper<Box<dyn Fn() -> Option<web_sys::Element>>>>,
     #[cfg(feature = "ssr")]
     get_scope: Arc<dyn Fn() -> Option<web_sys::Element> + Send + Sync>,
+    /// The filter of calls that don't pass one (react-aria's default options of
+    /// `createFocusManager`).
+    default_accept: Option<Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
 }
 
 impl std::fmt::Debug for FocusManager {
@@ -98,6 +101,7 @@ impl FocusManager {
             let _ = get_scope;
             Self {
                 get_scope: Arc::new(|| None),
+                default_accept: None,
             }
         }
 
@@ -105,13 +109,33 @@ impl FocusManager {
         {
             Self {
                 get_scope: Arc::new(SendWrapper::new(Box::new(get_scope))),
+                default_accept: None,
             }
         }
+    }
+
+    /// Only elements `accept` accepts, unless a call passes its own filter (e.g. a date range
+    /// picker's segments without its button).
+    #[must_use]
+    pub fn with_default_accept(
+        mut self,
+        accept: impl Fn(&web_sys::Element) -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.default_accept = Some(Arc::new(accept));
+        self
+    }
+
+    fn with_defaults(&self, mut opts: FocusManagerOptions) -> FocusManagerOptions {
+        if opts.accept.is_none() {
+            opts.accept.clone_from(&self.default_accept);
+        }
+        opts
     }
 
     /// Move focus to the next focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_next(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let scope = (self.get_scope)()?;
 
         let from = opts.from.or_else(|| {
@@ -184,6 +208,7 @@ impl FocusManager {
     /// Move focus to the previous focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_previous(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let scope = (self.get_scope)()?;
 
         let from = opts.from.or_else(|| {
@@ -256,6 +281,7 @@ impl FocusManager {
     /// Move focus to the first focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_first(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let result = self.find_first(opts);
         if let Some(ref el) = result {
             focus_element(el);
@@ -266,6 +292,7 @@ impl FocusManager {
     /// Move focus to the last focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_last(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let result = self.find_last(opts);
         if let Some(ref el) = result {
             focus_element(el);
@@ -280,6 +307,7 @@ impl FocusManager {
     /// `focus()` which allows scrolling).
     #[allow(clippy::needless_pass_by_value)]
     pub fn find_first(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let scope = (self.get_scope)()?;
         let mut walker = get_focusable_tree_walker(
             &scope,
@@ -298,6 +326,7 @@ impl FocusManager {
     /// (e.g., `focus_safely` for overlay auto-focus).
     #[allow(clippy::needless_pass_by_value)]
     pub fn find_last(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
+        let opts = self.with_defaults(opts);
         let scope = (self.get_scope)()?;
         let mut walker = get_focusable_tree_walker(
             &scope,

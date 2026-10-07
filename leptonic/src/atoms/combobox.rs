@@ -15,13 +15,14 @@ use crate::{
     hooks::{
         ComboBoxFilter, ComboBoxMenuTrigger, ComboBoxState, ComboBoxValue, IntoAttrs, Placement,
         PopoverModality, SelectMode, UseButtonInput, UseComboBoxInput, UseComboBoxReturn,
-        UseComboBoxStateInput, UsePopoverInput, UsePopoverReturn, UseTextFieldReturn, ValidateFn,
-        ValidationBehavior,
+        UseComboBoxStateInput, UseHoverInput, UsePopoverInput, UsePopoverReturn,
+        UseTextFieldReturn, ValidateFn, ValidationBehavior,
         collections::{CollectionMemo, Key},
-        use_button, use_combobox, use_combobox_state, use_popover, use_text_field,
+        use_button, use_combobox, use_combobox_state, use_hover, use_popover, use_text_field,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -50,6 +51,8 @@ struct Parts {
 /// [`ComboBoxPopover`] (containing a [`ListBox`](super::listbox::ListBox) with one
 /// `ListBoxItem` per option), a [`Description`](super::field::Description) and a
 /// [`FieldError`](super::field::FieldError).
+///
+/// Default class: `leptonic-ComboBox`.
 #[component]
 #[allow(
     clippy::too_many_lines,
@@ -110,6 +113,7 @@ pub fn ComboBox(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ComboBox", classes);
     let (input_value, on_input_change) =
         ValueBinding::from_state_props(input_value, set_input_value, on_input_change);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
@@ -132,7 +136,9 @@ pub fn ComboBox(
         validate,
         validation_behavior,
         name: name.clone(),
-        ..UseComboBoxStateInput::new(collection)
+        collection,
+        should_close_on_blur: true,
+        on_open_change: None,
     });
 
     let popover = CapturedElement::new();
@@ -155,7 +161,13 @@ pub fn ComboBox(
         placeholder,
         name,
         popover,
-        ..UseComboBoxInput::new(state)
+        state,
+        id: None,
+        aria_describedby: None,
+        should_focus_wrap: false,
+        keyboard_delegate: None,
+        on_focus: None,
+        on_blur: None,
     });
     let UseTextFieldReturn {
         label_props,
@@ -229,15 +241,25 @@ pub fn ComboBox(
 }
 
 /// The button opening the popover (not in the tab order: the keyboard uses ArrowDown on the
-/// input).
+/// input). Data attributes: `data-open`, `data-pressed`, `data-hovered`, `data-disabled`,
+/// `data-focus-visible`.
+///
+/// Default class: `leptonic-ComboBoxButton`.
 #[component]
 pub fn ComboBoxButton(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ComboBoxButton", classes);
     let ctx = expect_context::<ComboBoxCtx>();
-    let button = use_button(ctx.parts.with_value(|p| p.button.clone()));
+    let input = ctx.parts.with_value(|p| p.button.clone());
+    let is_disabled = input.is_disabled;
+    let button = use_button(input);
+    let hover = use_hover(UseHoverInput {
+        is_disabled,
+        ..UseHoverInput::default()
+    });
     let (attrs, button_styles) = button.props.into_parts();
     let styles = button_styles.merge(styles);
     let state = ctx.state;
@@ -245,10 +267,13 @@ pub fn ComboBoxButton(
     view! {
         <button
             {..attrs}
+            {..hover.props.into_attrs()}
             class=classes
             style=styles
             data-open=flag(Signal::derive(move || state.is_open()))
             data-pressed=flag(button.is_pressed)
+            data-hovered=flag(hover.is_hovered)
+            data-disabled=flag(is_disabled)
         >
             {children()}
         </button>
@@ -258,6 +283,8 @@ pub fn ComboBoxButton(
 /// The popover with the options' [`ListBox`](super::listbox::ListBox), positioned at the input
 /// and mounted while open. It is non-modal (react-aria-components): focus stays in the input, and
 /// the page stays usable; scrolling closes it.
+///
+/// Default class: `leptonic-ComboBoxPopover`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn ComboBoxPopover(
@@ -281,6 +308,7 @@ pub fn ComboBoxPopover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ComboBoxPopover", classes);
     let ctx = expect_context::<ComboBoxCtx>();
     let UsePopoverReturn {
         props,
@@ -297,7 +325,15 @@ pub fn ComboBoxPopover(
         container_padding,
         should_flip,
         modality: PopoverModality::NonModal,
-        ..UsePopoverInput::new(ctx.state)
+        state: ctx.state,
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        boundary: None,
+        target_rect: Signal::stored(None),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
+        is_submenu: false,
     });
     render_popover(
         ctx.state,

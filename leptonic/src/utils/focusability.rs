@@ -244,6 +244,12 @@ pub fn is_focusable(element: &web_sys::Element) -> bool {
     true
 }
 
+/// Check if an element is focusable regardless of its visibility (react-aria's
+/// `isFocusable(element, {skipVisibilityCheck: true})`).
+pub fn is_focusable_ignoring_visibility(element: &web_sys::Element) -> bool {
+    element.matches(FOCUSABLE_SELECTOR).unwrap_or(false) && !is_inert(element)
+}
+
 /// Check if an element is tabbable (reachable via Tab key).
 ///
 /// An element is tabbable if it matches the tabbable selector,
@@ -417,7 +423,7 @@ pub fn is_tabbable_radio(element: &web_sys::HtmlInputElement) -> bool {
 
 /// Returns true if the element is a text input (input[text-like], textarea, contenteditable).
 /// Used by focus-visible to suppress keyboard modality on regular typing in text fields.
-pub(crate) fn is_text_input(element: &web_sys::Element) -> bool {
+pub fn is_text_input(element: &web_sys::Element) -> bool {
     if let Some(input) = element.dyn_ref::<web_sys::HtmlInputElement>() {
         return !NON_TEXT_INPUT_TYPES.contains(&input.type_().as_str());
     }
@@ -430,6 +436,13 @@ pub(crate) fn is_text_input(element: &web_sys::Element) -> bool {
         return true;
     }
     false
+}
+
+/// Whether keys pressed at `element` are the user typing: a text input (see [`is_text_input`]) or
+/// a `<select>` (typing picks an option). Shortcuts without modifiers (e.g. `/`) shouldn't act
+/// there.
+pub fn is_typing_target(element: &web_sys::Element) -> bool {
+    is_text_input(element) || element.dyn_ref::<web_sys::HtmlSelectElement>().is_some()
 }
 
 const NON_TEXT_INPUT_TYPES: &[&str] = &[

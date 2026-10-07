@@ -1,0 +1,215 @@
+// Upstream: ../starters/docs/src/Menu.css @ 99e610236
+// Upstream: ../starters/docs/src/Menu.tsx @ 99e610236
+//
+// `Menu`, `MenuItem` (with `MenuItemLabel`, `MenuItemDescription`, `MenuItemShortcut`),
+// `MenuSection` (its heading as `leptonic-MenuSectionHeading`) and a `Separator` between the
+// items. The menu of a `MenuTrigger` or `SubmenuTrigger` goes into a `Popover` (`popover.scss`;
+// the starter gives a submenu's popover `offset=-2` and `cross_offset=-4`, without an arrow).
+//
+// Markup of an item, as the starter's: a check mark (multiple selection) or a dot (single
+// selection) while selected, an optional icon, the label, and a chevron on a submenu's trigger
+// item:
+//
+//   <svg class="lucide-check" ..>..</svg>      // selected, multiple selection
+//   <svg class="lucide-dot" ..>..</svg>        // selected, single selection
+//   <svg ..>..</svg>                           // optional icon
+//   <MenuItemLabel>"Copy"</MenuItemLabel>
+//   <MenuItemDescription>..</MenuItemDescription>
+//   <MenuItemShortcut>"⌘C"</MenuItemShortcut>
+//   <svg class="lucide-chevron-right" ..>..</svg>   // trigger item of a submenu
+@use "mode";
+
+.leptonic-Menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 0;
+  max-height: inherit;
+  box-sizing: border-box;
+  overflow: auto;
+  min-width: 150px;
+  box-sizing: border-box;
+  outline: none;
+  border-radius: inherit;
+  display: grid;
+  --check-width: 0;
+  grid-template-columns: var(--spacing-3) var(--check-width) auto 1fr auto var(--spacing-3);
+  grid-auto-rows: max-content;
+
+  &:has(> [data-selection-mode]) {
+    --check-width: var(--spacing-6);
+  }
+
+  &[data-empty] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+    min-height: var(--spacing-8);
+  }
+}
+
+.leptonic-MenuItem {
+  margin-inline: var(--spacing-1);
+  padding: calc((var(--spacing-8) - 1lh) / 2) 0;
+  border-radius: calc(var(--radius-lg) - var(--spacing-1));
+  outline: none;
+  cursor: default;
+  color: var(--text-color);
+  font: var(--font-size) system-ui;
+  position: relative;
+  display: grid;
+  grid-column-start: 1;
+  grid-column-end: -1;
+  grid-template-areas:
+    '. check icon label end .'
+    '. . . desc end .';
+  grid-template-columns: subgrid;
+  align-items: center;
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+
+  > svg:not(.lucide-check, .lucide-dot, .lucide-chevron-right) {
+    grid-area: icon;
+    width: var(--spacing-4);
+    height: var(--spacing-4);
+    justify-self: center;
+    margin-inline-end: var(--spacing-2);
+  }
+
+  &:first-of-type {
+    margin-top: var(--spacing);
+  }
+
+  &:last-of-type {
+    margin-bottom: var(--spacing);
+  }
+
+  &[data-open],
+  &[data-pressed] {
+    background: var(--highlight-hover);
+  }
+
+  &[data-focused] {
+    background: var(--highlight-background);
+    color: var(--highlight-foreground);
+  }
+
+  &[data-selection-mode] {
+    .lucide-check,
+    .lucide-dot {
+      grid-area: check;
+      width: var(--spacing-4);
+      height: var(--spacing-4);
+    }
+
+    .lucide-check {
+      stroke-width: 3px;
+    }
+
+    .lucide-dot {
+      scale: 3;
+    }
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+  }
+
+  .leptonic-MenuItemLabel {
+    grid-area: label;
+    font-weight: 500;
+  }
+
+  .leptonic-MenuItemDescription {
+    font-size: var(--font-size-sm);
+    grid-area: desc;
+  }
+
+  .leptonic-MenuItemShortcut {
+    grid-area: end;
+    justify-self: end;
+    margin-inline-start: var(--spacing-4);
+    font-family: system-ui;
+    font-size: var(--font-size-sm);
+    text-align: end;
+    background: var(--highlight-hover);
+    border: 0.5px solid var(--highlight-pressed);
+    padding: 0 var(--spacing-1);
+    border-radius: var(--radius-sm);
+  }
+
+  &[data-focused] .leptonic-MenuItemShortcut {
+    background: rgb(255 255 255 / 0.1);
+    border-color: rgb(255 255 255 / 0.2);
+  }
+
+  .lucide-chevron-right {
+    grid-area: end;
+    margin-left: var(--spacing-1);
+    justify-self: end;
+    width: var(--spacing-4);
+    height: var(--spacing-4);
+  }
+}
+
+// A section renders its heading and its group (`leptonic-MenuSection`) in a wrapper
+// (`role="presentation"`), which leaves the layout to them (upstream: the header is inside the
+// section).
+.leptonic-Menu > [role='presentation']:has(> .leptonic-MenuSection) {
+  display: contents;
+}
+
+.leptonic-MenuSection {
+  display: grid;
+  grid-column-start: 1;
+  grid-column-end: -1;
+  --check-width: 0;
+  grid-template-columns: var(--spacing-3) var(--check-width) auto 1fr auto var(--spacing-3);
+
+  &:has(> [data-selection-mode]) {
+    --check-width: var(--spacing-6);
+  }
+}
+
+.leptonic-MenuSectionHeading {
+  grid-column-start: 1;
+  grid-column-end: -1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  font-variation-settings: initial;
+  padding: var(--spacing-1) var(--spacing-3);
+  background: var(--gray-100);
+  border-block: 0.5px solid var(--gray-400);
+  cursor: default;
+  user-select: none;
+  box-shadow:
+    inset 0px 1px 0px white,
+    inset 0px -4px 8px var(--gray-200);
+
+  @include mode.dark {
+    box-shadow: inset 0px 4px 8px var(--gray-200);
+  }
+
+  .leptonic-Menu > :first-child > & {
+    margin-top: -0.5px;
+  }
+}
+
+.leptonic-Menu .leptonic-Separator {
+  grid-column-start: 1;
+  grid-column-end: -1;
+  margin: 0 var(--spacing-2);
+  border: 0;
+  border-top: 0.5px solid var(--border-color);
+  height: auto;
+  width: auto;
+
+  .leptonic-MenuItem + & {
+    margin-block-start: var(--spacing-1);
+  }
+
+  &:has(+ .leptonic-MenuItem) {
+    margin-block-end: var(--spacing-1);
+  }
+}

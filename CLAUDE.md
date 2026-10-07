@@ -19,6 +19,9 @@ components with theming capabilities, built on a layered architecture of hooks, 
   `set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`), never one combined binding
   that forces e.g. an `RwSignal` (for `is_<x>`, the setter is `set_<x>`: `is_open` + `set_open`). Uncontrolled: `default_<x>`, plus `on_<x>_change` to observe. Hooks keep
   `ValueBinding` internally (the component builds it from the two props).
+- **No constructors on input structs** (the user's rule, 2026-10-07): never add `new(..)` (or similar) functions to
+  `*Input` types; callers write struct literals with every field named (or `Default` + struct update syntax), so
+  creating an input is explicit and its field names stay visible.
 - **No workarounds**: Do not use temporary workarounds instead of fixing real underlying issues. Always address the root
   cause.
 - **Long-term solutions**: Prefer maintainable, long-term solutions over quick fixes that accumulate technical debt.
@@ -39,8 +42,11 @@ components with theming capabilities, built on a layered architecture of hooks, 
 
 Several agent sessions work in this repository at the same time, each owning one area:
 
-- **Library** (`leptonic/`, `leptonic-theme/`, `testing/`): roadmap and API conventions in `PLAN.md`; conventions
-  also in `documentation/hooks-implementation.md` ("API Conventions").
+- **Library** (`leptonic/`, `leptonic-theme/`, `testing/`): open work in `PLAN.md`; guiding decisions and API
+  conventions in `documentation/conventions.md` (summary table in `documentation/hooks-implementation.md`); pitfalls
+  in `documentation/lessons.md`; consumers in `documentation/consumers.md`; finished work in
+  `documentation/history.md`; the atom theme (CSS ported from react-aria-components' starter styles) in
+  `documentation/atom-theme.md`.
 - **Book** (`examples/book-ssr/`): todos in `PLAN.md` (section "Book"); page structure, kit and writing rules in
   `documentation/documentation-strategy.md`; look, design tokens and which leptonic piece to use in
   `examples/book-ssr/STYLE_GUIDE.md`.
@@ -48,7 +54,8 @@ Several agent sessions work in this repository at the same time, each owning one
 Rules for every agent:
 
 - **Central todos.** Open work lives only in the root `PLAN.md`, never in scratch files, private notes or other plan
-  files. A finding about another area goes into that area's part of `PLAN.md` (or to its owner, who records it
+  files. `PLAN.md` holds open items only: move finished work to `documentation/history.md` and long-term rules or
+  knowledge to the documentation files above. A finding about another area goes into that area's part of `PLAN.md` (or to its owner, who records it
   there).
 - **Stay in your area.** When a library change breaks the book build, make only minimal compile fixes in book files
   and leave page texts to the book session (and tell it what changed).
@@ -109,7 +116,9 @@ cd examples/book-ssr && cargo leptos serve          # Equivalent manual command
 
 ## Architecture
 
-The library follows a three-layer hierarchy:
+The library follows a three-layer hierarchy. The user decided (2026-10-07) to remove the third layer: leptonic
+becomes hooks + atoms + an optional CSS theme for the atoms (`documentation/conventions.md`; the steps are in
+`PLAN.md`). Until then the components still have to compile, but get no new work.
 
 1. **Hooks** (`leptonic/src/hooks/`) - Low-level interaction logic (usePress, useFocus, useCalendar). Handle ARIA
    attributes and accessibility. No rendering.
@@ -211,7 +220,7 @@ Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `componen
 - `atoms` - Headless base components (requires hooks)
 - `components` - Full pre-built components (requires atoms)
 - `clipboard` - Clipboard support
-- `tiptap` - Rich text editor integration (build script copies tiptap JS into the consuming app)
+- `tiptap` - Rich text editor (leptos-tiptap; its JS ships as wasm-bindgen snippets, nothing to copy)
 - `syntax-highlight` (syntect) / `sanitize` (ammonia) - Optional component extras
 - `ssr` / `hydrate` - Server-side rendering support
 - `nightly` - Enables `leptos/nightly`

@@ -1,509 +1,635 @@
-use super::use_date_segment::DateSegmentType;
-use crate::utils::time::whole_days_in;
+// Upstream: react-stately/src/datepicker/IncompleteDate.ts @ 99e6102368
+// Upstream: @internationalized/date/src/manipulation.ts @ 99e6102368 (`cycleValue`, zoned hours)
+//! The value a date field shows while it is edited: each field may be missing, and the fields
+//! may form an invalid date (February 30) until the field is left.
 
-// Page step constants matching react-aria behavior.
-const PAGE_STEP_YEAR: i32 = 5;
-const PAGE_STEP_MONTH: i32 = 2;
-const PAGE_STEP_DAY: i32 = 7;
-const PAGE_STEP_HOUR: i32 = 2;
-const PAGE_STEP_MINUTE: i32 = 15;
-const PAGE_STEP_SECOND: i32 = 15;
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Gregorian only: eras are `Era::Bc`/`Era::Ad`, months 1 to 12, days 1 to 31.
+//
+// ## DIFFERENT BEHAVIOR
+// - A zoned hour cycles within its half of the day in both 12-hour cycles (react-aria: only for
+//   `h12`; `h11` cycles through all 24 hours, changing the day period).
+//
+// =============================================================================
 
-/// A partially-filled date/time value.
-///
-/// Each field is optional, enabling representation of partial edits (e.g., user
-/// typed the month but not the day). This is the Rust equivalent of react-aria's
-/// `DateFieldState` internal editing buffer.
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct IncompleteDate {
+use jiff::{
+    SignedDuration, Zoned,
+    civil::{Date, Time},
+    tz::Offset,
+};
+
+use super::types::{DateSegmentType, DateValue, Era, ResolvedHourCycle};
+
+/// The limits of a segment's value and its current value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct SegmentLimits {
+    pub value: Option<i32>,
+    pub min_value: i32,
+    pub max_value: i32,
+}
+
+const MAX_YEAR: i32 = 9999;
+const MAX_MONTHS: i32 = 12;
+const MAX_DAYS: i32 = 31;
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct IncompleteDate {
+    hour_cycle: ResolvedHourCycle,
+    pub era: Option<Era>,
+    /// The year in its era.
     pub year: Option<i32>,
-    /// 1-12
-    pub month: Option<u8>,
-    /// 1-31
-    pub day: Option<u8>,
-    /// In display hour cycle (0-23 for h24, 1-12 for h12)
-    pub hour: Option<u8>,
-    /// 0-59
-    pub minute: Option<u8>,
-    /// 0-59
-    pub second: Option<u8>,
-    /// `false` = AM, `true` = PM. Only meaningful for h12.
-    pub day_period: Option<bool>,
-    /// Whether we are in 24-hour mode.
-    pub hour_cycle_24: bool,
+    pub month: Option<i32>,
+    pub day: Option<i32>,
+    /// In the hour cycle (e.g. 12 for midnight in `H12`).
+    pub hour: Option<i32>,
+    /// 0: AM, 1: PM (12-hour cycles only).
+    pub day_period: Option<i32>,
+    pub minute: Option<i32>,
+    pub second: Option<i32>,
+    pub nanosecond: Option<i32>,
+    /// The UTC offset of a zoned value, to keep a repeated local time (DST) apart.
+    pub offset: Option<Offset>,
 }
 
 impl IncompleteDate {
-    /// Create an empty `IncompleteDate` with no fields set.
-    pub fn empty(hour_cycle_24: bool) -> Self {
-        Self {
+    pub fn new<V: DateValue>(hour_cycle: ResolvedHourCycle, value: Option<&V>) -> Self {
+        let mut date = Self {
+            hour_cycle,
+            era: None,
             year: None,
             month: None,
             day: None,
             hour: None,
+            day_period: None,
             minute: None,
             second: None,
-            day_period: None,
-            hour_cycle_24,
-        }
-    }
-
-    /// Populate all fields from a complete date.
-    pub fn from_date(date: &time::OffsetDateTime, hour_cycle_24: bool) -> Self {
-        let (hour, day_period) = Self::from_24_hour(date.hour(), hour_cycle_24);
-        Self {
-            year: Some(date.year()),
-            month: Some(date.month() as u8),
-            day: Some(date.day()),
-            hour: Some(hour),
-            minute: Some(date.minute()),
-            second: Some(date.second()),
-            day_period,
-            hour_cycle_24,
-        }
-    }
-
-    /// Sync from an external complete date (when the controlled value changes).
-    pub fn sync_from_date(&mut self, date: &time::OffsetDateTime) {
-        let (hour, day_period) = Self::from_24_hour(date.hour(), self.hour_cycle_24);
-        self.year = Some(date.year());
-        self.month = Some(date.month() as u8);
-        self.day = Some(date.day());
-        self.hour = Some(hour);
-        self.minute = Some(date.minute());
-        self.second = Some(date.second());
-        self.day_period = day_period;
-    }
-
-    /// Set a single field by segment type.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn set(&mut self, segment_type: DateSegmentType, value: i32) {
-        match segment_type {
-            DateSegmentType::Year => self.year = Some(value),
-            DateSegmentType::Month => {
-                self.month = Some(value.clamp(1, 12) as u8);
-                self.clamp_day_to_month();
+            nanosecond: None,
+            offset: None,
+        };
+        if let Some(value) = value {
+            let (era, year) = Era::of(value.date().year());
+            date.era = Some(era);
+            date.year = Some(year);
+            date.month = Some(i32::from(value.date().month()));
+            date.day = Some(i32::from(value.date().day()));
+            if V::HAS_TIME {
+                let time = value.time();
+                let (day_period, hour) = to_hour_cycle(i32::from(time.hour()), hour_cycle);
+                date.hour = Some(hour);
+                date.day_period = day_period;
+                date.minute = Some(i32::from(time.minute()));
+                date.second = Some(i32::from(time.second()));
+                date.nanosecond = Some(time.subsec_nanosecond());
             }
-            DateSegmentType::Day => self.day = Some(value.clamp(1, 31) as u8),
-            DateSegmentType::Hour => {
-                let (min, max) = self.hour_limits();
-                self.hour = Some(value.clamp(min, max) as u8);
-                // Auto-populate day_period from default if not set.
-                if !self.hour_cycle_24 && self.day_period.is_none() {
-                    self.day_period = Some(false); // default AM
-                }
+            date.offset = value.offset();
+        }
+        date
+    }
+
+    pub fn hour_cycle(&self) -> ResolvedHourCycle {
+        self.hour_cycle
+    }
+
+    /// A segment's value (the era as its index).
+    pub fn get(&self, field: DateSegmentType) -> Option<i32> {
+        match field {
+            DateSegmentType::Era => self.era.map(Era::index),
+            DateSegmentType::Year => self.year,
+            DateSegmentType::Month => self.month,
+            DateSegmentType::Day => self.day,
+            DateSegmentType::Hour => self.hour,
+            DateSegmentType::DayPeriod => self.day_period,
+            DateSegmentType::Minute => self.minute,
+            DateSegmentType::Second => self.second,
+            DateSegmentType::Literal | DateSegmentType::TimeZoneName => None,
+        }
+    }
+
+    fn put(&mut self, field: DateSegmentType, value: Option<i32>) {
+        match field {
+            DateSegmentType::Era => {
+                self.era = value.map(|index| if index <= 0 { Era::Bc } else { Era::Ad });
             }
-            DateSegmentType::Minute => self.minute = Some(value.clamp(0, 59) as u8),
-            DateSegmentType::Second => self.second = Some(value.clamp(0, 59) as u8),
-            DateSegmentType::DayPeriod => self.day_period = Some(value != 0),
-            DateSegmentType::Literal => {}
+            DateSegmentType::Year => self.year = value,
+            DateSegmentType::Month => self.month = value,
+            DateSegmentType::Day => self.day = value,
+            DateSegmentType::Hour => self.hour = value,
+            DateSegmentType::DayPeriod => self.day_period = value,
+            DateSegmentType::Minute => self.minute = value,
+            DateSegmentType::Second => self.second = value,
+            DateSegmentType::Literal | DateSegmentType::TimeZoneName => {}
         }
     }
 
-    /// Clear a field (e.g., on Backspace).
-    pub fn clear(&mut self, segment_type: DateSegmentType) {
-        match segment_type {
-            DateSegmentType::Year => self.year = None,
-            DateSegmentType::Month => self.month = None,
-            DateSegmentType::Day => self.day = None,
-            DateSegmentType::Hour => self.hour = None,
-            DateSegmentType::Minute => self.minute = None,
-            DateSegmentType::Second => self.second = None,
-            DateSegmentType::DayPeriod => self.day_period = None,
-            DateSegmentType::Literal => {}
-        }
+    /// Whether all `segments` have a value.
+    pub fn is_complete(&self, segments: &[DateSegmentType]) -> bool {
+        segments.iter().all(|segment| self.get(*segment).is_some())
     }
 
-    /// Increment or decrement a segment with wrapping.
-    /// Initializes from `placeholder` if the field is currently `None`.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn cycle(
-        &mut self,
-        segment_type: DateSegmentType,
+    /// Whether `value` shows these fields unchanged (it wasn't constrained, e.g. February 30).
+    pub fn validate<V: DateValue>(&self, value: &V, segments: &[DateSegmentType]) -> bool {
+        let fields = Self::new(self.hour_cycle, Some(value));
+        segments.iter().all(|segment| match segment {
+            DateSegmentType::Hour | DateSegmentType::DayPeriod if V::HAS_TIME => {
+                self.day_period == fields.day_period && self.hour == fields.hour
+            }
+            segment => self.get(*segment) == fields.get(*segment),
+        })
+    }
+
+    /// Whether none of `segments` has a value.
+    pub fn is_cleared(&self, segments: &[DateSegmentType]) -> bool {
+        segments.iter().all(|segment| self.get(*segment).is_none())
+    }
+
+    /// With `field` set to `value`.
+    #[must_use]
+    pub fn set<V: DateValue>(&self, field: DateSegmentType, value: i32, placeholder: &V) -> Self {
+        let mut result = self.clone();
+        result.put(field, Some(value));
+        if field == DateSegmentType::Hour && result.day_period.is_none() && V::HAS_TIME {
+            result.day_period =
+                to_hour_cycle(i32::from(placeholder.time().hour()), self.hour_cycle).0;
+        }
+        if field == DateSegmentType::Year && result.era.is_none() {
+            result.era = Some(Era::of(placeholder.date().year()).0);
+        }
+        // A changed date or time may not have this offset any more.
+        if !matches!(
+            field,
+            DateSegmentType::Second | DateSegmentType::Literal | DateSegmentType::TimeZoneName
+        ) {
+            result.offset = None;
+        }
+        result
+    }
+
+    /// With `field` cleared.
+    #[must_use]
+    pub fn clear(&self, field: DateSegmentType) -> Self {
+        let mut result = self.clone();
+        result.put(field, None);
+        if field == DateSegmentType::Year {
+            result.era = None;
+        }
+        result.offset = None;
+        result
+    }
+
+    /// With `field` moved by `amount`, wrapping around (a missing field takes the placeholder's).
+    #[must_use]
+    pub fn cycle<V: DateValue>(
+        &self,
+        field: DateSegmentType,
         amount: i32,
-        placeholder: &time::OffsetDateTime,
-    ) {
-        match segment_type {
+        placeholder: &V,
+        display_segments: &[DateSegmentType],
+    ) -> Self {
+        let mut result = self.clone();
+        let (placeholder_era, placeholder_year) = Era::of(placeholder.date().year());
+
+        if result.get(field).is_none()
+            && !matches!(field, DateSegmentType::DayPeriod | DateSegmentType::Era)
+        {
+            let placeholder_fields = Self::new(self.hour_cycle, Some(placeholder));
+            if field == DateSegmentType::Hour && V::HAS_TIME {
+                result.day_period = placeholder_fields.day_period;
+                result.hour = placeholder_fields.hour;
+            } else {
+                result.put(field, placeholder_fields.get(field));
+            }
+            if field == DateSegmentType::Year && result.era.is_none() {
+                result.era = Some(placeholder_era);
+            }
+            return result;
+        }
+
+        match field {
+            DateSegmentType::Era => {
+                let index = result.era.map_or(1, Era::index);
+                result.era = Some(
+                    Era::ALL[usize::from(
+                        cycle_value(i64::from(index), i64::from(amount), Some(0), 1, false) == 1,
+                    )],
+                );
+            }
             DateSegmentType::Year => {
-                let current = self.year.unwrap_or_else(|| placeholder.year());
-                self.year = Some(current + amount);
+                // As a date, so that 1 AD and 1 BC go into each other.
+                let era = self.era.unwrap_or(placeholder_era);
+                let year = self.year.unwrap_or(placeholder_year);
+                // BC years count backwards.
+                let amount = if era == Era::Bc { -amount } else { amount };
+                let cycled = cycle_value(
+                    i64::from(year),
+                    i64::from(amount),
+                    None,
+                    i64::from(MAX_YEAR),
+                    true,
+                );
+                let cycled = i32::try_from(cycled).unwrap_or(1);
+                let proleptic = era.proleptic_year(cycled);
+                let (era, year) = Era::of(i16::try_from(proleptic).unwrap_or(1));
+                result.era = Some(era);
+                result.year = Some(year);
             }
             DateSegmentType::Month => {
-                let current = self.month.unwrap_or_else(|| placeholder.month() as u8);
-                let new_val = wrap(i32::from(current) + amount, 1, 12);
-                self.month = Some(new_val as u8);
-                // Adjust day if it exceeds new month's max.
-                self.clamp_day_to_month();
+                result.month = Some(cycle_i32(
+                    result.month.unwrap_or(1),
+                    amount,
+                    1,
+                    MAX_MONTHS,
+                    false,
+                ));
             }
             DateSegmentType::Day => {
-                let max = self.day_max(placeholder);
-                let current = self.day.unwrap_or_else(|| placeholder.day());
-                let new_val = wrap(i32::from(current) + amount, 1, i32::from(max));
-                self.day = Some(new_val as u8);
+                // Up to the most days of any month.
+                result.day = Some(cycle_i32(
+                    result.day.unwrap_or(1),
+                    amount,
+                    1,
+                    MAX_DAYS,
+                    false,
+                ));
             }
             DateSegmentType::Hour => {
-                let (min, max) = self.hour_limits();
-                let current = self.hour.unwrap_or_else(|| {
-                    let (h, dp) = Self::from_24_hour(placeholder.hour(), self.hour_cycle_24);
-                    if !self.hour_cycle_24 && self.day_period.is_none() {
-                        self.day_period = dp;
-                    }
-                    h
+                let has_date_segments = display_segments.iter().any(|segment| {
+                    matches!(
+                        segment,
+                        DateSegmentType::Year | DateSegmentType::Month | DateSegmentType::Day
+                    )
                 });
-                let new_val = wrap(i32::from(current) + amount, min, max);
-                self.hour = Some(new_val as u8);
-            }
-            DateSegmentType::Minute => {
-                let current = self.minute.unwrap_or_else(|| placeholder.minute());
-                let new_val = wrap(i32::from(current) + amount, 0, 59);
-                self.minute = Some(new_val as u8);
-            }
-            DateSegmentType::Second => {
-                let current = self.second.unwrap_or_else(|| placeholder.second());
-                let new_val = wrap(i32::from(current) + amount, 0, 59);
-                self.second = Some(new_val as u8);
+                let zoned = placeholder.time_zone().is_some()
+                    && (!has_date_segments
+                        || (result.year.is_some()
+                            && result.month.is_some()
+                            && result.day.is_some()));
+                let cycled = zoned.then(|| self.to_value(placeholder)).and_then(|value| {
+                    // The value's instant (its offset tells a repeated local time apart).
+                    let time_zone = value.time_zone()?.clone();
+                    let timestamp = value.offset()?.to_timestamp(value.date_time()).ok()?;
+                    cycle_zoned_hour(
+                        &timestamp.to_zoned(time_zone),
+                        amount,
+                        self.hour_cycle.is_12_hour(),
+                    )
+                });
+                if let Some(cycled) = cycled {
+                    let (day_period, hour) =
+                        to_hour_cycle(i32::from(cycled.hour()), self.hour_cycle);
+                    result.hour = Some(hour);
+                    result.day_period = day_period;
+                    result.offset = Some(cycled.offset());
+                } else {
+                    let limits = self.segment_limits(DateSegmentType::Hour);
+                    let (min, max) =
+                        limits.map_or((0, 23), |limits| (limits.min_value, limits.max_value));
+                    result.hour =
+                        Some(cycle_i32(result.hour.unwrap_or(0), amount, min, max, false));
+                    if result.day_period.is_none() && V::HAS_TIME {
+                        result.day_period =
+                            to_hour_cycle(i32::from(placeholder.time().hour()), self.hour_cycle).0;
+                    }
+                }
             }
             DateSegmentType::DayPeriod => {
-                // Toggle AM/PM.
-                let current = self.day_period.unwrap_or_else(|| placeholder.hour() >= 12);
-                self.day_period = Some(!current);
+                result.day_period = Some(cycle_i32(
+                    result.day_period.unwrap_or(0),
+                    amount,
+                    0,
+                    1,
+                    false,
+                ));
             }
-            DateSegmentType::Literal => {}
+            DateSegmentType::Minute => {
+                result.minute = Some(cycle_i32(result.minute.unwrap_or(0), amount, 0, 59, true));
+            }
+            DateSegmentType::Second => {
+                result.second = Some(cycle_i32(result.second.unwrap_or(0), amount, 0, 59, true));
+            }
+            DateSegmentType::Literal | DateSegmentType::TimeZoneName => {}
+        }
+        result
+    }
+
+    /// A value of `value`'s type with these fields (missing ones from `value`); a day beyond
+    /// its month is constrained to the month's last day.
+    pub fn to_value<V: DateValue>(&self, value: &V) -> V {
+        let (value_era, value_year) = Era::of(value.date().year());
+        let era = self.era.unwrap_or(value_era);
+        let year = era.proleptic_year(self.year.unwrap_or(value_year));
+        let month = self.month.unwrap_or(i32::from(value.date().month()));
+        let day = self.day.unwrap_or(i32::from(value.date().day()));
+        let date = constrained_date(year, month, day).unwrap_or_else(|| value.date());
+        if !V::HAS_TIME {
+            return value.with_fields(date, Time::midnight(), None);
+        }
+        let hour = match self.hour {
+            Some(hour) => Some(from_hour_cycle(
+                hour,
+                self.day_period.unwrap_or(0),
+                self.hour_cycle,
+            )),
+            None if self.hour_cycle.is_12_hour() => {
+                Some(if self.day_period == Some(1) { 12 } else { 0 })
+            }
+            None => None,
+        };
+        let time = value.time();
+        let time = Time::new(
+            hour.and_then(|hour| i8::try_from(hour).ok())
+                .unwrap_or(time.hour()),
+            self.minute
+                .and_then(|minute| i8::try_from(minute).ok())
+                .unwrap_or(time.minute()),
+            self.second
+                .and_then(|second| i8::try_from(second).ok())
+                .unwrap_or(time.second()),
+            self.nanosecond.unwrap_or(time.subsec_nanosecond()),
+        )
+        .unwrap_or(time);
+        value.with_fields(date, time, self.offset)
+    }
+
+    /// The limits of a segment (`None` for literals and the time zone).
+    pub fn segment_limits(&self, kind: DateSegmentType) -> Option<SegmentLimits> {
+        let limits = |value, min_value, max_value| {
+            Some(SegmentLimits {
+                value,
+                min_value,
+                max_value,
+            })
+        };
+        match kind {
+            DateSegmentType::Era => limits(Some(self.era.map_or(1, Era::index)), 0, 1),
+            DateSegmentType::Year => limits(self.year, 1, MAX_YEAR),
+            DateSegmentType::Month => limits(self.month, 1, MAX_MONTHS),
+            DateSegmentType::Day => limits(self.day, 1, MAX_DAYS),
+            DateSegmentType::DayPeriod => limits(self.day_period, 0, 1),
+            DateSegmentType::Hour => {
+                let (min_value, max_value) = match self.hour_cycle {
+                    ResolvedHourCycle::H12 => (1, 12),
+                    ResolvedHourCycle::H11 => (0, 11),
+                    ResolvedHourCycle::H23 | ResolvedHourCycle::H24 => (0, 23),
+                };
+                limits(self.hour, min_value, max_value)
+            }
+            DateSegmentType::Minute => limits(self.minute, 0, 59),
+            DateSegmentType::Second => limits(self.second, 0, 59),
+            DateSegmentType::Literal | DateSegmentType::TimeZoneName => None,
         }
     }
+}
 
-    /// Get the page step for a segment type.
-    pub fn page_step(segment_type: DateSegmentType) -> i32 {
-        match segment_type {
-            DateSegmentType::Year => PAGE_STEP_YEAR,
-            DateSegmentType::Month => PAGE_STEP_MONTH,
-            DateSegmentType::Day => PAGE_STEP_DAY,
-            DateSegmentType::Hour => PAGE_STEP_HOUR,
-            DateSegmentType::Minute => PAGE_STEP_MINUTE,
-            DateSegmentType::Second => PAGE_STEP_SECOND,
-            DateSegmentType::DayPeriod | DateSegmentType::Literal => 1,
+/// The date, the day constrained to the month's length.
+fn constrained_date(year: i32, month: i32, day: i32) -> Option<Date> {
+    let year = i16::try_from(year).ok()?;
+    let month = i8::try_from(month.clamp(1, MAX_MONTHS)).ok()?;
+    let first = Date::new(year, month, 1).ok()?;
+    let day = i8::try_from(day.clamp(1, i32::from(first.days_in_month()))).ok()?;
+    Date::new(year, month, day).ok()
+}
+
+fn cycle_i32(value: i32, amount: i32, min: i32, max: i32, round: bool) -> i32 {
+    let cycled = cycle_value(
+        i64::from(value),
+        i64::from(amount),
+        Some(i64::from(min)),
+        i64::from(max),
+        round,
+    );
+    i32::try_from(cycled).unwrap_or(min)
+}
+
+/// `value` moved by `amount` within `min` (`None`: unbounded) and `max`, wrapping around;
+/// rounding to a multiple of `amount` (react-aria's page steps).
+fn cycle_value(value: i64, amount: i64, min: Option<i64>, max: i64, round: bool) -> i64 {
+    let below = |value: i64| min.is_some_and(|min| value < min);
+    // Below an unbounded minimum, the value wraps to 1 (as `-Infinity` upstream).
+    let wrap_min = min.unwrap_or(1);
+    if round {
+        let mut value = value + amount.signum();
+        if below(value) {
+            value = max;
         }
-    }
-
-    /// Set a segment to its maximum value.
-    pub fn set_to_max(
-        &mut self,
-        segment_type: DateSegmentType,
-        placeholder: &time::OffsetDateTime,
-    ) {
-        let (_, max) = self.get_segment_limits(segment_type, placeholder);
-        self.set(segment_type, max);
-    }
-
-    /// Set a segment to its minimum value.
-    pub fn set_to_min(
-        &mut self,
-        segment_type: DateSegmentType,
-        placeholder: &time::OffsetDateTime,
-    ) {
-        let (min, _) = self.get_segment_limits(segment_type, placeholder);
-        self.set(segment_type, min);
-    }
-
-    /// Whether all date fields (and time fields, if `show_time`) are filled.
-    pub fn is_complete(&self, show_time: bool) -> bool {
-        let date_complete = self.year.is_some() && self.month.is_some() && self.day.is_some();
-        if !show_time {
-            return date_complete;
-        }
-        let time_complete = self.hour.is_some() && self.minute.is_some();
-        let period_complete = self.hour_cycle_24 || self.day_period.is_some();
-        date_complete && time_complete && period_complete
-    }
-
-    /// Whether all fields are `None`.
-    pub fn is_cleared(&self, show_time: bool) -> bool {
-        let date_cleared = self.year.is_none() && self.month.is_none() && self.day.is_none();
-        if !show_time {
-            return date_cleared;
-        }
-        let time_cleared = self.hour.is_none() && self.minute.is_none() && self.second.is_none();
-        let period_cleared = self.hour_cycle_24 || self.day_period.is_none();
-        date_cleared && time_cleared && period_cleared
-    }
-
-    /// Convert to a complete `OffsetDateTime`, using `placeholder` for any missing fields.
-    /// Returns `None` if the resulting date is invalid (e.g., Feb 30).
-    pub fn to_date(&self, placeholder: &time::OffsetDateTime) -> Option<time::OffsetDateTime> {
-        let year = self.year.unwrap_or_else(|| placeholder.year());
-        let month_num = self.month.unwrap_or_else(|| placeholder.month() as u8);
-        let month = month_from_u8(month_num)?;
-        let day = self.day.unwrap_or_else(|| placeholder.day());
-        let hour_24 = self.to_24_hour(placeholder);
-        let minute = self.minute.unwrap_or_else(|| placeholder.minute());
-        let second = self.second.unwrap_or_else(|| placeholder.second());
-
-        // Clamp day to the valid range for the given year/month.
-        let max_day = whole_days_in(year, month);
-        let day = day.min(max_day);
-
-        let date = time::Date::from_calendar_date(year, month, day).ok()?;
-        let time = time::Time::from_hms(hour_24, minute, second).ok()?;
-        Some(date.with_time(time).assume_utc())
-    }
-
-    /// Get (min, max) for a segment type.
-    pub fn get_segment_limits(
-        &self,
-        segment_type: DateSegmentType,
-        placeholder: &time::OffsetDateTime,
-    ) -> (i32, i32) {
-        match segment_type {
-            DateSegmentType::Year => (1, 9999),
-            DateSegmentType::Month => (1, 12),
-            DateSegmentType::Day => (1, i32::from(self.day_max(placeholder))),
-            DateSegmentType::Hour => self.hour_limits(),
-            DateSegmentType::Minute | DateSegmentType::Second => (0, 59),
-            DateSegmentType::DayPeriod => (0, 1),
-            DateSegmentType::Literal => (0, 0),
-        }
-    }
-
-    /// Convert display hour + `day_period` to 24-hour value.
-    fn to_24_hour(&self, placeholder: &time::OffsetDateTime) -> u8 {
-        let display_hour = self.hour.unwrap_or_else(|| {
-            let (h, _) = Self::from_24_hour(placeholder.hour(), self.hour_cycle_24);
-            h
-        });
-        if self.hour_cycle_24 {
-            return display_hour;
-        }
-        let is_pm = self.day_period.unwrap_or_else(|| placeholder.hour() >= 12);
-        match (display_hour, is_pm) {
-            (12, false) => 0,    // 12 AM = 0
-            (12, true) => 12,    // 12 PM = 12
-            (h, false) => h,     // 1-11 AM
-            (h, true) => h + 12, // 1-11 PM
-        }
-    }
-
-    /// Convert 24-hour value to (`display_hour`, `day_period`).
-    pub fn from_24_hour(hour: u8, hour_cycle_24: bool) -> (u8, Option<bool>) {
-        if hour_cycle_24 {
-            (hour, None)
+        let div = amount.abs().max(1);
+        value = if amount > 0 {
+            value.div_euclid(div) * div + if value.rem_euclid(div) == 0 { 0 } else { div }
         } else {
-            let is_pm = hour >= 12;
-            let display = match hour {
+            value.div_euclid(div) * div
+        };
+        if value > max {
+            value = wrap_min;
+        }
+        value
+    } else {
+        let value = value + amount;
+        match min {
+            Some(min) if value < min => max - (min - value - 1),
+            _ if value > max => wrap_min + (value - max - 1),
+            _ => value,
+        }
+    }
+}
+
+/// Cycles the hour of a zoned value through the hours of its day (in absolute time, so that a
+/// day with a DST change has one more or one less hour); with `twelve_hour`, within its half.
+fn cycle_zoned_hour(value: &Zoned, amount: i32, twelve_hour: bool) -> Option<Zoned> {
+    const HOUR: i64 = 3_600;
+    let (min, max) = if twelve_hour {
+        if value.hour() >= 12 {
+            (12, 23)
+        } else {
+            (0, 11)
+        }
+    } else {
+        (0, 23)
+    };
+    let time_zone = value.time_zone().clone();
+    let date = value.date();
+    // The instants of an hour of the day (two if it repeats), within the day.
+    let instants = |hour: i8| -> Vec<jiff::Timestamp> {
+        let Ok(time) = Time::new(hour, 0, 0, 0) else {
+            return Vec::new();
+        };
+        let ambiguous = time_zone.to_ambiguous_timestamp(date.to_datetime(time));
+        [ambiguous.earlier().ok(), ambiguous.later().ok()]
+            .into_iter()
+            .flatten()
+            .filter(|timestamp| timestamp.to_zoned(time_zone.clone()).date() == date)
+            .collect()
+    };
+    let min_absolute = *instants(min).first()?;
+    let max_absolute = *instants(max).last()?;
+    let seconds = value.timestamp().as_second();
+    let hours = seconds.div_euclid(HOUR);
+    let remainder = value.timestamp().as_duration() - SignedDuration::from_secs(hours * HOUR);
+    let cycled = cycle_value(
+        hours,
+        i64::from(amount),
+        Some(min_absolute.as_second().div_euclid(HOUR)),
+        max_absolute.as_second().div_euclid(HOUR),
+        false,
+    );
+    let timestamp =
+        jiff::Timestamp::from_duration(SignedDuration::from_secs(cycled * HOUR) + remainder)
+            .ok()?;
+    Some(timestamp.to_zoned(time_zone))
+}
+
+/// A 24-hour hour in the hour cycle: (day period, hour).
+pub(crate) fn to_hour_cycle(hour: i32, hour_cycle: ResolvedHourCycle) -> (Option<i32>, i32) {
+    let day_period = Some(i32::from(hour >= 12));
+    match hour_cycle {
+        ResolvedHourCycle::H11 => (day_period, if hour >= 12 { hour - 12 } else { hour }),
+        ResolvedHourCycle::H12 => (
+            day_period,
+            match hour {
                 0 => 12,
-                1..=12 => hour,
-                _ => hour - 12,
-            };
-            (display, Some(is_pm))
-        }
-    }
-
-    /// Max day for the currently selected year/month (or placeholder).
-    fn day_max(&self, placeholder: &time::OffsetDateTime) -> u8 {
-        let year = self.year.unwrap_or_else(|| placeholder.year());
-        let month_num = self.month.unwrap_or_else(|| placeholder.month() as u8);
-        month_from_u8(month_num).map_or(31, |m| whole_days_in(year, m))
-    }
-
-    /// Hour min/max depending on hour cycle.
-    fn hour_limits(&self) -> (i32, i32) {
-        if self.hour_cycle_24 { (0, 23) } else { (1, 12) }
-    }
-
-    /// Clamp day if it exceeds the max for current month.
-    fn clamp_day_to_month(&mut self) {
-        if let (Some(year), Some(month_num), Some(day)) = (self.year, self.month, self.day)
-            && let Some(month) = month_from_u8(month_num)
-        {
-            let max = whole_days_in(year, month);
-            if day > max {
-                self.day = Some(max);
-            }
-        }
-    }
-
-    /// The maximum number of digits for a segment type.
-    pub fn max_digits(segment_type: DateSegmentType) -> usize {
-        match segment_type {
-            DateSegmentType::Year => 4,
-            DateSegmentType::Month
-            | DateSegmentType::Day
-            | DateSegmentType::Hour
-            | DateSegmentType::Minute
-            | DateSegmentType::Second => 2,
-            DateSegmentType::DayPeriod | DateSegmentType::Literal => 0,
-        }
+                hour if hour > 12 => hour - 12,
+                hour => hour,
+            },
+        ),
+        ResolvedHourCycle::H23 => (None, hour),
+        ResolvedHourCycle::H24 => (None, hour + 1),
     }
 }
 
-/// Wrap `value` into `[min, max]` range with cycling.
-fn wrap(value: i32, min: i32, max: i32) -> i32 {
-    let range = max - min + 1;
-    ((value - min).rem_euclid(range)) + min
-}
-
-/// Convert a 1-12 number to `time::Month`.
-fn month_from_u8(m: u8) -> Option<time::Month> {
-    match m {
-        1 => Some(time::Month::January),
-        2 => Some(time::Month::February),
-        3 => Some(time::Month::March),
-        4 => Some(time::Month::April),
-        5 => Some(time::Month::May),
-        6 => Some(time::Month::June),
-        7 => Some(time::Month::July),
-        8 => Some(time::Month::August),
-        9 => Some(time::Month::September),
-        10 => Some(time::Month::October),
-        11 => Some(time::Month::November),
-        12 => Some(time::Month::December),
-        _ => None,
+/// An hour of the hour cycle as a 24-hour hour.
+pub(crate) fn from_hour_cycle(hour: i32, day_period: i32, hour_cycle: ResolvedHourCycle) -> i32 {
+    match hour_cycle {
+        ResolvedHourCycle::H11 => hour + if day_period == 1 { 12 } else { 0 },
+        ResolvedHourCycle::H12 => {
+            (if hour == 12 { 0 } else { hour }) + if day_period == 1 { 12 } else { 0 }
+        }
+        ResolvedHourCycle::H23 => hour,
+        ResolvedHourCycle::H24 => hour - 1,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
+    use jiff::civil::{date, datetime};
 
     use super::*;
 
+    const DATE: [DateSegmentType; 3] = [
+        DateSegmentType::Month,
+        DateSegmentType::Day,
+        DateSegmentType::Year,
+    ];
+
     #[test]
-    fn wrap_cycles_forward() {
-        assert_that!(wrap(13, 1, 12)).is_equal_to(1);
-        assert_that!(wrap(32, 1, 31)).is_equal_to(1);
-        assert_that!(wrap(60, 0, 59)).is_equal_to(0);
+    fn cycles_values_with_and_without_rounding() {
+        assert_that!(cycle_value(59, 1, Some(0), 59, false)).is_equal_to(0);
+        assert_that!(cycle_value(0, -1, Some(0), 59, false)).is_equal_to(59);
+        assert_that!(cycle_value(7, 15, Some(0), 59, true)).is_equal_to(15);
+        assert_that!(cycle_value(15, 15, Some(0), 59, true)).is_equal_to(30);
+        assert_that!(cycle_value(50, 15, Some(0), 59, true)).is_equal_to(0);
+        assert_that!(cycle_value(7, -15, Some(0), 59, true)).is_equal_to(0);
+        assert_that!(cycle_value(0, -15, Some(0), 59, true)).is_equal_to(45);
+        assert_that!(cycle_value(9999, 1, None, 9999, true)).is_equal_to(1);
     }
 
     #[test]
-    fn wrap_cycles_backward() {
-        assert_that!(wrap(0, 1, 12)).is_equal_to(12);
-        assert_that!(wrap(0, 1, 31)).is_equal_to(31);
-        assert_that!(wrap(-1, 0, 59)).is_equal_to(59);
+    fn converts_hour_cycles() {
+        assert_that!(to_hour_cycle(0, ResolvedHourCycle::H12)).is_equal_to((Some(0), 12));
+        assert_that!(to_hour_cycle(13, ResolvedHourCycle::H12)).is_equal_to((Some(1), 1));
+        assert_that!(to_hour_cycle(12, ResolvedHourCycle::H11)).is_equal_to((Some(1), 0));
+        assert_that!(to_hour_cycle(0, ResolvedHourCycle::H24)).is_equal_to((None, 1));
+        for hour in 0..24 {
+            for cycle in [
+                ResolvedHourCycle::H11,
+                ResolvedHourCycle::H12,
+                ResolvedHourCycle::H23,
+                ResolvedHourCycle::H24,
+            ] {
+                let (day_period, converted) = to_hour_cycle(hour, cycle);
+                assert_that!(from_hour_cycle(converted, day_period.unwrap_or(0), cycle))
+                    .is_equal_to(hour);
+            }
+        }
     }
 
     #[test]
-    fn from_24_hour_h24() {
-        assert_that!(IncompleteDate::from_24_hour(0, true)).is_equal_to((0, None));
-        assert_that!(IncompleteDate::from_24_hour(13, true)).is_equal_to((13, None));
-        assert_that!(IncompleteDate::from_24_hour(23, true)).is_equal_to((23, None));
+    fn edits_fields_and_builds_values() {
+        let placeholder = date(2024, 1, 1);
+        let empty = IncompleteDate::new::<Date>(ResolvedHourCycle::H12, None);
+        assert_that!(empty.is_cleared(&DATE)).is_true();
+        let partial = empty.set(DateSegmentType::Month, 2, &placeholder).set(
+            DateSegmentType::Day,
+            30,
+            &placeholder,
+        );
+        assert_that!(partial.is_complete(&DATE)).is_false();
+        let complete = partial.set(DateSegmentType::Year, 2023, &placeholder);
+        assert_that!(complete.era).is_equal_to(Some(Era::Ad));
+        assert_that!(complete.is_complete(&DATE)).is_true();
+        // February 30 is constrained, so it doesn't validate.
+        let value = complete.to_value(&placeholder);
+        assert_that!(value).is_equal_to(date(2023, 2, 28));
+        assert_that!(complete.validate(&value, &DATE)).is_false();
+        let valid = complete.set(DateSegmentType::Day, 28, &placeholder);
+        assert_that!(valid.validate(&valid.to_value(&placeholder), &DATE)).is_true();
     }
 
     #[test]
-    fn from_24_hour_h12() {
-        assert_that!(IncompleteDate::from_24_hour(0, false)).is_equal_to((12, Some(false)));
-        assert_that!(IncompleteDate::from_24_hour(1, false)).is_equal_to((1, Some(false)));
-        assert_that!(IncompleteDate::from_24_hour(12, false)).is_equal_to((12, Some(true)));
-        assert_that!(IncompleteDate::from_24_hour(13, false)).is_equal_to((1, Some(true)));
-        assert_that!(IncompleteDate::from_24_hour(23, false)).is_equal_to((11, Some(true)));
+    fn cycles_from_the_placeholder_and_across_eras() {
+        let placeholder = date(2024, 5, 20);
+        let empty = IncompleteDate::new::<Date>(ResolvedHourCycle::H12, None);
+        // A missing field takes the placeholder's value first.
+        let year = empty.cycle(DateSegmentType::Year, 1, &placeholder, &DATE);
+        assert_that!(year.year).is_equal_to(Some(2024));
+        let day = empty.cycle(DateSegmentType::Day, -1, &placeholder, &DATE);
+        assert_that!(day.day).is_equal_to(Some(20));
+        // 1 AD - 1 is 1 BC; 1 BC + 1 is 1 AD.
+        let ad1 = IncompleteDate::new(ResolvedHourCycle::H12, Some(&date(1, 1, 1)));
+        let bc1 = ad1.cycle(DateSegmentType::Year, -1, &placeholder, &DATE);
+        assert_that!((bc1.era, bc1.year)).is_equal_to((Some(Era::Bc), Some(1)));
+        assert_that!(bc1.to_value(&placeholder).year()).is_equal_to(0);
+        let back = bc1.cycle(DateSegmentType::Year, 1, &placeholder, &DATE);
+        assert_that!((back.era, back.year)).is_equal_to((Some(Era::Ad), Some(1)));
     }
 
     #[test]
-    fn cycle_month_wraps() {
-        let placeholder = time::macros::datetime!(2024-06-15 12:00 UTC);
-        let mut date = IncompleteDate::from_date(&placeholder, true);
-        date.cycle(DateSegmentType::Month, 1, &placeholder);
-        assert_that!(date.month).is_equal_to(Some(7));
-
-        date.month = Some(12);
-        date.cycle(DateSegmentType::Month, 1, &placeholder);
-        assert_that!(date.month).is_equal_to(Some(1));
-
-        date.month = Some(1);
-        date.cycle(DateSegmentType::Month, -1, &placeholder);
-        assert_that!(date.month).is_equal_to(Some(12));
+    fn keeps_times_in_the_hour_cycle() {
+        let value = datetime(2024, 5, 20, 0, 30, 0, 0);
+        let fields = IncompleteDate::new(ResolvedHourCycle::H12, Some(&value));
+        assert_that!((fields.hour, fields.day_period)).is_equal_to((Some(12), Some(0)));
+        let segments = [DateSegmentType::Hour, DateSegmentType::DayPeriod];
+        let next = fields.cycle(DateSegmentType::Hour, 1, &value, &segments);
+        assert_that!(next.hour).is_equal_to(Some(1));
+        let pm = next.cycle(DateSegmentType::DayPeriod, 1, &value, &segments);
+        assert_that!(pm.to_value(&value)).is_equal_to(datetime(2024, 5, 20, 13, 30, 0, 0));
     }
 
     #[test]
-    fn cycle_day_wraps() {
-        let placeholder = time::macros::datetime!(2024-02-15 12:00 UTC);
-        let mut date = IncompleteDate::from_date(&placeholder, true);
-        date.day = Some(29); // leap year
-        date.cycle(DateSegmentType::Day, 1, &placeholder);
-        assert_that!(date.day).is_equal_to(Some(1));
-
-        date.day = Some(1);
-        date.cycle(DateSegmentType::Day, -1, &placeholder);
-        assert_that!(date.day).is_equal_to(Some(29));
-    }
-
-    #[test]
-    fn is_complete_date_only() {
-        let mut date = IncompleteDate::empty(true);
-        assert_that!(date.is_complete(false)).is_false();
-        date.year = Some(2024);
-        date.month = Some(6);
-        assert_that!(date.is_complete(false)).is_false();
-        date.day = Some(15);
-        assert_that!(date.is_complete(false)).is_true();
-    }
-
-    #[test]
-    fn is_complete_with_time_h24() {
-        let mut date = IncompleteDate::empty(true);
-        date.year = Some(2024);
-        date.month = Some(6);
-        date.day = Some(15);
-        assert_that!(date.is_complete(true)).is_false();
-        date.hour = Some(12);
-        date.minute = Some(30);
-        assert_that!(date.is_complete(true)).is_true();
-    }
-
-    #[test]
-    fn is_complete_with_time_h12() {
-        let mut date = IncompleteDate::empty(false);
-        date.year = Some(2024);
-        date.month = Some(6);
-        date.day = Some(15);
-        date.hour = Some(12);
-        date.minute = Some(30);
-        assert_that!(date.is_complete(true)).is_false();
-        date.day_period = Some(false);
-        assert_that!(date.is_complete(true)).is_true();
-    }
-
-    #[test]
-    fn to_date_basic() {
-        let placeholder = time::macros::datetime!(2024-01-01 0:00 UTC);
-        let mut date = IncompleteDate::empty(true);
-        date.year = Some(2024);
-        date.month = Some(6);
-        date.day = Some(15);
-        date.hour = Some(14);
-        date.minute = Some(30);
-        date.second = Some(0);
-        let result = date.to_date(&placeholder);
-        assert_that!(result).is_some();
-        let dt = result.unwrap();
-        assert_that!(dt.year()).is_equal_to(2024);
-        assert_that!(dt.month() as u8).is_equal_to(6);
-        assert_that!(dt.day()).is_equal_to(15);
-        assert_that!(dt.hour()).is_equal_to(14);
-        assert_that!(dt.minute()).is_equal_to(30);
-    }
-
-    #[test]
-    fn to_date_h12_pm() {
-        let placeholder = time::macros::datetime!(2024-01-01 0:00 UTC);
-        let mut date = IncompleteDate::empty(false);
-        date.year = Some(2024);
-        date.month = Some(6);
-        date.day = Some(15);
-        date.hour = Some(3);
-        date.minute = Some(30);
-        date.second = Some(0);
-        date.day_period = Some(true); // PM
-        let dt = date.to_date(&placeholder).unwrap();
-        assert_that!(dt.hour()).is_equal_to(15);
-    }
-
-    #[test]
-    fn month_change_clamps_day() {
-        let placeholder = time::macros::datetime!(2024-01-31 0:00 UTC);
-        let mut date = IncompleteDate::from_date(&placeholder, true);
-        assert_that!(date.day).is_equal_to(Some(31));
-        // Change to February (max 29 in 2024 leap year)
-        date.set(DateSegmentType::Month, 2);
-        assert_that!(date.day).is_equal_to(Some(29));
+    fn cycles_zoned_hours_through_a_dst_change() {
+        // New York falls back on 2024-11-03: 1 AM occurs twice.
+        let value = date(2024, 11, 3)
+            .at(0, 30, 0, 0)
+            .in_tz("America/New_York")
+            .expect("a zoned value");
+        let segments = [DateSegmentType::Hour, DateSegmentType::Minute];
+        let fields = IncompleteDate::new(ResolvedHourCycle::H23, Some(&value));
+        let first = fields.cycle(DateSegmentType::Hour, 1, &value, &segments);
+        assert_that!(first.hour).is_equal_to(Some(1));
+        let first_value = first.to_value(&value);
+        let second = IncompleteDate::new(ResolvedHourCycle::H23, Some(&first_value)).cycle(
+            DateSegmentType::Hour,
+            1,
+            &first_value,
+            &segments,
+        );
+        // The repeated 1 AM, at the standard offset.
+        assert_that!(second.hour).is_equal_to(Some(1));
+        assert_that!(second.offset).is_not_equal_to(first.offset);
+        let second_value = second.to_value(&first_value);
+        assert_that!(second_value.timestamp().as_second() - first_value.timestamp().as_second())
+            .is_equal_to(3600);
     }
 }

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_area::ColorAreaDemo;
@@ -35,13 +34,25 @@ pub fn PageUseColorArea() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let state = use_color_area_state(UseColorAreaStateInput {
+                            default_value: HSV::new(),
+                            value: None,
                             x_channel: Some(HsvChannel::Saturation),
                             y_channel: Some(HsvChannel::Brightness),
-                            ..UseColorAreaStateInput::new(HSV::new())
+                            x_channel_step: None,
+                            y_channel_step: None,
+                            on_change: None,
+                            on_change_end: None,
                         });
                         let area = use_color_area(UseColorAreaInput {
+                            state,
+                            is_disabled: false.into(),
                             aria_label: "Saturation and brightness".into(),
-                            ..UseColorAreaInput::new(state)
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            aria_details: None,
+                            x_name: None,
+                            y_name: None,
+                            form: None,
                         });
                         let (area_attrs, area_styles) = area.color_area_props.into_parts();
                         let (thumb_attrs, thumb_styles) = area.thumb_props.into_parts();
@@ -88,9 +99,9 @@ pub fn PageUseColorArea() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-area-state-input">
-                    <p>"Start from "<Code inline=true>"UseColorAreaStateInput::new(default_value)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorAreaStateInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseColorAreaStateInput">
-                        <ApiRow name="default_value" ty="C">"The initial color. Required (the argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="default_value" ty="C">"The initial color. Required."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<C>>" default="None">
                             "The color as app state, replacing "<Code inline=true>"default_value"</Code>": "
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
@@ -165,9 +176,10 @@ pub fn PageUseColorArea() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-area-input">
-                    <p>"Start from "<Code inline=true>"UseColorAreaInput::new(state)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorAreaInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseColorAreaInput">
-                        <ApiRow name="state" ty="ColorAreaState<C>">"The state from "<Code inline=true>"use_color_area_state"</Code>". Required (the argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="state" ty="ColorAreaState<C>">"The state from "<Code inline=true>"use_color_area_state"</Code>". Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the area is disabled."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the area; its inputs are named \u{201c}<label>, Color picker\u{201d}. The area has no visible "

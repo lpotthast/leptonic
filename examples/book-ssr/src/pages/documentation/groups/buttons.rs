@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -41,8 +40,7 @@ pub fn PageButtons() -> impl IntoView {
                             <Code inline=true>"LinkButton"</Code>
                         </Link>
                         " renders a "<Link href=routes::doc::Link.materialize()>"link"</Link>
-                        " that looks and presses like a button; its themed version is one of the "
-                        <Link href=format!("{}#linkbutton", routes::doc::link::Component.materialize())>"Link Components"</Link>"."
+                        " that looks and presses like a button."
                     </li>
                     <li>
                         "Triggers of other concepts hand their behavior to a button: put a button into a "
@@ -60,22 +58,6 @@ pub fn PageButtons() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Trigger an action, such as submit, delete or open"</TableCell>
                         <TableCell><Link href=routes::doc::Button.materialize()>"Button"</Link></TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Show several buttons side by side as one visual unit"</TableCell>
-                        <TableCell>
-                            <Link href=format!("{}#buttongroup", routes::doc::button::Component.materialize())>
-                                <Code inline=true>"ButtonGroup"</Code>
-                            </Link>" of the Button Components"
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"Lay out separate buttons in a row that wraps when space runs out"</TableCell>
-                        <TableCell>
-                            <Link href=format!("{}#buttonwrapper", routes::doc::button::Component.materialize())>
-                                <Code inline=true>"ButtonWrapper"</Code>
-                            </Link>" of the Button Components"
-                        </TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Switch a mode or a formatting option on and off, such as bold text"</TableCell>

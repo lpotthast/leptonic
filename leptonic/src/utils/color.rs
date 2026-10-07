@@ -27,8 +27,8 @@ use std::{fmt, hash::Hash, str::FromStr};
 // ICU4X infrastructure already in place for other modules.
 //
 // ## Alpha Channel
-// Not yet implemented. RGBA8 is declared as a stub. React-aria has full alpha
-// support across all color spaces.
+// Opt-in: `Alpha<C>` adds an alpha channel to any color type (react-aria: every color has one).
+// `Color`, the color shared between components, is an `Alpha<OpaqueColor>`.
 
 /// A channel of the HSV color space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -109,8 +109,11 @@ pub trait ColorValue:
     /// Returns the valid range, step, and page size for a channel.
     fn get_channel_range(channel: Self::Channel) -> ColorChannelRange;
 
+    /// Whether the type has an alpha channel (`Alpha<C>`).
+    const HAS_ALPHA: bool = false;
+
     /// Returns all channels of this color space (excluding alpha).
-    fn channels() -> &'static [Self::Channel];
+    fn channels() -> Vec<Self::Channel>;
 
     /// Given optional x and y channel preferences, returns (x, y, z) axes.
     ///
@@ -123,6 +126,20 @@ pub trait ColorValue:
 
     /// Returns a CSS color string representation (e.g. `"rgb(128, 0, 255)"`).
     fn to_css_string(&self) -> String;
+
+    /// The color with an alpha (0 to 1) as a CSS color (`rgba(..)` when transparent).
+    fn to_css_string_with_alpha(&self, alpha: f64) -> String {
+        if alpha >= 1.0 {
+            return self.to_css_string();
+        }
+        let RGB8 { r, g, b } = self.to_rgb8();
+        format!("rgba({r}, {g}, {b}, {})", round_alpha(alpha))
+    }
+
+    /// Whether `channel` is an alpha channel (whose value text names no color, as react-aria's).
+    fn is_alpha_channel(_channel: Self::Channel) -> bool {
+        false
+    }
 
     /// Formats the value of a channel for display (e.g. `"128"`, `"0.50"`).
     fn format_channel_value(&self, channel: Self::Channel) -> String;
@@ -140,8 +157,8 @@ pub trait ColorValue:
     ///
     /// For hue channels, this returns a fully saturated/bright version so the
     /// gradient shows vivid hues regardless of the current saturation/brightness.
-    /// For other channels, returns the color as-is (alpha stripping will be added
-    /// when alpha channel support is implemented).
+    /// For other channels, returns the color as-is (`Alpha` makes it opaque, except for its
+    /// alpha channel, as react-aria).
     #[must_use]
     fn get_display_color(&self, channel: Self::Channel) -> Self;
 
@@ -234,99 +251,279 @@ impl BlendMode {
     }
 }
 
-/// A color in any of leptonic's color spaces, kept in the space it was set in (react-aria's
-/// `Color`): a gray set as HSV keeps its hue, which RGB would lose. Components of different
-/// spaces share one (e.g. a `ColorPicker`'s); read it in a space with [`Color::to`].
-///
-/// Parses from CSS-like text as react-aria's `parseColor`: `#rgb`, `#rrggbb`, `rgb(r, g, b)`,
-/// `hsb(h, s%, b%)` and `hsl(h, s%, l%)`. Displays as a CSS color.
+/// Rounds an alpha for CSS (two decimals, as react-aria's percentages).
+fn round_alpha(alpha: f64) -> f64 {
+    (alpha.clamp(0.0, 1.0) * 100.0).round() / 100.0
+}
+
+/// A color of type `C` with an alpha channel (0: transparent, 1: opaque): react-aria's colors
+/// all have one. Its channels are `C`'s plus [`AlphaChannel::Alpha`], so every color component
+/// edits alpha too: `<ColorSlider channel={AlphaChannel::<HsvChannel>::Alpha}>` (braces: `view!`
+/// can't parse a turbofish in an attribute value). Inside a `ColorPicker`, components of opaque
+/// types keep the picker's alpha.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Color {
+pub struct Alpha<C> {
+    pub color: C,
+    /// From 0 (transparent) to 1 (opaque).
+    pub alpha: f64,
+}
+
+impl<C> Alpha<C> {
+    /// The opaque `color`.
+    pub const fn new(color: C) -> Self {
+        Self { color, alpha: 1.0 }
+    }
+
+    /// The color with `alpha` (clamped to 0 to 1).
+    #[must_use]
+    pub fn with_alpha(self, alpha: f64) -> Self {
+        Self {
+            color: self.color,
+            alpha: alpha.clamp(0.0, 1.0),
+        }
+    }
+}
+
+impl<C: Default> Default for Alpha<C> {
+    fn default() -> Self {
+        Self::new(C::default())
+    }
+}
+
+/// A channel of an [`Alpha`] color: one of the color's, or the alpha.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AlphaChannel<Ch> {
+    Color(Ch),
+    Alpha,
+}
+
+impl<Ch: ColorChannel> ColorChannel for AlphaChannel<Ch> {
+    type Color = Alpha<Ch::Color>;
+}
+
+impl<C: ColorValue> From<Color> for Alpha<C> {
+    fn from(color: Color) -> Self {
+        Self {
+            color: Alpha::new(color.color).to::<C>(),
+            alpha: color.alpha,
+        }
+    }
+}
+
+impl<C: ColorValue> From<Alpha<C>> for Color {
+    fn from(color: Alpha<C>) -> Self {
+        let opaque: Color = color.color.into();
+        opaque.with_alpha(opaque.alpha * color.alpha)
+    }
+}
+
+impl<C: ColorValue> ColorValue for Alpha<C> {
+    type Channel = AlphaChannel<C::Channel>;
+
+    const HAS_ALPHA: bool = true;
+
+    fn get_channel_value(&self, channel: Self::Channel) -> f64 {
+        match channel {
+            AlphaChannel::Color(channel) => self.color.get_channel_value(channel),
+            AlphaChannel::Alpha => self.alpha,
+        }
+    }
+
+    fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self {
+        match channel {
+            AlphaChannel::Color(channel) => Self {
+                color: self.color.with_channel_value(channel, value),
+                alpha: self.alpha,
+            },
+            AlphaChannel::Alpha => self.with_alpha(value),
+        }
+    }
+
+    fn get_channel_range(channel: Self::Channel) -> ColorChannelRange {
+        match channel {
+            AlphaChannel::Color(channel) => C::get_channel_range(channel),
+            AlphaChannel::Alpha => ColorChannelRange {
+                min_value: 0.0,
+                max_value: 1.0,
+                step: 0.01,
+                page_size: 0.1,
+                gradient_stops: None,
+            },
+        }
+    }
+
+    fn channels() -> Vec<Self::Channel> {
+        C::channels().into_iter().map(AlphaChannel::Color).collect()
+    }
+
+    fn get_color_space_axes(
+        x_channel: Option<Self::Channel>,
+        y_channel: Option<Self::Channel>,
+    ) -> (Self::Channel, Self::Channel, Self::Channel) {
+        // Alpha is no axis of a color space.
+        let color_channel = |channel: Option<Self::Channel>| match channel {
+            Some(AlphaChannel::Color(channel)) => Some(channel),
+            _ => None,
+        };
+        let (x, y, z) = C::get_color_space_axes(color_channel(x_channel), color_channel(y_channel));
+        (
+            AlphaChannel::Color(x),
+            AlphaChannel::Color(y),
+            AlphaChannel::Color(z),
+        )
+    }
+
+    fn to_css_string(&self) -> String {
+        self.color.to_css_string_with_alpha(self.alpha)
+    }
+
+    fn is_alpha_channel(channel: Self::Channel) -> bool {
+        channel == AlphaChannel::Alpha
+    }
+
+    fn format_channel_value(&self, channel: Self::Channel) -> String {
+        match channel {
+            AlphaChannel::Color(channel) => self.color.format_channel_value(channel),
+            AlphaChannel::Alpha => format!("{:.0}%", self.alpha * 100.0),
+        }
+    }
+
+    fn get_channel_name(channel: Self::Channel) -> &'static str {
+        match channel {
+            AlphaChannel::Color(channel) => C::get_channel_name(channel),
+            AlphaChannel::Alpha => "Alpha",
+        }
+    }
+
+    fn get_channel_format_options(channel: Self::Channel) -> NumberFormatOptions {
+        match channel {
+            AlphaChannel::Color(channel) => C::get_channel_format_options(channel),
+            AlphaChannel::Alpha => NumberFormatOptions {
+                style: NumberStyle::Percent,
+                ..NumberFormatOptions::default()
+            },
+        }
+    }
+
+    fn get_display_color(&self, channel: Self::Channel) -> Self {
+        match channel {
+            AlphaChannel::Color(channel) => Self::new(self.color.get_display_color(channel)),
+            AlphaChannel::Alpha => *self,
+        }
+    }
+
+    fn to_rgb8(&self) -> RGB8 {
+        self.color.to_rgb8()
+    }
+
+    fn hue_channel() -> Option<Self::Channel> {
+        C::hue_channel().map(AlphaChannel::Color)
+    }
+
+    /// The color's name, with its transparency (react-aria: e.g. "vibrant red, 80% transparent").
+    fn color_name(&self) -> String {
+        let name = self.color.color_name();
+        if self.alpha >= 1.0 {
+            return name;
+        }
+        format!("{name}, {:.0}% transparent", (1.0 - self.alpha) * 100.0)
+    }
+
+    fn hue_name(&self) -> String {
+        self.color.hue_name()
+    }
+
+    fn get_area_gradient(
+        &self,
+        x_channel: Self::Channel,
+        y_channel: Self::Channel,
+        direction: WritingDirection,
+    ) -> AreaGradient {
+        let (AlphaChannel::Color(x), AlphaChannel::Color(y)) = (x_channel, y_channel) else {
+            // Alpha is no axis of a color space: the color's default axes.
+            let (x, y, _) = C::get_color_space_axes(None, None);
+            return self.color.get_area_gradient(x, y, direction);
+        };
+        self.color.get_area_gradient(x, y, direction)
+    }
+}
+
+/// A color without alpha in any of leptonic's color spaces, kept in the space it was set in.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum OpaqueColor {
     Rgb(RGB8),
     Hsv(HSV),
     Hsl(HSL),
 }
 
-impl Color {
+impl OpaqueColor {
+    fn to_css_string_with_alpha(self, alpha: f64) -> String {
+        match self {
+            Self::Rgb(rgb) => rgb.to_css_string_with_alpha(alpha),
+            Self::Hsv(hsv) => hsv.to_css_string_with_alpha(alpha),
+            Self::Hsl(hsl) => hsl.to_css_string_with_alpha(alpha),
+        }
+    }
+}
+
+/// A color in any of leptonic's color spaces with alpha, kept in the space it was set in
+/// (react-aria's `Color`): a gray set as HSV keeps its hue, which RGB would lose. Components of
+/// different spaces share one (e.g. a `ColorPicker`'s); read it in a space with [`Color::to`]
+/// (an opaque type drops the alpha, an `Alpha<C>` keeps it).
+///
+/// Parses from CSS-like text as react-aria's `parseColor`: `#rgb`, `#rgba`, `#rrggbb`,
+/// `#rrggbbaa`, `rgb(r, g, b)`, `rgba(r, g, b, a)`, `hsb(h, s%, b%)`, `hsba(..)`,
+/// `hsl(h, s%, l%)` and `hsla(..)`. Displays as a CSS color.
+pub type Color = Alpha<OpaqueColor>;
+
+impl Alpha<OpaqueColor> {
     /// The color in the space `C`.
     #[must_use]
     pub fn to<C: ColorValue>(self) -> C {
         C::from(self)
     }
-}
 
-/// Black (react-aria's default color).
-impl Default for Color {
-    fn default() -> Self {
-        Self::Rgb(RGB8::new())
-    }
-}
-
-impl From<RGB8> for Color {
-    fn from(color: RGB8) -> Self {
-        Self::Rgb(color)
-    }
-}
-
-impl From<HSV> for Color {
-    fn from(color: HSV) -> Self {
-        Self::Hsv(color)
-    }
-}
-
-impl From<HSL> for Color {
-    fn from(color: HSL) -> Self {
-        Self::Hsl(color)
-    }
-}
-
-impl From<Color> for RGB8 {
-    fn from(color: Color) -> Self {
-        match color {
-            Color::Rgb(rgb) => rgb,
-            Color::Hsv(hsv) => hsv.into(),
-            Color::Hsl(hsl) => hsl.into(),
-        }
-    }
-}
-
-impl From<Color> for HSV {
-    fn from(color: Color) -> Self {
-        match color {
-            Color::Rgb(rgb) => rgb.into(),
-            Color::Hsv(hsv) => hsv,
-            Color::Hsl(hsl) => hsl.into(),
-        }
-    }
-}
-
-impl From<Color> for HSL {
-    fn from(color: Color) -> Self {
-        match color {
-            Color::Rgb(rgb) => rgb.into(),
-            Color::Hsv(hsv) => hsv.into(),
-            Color::Hsl(hsl) => hsl,
-        }
-    }
-}
-
-impl Color {
     /// The color as a CSS color.
     #[must_use]
     pub fn to_css_string(self) -> String {
-        match self {
-            Self::Rgb(rgb) => rgb.to_css_string(),
-            Self::Hsv(hsv) => hsv.to_css_string(),
-            Self::Hsl(hsl) => hsl.to_css_string(),
-        }
+        self.color.to_css_string_with_alpha(self.alpha)
     }
 
-    /// The color's name, e.g. "dark vibrant blue".
+    /// The color's name, e.g. "dark vibrant blue" or "vibrant red, 80% transparent".
     #[must_use]
     pub fn color_name(self) -> String {
-        self.to::<RGB8>().color_name()
+        self.to::<Alpha<RGB8>>().color_name()
     }
 }
+
+/// Black (react-aria's default color).
+impl Default for Alpha<OpaqueColor> {
+    fn default() -> Self {
+        Self::new(OpaqueColor::Rgb(RGB8::new()))
+    }
+}
+
+macro_rules! opaque_color_conversions {
+    ($($type:ident => $variant:ident),*) => {$(
+        impl From<$type> for Color {
+            fn from(color: $type) -> Self {
+                Self::new(OpaqueColor::$variant(color))
+            }
+        }
+
+        /// Drops the alpha.
+        impl From<Color> for $type {
+            fn from(color: Color) -> Self {
+                match color.color {
+                    OpaqueColor::Rgb(rgb) => rgb.into(),
+                    OpaqueColor::Hsv(hsv) => hsv.into(),
+                    OpaqueColor::Hsl(hsl) => hsl.into(),
+                }
+            }
+        }
+    )*};
+}
+opaque_color_conversions!(RGB8 => Rgb, HSV => Hsv, HSL => Hsl);
 
 /// A color shown by a component (e.g. a `ColorSwatch`): any color value or signal of one
 /// (`RGB8`, `HSV`, `Color`, `Signal<HSL>`, `RwSignal<RGB8>`, `Memo<Color>`, ...).
@@ -369,7 +566,7 @@ impl From<leptos::prelude::RwSignal<Color>> for ColorProp {
     }
 }
 
-impl fmt::Display for Color {
+impl fmt::Display for Alpha<OpaqueColor> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_css_string())
     }
@@ -387,7 +584,7 @@ impl fmt::Display for ParseColorError {
 
 impl std::error::Error for ParseColorError {}
 
-impl FromStr for Color {
+impl FromStr for Alpha<OpaqueColor> {
     type Err = ParseColorError;
 
     fn from_str(text: &str) -> Result<Self, Self::Err> {
@@ -395,20 +592,40 @@ impl FromStr for Color {
     }
 }
 
-/// The comma-separated arguments of `name(...)`.
-fn css_arguments<'a>(text: &'a str, name: &str) -> Option<Vec<&'a str>> {
-    let inner = text
-        .strip_prefix(name)?
-        .strip_prefix('(')?
-        .strip_suffix(')')?;
+/// The comma-separated arguments of `name(...)`: 3, or 4 for `alpha_name(...)` (the last the
+/// alpha).
+fn css_arguments<'a>(text: &'a str, name: &str, alpha_name: &str) -> Option<(Vec<&'a str>, bool)> {
+    let (inner, with_alpha) = match text.strip_prefix(alpha_name) {
+        Some(rest) => (rest, true),
+        None => (text.strip_prefix(name)?, false),
+    };
+    let inner = inner.strip_prefix('(')?.strip_suffix(')')?;
     let arguments: Vec<&str> = inner.split(',').map(str::trim).collect();
-    (arguments.len() == 3).then_some(arguments)
+    (arguments.len() == if with_alpha { 4 } else { 3 }).then_some((arguments, with_alpha))
 }
 
-/// react-aria's `parseColor` (without alpha): RGB (hex or `rgb()`), then HSB, then HSL.
+/// A hex color with alpha: `#rgba` or `#rrggbbaa`.
+fn parse_hex_with_alpha(text: &str) -> Option<Color> {
+    let digits = text.strip_prefix('#')?;
+    // Only hex digits: slicing by byte length needs ASCII, and `from_str_radix` takes a sign.
+    if !digits.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let (color, alpha) = match digits.len() {
+        4 => (&digits[..3], digits[3..].repeat(2)),
+        8 => (&digits[..6], digits[6..].to_owned()),
+        _ => return None,
+    };
+    let alpha = u8::from_str_radix(&alpha, 16).ok()?;
+    Some(Color::from(RGB8::from_hex(color)?).with_alpha(f64::from(alpha) / 255.0))
+}
+
+/// react-aria's `parseColor`: RGB (hex or `rgb()`/`rgba()`), then HSB, then HSL.
 fn parse_color(text: &str) -> Option<Color> {
     if text.starts_with('#') {
-        return RGB8::from_hex(text).map(Color::Rgb);
+        return RGB8::from_hex(text)
+            .map(Color::from)
+            .or_else(|| parse_hex_with_alpha(text));
     }
     let number = |text: &str| text.parse::<f64>().ok().filter(|n| n.is_finite());
     let percent = |text: &str| {
@@ -426,28 +643,38 @@ fn parse_color(text: &str) -> Option<Color> {
             }
         })
     };
-    if let Some(arguments) = css_arguments(text, "rgb") {
+    let alpha = |arguments: &[&str], with_alpha: bool| {
+        if with_alpha {
+            number(arguments[3]).map(|alpha| alpha.clamp(0.0, 1.0))
+        } else {
+            Some(1.0)
+        }
+    };
+    if let Some((arguments, with_alpha)) = css_arguments(text, "rgb", "rgba") {
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let channel = |text: &str| number(text).map(|n| n.clamp(0.0, 255.0).round() as u8);
-        return Some(Color::Rgb(RGB8 {
+        let color = RGB8 {
             r: channel(arguments[0])?,
             g: channel(arguments[1])?,
             b: channel(arguments[2])?,
-        }));
+        };
+        return Some(Color::from(color).with_alpha(alpha(&arguments, with_alpha)?));
     }
-    if let Some(arguments) = css_arguments(text, "hsb") {
-        return Some(Color::Hsv(HSV {
+    if let Some((arguments, with_alpha)) = css_arguments(text, "hsb", "hsba") {
+        let color = HSV {
             hue: hue(arguments[0])?,
             saturation: percent(arguments[1])?,
             value: percent(arguments[2])?,
-        }));
+        };
+        return Some(Color::from(color).with_alpha(alpha(&arguments, with_alpha)?));
     }
-    let arguments = css_arguments(text, "hsl")?;
-    Some(Color::Hsl(HSL {
+    let (arguments, with_alpha) = css_arguments(text, "hsl", "hsla")?;
+    let color = HSL {
         hue: hue(arguments[0])?,
         saturation: percent(arguments[1])?,
         lightness: percent(arguments[2])?,
-    }))
+    };
+    Some(Color::from(color).with_alpha(alpha(&arguments, with_alpha)?))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -567,8 +794,8 @@ impl ColorValue for HSV {
         }
     }
 
-    fn channels() -> &'static [HsvChannel] {
-        &[
+    fn channels() -> Vec<HsvChannel> {
+        vec![
             HsvChannel::Hue,
             HsvChannel::Saturation,
             HsvChannel::Brightness,
@@ -845,8 +1072,8 @@ impl ColorValue for RGB8 {
         }
     }
 
-    fn channels() -> &'static [RgbChannel] {
-        &[RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue]
+    fn channels() -> Vec<RgbChannel> {
+        vec![RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue]
     }
 
     fn get_color_space_axes(
@@ -929,14 +1156,6 @@ impl ColorValue for RGB8 {
             blend_mode: Some(BlendMode::Screen),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RGBA8 {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1056,8 +1275,8 @@ impl ColorValue for HSL {
         }
     }
 
-    fn channels() -> &'static [HslChannel] {
-        &[
+    fn channels() -> Vec<HslChannel> {
+        vec![
             HslChannel::Hue,
             HslChannel::Saturation,
             HslChannel::Lightness,
@@ -2049,22 +2268,22 @@ mod tests {
     #[test]
     fn parses_colors_as_react_aria() {
         let parse = |text: &str| text.parse::<Color>().ok();
-        assert_that!(parse("#f0a")).is_equal_to(Some(Color::Rgb(RGB8 {
+        assert_that!(parse("#f0a")).is_equal_to(Some(Color::from(RGB8 {
             r: 255,
             g: 0,
             b: 170,
         })));
-        assert_that!(parse("rgb(10, 300, -5)")).is_equal_to(Some(Color::Rgb(RGB8 {
+        assert_that!(parse("rgb(10, 300, -5)")).is_equal_to(Some(Color::from(RGB8 {
             r: 10,
             g: 255,
             b: 0,
         })));
-        assert_that!(parse("hsb(-30, 50%, 100%)")).is_equal_to(Some(Color::Hsv(HSV {
+        assert_that!(parse("hsb(-30, 50%, 100%)")).is_equal_to(Some(Color::from(HSV {
             hue: 330.0,
             saturation: 0.5,
             value: 1.0,
         })));
-        assert_that!(parse("hsl(360, 100%, 50%)")).is_equal_to(Some(Color::Hsl(HSL {
+        assert_that!(parse("hsl(360, 100%, 50%)")).is_equal_to(Some(Color::from(HSL {
             hue: 360.0,
             saturation: 1.0,
             lightness: 0.5,
@@ -2099,5 +2318,44 @@ mod tests {
         };
         assert_that!(HSV::from(magenta).hue).is_equal_to(300.0);
         assert_that!(HSL::from(magenta).hue).is_equal_to(300.0);
+    }
+
+    /// From react-stately's `Color.test.tsx` (parsing and formatting with alpha).
+    #[test]
+    fn parses_and_formats_alpha_as_react_aria() {
+        let parse = |text: &str| text.parse::<Color>().expect("a color");
+        let hexa = parse("#abcdef99");
+        assert_that!(hexa.to::<RGB8>()).is_equal_to(RGB8 {
+            r: 171,
+            g: 205,
+            b: 239,
+        });
+        assert_that!(hexa.to_css_string()).is_equal_to("rgba(171, 205, 239, 0.6)".to_owned());
+        assert_that!(parse("#abc9").to_css_string())
+            .is_equal_to("rgba(170, 187, 204, 0.6)".to_owned());
+        assert_that!(parse("rgba(128, 128, 0, 0.5)").to_css_string())
+            .is_equal_to("rgba(128, 128, 0, 0.5)".to_owned());
+        // "normalizes rgba value by clamping"
+        assert_that!(parse("rgba(300, -10, 0, 4)").to_css_string())
+            .is_equal_to("rgb(255, 0, 0)".to_owned());
+        assert_that!("rgba(0, 0, 0, abc)".parse::<Color>()).is_err();
+        assert_that!("#aa\u{e9}".parse::<Color>()).is_err();
+        assert_that!("#abcdef+f".parse::<Color>()).is_err();
+        assert_that!(parse("hsla(0, 100%, 50%, 0.25)").alpha).is_equal_to(0.25);
+        assert_that!(parse("hsba(0, 100%, 100%, 0.2)").color_name())
+            .is_equal_to("vibrant red, 80% transparent".to_owned());
+    }
+
+    #[test]
+    fn alpha_survives_conversions_and_opaque_types_drop_it() {
+        let color = Color::from(HSV::new()).with_alpha(0.4);
+        let hsl: Alpha<HSL> = color.to();
+        assert_that!(hsl.alpha).is_equal_to(0.4);
+        assert_that!(Color::from(hsl).alpha).is_equal_to(0.4);
+        assert_that!(Color::from(color.to::<RGB8>()).alpha).is_equal_to(1.0);
+        let channel = AlphaChannel::<HsvChannel>::Alpha;
+        let half = Alpha::new(HSV::new()).with_channel_value(channel, 0.5);
+        assert_that!(half.format_channel_value(channel)).is_equal_to("50%".to_owned());
+        assert_that!(Alpha::<HSV>::channels().len()).is_equal_to(3);
     }
 }

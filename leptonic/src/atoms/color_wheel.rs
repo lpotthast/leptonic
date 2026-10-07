@@ -3,8 +3,10 @@
 
 use leptos::{context::Provider, prelude::*};
 
-use super::color_picker::ColorPickerContext;
-use super::color_thumb::{ColorThumbContext, ThumbParts, WheelThumbParts};
+use super::{
+    color_picker::ColorPickerContext,
+    color_thumb::{ColorThumbContext, ThumbParts, WheelThumbParts},
+};
 use crate::{
     Out,
     hooks::{
@@ -16,6 +18,7 @@ use crate::{
         classes::Classes,
         color::{ColorChannel, ColorValue},
         data_attributes::flag,
+        default_class::with_default_class,
         styles::Styles,
     },
 };
@@ -50,6 +53,8 @@ struct ColorWheelTrackContext {
 /// ```
 ///
 /// Data attributes: `data-disabled`.
+///
+/// Default class: `leptonic-ColorWheel`.
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
@@ -89,6 +94,7 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorWheel", classes);
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<Ch::Color>);
     let state = use_color_wheel_state(UseColorWheelStateInput {
@@ -96,14 +102,19 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
         is_disabled,
         on_change,
         on_change_end,
-        ..UseColorWheelStateInput::new(default_value.unwrap_or_default(), channel)
+        default_value: default_value.unwrap_or_default(),
+        channel,
     });
     let wheel = use_color_wheel(UseColorWheelInput {
         aria_label,
         aria_labelledby,
         name,
         form,
-        ..UseColorWheelInput::new(state, outer_radius, inner_radius)
+        state,
+        outer_radius,
+        inner_radius,
+        aria_describedby: None,
+        aria_details: None,
     });
     let (track_attrs, track_styles) = wheel.track_props.into_parts();
     let track = ColorWheelTrackContext {
@@ -140,11 +151,14 @@ pub fn ColorWheel<Ch: ColorChannel<Color: Default>>(
 /// # Panics
 ///
 /// Outside a [`ColorWheel`], or as its second track.
+///
+/// Default class: `leptonic-ColorWheelTrack`.
 #[component]
 pub fn ColorWheelTrack(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorWheelTrack", classes);
     let ColorWheelTrackContext { is_disabled, track } = expect_context::<ColorWheelTrackContext>();
     let (attrs, track_styles) = track
         .try_update_value(Option::take)

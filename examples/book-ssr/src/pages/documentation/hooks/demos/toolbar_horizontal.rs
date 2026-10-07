@@ -52,7 +52,7 @@ fn FormatButton(state: ToggleState, format: Format) -> impl IntoView {
             aria_label: name.into(),
             ..UseButtonInput::default()
         },
-        ..UseToggleButtonInput::new(state)
+        state,
     }));
     let (attrs, styles) = button.props.into_parts();
     // Pressed buttons are styled through `aria-pressed`, keyboard focus through the hook's `is_focus_visible`.

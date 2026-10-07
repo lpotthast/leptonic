@@ -119,32 +119,6 @@ impl PopoverModality {
     }
 }
 
-impl<S: OverlayState> UsePopoverInput<S> {
-    /// A modal popover for `state`, below its trigger and centered, flipping when there is no
-    /// room, 12px from the viewport edges.
-    pub fn new(state: S) -> Self {
-        Self {
-            state,
-            trigger: CapturedElement::new(),
-            placement: Signal::stored(Placement::Bottom),
-            offset: Signal::stored(0.0),
-            cross_offset: Signal::stored(0.0),
-            container_padding: Signal::stored(12.0),
-            should_flip: Signal::stored(true),
-            max_height: Signal::stored(None),
-            arrow_size: Signal::stored(None),
-            arrow_boundary_offset: Signal::stored(0.0),
-            boundary: None,
-            target_rect: Signal::stored(None),
-            modality: PopoverModality::Modal,
-            is_keyboard_dismiss_disabled: Signal::stored(false),
-            should_close_on_interact_outside: None,
-            group: None,
-            is_submenu: false,
-        }
-    }
-}
-
 /// The return value of the `use_popover` hook.
 #[derive(Debug)]
 pub struct UsePopoverReturn {
@@ -221,8 +195,23 @@ pub type UsePopoverAttrs = MergedOverlayOverlayPositionAttrs;
 /// ```ignore
 /// let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
 /// let popover = use_popover(UsePopoverInput {
+///     state,
+///     trigger: CapturedElement::new(),
+///     placement: Signal::stored(Placement::Bottom),
 ///     offset: Signal::stored(8.0),
-///     ..UsePopoverInput::new(state)
+///     cross_offset: Signal::stored(0.0),
+///     container_padding: Signal::stored(12.0),
+///     should_flip: Signal::stored(true),
+///     max_height: Signal::stored(None),
+///     arrow_size: Signal::stored(None),
+///     arrow_boundary_offset: Signal::stored(0.0),
+///     boundary: None,
+///     target_rect: Signal::stored(None),
+///     modality: PopoverModality::Modal,
+///     is_keyboard_dismiss_disabled: Signal::stored(false),
+///     should_close_on_interact_outside: None,
+///     group: None,
+///     is_submenu: false,
 /// });
 ///
 /// let trigger_attrs = StoredValue::new(popover.trigger_props.into_attrs());
@@ -312,7 +301,10 @@ pub fn use_popover<S: OverlayState>(input: UsePopoverInput<S>) -> UsePopoverRetu
         }),
         // A submenu's popover stays open (as react-aria): its menu may scroll the trigger item.
         on_close: (!modality.is_modal() && !is_submenu).then_some(on_close),
-        ..UseOverlayPositionInput::new(trigger_element, is_open)
+        target: trigger_element,
+        is_open,
+        should_update_position: Signal::stored(true),
+        scroll: None,
     });
 
     // 3. Scroll prevention (disabled when non-modal or not open).

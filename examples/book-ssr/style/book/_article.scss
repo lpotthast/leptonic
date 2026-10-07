@@ -7,33 +7,32 @@
   max-width: var(--book-article-max-width);
   padding: 0 var(--book-article-padding) calc(2 * var(--book-space-xxl));
 
-  // Inline code may wrap: the theme renders it with `white-space: pre`, so a long expression in a sentence would widen
-  // the page on phones. Long identifiers break only where nothing else fits.
-  .leptonic-code[data-inline="true"],
-  .leptonic-code[data-inline="true"] .leptonic-code-text {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-  }
-
   // Anchor targets must not end up underneath the fixed app bar (and the sticky concept tabs).
   :is(h1, h2, h3, h4)[id] {
     scroll-margin-top: var(--book-scroll-offset);
   }
 
-  // Plain links in prose (`<a href="#...">`); leptonic's `Link` components bring their own style.
+  // Plain links in prose (`<a href="#...">`); the kit's links bring their own style (`.doc-link`).
   a:not([class]) {
     color: var(--book-brand-text-color);
   }
 
-  // Keys (leptonic's `KbdKey`) in prose and tables: the font of code, slightly smaller than the text.
-  .leptonic-kbd-key {
-    min-width: 1.5em;
-    font-family: var(--typography-code-font-family);
-    font-size: var(--book-font-size-s);
-    font-weight: 400;
-    line-height: 1.2;
+  // The direct link (`#`) after a heading, a space away from its text.
+  .doc-heading-anchor {
+    margin-inline-start: 0.3em;
+  }
+}
+
+// Keys (the kit's `Keys`) in prose and tables: key caps in the font of code, slightly smaller than the text, a
+// combination's keys joined by `+`.
+.doc-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  font-family: inherit;
+
+  kbd {
+    @include key-cap;
   }
 }
 
@@ -51,24 +50,38 @@
     overflow-wrap: anywhere;
   }
 
-  .leptonic-btn.doc-copy-markdown {
+  // Leptonic's `Button` atom, small and outlined.
+  .doc-copy-markdown {
     flex-shrink: 0;
     margin-bottom: var(--book-space-s);
+    padding: 0.35em 0.6em;
+    border: 0.125em solid var(--book-border-color);
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: var(--main-color);
+    font: inherit;
+    font-size: 0.9em;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-hovered] {
+      background-color: var(--book-hover-background-color);
+    }
+
+    &[data-focus-visible] {
+      outline: 2px solid var(--book-focus-color);
+      outline-offset: 2px;
+    }
   }
 }
 
-// Documentation tables use leptonic's `Table` components, configured through its variables.
-.leptonic-table-container.doc-table-container {
-  --table-color: inherit;
-  --table-background-color: transparent;
-  --table-header-background-color: transparent;
-  --table-wrapper-box-shadow-color: transparent;
-  --table-row-border-bottom-color: transparent;
-  --table-header-cell-padding: var(--book-space-s) var(--book-space-m);
-  --table-body-cell-padding: var(--book-space-s) var(--book-space-m);
-
+// Documentation tables (the kit's `DocTable`): scroll sideways when they don't fit.
+.doc-table-container {
+  display: block;
+  width: 100%;
   margin: var(--book-space-m) 0;
-  border-radius: 0;
+  overflow-x: auto;
 }
 
 // The Rust item an API table documents, right above the table.
@@ -77,12 +90,15 @@
   font-size: var(--book-font-size-s);
 }
 
-.leptonic-table.doc-table {
+.doc-table {
   width: 100%;
+  margin: 0;
   border-collapse: collapse;
+  line-height: 1.35;
 
   th,
   td {
+    padding: var(--book-space-s) var(--book-space-m);
     border-bottom: 1px solid var(--book-border-color);
     text-align: left;
     vertical-align: top;
@@ -100,20 +116,20 @@
 
   // Types (`ApiRow`) look like inline code but may wrap at their `<wbr>`s.
   code.doc-type {
-    padding: var(--typography-inline-code-padding);
-    border-radius: var(--typography-code-border-radius);
-    background-color: var(--typography-code-background-color);
-    color: var(--typography-code-color);
-    font-family: var(--typography-inline-code-font-family);
-    font-size: var(--typography-code-font-size);
+    padding: var(--book-inline-code-padding);
+    border-radius: var(--book-radius-s);
+    background-color: var(--book-code-background-color);
+    color: var(--book-code-color);
+    font-family: var(--typography-code-font-family);
+    font-size: var(--book-code-font-size);
     line-height: 1.6;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }
 
-  // Table cells have tighter lines than paragraphs: with the theme's `1em` line height, the padded backgrounds of
-  // inline code wrapped onto consecutive lines would cover each other.
-  td .leptonic-code[data-inline="true"] {
+  // Table cells have tighter lines than paragraphs: with the `1em` line height of inline code, the padded backgrounds
+  // of inline code wrapped onto consecutive lines would cover each other.
+  td .doc-code[data-inline="true"] {
     line-height: 1.6;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
@@ -123,8 +139,7 @@
   // stay whole and wrap only between each other: the inline code rule above would otherwise let the table squeeze
   // them letter by letter.
   td.doc-table-name {
-    .leptonic-code[data-inline="true"],
-    .leptonic-code[data-inline="true"] .leptonic-code-text {
+    .doc-code[data-inline="true"] {
       white-space: nowrap;
       overflow-wrap: normal;
     }
@@ -139,7 +154,7 @@
 // Narrow screens: every row becomes a card of stacked cells, labelled by their column (`data-label`, set by the kit's
 // API and keyboard tables). The first cell (the name) acts as the card's title.
 @media (width <= $small) {
-  .leptonic-table.doc-table {
+  .doc-table {
     thead {
       display: none;
     }
@@ -164,8 +179,7 @@
     }
 
     td.doc-table-name {
-      .leptonic-code[data-inline="true"],
-      .leptonic-code[data-inline="true"] .leptonic-code-text {
+      .doc-code[data-inline="true"] {
         white-space: pre-wrap;
         overflow-wrap: anywhere;
       }

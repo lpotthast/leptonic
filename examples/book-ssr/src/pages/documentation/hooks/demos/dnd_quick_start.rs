@@ -16,9 +16,16 @@ pub fn DndQuickStartDemo() -> impl IntoView {
         drag_props,
         is_dragging,
         ..
-    } = use_drag(UseDragInput::new(Callback::new(|()| {
-        vec![DragItem::text("Water the plants")]
-    })));
+    } = use_drag(UseDragInput {
+        get_items: Callback::new(|()| vec![DragItem::text("Water the plants")]),
+        get_allowed_drop_operations: None,
+        preview: None,
+        on_drag_start: None,
+        on_drag_move: None,
+        on_drag_end: None,
+        has_drag_button: false,
+        is_disabled: Signal::stored(false),
+    });
 
     let UseDropReturn {
         drop_props,
@@ -32,7 +39,15 @@ pub fn DndQuickStartDemo() -> impl IntoView {
             });
             dropped.set(text);
         })),
-        ..UseDropInput::new(CapturedElement::new())
+        element: CapturedElement::new(),
+        get_drop_operation: None,
+        get_drop_operation_for_point: None,
+        on_drop_enter: None,
+        on_drop_move: None,
+        on_drop_activate: None,
+        on_drop_exit: None,
+        has_drop_button: false,
+        is_disabled: Signal::stored(false),
     });
 
     view! {

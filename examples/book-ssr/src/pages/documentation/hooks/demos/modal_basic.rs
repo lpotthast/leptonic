@@ -17,7 +17,9 @@ pub fn ModalHooksDemo() -> impl IntoView {
         on_open_change: Some(Callback::new(move |is_open: bool| {
             if !is_open {
                 let button = button_pressed.get_value();
-                set_closed_by.set(Some(button.unwrap_or("dismissed with Escape or an outside click")));
+                set_closed_by.set(Some(
+                    button.unwrap_or("dismissed with Escape or an outside click"),
+                ));
                 button_pressed.set_value(None);
             }
         })),
@@ -32,7 +34,9 @@ pub fn ModalHooksDemo() -> impl IntoView {
     let UseModalBackdropReturn { modal_props, .. } = use_modal_backdrop(UseModalBackdropInput {
         is_dismissable: close_on_outside_click.into(),
         is_keyboard_dismiss_disabled: Signal::derive(move || !close_on_escape.get()),
-        ..UseModalBackdropInput::new(state)
+        state,
+        should_close_on_interact_outside: None,
+        is_entering: Signal::stored(false),
     });
     // `aria-modal="true"`.
     let UseModalReturn {

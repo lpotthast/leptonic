@@ -57,8 +57,11 @@ pub(crate) async fn referenced_texts(
 ) -> Result<String, Report> {
     let ids = element.attr(attr).await?.unwrap_or_default();
     let mut texts = Vec::new();
+    // The text content: a referenced element counts for the accessible name or description also
+    // while hidden (e.g. a description the theme hides while an error shows).
     for id in ids.split_whitespace() {
-        texts.push(page.element(id).await?.text().await?);
+        let text = page.element(id).await?.prop("textContent").await?;
+        texts.push(text.unwrap_or_default().trim().to_owned());
     }
     Ok(texts.join(" "))
 }

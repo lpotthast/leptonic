@@ -55,10 +55,6 @@ pub fn PageAtomProgressBar() -> impl IntoView {
             <Label>"Visible"</Label>
         </ProgressBar>
 
-        // The themed components (server-rendered parts inside their atoms).
-        <leptonic::components::progress_bar::ProgressBar value=60 label="Themed upload" />
-        <leptonic::components::meter::Meter value=40 label="Themed battery" />
-
         <h1>"Meter"</h1>
         <Meter value=75_u8>
             <Label>"Storage"</Label>

@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{alert_custom::AlertCustomDemo, alert_variants::AlertVariantsDemo};
@@ -30,6 +29,11 @@ pub fn PageAlert() -> impl IntoView {
                     <ApiRow name="default_icon_slot" ty="AlertIconSlot" default="Prepend">
                         "Where the variant\u{2019}s icon goes: "<Code inline=true>"Prepend"</Code>", "
                         <Code inline=true>"Append"</Code>" or "<Code inline=true>"None"</Code>" (no icon)."
+                    </ApiRow>
+                    <ApiRow name="assertiveness" ty="Assertiveness" default="Assertive">
+                        "How urgently screen readers announce the alert when it appears: "<Code inline=true>"Assertive"</Code>
+                        " interrupts them ("<Code inline=true>"role=\"alert\""</Code>"), "<Code inline=true>"Polite"</Code>
+                        " waits until they are done ("<Code inline=true>"role=\"status\""</Code>", e.g. for \u{201c}Saved\u{201d})."
                     </ApiRow>
                     <ApiRow name="alert_prepend" ty="Option<AlertPrepend>" default="None">
                         "Slot before the text. Replaces the icon if it would go there."
@@ -81,15 +85,16 @@ pub fn PageAlert() -> impl IntoView {
             <Section title="Accessibility">
                 <ul>
                     <li>
-                        "An alert has "<Code inline=true>"role=\"alert\""</Code>": screen readers announce it right away "
+                        "By default, an alert has "<Code inline=true>"role=\"alert\""</Code>": screen readers announce it right away "
                         "when it is added to the page or its content changes, interrupting what they are reading. An alert "
                         "rendered with the page is read as part of the page."
                     </li>
                     <li>
-                        "Every variant gets this role; there is currently no polite variant. For a message that "
-                        "shouldn\u{2019}t interrupt, announce it with "
-                        <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link>
-                        "\u{2019}s "<Code inline=true>"announce_polite"</Code>" instead of adding an alert."
+                        "For a message that shouldn\u{2019}t interrupt, such as \u{201c}Saved\u{201d}, set "
+                        <Code inline=true>"assertiveness=Assertiveness::Polite"</Code>": the alert gets "
+                        <Code inline=true>"role=\"status\""</Code>", and screen readers announce it once they are done "
+                        "reading. For an announcement without a visible message, use "
+                        <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link>"."
                     </li>
                     <li>
                         "The variant shows only as a color and an icon, which screen readers don\u{2019}t announce. Say "
@@ -106,7 +111,6 @@ pub fn PageAlert() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
-                <li><Link href=routes::doc::Toast.materialize()>"Toast Component"</Link></li>
                 <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link></li>
                 <li><Link href=routes::doc::Icon.materialize()>"Icon Component"</Link></li>
             </SeeAlso>

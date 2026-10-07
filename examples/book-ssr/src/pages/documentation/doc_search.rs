@@ -1,19 +1,27 @@
 use leptonic::{
-    components::prelude::*,
-    prelude::*,
+    atoms::prelude::{
+        Button, Dialog, Input, Link, ModalBackdrop, ModalContent, SearchField,
+        SearchFieldClearButton, ShortcutKeys,
+    },
+    hooks::{UseGlobalShortcutsInput, use_global_shortcuts},
     utils::{
-        key::KeyboardKey, keyboard_shortcut::Shortcut, live_announcer::announce_polite,
+        aria::AriaHasPopup,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        live_announcer::announce_polite,
         platform::device,
     },
 };
-use leptos::{ev::keydown, prelude::*};
+use leptos::prelude::*;
 use leptos_router::{
     NavigateOptions,
     hooks::{use_location, use_navigate},
 };
-use leptos_use::{signal_debounced, use_event_listener, use_window};
+use leptos_use::signal_debounced;
 
-use crate::search::{SearchResult, search_docs};
+use crate::{
+    kit::Icon,
+    search::{SearchResult, search_docs},
+};
 
 /// Opens and closes the search anywhere on the page: Cmd+K on Apple devices, Ctrl+K elsewhere.
 const TOGGLE_SEARCH: Shortcut = Shortcut::key("k").primary();
@@ -32,11 +40,11 @@ pub fn DocSearch() -> impl IntoView {
     let query = RwSignal::new(String::new());
     let location = use_location();
 
-    let _ = use_event_listener(use_window(), keydown, move |e| {
-        if TOGGLE_SEARCH.matches(&e) {
-            e.prevent_default();
-            show.update(|show| *show = !*show);
-        }
+    // Also while typing, e.g. in the search field itself, which closes it again.
+    use_global_shortcuts(UseGlobalShortcutsInput {
+        anywhere: KeyboardShortcuts::new()
+            .on(TOGGLE_SEARCH, move |_| show.update(|show| *show = !*show)),
+        outside_text_fields: KeyboardShortcuts::new(),
     });
 
     let close = Callback::new(move |()| {
@@ -54,12 +62,18 @@ pub fn DocSearch() -> impl IntoView {
     view! {
         <SearchTrigger on_press=move || show.set(true)/>
 
-        <Modal
+        <ModalBackdrop
             is_open=show
             set_open=move |open: bool| if open { show.set(true) } else { close.run(()) }
-            aria_label="Search documentation" classes="doc-search-modal">
-            <SearchPanel query/>
-        </Modal>
+            is_dismissable=true
+            classes="doc-search-backdrop"
+        >
+            <ModalContent classes="doc-search-modal">
+                <Dialog aria_label="Search documentation" classes="doc-search-dialog">
+                    <SearchPanel query/>
+                </Dialog>
+            </ModalContent>
+        </ModalBackdrop>
     }
 }
 
@@ -93,16 +107,22 @@ fn SearchPanel(query: RwSignal<String>) -> impl IntoView {
     });
 
     view! {
-        <ModalHeader>
+        <div class="doc-search-header">
             <SearchField
                 value=query set_value=query
                 on_submit=open_first
                 aria_label="Search documentation"
                 placeholder="Search documentation\u{2026}"
                 classes="doc-search-field"
-            />
-        </ModalHeader>
-        <ModalBody>
+            >
+                <Icon icon=icondata::BsSearch classes="doc-search-field-icon"/>
+                <Input classes="doc-search-input"/>
+                <SearchFieldClearButton classes="doc-search-clear">
+                    <Icon icon=icondata::BsXLg/>
+                </SearchFieldClearButton>
+            </SearchField>
+        </div>
+        <div class="doc-search-body">
             <Suspense fallback=move || view! { <p class="doc-search-status">"Searching\u{2026}"</p> }>
                 {move || Suspend::new(async move {
                     let Some(results) = results.await else {
@@ -137,7 +157,7 @@ fn SearchPanel(query: RwSignal<String>) -> impl IntoView {
                     .into_any()
                 })}
             </Suspense>
-        </ModalBody>
+        </div>
     }
 }
 
@@ -219,35 +239,29 @@ fn highlight(text: &str, terms: &str) -> Vec<(String, bool)> {
     parts
 }
 
-/// The app bar button opening the search, showing [`TOGGLE_SEARCH`] with the platform's primary modifier.
+/// The app bar button opening the search, showing [`TOGGLE_SEARCH`] in the keys of the reader's platform.
 #[component]
 fn SearchTrigger(on_press: impl Fn() + Send + Sync + 'static) -> impl IntoView {
-    // Rendered with Ctrl on the server; switched after hydration, so that server and client markup match.
-    let primary = RwSignal::new(KeyboardKey::Control);
-    Effect::new(move |_| {
-        if device::is_apple_device() {
-            primary.set(KeyboardKey::Command);
-        }
-    });
+    // `aria-keyshortcuts` names the generic form (Control) on the server and in the first client render; switched
+    // after hydration (as `ShortcutKeys` switches its keys), so that server and client markup match.
+    let apple = RwSignal::new(false);
+    Effect::new(move |_| apple.set(device::is_apple_device()));
 
     view! {
         // The name contains the visible text (which small screens hide); the shortcut is announced through
         // `aria-keyshortcuts` instead of the key caps.
         <Button
             on_press=move |_| on_press()
-            variant=ButtonVariant::Outlined
-            color=ButtonColor::Secondary
             aria_haspopup=Some(AriaHasPopup::Dialog)
+            aria_label="Search docs"
             classes="doc-search-trigger"
-            attr:aria-label="Search docs"
-            attr:aria-keyshortcuts=move || match primary.get() {
-                KeyboardKey::Command => "Meta+K",
-                _ => "Control+K",
-            }
+            attr:aria-keyshortcuts=move || TOGGLE_SEARCH.to_aria_keyshortcuts(apple.get())
         >
             <Icon icon=icondata::BsSearch/>
             <span class="doc-search-trigger-text">"Search docs\u{2026}"</span>
-            {move || view! { <KbdShortcut keys=[primary.get(), KeyboardKey::K] classes="doc-search-trigger-kbd"/> }}
+            <span aria-hidden="true" class="doc-search-trigger-keys">
+                <ShortcutKeys shortcut=TOGGLE_SEARCH/>
+            </span>
         </Button>
     }
 }

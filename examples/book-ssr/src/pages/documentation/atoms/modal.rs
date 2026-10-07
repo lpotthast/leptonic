@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::modal_form::ModalFormDemo;
@@ -211,12 +210,6 @@ pub fn PageAtomModal() -> impl IntoView {
                         .my-panel { width: 100%; max-width: 26em; }
                     ")}
                 </Code>
-                <p>
-                    "The backdrop always has the class "<Code inline=true>"leptonic-modal-backdrop"</Code>", which the "
-                    <Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link>"\u{2019} theme styles "
-                    "(a fixed, blurred backdrop above the page). If your app includes the leptonic theme, these styles "
-                    "apply to the atom too, including the layer; override them in your own class."
-                </p>
                 <Section title="Animation">
                     <p>
                         "Animate the backdrop and the panel with "<Code inline=true>"data-entering"</Code>" and "
@@ -247,18 +240,11 @@ pub fn PageAtomModal() -> impl IntoView {
                     "The parts find each other through context: "<Code inline=true>"ModalContent"</Code>" takes the dismiss "
                     "handling from "<Code inline=true>"ModalBackdrop"</Code>", wherever it is inside it."
                 </p>
-                <p>
-                    "The "<Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link>" are built this way: "
-                    <Code inline=true>"Modal"</Code>" composes "<Code inline=true>"ModalBackdrop"</Code>", "<Code inline=true>"ModalContent"</Code>" and "
-                    <Code inline=true>"Dialog"</Code>", and its "<Code inline=true>"ModalTitle"</Code>" is a themed "
-                    <Code inline=true>"DialogTitle"</Code>"."
-                </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Modal.materialize()>"Modal overview"</Link></li>
                 <li><Link href=routes::doc::modal::Hook.materialize()>"Modal Hooks"</Link></li>
-                <li><Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link></li>
                 <li><Link href=routes::doc::dialog::Atom.materialize()>"Dialog Atoms"</Link></li>
                 <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>
                 <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>

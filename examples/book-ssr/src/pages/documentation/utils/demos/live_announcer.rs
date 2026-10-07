@@ -24,7 +24,9 @@ pub fn LiveAnnouncerDemo() -> impl IntoView {
     };
     let lose_connection = move |_| {
         announce_assertive(CONNECTION_LOST);
-        last.set(format!("announced \u{201c}{CONNECTION_LOST}\u{201d} assertively."));
+        last.set(format!(
+            "announced \u{201c}{CONNECTION_LOST}\u{201d} assertively."
+        ));
     };
     let clear = move |_| {
         clear_announcer(None);

@@ -35,7 +35,10 @@ pub fn ClipboardDemo() -> impl IntoView {
                 .collect()
         })),
         on_copy: Some(Callback::new(move |()| {
-            last.set(format!("copied {}", items_text(items.with_untracked(Vec::len))));
+            last.set(format!(
+                "copied {}",
+                items_text(items.with_untracked(Vec::len))
+            ));
         })),
         // Called after the items were written to the clipboard: remove them.
         on_cut: Some(Callback::new(move |()| {

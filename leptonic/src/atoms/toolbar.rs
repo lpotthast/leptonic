@@ -3,7 +3,10 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{IntoAttrs, UseToolbarInput, use_toolbar},
-    utils::{classes::Classes, orientation::Orientation, styles::Styles},
+    utils::{
+        classes::Classes, default_class::with_default_class, orientation::Orientation,
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -19,6 +22,8 @@ use crate::{
 /// arrow keys move focus. A toolbar inside another toolbar becomes a `group` of it.
 ///
 /// Data attributes: `data-orientation` (`horizontal`, `vertical`).
+///
+/// Default class: `leptonic-Toolbar`.
 #[component]
 pub fn Toolbar(
     /// The axis of the arrow keys.
@@ -32,6 +37,7 @@ pub fn Toolbar(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Toolbar", classes);
     let toolbar = use_toolbar(UseToolbarInput {
         orientation,
         aria_label,

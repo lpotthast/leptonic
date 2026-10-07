@@ -7,7 +7,9 @@ pub use leptos_classes as classes;
 pub mod color;
 pub mod css;
 pub mod data_attributes;
+pub mod date;
 pub mod date_time_formatter;
+pub mod default_class;
 pub(crate) mod dom_ext;
 pub mod event_handler;
 pub(crate) mod event_listeners;
@@ -39,10 +41,11 @@ pub mod platform;
 pub mod plurals;
 pub mod point;
 pub mod pointer_type;
+pub(crate) mod prevent_focus;
 pub mod propagation_control;
 pub(crate) mod run_after_transition;
 pub(crate) mod scoped_context;
-pub(crate) mod scroll;
+pub mod scroll;
 pub mod scroll_behavior;
 pub(crate) mod shadow_dom;
 pub(crate) mod shadow_tree_walker;
@@ -52,15 +55,15 @@ pub mod style;
 pub use leptos_styles as styles;
 pub(crate) mod synthetic_blur;
 pub(crate) mod text_selection;
-pub mod time;
 pub mod use_description;
+pub mod use_viewport_size;
 pub mod value_binding;
 pub(crate) mod virtual_click;
 pub mod virtual_focus;
 pub mod visually_hidden;
 
-#[cfg(all(feature = "syntax-highlight", not(feature = "ssr")))]
-pub(crate) mod syntax_highlight;
+#[cfg(feature = "syntax-highlight")]
+pub mod syntax_highlight;
 
 // Re-exports from aria_hide_outside
 pub use aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside, keep_visible};

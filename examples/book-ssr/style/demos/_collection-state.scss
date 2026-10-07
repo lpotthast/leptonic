@@ -28,3 +28,71 @@
     &[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
     &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
 }
+
+// -- Virtualizer --
+
+// A virtualized listbox: it scrolls, so it needs a height. The virtualizer positions each option in a wrapper of the
+// layout's row size; the option fills it.
+.demo-virt-listbox {
+    height: 18em;
+    max-width: 20em;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    // The listbox takes focus itself only while it has no options.
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-virt-option {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 100%;
+    padding: 0 var(--book-space-m);
+    cursor: pointer;
+    transition: background-color var(--book-transition);
+
+    &[data-selected] { background: var(--brand-color-subtle); font-weight: 600; }
+    // The wrapper clips what overflows it: draw the ring inside the option.
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+// A virtualized log of plain rows (`VirtualList`), focusable to scroll it with the keyboard: it then has
+// `data-focus-visible`.
+.demo-virt-log {
+    height: 15em;
+    border-radius: var(--typography-code-border-radius);
+    background-color: var(--typography-code-background-color);
+    color: var(--typography-code-color);
+    font-family: var(--typography-code-font-family);
+    font-size: var(--book-font-size-s);
+
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+// Long lines wrap, so rows differ in height: each is measured once rendered.
+.demo-virt-log-line {
+    padding: var(--book-space-xs) var(--book-space-s);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+// A list virtualized with the hooks: the scroll view and its rows.
+.demo-virt-scroll {
+    height: 15em;
+    max-width: 20em;
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+
+    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+}
+
+.demo-virt-row {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 var(--book-space-m);
+    border-bottom: 1px solid var(--book-border-color);
+}

@@ -54,7 +54,7 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
             </div>
             // Inside a picker of red, the items' swatches show their own colors.
             <div id="test-csw-in-picker">
-                <ColorPicker default_value=Color::Rgb(red)>
+                <ColorPicker default_value=Color::from(red)>
                     <ColorSwatchPicker<RGB8> colors=palette>
                         <ColorSwatchPickerItems />
                     </ColorSwatchPicker<RGB8>>

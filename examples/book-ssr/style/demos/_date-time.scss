@@ -3,6 +3,8 @@
 // theme tokens (--book-surface-color, --brand-color, ...) so demos work in light and dark mode.
 
 // -- Calendar --
+// The calendar atoms set the state of the days as data attributes; the hook demos set the same attributes from the
+// cell hook's return, so these rules serve both.
 
 .demo-calendar {
     display: inline-flex;
@@ -17,23 +19,16 @@
 
 .demo-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: var(--book-space-s); }
 
-.demo-calendar-title  { font-weight: 600; }
+.demo-calendar-title  { margin: 0; font-size: var(--book-font-size-m); font-weight: 600; text-align: center; }
 
-.demo-calendar-grid {
-    width: auto;
-    margin: 0;
-    border-collapse: separate;
-    border-spacing: 0 2px;
-
-    th, td { padding: 0 1px; border: none; background: none; text-align: center; }
-    th { padding-bottom: var(--book-space-xs); font-size: var(--book-font-size-s); font-weight: 600; color: var(--book-muted-color); }
-
-    &[aria-disabled="true"] { opacity: 0.5; }
-}
-
-.demo-calendar-day {
-    width: 2.4em;
-    height: 2.4em;
+// The page buttons. `data-focus-visible` comes from `use_button`, so the hook demos have it too; `data-hovered` and the
+// other states only the atoms set.
+.demo-calendar-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25em;
+    height: 2.25em;
     padding: 0;
     border: none;
     border-radius: 50%;
@@ -42,58 +37,88 @@
     font: inherit;
     cursor: pointer;
 
-    &:hover { background: var(--book-surface-color-raised); }
-    &[data-today] { font-weight: 700; text-decoration: underline; }
-    &[data-outside-month] { color: var(--book-muted-color); }
-    &[data-unavailable] { color: var(--book-muted-color); text-decoration: line-through; cursor: not-allowed; }
-    &[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[disabled] { color: var(--book-muted-color); cursor: default; }
     &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 1px; }
 }
 
-[aria-selected="true"] > .demo-calendar-day { background: var(--brand-color); color: var(--book-on-brand-color); }
+// Collapsed borders: the selected days of a range form a band without gaps.
+.demo-calendar-grid {
+    width: auto;
+    margin: 0;
+    border-collapse: collapse;
 
-// Range calendars: the selected range is a band, its first and last day are filled.
-.demo-calendar-range {
-    td[aria-selected="true"] { background: var(--brand-color-subtle); }
-    td[data-range-start] { border-radius: var(--book-radius-pill) 0 0 var(--book-radius-pill); }
-    td[data-range-end] { border-radius: 0 var(--book-radius-pill) var(--book-radius-pill) 0; }
-    td[data-range-start][data-range-end] { border-radius: var(--book-radius-pill); }
-
-    [aria-selected="true"] > .demo-calendar-day { background: none; color: var(--main-color); }
-    [data-range-start] > .demo-calendar-day,
-    [data-range-end] > .demo-calendar-day { background: var(--brand-color); color: var(--book-on-brand-color); }
-}
-
-// -- Date field --
-
-.demo-date-field             { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); max-width: 100%; }
-
-.demo-date-field-label       { font-weight: 600; }
-
-.demo-date-field-description { color: var(--book-muted-color); font-size: var(--book-font-size-s); }
-
-.demo-date-field-error       { color: var(--danger-color); font-size: var(--book-font-size-s); }
-
-.demo-date-field-error:empty { display: none; }
-
-.demo-date-field-input {
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
-    padding: var(--book-space-s);
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background: var(--book-surface-color);
-    font-family: var(--typography-code-font-family);
-    font-size: var(--book-font-size-m);
-    font-variant-numeric: tabular-nums;
-
-    &:focus-within { border-color: var(--book-focus-color); }
-
-    &[aria-invalid="true"] { border-color: var(--danger-color); }
+    th, td { padding: 0; border: none; background: none; text-align: center; }
+    th { padding-bottom: var(--book-space-xs); font-size: var(--book-font-size-s); font-weight: 600; color: var(--book-muted-color); }
 
     &[aria-disabled="true"] { opacity: 0.5; }
 }
+
+// A day. The hook demos have no focus-visible attribute either: `:focus-visible` covers them.
+.demo-calendar-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5em;
+    height: 2.5em;
+    margin: 1px 0;
+    border-radius: 50%;
+    color: var(--main-color);
+    cursor: pointer;
+    user-select: none;
+
+    &[data-hovered] { background: var(--book-hover-background-color); }
+    &[data-today] { font-weight: 700; text-decoration: underline; }
+    &[data-outside-month], &[data-disabled] { color: var(--book-muted-color); cursor: default; }
+    &[data-unavailable] { color: var(--book-muted-color); text-decoration: line-through; cursor: not-allowed; }
+    &[data-selected] { background: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-focus-visible], &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: -2px; }
+}
+
+// Range calendars: the selected range is a band, its first and last day are filled.
+.demo-calendar-range .demo-calendar-day {
+    &[data-selected] { border-radius: 0; background: var(--brand-color-subtle); color: var(--main-color); }
+    &[data-selected][data-selection-start] { border-radius: var(--book-radius-pill) 0 0 var(--book-radius-pill); }
+    &[data-selected][data-selection-end] { border-radius: 0 var(--book-radius-pill) var(--book-radius-pill) 0; }
+    &[data-selected][data-selection-start][data-selection-end] { border-radius: 50%; }
+
+    &[data-selected]:is([data-selection-start], [data-selection-end]) {
+        background: var(--brand-color);
+        color: var(--book-on-brand-color);
+    }
+}
+
+// Several months side by side, one below the other on narrow screens.
+.demo-calendar-months { display: flex; flex-wrap: wrap; gap: var(--book-space-l); }
+
+.demo-calendar-month  { display: flex; flex-direction: column; gap: var(--book-space-s); }
+
+// -- Date field, time field, date picker --
+// The atom demos style the atoms' data attributes. The hook demos set `data-type` from the segment and style the
+// ARIA attributes the hooks set (`aria-disabled`, `aria-invalid`); the focus shows through `:focus` there.
+
+.demo-date-field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); max-width: 100%; }
+
+// The box around the segments: a `DateInput`, a `DatePickerGroup`, or a hook demo's field group.
+.demo-date-input {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 100%;
+    padding: var(--book-space-xs) var(--book-space-s);
+    border: 1px solid var(--book-border-color);
+    border-radius: var(--book-radius-m);
+    background: var(--book-surface-color);
+    font-variant-numeric: tabular-nums;
+
+    // The atoms set `data-focus-within`; the hook demos' groups are plain elements, hence `:focus-within`.
+    &[data-focus-within], &:focus-within { border-color: var(--book-focus-color); }
+    &[data-invalid], &:has([aria-invalid="true"]) { border-color: var(--danger-color); }
+    &[data-disabled], &[aria-disabled="true"] { opacity: 0.5; }
+}
+
+// The segments inside a picker's group, next to its button.
+.demo-date-segments { display: inline-flex; flex-wrap: wrap; align-items: center; }
 
 // Segments: focused while edited, so the background marks the focus.
 .demo-date-segment {
@@ -103,37 +128,29 @@
     cursor: default;
 
     &[data-placeholder] { color: var(--book-muted-color); }
-
-    &:focus { background: var(--brand-color); color: var(--book-on-brand-color); }
+    &[data-type="literal"] { color: var(--book-muted-color); white-space: pre; }
+    &[data-focused], &:focus { background: var(--brand-color); color: var(--book-on-brand-color); }
 }
 
-.demo-date-segment-literal { color: var(--book-muted-color); white-space: pre; }
-
-// -- Date picker --
-
-.demo-date-picker            { display: inline-block; max-width: 100%; }
-
-.demo-date-picker-group      { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-xs); }
-
-.demo-date-picker-input      { gap: var(--book-space-s); padding-right: var(--book-space-xs); }
-
-.demo-date-picker-segments   { display: inline-flex; }
-
+// The picker's button.
 .demo-date-picker-button {
     display: inline-flex;
     align-items: center;
-    padding: var(--book-space-xs) var(--book-space-s);
+    margin-left: var(--book-space-s);
+    padding: var(--book-space-xs);
     border: 1px solid var(--book-border-color);
     border-radius: var(--book-radius-s);
     background: var(--book-surface-color-raised);
     color: var(--main-color);
     cursor: pointer;
 
+    &[data-hovered] { background: var(--book-hover-background-color); }
     &[aria-expanded="true"] { border-color: var(--brand-color); }
-    &[aria-disabled="true"] { cursor: not-allowed; }
-
-    &:focus-visible { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    &[data-disabled] { cursor: not-allowed; }
+    &[data-focus-visible] { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
+
+.demo-date-range-separator { padding: 0 var(--book-space-xs); color: var(--book-muted-color); }
 
 // Positioning styles (and the layer) come from the `Popover` atom. The calendar inside reuses the calendar classes.
 .demo-date-picker-popover {
@@ -144,3 +161,5 @@
     color: var(--main-color);
     box-shadow: var(--book-shadow);
 }
+
+.demo-date-picker-calendar { display: flex; flex-direction: column; gap: var(--book-space-s); }

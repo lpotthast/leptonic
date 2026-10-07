@@ -2,6 +2,8 @@
 use leptos::prelude::*;
 
 use super::TreeState;
+use crate::hooks::KeyboardNavigationBehavior;
+use crate::hooks::collections::ListLayout;
 use crate::{
     hooks::{
         collections::{CollectionOptions, Key},
@@ -34,21 +36,6 @@ pub struct UseTreeInput {
     pub on_action: Option<Callback<Key>>,
 }
 
-impl UseTreeInput {
-    /// A tree for `state`, with all other settings at their defaults.
-    pub fn new(state: TreeState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            options: CollectionOptions::default(),
-            on_action: None,
-        }
-    }
-}
-
 /// A tree: a grid list (`role="treegrid"`) whose items can have children, expanded and
 /// collapsed with ArrowRight/ArrowLeft or an expand button. Render one `use_tree_item` per
 /// visible item (`state.list.collection`), in order.
@@ -69,7 +56,12 @@ pub fn use_tree(input: UseTreeInput) -> UseGridListReturn {
         options,
         on_action,
         tree: Some(state.expansion),
-        ..UseGridListInput::new(state.list, element)
+        state: state.list,
+        element,
+        layout: ListLayout::Stack,
+        keyboard_delegate: None,
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
     });
     tree.props.role = Signal::stored(AriaRole::Treegrid);
     tree

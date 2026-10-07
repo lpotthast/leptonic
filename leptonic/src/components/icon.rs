@@ -1,11 +1,14 @@
-use leptos::{prelude::*, svg, text_prop::TextProp};
+use leptos::{prelude::*, svg};
+use leptos_styles::css::css_custom_property;
 
 use crate::{
-    Margin,
+    Height, Margin, Width,
     utils::{classes::Classes, styles::Styles},
 };
 
-leptos_styles::css::css_custom_property!(MARGIN: leptos_styles::css::Margin = "--margin");
+css_custom_property!(MARGIN: leptos_styles::css::Margin = "--margin");
+css_custom_property!(ICON_WIDTH: Width = "--icon-width");
+css_custom_property!(ICON_HEIGHT: Height = "--icon-height");
 
 /// The Icon component.
 #[component]
@@ -14,13 +17,13 @@ pub fn Icon(
     #[prop(into)]
     icon: Signal<icondata::Icon>,
 
-    /// The width of the icon (horizontal side length of the square surrounding the icon). Defaults to "1em".
-    #[prop(into, optional)]
-    width: MaybeProp<TextProp>,
+    /// The width of the icon. Default: the theme's (`1rem`).
+    #[prop(optional)]
+    width: Option<Width>,
 
-    /// The height of the icon (vertical side length of the square surrounding the icon). Defaults to "1em".
-    #[prop(into, optional)]
-    height: MaybeProp<TextProp>,
+    /// The height of the icon. Default: the theme's (`1rem`).
+    #[prop(optional)]
+    height: Option<Height>,
 
     #[prop(optional)] margin: Option<Margin>,
 
@@ -55,22 +58,7 @@ where
         if let Some(y) = icon.y {
             svg = svg.attr("y", y);
         }
-        // The style set by the user overrides the style set by the icon.
-        // We ignore the width and height attributes of the icon, even if the user hasn't specified any.
-        svg = svg.attr(
-            "width",
-            match (width.get(), icon.width) {
-                (Some(a), _) => a.get(),
-                _ => Oco::from("1em"),
-            },
-        );
-        svg = svg.attr(
-            "height",
-            match (height.get(), icon.height) {
-                (Some(a), _) => a.get(),
-                _ => Oco::from("1em"),
-            },
-        );
+        // The `<span>` around sets the size (the theme fills it), not the icon's own attributes.
         if let Some(view_box) = icon.view_box {
             svg = svg.attr("viewBox", view_box);
         }
@@ -91,10 +79,10 @@ where
     };
 
     let is_labelled = aria_label.is_some();
-    let styles = match margin {
-        Some(m) => styles.add(MARGIN.declare(m)),
-        None => styles,
-    };
+    let styles = styles
+        .add_optional(margin.map(|margin| MARGIN.declare(margin)))
+        .add_optional(width.map(|width| ICON_WIDTH.declare(width)))
+        .add_optional(height.map(|height| ICON_HEIGHT.declare(height)));
     view! {
         <span
             class=classes.add("leptonic-icon")

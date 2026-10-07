@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -223,9 +222,6 @@ pub fn PageAtomLink() -> impl IntoView {
                         .my-link[data-focus-visible] { outline: 2px solid var(--focus); }
                     "#)}
                 </Code>
-                <p>
-                    "For the themed look, use the "<Link href=routes::doc::link::Component.materialize()>"Link Components"</Link>"."
-                </p>
             </Section>
 
             <Section title="Composition">
@@ -239,7 +235,6 @@ pub fn PageAtomLink() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
                 <li><Link href=routes::doc::link::Hook.materialize()>"Link Hooks"</Link></li>
-                <li><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></li>
                 <li><Link href=routes::doc::breadcrumbs::Atom.materialize()>"Breadcrumbs Atoms"</Link></li>
                 <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
             </SeeAlso>

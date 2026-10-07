@@ -97,22 +97,6 @@ pub struct UseOverlayInput {
     pub group: Option<CapturedElement>,
 }
 
-impl UseOverlayInput {
-    /// An overlay open while `is_open`, closed through `on_close`: not dismissable by clicking
-    /// outside or blurring, closed by Escape, no group.
-    pub fn new(is_open: Signal<bool>, on_close: Callback<()>) -> Self {
-        Self {
-            is_open,
-            on_close,
-            is_dismissable: Signal::stored(false),
-            should_close_on_blur: Signal::stored(false),
-            is_keyboard_dismiss_disabled: Signal::stored(false),
-            should_close_on_interact_outside: None,
-            group: None,
-        }
-    }
-}
-
 /// The return value of the `use_overlay` hook.
 #[derive(Debug)]
 pub struct UseOverlayReturn {

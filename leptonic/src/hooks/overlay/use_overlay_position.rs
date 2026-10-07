@@ -82,29 +82,6 @@ pub struct UseOverlayPositionInput {
     pub on_close: Option<Callback<()>>,
 }
 
-impl UseOverlayPositionInput {
-    /// Positioning below `target` while `is_open`, with the defaults above.
-    pub fn new(target: CapturedElement, is_open: Signal<bool>) -> Self {
-        Self {
-            target,
-            is_open,
-            placement: Signal::stored(Placement::Bottom),
-            container_padding: Signal::stored(12.0),
-            offset: Signal::stored(0.0),
-            cross_offset: Signal::stored(0.0),
-            should_flip: Signal::stored(true),
-            boundary: None,
-            max_height: Signal::stored(None),
-            arrow_size: Signal::stored(None),
-            arrow_boundary_offset: Signal::stored(0.0),
-            should_update_position: Signal::stored(true),
-            target_rect: Signal::stored(None),
-            scroll: None,
-            on_close: None,
-        }
-    }
-}
-
 /// Repositions the overlay on request (react-aria: `updatePosition`), e.g. after its content
 /// changed size in a way no observer sees.
 #[derive(Debug, Clone, Copy)]
@@ -188,9 +165,21 @@ fn px(value: f64) -> Option<LengthPercentageAuto> {
 ///
 /// ```ignore
 /// let position = use_overlay_position(UseOverlayPositionInput {
+///     target: trigger,
+///     is_open,
 ///     placement: Signal::stored(Placement::Top),
+///     container_padding: Signal::stored(12.0),
 ///     offset: Signal::stored(8.0),
-///     ..UseOverlayPositionInput::new(trigger, is_open)
+///     cross_offset: Signal::stored(0.0),
+///     should_flip: Signal::stored(true),
+///     boundary: None,
+///     max_height: Signal::stored(None),
+///     arrow_size: Signal::stored(None),
+///     arrow_boundary_offset: Signal::stored(0.0),
+///     should_update_position: Signal::stored(true),
+///     target_rect: Signal::stored(None),
+///     scroll: None,
+///     on_close: None,
 /// });
 /// let (attrs, styles) = position.props.into_parts();
 /// view! { <div {..attrs} style=styles>"Content"</div> }

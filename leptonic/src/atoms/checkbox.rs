@@ -16,8 +16,8 @@ use crate::{
         use_checkbox_group_item, use_checkbox_group_state, use_hover, use_toggle_state,
     },
     utils::{
-        ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
+        styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 
@@ -48,6 +48,8 @@ pub struct CheckboxGroupCtx {
 ///
 /// Inside a [`CheckboxGroup`], `value` is required and the group holds the selection
 /// (`default_selected`, `is_selected` and `set_selected` don't apply).
+///
+/// Default class: `leptonic-Checkbox`.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn Checkbox(
@@ -94,6 +96,7 @@ pub fn Checkbox(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Checkbox", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let options = ToggleOptions {
         id,
@@ -120,7 +123,8 @@ pub fn Checkbox(
             on_change,
             validate,
             options,
-            ..UseCheckboxGroupItemInput::new(group.data, value)
+            group: group.data,
+            value,
         })
     } else {
         let (value, on_change) =
@@ -137,7 +141,7 @@ pub fn Checkbox(
                 validate,
                 ..options
             },
-            ..UseCheckboxInput::new(state)
+            state,
         })
     };
     let hover = use_hover(UseHoverInput {
@@ -177,6 +181,8 @@ pub fn Checkbox(
 /// needed.
 ///
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
+///
+/// Default class: `leptonic-CheckboxGroup`.
 #[allow(clippy::too_many_arguments)]
 #[component]
 pub fn CheckboxGroup(
@@ -210,6 +216,7 @@ pub fn CheckboxGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-CheckboxGroup", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let (value, on_change) =
         crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
@@ -245,7 +252,10 @@ pub fn CheckboxGroup(
         aria_labelledby,
         aria_describedby,
         form,
-        ..UseCheckboxGroupInput::new(state)
+        state,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     let ctx = CheckboxGroupCtx { data };
     let label = LabelContext::span(label_props).with_presence(label_presence);

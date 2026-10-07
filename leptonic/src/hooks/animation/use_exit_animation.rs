@@ -41,17 +41,6 @@ pub struct UseExitAnimationInput {
     pub on_exit: Option<Callback<send_wrapper::SendWrapper<web_sys::Element>>>,
 }
 
-impl UseExitAnimationInput {
-    /// Tracks the exit of `element` once `is_open` turns `false`.
-    pub fn new(element: CapturedElement, is_open: Signal<bool>) -> Self {
-        Self {
-            element,
-            is_open,
-            on_exit: None,
-        }
-    }
-}
-
 /// Return value of [`use_exit_animation`].
 pub struct UseExitAnimationReturn {
     /// `true` while exit animation is in flight. Keep the element in the DOM while `true`.
@@ -79,7 +68,11 @@ pub struct UseExitAnimationReturn {
 /// let element = CapturedElement::new();
 ///
 /// let UseExitAnimationReturn { is_exiting, exit_state } =
-///     use_exit_animation(UseExitAnimationInput::new(element, state.is_open));
+///     use_exit_animation(UseExitAnimationInput {
+///         element,
+///         is_open: state.is_open,
+///         on_exit: None,
+///     });
 ///
 /// // Keep element mounted while exiting:
 /// // <Show when=move || state.is_open.get() || is_exiting.get()>

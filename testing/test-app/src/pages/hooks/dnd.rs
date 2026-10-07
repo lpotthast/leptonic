@@ -1,5 +1,8 @@
 use std::{collections::HashSet, sync::Arc};
 
+use leptonic::hooks::FocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     hooks::{
         DragEndEvent, DragItem, DropEnterEvent, DropEvent, DropExitEvent, DropItem, DropPosition,
@@ -56,7 +59,12 @@ fn Draggable(log: impl Fn(String) + Copy + Send + Sync + 'static) -> impl IntoVi
         on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
             log(format!("dragend {:?}", e.drop_operation));
         })),
-        ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("hello world")]))
+        get_items: Callback::new(|()| vec![DragItem::text("hello world")]),
+        get_allowed_drop_operations: None,
+        preview: None,
+        on_drag_move: None,
+        has_drag_button: false,
+        is_disabled: Signal::stored(false),
     });
     view! {
         <div
@@ -99,7 +107,13 @@ fn Droppable(
                 .unwrap_or_default();
             log(format!("drop {index} {text} {:?}", e.drop_operation));
         })),
-        ..UseDropInput::new(element)
+        element,
+        get_drop_operation: None,
+        get_drop_operation_for_point: None,
+        on_drop_move: None,
+        on_drop_activate: None,
+        has_drop_button: false,
+        is_disabled: Signal::stored(false),
     });
     view! {
         <div
@@ -140,15 +154,31 @@ fn ReorderableList() -> impl IntoView {
     let element = CapturedElement::new();
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label: "Letters".into(),
-        ..UseGridListInput::new(list, element)
+        state: list,
+        element,
+        id: None,
+        aria_labelledby: Signal::stored(None),
+        layout: ListLayout::Stack,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
+        on_action: None,
+        tree: None,
     });
 
-    let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput::new(
+    let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput {
         list,
-        Callback::new(|keys: HashSet<Key>| {
+        get_items: Callback::new(|keys: HashSet<Key>| {
             keys.iter().map(|k| DragItem::text(k.to_string())).collect()
         }),
-    ));
+        preview: None,
+        get_allowed_drop_operations: None,
+        on_drag_start: None,
+        on_drag_move: None,
+        on_drag_end: None,
+        is_disabled: Signal::stored(false),
+    });
     use_draggable_collection(drag_state, element);
 
     let on_reorder = Callback::new(move |e: DroppableCollectionReorderEvent| {
@@ -236,7 +266,13 @@ fn Row(letter: &'static str) -> impl IntoView {
         row_props,
         grid_cell_props,
         ..
-    } = use_grid_list_item(UseGridListItemInput::new(list, key.clone()));
+    } = use_grid_list_item(UseGridListItemInput {
+        list,
+        key: key.clone(),
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let UseDraggableItemReturn {
         mut drag_props,
         is_dragging,

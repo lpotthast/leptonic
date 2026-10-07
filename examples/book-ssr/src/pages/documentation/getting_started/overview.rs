@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -31,7 +30,7 @@ pub fn PageOverview() -> impl IntoView {
             </p>
 
             <Section title="How the Documentation Is Organized">
-                <p>"The sidebar has four parts:"</p>
+                <p>"The sidebar has three parts; the first holds the Getting started and Guides groups:"</p>
                 <ul>
                     <li>
                         <b>"Getting started"</b>": this overview, the "

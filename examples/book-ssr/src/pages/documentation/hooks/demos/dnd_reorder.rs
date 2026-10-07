@@ -1,5 +1,8 @@
 use std::{collections::HashSet, sync::Arc};
 
+use leptonic::hooks::FocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     components::prelude::*,
     hooks::{
@@ -85,20 +88,32 @@ pub fn ReorderDemo() -> impl IntoView {
         aria_label: "Tasks".into(),
         // Select when the press ends, so that dragging a row doesn't select it.
         should_select_on_press_up: true,
-        ..UseGridListInput::new(list, element)
+        state: list,
+        element,
+        id: None,
+        aria_labelledby: Signal::stored(None),
+        layout: ListLayout::Stack,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        on_action: None,
+        tree: None,
     });
 
     // Dragging: the dragged rows' data.
     let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput {
         is_disabled: disabled.into(),
-        ..UseDraggableCollectionStateInput::new(
-            list,
-            Callback::new(|keys: HashSet<Key>| {
-                keys.iter()
-                    .map(|key| DragItem::text(key.to_string()))
-                    .collect()
-            }),
-        )
+        list,
+        get_items: Callback::new(|keys: HashSet<Key>| {
+            keys.iter()
+                .map(|key| DragItem::text(key.to_string()))
+                .collect()
+        }),
+        preview: None,
+        get_allowed_drop_operations: None,
+        on_drag_start: None,
+        on_drag_move: None,
+        on_drag_end: None,
     });
     use_draggable_collection(drag_state, element);
 
@@ -187,7 +202,13 @@ fn TaskRow(
         is_selected,
         is_focus_visible,
         ..
-    } = use_grid_list_item(UseGridListItemInput::new(list, key.clone()));
+    } = use_grid_list_item(UseGridListItemInput {
+        list,
+        key: key.clone(),
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let UseDraggableItemReturn { mut drag_props, .. } = use_draggable_item(UseDraggableItemInput {
         state: drag_state,
         key: key.clone(),

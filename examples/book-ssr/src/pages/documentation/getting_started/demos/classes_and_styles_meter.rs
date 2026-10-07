@@ -21,7 +21,8 @@ pub fn ClassesAndStylesMeterDemo() -> impl IntoView {
     let is_almost_full = move || used.get() >= 80;
 
     // The look lives in CSS; a class follows the state reactively.
-    let fill_classes = Classes::from("demo-storage-meter-fill").add_reactive("demo-storage-meter-fill-high", is_almost_full);
+    let fill_classes = Classes::from("demo-storage-meter-fill")
+        .add_reactive("demo-storage-meter-fill-high", is_almost_full);
 
     // A typed, reactive declaration: the fill color follows the state, too.
     let fill_styles = Styles::new().add_reactive(move || {

@@ -1,0 +1,103 @@
+// Upstream: ../starters/docs/src/NumberField.css @ 99e610236
+// Upstream: ../starters/docs/src/NumberField.tsx @ 99e610236
+//
+// `NumberField`, `NumberFieldGroup`, `NumberFieldDecrementButton`, `NumberFieldIncrementButton`.
+// Its `Input` is styled as a text field's (`text-field.scss`). The stepper buttons are the
+// starter's secondary `Button`s (`button-base` with the gray color). Markup, as the starter
+// (lucide's `minus` and `plus` icons):
+//
+//   <NumberField ..>
+//     <Label>..</Label>
+//     <NumberFieldGroup>
+//       <Input />
+//       <NumberFieldDecrementButton><svg ..>..</svg></NumberFieldDecrementButton>
+//       <NumberFieldIncrementButton><svg ..>..</svg></NumberFieldIncrementButton>
+//     </NumberFieldGroup>
+//     <Description>..</Description>
+//     <FieldError />
+//   </NumberField>
+@use "utilities";
+
+@layer utilities {
+  .leptonic-NumberField .leptonic-Input {
+    @include utilities.inset;
+  }
+
+  .leptonic-NumberFieldDecrementButton,
+  .leptonic-NumberFieldIncrementButton {
+    @include utilities.button-base;
+  }
+
+  .leptonic-NumberFieldDecrementButton,
+  .leptonic-NumberFieldIncrementButton {
+    --button-color: var(--gray);
+  }
+}
+
+.leptonic-NumberField {
+  color: var(--text-color);
+
+  .leptonic-NumberFieldGroup {
+    display: flex;
+    width: fit-content;
+    border-radius: var(--radius);
+    position: relative;
+    box-shadow: 0 1px 0 var(--gray-50);
+
+    &[data-invalid]::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      z-index: 2;
+      pointer-events: none;
+      border-radius: inherit;
+      outline: 1px solid var(--invalid-color);
+    }
+
+    &[data-focus-within]::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      z-index: 2;
+      pointer-events: none;
+      border-radius: inherit;
+      outline: 2px solid var(--focus-ring-color);
+    }
+  }
+
+  .leptonic-NumberFieldDecrementButton,
+  .leptonic-NumberFieldIncrementButton {
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-inline-start: -1px;
+  }
+
+  .leptonic-NumberFieldDecrementButton {
+    border-radius: 0;
+  }
+
+  .leptonic-NumberFieldIncrementButton {
+    border-radius: var(--radius);
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+  }
+
+  .leptonic-Input {
+    z-index: 1;
+    outline: none;
+    width: 5.25rem;
+    flex: 1;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+
+    &[data-invalid] {
+      border-color: var(--border-color);
+    }
+  }
+
+  .leptonic-Description {
+    font-size: 12px;
+  }
+}

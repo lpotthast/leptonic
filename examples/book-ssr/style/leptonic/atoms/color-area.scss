@@ -1,0 +1,20 @@
+// Upstream: ../starters/docs/src/ColorArea.css @ 99e610236
+// Upstream: ../starters/docs/src/ColorArea.tsx @ 99e610236
+//
+// `ColorArea`; its thumb is styled by `color-thumb.scss`.
+//
+// Markup (as the starter): <ColorArea><ColorThumb /></ColorArea>
+
+.leptonic-ColorArea {
+  width: 100%;
+  max-width: calc(var(--spacing) * 56);
+  aspect-ratio: 1/1;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+}
+
+.leptonic-ColorArea {
+  &[data-disabled] {
+    background: gray !important;
+  }
+}

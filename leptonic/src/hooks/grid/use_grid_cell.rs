@@ -72,19 +72,6 @@ pub struct UseGridCellInput {
     pub should_select_on_press_up: bool,
 }
 
-impl UseGridCellInput {
-    pub fn new(grid: GridData, key: Key) -> Self {
-        Self {
-            grid,
-            key,
-            id: None,
-            focus_mode: None,
-            allows_arrow_navigation: false,
-            should_select_on_press_up: false,
-        }
-    }
-}
-
 /// Return value of [`use_grid_cell`].
 pub struct UseGridCellReturn {
     pub grid_cell_props: PropsWithStyles<UseGridCellProps>,
@@ -253,6 +240,7 @@ pub fn use_grid_cell(input: UseGridCellInput) -> UseGridCellReturn {
         link_behavior: LinkBehavior::Action,
         focus: Some(Callback::new(move |()| focus_cell())),
         should_use_virtual_focus: false,
+        on_context_menu: None,
     });
     let (mut item_props, item_styles) = item_props.into_inner();
 

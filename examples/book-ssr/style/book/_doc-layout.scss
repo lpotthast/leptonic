@@ -12,7 +12,7 @@
   }
 }
 
-// The navigation as a sidebar. Small screens open it as a menu (`Sheet`) instead.
+// The navigation as a sidebar. Small screens open it as a menu (`MenuDrawer`) instead.
 #book-doc-sidebar {
   position: fixed;
   top: var(--book-app-bar-height);
@@ -67,6 +67,7 @@
   a.book-nav-group-header,
   a.book-nav-group-title {
     border-radius: var(--book-radius-s);
+    text-decoration: none;
     cursor: pointer;
 
     &:hover,
@@ -129,6 +130,7 @@
     border-radius: var(--book-radius-s);
     color: var(--main-color);
     font-weight: 400;
+    text-decoration: none;
     cursor: pointer;
     transition: background-color var(--book-transition), color var(--book-transition);
 
@@ -272,6 +274,7 @@
     padding: 0 var(--book-space-m);
     border-bottom: 2px solid transparent;
     color: var(--main-color);
+    text-decoration: none;
     white-space: nowrap;
     transition: color var(--book-transition), border-color var(--book-transition);
 
@@ -320,15 +323,17 @@ nav#book-toc {
     margin: var(--book-space-xs) 0;
 
     @for $level from 1 through 4 {
-      &[data-level="#{$level}"] .leptonic-anchor-link {
+      &[data-level="#{$level}"] .doc-toc-link {
         padding-left: calc(#{$level} * var(--book-space-s));
       }
     }
   }
 
-  .leptonic-anchor-link {
+  .doc-toc-link {
     display: block;
     padding: var(--book-space-xs) var(--book-space-s);
+    color: var(--book-brand-text-color);
+    text-decoration: none;
     overflow-wrap: anywhere;
     border-radius: var(--book-radius-s);
 

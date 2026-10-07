@@ -219,56 +219,6 @@ pub struct UseTextFieldInput {
     pub shortcuts: Option<KeyboardShortcuts>,
 }
 
-impl UseTextFieldInput {
-    /// An enabled, single-line text field for `state`, with all other settings at their
-    /// defaults.
-    pub fn new(state: TextFieldState) -> Self {
-        Self {
-            state,
-            id: None,
-            element: TextFieldElement::Input,
-            input_type: Signal::stored(InputType::Text),
-            is_disabled: Signal::stored(false),
-            is_read_only: Signal::stored(false),
-            is_required: Signal::stored(false),
-            is_invalid: Signal::stored(false),
-            validate: None,
-            validation_behavior: ValidationBehavior::default(),
-            validation: None,
-            name: None,
-            form: None,
-            placeholder: MaybeProp::default(),
-            pattern: None,
-            min_length: None,
-            max_length: None,
-            auto_complete: None,
-            auto_capitalize: None,
-            auto_correct: None,
-            spell_check: None,
-            input_mode: None,
-            enter_key_hint: None,
-            auto_focus: false,
-            exclude_from_tab_order: false,
-            label_id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            aria_errormessage: None,
-            aria_activedescendant: Signal::stored(None),
-            aria_autocomplete: None,
-            aria_haspopup: None,
-            aria_controls: Signal::stored(None),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            on_key_down: None,
-            on_key_up: None,
-            shortcuts: None,
-        }
-    }
-}
-
 /// Return value of [`use_text_field`].
 pub struct UseTextFieldReturn {
     pub label_props: UseLabelProps,
@@ -411,8 +361,9 @@ impl IntoAttrs for UseTextFieldInputProps {
 ///
 /// ```ignore
 /// let state = use_text_field_state(UseTextFieldStateInput::default());
-/// let field =
-///     use_text_field(UseTextFieldInput { has_label: true.into(), ..UseTextFieldInput::new(state) });
+/// // Every field named: `state`, `has_label: Signal::stored(true)`, the others their defaults
+/// // (`element: TextFieldElement::Input`, `input_type: Signal::stored(InputType::Text)`, ...).
+/// let field = use_text_field(input);
 /// view! {
 ///     <label {..field.label_props.into_attrs()}>"Name"</label>
 ///     <input {..field.input_props.into_attrs()} />
@@ -497,6 +448,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
 
     let validation = validation.unwrap_or_else(|| {
         use_form_validation_state(UseFormValidationStateInput {
+            builtin_validation: Signal::default(),
             is_invalid,
             value: state.value,
             validate,
@@ -510,11 +462,12 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         initial_value: initial_value.clone(),
         on_reset: Callback::new(move |value| state.set_value(value)),
     });
-    use_form_validation(UseFormValidationInput::new(
+    use_form_validation(UseFormValidationInput {
         element,
-        validation,
+        state: validation,
         validation_behavior,
-    ));
+        focus: None,
+    });
 
     let UseFieldReturn {
         label_props,

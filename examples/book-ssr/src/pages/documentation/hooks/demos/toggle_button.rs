@@ -12,7 +12,7 @@ pub fn ToggleButtonDemo() -> impl IntoView {
             is_disabled: disabled.into(),
             ..UseButtonInput::default()
         },
-        ..UseToggleButtonInput::new(state)
+        state,
     }));
     let (attrs, styles) = button.props.into_parts();
 

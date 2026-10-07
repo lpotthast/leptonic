@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -29,8 +28,16 @@ pub fn PageAriaHideOutside() -> impl IntoView {
                         use leptonic::{hooks::*, utils::{AriaHideOutsideOptions, aria_hide_outside}};
 
                         let (is_open, set_is_open) = signal(false);
-                        let UseOverlayReturn { props, overlay_element, .. } =
-                            use_overlay(UseOverlayInput::new(is_open.into(), Callback::new(move |()| set_is_open.set(false))));
+                        let UseOverlayReturn { props, overlay_element, .. } = use_overlay(UseOverlayInput {
+                            is_open: is_open.into(),
+                            on_close: Callback::new(move |()| set_is_open.set(false)),
+                            is_dismissable: Signal::stored(false),
+                            should_close_on_blur: Signal::stored(false),
+                            is_keyboard_dismiss_disabled: Signal::stored(false),
+                            should_close_on_interact_outside: None,
+                            group: None,
+                        });
+
 
                         // While open, hide the rest of the page; show it again when the overlay closes.
                         let undo = StoredValue::new_local(None::<Box<dyn FnOnce()>>);

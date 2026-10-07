@@ -1,10 +1,7 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    kit::*, pages::documentation::components::feedback::demos::meter_storage::MeterStorageDemo,
-    routes,
-};
+use super::demos::meter_storage::MeterStorageDemo;
+use crate::{kit::*, routes};
 
 #[component]
 pub fn PageMeterOverview() -> impl IntoView {
@@ -59,10 +56,6 @@ pub fn PageMeterOverview() -> impl IntoView {
                             "; you draw the track."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::meter::Component.materialize()>"Meter Component"</Link></TableCell>
-                        <TableCell>"A themed meter with a track, a label and the value text."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -70,7 +63,7 @@ pub fn PageMeterOverview() -> impl IntoView {
                 <p>"The component is the quickest way to a meter: give it a value and a label, optionally a range and your own value text:"</p>
                 <Demo
                     description="A storage meter with its own value text"
-                    source=include_str!("../components/feedback/demos/meter_storage.rs")
+                    source=include_str!("demos/meter_storage.rs")
                     source_open=true
                 >
                     <MeterStorageDemo/>
@@ -90,7 +83,6 @@ pub fn PageMeterOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link></li>
                 <li><Link href=routes::doc::meter::Atom.materialize()>"Meter Atoms"</Link></li>
-                <li><Link href=routes::doc::meter::Component.materialize()>"Meter Component"</Link></li>
                 <li><Link href=routes::doc::ProgressBar.materialize()>"Progress Bar"</Link></li>
                 <li><Link href=routes::doc::Status.materialize()>"Status"</Link></li>
             </SeeAlso>

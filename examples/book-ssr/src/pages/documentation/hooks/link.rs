@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -173,8 +172,8 @@ pub fn PageUseLink() -> impl IntoView {
 
                 <Section title="Input" id="use-anchor-link-input">
                     <p>
-                        "Create it with "<Code inline=true>"UseAnchorLinkInput::new(href)"</Code>" and change the rest with "
-                        "struct update syntax."
+                        "Pass a "<Code inline=true>"UseAnchorLinkInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseAnchorLinkInput">
@@ -208,9 +207,17 @@ pub fn PageUseLink() -> impl IntoView {
                 <Section title="Example" id="use-anchor-link-example">
                     <Code language=Language::Rust>
                         {indoc!(r##"
-                            use leptonic::hooks::{UseAnchorLinkInput, use_anchor_link};
+                            use leptonic::{
+                                hooks::{UseAnchorLinkInput, UseLinkInput, use_anchor_link},
+                                utils::scroll_behavior::ScrollBehavior,
+                            };
 
-                            let link = use_anchor_link(UseAnchorLinkInput::new("#returns"));
+                            let link = use_anchor_link(UseAnchorLinkInput {
+                                href: "#returns".into(),
+                                scroll_behavior: Some(ScrollBehavior::Smooth),
+                                link: UseLinkInput::default(),
+                            });
+
                             let (attrs, styles) = link.props.into_parts();
 
                             view! { <a {..attrs} style=styles>"Returns"</a> }
@@ -241,7 +248,6 @@ pub fn PageUseLink() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Link.materialize()>"Link overview"</Link></li>
                 <li><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></li>
-                <li><Link href=routes::doc::link::Component.materialize()>"Link Components"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
             </SeeAlso>

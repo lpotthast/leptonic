@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 use super::demos::icon::IconDemo;
@@ -30,10 +30,13 @@ pub fn PageIcon() -> impl IntoView {
             <Section title="Props">
                 <ApiTable kind=ApiKind::Props of="Icon">
                     <ApiRow name="icon" ty="Signal<icondata::Icon>">"The icon to render. Required."</ApiRow>
-                    <ApiRow name="width, height" ty="MaybeProp<TextProp>" default="\"1em\"">
-                        "The "<Code inline=true>"width"</Code>" and "<Code inline=true>"height"</Code>" attributes of the "
-                        <Code inline=true>"<svg>"</Code>". The default theme stretches the "<Code inline=true>"<svg>"</Code>
-                        " to the size of the icon element, which overrides them."
+                    <ApiRow name="width" ty="Option<Width>" default="None">
+                        "The icon\u{2019}s width, e.g. "<Code inline=true>"em(2.0)"</Code>", set as the "
+                        <Code inline=true>"--icon-width"</Code>" variable. Default: the theme\u{2019}s "<Code inline=true>"1rem"</Code>"."
+                    </ApiRow>
+                    <ApiRow name="height" ty="Option<Height>" default="None">
+                        "The icon\u{2019}s height, set as "<Code inline=true>"--icon-height"</Code>". Default: "
+                        <Code inline=true>"1rem"</Code>"."
                     </ApiRow>
                     <ApiRow name="margin" ty="Option<Margin>" default="None">
                         "The margin around the icon, set as the "<Code inline=true>"--margin"</Code>" variable."

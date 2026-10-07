@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{select::SelectAtomDemo, select_form::SelectFormDemo};
@@ -179,7 +178,7 @@ pub fn PageAtomSelect() -> impl IntoView {
                             "The selected keys (controlled), replacing "<Code inline=true>"default_value"</Code>": a value or any signal."
                         </ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<Vec<Key>>>" default="None">
-                            "Receives the new state: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
+                            "Receives the selected keys: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Vec<Key>>>" default="None">
                             "Called with the selected keys, in collection order, when they change."
@@ -201,9 +200,10 @@ pub fn PageAtomSelect() -> impl IntoView {
                         <ApiRow name="allows_empty_collection" ty="bool" default="false">
                             "Allow opening the popover without options, e.g. to show an empty state."
                         </ApiRow>
-                        <ApiRow name="should_close_on_select" ty="Option<bool>" default="None">
-                            "Close the popover when an option is selected. "<Code inline=true>"None"</Code>": in "
-                            <Code inline=true>"Single"</Code>" mode."
+                        <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
+                            "Close the popover when an option is selected: "<Code inline=true>"Always"</Code>", "
+                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (in "<Code inline=true>"Single"</Code>" mode). "
+                            "A "<Code inline=true>"bool"</Code>" converts into it."
                         </ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Labels the select when it has no "<Code inline=true>"Label"</Code>
@@ -408,7 +408,6 @@ pub fn PageAtomSelect() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Select.materialize()>"Select overview"</Link></li>
                 <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
-                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
                 <li><Link href=routes::doc::listbox::Atom.materialize()>"Listbox Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>

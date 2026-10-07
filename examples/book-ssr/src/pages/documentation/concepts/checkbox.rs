@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::checkbox::CheckboxConceptDemo;
@@ -65,10 +64,6 @@ pub fn PageCheckboxOverview() -> impl IntoView {
                             " with their parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></TableCell>
-                        <TableCell>"Themed "<Code inline=true>"Checkbox"</Code>" and "<Code inline=true>"CheckboxGroup"</Code>" with icons, label and description."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -123,7 +118,6 @@ pub fn PageCheckboxOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
                 <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
-                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch"</Link></li>
                 <li><Link href=routes::doc::Radio.materialize()>"Radio"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>

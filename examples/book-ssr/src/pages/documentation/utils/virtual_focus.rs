@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::virtual_focus::VirtualFocusDemo;
@@ -70,20 +69,39 @@ pub fn PageVirtualFocus() -> impl IntoView {
                     " calls "<AnchorLink href="#move-virtual-focus">"move_virtual_focus"</AnchorLink>" with it. The listbox "
                     "element isn\u{2019}t focusable either. In a combobox, that call comes after the input\u{2019}s "
                     <Code inline=true>"aria-activedescendant"</Code>" already points at the option, so the options get no "
-                    "synthetic events (as in react-aria): style them from state. Only code that moves virtual focus before "
+                    "synthetic events: style them from state. Only code that moves virtual focus before "
                     "updating the attribute, as the demo below does, sends them."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        use leptonic::hooks::{collections::CollectionOptions, *};
+                        use leptonic::hooks::{
+                            collections::{CollectionOptions, ListLayout},
+                            *,
+                        };
 
                         let listbox = use_listbox(UseListBoxInput {
+                            state,
+                            element: listbox_element,
                             options: CollectionOptions {
                                 should_use_virtual_focus: true,
                                 ..CollectionOptions::default()
                             },
-                            ..UseListBoxInput::new(state, listbox_element)
+                            id: None,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: Signal::stored(None),
+                            orientation: Orientation::Vertical,
+                            layout: ListLayout::Stack,
+                            keyboard_delegate: None,
+                            layout_delegate: None,
+                            is_virtualized: false,
+                            should_select_on_press_up: false,
+                            should_focus_on_hover: false,
+                            on_action: None,
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
                         });
+
                     ")}
                 </Code>
                 <p>

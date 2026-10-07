@@ -13,7 +13,9 @@ use crate::{
         use_button, use_toggle_button, use_toggle_button_group, use_toggle_button_group_item,
         use_toggle_group_state, use_toggle_state,
     },
-    utils::{classes::Classes, data_attributes::flag, styles::Styles},
+    utils::{
+        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -42,6 +44,8 @@ pub struct ToggleButtonGroupCtx {
 ///
 /// Inside a [`ToggleButtonGroup`], `value` is required and the group holds the selection
 /// (`default_selected`, `is_selected`, `set_selected` and `on_change` don't apply).
+///
+/// Default class: `leptonic-ToggleButton`.
 #[allow(clippy::needless_pass_by_value)]
 #[component]
 pub fn ToggleButton(
@@ -64,6 +68,7 @@ pub fn ToggleButton(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ToggleButton", classes);
     let button = UseButtonInput {
         aria_label,
         is_disabled,
@@ -75,7 +80,8 @@ pub fn ToggleButton(
         let is_selected = Signal::derive(move || group.state.is_selected(&selected_value));
         let input = use_toggle_button_group_item(UseToggleButtonGroupItemInput {
             button,
-            ..UseToggleButtonGroupItemInput::new(group.state, value)
+            group: group.state,
+            key: value,
         });
         (input, is_selected)
     } else {
@@ -115,6 +121,7 @@ pub fn ToggleButton(
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
 // The keys are the group state's `HashSet<Key>`; a component prop can't be generic over hashers.
+/// Default class: `leptonic-ToggleButtonGroup`.
 #[allow(clippy::too_many_arguments, clippy::implicit_hasher)]
 #[component]
 pub fn ToggleButtonGroup(
@@ -140,6 +147,7 @@ pub fn ToggleButtonGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ToggleButtonGroup", classes);
     let (selected_keys, on_selection_change) = crate::utils::ValueBinding::from_state_props(
         selected_keys,
         set_selected_keys,

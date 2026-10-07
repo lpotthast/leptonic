@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -43,7 +42,10 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());
-                        let button = use_button(use_toggle_button(UseToggleButtonInput::new(state)));
+                        let button = use_button(use_toggle_button(UseToggleButtonInput {
+                            state,
+                            button: UseButtonInput::default(),
+                        }));
                         let (attrs, styles) = button.props.into_parts();
 
                         view! { <button {..attrs} style=styles>"Pin"</button> }
@@ -85,7 +87,7 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                 <p>"Makes a button toggle a "<Code inline=true>"ToggleState"</Code>" when pressed."</p>
 
                 <Section title="Input" id="use-toggle-button-input">
-                    <p>"Create it with "<Code inline=true>"UseToggleButtonInput::new(state)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseToggleButtonInput"</Code>" with both fields named; the Default column gives the value for a field you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseToggleButtonInput">
                         <ApiRow name="state" ty="ToggleState">
                             "Whether the button is pressed, from "<Link href=toggle_state_input>"use_toggle_state"</Link>". Required."
@@ -158,7 +160,7 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-toggle-button-group-input">
-                    <p>"Create it with "<Code inline=true>"UseToggleButtonGroupInput::new(state)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseToggleButtonGroupInput"</Code>" with both fields named; the Default column gives the value for a field you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseToggleButtonGroupInput">
                         <ApiRow name="state" ty="ToggleGroupState">"From "<AnchorLink href="#use-toggle-group-state"><Code inline=true>"use_toggle_group_state"</Code></AnchorLink>". Required."</ApiRow>
                         <ApiRow name="toolbar" ty="UseToolbarInput" default="UseToolbarInput::default()">
@@ -187,7 +189,8 @@ pub fn PageUseToggleButtonHook() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-toggle-button-group-item-input">
-                    <p>"Create it with "<Code inline=true>"UseToggleButtonGroupItemInput::new(state, key)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseToggleButtonGroupItemInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseToggleButtonGroupItemInput">
                         <ApiRow name="group" ty="ToggleGroupState">"The group\u{2019}s state. Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The button\u{2019}s key in the group. Required."</ApiRow>

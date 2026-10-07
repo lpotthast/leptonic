@@ -1,5 +1,7 @@
-use leptonic::{atoms::prelude as atoms, components::prelude::Icon, prelude::icondata};
+use leptonic::atoms::prelude as atoms;
 use leptos::prelude::*;
+
+use super::Icon;
 
 /// A button showing or hiding its content, built on leptonic's `Disclosure` atoms. While collapsed,
 /// the panel is `hidden="until-found"`: hidden, but the browser's find in page still finds (and

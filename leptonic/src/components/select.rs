@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use leptos::prelude::*;
+use wasm_bindgen::JsCast;
 
 use crate::{
     Out,
@@ -99,16 +100,22 @@ fn SelectOptionsPopover<O: SelectOption>(
     render_option: ViewCallback<O>,
     autofocus_search: Signal<bool>,
 ) -> impl IntoView {
-    let has_options = Memo::new(move |_| !options.filtered.with(Vec::is_empty));
     view! {
         <SelectPopover classes="leptonic-select-options">
             <SelectSearchInput search=options.search autofocus_search=autofocus_search />
             <ListBox classes="leptonic-select-listbox">
+                // One memo source: a `has_options` memo read before `filtered` (derived from the
+                // same) skipped updates that changed the options but not their emptiness ("Effect
+                // Read Order" in documentation/hooks-implementation.md).
                 {move || {
-                    if has_options.get() {
-                        options
-                            .filtered
-                            .get()
+                    let filtered = options.filtered.get();
+                    if filtered.is_empty() {
+                        view! {
+                            <div class="leptonic-select-no-search-results">"No options..."</div>
+                        }
+                            .into_any()
+                    } else {
+                        filtered
                             .into_iter()
                             .map(|option| {
                                 view! {
@@ -118,11 +125,6 @@ fn SelectOptionsPopover<O: SelectOption>(
                                 }
                             })
                             .collect_view()
-                            .into_any()
-                    } else {
-                        view! {
-                            <div class="leptonic-select-no-search-results">"No options..."</div>
-                        }
                             .into_any()
                     }
                 }}
@@ -224,6 +226,8 @@ where
     let options = Options::new(options, search_text_provider, search_filter_provider);
     let keys = Signal::derive(move || selected.get().iter().map(option_key).collect::<Vec<_>>());
 
+    let control = NodeRef::<leptos::html::Div>::new();
+
     view! {
         <SelectAtom
             collection=options.collection
@@ -239,7 +243,7 @@ where
         >
             {label_view(label)}
             // The clear button is the trigger's sibling: buttons can't contain buttons.
-            <div class="leptonic-select-control">
+            <div class="leptonic-select-control" node_ref=control>
                 <SelectTrigger classes="leptonic-select-selected">
                     <SelectValue />
                     <SelectShowTriggerIcon />
@@ -252,7 +256,11 @@ where
                                     classes="leptonic-select-deselect-trigger"
                                     aria_label="Clear selection"
                                     is_disabled=is_disabled
-                                    on_press=move |_| set_selected.set(None)
+                                    on_press=move |_| {
+                                        set_selected.set(None);
+                                        // The pressed button disappears: keep the focus in the select.
+                                        focus_after_render(control, &["button.leptonic-select-selected"], 0);
+                                    }
                                 >
                                     <Icon icon=icondata::BsXCircleFill />
                                 </Button>
@@ -301,10 +309,21 @@ where
     let options = Options::new(options, search_text_provider, search_filter_provider);
     let keys = Signal::derive(move || selected.get().iter().map(option_key).collect::<Vec<_>>());
 
+    let control = NodeRef::<leptos::html::Div>::new();
     let deselect = Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
+        let index = vec.iter().position(|it| it == &option).unwrap_or_default();
         vec.retain(|it| it != &option);
         set_selected.set(vec);
+        // The pressed chip disappears: focus the next chip's dismiss button, else the trigger.
+        focus_after_render(
+            control,
+            &[
+                "button.leptonic-chip-dismiss",
+                "button.leptonic-multiselect-trigger",
+            ],
+            index,
+        );
     });
 
     view! {
@@ -313,9 +332,12 @@ where
             selection_mode=SelectMode::Multiple
             value=keys
             set_value=Callback::new(move |keys: Vec<Key>| {
+                // At `max`, further options are refused (instead of dropping chosen ones).
+                if keys.len() > usize::try_from(max).unwrap_or(usize::MAX) {
+                    return;
+                }
                 let mut vec = options.lookup(&keys);
                 vec.sort();
-                vec.truncate(usize::try_from(max).unwrap_or(usize::MAX));
                 set_selected.set(vec);
             })
             aria_label=aria_label
@@ -327,27 +349,26 @@ where
             {label_view(label)}
             // The box holds the chips and the trigger side by side: the chips' dismiss buttons
             // can't be inside the trigger button.
-            <div class="leptonic-select-control leptonic-select-selected">
-                {move || {
-                    selected
-                        .get()
-                        .into_iter()
-                        .map(|item| {
-                            let dismiss_label = format!("Remove {}", search_text_provider.run(item.clone()));
-                            let removed = item.clone();
-                            view! {
-                                <Chip
-                                    color=ChipColor::Secondary
-                                    classes="leptonic-select-option"
-                                    dismiss_label=dismiss_label
-                                    on_dismiss=move |()| deselect.run(removed.clone())
-                                >
-                                    {render_option.render(item)}
-                                </Chip>
-                            }
-                        })
-                        .collect_view()
-                }}
+            <div class="leptonic-select-control leptonic-select-selected" node_ref=control>
+                <For
+                    each=move || selected.get()
+                    key=option_key
+                    children=move |item| {
+                        let dismiss_label = format!("Remove {}", search_text_provider.run(item.clone()));
+                        let removed = item.clone();
+                        view! {
+                            <Chip
+                                color=ChipColor::Secondary
+                                classes="leptonic-select-option"
+                                dismiss_label=dismiss_label
+                                is_disabled=is_disabled
+                                on_dismiss=move |()| deselect.run(removed.clone())
+                            >
+                                {render_option.render(item)}
+                            </Chip>
+                        }
+                    }
+                />
                 <SelectTrigger classes="leptonic-multiselect-trigger">
                     // The trigger's name includes the selection, as react-aria's value.
                     <SelectValue styles=visually_hidden_styles() />
@@ -408,4 +429,36 @@ fn SelectSearchInput(
             <Input />
         </SearchField>
     }
+}
+
+/// After the next render, focuses the `index`th element of `control` matching the first selector
+/// that matches any (clamped to the last match): keeps the focus in a select whose focused button
+/// a press removed.
+fn focus_after_render(
+    control: NodeRef<leptos::html::Div>,
+    selectors: &'static [&'static str],
+    index: usize,
+) {
+    request_animation_frame(move || {
+        let Some(control) = control.get_untracked() else {
+            return;
+        };
+        for selector in selectors {
+            let Ok(matches) = control.query_selector_all(selector) else {
+                continue;
+            };
+            let count = matches.length();
+            if count == 0 {
+                continue;
+            }
+            let index = u32::try_from(index).unwrap_or(u32::MAX).min(count - 1);
+            if let Some(element) = matches
+                .item(index)
+                .and_then(|node| node.dyn_into::<web_sys::HtmlElement>().ok())
+            {
+                let _ = element.focus();
+            }
+            return;
+        }
+    });
 }

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid_messages::GridMessagesDemo;
@@ -77,7 +76,7 @@ pub fn PageAtomGrid() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A message list with the "<Code inline=true>"Replace"</Code>" selection behavior, like a file manager: "
-                    "a click selects a row ("<Keys keys="Control"/>" + click, "<Keys keys="Command"/>" + click on macOS, "
+                    "a click selects a row ("<Keys keys="Control"/>" + click, "<Keys keys="Meta"/>" + click on macOS, "
                     "adds to the selection), "<Keys keys="Escape"/>" clears it, and a double click or "<Keys keys="Enter"/>
 
                     " opens a message. "<Keys keys="ArrowRight"/>" moves into a row\u{2019}s cells. The message from Alan "

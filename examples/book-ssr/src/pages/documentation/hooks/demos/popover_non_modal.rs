@@ -1,3 +1,4 @@
+use leptonic::utils::CapturedElement;
 use leptonic::{
     atoms::prelude::FocusScope,
     components::prelude::{Button, ButtonVariant},
@@ -24,7 +25,20 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
         placement: Signal::stored(Placement::Top),
         offset: Signal::stored(8.0),
         modality: PopoverModality::NonModal,
-        ..UsePopoverInput::new(state)
+        state,
+        trigger: CapturedElement::new(),
+        cross_offset: Signal::stored(0.0),
+        container_padding: Signal::stored(12.0),
+        should_flip: Signal::stored(true),
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        boundary: None,
+        target_rect: Signal::stored(None),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
+        is_submenu: false,
     });
 
     let UseOverlayTriggerReturn {

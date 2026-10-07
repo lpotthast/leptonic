@@ -1,27 +1,32 @@
-use leptonic::{components::prelude::*, utils::css::em};
+use leptonic::{components::prelude::*, prelude::icondata};
 use leptos::prelude::*;
 
+const FOLDERS: [&str; 3] = ["Inbox", "Sent", "Archive"];
+
+/// A menu sliding in from the left. Choosing a folder, the close button, Escape or a press outside closes it.
 #[component]
 pub fn DrawerLeftDemo() -> impl IntoView {
-    let (shown, set_shown) = signal(true);
+    let is_open = RwSignal::new(false);
+    let (folder, set_folder) = signal(FOLDERS[0]);
 
     view! {
-        <div class="demo-drawer-frame">
-            <Drawer side=DrawerSide::Left shown=shown classes="demo-drawer">
-                <Stack spacing=em(0.5)>
-                    {(0..8).map(|_| view! { <Skeleton height=em(3.0)/> }).collect_view()}
-                </Stack>
-            </Drawer>
-            <div class="demo-drawer-content">
-                <p>"Scroll " <span aria-hidden="true">"\u{2193}"</span></p>
-                <Stack spacing=em(0.5)>
-                    {(0..8).map(|_| view! { <Skeleton height=em(3.0)/> }).collect_view()}
-                </Stack>
-            </div>
-        </div>
+        <Button on_press=move |_| is_open.set(true)>"Folders"</Button>
+        <p class="demo-status">{move || format!("Showing {}.", folder.get())}</p>
 
-        <div class="demo-controls">
-            <Switch is_selected=shown set_selected=set_shown>"Show drawer"</Switch>
-        </div>
+        <Drawer is_open=is_open set_open=is_open aria_label="Folders" classes="demo-drawer">
+            <div class="demo-drawer-header">
+                <Button on_press=move |_| is_open.set(false) variant=ButtonVariant::Flat attr:aria-label="Close folders">
+                    <Icon icon=icondata::BsXLg/>
+                </Button>
+            </div>
+            {FOLDERS
+                .iter()
+                .map(|&name| view! {
+                    <Button on_press=move |_| { set_folder.set(name); is_open.set(false); } variant=ButtonVariant::Flat>
+                        {name}
+                    </Button>
+                })
+                .collect_view()}
+        </Drawer>
     }
 }

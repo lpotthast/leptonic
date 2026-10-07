@@ -17,7 +17,7 @@ pub fn SwitchDemo() -> impl IntoView {
             name: Some("notifications".to_owned()),
             ..ToggleOptions::default()
         },
-        ..UseSwitchInput::new(state)
+        state,
     });
     let (label_attrs, label_styles) = switch.label_props.into_parts();
     let (input_attrs, input_styles) = switch.input_props.into_parts();

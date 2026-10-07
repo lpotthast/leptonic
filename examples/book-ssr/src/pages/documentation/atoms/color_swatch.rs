@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_swatch::ColorSwatchPaletteDemo;
@@ -113,7 +112,6 @@ pub fn PageAtomColorSwatch() -> impl IntoView {
                 <li><Link href=routes::doc::color_swatch::Hook.materialize()>"use_color_swatch"</Link></li>
                 <li><Link href=routes::doc::ColorSwatchPicker.materialize()>"Color Swatch Picker Atoms"</Link></li>
                 <li><Link href=routes::doc::color_area::Atom.materialize()>"Color Area Atoms"</Link></li>
-                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
             </SeeAlso>
         </DocPage>
     }

@@ -22,6 +22,9 @@
 //!   browsers only), so there is no `aria-hidden` fallback for it.
 //! - Omitted: watching shadow roots around the targets (react-aria's `shadowDOM` flag, off by
 //!   default).
+//! - Registering an overlay opened from inside (`keep_visible`, a nested `aria_hide_outside`)
+//!   shows it again if the current observer hid it already: Leptos effects run after the
+//!   observer's callback, react-aria's layout effects before it.
 
 /// How [`aria_hide_outside`] hides elements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -140,6 +143,8 @@ thread_local! {
 struct ObserverWrapper {
     id: u64,
     visible_nodes: Rc<RefCell<Vec<web_sys::Element>>>,
+    hidden_nodes: Rc<RefCell<Vec<web_sys::Element>>>,
+    mode: HideMode,
     observer: web_sys::MutationObserver,
     root: web_sys::Element,
     /// Prevent the closure from being dropped while the observer is alive.
@@ -157,6 +162,41 @@ impl ObserverWrapper {
 
     fn disconnect(&self) {
         self.observer.disconnect();
+    }
+
+    /// Shows the nodes this call hid around `element` (e.g. the portal container of an overlay
+    /// opened from inside the hiding one) and hides their other content again.
+    ///
+    /// Upstream registers such an overlay (`keepVisible`, or a nested `ariaHideOutside` that
+    /// disconnects this observer) in a layout effect, before this observer's callback sees the
+    /// overlay's insertion. Leptos effects run after it, when the overlay may already be hidden.
+    fn reveal(&self, element: &web_sys::Element) {
+        let containing: Vec<web_sys::Element> = self
+            .hidden_nodes
+            .borrow()
+            .iter()
+            .filter(|hidden| {
+                node_contains(Some(hidden.as_ref()), Some(element.as_ref())).unwrap_or(false)
+            })
+            .cloned()
+            .collect();
+        if containing.is_empty() {
+            return;
+        }
+        self.hidden_nodes
+            .borrow_mut()
+            .retain(|hidden| !containing.contains(hidden));
+        for node in &containing {
+            show_element(node, self.mode);
+        }
+        // The element stays visible to this walk even when it isn't one of this call's targets
+        // (a nested hide's target).
+        let mut visible = self.visible_nodes.borrow().clone();
+        visible.push(element.clone());
+        let visible = Rc::new(RefCell::new(visible));
+        for node in &containing {
+            walk_children(node, self.mode, &visible, &self.hidden_nodes);
+        }
     }
 }
 
@@ -436,10 +476,13 @@ pub fn aria_hide_outside(
     // Discover and preserve live announcer / top-layer elements.
     discover_special_elements(&root, &mut visible_nodes.borrow_mut());
 
-    // Disconnect the previous observer (if nested).
+    // Disconnect the previous observer (if nested), keeping the targets visible to it.
     OBSERVER_STACK.with_borrow(|stack| {
         if let Some(top) = stack.last() {
             top.disconnect();
+            for target in targets {
+                top.reveal(target);
+            }
         }
     });
 
@@ -464,6 +507,8 @@ pub fn aria_hide_outside(
         stack.push(ObserverWrapper {
             id: wrapper_id,
             visible_nodes: Rc::clone(&visible_nodes),
+            hidden_nodes: Rc::clone(&hidden_nodes),
+            mode,
             observer,
             root,
             _callback: callback,
@@ -503,6 +548,7 @@ pub fn keep_visible(element: &web_sys::Element) -> Option<Box<dyn FnOnce()>> {
         }
         drop(vis);
         wrapper.visible_nodes.borrow_mut().push(element.clone());
+        wrapper.reveal(element);
         let nodes = Rc::clone(&wrapper.visible_nodes);
         let el = element.clone();
         Some(Box::new(move || {

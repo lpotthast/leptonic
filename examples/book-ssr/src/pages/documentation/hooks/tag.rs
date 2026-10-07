@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::tag::TagDemo;
@@ -34,7 +33,7 @@ pub fn PageUseTag() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-tag-group-input">
-                    <p>"Create the input with "<Code inline=true>"UseTagGroupInput::new(state, element)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseTagGroupInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseTagGroupInput">
                         <ApiRow name="state" ty="ListState">"The tags and their selection. Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The group element; the props capture it. Required."</ApiRow>
@@ -83,12 +82,20 @@ pub fn PageUseTag() -> impl IntoView {
                             let state = use_list_state(UseListStateInput { collection, selection: SelectionOptions::default() });
 
                             let UseTagGroupReturn { grid_props, label_props, data, .. } = use_tag_group(UseTagGroupInput {
+                                state,
+                                element: CapturedElement::new(),
+                                id: None,
                                 has_label: true.into(),
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
+                                keyboard_delegate: None,
                                 on_remove: Some(Callback::new(move |keys: HashSet<Key>| {
                                     tags.update(|tags| tags.retain(|tag| !keys.contains(&Key::from(*tag))));
                                 })),
-                                ..UseTagGroupInput::new(state, CapturedElement::new())
+                                on_action: None,
                             });
+
                         "#)}
                     </Code>
                 </Section>
@@ -135,7 +142,7 @@ pub fn PageUseTag() -> impl IntoView {
                     <KeyRow keys="ArrowLeft / ArrowRight">"Focus the previous or next tag, wrapping around."</KeyRow>
                     <KeyRow keys="Home / End">"Focus the first or last tag."</KeyRow>
                     <KeyRow keys="Space">"Select or deselect the focused tag (when selection is enabled)."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all tags (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all tags (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Delete / Backspace">
                         "Remove the focused tag, or all selected tags if it is selected. Focus moves to a neighbor, or stays in the "

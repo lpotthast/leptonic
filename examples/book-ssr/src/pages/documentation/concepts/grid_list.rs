@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid_list::GridListConceptDemo;
@@ -85,7 +84,7 @@ pub fn PageGridListOverview() -> impl IntoView {
                     <KeyRow keys="Space">"Select or deselect the focused row."</KeyRow>
                     <KeyRow keys="Shift + ArrowUp / Shift + ArrowDown">"Extend the selection (multiple selection)."</KeyRow>
                     <KeyRow keys="Enter">"Activate the row; without an action, select it."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Any character">"Focus the next row whose text starts with the typed text."</KeyRow>
                     <KeyRow keys="Tab">"Leave the list; with the "<Code inline=true>"Tab"</Code>" navigation behavior, move between the focused row\u{2019}s elements first."</KeyRow>

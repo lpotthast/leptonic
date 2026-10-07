@@ -16,16 +16,27 @@ pub fn ColorAreaDemo() -> impl IntoView {
     let state = use_color_area_state(UseColorAreaStateInput {
         x_channel: Some(HsvChannel::Saturation),
         y_channel: Some(HsvChannel::Brightness),
-        ..UseColorAreaStateInput::new(HSV {
+        default_value: HSV {
             hue: 210.0,
             saturation: 0.6,
             value: 0.8,
-        })
+        },
+        value: None,
+        x_channel_step: None,
+        y_channel_step: None,
+        on_change: None,
+        on_change_end: None,
     });
     let area = use_color_area(UseColorAreaInput {
         is_disabled: disabled.into(),
         aria_label: "Saturation and brightness".into(),
-        ..UseColorAreaInput::new(state)
+        state,
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_details: None,
+        x_name: None,
+        y_name: None,
+        form: None,
     });
 
     // The focus is on a hidden input inside the thumb: `within` reports it on the thumb as
@@ -41,8 +52,9 @@ pub fn ColorAreaDemo() -> impl IntoView {
     let (x_attrs, x_styles) = area.x_input_props.into_parts();
     let (y_attrs, y_styles) = area.y_input_props.into_parts();
     let color = state.value;
-    let thumb_styles = thumb_styles
-        .add_reactive(move || BackgroundColorProperty.declare(CssColor::from(color.get().into_rgb8())));
+    let thumb_styles = thumb_styles.add_reactive(move || {
+        BackgroundColorProperty.declare(CssColor::from(color.get().into_rgb8()))
+    });
 
     view! {
         <div {..area_attrs} class="demo-color-area" style=area_styles>

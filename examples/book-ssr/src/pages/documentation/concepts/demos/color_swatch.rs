@@ -3,7 +3,11 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorSwatchConceptDemo() -> impl IntoView {
-    let forest_green = RGB8 { r: 34, g: 139, b: 84 };
+    let forest_green = RGB8 {
+        r: 34,
+        g: 139,
+        b: 84,
+    };
 
     view! {
         <ColorSwatch

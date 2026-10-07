@@ -43,12 +43,13 @@ components = ["atoms"]
 themes = []
 
 # Enables clipboard support.
-clipboard = ["components", "web-sys/Clipboard"]
+clipboard = ["hooks", "web-sys/Clipboard"]
 
 # Enables the tiptap rich text editor (its JS ships with leptos-tiptap as wasm-bindgen snippets).
 tiptap = ["components", "dep:leptos-tiptap"]
 
-syntax-highlight = ["components", "dep:syntect"]
+# Syntax highlighting of source code (`utils::syntax_highlight`, used by the `Code` component).
+syntax-highlight = ["dep:syntect"]
 
 sanitize = ["components", "dep:ammonia"]
 
@@ -66,6 +67,7 @@ educe = "0.6.0"
 icondata = { version = "0.7.0" }
 indoc = "2.0.7"
 js-sys = "0.3"
+jiff = { version = "0.2.38", features = ["js"] }
 leptos = "0.8.2"
 leptos-classes = "0.1.4"
 leptos-element-capture = "0.1.0"
@@ -82,15 +84,7 @@ serde = "1.0.228"
 serde_json = "1.0.149"
 smallvec = "1"
 strum = { version = "0.27.2", features = ["derive"] }
-time = { version = "0.3.41", features = [
-    "wasm-bindgen",
-    "local-offset",
-    "macros",
-    "serde",
-    "serde-well-known",
-] }
 tracing = "0.1.44"
-uuid = { version = "1.20.0", features = ["v4", "v7", "js", "serde"] }
 wasm-bindgen = "0.2.117"
 wasm-bindgen-futures = "0.4.64"
 web-sys = { version = "0.3.91", features = [
@@ -166,6 +160,8 @@ icu_time = "2"
 itertools = "0.14.0"
 ammonia = { version = "4", optional = true }
 syntect = { version = "5", optional = true, default-features = false, features = ["default-fancy"] }
+# `TryWriteable` output of ICU4X pattern formatting.
+writeable = "0.6"
 
 [build-dependencies]
 anyhow = "1.0.102"

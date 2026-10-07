@@ -322,10 +322,6 @@ fn atoms(href: String) -> NavTab {
     tab(Layer::Atom, true, href)
 }
 
-fn component(href: String) -> NavTab {
-    tab(Layer::Component, false, href)
-}
-
 fn components(href: String) -> NavTab {
     tab(Layer::Component, true, href)
 }
@@ -473,7 +469,6 @@ fn buttons() -> NavGroup {
                 vec![
                     hook(doc::button::Hook.materialize()),
                     atom(doc::button::Atom.materialize()),
-                    components(doc::button::Component.materialize()),
                 ],
             ),
             concept(
@@ -502,7 +497,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::checkbox::Hook.materialize()),
                     atoms(doc::checkbox::Atom.materialize()),
-                    components(doc::checkbox::Component.materialize()),
                 ],
             ),
             concept(
@@ -530,7 +524,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::number_field::Hook.materialize()),
                     atoms(doc::number_field::Atom.materialize()),
-                    component(doc::number_field::Component.materialize()),
                 ],
             ),
             concept(
@@ -540,7 +533,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::radio::Hook.materialize()),
                     atoms(doc::radio::Atom.materialize()),
-                    components(doc::radio::Component.materialize()),
                 ],
             ),
             page(
@@ -556,7 +548,6 @@ fn fields() -> NavGroup {
                 vec![
                     hook(doc::search_field::Hook.materialize()),
                     atoms(doc::search_field::Atom.materialize()),
-                    component(doc::search_field::Component.materialize()),
                 ],
             ),
             concept(
@@ -566,7 +557,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::slider::Hook.materialize()),
                     atoms(doc::slider::Atom.materialize()),
-                    components(doc::slider::Component.materialize()),
                 ],
             ),
             concept(
@@ -576,7 +566,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::switch::Hook.materialize()),
                     atom(doc::switch::Atom.materialize()),
-                    component(doc::switch::Component.materialize()),
                 ],
             ),
             concept(
@@ -586,7 +575,6 @@ fn fields() -> NavGroup {
                 vec![
                     hooks(doc::text_field::Hook.materialize()),
                     atoms(doc::text_field::Atom.materialize()),
-                    component(doc::text_field::Component.materialize()),
                 ],
             ),
         ],
@@ -615,7 +603,6 @@ fn pickers() -> NavGroup {
                 vec![
                     hooks(doc::select::Hook.materialize()),
                     atoms(doc::select::Atom.materialize()),
-                    components(doc::select::Component.materialize()),
                 ],
             ),
         ],
@@ -671,7 +658,6 @@ fn collections() -> NavGroup {
                 vec![
                     hooks(doc::table::Hook.materialize()),
                     atoms(doc::table::Atom.materialize()),
-                    components(doc::table::Component.materialize()),
                 ],
             ),
             page(
@@ -702,29 +688,35 @@ fn date_time() -> NavGroup {
                 doc::Calendar.materialize(),
                 vec![
                     hooks(doc::calendar::Hook.materialize()),
-                    component(doc::calendar::Component.materialize()),
+                    atoms(doc::calendar::Atom.materialize()),
                 ],
             ),
-            page(
+            concept(
                 "Date Field",
                 "Enters a date, or a date and time, in editable segments",
                 doc::DateField.materialize(),
-                PageKind::Hook,
+                vec![
+                    hooks(doc::date_field::Hook.materialize()),
+                    atoms(doc::date_field::Atom.materialize()),
+                ],
             ),
             concept(
                 "Date Picker",
-                "A date field with a calendar in a popover",
+                "A date field with a calendar in a popover, for a date or a range",
                 doc::DatePicker.materialize(),
                 vec![
                     hooks(doc::date_picker::Hook.materialize()),
-                    component(doc::date_picker::Component.materialize()),
+                    atoms(doc::date_picker::Atom.materialize()),
                 ],
             ),
-            page(
+            concept(
                 "Time Field",
                 "Enters a time of day in editable segments",
                 doc::TimeField.materialize(),
-                PageKind::Hook,
+                vec![
+                    hooks(doc::time_field::Hook.materialize()),
+                    atom(doc::time_field::Atom.materialize()),
+                ],
             ),
         ],
     )
@@ -761,7 +753,6 @@ fn color() -> NavGroup {
                 vec![
                     hook(doc::color_picker::Hook.materialize()),
                     atom(doc::color_picker::Atom.materialize()),
-                    components(doc::color_picker::Component.materialize()),
                 ],
             ),
             concept(
@@ -818,7 +809,7 @@ fn overlays() -> NavGroup {
             ),
             page(
                 "Drawer",
-                "A side panel that slides in",
+                "A modal panel sliding in from the edge of the screen",
                 doc::Drawer.materialize(),
                 PageKind::Component,
             ),
@@ -829,7 +820,6 @@ fn overlays() -> NavGroup {
                 vec![
                     hooks(doc::modal::Hook.materialize()),
                     atoms(doc::modal::Atom.materialize()),
-                    components(doc::modal::Component.materialize()),
                 ],
             ),
             concept(
@@ -839,7 +829,6 @@ fn overlays() -> NavGroup {
                 vec![
                     hook(doc::popover::Hook.materialize()),
                     atoms(doc::popover::Atom.materialize()),
-                    component(doc::popover::Component.materialize()),
                 ],
             ),
             concept(
@@ -877,7 +866,6 @@ fn navigation() -> NavGroup {
                 vec![
                     hooks(doc::disclosure::Hook.materialize()),
                     atoms(doc::disclosure::Atom.materialize()),
-                    components(doc::disclosure::Component.materialize()),
                 ],
             ),
             concept(
@@ -887,7 +875,6 @@ fn navigation() -> NavGroup {
                 vec![
                     hooks(doc::link::Hook.materialize()),
                     atoms(doc::link::Atom.materialize()),
-                    components(doc::link::Component.materialize()),
                 ],
             ),
             concept(
@@ -897,7 +884,6 @@ fn navigation() -> NavGroup {
                 vec![
                     hooks(doc::tabs::Hook.materialize()),
                     atoms(doc::tabs::Atom.materialize()),
-                    components(doc::tabs::Component.materialize()),
                 ],
             ),
         ],
@@ -923,7 +909,6 @@ fn status() -> NavGroup {
                 vec![
                     hook(doc::meter::Hook.materialize()),
                     atoms(doc::meter::Atom.materialize()),
-                    component(doc::meter::Component.materialize()),
                 ],
             ),
             concept(
@@ -933,14 +918,16 @@ fn status() -> NavGroup {
                 vec![
                     hook(doc::progress_bar::Hook.materialize()),
                     atoms(doc::progress_bar::Atom.materialize()),
-                    component(doc::progress_bar::Component.materialize()),
                 ],
             ),
-            page(
+            concept(
                 "Toast",
-                "Temporary notifications",
+                "A short notification above the app that usually closes by itself",
                 doc::Toast.materialize(),
-                PageKind::Component,
+                vec![
+                    hooks(doc::toast::Hook.materialize()),
+                    atoms(doc::toast::Atom.materialize()),
+                ],
             ),
         ],
     )
@@ -982,11 +969,14 @@ fn layout() -> NavGroup {
                 doc::Icon.materialize(),
                 PageKind::Component,
             ),
-            page(
+            concept(
                 "Kbd",
                 "Displays keys and keyboard shortcuts",
                 doc::Kbd.materialize(),
-                PageKind::Component,
+                vec![
+                    atom(doc::kbd::Atom.materialize()),
+                    components(doc::kbd::Component.materialize()),
+                ],
             ),
             page(
                 "Sanitized HTML",
@@ -1001,7 +991,6 @@ fn layout() -> NavGroup {
                 vec![
                     hook(doc::separator::Hook.materialize()),
                     atom(doc::separator::Atom.materialize()),
-                    component(doc::separator::Component.materialize()),
                 ],
             ),
             page(
@@ -1078,6 +1067,12 @@ fn interactions() -> NavGroup {
                 "use_keyboard",
                 "Key events and keyboard shortcuts on an element",
                 doc::interactions::UseKeyboard.materialize(),
+                Hook,
+            ),
+            page(
+                "use_global_shortcuts",
+                "Keyboard shortcuts for the whole page, e.g. one opening a search from anywhere",
+                doc::interactions::UseGlobalShortcuts.materialize(),
                 Hook,
             ),
             page(
@@ -1168,6 +1163,12 @@ fn focus() -> NavGroup {
                 "A container that hands a focus manager to its children",
                 doc::focus::FocusManagerProvider.materialize(),
                 Atom,
+            ),
+            page(
+                "use_landmark",
+                "Makes a region of the page a landmark that F6 moves to",
+                doc::focus::UseLandmark.materialize(),
+                Hook,
             ),
             page(
                 "use_has_tabbable_child",
@@ -1261,7 +1262,20 @@ fn collection_state() -> NavGroup {
         "Collection State",
         icondata::BsCollection,
         Some(doc::CollectionState.materialize()),
-        Vec::new(),
+        vec![
+            page(
+                "Virtualizer",
+                "Renders only the visible options of a long listbox, and VirtualList only the visible rows of a plain list",
+                doc::collection_state::Virtualizer.materialize(),
+                PageKind::Atom,
+            ),
+            page(
+                "use_virtualizer_state",
+                "Lays out a collection and renders only what is visible, with use_scroll_view and use_virtualizer_item",
+                doc::collection_state::UseVirtualizerState.materialize(),
+                PageKind::Hook,
+            ),
+        ],
     )
 }
 
@@ -1356,6 +1370,12 @@ fn utilities() -> NavGroup {
                 "Collator",
                 "Sorts and filters text by the rules of a locale",
                 doc::utilities::Collator.materialize(),
+                PageKind::Utility,
+            ),
+            page(
+                "scroll",
+                "Finds scrolling containers and scrolls an element into view inside them",
+                doc::utilities::Scroll.materialize(),
                 PageKind::Utility,
             ),
             page(

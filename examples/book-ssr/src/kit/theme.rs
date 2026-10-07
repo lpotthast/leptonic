@@ -1,5 +1,6 @@
-use leptonic::components::prelude::{Code, Language};
 use leptos::prelude::*;
+
+use super::{Code, Language};
 
 /// Source of a leptonic theme stylesheet, e.g. `theme_scss!("button")` for `components/button.scss`.
 ///

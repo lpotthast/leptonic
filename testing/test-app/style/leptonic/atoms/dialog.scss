@@ -1,0 +1,18 @@
+// Upstream: ../starters/docs/src/Dialog.css @ 99e610236
+// Upstream: ../starters/docs/src/Dialog.tsx @ 99e610236
+//
+// `Dialog` and its `DialogTitle` (upstream's `<Heading slot="title">`). Put it into a `Popover`
+// or a `ModalContent` (`popover.scss`, `modal.scss`).
+
+.leptonic-Dialog {
+  outline: none;
+  max-height: inherit;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: var(--spacing-10);
+
+  .leptonic-DialogTitle {
+    margin-top: 0;
+    margin-bottom: 1em;
+  }
+}

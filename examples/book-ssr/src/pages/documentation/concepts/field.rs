@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::field::FieldConceptDemo;
@@ -75,14 +74,6 @@ pub fn PageFieldOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>
-                    "There is no field component of its own: the styled "
-                    <Link href=routes::doc::text_field::Component.materialize()><Code inline=true>"TextField"</Code></Link>", "
-                    <Link href=routes::doc::search_field::Component.materialize()><Code inline=true>"SearchField"</Code></Link>" and "
-                    <Link href=routes::doc::number_field::Component.materialize()><Code inline=true>"NumberField"</Code></Link>
-                    " components take a "<Code inline=true>"label"</Code>" and a "<Code inline=true>"description"</Code>
-                    " and render these parts for you."
-                </p>
             </Section>
 
             <Section title="Quick Start">

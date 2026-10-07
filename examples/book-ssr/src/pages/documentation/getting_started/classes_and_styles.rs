@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 use super::demos::classes_and_styles_meter::ClassesAndStylesMeterDemo;
@@ -603,9 +603,9 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     "Those that render no element of their own don\u{2019}t take them: atoms that give their child "
                     "behavior ("<Code inline=true>"Pressable"</Code>", "<Code inline=true>"Hoverable"</Code>", "
                     <Code inline=true>"Focusable"</Code>", "<Code inline=true>"PressResponder"</Code>", the "
-                    <Code inline=true>"*Trigger"</Code>" atoms), providers ("<Code inline=true>"Root"</Code>", "
+                    <Code inline=true>"*Trigger"</Code>" atoms), providers that only wrap their children ("<Code inline=true>"Root"</Code>", "
                     <Code inline=true>"ThemeProvider"</Code>", "<Code inline=true>"ToastRoot"</Code>"), and "
-                    <Code inline=true>"Toast"</Code>" and "<Code inline=true>"AlertIcon"</Code>"."
+                    <Code inline=true>"AlertIcon"</Code>"."
                 </p>
 
                 <p>

@@ -15,6 +15,7 @@ use crate::{
         aria::{AriaCurrent, AriaExpanded, AriaHasPopup, AriaPressed},
         classes::Classes,
         data_attributes::flag,
+        default_class::with_default_class,
         styles::Styles,
     },
 };
@@ -23,6 +24,8 @@ use crate::{
 ///
 /// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
 /// `data-disabled`.
+///
+/// Default class: `leptonic-Button`.
 #[component]
 pub fn Button(
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
@@ -53,6 +56,7 @@ pub fn Button(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Button", classes);
     let UseButtonReturn {
         props,
         is_disabled,
@@ -97,6 +101,7 @@ pub fn Button(
     }
 }
 
+/// Default class: `leptonic-LinkButton`.
 #[component]
 pub fn LinkButton<H>(
     href: H,
@@ -129,6 +134,7 @@ pub fn LinkButton<H>(
 where
     H: ToHref + Send + Sync + 'static,
 {
+    let classes = with_default_class("leptonic-LinkButton", classes);
     // Navigation is handled by the router's `<A>`. The button hook only adds press, hover and
     // focus behavior; propagation must continue so the router sees the click.
     let UseButtonReturn {

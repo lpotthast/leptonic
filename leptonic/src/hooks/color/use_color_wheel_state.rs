@@ -15,7 +15,7 @@ use crate::utils::{ValueBinding, color::ColorValue};
 //
 // =============================================================================
 
-/// Input of [`use_color_wheel_state`]. Start from [`UseColorWheelStateInput::new`].
+/// Input of [`use_color_wheel_state`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseColorWheelStateInput<C: ColorValue> {
     /// The initial color.
@@ -29,20 +29,6 @@ pub struct UseColorWheelStateInput<C: ColorValue> {
     pub on_change: Option<Callback<C>>,
     /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
-}
-
-impl<C: ColorValue> UseColorWheelStateInput<C> {
-    /// A wheel changing the hue `channel` of `default_value`.
-    pub fn new(default_value: C, channel: C::Channel) -> Self {
-        Self {
-            default_value,
-            value: None,
-            channel,
-            is_disabled: Signal::stored(false),
-            on_change: None,
-            on_change_end: None,
-        }
-    }
 }
 
 /// The state of a color wheel: the color and its hue.
@@ -227,14 +213,18 @@ mod tests {
     use crate::utils::color::{HSV, HsvChannel};
 
     fn wheel(hue: f64) -> ColorWheelState<HSV> {
-        use_color_wheel_state(UseColorWheelStateInput::new(
-            HSV {
+        use_color_wheel_state(UseColorWheelStateInput {
+            default_value: HSV {
                 hue,
                 saturation: 1.0,
                 value: 1.0,
             },
-            HsvChannel::Hue,
-        ))
+            value: None,
+            channel: HsvChannel::Hue,
+            is_disabled: Signal::stored(false),
+            on_change: None,
+            on_change_end: None,
+        })
     }
 
     #[test]

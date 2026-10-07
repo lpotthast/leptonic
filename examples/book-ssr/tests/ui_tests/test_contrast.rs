@@ -28,8 +28,8 @@ const PAGES: [&str; 4] = [
 const CONTRAST_PROBLEMS: &str = r"
     const SELECTORS = ['.book-nav-item', '.book-badge', '.book-layer-marks span', '.book-nav-part-title',
         '.book-nav-group-title', 'a.book-nav-group-header', '.doc-concept-name', '.doc-concept-tab', '.doc-article p',
-        '.doc-article li', '.doc-article a.leptonic-link', '.doc-disclosure-trigger', '#book-toc .leptonic-anchor-link',
-        '#book-toc h2', '#book-app-bar .leptonic-link', '.doc-search-trigger-text', '.book-welcome-card a',
+        '.doc-article li', '.doc-article a.doc-link', '.doc-disclosure-trigger', '#book-toc .doc-toc-link',
+        '#book-toc h2', '#book-app-bar a', '.doc-search-trigger-text', '.book-welcome-card a',
         '.book-welcome-card p', '.book-welcome-tagline'];
     const parse = c => { const m = c.match(/rgba?\(([^)]+)\)/); if (!m) return null;
         const p = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; };

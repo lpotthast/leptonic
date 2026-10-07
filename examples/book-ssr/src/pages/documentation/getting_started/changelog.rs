@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::kit::*;
@@ -40,7 +39,7 @@ const RELEASES: &[Release] = &[
                  Utilities live in `leptonic::utils`.",
                     "Features choose the layers: `hooks` (the only default), `atoms` and `components`, each including the \
                  layers below. Apps upgrading from 0.5.0 need `components`. `syntax-highlight` and `sanitize` are new \
-                 extras; `clipboard` and `tiptap` now include `components`; `full` enables all layers and extras.",
+                 extras; `tiptap` includes `components`, `clipboard` needs only `hooks`; `full` enables all layers and extras.",
                     "The `csr` feature was removed: client-side rendered apps enable neither `ssr` nor `hydrate`.",
                 ],
             ),
@@ -78,8 +77,9 @@ const RELEASES: &[Release] = &[
                     "`create_signal_ls` \u{2192} `signal_ls`.",
                     "The key caps\u{2019} `Key` \u{2192} `KeyboardKey` (`leptonic::utils::key`), which keyboard handling \
                  uses too.",
-                    "`HSV`, `RGB8` and `RGBA8` moved to `leptonic::utils::color`, next to the new `HSL` and `Color`. \
-                 `ColorSpace` was removed: a `Color` keeps the color space it was set in.",
+                    "`HSV` and `RGB8` moved to `leptonic::utils::color`, next to the new `HSL`, `Alpha<C>` (any color with \
+                 an alpha channel; replaces `RGBA8`) and `Color`. `ColorSpace` was removed: a `Color` keeps the color \
+                 space it was set in.",
                     "`Size` \u{2192} `CssDimension`, of which `Width` and `Height` are now aliases: write `em(1.0)`, \
                  `px(4)` or `pct(50.0)` (`leptonic::utils::css`).",
                 ],
@@ -89,7 +89,21 @@ const RELEASES: &[Release] = &[
                 &[
                     "`Button` and `LinkButton`: `on_click` \u{2192} `on_press`, `disabled` \u{2192} `is_disabled`. \
                  `button_type` makes a button submit or reset its form; without it, buttons have `type=\"button\"`.",
-                    "`DateTimeInput` and `TiptapEditor`: `disabled` \u{2192} `is_disabled`.",
+                    "`TiptapEditor`: `disabled` \u{2192} `is_disabled`.",
+                    "`Toast`: `id` and `created_at` were removed. `Toasts::push` returns the toast\u{2019}s key, and \
+                 `close(&key)` replaces `try_remove(id)`; the `toasts` signal \u{2192} `queue()`, whose `visible_toasts` \
+                 lists the toasts shown. `ToastTimeout::CustomDelay` takes a `std::time::Duration`, and `DefaultDelay` is \
+                 5 seconds (was 3). The toasts are built on the toast atoms: every toast has a close button, timeouts \
+                 pause while the toasts are hovered or focused, screen readers announce new toasts, and the toast region \
+                 is a landmark reached with F6. New: `max_visible_toasts` on `ToastRoot`.",
+                    "`DateSelector` is built on the calendar atoms and picks a `jiff::civil::Date` instead of a \
+                 `time::OffsetDateTime`. The initial `value` \u{2192} `default_value` (or `value` and `set_value` for a \
+                 controlled date), `on_change` \u{2192} `set_value` (`on_change` is now a `Callback<Option<Date>>` that \
+                 only observes); `min` and `max` \
+                 \u{2192} `min_value` and `max_value`; `guide_mode` \u{2192} `initial_view` (`DateSelectorView::Days`, \
+                 `Months` or `Years`). New: `default_focused_value`, `is_date_unavailable`, `is_disabled`, \
+                 `is_read_only`, `is_invalid`, `error_message`, `first_day_of_week` and `aria_label`. It works with the \
+                 keyboard and screen readers; its heading switches to the years, then the months.",
                     "`Checkbox`: `checked` and `set_checked` \u{2192} `is_selected` and `set_selected`. Its children are its \
                  label. New: `is_indeterminate`, `is_required`, `is_invalid`, `name` and `form_value`. Removed: \
                  `variant`, `size` and `id`.",
@@ -99,6 +113,20 @@ const RELEASES: &[Release] = &[
                     "`Popover`: put the element that opens it into the new `PopoverTrigger` slot, instead of rendering \
                  the popover next to it with `show`. The popover opens and closes itself, or follows `is_open` and \
                  `set_open`; `placement` positions it and `modality` makes it modal.",
+                    "`Drawer` is a modal side sheet: it renders into `<body>` over the page, keeps the focus inside, closes \
+                 on Escape and (while `is_dismissable`, the default) a press outside, and makes the page behind it inert \
+                 and unscrollable. `shown` \u{2192} `is_open` and `set_open` (or `default_open`; inside a `DialogTrigger`, \
+                 the trigger opens it); `side` defaults to `DrawerSide::Left`. New: `on_open_change`, `is_dismissable`, \
+                 `is_keyboard_dismiss_disabled` and `aria_label`. It slides while `data-entering` and `data-exiting` are \
+                 set, instead of the classes `showing`, `shown`, `hiding` and `hidden`; `classes` and `styles` reach the \
+                 dialog inside the panel. For a panel next to the content, use a `Collapse` with `axis=CollapseAxis::X`.",
+                    "Transitions (`Collapse`, `Fade`, `Grow`, `Slide` and `Zoom`): `inn` and `show` \u{2192} `is_shown`, \
+                 a value or any signal. The wrapper has `data-shown` while shown (was `data-in`); hidden content is \
+                 `inert` and invisible once its transition ended. The theme styles all five and turns them off for \
+                 reduced motion.",
+                    "`Collapse` animates a grid track and follows the size of its content. Its classes `height` and \
+                 `width` \u{2192} `leptonic-collapse-y` and `leptonic-collapse-x`; its inner `content` (with `show` while \
+                 expanded) \u{2192} `leptonic-collapse-content`.",
                     "`Slider` and `RangeSlider` are generic over their number type. `min` and `max` \u{2192} `min_value` \
                  and `max_value`, `value_display` \u{2192} `format_options`, `disabled` \u{2192} `is_disabled`; name them \
                  with `aria_label`.",
@@ -108,13 +136,18 @@ const RELEASES: &[Release] = &[
                     "`Collapsible`: `open` \u{2192} `default_expanded`, or `is_expanded` and `set_expanded`. \
                  `Collapsibles`: `default_on_open` \u{2192} `expansion`; which collapsibles are open can be set by their \
                  `id`.",
-                    "`Tab`: its `id` is a string, generated and stable during hydration by default, instead of a `Uuid`; \
-                 `label` takes a closure (`ViewFn`) instead of a `View`.",
+                    "`Tabs` are built on the tabs atoms (keyboard navigation, ARIA) and take `default_selected_key`, \
+                 `selected_key` and `set_selected_key`, `on_selection_change`, `orientation`, `keyboard_activation` and \
+                 `aria_label`. `Tab`: `name` is a `String`, `label` takes a closure (`ViewFn`) instead of a `View`, \
+                 new `is_disabled`; `id`, `on_show`, `on_hide`, `classes` and `styles` were removed (use \
+                 `on_selection_change`).",
                     "`TableHeaderCell`: new `on_press`, which makes the header focusable and pressable with the keyboard \
-                 (e.g. to sort by its column), and `aria_sort`.",
+                 (e.g. to sort by its column), and `aria_sort`; `min_width` is a `Signal<bool>` and defaults to `true`. \
+                 `Table`: `bordered` and `hoverable` are `Signal<bool>`.",
                     "`Grid` and `Row`: `spacing` \u{2192} `gap`.",
                     "`Separator` takes an `orientation` and an `aria_label`.",
-                    "`Chip`: `dismissible` takes an `Out` (a closure or a signal) instead of a `Callback`.",
+                    "`Chip`: `dismissible` \u{2192} `on_dismiss` (a `Callback<()>`), which renders a focusable dismiss \
+                 button; new `dismiss_label` and `is_disabled`. `color` is a `Signal<ChipColor>`.",
                     "`Icon`: without `aria_label`, icons are decorative and hidden from screen readers; with it, they are \
                  labelled images.",
                     "`Code` highlights code blocks with a `language` (`syntax-highlight` feature).",
@@ -135,6 +168,9 @@ const RELEASES: &[Release] = &[
                     "`Box`. Use a `<div>` with your own classes.",
                     "The typography components `H1` to `H6` and `P`. Write the HTML elements; the theme styles them.",
                     "`ModalRoot`. Modals need no root anymore.",
+                    "`DateTimeInput` and its `GuideMode`. Use `DatePicker`, which can be typed into and picks `jiff` \
+                 dates (with times, if you like) instead of `time::OffsetDateTime`; its `initial_view` replaces \
+                 `guide_mode`.",
                     "`OnOpen` of `Collapsibles`. Use `expansion`.",
                     "`Consumer` and `Producer` (and `consumer` and `producer`). Use Leptos\u{2019} `Callback`.",
                     "The global event contexts `GlobalClickEvent` and `GlobalKeyboardEvent`. Listen to document events \
@@ -152,31 +188,51 @@ const RELEASES: &[Release] = &[
                  and the ARIA patterns of buttons, toggle buttons, links, breadcrumbs, text, search and number fields, \
                  checkboxes, radio groups, switches, sliders, listboxes, selects, comboboxes, menus, tooltips, dialogs, \
                  disclosures, tabs, toolbars, separators, meters, progress bars, grids, grid lists, tables, trees, tag \
-                 groups, calendars, date fields, date pickers and color controls.",
-                    "Atoms, unstyled Leptos components rendering one element each: `Breadcrumbs`, `Button`, `Checkbox` \
+                 groups, calendars, date fields, date pickers, color controls and toasts.",
+                    "Document-wide keyboard shortcuts: `use_global_shortcuts` binds shortcuts that work anywhere (e.g. \
+                 Ctrl+K, also while typing) and shortcuts that work only outside text fields (e.g. /), seeing every key \
+                 press before leptonic\u{2019}s components stop it.",
+                    "Landmarks: `use_landmark` makes a region of the page a landmark, and F6 and Shift+F6 move the focus \
+                 between landmarks (Alt+F6 to the main one).",
+                    "Atoms, unstyled Leptos components rendering one element each: `Breadcrumbs`, `Button`, `Calendar` \
+                 and `RangeCalendar` with `CalendarHeading`, `CalendarPreviousButton`, `CalendarNextButton`, \
+                 `CalendarErrorMessage`, `CalendarGrid` and its parts, `CalendarCell` and `CalendarCellButton`, `Checkbox` \
                  and `CheckboxGroup`, `ColorArea`, `ColorField` and `ColorChannelField`, `ColorPicker`, \
                  `ColorSlider` with `ColorSliderTrack` and `ColorSliderOutput`, `ColorSwatch`, `ColorSwatchPicker` with \
-                 `ColorSwatchPickerItem`, `ColorThumb`, `ColorWheel` with `ColorWheelTrack`, `ComboBox`, `Dialog` and `DialogTrigger`, `Disclosure` \
-                 and `DisclosureGroup`, `DismissButton`, the field parts `Label`, `Description` and `FieldError`, \
+                 `ColorSwatchPickerItem`, `ColorThumb`, `ColorWheel` with `ColorWheelTrack`, `ComboBox`, `DateField` and \
+                 `TimeField` with `DateInput` and `DateSegment`, `DatePicker` and `DateRangePicker` with `DatePickerGroup` \
+                 and `DatePickerButton`, `Dialog` and `DialogTrigger`, `Disclosure` and `DisclosureGroup`, `DismissButton`, the field parts `Label`, `Description` and `FieldError`, \
                  `FocusManagerProvider`, `FocusRing`, `FocusScope`, `Focusable`, `Form`, `Grid`, `GridList`, \
                  `Hoverable`, `Input` and `TextArea`, `Link` and `AnchorLink`, `ListBox`, `Menu` with `MenuTrigger` and \
                  `SubmenuTrigger`, `Meter`, `ModalBackdrop` and `ModalContent`, `NumberField`, `OverlayArrow`, \
                  `Popover`, `Pressable` and `PressResponder`, `ProgressBar`, `Radio` and `RadioGroup`, `SearchField`, \
-                 `Select`, `Separator`, `Slider`, `Switch`, `Table`, `Tabs`, `TextField`, `ToggleButton` and \
+                 `Select`, `Separator`, `ShortcutKeys`, `Slider`, `Switch`, `Table`, `Tabs`, `TextField`, `ToastRegion` and `Toast` with \
+                 `ToastContent`, `ToastTitle`, `ToastDescription` and `ToastCloseButton`, `ToggleButton` and \
                  `ToggleButtonGroup`, `Toolbar`, `Tooltip` and `VisuallyHidden`.",
                     "Components: `TextField` and `SearchField` with label, description and validation, `NumberField` \
-                 (generic over its number type), `CheckboxGroup`, `Radio` and `RadioGroup`, `Meter`, and the \
+                 (generic over its number type), `DatePicker` (generic over `civil::Date`, `civil::DateTime` and `Zoned`, \
+                 with a `DateSelector` in a popover), `CheckboxGroup`, `Radio` and `RadioGroup`, `Meter`, and the \
                  `PopoverTrigger` slot.",
+                    "Virtualization of long lists: the `Virtualizer` atom renders only the visible options of a \
+                 `ListBox` (with `ListBoxItems`), positioned by a `ListLayout` of fixed or measured row sizes; \
+                 `VirtualList` renders only the visible rows of a plain list such as a log, optionally following its \
+                 end. `use_virtualizer_state`, `use_scroll_view`, `use_virtualizer_item` and the `Layout` trait \
+                 (`leptonic::hooks::virtualizer`) virtualize markup and layouts of your own.",
                     "`Color` (`leptonic::utils::color`): a color in any of the spaces HSV, HSL and RGB, parsed from \
                  CSS-like text (`#rgb`, `#rrggbb`, `rgb()`, `hsb()`, `hsl()`), with `color_name()` and `hue_name()` \
                  describing colors in words (\u{201c}dark vibrant blue\u{201d}).",
                     "`use_theme`, to read and change the theme of the closest `ThemeProvider`.",
+                    "`leptonic::jiff`, the re-exported date crate: calendars pick `jiff::civil::Date` values; date fields and \
+                 pickers are generic over `civil::Date`, `civil::DateTime` and `Zoned`, time fields over `civil::Time`, \
+                 `civil::DateTime` and `Zoned`, with segments in the order and format of the locale.",
                     "Internationalization (number, date and list formatting, collation, plural rules) based on ICU4X, \
                  which also works during server-side rendering, with `I18nProvider`, `use_locale` and `use_direction`.",
                     "Element ids that are stable between server-side rendering and hydration (`use_id`).",
                     "`leptonic::utils::clipboard::write_text`, to copy text to the clipboard (`clipboard` feature).",
                     "A live announcer for screen reader announcements, and keyboard shortcuts (`Shortcut`, \
-                 `KeyboardShortcuts`).",
+                 `KeyboardShortcuts`); `Shortcut::keys` lists the keys to show for a shortcut on a platform.",
+                    "`is_text_input` and `is_typing_target` (`leptonic::utils::focusability`), telling whether keys pressed \
+                 at an element are the user typing.",
                 ],
             ),
             (

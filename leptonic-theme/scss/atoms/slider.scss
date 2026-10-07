@@ -1,0 +1,188 @@
+// Upstream: ../starters/docs/src/Slider.css @ 99e610236
+// Upstream: ../starters/docs/src/Slider.tsx @ 99e610236
+//
+// `Slider`, `SliderOutput`, `SliderTrack`, `SliderFill`, `SliderThumb`. Markup, as the starter
+// (the visible track is the app's, with the `inset` utility class, around the fill):
+//
+//   <Slider ..>
+//     <Label>..</Label>
+//     <SliderOutput />
+//     <SliderTrack>
+//       <div class="track inset"><SliderFill /></div>
+//       <SliderThumb index=0 />    // one per value
+//     </SliderTrack>
+//   </Slider>
+//
+// A vertical slider hides its label and output, as upstream. The starter's track takes
+// `data-disabled` from the slider; here a rule below gives it the inset's disabled border from
+// the `SliderTrack`'s. The fill's size across the track is set here (react-aria-components sets
+// it inline).
+@use "mode";
+@use "utilities";
+
+@layer utilities {
+  .leptonic-SliderThumb {
+    @include utilities.indicator;
+  }
+
+  .leptonic-SliderTrack[data-disabled] > .track {
+    box-shadow: inset 0 0 0 1px var(--border-color-disabled);
+  }
+}
+
+.leptonic-Slider {
+  display: grid;
+  grid-template-areas:
+    'label output'
+    'track track';
+  grid-template-columns: 1fr auto;
+  max-width: min(calc(100% - 12px), 300px);
+  font: var(--font-size) system-ui;
+  color: var(--text-color);
+
+  .leptonic-Label {
+    grid-area: label;
+  }
+
+  .leptonic-SliderOutput {
+    grid-area: output;
+    font-size: var(--font-size);
+  }
+
+  .leptonic-SliderTrack {
+    grid-area: track;
+    position: relative;
+
+    .track {
+      display: block;
+      position: absolute;
+      border-radius: 9999px;
+    }
+
+    .leptonic-SliderFill {
+      border-radius: inherit;
+      background: var(--tint-900);
+
+      @media (forced-colors: active) {
+        background: Highlight;
+      }
+    }
+  }
+
+  .leptonic-SliderThumb {
+    width: calc(var(--spacing) * 5.5);
+    height: calc(var(--spacing) * 5.5);
+    border-radius: 50%;
+    forced-color-adjust: none;
+    --indicator-color: var(--tint);
+    --indicator-drop-shadow: 0 1px 4px rgb(0 0 0 / 0.3);
+
+    &[data-dragging] {
+      background: var(--button-background-pressed);
+    }
+  }
+
+  &[data-orientation='horizontal'] {
+    flex-direction: column;
+    width: 100%;
+
+    .leptonic-SliderTrack {
+      height: var(--spacing-5);
+      width: 100%;
+
+      .track {
+        height: var(--spacing-2);
+        width: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .leptonic-SliderFill {
+        height: 100%;
+        box-shadow:
+          inset 0 -1px 0 lch(from var(--tint) 42% c h),
+          inset 0 0 0 1px var(--tint-900),
+          inset 0 2px 0 rgb(255 255 255 / 0.3),
+          inset 0 3px 2px rgb(255 255 255 / 0.2);
+
+        @include mode.dark {
+          box-shadow:
+            inset 0 -1px 0 lch(from var(--tint) 42% c h),
+            inset 0 1px 0 rgb(255 255 255 / 0.6),
+            inset 0 0 0 1px var(--tint-900),
+            inset 0 3px 2px rgb(255 255 255 / 0.2);
+        }
+
+        @media (forced-colors: active) {
+          box-shadow: none;
+        }
+      }
+    }
+
+    .leptonic-SliderThumb {
+      top: 50%;
+    }
+  }
+
+  &[data-orientation='vertical'] {
+    height: 150px;
+    display: block;
+    margin: var(--spacing-3) 0;
+
+    .leptonic-Label,
+    .leptonic-SliderOutput {
+      display: none;
+    }
+
+    .leptonic-SliderTrack {
+      width: var(--spacing-5);
+      height: 100%;
+
+      .track {
+        width: var(--spacing-2);
+        height: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .leptonic-SliderFill {
+        width: 100%;
+        box-shadow:
+          inset -1px 0 0 lch(from var(--tint) 42% c h),
+          inset 0 0 0 1px var(--tint-900),
+          inset 2px 0 0 rgb(255 255 255 / 0.3),
+          inset 3px 0 2px rgb(255 255 255 / 0.2);
+
+        @include mode.dark {
+          box-shadow:
+            inset -1px 0 0 lch(from var(--tint) 42% c h),
+            inset 1px 0 0 rgb(255 255 255 / 0.6),
+            inset 0 0 0 1px var(--tint-900),
+            inset 3px 0 2px rgb(255 255 255 / 0.2);
+        }
+
+        @media (forced-colors: active) {
+          box-shadow: none;
+        }
+      }
+    }
+
+    .leptonic-SliderThumb {
+      left: 50%;
+    }
+  }
+
+  &[data-disabled] {
+    .leptonic-SliderTrack {
+      .track {
+        background: var(--field-background);
+        --border-color: var(--border-color-disabled);
+      }
+
+      .leptonic-SliderFill {
+        background: var(--border-color-disabled);
+        box-shadow: none;
+      }
+    }
+  }
+}

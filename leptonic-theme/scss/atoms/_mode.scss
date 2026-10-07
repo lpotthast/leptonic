@@ -1,0 +1,31 @@
+// Light and dark mode of the atom theme (react-aria-components' starter styles switch on
+// `prefers-color-scheme`). Leptonic: the nearest `data-theme` (`ThemeProvider`) decides; without
+// one, the system preference does.
+//
+// Rules for one mode select by an ancestor (`[data-theme="dark"] &`), so they follow any themed
+// ancestor of that mode: nested `ThemeProvider`s of different modes get the tokens of the nearest
+// one, but these few per-atom tweaks of the outer one.
+
+// Content for dark mode, inside a rule.
+@mixin dark {
+  :where([data-theme="dark"]) & {
+    @content;
+  }
+  @media (prefers-color-scheme: dark) {
+    :where(:root:not([data-theme])) & {
+      @content;
+    }
+  }
+}
+
+// Content for light mode, inside a rule.
+@mixin light {
+  :where([data-theme="light"]) & {
+    @content;
+  }
+  @media not (prefers-color-scheme: dark) {
+    :where(:root:not([data-theme])) & {
+      @content;
+    }
+  }
+}

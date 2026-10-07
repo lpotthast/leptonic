@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{color_channel_field::ColorChannelFieldDemo, color_field::ColorFieldDemo};
@@ -36,8 +35,23 @@ pub fn PageUseColorField() -> impl IntoView {
                             ..UseColorFieldStateInput::default()
                         });
                         let field = use_color_field(UseColorFieldInput {
+                            state,
                             has_label: true.into(),
-                            ..UseColorFieldInput::new(state)
+                            id: None,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            is_disabled: false.into(),
+                            is_read_only: false.into(),
+                            is_required: false.into(),
+                            placeholder: MaybeProp::default(),
+                            auto_focus: false,
+                            is_wheel_disabled: false,
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
+                            on_key_down: None,
+                            on_key_up: None,
                         });
 
                         view! {
@@ -61,9 +75,38 @@ pub fn PageUseColorField() -> impl IntoView {
 
                         let state = use_color_channel_field_state(UseColorChannelFieldStateInput {
                             default_value: Some(HSV::new()),
-                            ..UseColorChannelFieldStateInput::new(HsvChannel::Hue)
+                            value: None,
+                            channel: HsvChannel::Hue,
+                            is_disabled: false.into(),
+                            is_read_only: false.into(),
+                            is_invalid: false.into(),
+                            validate: None,
+                            validation_behavior: ValidationBehavior::Aria,
+                            name: None,
+                            on_change: None,
                         });
-                        let field = use_color_channel_field(UseColorChannelFieldInput::new(state));
+                        let field = use_color_channel_field(UseColorChannelFieldInput {
+                            state,
+                            field: UseNumberFieldInput {
+                                state: state.number,
+                                id: None,
+                                has_label: false.into(),
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
+                                is_required: false.into(),
+                                placeholder: MaybeProp::default(),
+                                auto_focus: false,
+                                is_wheel_disabled: false,
+                                increment_aria_label: MaybeProp::default(),
+                                decrement_aria_label: MaybeProp::default(),
+                                on_focus: None,
+                                on_blur: None,
+                                on_focus_change: None,
+                                on_key_down: None,
+                                on_key_up: None,
+                            },
+                        });
                         let (decrement, decrement_styles) = use_button(field.decrement_button).props.into_parts();
                         let (increment, increment_styles) = use_button(field.increment_button).props.into_parts();
 
@@ -178,11 +221,10 @@ pub fn PageUseColorField() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-field-input">
-                    <p>"Start from "<Code inline=true>"UseColorFieldInput::new(state)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorFieldInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseColorFieldInput">
                         <ApiRow name="state" ty="ColorFieldState">
-                            "The state from "<Code inline=true>"use_color_field_state"</Code>". Required (the argument of "
-                            <Code inline=true>"new"</Code>")."
+                            "The state from "<Code inline=true>"use_color_field_state"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id; generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a visible label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
@@ -229,13 +271,13 @@ pub fn PageUseColorField() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-channel-field-state-input">
-                    <p>"Start from "<Code inline=true>"UseColorChannelFieldStateInput::new(channel)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorChannelFieldStateInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseColorChannelFieldStateInput">
                         <ApiRow name="default_value" ty="Option<C>" default="None">"The initial color; "<Code inline=true>"None"</Code>" starts with an empty field."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<Option<C>>>" default="None">
                             "The color as app state, replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The channel the field edits. Required (the argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the field edits. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the field is disabled."</ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Whether the field is read-only."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the field invalid, whatever the validation says."</ApiRow>
@@ -268,16 +310,17 @@ pub fn PageUseColorField() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-channel-field-input">
-                    <p>"Start from "<Code inline=true>"UseColorChannelFieldInput::new(state)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorChannelFieldInput"</Code>" with both fields named."</p>
                     <ApiTable kind=ApiKind::Input of="UseColorChannelFieldInput">
                         <ApiRow name="state" ty="ColorChannelFieldState<C>">
-                            "The state from "<Code inline=true>"use_color_channel_field_state"</Code>". Required (the argument of "
-                            <Code inline=true>"new"</Code>")."
+                            "The state from "<Code inline=true>"use_color_channel_field_state"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="field" ty="UseNumberFieldInput<f64>" default="UseNumberFieldInput::new(state.number)">
-                            "The number field\u{2019}s other settings (label, placeholder, focus callbacks, \u{2026}); its "
-                            <Code inline=true>"state"</Code>" is replaced by the channel\u{2019}s."
+                        <ApiRow name="field" ty="UseNumberFieldInput<f64>">
+                            "Required. The number field\u{2019}s other settings (label, placeholder, focus callbacks, \u{2026}). Its "
+                            <Code inline=true>"state"</Code>" is replaced by the channel\u{2019}s, so pass "
+                            <Code inline=true>"state.number"</Code>"."
                         </ApiRow>
+
                     </ApiTable>
                 </Section>
 

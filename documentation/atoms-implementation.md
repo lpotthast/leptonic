@@ -15,7 +15,9 @@ invisible and that consumers never style, inside its one element:
 - the visually hidden `<input>` of `Checkbox`, `Radio` and `Switch`;
 - `type="hidden"` inputs carrying a field's value for forms (`ColorField`, `ColorChannelField`, ...).
 
-Anything visible or stylable is its own atom.
+Anything visible or stylable is its own atom. Structural wrappers too: a calendar cell is two atoms, `CalendarCell` (the `<td role="gridcell">`) and
+`CalendarCellButton` (the focusable `<div role="button">` inside it), where react-aria-components renders both from
+one component (decided by the user, 2026-10-06).
 
 ## Wrapping Hooks
 

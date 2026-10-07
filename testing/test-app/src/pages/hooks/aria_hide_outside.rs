@@ -1,6 +1,6 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, time::Duration};
 
-use leptonic::utils::{AriaHideOutsideOptions, aria_hide_outside};
+use leptonic::utils::{AriaHideOutsideOptions, aria_hide_outside, keep_visible};
 use leptos::{prelude::*, web_sys};
 
 type Reverts = HashMap<&'static str, Box<dyn FnOnce()>>;
@@ -29,6 +29,45 @@ fn hide(case: &'static str, targets: &[&str], root: &str) {
     REVERTS.with_borrow_mut(|reverts| reverts.insert(case, revert));
 }
 
+/// Appends an overlay (`#test-aho-late-<name>`) in a portal container to the late root, lets the
+/// active hide's observer hide it, then registers it as an overlay opened from inside: with
+/// `keep_visible` (non-modal) or a nested hide (modal).
+fn open_late_overlay(name: &'static str, nested: bool) {
+    let document = document();
+    let Ok(portal) = document.create_element("div") else {
+        return;
+    };
+    let Ok(overlay) = document.create_element("button") else {
+        return;
+    };
+    overlay.set_id(&format!("test-aho-late-{name}"));
+    overlay.set_text_content(Some(name));
+    let _ = portal.append_child(&overlay);
+    portal.set_id(&format!("test-aho-late-{name}-portal"));
+    let _ = element("test-aho-late").append_child(&portal);
+    // After the observer's callback (a microtask): Leptos effects may run that late.
+    set_timeout(
+        move || {
+            let overlay = element(&format!("test-aho-late-{name}"));
+            let revert = if nested {
+                Some(aria_hide_outside(
+                    &[overlay],
+                    AriaHideOutsideOptions {
+                        root: Some(element("test-aho-late")),
+                        ..AriaHideOutsideOptions::default()
+                    },
+                ))
+            } else {
+                keep_visible(&overlay)
+            };
+            if let Some(revert) = revert {
+                REVERTS.with_borrow_mut(|reverts| reverts.insert(name, revert));
+            }
+        },
+        Duration::from_millis(50),
+    );
+}
+
 fn revert(case: &'static str) {
     if let Some(revert) = REVERTS.with_borrow_mut(|reverts| reverts.remove(case)) {
         revert();
@@ -41,6 +80,8 @@ fn revert(case: &'static str) {
 /// - row: a grid; the target is the second row.
 /// - nested: two hides (`[button, radios]`, then `[button]`), reverted in either order.
 /// - outer root: a root not containing the target is hidden itself.
+/// - late: overlays inserted while a hide is active and registered only after its observer hid
+///   them (`#test-aho-late-open-popover`: `keep_visible`, `#test-aho-late-open-modal`: nested).
 #[component]
 pub fn PageHookAriaHideOutside() -> impl IntoView {
     view! {
@@ -68,6 +109,18 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
                 "Hide outer"
             </button>
             <button id="test-aho-revert-outer" on:click=|_| revert("outer")>"Revert outer"</button>
+            <button id="test-aho-hide-late" on:click=|_| hide("late", &["test-aho-late-dialog"], "test-aho-late")>
+                "Hide late"
+            </button>
+            <button id="test-aho-late-open-popover" on:click=|_| open_late_overlay("popover", false)>
+                "Open popover"
+            </button>
+            <button id="test-aho-late-open-modal" on:click=|_| open_late_overlay("modal", true)>
+                "Open modal"
+            </button>
+            <button id="test-aho-revert-late" on:click=|_| { revert("modal"); revert("popover"); revert("late"); }>
+                "Revert late"
+            </button>
         </div>
 
         <div id="test-aho-basic">
@@ -100,6 +153,11 @@ pub fn PageHookAriaHideOutside() -> impl IntoView {
 
         <div id="test-aho-outer-root">
             <span>"Outside the target"</span>
+        </div>
+
+        <div id="test-aho-late">
+            <span id="test-aho-late-outside">"Outside the dialog"</span>
+            <div id="test-aho-late-dialog">"Dialog"</div>
         </div>
     }
 }

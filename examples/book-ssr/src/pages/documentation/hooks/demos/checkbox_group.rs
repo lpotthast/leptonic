@@ -26,7 +26,15 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
     });
     let group = use_checkbox_group(UseCheckboxGroupInput {
         has_label: true.into(),
-        ..UseCheckboxGroupInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        form: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     let data = group.data;
     let description_props = group.description_props;
@@ -64,8 +72,14 @@ pub fn CheckboxGroupDemo() -> impl IntoView {
 
 #[component]
 fn ToppingCheckbox(group: CheckboxGroupData, topping: &'static str) -> impl IntoView {
-    let checkbox =
-        use_checkbox_group_item(UseCheckboxGroupItemInput::new(group, Key::from(topping)));
+    let checkbox = use_checkbox_group_item(UseCheckboxGroupItemInput {
+        group,
+        value: Key::from(topping),
+        is_indeterminate: Signal::stored(false),
+        on_change: None,
+        validate: None,
+        options: ToggleOptions::default(),
+    });
     let (label_attrs, label_styles) = checkbox.label_props.into_parts();
     let (input_attrs, input_styles) = checkbox.input_props.into_parts();
     let is_focus_visible = checkbox.is_focus_visible;

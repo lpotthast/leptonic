@@ -1,9 +1,14 @@
+use leptonic::hooks::FocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
+use leptonic::hooks::collections::ListLayout;
 use leptonic::{
     components::prelude::{Button, ButtonVariant, Icon},
     hooks::{
-        GridListData, IntoAttrs, Key, SelectionBehavior, SelectionMode, UseGridListInput, UseGridListItemInput,
-        UseGridListReturn, use_grid_list, use_grid_list_item, use_list_collection, use_list_state,
+        GridListData, IntoAttrs, Key, SelectionBehavior, SelectionMode, UseGridListInput,
+        UseGridListItemInput, UseGridListReturn,
         collections::{Selection, SelectionOptions, UseListStateInput},
+        use_grid_list, use_grid_list_item, use_list_collection, use_list_state,
     },
     prelude::icondata,
     utils::CapturedElement,
@@ -26,7 +31,11 @@ pub fn GridListDemo() -> impl IntoView {
     let opened = RwSignal::new(None::<Key>);
 
     // The rows follow the files: removing one updates the collection, and focus moves to a neighbor.
-    let collection = use_list_collection(files.into(), |(key, _)| Key::from(*key), |(_, name)| (*name).to_owned());
+    let collection = use_list_collection(
+        files.into(),
+        |(key, _)| Key::from(*key),
+        |(_, name)| (*name).to_owned(),
+    );
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
@@ -39,9 +48,20 @@ pub fn GridListDemo() -> impl IntoView {
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label: "Files".into(),
         on_action: Some(Callback::new(move |key| opened.set(Some(key)))),
-        ..UseGridListInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: Signal::stored(None),
+        layout: ListLayout::Stack,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
+        tree: None,
     });
-    let remove = Callback::new(move |key: &'static str| files.update(|files| files.retain(|(k, _)| *k != key)));
+    let remove = Callback::new(move |key: &'static str| {
+        files.update(|files| files.retain(|(k, _)| *k != key));
+    });
 
     let status = move || {
         let selected = selection.with(|selection| match selection {
@@ -53,7 +73,9 @@ pub fn GridListDemo() -> impl IntoView {
                 keys.join(", ")
             }
         });
-        let opened = opened.get().map_or_else(|| "none".to_owned(), |key| key.to_string());
+        let opened = opened
+            .get()
+            .map_or_else(|| "none".to_owned(), |key| key.to_string());
         format!("Selected: {selected}. Opened: {opened}.")
     };
 
@@ -73,8 +95,19 @@ pub fn GridListDemo() -> impl IntoView {
 /// A row: `use_grid_list_item` sets `role="row"`, `aria-selected` and the single `role="gridcell"`, which holds
 /// the name and a button. ArrowRight moves focus to the button, ArrowLeft back to the row.
 #[component]
-fn FileRow(list: GridListData, key: &'static str, name: &'static str, remove: Callback<&'static str>) -> impl IntoView {
-    let row = use_grid_list_item(UseGridListItemInput::new(list, Key::from(key)));
+fn FileRow(
+    list: GridListData,
+    key: &'static str,
+    name: &'static str,
+    remove: Callback<&'static str>,
+) -> impl IntoView {
+    let row = use_grid_list_item(UseGridListItemInput {
+        list,
+        key: Key::from(key),
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let (row_attrs, row_styles) = row.row_props.into_parts();
 
     view! {

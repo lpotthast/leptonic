@@ -1,7 +1,6 @@
-use leptonic::components::prelude::{Code, Language};
 use leptos::prelude::*;
 
-use super::{Disclosure, demo_styles::styles_for};
+use super::{Code, Disclosure, Language, demo_styles::styles_for};
 
 /// Frame for an interactive demo.
 ///

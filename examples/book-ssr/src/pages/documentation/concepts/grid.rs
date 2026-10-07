@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid::GridConceptDemo;
@@ -101,7 +100,7 @@ pub fn PageGridOverview() -> impl IntoView {
                     <KeyRow keys="Space">"Select or deselect the focused row."</KeyRow>
                     <KeyRow keys="Shift + ArrowUp / Shift + ArrowDown">"Extend the selection (multiple selection)."</KeyRow>
                     <KeyRow keys="Enter">"Activate the row or cell; without an action, select the row."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all rows (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Any character">"Focus the next row whose text starts with the typed text."</KeyRow>
                 </KeyboardTable>

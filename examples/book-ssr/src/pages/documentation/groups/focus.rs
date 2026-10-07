@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focus::FocusQuickStartDemo;
@@ -55,6 +54,12 @@ pub fn PageFocus() -> impl IntoView {
                             " tells a container whether it holds tabbable elements, so it can become a tab stop itself "
                             "when it doesn\u{2019}t. The "<Link href=routes::doc::focus::Focusability.materialize()>"focusability"</Link>
                             " functions decide what counts as focusable and tabbable for all of them."
+                        </li>
+                        <li>
+                            <strong>"Page regions: "</strong>
+                            <Link href=routes::doc::focus::UseLandmark.materialize()>"use_landmark"</Link>
+                            " makes a large part of the page, such as the navigation or the toasts, a landmark that "
+                            <Keys keys="F6"/>" moves the focus to."
                         </li>
                     </ul>
                 </Section>
@@ -142,6 +147,10 @@ pub fn PageFocus() -> impl IntoView {
                     <TableRow>
                         <TableCell>"Keep DOM focus in an input while the arrow keys move through a list"</TableCell>
                         <TableCell><Link href=routes::doc::focus::VirtualFocus.materialize()>"virtual_focus"</Link></TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"Let keyboard users jump between the large parts of a page"</TableCell>
+                        <TableCell><Link href=routes::doc::focus::UseLandmark.materialize()>"use_landmark"</Link></TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>"Keep focus inside a dialog and restore it afterwards"</TableCell>

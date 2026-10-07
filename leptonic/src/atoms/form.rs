@@ -5,7 +5,10 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{FormValidationContext, ValidationBehavior},
-    utils::{classes::Classes, scoped_context::scoped_view, styles::Styles},
+    utils::{
+        classes::Classes, default_class::with_default_class, scoped_context::scoped_view,
+        styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -30,6 +33,8 @@ pub struct FormContext {
 /// With `ValidationBehavior::Native` (the default), fields use the browser's constraint
 /// validation and show their errors when the form is submitted; with `Aria`, the form sets
 /// `novalidate` and fields show their errors as the user edits.
+///
+/// Default class: `leptonic-Form`.
 #[allow(clippy::implicit_hasher)]
 #[component]
 pub fn Form(
@@ -42,6 +47,7 @@ pub fn Form(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Form", classes);
     let errors = FormValidationContext {
         errors: validation_errors.unwrap_or_default(),
     };

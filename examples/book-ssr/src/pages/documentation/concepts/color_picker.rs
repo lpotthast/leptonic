@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_picker::ColorPickerConceptDemo;
@@ -66,15 +65,6 @@ pub fn PageColorPickerOverview() -> impl IntoView {
                             "each in its own color space."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></TableCell>
-                        <TableCell>
-                            "A themed "<Code inline=true>"ColorPicker"</Code>": a preview, a saturation and brightness area, a "
-                            "hue slider, and fields for the HSB and RGB channels and the hex code. Its parts "
-                            <Code inline=true>"ColorPreview"</Code>", "<Code inline=true>"ColorPalette"</Code>" and "
-                            <Code inline=true>"HueSlider"</Code>" are available on their own."
-                        </TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -125,7 +115,6 @@ pub fn PageColorPickerOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::color_picker::Hook.materialize()>"use_color_picker_state"</Link></li>
                 <li><Link href=routes::doc::color_picker::Atom.materialize()>"Color Picker Atom"</Link></li>
-                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
                 <li><Link href=routes::doc::ColorArea.materialize()>"Color Area"</Link></li>
                 <li><Link href=routes::doc::ColorSwatchPicker.materialize()>"Color Swatch Picker"</Link></li>
                 <li><Link href=routes::doc::Color.materialize()>"Color"</Link></li>

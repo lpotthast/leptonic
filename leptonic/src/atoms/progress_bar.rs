@@ -2,13 +2,13 @@
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    atoms::field::LabelContext,
-    atoms::field::LabelPresence,
+    atoms::field::{LabelContext, LabelPresence},
     hooks::{IntoAttrs, UseProgressBarInput, UseProgressBarReturn, use_progress_bar},
     utils::{
         classes::Classes,
         css::{computed_pct, computed_size},
         data_attributes::flag,
+        default_class::with_default_class,
         number_formatter::NumberFormatOptions,
         number_value::{NumberValue, OptionalNumberSignal},
         style::WidthProperty,
@@ -53,6 +53,8 @@ pub(crate) struct ValueContext {
 /// ```
 ///
 /// Data attributes: `data-indeterminate`.
+///
+/// Default class: `leptonic-ProgressBar`.
 #[allow(clippy::too_many_arguments)]
 #[component]
 pub fn ProgressBar<T: NumberValue>(
@@ -83,6 +85,7 @@ pub fn ProgressBar<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ProgressBar", classes);
     let value = value.into_signal();
     let defaults = UseProgressBarInput::<T>::default();
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
@@ -126,20 +129,26 @@ pub fn ProgressBar<T: NumberValue>(
 /// `[data-indeterminate]`.
 ///
 /// Data attributes: `data-indeterminate`.
+///
+/// Default class: `leptonic-ProgressBarFill`.
 #[component]
 pub fn ProgressBarFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ProgressBarFill", classes);
     fill(classes, styles)
 }
 
 /// The formatted value of a [`ProgressBar`] (its `aria-valuetext`); empty while indeterminate.
+///
+/// Default class: `leptonic-ProgressBarValueText`.
 #[component]
 pub fn ProgressBarValueText(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ProgressBarValueText", classes);
     value_text(classes, styles)
 }
 

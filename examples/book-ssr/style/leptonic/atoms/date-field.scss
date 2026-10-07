@@ -1,0 +1,91 @@
+// Upstream: ../starters/docs/src/DateField.css @ 99e610236
+// Upstream: ../starters/docs/src/DateField.tsx @ 99e610236
+//
+// `DateField`, `DateInput`, `DateSegment` (the input and segments of `TimeField`, `DatePicker` and
+// `DateRangePicker` too).
+//
+// Markup (as the starter):
+//   <DateField>
+//     <Label />
+//     <DateInput>{|segment| <DateSegment segment /> }</DateInput>
+//     <Description /> <FieldError />
+//   </DateField>
+// States as data attributes: a segment's `data-type` (`"literal"` for separators), `data-placeholder`,
+// `data-invalid`, `data-disabled`; the input's `data-focus-within`, `data-disabled`.
+@use "utilities";
+
+@layer utilities {
+  .leptonic-DateInput {
+    @include utilities.inset;
+  }
+}
+
+.leptonic-DateField {
+  display: flex;
+  flex-direction: column;
+}
+
+.leptonic-DateInput {
+  display: inline;
+  padding: 0 var(--spacing-3);
+  box-sizing: border-box;
+  border-radius: var(--radius);
+  font: var(--font-size) system-ui;
+  color: var(--field-text-color);
+  height: var(--spacing-8);
+  line-height: var(--spacing-8);
+  width: fit-content;
+  min-width: 150px;
+  white-space: nowrap;
+  forced-color-adjust: none;
+  cursor: text;
+
+  &[data-focus-within] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: -1px;
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+    cursor: default;
+  }
+}
+
+.leptonic-DateSegment {
+  padding: 2px;
+  font-size: var(--font-size);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--field-text-color);
+  -webkit-tap-highlight-color: transparent;
+
+  &[data-type='literal'] {
+    padding: 0;
+  }
+
+  &[data-placeholder] {
+    color: var(--text-color-placeholder);
+  }
+
+  &:focus {
+    color: var(--highlight-foreground);
+    background: var(--highlight-background);
+    outline: none;
+    border-radius: 4px;
+    caret-color: transparent;
+  }
+
+  &[data-invalid] {
+    color: var(--invalid-color);
+
+    &:focus {
+      background: var(--highlight-background-invalid);
+      color: var(--highlight-foreground);
+    }
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+    cursor: default;
+  }
+}

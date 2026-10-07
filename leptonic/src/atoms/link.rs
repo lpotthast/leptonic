@@ -16,7 +16,10 @@ use crate::{
         HoverEndEvent, HoverStartEvent, Href, LinkElementType, LinkTarget, PressEvent,
         UseAnchorLinkInput, UseLinkInput, use_anchor_link, use_link,
     },
-    utils::{aria::AriaCurrent, classes::Classes, data_attributes::flag, styles::Styles},
+    utils::{
+        aria::AriaCurrent, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -89,6 +92,8 @@ impl<H: ToHref> ToHref for SharedHref<H> {
 ///
 /// Data attributes: `data-pressed`, `data-hovered`, `data-focused`, `data-focus-visible`,
 /// `data-disabled`.
+///
+/// Default class: `leptonic-Link`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Link<H>(
@@ -120,6 +125,7 @@ pub fn Link<H>(
 where
     H: ToHref + Send + Sync + 'static,
 {
+    let classes = with_default_class("leptonic-Link", classes);
     let context = use_context::<LinkContext>();
     let is_disabled = match context {
         Some(ctx) => Signal::derive(move || is_disabled.get() || ctx.is_disabled.get()),
@@ -205,6 +211,8 @@ where
 
 /// A link to an element on the same page: pressing it scrolls the element into view and updates
 /// the URL fragment.
+///
+/// Default class: `leptonic-AnchorLink`.
 #[component]
 pub fn AnchorLink(
     /// The element to link to, by id: `"#my-anchor"` (or `"my-anchor"`).
@@ -222,6 +230,7 @@ pub fn AnchorLink(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-AnchorLink", classes);
     let link = use_anchor_link(UseAnchorLinkInput {
         scroll_behavior,
         link: UseLinkInput {
@@ -229,7 +238,7 @@ pub fn AnchorLink(
             on_press,
             ..UseLinkInput::default()
         },
-        ..UseAnchorLinkInput::new(href)
+        href,
     });
     let (attrs, link_styles) = link.props.into_parts();
 

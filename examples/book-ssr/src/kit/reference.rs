@@ -1,7 +1,7 @@
-use leptonic::{components::prelude::*, hooks::LinkTarget};
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
-use super::Section;
+use super::{Link, Section};
 
 /// Where react-aria's documentation lives. Each page is at the path of its source file below
 /// `packages/dev/s2-docs/pages/react-aria/` in the react-spectrum repository, without the `.mdx` extension.
@@ -54,11 +54,19 @@ const COMPONENT_HOOKS: &[(&str, &str)] = &[
 
 /// Hooks and components with a top-level page (`usePress`, `FocusScope`).
 const TOP_LEVEL_PAGES: &[&str] = &[
+    "Calendar",
     "ColorSwatchPicker",
+    "DateField",
+    "DatePicker",
+    "DateRangePicker",
     "FocusRing",
     "FocusScope",
     "I18nProvider",
     "PortalProvider",
+    "RangeCalendar",
+    "TimeField",
+    "Toast",
+    "Virtualizer",
     "VisuallyHidden",
     "useAsyncList",
     "useClipboard",
@@ -101,11 +109,7 @@ fn doc_path(name: &str) -> Option<String> {
         .iter()
         .find(|(hook, _)| *hook == name)
         .map(|(hook, component)| format!("{component}/{hook}"))
-        .or_else(|| {
-            TOP_LEVEL_PAGES
-                .contains(&name)
-                .then(|| name.to_owned())
-        })
+        .or_else(|| TOP_LEVEL_PAGES.contains(&name).then(|| name.to_owned()))
         .or_else(|| {
             DOCUMENTED_BY_COMPONENT
                 .iter()
@@ -124,7 +128,9 @@ pub fn ReactAria(
 ) -> impl IntoView {
     let href = doc_path(hook).map_or_else(
         || {
-            tracing::error!("react-aria has no documentation page for {hook}: use `ReactAriaSource`");
+            tracing::error!(
+                "react-aria has no documentation page for {hook}: use `ReactAriaSource`"
+            );
             format!("{REACT_ARIA_DOCS}/")
         },
         |path| format!("{REACT_ARIA_DOCS}/{path}"),
@@ -238,12 +244,17 @@ mod tests {
     #[test]
     fn every_named_hook_has_a_documentation_page() {
         let mut found = Vec::new();
-        named_hooks(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages"), &mut found);
+        named_hooks(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pages"),
+            &mut found,
+        );
         assert_that!(found.len()).is_greater_than(0);
         let unknown: Vec<String> = found
             .into_iter()
             .filter(|(_, hook)| doc_path(hook).is_none())
-            .map(|(page, hook)| format!("{page}: {hook} (no react-aria page; use `ReactAriaSource`)"))
+            .map(|(page, hook)| {
+                format!("{page}: {hook} (no react-aria page; use `ReactAriaSource`)")
+            })
             .collect();
         assert_that!(unknown).is_empty();
     }
@@ -255,7 +266,8 @@ mod tests {
         let Some(home) = std::env::var_os("HOME") else {
             return;
         };
-        let pages = Path::new(&home).join("dev/react-spectrum/packages/dev/s2-docs/pages/react-aria");
+        let pages =
+            Path::new(&home).join("dev/react-spectrum/packages/dev/s2-docs/pages/react-aria");
         if !pages.is_dir() {
             return;
         }
@@ -263,7 +275,11 @@ mod tests {
             .iter()
             .map(|(hook, component)| format!("{component}/{hook}"))
             .chain(TOP_LEVEL_PAGES.iter().map(|&page| page.to_owned()))
-            .chain(DOCUMENTED_BY_COMPONENT.iter().map(|(_, page)| (*page).to_owned()))
+            .chain(
+                DOCUMENTED_BY_COMPONENT
+                    .iter()
+                    .map(|(_, page)| (*page).to_owned()),
+            )
             .filter(|page| !pages.join(format!("{page}.mdx")).is_file())
             .collect();
         assert_that!(missing).is_empty();

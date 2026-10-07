@@ -38,11 +38,14 @@ impl MarkdownCache {
 
 /// The pages of `group` in the order of the sidebar: the overview, then each entry followed by its layer pages.
 fn group_pages(group: &NavGroup) -> impl Iterator<Item = &str> {
-    group.overview.as_deref().into_iter().chain(
-        group.entries.iter().flat_map(|entry| {
-            std::iter::once(entry.href.as_str()).chain(entry.tabs.iter().map(|tab| tab.href.as_str()))
-        }),
-    )
+    group
+        .overview
+        .as_deref()
+        .into_iter()
+        .chain(group.entries.iter().flat_map(|entry| {
+            std::iter::once(entry.href.as_str())
+                .chain(entry.tabs.iter().map(|tab| tab.href.as_str()))
+        }))
 }
 
 fn write_page(md: &mut String, docs: &HashMap<String, CachedDoc>, path: &str) {
@@ -54,7 +57,11 @@ fn write_page(md: &mut String, docs: &HashMap<String, CachedDoc>, path: &str) {
     if doc.description.is_empty() {
         let _ = writeln!(md, "- [{}]({md_path})", doc.title);
     } else {
-        let _ = writeln!(md, "- [{}]({md_path}) \u{2014} {}", doc.title, doc.description);
+        let _ = writeln!(
+            md,
+            "- [{}]({md_path}) \u{2014} {}",
+            doc.title, doc.description
+        );
     }
     for section in &doc.sections {
         let _ = writeln!(md, "  - [{}]({md_path}#{})", section.text, section.id);

@@ -106,9 +106,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::button::PageAtomButton);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::button::PageButton);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::button::Atom.materialize())/> }
+                );
             }
         }
 
@@ -156,9 +159,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::checkbox::PageAtomCheckbox);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::checkbox::PageCheckbox);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::checkbox::Atom.materialize())/> }
+                );
             }
         }
 
@@ -209,10 +215,11 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::number_field::PageAtomNumberField);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
+            mod moved_component {
                 page!(
-                    crate::pages::documentation::components::input::number_field::PageNumberField
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::number_field::Atom.materialize())/> }
                 );
             }
         }
@@ -232,9 +239,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::radio::PageAtomRadio);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::radio::PageRadio);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::radio::Atom.materialize())/> }
+                );
             }
         }
 
@@ -258,10 +268,11 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::search_field::PageAtomSearchField);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
+            mod moved_component {
                 page!(
-                    crate::pages::documentation::components::input::search_field::PageSearchField
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::search_field::Atom.materialize())/> }
                 );
             }
         }
@@ -281,9 +292,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::slider::PageAtomSlider);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::slider::PageSlider);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::slider::Atom.materialize())/> }
+                );
             }
         }
 
@@ -302,9 +316,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::switch::PageAtomSwitch);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::switch::PageSwitch);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::switch::Atom.materialize())/> }
+                );
             }
         }
 
@@ -321,7 +338,7 @@ pub mod routes {
             #[route("/component")]
             mod component {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::switch::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::switch::Atom.materialize())/> }
                 );
             }
         }
@@ -341,9 +358,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::text_field::PageAtomTextField);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::text_field::PageTextField);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::text_field::Atom.materialize())/> }
+                );
             }
 
             #[route("/number-field-hook")]
@@ -399,9 +419,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::select::PageAtomSelect);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::select::PageSelect);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::select::Atom.materialize())/> }
+                );
             }
         }
 
@@ -503,9 +526,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::table::PageAtomTable);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::layout::table::PageTable);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::table::Atom.materialize())/> }
+                );
             }
         }
 
@@ -534,7 +560,9 @@ pub mod routes {
 
             #[route("/date-field-hooks")]
             mod moved_date_field_hooks {
-                page!(|| view! { <Redirect path=crate::routes::doc::DateField.materialize()/> });
+                page!(
+                    || view! { <Redirect path=crate::routes::doc::date_field::Hook.materialize()/> }
+                );
             }
 
             #[route("/date-picker-hooks")]
@@ -547,7 +575,7 @@ pub mod routes {
             #[route("/component")]
             mod moved_component {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::date_picker::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::date_picker::Atom.materialize())/> }
                 );
             }
         }
@@ -562,17 +590,34 @@ pub mod routes {
                 page!(crate::pages::documentation::hooks::calendar::PageCalendarHooks);
             }
 
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::calendar::PageAtomCalendar);
+            }
+
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
+            mod moved_component {
                 page!(
-                    crate::pages::documentation::components::input::date_selector::PageDateSelector
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::calendar::Atom.materialize())/> }
                 );
             }
         }
 
         #[route("/date-field")]
         mod date_field {
-            page!(crate::pages::documentation::hooks::date_field::PageDateFieldHooks);
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::date_field::PageDateFieldOverview);
+
+            #[route("/hook")]
+            mod hook {
+                page!(crate::pages::documentation::hooks::date_field::PageDateFieldHooks);
+            }
+
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::date_field::PageAtomDateField);
+            }
         }
 
         #[route("/date-picker")]
@@ -585,15 +630,34 @@ pub mod routes {
                 page!(crate::pages::documentation::hooks::date_picker::PageDatePickerHooks);
             }
 
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::date_picker::PageAtomDatePicker);
+            }
+
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::input::date_time::PageDateTimeInput);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::date_picker::Atom.materialize())/> }
+                );
             }
         }
 
         #[route("/time-field")]
         mod time_field {
-            page!(crate::pages::documentation::hooks::time_field::PageTimeFieldHooks);
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::time_field::PageTimeFieldOverview);
+
+            #[route("/hook")]
+            mod hook {
+                page!(crate::pages::documentation::hooks::time_field::PageTimeFieldHooks);
+            }
+
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::time_field::PageAtomTimeField);
+            }
         }
 
         // ── Concepts: color ─────────────────────────────────────────────
@@ -619,7 +683,7 @@ pub mod routes {
             #[route("/component")]
             mod moved_component {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::color_picker::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::color_picker::Atom.materialize())/> }
                 );
             }
         }
@@ -679,10 +743,11 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::color_picker::PageAtomColorPicker);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
+            mod moved_component {
                 page!(
-                    crate::pages::documentation::components::input::color_picker::PageColorPicker
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::color_picker::Atom.materialize())/> }
                 );
             }
         }
@@ -721,7 +786,9 @@ pub mod routes {
 
         #[route("/color-swatch-picker")]
         mod color_swatch_picker {
-            page!(crate::pages::documentation::atoms::color_swatch_picker::PageAtomColorSwatchPicker);
+            page!(
+                crate::pages::documentation::atoms::color_swatch_picker::PageAtomColorSwatchPicker
+            );
         }
 
         #[route("/color-wheel")]
@@ -797,9 +864,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::modal::PageAtomModal);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::feedback::modal::PageModal);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::modal::Atom.materialize())/> }
+                );
             }
         }
 
@@ -818,9 +888,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::popover::PageAtomPopover);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::feedback::popover::PagePopover);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::popover::Atom.materialize())/> }
+                );
             }
         }
 
@@ -878,10 +951,11 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::disclosure::PageAtomDisclosure);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
+            mod moved_component {
                 page!(
-                    crate::pages::documentation::components::layout::collapsible::PageCollapsible
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::disclosure::Atom.materialize())/> }
                 );
             }
         }
@@ -908,7 +982,7 @@ pub mod routes {
             #[route("/component")]
             mod component {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::disclosure::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::disclosure::Atom.materialize())/> }
                 );
             }
         }
@@ -928,9 +1002,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::link::PageAtomLink);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::layout::link::PageLinkComponents);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::link::Atom.materialize())/> }
+                );
             }
 
             // The anchor link hook and atom are sections of the Hooks and Atoms tabs.
@@ -974,9 +1051,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::tabs::PageAtomTabs);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::layout::tab::PageTab);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::tabs::Atom.materialize())/> }
+                );
             }
         }
 
@@ -1013,9 +1093,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::meter::PageAtomMeter);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::feedback::meter::PageMeterComponent);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::meter::Atom.materialize())/> }
+                );
             }
         }
 
@@ -1034,9 +1117,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::progress_bar::PageAtomProgressBar);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::feedback::progress::PageProgress);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::progress_bar::Atom.materialize())/> }
+                );
             }
         }
 
@@ -1055,14 +1141,33 @@ pub mod routes {
             #[route("/component")]
             mod component {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::progress_bar::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::progress_bar::Atom.materialize())/> }
                 );
             }
         }
 
         #[route("/toast")]
         mod toast {
-            page!(crate::pages::documentation::components::feedback::toast::PageToast);
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::toast::PageToastOverview);
+
+            #[route("/hook")]
+            mod hook {
+                page!(crate::pages::documentation::hooks::toast::PageToastHooks);
+            }
+
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::toast::PageAtomToast);
+            }
+
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
+            #[route("/component")]
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::toast::Atom.materialize())/> }
+                );
+            }
         }
 
         // ── Concepts: content & layout ──────────────────────────────────
@@ -1115,12 +1220,25 @@ pub mod routes {
 
         #[route("/kbd")]
         mod kbd {
-            page!(crate::pages::documentation::components::feedback::kbd::PageKbd);
+            layout!(ConceptLayout);
+            index!(crate::pages::documentation::concepts::kbd::PageKbdOverview);
+
+            #[route("/atom")]
+            mod atom {
+                page!(crate::pages::documentation::atoms::kbd::PageAtomKbd);
+            }
+
+            #[route("/component")]
+            mod component {
+                page!(crate::pages::documentation::components::feedback::kbd::PageKbd);
+            }
         }
 
         #[route("/sanitized-html")]
         mod sanitized_html {
-            page!(crate::pages::documentation::components::general::sanitized_html::PageSanitizedHtml);
+            page!(
+                crate::pages::documentation::components::general::sanitized_html::PageSanitizedHtml
+            );
         }
 
         #[route("/separator")]
@@ -1138,9 +1256,12 @@ pub mod routes {
                 page!(crate::pages::documentation::atoms::separator::PageAtomSeparator);
             }
 
+            // The component layer is gone: the atom page's "Styling" section shows the atom theme.
             #[route("/component")]
-            mod component {
-                page!(crate::pages::documentation::components::layout::separator::PageSeparator);
+            mod moved_component {
+                page!(
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::separator::Atom.materialize())/> }
+                );
             }
         }
 
@@ -1209,6 +1330,11 @@ pub mod routes {
             #[route("/use-keyboard")]
             mod use_keyboard {
                 page!(crate::pages::documentation::hooks::keyboard::PageUseKeyboard);
+            }
+
+            #[route("/use-global-shortcuts")]
+            mod use_global_shortcuts {
+                page!(crate::pages::documentation::hooks::global_shortcuts::PageUseGlobalShortcuts);
             }
 
             #[route("/use-context-menu")]
@@ -1303,6 +1429,11 @@ pub mod routes {
                 );
             }
 
+            #[route("/use-landmark")]
+            mod use_landmark {
+                page!(crate::pages::documentation::hooks::landmark::PageUseLandmark);
+            }
+
             #[route("/use-has-tabbable-child")]
             mod use_has_tabbable_child {
                 page!(
@@ -1377,7 +1508,17 @@ pub mod routes {
 
         #[route("/collection-state")]
         mod collection_state {
-            page!(crate::pages::documentation::groups::collection_state::PageCollectionState);
+            index!(crate::pages::documentation::groups::collection_state::PageCollectionState);
+
+            #[route("/virtualizer")]
+            mod virtualizer {
+                page!(crate::pages::documentation::atoms::virtualizer::PageAtomVirtualizer);
+            }
+
+            #[route("/use-virtualizer-state")]
+            mod use_virtualizer_state {
+                page!(crate::pages::documentation::hooks::virtualizer::PageUseVirtualizerState);
+            }
         }
 
         // The selection hooks were merged into the collection state.
@@ -1440,7 +1581,9 @@ pub mod routes {
 
             #[route("/date-time-formatter")]
             mod date_time_formatter {
-                page!(crate::pages::documentation::utils::date_time_formatter::PageDateTimeFormatter);
+                page!(
+                    crate::pages::documentation::utils::date_time_formatter::PageDateTimeFormatter
+                );
             }
 
             #[route("/list-formatter")]
@@ -1451,6 +1594,11 @@ pub mod routes {
             #[route("/collator")]
             mod collator {
                 page!(crate::pages::documentation::utils::collator::PageCollator);
+            }
+
+            #[route("/scroll")]
+            mod scroll {
+                page!(crate::pages::documentation::utils::scroll::PageScroll);
             }
 
             #[route("/use-spin-button")]
@@ -1628,7 +1776,7 @@ pub mod routes {
             #[route("/date-time")]
             mod date_time {
                 page!(
-                    || view! { <Redirect path=crate::routes::doc::date_picker::Component.materialize()/> }
+                    || view! { <Redirect path=format!("{}#styling", crate::routes::doc::date_picker::Atom.materialize())/> }
                 );
             }
 
@@ -1651,7 +1799,9 @@ pub mod routes {
 
             #[route("/kbd")]
             mod kbd {
-                page!(|| view! { <Redirect path=crate::routes::doc::Kbd.materialize()/> });
+                page!(
+                    || view! { <Redirect path=crate::routes::doc::kbd::Component.materialize()/> }
+                );
             }
 
             #[route("/typography")]

@@ -8,7 +8,15 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-const WORDS: [&str; 7] = ["Zebra", "Äpfel", "olive", "Ångström", "apple", "Öl", "Orange"];
+const WORDS: [&str; 7] = [
+    "Zebra",
+    "Äpfel",
+    "olive",
+    "Ångström",
+    "apple",
+    "Öl",
+    "Orange",
+];
 
 #[component]
 pub fn CollatorDemo() -> impl IntoView {
@@ -32,7 +40,11 @@ pub fn CollatorDemo() -> impl IntoView {
     };
 
     let on_locale_change = move |key: Option<Key>| {
-        if let Some(new_locale) = key.as_ref().and_then(Key::as_str).and_then(|tag| tag.parse().ok()) {
+        if let Some(new_locale) = key
+            .as_ref()
+            .and_then(Key::as_str)
+            .and_then(|tag| tag.parse().ok())
+        {
             locale.set(new_locale);
         }
     };

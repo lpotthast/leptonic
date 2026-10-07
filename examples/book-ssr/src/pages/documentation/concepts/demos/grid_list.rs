@@ -4,12 +4,20 @@ use leptonic::{
 };
 use leptos::prelude::*;
 
-const FILES: [(&str, &str); 3] = [("doc", "Document.pdf"), ("photo", "Photo.jpg"), ("sheet", "Budget.xlsx")];
+const FILES: [(&str, &str); 3] = [
+    ("doc", "Document.pdf"),
+    ("photo", "Photo.jpg"),
+    ("sheet", "Budget.xlsx"),
+];
 
 #[component]
 pub fn GridListConceptDemo() -> impl IntoView {
     // A key and a text value (for type-ahead) per file.
-    let files = use_list_collection(Signal::stored(FILES.to_vec()), |(key, _)| Key::from(*key), |(_, name)| (*name).to_owned());
+    let files = use_list_collection(
+        Signal::stored(FILES.to_vec()),
+        |(key, _)| Key::from(*key),
+        |(_, name)| (*name).to_owned(),
+    );
     let selection = RwSignal::new(Selection::default());
     let opened = RwSignal::new(None::<Key>);
 
@@ -34,9 +42,16 @@ pub fn GridListConceptDemo() -> impl IntoView {
                 .collect_view()}
         </GridList>
         <p class="demo-status">
-            {move || match opened.get() {
-                Some(key) => format!("Opened: {key}."),
-                None => "Nothing opened yet (Enter or double click opens a file).".to_owned(),
+            {move || {
+                let name = |key: &Key| FILES.iter().find(|(k, _)| key.as_str() == Some(*k)).map_or("", |(_, name)| *name);
+                let selected = selection.with(|selection| match selection {
+                    Selection::Keys(keys) => keys.iter().next().map_or("none", name),
+                    Selection::All => "all",
+                });
+                match opened.get() {
+                    Some(key) => format!("Selected: {selected}. Opened: {}.", name(&key)),
+                    None => format!("Selected: {selected}. Nothing opened yet (Enter or double click opens a file)."),
+                }
             }}
         </p>
     }

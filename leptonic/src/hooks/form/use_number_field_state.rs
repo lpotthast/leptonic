@@ -317,6 +317,7 @@ pub fn use_number_field_state<T: NumberValue>(
     });
 
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value,
         validate,

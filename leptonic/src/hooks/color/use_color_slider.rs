@@ -29,7 +29,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_slider`]. Start from [`UseColorSliderInput::new`].
+/// Input of [`use_color_slider`].
 #[derive(Debug, Clone)]
 pub struct UseColorSliderInput<C: ColorValue> {
     pub state: ColorSliderState<C>,
@@ -43,20 +43,6 @@ pub struct UseColorSliderInput<C: ColorValue> {
     pub name: Option<String>,
     /// The id of a `<form>` the input belongs to.
     pub form: Option<String>,
-}
-
-impl<C: ColorValue> UseColorSliderInput<C> {
-    pub fn new(state: ColorSliderState<C>) -> Self {
-        Self {
-            state,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            name: None,
-            form: None,
-        }
-    }
 }
 
 /// Return value of [`use_color_slider`].
@@ -99,24 +85,37 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
         aria_label,
         aria_labelledby,
         aria_describedby,
-        ..UseSliderInput::new(state.slider)
+        state: state.slider,
+        id: None,
     });
     let mut thumb = use_slider_thumb(UseSliderThumbInput {
         is_disabled: state.slider.is_disabled,
         name,
         form,
-        ..UseSliderThumbInput::new(state.slider, &slider)
+        state: state.slider,
+        slider: slider.data.clone(),
+        track: slider.track_element,
+        index: 0,
+        is_required: Signal::default(),
+        is_invalid: Signal::default(),
+        has_label: Signal::stored(false),
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
     });
     let value = state.value;
     thumb.input_props.aria_valuetext = Signal::derive(move || {
-        // The hue names a hue slider, the color the other channels (react-aria).
+        // The hue names a hue slider, the color the other channels, nothing an alpha slider
+        // (react-aria).
         let color = value.get();
-        let name = if C::hue_channel() == Some(channel) {
-            color.hue_name()
+        let text = color.format_channel_value(channel);
+        if C::is_alpha_channel(channel) {
+            text
+        } else if C::hue_channel() == Some(channel) {
+            format!("{text}, {}", color.hue_name())
         } else {
-            color.color_name()
-        };
-        format!("{}, {name}", color.format_channel_value(channel))
+            format!("{text}, {}", color.color_name())
+        }
     });
 
     let display_color = state.display_color();

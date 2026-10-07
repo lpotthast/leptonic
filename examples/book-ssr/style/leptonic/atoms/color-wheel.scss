@@ -1,0 +1,15 @@
+// Upstream: ../starters/docs/src/ColorWheel.css @ 99e610236
+// Upstream: ../starters/docs/src/ColorWheel.tsx @ 99e610236
+//
+// `ColorWheel`, `ColorWheelTrack`; the thumb is styled by `color-thumb.scss`.
+//
+// Markup (as the starter, which sets `outer_radius=100.0 inner_radius=74.0`):
+//   <ColorWheel><ColorWheelTrack /><ColorThumb /></ColorWheel>
+
+.leptonic-ColorWheel {
+  &[data-disabled] {
+    .leptonic-ColorWheelTrack {
+      background: gray !important;
+    }
+  }
+}

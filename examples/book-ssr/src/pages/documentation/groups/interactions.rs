@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::interactions::InteractionsQuickStartDemo;
@@ -45,6 +44,11 @@ pub fn PageInteractions() -> impl IntoView {
                             <Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link>
                             " handles any key, while "<Code inline=true>"use_press"</Code>" already handles "
                             <Keys keys="Enter"/>" and "<Keys keys="Space"/>" as presses."
+                        </li>
+                        <li>
+                            <Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link>
+                            " binds shortcuts to the whole page instead of one element. It sees every key press first, also "
+                            "those inside leptonic\u{2019}s components, which stop their events from bubbling."
                         </li>
                         <li>
                             <Link href=routes::doc::interactions::UseContextMenu.materialize()>"use_context_menu"</Link>

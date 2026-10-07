@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::dialog::DialogConceptDemo;
@@ -51,9 +50,7 @@ pub fn PageDialogOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                    " for how the layers relate. There is no styled dialog of its own: the "
-                    <Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link>" and the "
-                    <Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link>" contain one."
+                    " for how the layers relate."
                 </p>
 
                 <DocTable headers=&["Layer", "What you get"]>

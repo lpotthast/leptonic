@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_slider::ColorSliderDemo;
@@ -35,9 +34,25 @@ pub fn PageUseColorSlider() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let state = use_color_slider_state(UseColorSliderStateInput::new(HSV::new(), HsvChannel::Hue));
+                        let state = use_color_slider_state(UseColorSliderStateInput {
+                            default_value: HSV::new(),
+                            value: None,
+                            channel: HsvChannel::Hue,
+                            is_disabled: false.into(),
+                            orientation: Signal::stored(Orientation::Horizontal),
+                            on_change: None,
+                            on_change_end: None,
+                        });
                         let UseColorSliderReturn { slider, thumb, track_styles, input_styles } =
-                            use_color_slider(UseColorSliderInput::new(state));
+                            use_color_slider(UseColorSliderInput {
+                                state,
+                                has_label: false.into(),
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
+                                name: None,
+                                form: None,
+                            });
                         let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
 
@@ -84,17 +99,17 @@ pub fn PageUseColorSlider() -> impl IntoView {
 
                 <Section title="Input" id="use-color-slider-state-input">
                     <p>
-                        "Start from "<Code inline=true>"UseColorSliderStateInput::new(default_value, channel)"</Code>
-                        " and change single fields:"
+                        "Pass a "<Code inline=true>"UseColorSliderStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseColorSliderStateInput">
-                        <ApiRow name="default_value" ty="C">"The initial color. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="default_value" ty="C">"The initial color. Required."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<C>>" default="None">
                             "The color as app state, replacing "<Code inline=true>"default_value"</Code>": "
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
                             <Code inline=true>"ValueBinding::new(signal, callback)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The channel the slider changes. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The channel the slider changes. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the slider is disabled."</ApiRow>
                         <ApiRow name="orientation" ty="Signal<Orientation>" default="Orientation::Horizontal">
                             "The direction of the track: how pointer positions and the gradient map to values."
@@ -148,11 +163,11 @@ pub fn PageUseColorSlider() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-color-slider-input">
-                    <p>"Start from "<Code inline=true>"UseColorSliderInput::new(state)"</Code>" and change single fields:"</p>
+                    <p>"Pass a "<Code inline=true>"UseColorSliderInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseColorSliderInput">
                         <ApiRow name="state" ty="ColorSliderState<C>">
-                            "The state from "<Code inline=true>"use_color_slider_state"</Code>". Required (the argument of "
-                            <Code inline=true>"new"</Code>")."
+                            "The state from "<Code inline=true>"use_color_slider_state"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"slider.label_props"</Code>"."

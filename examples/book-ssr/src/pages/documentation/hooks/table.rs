@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{table::TableHookDemo, table_resizing::TableResizingHookDemo};
@@ -32,7 +31,6 @@ pub fn PageUseTableHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Table.materialize()>"Table overview"</Link></li>
                 <li><Link href=routes::doc::table::Atom.materialize()>"Table Atoms"</Link></li>
-                <li><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></li>
                 <li><Link href=routes::doc::grid::Hook.materialize()>"Grid Hooks"</Link>" \u{2014} the grid the table builds on"</li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
@@ -265,12 +263,12 @@ fn TableStateSections() -> impl IntoView {
             <p>"Holds the rows\u{2019} selection, the focus and the sorting of a table."</p>
 
             <Section title="Input" id="use-table-state-input">
-                <p>"Create the input with "<Code inline=true>"UseTableStateInput::new(table)"</Code>"."</p>
+                <p>"Pass a "<Code inline=true>"UseTableStateInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseTableStateInput">
                     <ApiRow name="table" ty="Memo<Arc<TableCollection>>">"The columns and rows."</ApiRow>
                     <ApiRow name="selection" ty="SelectionOptions" default="no selection">
                         "Row selection, see "<Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link>". "
-                        <Code inline=true>"new"</Code>" sets "<Code inline=true>"disabled_behavior"</Code>" to "
+                        "Tables usually set "<Code inline=true>"disabled_behavior"</Code>" to "
                         <Code inline=true>"DisabledBehavior::Selection"</Code>": disabled rows can be focused, not selected."
                     </ApiRow>
                     <ApiRow name="focus_mode" ty="GridFocusMode" default="Row">
@@ -286,11 +284,9 @@ fn TableStateSections() -> impl IntoView {
                     </ApiRow>
                 </ApiTable>
                 <p>
-                    "When you replace "<Code inline=true>"selection"</Code>" with "
-                    <Code inline=true>"SelectionOptions { .., ..SelectionOptions::default() }"</Code>", set "
-                    <Code inline=true>"disabled_behavior: DisabledBehavior::Selection"</Code>" again if you want to keep "
-                    "the table default; "<Code inline=true>"SelectionOptions::default()"</Code>" uses "
-                    <Code inline=true>"All"</Code>"."
+                    <Code inline=true>"SelectionOptions::default()"</Code>" uses "<Code inline=true>"DisabledBehavior::All"</Code>
+                    ", which also keeps focus off disabled rows. For a table without selection, pass "
+                    <Code inline=true>"SelectionOptions { disabled_behavior: DisabledBehavior::Selection, ..SelectionOptions::default() }"</Code>"."
                 </p>
             </Section>
 
@@ -334,8 +330,15 @@ fn TableStateSections() -> impl IntoView {
                             });
                         })));
                         let state = use_table_state(UseTableStateInput {
+                            table,
+                            selection: SelectionOptions {
+                                disabled_behavior: DisabledBehavior::Selection,
+                                ..SelectionOptions::default()
+                            },
+                            focus_mode: GridFocusMode::Row,
+                            default_sort_descriptor: None,
                             sort_descriptor: Some(sort.into()),
-                            ..UseTableStateInput::new(table)
+                            on_sort_change: None,
                         });
                     "#)}
                 </Code>
@@ -346,7 +349,7 @@ fn TableStateSections() -> impl IntoView {
             <p>"Makes the "<Code inline=true>"<table>"</Code>" element a grid and provides what rows and cells need."</p>
 
             <Section title="Input" id="use-table-input">
-                <p>"Create the input with "<Code inline=true>"UseTableInput::new(state, element)"</Code>"."</p>
+                <p>"Pass a "<Code inline=true>"UseTableInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseTableInput">
                     <ApiRow name="state" ty="TableState">"From "<Code inline=true>"use_table_state"</Code>"."</ApiRow>
                     <ApiRow name="element" ty="CapturedElement">"The table element. The props capture it."</ApiRow>
@@ -376,7 +379,9 @@ fn TableStateSections() -> impl IntoView {
                 <ApiTable kind=ApiKind::Return of="UseTableReturn">
                     <ApiRow name="props" ty="UseGridProps">
                         "For the "<Code inline=true>"<table>"</Code>": id, "<Code inline=true>"role=\"grid\""</Code>", label, "
-                        <Code inline=true>"aria-multiselectable"</Code>", keyboard and focus handling."
+                        <Code inline=true>"aria-multiselectable"</Code>", the "<Code inline=true>"aria-describedby"</Code>" of the sort "
+                        "description (\u{201c}sorted by column Type in ascending order\u{201d}), keyboard and focus handling. "
+                        "Sort changes are announced."
                     </ApiRow>
                     <ApiRow name="data" ty="TableData">
                         "Hand this to the row, cell and header hooks. Holds the "<Code inline=true>"state"</Code>", the "
@@ -389,8 +394,17 @@ fn TableStateSections() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         let UseTableReturn { props, data } = use_table(UseTableInput {
+                            state,
+                            element: CapturedElement::new(),
+                            id: None,
                             aria_label: "People".into(),
-                            ..UseTableInput::new(state, CapturedElement::new())
+                            aria_labelledby: None,
+                            keyboard_delegate: None,
+                            options: CollectionOptions::default(),
+                            keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
+                            should_select_on_press_up: false,
+                            on_row_action: None,
+                            on_cell_action: None,
                         });
 
                         view! {
@@ -452,7 +466,7 @@ fn TableHeaderSections() -> impl IntoView {
             </p>
 
             <Section title="Input" id="use-table-column-header-input">
-                <p>"Create the input with "<Code inline=true>"UseTableColumnHeaderInput::new(data, column_key)"</Code>"."</p>
+                <p>"Pass a "<Code inline=true>"UseTableColumnHeaderInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseTableColumnHeaderInput">
                     <ApiRow name="table" ty="TableData">"From "<Code inline=true>"use_table"</Code>"."</ApiRow>
                     <ApiRow name="key" ty="Key">"The column\u{2019}s key."</ApiRow>
@@ -479,7 +493,11 @@ fn TableHeaderSections() -> impl IntoView {
             <Section title="Example" id="use-table-column-header-example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        let header = use_table_column_header(UseTableColumnHeaderInput::new(data, column));
+                        let header = use_table_column_header(UseTableColumnHeaderInput {
+                            table: data,
+                            key: column,
+                            allows_arrow_navigation: false,
+                        });
                         let (attrs, styles) = header.column_header_props.into_parts();
                         view! { <th {..attrs} style=styles>{text}</th> }
                     ")}
@@ -502,6 +520,9 @@ fn TableBodySections() -> impl IntoView {
                 <ApiTable kind=ApiKind::Input of="UseTableRowInput">
                     <ApiRow name="table" ty="TableData">"From "<Code inline=true>"use_table"</Code>"."</ApiRow>
                     <ApiRow name="key" ty="Key">"The row\u{2019}s key in the collection."</ApiRow>
+                    <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>" default="None">
+                        "Called when a context menu is requested on the row (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the row\u{2019}s menu then replaces the browser\u{2019}s."
+                    </ApiRow>
                 </ApiTable>
             </Section>
 
@@ -516,7 +537,7 @@ fn TableBodySections() -> impl IntoView {
                     <ApiRow name="is_selected, is_focused, is_pressed" ty="Signal<bool>">"The row\u{2019}s state."</ApiRow>
                     <ApiRow name="is_disabled" ty="Signal<bool>">
                         "Whether the row is disabled for interaction. Only with "<Code inline=true>"DisabledBehavior::All"</Code>
-                        "; with the table default "<Code inline=true>"Selection"</Code>", check "
+                        "; with "<Code inline=true>"Selection"</Code>", check "
                         <Code inline=true>"allows_selection"</Code>"."
                     </ApiRow>
                     <ApiRow name="allows_selection, has_action" ty="Signal<bool>">"Whether the row can be selected, and whether it has an action."</ApiRow>
@@ -526,7 +547,7 @@ fn TableBodySections() -> impl IntoView {
             <Section title="Example" id="use-table-row-example">
                 <Code language=Language::Rust>
                     {indoc!(r"
-                        let row = use_table_row(UseTableRowInput { table: data.clone(), key: key.clone() });
+                        let row = use_table_row(UseTableRowInput { table: data.clone(), key: key.clone(), on_context_menu: None });
                         let (attrs, styles) = row.row_props.into_parts();
                         view! {
                             <tr {..attrs} style=styles>
@@ -547,7 +568,7 @@ fn TableBodySections() -> impl IntoView {
             </p>
 
             <Section title="Input" id="use-table-cell-input">
-                <p>"Create the input with "<Code inline=true>"UseTableCellInput::new(data, Key::cell(&row, index))"</Code>"."</p>
+                <p>"Pass a "<Code inline=true>"UseTableCellInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseTableCellInput">
                     <ApiRow name="table" ty="TableData">"From "<Code inline=true>"use_table"</Code>"."</ApiRow>
                     <ApiRow name="key" ty="Key">"The cell\u{2019}s key, "<Code inline=true>"Key::cell(&row, column_index)"</Code>"."</ApiRow>
@@ -576,7 +597,13 @@ fn TableBodySections() -> impl IntoView {
                     {indoc!(r"
                         #[component]
                         fn Cell(table: TableData, key: Key, children: Children) -> impl IntoView {
-                            let cell = use_table_cell(UseTableCellInput::new(table, key));
+                            let cell = use_table_cell(UseTableCellInput {
+                                table,
+                                key,
+                                focus_mode: None,
+                                allows_arrow_navigation: false,
+                                should_select_on_press_up: false,
+                            });
                             let (attrs, styles) = cell.grid_cell_props.into_parts();
                             view! { <td {..attrs} style=styles>{children()}</td> }
                         }
@@ -703,8 +730,8 @@ fn TableResizingSections() -> impl IntoView {
 
             <Section title="Input" id="use-table-column-resize-state-input">
                 <p>
-                    "Create the input with "
-                    <Code inline=true>"UseTableColumnResizeStateInput::new(table_state, table_width)"</Code>"."
+                    "Pass a "<Code inline=true>"UseTableColumnResizeStateInput"</Code>" with every field named; the Default "
+                    "column gives the value for fields you don\u{2019}t need."
                 </p>
                 <ApiTable kind=ApiKind::Input of="UseTableColumnResizeStateInput">
                     <ApiRow name="table_state" ty="TableState">"From "<Code inline=true>"use_table_state"</Code>"."</ApiRow>
@@ -770,10 +797,19 @@ fn TableResizingSections() -> impl IntoView {
                     {indoc!(r"
                         let container = NodeRef::<html::Div>::new();
                         let width = use_element_size(container).width;
-                        let resize = use_table_column_resize_state(UseTableColumnResizeStateInput::new(state, width));
+                        let resize = use_table_column_resize_state(UseTableColumnResizeStateInput {
+                            table_state: state,
+                            table_width: width,
+                            default_width: None,
+                            default_min_width: None,
+                        });
 
                         // In a column header: its width, from the state (`pixels` makes it a CSS `Size`, see the demo).
-                        let header = use_table_column_header(UseTableColumnHeaderInput::new(data, column.clone()));
+                        let header = use_table_column_header(UseTableColumnHeaderInput {
+                            table: data,
+                            key: column.clone(),
+                            allows_arrow_navigation: false,
+                        });
                         let (attrs, styles) = header.column_header_props.into_parts();
                         let width = move || WidthProperty.declare(pixels(resize.column_width(&column)));
                         view! { <th {..attrs} style=styles.add_reactive(width)>{text}</th> }
@@ -799,8 +835,8 @@ fn TableResizingSections() -> impl IntoView {
 
             <Section title="Input" id="use-table-column-resize-input">
                 <p>
-                    "Create the input with "
-                    <Code inline=true>"UseTableColumnResizeInput::new(state, table_data, column, element)"</Code>"."
+                    "Pass a "<Code inline=true>"UseTableColumnResizeInput"</Code>" with every field named; the Default column "
+                    "gives the value for fields you don\u{2019}t need."
                 </p>
                 <ApiTable kind=ApiKind::Input of="UseTableColumnResizeInput">
                     <ApiRow name="state" ty="TableColumnResizeState">"From "<Code inline=true>"use_table_column_resize_state"</Code>"."</ApiRow>
@@ -850,9 +886,19 @@ fn TableResizingSections() -> impl IntoView {
             <Section title="Example" id="use-table-column-resize-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        let resizer = use_table_column_resize(UseTableColumnResizeInput::new(
-                            resize, data, column, CapturedElement::new(),
-                        ));
+                        let resizer = use_table_column_resize(UseTableColumnResizeInput {
+                            state: resize,
+                            table: data,
+                            column,
+                            aria_label: "Resizer".to_owned(),
+                            element: CapturedElement::new(),
+                            trigger: None,
+                            is_disabled: Signal::stored(false),
+                            on_resize_start: None,
+                            on_resize: None,
+                            on_resize_end: None,
+                        });
+
                         let (attrs, styles) = resizer.resizer_props.into_parts();
                         let (input_attrs, input_styles) = resizer.input_props.into_parts();
                         view! {

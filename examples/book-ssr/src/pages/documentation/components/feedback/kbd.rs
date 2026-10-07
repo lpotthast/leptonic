@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -13,16 +12,11 @@ pub fn PageKbd() -> impl IntoView {
     view! {
         <DocPage title="Kbd Components">
             <p>
-                "Key caps show keys and keyboard shortcuts in text, e.g. in help texts or next to the actions they "
-                "trigger, so that users learn them. The "<Code inline=true>"KbdKey"</Code>" component renders a key cap "
-                "in a "<Code inline=true>"<kbd>"</Code>" element, "<Code inline=true>"KbdShortcut"</Code>" a combination "
-                "of keys. The keys come from the "<Code inline=true>"KeyboardKey"</Code>" enum ("
-                <Code inline=true>"leptonic::utils::key"</Code>"), which knows their labels."
-            </p>
-            <p>
-                "These components only display keys. They don\u{2019}t listen for key presses: handle the shortcut itself "
-                "with "<Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link>" or its "
-                <Code inline=true>"Shortcut"</Code>"s."
+                "The themed "<Code inline=true>"KbdKey"</Code>" component renders a key cap in a "
+                <Code inline=true>"<kbd>"</Code>", "<Code inline=true>"KbdShortcut"</Code>" a combination of keys. The "
+                "keys come from the "<Code inline=true>"KeyboardKey"</Code>" enum ("<Code inline=true>"leptonic::utils::key"</Code>
+                "), which knows their labels. See the "<Link href=routes::doc::Kbd.materialize()>"Kbd overview"</Link>
+                " for concept guidance."
             </p>
 
             <Demo description="Sentence with the key cap of the Escape key" source=include_str!("demos/kbd_single.rs")>
@@ -121,22 +115,14 @@ pub fn PageKbd() -> impl IntoView {
                 </Demo>
             </Section>
 
-            <Section title="Accessibility">
-                <p>
-                    "Screen readers read a "<Code inline=true>"<kbd>"</Code>" as its text. Where a key\u{2019}s label is a "
-                    "glyph or an abbreviation they would read wrongly (\u{2318}, \u{21e7}, PgUp), "
-                    <Code inline=true>"KbdKey"</Code>" hides the label from them and adds the key\u{2019}s spoken name in "
-                    "visually hidden text (\u{201c}Command\u{201d}, \u{201c}Shift\u{201d}, \u{201c}Page Up\u{201d})."
-                </p>
-            </Section>
-
             <Section title="Styling">
                 <p>"Override any of these CSS variables to adapt key caps to your design:"</p>
                 <CssVariables prefix="--leptonic-kbd-" scss=theme_scss!("kbd")/>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
+                <li><Link href=routes::doc::Kbd.materialize()>"Kbd overview"</Link></li>
+                <li><Link href=routes::doc::kbd::Atom.materialize()>"Kbd Atom"</Link></li>
                 <li><Link href=routes::doc::Typography.materialize()>"Typography Components"</Link></li>
                 <li><Link href=routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
             </SeeAlso>

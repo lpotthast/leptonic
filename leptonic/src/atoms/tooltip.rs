@@ -15,7 +15,8 @@ use crate::{
         use_tooltip_trigger, use_tooltip_trigger_state,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -139,6 +140,8 @@ pub fn TooltipTrigger(
 ///
 /// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping). CSS
 /// variable: `--trigger-anchor-point` (the point closest to the trigger).
+///
+/// Default class: `leptonic-Tooltip`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn Tooltip(
@@ -162,6 +165,7 @@ pub fn Tooltip(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Tooltip", classes);
     let Some(TooltipTriggerContext {
         state,
         tooltip_id,
@@ -190,7 +194,14 @@ pub fn Tooltip(
         on_close: Some(Callback::new(move |()| {
             state.close(TooltipTiming::Immediate);
         })),
-        ..UseOverlayPositionInput::new(trigger, is_open)
+        target: trigger,
+        is_open,
+        boundary: None,
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        should_update_position: Signal::stored(true),
+        target_rect: Signal::stored(None),
+        scroll: None,
     });
     let tooltip = use_tooltip(UseTooltipInput {
         state: Some(state),
@@ -229,7 +240,8 @@ pub fn Tooltip(
                 let entering = CapturedElement::new();
                 let is_entering = use_enter_animation(UseEnterAnimationInput {
                     is_ready: Signal::derive(move || resolved_placement.get().is_some()),
-                    ..UseEnterAnimationInput::new(entering)
+                    element: entering,
+on_enter: None
                 })
                 .is_entering;
                 view! {

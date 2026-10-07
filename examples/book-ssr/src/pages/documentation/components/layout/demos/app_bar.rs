@@ -8,7 +8,8 @@ pub fn AppBarDemo() -> impl IntoView {
     view! {
         // A scrolling frame standing in for the page: the bar sticks to its top.
         <div class="demo-app-bar-frame" role="region" aria-label="Scrolling page" tabindex="0">
-            <AppBar height=em(3.0) classes="demo-app-bar">
+            // A second banner on the page: its name tells it apart from the book's own app bar.
+            <AppBar height=em(3.0) aria_label="My App" classes="demo-app-bar">
                 <span class="demo-app-bar-title">"My App"</span>
                 <div class="demo-app-bar-actions">
                     // Icon-only buttons are named with `aria-label`; the icons themselves are decorative.

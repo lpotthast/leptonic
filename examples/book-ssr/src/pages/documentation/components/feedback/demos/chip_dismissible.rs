@@ -4,6 +4,7 @@ use leptos::prelude::*;
 #[component]
 pub fn ChipDismissibleDemo() -> impl IntoView {
     let (is_filtering, set_filtering) = signal(true);
+    let disabled = RwSignal::new(false);
 
     view! {
         // The chip doesn't remove itself: stop rendering it when it is dismissed.
@@ -11,12 +12,15 @@ pub fn ChipDismissibleDemo() -> impl IntoView {
             when=move || is_filtering.get()
             fallback=move || view! { <Button on_press=move |_| set_filtering.set(true)>"Show open issues only"</Button> }
         >
-            <Chip color=ChipColor::Secondary on_dismiss=move |()| set_filtering.set(false) dismiss_label="Remove filter">
+            <Chip color=ChipColor::Secondary on_dismiss=move |()| set_filtering.set(false) dismiss_label="Remove filter" is_disabled=disabled>
                 "Status: open"
             </Chip>
         </Show>
         <p class="demo-status">
             {move || if is_filtering.get() { "Showing open issues." } else { "Showing all issues." }}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
     }
 }

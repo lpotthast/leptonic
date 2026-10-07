@@ -28,7 +28,11 @@ pub fn ListFormatterDemo() -> impl IntoView {
     };
 
     let on_locale_change = move |key: Option<Key>| {
-        if let Some(new_locale) = key.as_ref().and_then(Key::as_str).and_then(|tag| tag.parse().ok()) {
+        if let Some(new_locale) = key
+            .as_ref()
+            .and_then(Key::as_str)
+            .and_then(|tag| tag.parse().ok())
+        {
             locale.set(new_locale);
         }
     };

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::modal_basic::ModalHooksDemo;
@@ -62,8 +61,8 @@ pub fn PageUseModalHook() -> impl IntoView {
 
                 <Section title="Input" id="use-modal-backdrop-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseModalBackdropInput::new(state)"</Code>
-                        " and change what you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseModalBackdropInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseModalBackdropInput">
@@ -110,9 +109,13 @@ pub fn PageUseModalHook() -> impl IntoView {
                             let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
                             let UseModalBackdropReturn { modal_props, .. } =
                                 use_modal_backdrop(UseModalBackdropInput {
+                                    state,
                                     is_dismissable: true.into(),
-                                    ..UseModalBackdropInput::new(state)
+                                    is_keyboard_dismiss_disabled: false.into(),
+                                    should_close_on_interact_outside: None,
+                                    is_entering: false.into(),
                                 });
+
                             // `<Show>` renders the modal on every opening: keep the attributes.
                             let modal_attrs = StoredValue::new(modal_props.into_attrs());
 
@@ -167,7 +170,6 @@ pub fn PageUseModalHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Modal.materialize()>"Modal overview"</Link></li>
                 <li><Link href=routes::doc::modal::Atom.materialize()>"Modal Atoms"</Link></li>
-                <li><Link href=routes::doc::modal::Component.materialize()>"Modal Components"</Link></li>
                 <li><Link href=routes::doc::dialog::Hook.materialize()>"use_dialog"</Link></li>
                 <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>
                 <li><Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link></li>

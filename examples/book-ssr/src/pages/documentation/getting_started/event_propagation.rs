@@ -1,8 +1,9 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{event_propagation::EventPropagationDemo, event_propagation_press::EventPropagationPressDemo};
+use super::demos::{
+    event_propagation::EventPropagationDemo, event_propagation_press::EventPropagationPressDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -58,6 +59,14 @@ pub fn PageEventPropagation() -> impl IntoView {
                             "Only when you passed a callback that doesn\u{2019}t call "<Code inline=true>"continue_propagation()"</Code>
                             ". Without a callback, keys bubble; so do keys none of your keyboard shortcuts matches."
                         </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>
+                            "Wheel events of "<Code inline=true>"use_scroll_wheel"</Code>" (except while "<Keys keys="Control"/>
+                            " is held, for zooming), "<Code inline=true>"contextmenu"</Code>" events of "
+                            <Code inline=true>"use_context_menu"</Code>", and the outside presses that close an overlay"
+                        </TableCell>
+                        <TableCell>"Always."</TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell>

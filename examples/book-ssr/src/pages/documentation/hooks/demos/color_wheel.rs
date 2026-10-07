@@ -15,17 +15,28 @@ pub fn ColorWheelDemo() -> impl IntoView {
 
     let state = use_color_wheel_state(UseColorWheelStateInput {
         is_disabled: disabled.into(),
-        ..UseColorWheelStateInput::new(
-            HSV {
-                hue: 210.0,
-                saturation: 1.0,
-                value: 1.0,
-            },
-            HsvChannel::Hue,
-        )
+        default_value: HSV {
+            hue: 210.0,
+            saturation: 1.0,
+            value: 1.0,
+        },
+        value: None,
+        channel: HsvChannel::Hue,
+        on_change: None,
+        on_change_end: None,
     });
     // A ring between the radii 100 and 74 pixels.
-    let wheel = use_color_wheel(UseColorWheelInput::new(state, 100.0, 74.0));
+    let wheel = use_color_wheel(UseColorWheelInput {
+        state,
+        outer_radius: 100.0,
+        inner_radius: 74.0,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_details: None,
+        name: None,
+        form: None,
+    });
 
     // The focus is on the hidden input inside the thumb: `within` reports it on the thumb as
     // `data-focus-visible`.

@@ -18,8 +18,14 @@ use super::{
 use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
-        interactions::use_press::{
-            LongPressEvent, PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press,
+        interactions::{
+            use_context_menu::{
+                ContextMenuEvent, UseContextMenuAttrs, UseContextMenuInput, UseContextMenuProps,
+                UseContextMenuReturn, use_context_menu,
+            },
+            use_press::{
+                LongPressEvent, PressEvent, UsePressAttrs, UsePressInput, UsePressProps, use_press,
+            },
         },
     },
     utils::{
@@ -88,6 +94,10 @@ pub struct UseSelectableItemInput {
     pub focus: Option<Callback<()>>,
     /// DOM focus stays elsewhere (e.g. in a combo box input); the item is focused virtually.
     pub should_use_virtual_focus: bool,
+    /// Called when a context menu is requested on the item (right click, Shift+F10, the
+    /// context menu key; a long press on iOS unless it selects): the item's own replaces the
+    /// browser's.
+    pub on_context_menu: Option<Callback<ContextMenuEvent>>,
 }
 
 /// Return value of [`use_selectable_item`].
@@ -115,6 +125,7 @@ pub struct UseSelectableItemProps {
     pub press: UsePressProps,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_dragstart_capture: EventHandler<DragEvent>,
+    pub context_menu: UseContextMenuProps,
 }
 
 pub type UseSelectableItemAttrs = (
@@ -125,6 +136,7 @@ pub type UseSelectableItemAttrs = (
     UsePressAttrs,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::Capture<ev::dragstart>, SharedEventCallback<DragEvent>>,
+    UseContextMenuAttrs,
 );
 
 impl IntoAttrs for UseSelectableItemProps {
@@ -140,6 +152,7 @@ impl IntoAttrs for UseSelectableItemProps {
             self.on_focus.into_on(ev::focus),
             self.on_dragstart_capture
                 .into_on(ev::capture(ev::dragstart)),
+            self.context_menu.into_attrs(),
         )
     }
 }
@@ -163,7 +176,13 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
         link_behavior,
         focus,
         should_use_virtual_focus,
+        on_context_menu,
     } = input;
+    let UseContextMenuReturn {
+        props: context_menu_props,
+        on_long_press_start: context_menu_long_press_start,
+        on_long_press: context_menu_long_press,
+    } = use_context_menu(UseContextMenuInput { on_context_menu });
 
     let id = id.unwrap_or_else(|| use_id("item"));
     item_elements.register(key.clone(), element);
@@ -405,13 +424,27 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             on_press_start.run(e);
         })),
         on_press_up,
+        // A long press selects (touch selection mode); else, on iOS, it requests the context menu.
+        on_long_press_start: context_menu_long_press_start.map(|on_start| {
+            Callback::new(move |e: LongPressEvent| {
+                if !long_press_enabled.get_untracked() {
+                    on_start.run(e);
+                }
+            })
+        }),
         on_long_press: Some(Callback::new(move |e: LongPressEvent| {
-            if e.pointer_type == PointerType::Touch {
-                on_select(&e.pointer_type, e.modifiers);
-                selection.set_selection_behavior(SelectionBehavior::Toggle);
+            if long_press_enabled.get_untracked() {
+                if e.pointer_type == PointerType::Touch {
+                    on_select(&e.pointer_type, e.modifiers);
+                    selection.set_selection_behavior(SelectionBehavior::Toggle);
+                }
+            } else if let Some(on_context_menu) = context_menu_long_press {
+                on_context_menu.run(e);
             }
         })),
-        long_press_disabled: Signal::derive(move || !long_press_enabled.get()),
+        long_press_disabled: Signal::derive(move || {
+            !long_press_enabled.get() && context_menu_long_press.is_none()
+        }),
         ..UsePressInput::default()
     });
     let (press_props, press_styles) = press.props.into_inner();
@@ -526,6 +559,7 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
                 },
                 on_focus,
                 on_dragstart_capture,
+                context_menu: context_menu_props,
             },
             press_styles,
         ),

@@ -1,0 +1,33 @@
+// Upstream: ../starters/docs/src/InputGroup.css @ 99e610236
+// Upstream: ../starters/docs/src/InputGroup.tsx @ 99e610236
+//
+// The `Input`s of an input group: inputs sharing one field-like box with other content (icons,
+// units). Markup: an element of the app's with the class `input-group` around the box, whose
+// `Input`s are plain (neither inset nor outlined). Leptonic has no `Group` atom (the starter's
+// box: react-aria-components' `Group` with `inset`, its `data-focus-within` outline and
+// `data-disabled` color), so its rules are left out.
+
+.input-group {
+  .leptonic-Input {
+    padding: var(--spacing-1);
+    margin: 0;
+    font: var(--font-size) system-ui;
+    color: var(--text-color);
+    outline: none;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+
+    &:disabled {
+      color: var(--text-color-disabled);
+      &::placeholder {
+        color: var(--text-color-disabled);
+      }
+    }
+
+    &::placeholder {
+      color: var(--text-color-placeholder);
+      opacity: 1;
+    }
+  }
+}

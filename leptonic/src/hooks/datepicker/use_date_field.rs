@@ -1,482 +1,689 @@
-// Upstream: react-aria/src/datepicker/useDateField.ts @ 6f664fe911
+// Upstream: react-aria/src/datepicker/useDateField.ts @ 99e6102368
+// Upstream: react-aria/src/datepicker/useDatePickerGroup.ts @ 99e6102368
+// Upstream: react-aria/src/datepicker/useDisplayNames.ts @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{self, Attr},
+    ev::{self, On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::KeyboardEvent;
+use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::{
-    use_date_field_state::{UseDateFieldStateInput, UseDateFieldStateReturn, use_date_field_state},
-    use_date_segment::{DateSegment, DateSegmentType},
+    types::{DateSegmentType, DateValue, MaxGranularity, TimeValue},
+    use_date_field_state::DateFieldState,
+    use_time_field_state::TimeFieldState,
 };
 use crate::{
     hooks::{
-        IntoAttrs,
-        form::use_form_validation_state::{ValidateFn, ValidationBehavior},
+        IntoAttrs, PressEvent, PropsWithStyles, UseKeyboardInput, UsePressAttrs, UsePressInput,
+        UsePressProps,
+        focus::{FocusManager, FocusManagerOptions, UseFocusWithinInput, use_focus_within},
+        form::{
+            LabelElementType, UseFieldInput, UseFieldReturn, UseFormResetInput,
+            UseFormValidationInput, UseLabelProps, ValidationBehavior, use_field, use_form_reset,
+            use_form_validation,
+        },
+        use_keyboard, use_press,
     },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaInvalid, AriaRequired, AriaRole},
-        id::use_id,
-        key::{KeyboardEventKey, KeyboardKey},
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
+        aria::AriaRole,
+        i18n::use_direction,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
+        locale::WritingDirection,
+        pointer_type::PointerType,
+        slot_id::SlotProps,
+        use_description::use_description,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/datepicker/useDateField.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// DIFFERENT BEHAVIOR
-// - Hook-owned state: Uses `use_date_field_state` which owns the editing buffer
-//   internally. Callers get read-only signals and semantic mutation callbacks.
-// - Segment mutation callbacks take `DateSegmentType` instead of segment index,
-//   because the state hook operates on field types, not indices.
+// ## API DIFFERENCES
+// - The data segments need (labels, focus manager) is returned as `DateFieldData` (react-aria:
+//   a `WeakMap` keyed by the state); the picker's role and focus manager are input fields
+//   (react-aria: private props).
+// - The hidden input is part of the return (`input_props`); the form reset and validation
+//   capture it (`input`).
 //
-// LEPTOS-SPECIFIC ADAPTATIONS
-// - aria-describedby is a reactive `Signal<Option<String>>` that dynamically
-//   includes/excludes the error ID based on validation state (following
-//   `use_text_field` pattern).
+// ## OMITTED FEATURES
+// - Localized field names and descriptions (`useDisplayNames`): English ("year", "Selected
+//   Date: ..."); ICU4X has no display names for date fields yet.
 //
+// =============================================================================
 
-/// Input parameters for the `use_date_field` hook.
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Clone)]
-pub struct UseDateFieldInput {
-    /// The current date value.
-    pub value: Signal<Option<time::OffsetDateTime>>,
-
-    /// The default value to restore on form reset.
-    pub default_value: Option<time::OffsetDateTime>,
-
-    /// The minimum allowed date.
-    pub min: Option<time::OffsetDateTime>,
-
-    /// The maximum allowed date.
-    pub max: Option<time::OffsetDateTime>,
-
-    /// Whether the field is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the field is read-only.
-    pub is_read_only: Signal<bool>,
-
-    /// Whether the field is required.
-    pub is_required: bool,
-
-    /// Whether the field is explicitly marked as invalid (controlled validation).
-    pub is_invalid: Signal<bool>,
-
-    /// Custom client-side validation function.
-    pub validate: Option<ValidateFn<Option<time::OffsetDateTime>>>,
-
-    /// Validation behavior mode.
-    pub validation_behavior: ValidationBehavior,
-
-    /// The label for the field.
-    pub label: Option<String>,
-
-    /// The description for the field.
-    pub description: Option<String>,
-
-    /// Error message to display.
-    pub error_message: Option<String>,
-
-    /// Callback when the value changes.
-    pub on_change: Option<Callback<Option<time::OffsetDateTime>>>,
-
-    /// Whether to show the time portion.
-    pub show_time: bool,
-
-    /// Whether to use 24-hour format.
-    pub hour_cycle_24: bool,
-
-    /// Whether this field is inside a date picker (changes role to Presentation).
-    pub is_date_picker: bool,
-
-    /// The field's name for form validation context matching.
-    pub name: Option<String>,
-}
-
-impl Default for UseDateFieldInput {
-    fn default() -> Self {
-        Self {
-            value: Signal::derive(|| None),
-            default_value: None,
-            min: None,
-            max: None,
-            is_disabled: Signal::derive(|| false),
-            is_read_only: Signal::derive(|| false),
-            is_required: false,
-            is_invalid: Signal::stored(false),
-            validate: None,
-            validation_behavior: ValidationBehavior::default(),
-            label: None,
-            description: None,
-            error_message: None,
-            on_change: None,
-            show_time: false,
-            hour_cycle_24: true,
-            is_date_picker: false,
-            name: None,
-        }
+/// The English names of the segments (react-aria's `useDisplayNames`).
+pub(crate) fn display_name(kind: DateSegmentType) -> &'static str {
+    match kind {
+        DateSegmentType::Era => "era",
+        DateSegmentType::Year => "year",
+        DateSegmentType::Month => "month",
+        DateSegmentType::Day => "day",
+        DateSegmentType::Hour => "hour",
+        DateSegmentType::Minute => "minute",
+        DateSegmentType::Second => "second",
+        DateSegmentType::DayPeriod => "AM/PM",
+        DateSegmentType::TimeZoneName => "time zone",
+        DateSegmentType::Literal => "",
     }
 }
 
-/// The return value of the `use_date_field` hook.
-pub struct UseDateFieldReturn {
-    /// Props for the field container element. Call `.into_attrs()` for view spreading.
-    pub field_props: UseDateFieldProps,
-
-    /// Props for the label element.
-    pub label_props: UseDateFieldLabelProps,
-
-    /// Props for the description element.
-    pub description_props: UseDateFieldDescriptionProps,
-
-    /// Props for the error message element.
-    pub error_props: UseDateFieldErrorProps,
-
-    /// The segments to render.
-    pub segments: Signal<Vec<DateSegment>>,
-
-    /// The currently focused segment index.
-    pub focused_segment: Signal<Option<usize>>,
-
-    /// The ID of the field.
-    pub field_id: String,
-
-    /// Focus a specific segment.
-    pub focus_segment: Callback<usize>,
-
-    /// Focus the next segment.
-    pub focus_next: Callback<()>,
-
-    /// Focus the previous segment.
-    pub focus_previous: Callback<()>,
-
-    /// Increment a segment by type.
-    pub increment: Callback<DateSegmentType>,
-
-    /// Decrement a segment by type.
-    pub decrement: Callback<DateSegmentType>,
-
-    /// Set a segment value by type.
-    pub set_segment: Callback<(DateSegmentType, i32)>,
-
-    /// Clear a segment (Backspace/Delete).
-    pub clear_segment: Callback<DateSegmentType>,
-
-    /// Increment by page step.
-    pub increment_page: Callback<DateSegmentType>,
-
-    /// Decrement by page step.
-    pub decrement_page: Callback<DateSegmentType>,
-
-    /// Set segment to max value.
-    pub increment_to_max: Callback<DateSegmentType>,
-
-    /// Set segment to min value.
-    pub decrement_to_min: Callback<DateSegmentType>,
-
-    /// Confirm placeholder on blur.
-    pub confirm_placeholder: Callback<()>,
-
-    /// Whether the displayed validation is invalid.
-    pub is_invalid: Signal<bool>,
-
-    /// The displayed validation error messages.
-    pub validation_errors: Signal<Vec<String>>,
-
-    /// The underlying state hook return, for advanced usage.
-    pub state: UseDateFieldStateReturn,
+/// What a date field's segments need from it.
+pub struct DateFieldData<V: DateValue> {
+    pub state: DateFieldState<V>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub(crate) focus_manager: StoredValue<FocusManager>,
 }
 
-/// Props from `use_date_field` for the field container element.
+// Derived, it would require a `Copy` value type.
+#[allow(clippy::expl_impl_clone_on_copy)]
+impl<V: DateValue> Clone for DateFieldData<V> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<V: DateValue> Copy for DateFieldData<V> {}
+
+impl<V: DateValue> DateFieldData<V> {
+    // `try_`: a segment removed with its field hands the focus over after the field's disposal.
+    pub(crate) fn focus_next(&self) -> bool {
+        self.focus_manager
+            .try_with_value(|manager| manager.focus_next(FocusManagerOptions::default()))
+            .flatten()
+            .is_some()
+    }
+
+    pub(crate) fn focus_previous(&self) -> bool {
+        self.focus_manager
+            .try_with_value(|manager| manager.focus_previous(FocusManagerOptions::default()))
+            .flatten()
+            .is_some()
+    }
+
+    pub(crate) fn focus_first(&self) {
+        self.focus_manager
+            .try_with_value(|manager| manager.focus_first(FocusManagerOptions::default()));
+    }
+}
+
+/// The focus manager of a field's segments.
+pub(crate) fn segment_focus_manager(element: CapturedElement) -> FocusManager {
+    FocusManager::new(move || element.get_untracked().map(|element| (*element).clone()))
+}
+
+/// Props of a date field group (the segments' container), from `use_date_picker_group`.
+#[derive(Debug)]
+pub struct UseDatePickerGroupProps {
+    pub press: UsePressProps,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
+}
+
+impl IntoAttrs for UseDatePickerGroupProps {
+    type Attrs = (
+        UsePressAttrs,
+        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+    );
+
+    fn into_attrs(self) -> Self::Attrs {
+        (
+            self.press.into_attrs(),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_keyup.into_on(ev::keyup),
+        )
+    }
+}
+
+/// Keyboard and pointer behavior of the element holding a field's segments (react-aria's
+/// `useDatePickerGroup`): the left and right arrows move between segments (by position in
+/// right-to-left locales), Alt+ArrowDown/Up opens a picker (`open`), and pressing the group
+/// outside the segments focuses the last segment with a value.
+pub fn use_date_picker_group(
+    element: CapturedElement,
+    disable_arrow_navigation: bool,
+    open: Option<Callback<()>>,
+) -> PropsWithStyles<UseDatePickerGroupProps> {
+    let direction = use_direction();
+    let manager = StoredValue::new(segment_focus_manager(element));
+
+    let arrow = move |e: &KeyboardEvent, forward: bool| -> ShortcutOutcome {
+        if disable_arrow_navigation {
+            return ShortcutOutcome::Ignored;
+        }
+        if direction.get_untracked() == WritingDirection::Rtl {
+            let target = wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(e.expect_target()).ok();
+            let next = target.and_then(|target| {
+                let group = element.get_untracked()?;
+                find_next_segment(
+                    &group,
+                    target.get_bounding_client_rect().left(),
+                    if forward { 1.0 } else { -1.0 },
+                )
+            });
+            match next {
+                Some(next) => {
+                    crate::utils::focus::focus_element(&next, false);
+                    ShortcutOutcome::Handled
+                }
+                None => ShortcutOutcome::Ignored,
+            }
+        } else {
+            let moved = manager.with_value(|manager| {
+                if forward {
+                    manager.focus_next(FocusManagerOptions::default())
+                } else {
+                    manager.focus_previous(FocusManagerOptions::default())
+                }
+            });
+            // Handled even at the ends (react-aria returns without `false`).
+            let _ = moved;
+            ShortcutOutcome::Handled
+        }
+    };
+    let open_with = move || match open {
+        Some(open) => {
+            open.run(());
+            ShortcutOutcome::Handled
+        }
+        None => ShortcutOutcome::Ignored,
+    };
+    let shortcuts = KeyboardShortcuts::new()
+        .on(
+            Shortcut::key("ArrowDown").alt(),
+            move |_: &KeyboardEvent| open_with(),
+        )
+        .on(Shortcut::key("ArrowUp").alt(), move |_: &KeyboardEvent| {
+            open_with()
+        })
+        .on(Shortcut::key("ArrowLeft"), move |e: &KeyboardEvent| {
+            arrow(e, false)
+        })
+        .on(Shortcut::key("ArrowRight"), move |e: &KeyboardEvent| {
+            arrow(e, true)
+        });
+    let keyboard = use_keyboard(UseKeyboardInput {
+        shortcuts: Some(shortcuts),
+        allow_repeats: true,
+        ..UseKeyboardInput::default()
+    });
+
+    // Pressing the field (not a segment: they stop the pointer events) focuses the segment
+    // before the pressed point, or the last one, skipping back over empty segments.
+    let focus_last = move |target: Option<web_sys::Element>| {
+        let Some(group) = element.get_untracked() else {
+            return;
+        };
+        let segments = tabbable_segments(&group);
+        let before = target.and_then(|target| {
+            segments
+                .iter()
+                .rev()
+                .find(|segment| {
+                    target.compare_document_position(segment)
+                        & web_sys::Node::DOCUMENT_POSITION_PRECEDING
+                        != 0
+                })
+                .cloned()
+        });
+        let Some(mut index) = before
+            .and_then(|before| segments.iter().position(|segment| *segment == before))
+            .or_else(|| segments.len().checked_sub(1))
+        else {
+            return;
+        };
+        while index > 0
+            && segments[index].has_attribute("data-placeholder")
+            && segments[index - 1].has_attribute("data-placeholder")
+        {
+            index -= 1;
+        }
+        crate::utils::focus::focus_element(&segments[index], false);
+    };
+    let press_target = |e: &PressEvent| {
+        wasm_bindgen::JsCast::dyn_into::<web_sys::Element>((*e.target).clone()).ok()
+    };
+    let press = use_press(UsePressInput {
+        prevent_focus_on_press: Signal::stored(true),
+        allow_text_selection_on_press: Signal::stored(true),
+        on_press_start: Some(Callback::new(move |e: PressEvent| {
+            if e.pointer_type == PointerType::Mouse {
+                focus_last(press_target(&e));
+            }
+        })),
+        on_press: Some(Callback::new(move |e: PressEvent| {
+            if matches!(e.pointer_type, PointerType::Touch | PointerType::Pen) {
+                focus_last(press_target(&e));
+            }
+        })),
+        ..UsePressInput::default()
+    });
+    let (press_props, press_styles) = press.props.into_inner();
+    PropsWithStyles::new(
+        UseDatePickerGroupProps {
+            press: press_props,
+            on_keydown: keyboard.props.on_keydown,
+            on_keyup: keyboard.props.on_keyup,
+        },
+        press_styles,
+    )
+}
+
+/// The tabbable segments of a field, in document order.
+fn tabbable_segments(group: &web_sys::Element) -> Vec<web_sys::Element> {
+    let Ok(candidates) = group.query_selector_all("[tabindex]") else {
+        return Vec::new();
+    };
+    (0..candidates.length())
+        .filter_map(|index| candidates.item(index))
+        .filter_map(|node| wasm_bindgen::JsCast::dyn_into::<web_sys::Element>(node).ok())
+        .filter(crate::utils::focusability::is_tabbable)
+        .collect()
+}
+
+/// The closest segment in a direction (-1: left, 1: right) from a horizontal position.
+fn find_next_segment(
+    group: &web_sys::Element,
+    from_x: f64,
+    direction: f64,
+) -> Option<web_sys::Element> {
+    tabbable_segments(group)
+        .into_iter()
+        .filter_map(|segment| {
+            let distance = segment.get_bounding_client_rect().left() - from_x;
+            (distance != 0.0 && distance.signum() == direction).then_some((distance.abs(), segment))
+        })
+        .min_by(|(a, _), (b, _)| a.total_cmp(b))
+        .map(|(_, segment)| segment)
+}
+
+/// Input of [`use_date_field`].
+#[derive(Clone, Default)]
+pub struct UseDateFieldInput {
+    pub id: Option<String>,
+    /// Whether a visible label labels the field.
+    pub has_label: Signal<bool>,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub auto_focus: bool,
+    /// The hidden input's form (when outside it).
+    pub form: Option<String>,
+    pub on_focus_change: Option<Callback<bool>>,
+    pub on_key_down: Option<Callback<KeyboardEvent>>,
+    pub on_key_up: Option<Callback<KeyboardEvent>>,
+    /// Inside a date picker: no group role (the picker's group labels and describes it).
+    pub is_in_picker: bool,
+    /// The picker's focus manager (it spans more fields).
+    pub focus_manager: Option<FocusManager>,
+    /// Opens the picker (Alt+ArrowDown).
+    pub open: Option<Callback<()>>,
+}
+
+/// Return value of [`use_date_field`].
+pub struct UseDateFieldReturn<V: DateValue> {
+    /// For the label (a `span`: it labels a group).
+    pub label_props: UseDateFieldLabelProps,
+    /// For the group of segments.
+    pub field_props: PropsWithStyles<UseDateFieldProps>,
+    /// For the hidden input carrying the value in forms.
+    pub input_props: UseDateFieldInputProps,
+    pub description_props: SlotProps,
+    pub error_message_props: SlotProps,
+    /// What the segments need (`use_date_segment`).
+    pub data: DateFieldData<V>,
+}
+
+/// Props of the field's label: pressing it focuses the first segment.
+#[derive(Debug, Clone)]
+pub struct UseDateFieldLabelProps {
+    pub label: UseLabelProps,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl IntoAttrs for UseDateFieldLabelProps {
+    type Attrs = (
+        <UseLabelProps as IntoAttrs>::Attrs,
+        On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
+    );
+
+    fn into_attrs(self) -> Self::Attrs {
+        (self.label.into_attrs(), self.on_click.into_on(ev::click))
+    }
+}
+
+/// Props of the group of segments.
 #[derive(Debug)]
 pub struct UseDateFieldProps {
-    pub id: String,
+    pub id: Option<String>,
     pub role: AriaRole,
-    pub aria_labelledby: Option<String>,
+    pub aria_label: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<String>>,
     pub aria_describedby: Signal<Option<String>>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub aria_required: Option<AriaRequired>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub aria_disabled: Signal<Option<&'static str>>,
+    pub group: UseDatePickerGroupProps,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseDateFieldAttrs = (
+    (
+        Attr<attr::Id, Option<String>>,
+        Attr<attr::Role, AriaRole>,
+        Attr<attr::AriaLabel, Signal<Option<String>>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+        Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+    ),
+    UsePressAttrs,
+    (
+        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+        On<ev::focusin, SharedEventCallback<FocusEvent>>,
+        On<ev::focusout, SharedEventCallback<FocusEvent>>,
+        ElementCaptureAttr,
+    ),
+);
 
 impl IntoAttrs for UseDateFieldProps {
     type Attrs = UseDateFieldAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabelledby, self.aria_labelledby),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaInvalid, self.aria_invalid),
-            Attr(attr::AriaRequired, self.aria_required),
-            self.on_keydown.into_on(ev::keydown),
+            (
+                Attr(attr::Id, self.id),
+                Attr(attr::Role, self.role),
+                Attr(attr::AriaLabel, self.aria_label),
+                Attr(attr::AriaLabelledby, self.aria_labelledby),
+                Attr(attr::AriaDescribedby, self.aria_describedby),
+                Attr(attr::AriaDisabled, self.aria_disabled),
+            ),
+            self.group.press.into_attrs(),
+            (
+                self.group.on_keydown.into_on(ev::keydown),
+                self.group.on_keyup.into_on(ev::keyup),
+                self.on_focusin.into_on(ev::focusin),
+                self.on_focusout.into_on(ev::focusout),
+                self.element_capture,
+            ),
         )
     }
 }
 
-/// Attributes for the date field container element.
-pub type UseDateFieldAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-    Attr<attr::AriaRequired, Option<AriaRequired>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
-
-/// Props for the label element.
-#[derive(Debug)]
-pub struct UseDateFieldLabelProps {
-    /// The id of the label element.
-    pub id: String,
+/// Props of the hidden input carrying the value (ISO 8601) in forms. With native validation a
+/// hidden text input, so that `required` blocks submitting an empty field.
+#[derive(Debug, Clone)]
+pub struct UseDateFieldInputProps {
+    pub input_type: &'static str,
+    pub hidden: bool,
+    pub name: Option<String>,
+    pub form: Option<String>,
+    pub value: Signal<String>,
+    pub disabled: Signal<bool>,
+    pub required: Signal<bool>,
+    pub element_capture: ElementCaptureAttr,
 }
 
-/// Props for the description element.
-#[derive(Debug)]
-pub struct UseDateFieldDescriptionProps {
-    /// The id of the description element.
-    pub id: String,
+impl IntoAttrs for UseDateFieldInputProps {
+    type Attrs = (
+        Attr<attr::Type, &'static str>,
+        Attr<attr::Hidden, bool>,
+        Attr<attr::Name, Option<String>>,
+        Attr<attr::Form, Option<String>>,
+        Attr<attr::Value, Signal<String>>,
+        Attr<attr::Disabled, Signal<bool>>,
+        Attr<attr::Required, Signal<bool>>,
+        ElementCaptureAttr,
+    );
+
+    fn into_attrs(self) -> Self::Attrs {
+        (
+            Attr(attr::Type, self.input_type),
+            Attr(attr::Hidden, self.hidden),
+            Attr(attr::Name, self.name),
+            Attr(attr::Form, self.form),
+            Attr(attr::Value, self.value),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Required, self.required),
+            self.element_capture,
+        )
+    }
 }
 
-/// Props for the error message element.
-#[derive(Debug)]
-pub struct UseDateFieldErrorProps {
-    /// The id of the error message element.
-    pub id: String,
-    /// The role for the error message.
-    pub role: AriaRole,
-    /// The aria-live attribute.
-    pub aria_live: &'static str,
-}
-
-/// Provides the behavior and accessibility for a date field.
-///
-/// A date field allows users to enter a date using editable segments.
-/// Delegates state management to [`use_date_field_state`] and adds ARIA
-/// attributes, keyboard navigation, and form validation integration.
-///
-/// # Example
-///
-/// ```ignore
-/// let (value, set_value) = signal(None);
-///
-/// let field = use_date_field(UseDateFieldInput {
-///     value: value.into(),
-///     label: Some("Date".to_string()),
-///     on_change: Some(Callback::new(move |v| set_value.set(v))),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div>
-///         <label id=field.label_props.id>"Date"</label>
-///         <div {..field.field_props.into_attrs()}>
-///             // Render segments...
-///         </div>
-///     </div>
-/// }
-/// ```
-#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
-pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
+/// Behavior and accessibility of a date field (react-aria's `useDateField`): a group of
+/// segments labelled by the field, describing its value ("Selected Date: ..."), committing an
+/// incomplete value and showing validation when left, with a hidden input for forms.
+pub fn use_date_field<V: DateValue>(
+    input: UseDateFieldInput,
+    state: DateFieldState<V>,
+    element: CapturedElement,
+    input_element: CapturedElement,
+) -> UseDateFieldReturn<V> {
     let UseDateFieldInput {
-        value,
-        default_value,
-        min,
-        max,
-        is_disabled: disabled,
-        is_read_only,
-        is_required,
-        is_invalid,
-        validate,
-        validation_behavior,
-        label,
-        description,
-        error_message,
-        on_change,
-        show_time,
-        hour_cycle_24,
-        is_date_picker,
-        name,
+        id,
+        has_label,
+        aria_label,
+        aria_labelledby,
+        aria_describedby,
+        auto_focus,
+        form,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
+        is_in_picker,
+        focus_manager,
+        open,
     } = input;
-
-    // ---- State hook ----
-    let state = use_date_field_state(UseDateFieldStateInput {
-        value,
-        default_value,
-        min,
-        max,
-        on_change,
-        show_time,
-        hour_cycle_24,
-        is_disabled: disabled,
-        is_read_only,
-        is_required,
-        validate,
-        is_invalid,
-        validation_behavior,
-        name,
-    });
-
-    // ---- IDs ----
-    let base_id = use_id("date-field");
-    let field_id = format!("date-field-{base_id}");
-    let label_id = format!("date-field-label-{base_id}");
-    let description_id = format!("date-field-desc-{base_id}");
-    let error_id = format!("date-field-error-{base_id}");
-
-    // ---- Track focused segment ----
-    let (focused_segment, set_focused_segment) = signal::<Option<usize>>(None);
-
-    let segments = state.segments;
-
-    // Get editable segment indices.
-    let editable_indices = move || {
-        segments.with(|segs| {
-            segs.iter()
-                .enumerate()
-                .filter(|(_, s)| s.is_editable)
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>()
-        })
-    };
-
-    // ---- Focus callbacks ----
-    let focus_segment = Callback::new(move |index: usize| {
-        set_focused_segment.set(Some(index));
-    });
-
-    let focus_next = Callback::new(move |_| {
-        let indices = editable_indices();
-        let current = focused_segment.get_untracked();
-
-        if let Some(curr) = current {
-            let next = indices.iter().find(|&&i| i > curr).copied();
-            if let Some(next_idx) = next {
-                set_focused_segment.set(Some(next_idx));
-            }
-        } else if let Some(&first) = indices.first() {
-            set_focused_segment.set(Some(first));
-        }
-    });
-
-    let focus_previous = Callback::new(move |_| {
-        let indices = editable_indices();
-        let current = focused_segment.get_untracked();
-
-        if let Some(curr) = current {
-            let prev = indices.iter().rev().find(|&&i| i < curr).copied();
-            if let Some(prev_idx) = prev {
-                set_focused_segment.set(Some(prev_idx));
-            }
-        } else if let Some(&last) = indices.last() {
-            set_focused_segment.set(Some(last));
-        }
-    });
-
-    // ---- Reactive ARIA attributes ----
-    let has_description = description.is_some();
-    let has_error = error_message.is_some();
-    let has_label = label.is_some();
     let validation = state.validation;
 
-    let description_id_for_signal = description_id.clone();
-    let error_id_for_signal = error_id.clone();
-    let aria_describedby = Signal::derive(move || {
-        let mut parts = Vec::new();
-        if has_description {
-            parts.push(description_id_for_signal.clone());
-        }
-        if has_error || validation.is_invalid.get() {
-            parts.push(error_id_for_signal.clone());
-        }
-        if parts.is_empty() {
-            None
-        } else {
-            Some(parts.join(" "))
-        }
+    let UseFieldReturn {
+        label_props,
+        field_props,
+        description_props,
+        error_message_props,
+        ..
+    } = use_field(UseFieldInput {
+        id,
+        has_label,
+        label_element_type: LabelElementType::Span,
+        aria_label,
+        aria_labelledby: aria_labelledby.clone(),
+        aria_describedby,
+        ..UseFieldInput::default()
     });
 
-    let aria_labelledby = if has_label {
-        Some(label_id.clone())
-    } else {
-        None
-    };
-
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-    let aria_invalid =
-        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
-    let aria_required = is_required.then_some(AriaRequired::True);
-
-    // Role depends on whether this is inside a date picker.
-    let role = if is_date_picker {
-        AriaRole::Presentation
-    } else {
-        AriaRole::Group
-    };
-
-    // ---- Keyboard handler (field-level, for navigation) ----
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        match e.typed_key() {
-            KeyboardKey::ArrowRight | KeyboardKey::Tab if !e.shift_key() => {
-                // Navigation handled by individual segments.
+    // Leaving the field commits an incomplete value, and shows the validation if it changed.
+    let value_on_focus = StoredValue::new(None::<V>);
+    let focus_within = use_focus_within(UseFocusWithinInput {
+        on_focus_within: Some(Callback::new(move |_| {
+            value_on_focus.set_value(state.value.get_untracked());
+        })),
+        on_blur_within: Some(Callback::new(move |_| {
+            // After the field's disposal (a removed focused segment): nothing to commit ("Blur
+            // After Disposal").
+            if !state.is_alive() {
+                return;
             }
-            KeyboardKey::ArrowLeft | KeyboardKey::Tab if e.shift_key() => {
-                // Navigation handled by individual segments.
+            state.confirm_placeholder();
+            if state.value.get_untracked() != value_on_focus.get_value() {
+                validation.commit_validation.run(());
             }
-            _ => {}
+        })),
+        on_focus_within_change: on_focus_change,
+        ..UseFocusWithinInput::default()
+    });
+
+    // "Selected Date: May 20, 2024" ("Selected Time" for time fields).
+    let description = Signal::derive(move || {
+        state.value.get().map(|_| {
+            let formatted = state.format_value();
+            if state.max_granularity == MaxGranularity::Hour {
+                format!("Selected Time: {formatted}")
+            } else {
+                format!("Selected Date: {formatted}")
+            }
+        })
+    });
+    let description_id = use_description(description);
+    let field_describedby = field_props.aria_describedby;
+    let described_by = Signal::derive(move || {
+        if is_in_picker {
+            return field_describedby.get();
+        }
+        let ids: Vec<String> = [description_id.get(), field_describedby.get()]
+            .into_iter()
+            .flatten()
+            .collect();
+        (!ids.is_empty()).then(|| ids.join(" "))
+    });
+
+    let focus_manager =
+        StoredValue::new(focus_manager.unwrap_or_else(|| segment_focus_manager(element)));
+    let group = use_date_picker_group(element, is_in_picker, open);
+
+    let label_id = label_props.id.clone();
+    let segments_labelledby = Signal::derive(move || {
+        let ids: Vec<String> = [
+            has_label.get().then(|| label_id.clone()),
+            aria_labelledby.clone(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        (!ids.is_empty()).then(|| ids.join(" "))
+    });
+    let data = DateFieldData {
+        state,
+        aria_label,
+        aria_labelledby: segments_labelledby,
+        aria_describedby: described_by,
+        focus_manager,
+    };
+
+    if auto_focus {
+        Effect::new(move |_| data.focus_first());
+    }
+
+    use_form_reset(UseFormResetInput {
+        element: input_element,
+        initial_value: state.default_value(),
+        on_reset: Callback::new(move |value: Option<V>| state.set_value(value)),
+    });
+    use_form_validation(UseFormValidationInput {
+        focus: Some(Callback::new(move |()| data.focus_first())),
+        element: input_element,
+        state: validation,
+        validation_behavior: state.validation_behavior,
+    });
+
+    let (group_props, group_styles) = group.into_inner();
+    let is_disabled = state.is_disabled;
+    let label_aria = field_props.aria_label;
+    let field_labelledby = field_props.aria_labelledby;
+    let on_keydown = group_props
+        .on_keydown
+        .chain(EventHandler::new(move |e: KeyboardEvent| {
+            if let Some(on_key_down) = on_key_down {
+                on_key_down.run(e);
+            }
+        }));
+    let on_keyup = group_props
+        .on_keyup
+        .chain(EventHandler::new(move |e: KeyboardEvent| {
+            if let Some(on_key_up) = on_key_up {
+                on_key_up.run(e);
+            }
+        }));
+    let field = if is_in_picker {
+        UseDateFieldProps {
+            id: None,
+            role: AriaRole::Presentation,
+            aria_label: Signal::stored(None),
+            aria_labelledby: Signal::stored(None),
+            aria_describedby: Signal::stored(None),
+            aria_disabled: Signal::stored(None),
+            group: UseDatePickerGroupProps {
+                on_keydown,
+                on_keyup,
+                ..group_props
+            },
+            on_focusin: focus_within.props.on_focusin,
+            on_focusout: focus_within.props.on_focusout,
+            element_capture: element.attr(),
+        }
+    } else {
+        UseDateFieldProps {
+            id: Some(field_props.id),
+            role: AriaRole::Group,
+            aria_label: Signal::derive(move || label_aria.get()),
+            aria_labelledby: field_labelledby,
+            aria_describedby: described_by,
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some("true")),
+            group: UseDatePickerGroupProps {
+                on_keydown,
+                on_keyup,
+                ..group_props
+            },
+            on_focusin: focus_within.props.on_focusin,
+            on_focusout: focus_within.props.on_focusout,
+            element_capture: element.attr(),
         }
     };
+    let native = state.validation_behavior == ValidationBehavior::Native;
 
     UseDateFieldReturn {
-        field_props: UseDateFieldProps {
-            id: field_id.clone(),
-            role,
-            aria_labelledby,
-            aria_describedby,
-            aria_disabled,
-            aria_invalid,
-            aria_required,
-            on_keydown: EventHandler::new(handle_keydown),
+        label_props: UseDateFieldLabelProps {
+            label: label_props,
+            on_click: EventHandler::new(move |_| data.focus_first()),
         },
-        label_props: UseDateFieldLabelProps { id: label_id },
-        description_props: UseDateFieldDescriptionProps { id: description_id },
-        error_props: UseDateFieldErrorProps {
-            id: error_id,
-            role: AriaRole::Alert,
-            aria_live: "polite",
+        field_props: PropsWithStyles::new(
+            field,
+            group_styles.add_unchecked("unicode-bidi", "isolate"),
+        ),
+        input_props: UseDateFieldInputProps {
+            input_type: if native { "text" } else { "hidden" },
+            hidden: native,
+            name: state.name(),
+            form,
+            value: Signal::derive(move || {
+                state.value.with(|value| {
+                    value
+                        .as_ref()
+                        .map(DateValue::to_iso_string)
+                        .unwrap_or_default()
+                })
+            }),
+            disabled: is_disabled,
+            required: Signal::derive(move || native && state.is_required.get()),
+            element_capture: input_element.attr(),
         },
-        segments,
-        focused_segment: focused_segment.into(),
-        field_id,
-        focus_segment,
-        focus_next,
-        focus_previous,
-        increment: state.increment,
-        decrement: state.decrement,
-        set_segment: state.set_segment,
-        clear_segment: state.clear_segment,
-        increment_page: state.increment_page,
-        decrement_page: state.decrement_page,
-        increment_to_max: state.increment_to_max,
-        decrement_to_min: state.decrement_to_min,
-        confirm_placeholder: state.confirm_placeholder,
-        is_invalid: validation.is_invalid,
-        validation_errors: validation.validation_errors,
-        state,
+        description_props,
+        error_message_props,
+        data,
     }
+}
+
+/// Behavior and accessibility of a time field (react-aria's `useTimeField`): a date field over the
+/// time state's field whose hidden input submits the time (`"08:30:00"`), not a date and time.
+pub fn use_time_field<T: TimeValue>(
+    input: UseDateFieldInput,
+    state: TimeFieldState<T>,
+    element: CapturedElement,
+    input_element: CapturedElement,
+) -> UseDateFieldReturn<T::Field> {
+    let mut field = use_date_field(input, state.field, element, input_element);
+    let time_value = state.time_value;
+    field.input_props.value = Signal::derive(move || {
+        time_value
+            .get()
+            .map(|time| time.to_string())
+            .unwrap_or_default()
+    });
+    field
 }

@@ -1,59 +1,115 @@
 use std::sync::Arc;
 
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::{
+    components::prelude::Checkbox,
+    hooks::{
+        IntoAttrs,
+        datepicker::{
+            DateFieldData, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
+            UseDateFieldStateInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
+            use_date_segment,
+        },
+    },
+    jiff::civil::{Date, Weekday},
+    utils::CapturedElement,
+};
 use leptos::prelude::*;
-use time::{OffsetDateTime, Weekday};
-
-// leptonic has no segment atom yet: the demos share this component built from `use_date_segment`.
-use super::date_segments::{DateSegments, SegmentControls};
 
 #[component]
-pub fn DateFieldDemo() -> impl IntoView {
-    let (value, set_value) = signal(None::<OffsetDateTime>);
+pub fn DateFieldHookDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
-
-    let field = use_date_field(UseDateFieldInput {
-        value: value.into(),
+    let state = use_date_field_state(UseDateFieldStateInput::<Date> {
         is_disabled: disabled.into(),
-        label: Some("Delivery date".to_owned()),
-        description: Some("We deliver on weekdays.".to_owned()),
-        validate: Some(Arc::new(|value: &Option<OffsetDateTime>| match value {
+        validate: Some(Arc::new(|date: &Option<Date>| match date {
             Some(date) if matches!(date.weekday(), Weekday::Saturday | Weekday::Sunday) => {
-                Err(vec!["Pick a weekday.".to_owned()])
+                Err(vec!["We deliver on weekdays only.".to_owned()])
             }
             _ => Ok(()),
         })),
-        on_change: Some(Callback::new(move |new_value| set_value.set(new_value))),
-        ..Default::default()
+        ..UseDateFieldStateInput::default()
     });
-
-    let controls = SegmentControls::from(&field);
-    let is_invalid = field.is_invalid;
-    let validation_errors = field.validation_errors;
+    let UseDateFieldReturn {
+        label_props,
+        field_props,
+        input_props,
+        description_props,
+        error_message_props,
+        data,
+    } = use_date_field(
+        UseDateFieldInput {
+            has_label: true.into(),
+            ..UseDateFieldInput::default()
+        },
+        state,
+        CapturedElement::new(),
+        CapturedElement::new(),
+    );
+    let (field_attrs, field_styles) = field_props.into_parts();
+    let segments = state.segments;
+    let errors = state.validation.validation_errors;
 
     view! {
         <div class="demo-date-field">
-            <span id=field.label_props.id class="demo-date-field-label">"Delivery date"</span>
-            <div {..field.field_props.into_attrs()} class="demo-date-field-input">
-                <DateSegments controls is_disabled=disabled is_read_only=false is_invalid/>
+            <span {..label_props.into_attrs()} class="demo-field-label">"Delivery date"</span>
+            <div {..field_attrs} style=field_styles class="demo-date-input">
+                // A segment's element stays while its text changes: keyed by position and kind.
+                <For
+                    each=move || {
+                        segments.with(|segments| {
+                            segments.iter().enumerate().map(|(index, segment)| (index, segment.kind)).collect::<Vec<_>>()
+                        })
+                    }
+                    key=|key| *key
+                    children=move |(index, kind)| {
+                        let initial = segments.with_untracked(|segments| segments[index].clone());
+                        let segment = Signal::derive(move || {
+                            segments.with(|segments| {
+                                segments.get(index).filter(|segment| segment.kind == kind).cloned()
+                            })
+                            .unwrap_or_else(|| initial.clone())
+                        });
+                        view! { <Segment segment data/> }
+                    }
+                />
             </div>
-            <span id=field.description_props.id class="demo-date-field-description">"We deliver on weekdays."</span>
-            <span
-                id=field.error_props.id
-                role=field.error_props.role
-                aria-live=field.error_props.aria_live
-                class="demo-date-field-error"
-            >
-                {move || validation_errors.get().join(" ")}
-            </span>
+            // Carries the value (ISO 8601) in forms.
+            <input {..input_props.into_attrs()}/>
+            <span {..description_props.into_attrs()} class="demo-field-description">"Monday to Friday."</span>
+            <span {..error_message_props.into_attrs()} class="demo-field-error">{move || errors.get().join(" ")}</span>
         </div>
 
         <p class="demo-status">
-            {move || value.get().map_or_else(|| "No date entered".to_owned(), |date| format!("Delivery on {}", date.date()))}
+            {move || {
+                let invalid = if errors.with(Vec::is_empty) { "" } else { " (invalid)" };
+                state.value.get().map_or_else(
+                    || "No date entered.".to_owned(),
+                    |date| format!("Delivery on {}{invalid}.", date.strftime("%A, %B %-d, %Y")),
+                )
+            }}
         </p>
 
         <div class="demo-controls">
             <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
         </div>
     }
+}
+
+/// An editable segment (a spin button), or a literal between them, hidden from screen readers.
+#[component]
+fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl IntoView {
+    let kind = segment.with_untracked(|segment| segment.kind);
+    let text = move || segment.with(|segment| segment.text.clone());
+    if kind == DateSegmentType::Literal {
+        return view! {
+            <span aria-hidden="true" class="demo-date-segment" data-type=kind.as_str()>{text}</span>
+        }
+        .into_any();
+    }
+    let UseDateSegmentReturn { segment_props } =
+        use_date_segment(segment, data, CapturedElement::new());
+    let (attrs, styles) = segment_props.into_parts();
+    view! {
+        <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>
+    }
+    .into_any()
 }

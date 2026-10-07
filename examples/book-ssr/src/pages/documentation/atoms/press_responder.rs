@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::press_responder::PressResponderDemo;
@@ -59,9 +58,9 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                     "Press the button: the handler of the "<Code inline=true>"PressResponder"</Code>" runs first, then the one "
                     "of the "<Code inline=true>"Pressable"</Code>". Disabling the "<Code inline=true>"PressResponder"</Code>
                     " stops the presses of the button inside, although the "<Code inline=true>"Pressable"</Code>" itself is enabled. "
-                    "As in react-aria, the responder\u{2019}s disabled state only reaches the press handling: the "
-                    <Code inline=true>"Pressable"</Code>" gets neither "<Code inline=true>"aria-disabled"</Code>" nor "
-                    <Code inline=true>"data-disabled"</Code>", so disable the element itself when it should look and announce as disabled."
+                    "For a "<Code inline=true>"Pressable"</Code>", the responder\u{2019}s disabled state only reaches the press "
+                    "handling: it gets neither "<Code inline=true>"aria-disabled"</Code>" nor "<Code inline=true>"data-disabled"</Code>
+                    ", so the demo sets "<Code inline=true>"aria-disabled"</Code>" itself."
                 </p>
 
                 <Demo
@@ -154,8 +153,11 @@ pub fn PageAtomPressResponder() -> impl IntoView {
                             <Code inline=true>"PressResponder"</Code>" without a pressable descendant logs a warning."
                         </li>
                         <li>
-                            "Disabling only stops the presses: the descendant keeps its focusability and its ARIA attributes, "
-                            "so mark it disabled yourself when it should look and be announced disabled (the demo sets "
+                            "A disabled responder fully disables a descendant built on "<Code inline=true>"use_button"</Code>
+                            " (the "<Code inline=true>"Button"</Code>" atom and the components): its "<Code inline=true>"disabled"</Code>
+                            " attribute, focus, hover and shortcuts. A "<Code inline=true>"Pressable"</Code>" or a plain "
+                            <Code inline=true>"use_press"</Code>" element only stops pressing: it keeps its focusability and its ARIA "
+                            "attributes, so mark it disabled yourself when it should look and be announced disabled (the demo sets "
                             <Code inline=true>"aria-disabled"</Code>")."
                         </li>
                     </ul>

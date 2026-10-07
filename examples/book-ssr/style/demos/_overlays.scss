@@ -15,9 +15,6 @@
 
 .demo-popover-narrow { max-width: 200px; }
 
-// A popover's controls, stacked.
-.demo-popover-form { display: flex; flex-direction: column; align-items: flex-start; gap: var(--book-space-m); }
-
 // Popover arrow: 16x8, a triangle drawn with borders pointing down at a trigger below the popover, turned for the
 // other sides (the arrow element's own transform centers it).
 .demo-popover-arrow {
@@ -171,49 +168,8 @@
 
 // -- Drawer --
 
-// A bordered, fixed-height frame with the drawer beside the content.
-.demo-drawer-frame {
-    position: relative;
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
-    width: 100%;
-    height: 20em;
-    overflow: hidden;
-    border: 1px solid var(--book-border-color);
-    border-radius: var(--book-radius-m);
-    background-color: var(--book-surface-color);
-}
+// The drawer's content (`classes` reach the dialog, which fills the theme's panel): stacked, with room to the edges.
+.demo-drawer { gap: var(--book-space-s); padding: var(--book-space-m); }
 
-// The scrollable page content next to the drawer.
-.demo-drawer-content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    padding: var(--book-space-s);
-    overflow-y: auto;
-    box-sizing: border-box;
-}
-
-// Drawer panel. Leptonic's theme layers drawers above the page; inside the demo frame, it stays below the book's
-// app bar.
-.demo-drawer {
-    z-index: auto;
-    padding: var(--book-space-s);
-    overflow-y: auto;
-    background-color: var(--brand-color-subtle);
-    box-sizing: border-box;
-
-    &[data-side="left"] { border-right: 1px solid var(--book-border-color); }
-    &[data-side="right"] { border-left: 1px solid var(--book-border-color); }
-}
-
-// Drawer that overlays the content instead of pushing it aside.
-.demo-drawer-overlay {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-}
+// The close button at the top end of the drawer.
+.demo-drawer-header { display: flex; justify-content: flex-end; }

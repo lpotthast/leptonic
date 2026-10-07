@@ -1,3 +1,6 @@
+use leptonic::hooks::ComboBoxMenuTrigger;
+use leptonic::hooks::SelectMode;
+use leptonic::hooks::ValidationBehavior;
 use leptonic::{
     components::prelude::*,
     hooks::{
@@ -11,6 +14,7 @@ use leptonic::{
     utils::CapturedElement,
 };
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 const FRUITS: [(&str, &str); 8] = [
     ("apple", "Apple"),
@@ -34,7 +38,25 @@ pub fn ComboboxDemo() -> impl IntoView {
     // Selection, input text, filtering and the open state.
     let state = use_combobox_state(UseComboBoxStateInput {
         filter: Some(use_contains_filter()),
-        ..UseComboBoxStateInput::new(collection)
+        collection,
+        selection_mode: SelectMode::Single,
+        default_value: Vec::new(),
+        value: None,
+        on_change: None,
+        default_input_value: None,
+        input_value: None,
+        on_input_change: None,
+        disabled_keys: Signal::stored(HashSet::new()),
+        menu_trigger: ComboBoxMenuTrigger::Input,
+        allows_empty_collection: false,
+        allows_custom_value: false,
+        should_close_on_blur: true,
+        is_read_only: Signal::stored(false),
+        on_open_change: None,
+        is_invalid: Signal::stored(false),
+        validate: None,
+        validation_behavior: ValidationBehavior::default(),
+        name: None,
     });
     let disabled = RwSignal::new(false);
 
@@ -51,7 +73,18 @@ pub fn ComboboxDemo() -> impl IntoView {
         placeholder: Some("Search fruits\u{2026}".to_owned()),
         is_disabled: disabled.into(),
         popover,
-        ..UseComboBoxInput::new(state)
+        state,
+        id: None,
+        is_read_only: Signal::stored(false),
+        is_required: false,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        name: None,
+        should_focus_wrap: false,
+        keyboard_delegate: None,
+        on_focus: None,
+        on_blur: None,
     });
 
     // The input is a text field with the combobox's configuration.
@@ -119,6 +152,7 @@ fn FruitOption(list: ListBoxData, node: Node) -> impl IntoView {
     } = use_option(UseOptionInput {
         list,
         key: node.key.clone(),
+        on_context_menu: None,
     });
     let (attrs, styles) = props.into_parts();
 
@@ -147,5 +181,4 @@ fn DemoState(state: ComboBoxState) -> impl IntoView {
             "Value: "{value}". Input: \u{201c}"{input_value}"\u{201d}. Popover: "{open}"."
         </p>
     }
-
 }

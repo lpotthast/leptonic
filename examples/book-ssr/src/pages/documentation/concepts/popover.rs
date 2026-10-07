@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::popover::PopoverConceptDemo;
@@ -51,10 +50,6 @@ pub fn PagePopoverOverview() -> impl IntoView {
                             "arrow pointing at the trigger, and data attributes for styling and animation."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></TableCell>
-                        <TableCell>"A themed, non-modal popover with a dialog inside, opened by the button in its trigger slot."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -103,7 +98,6 @@ pub fn PagePopoverOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></li>
                 <li><Link href=routes::doc::popover::Atom.materialize()>"Popover Atoms"</Link></li>
-                <li><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></li>
                 <li><Link href=routes::doc::Dialog.materialize()>"Dialog"</Link></li>
                 <li><Link href=routes::doc::Tooltip.materialize()>"Tooltip"</Link></li>
                 <li><Link href=routes::doc::OverlayBehavior.materialize()>"Overlay Behavior"</Link></li>

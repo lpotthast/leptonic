@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::radio::RadioAtomDemo;
@@ -191,7 +190,6 @@ pub fn PageAtomRadio() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Radio.materialize()>"Radio overview"</Link></li>
                 <li><Link href=routes::doc::radio::Hook.materialize()>"Radio Hooks"</Link></li>
-                <li><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></li>
                 <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>

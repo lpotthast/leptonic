@@ -17,7 +17,11 @@ pub fn AnimationDemo() -> impl IntoView {
     let UseExitAnimationReturn {
         is_exiting,
         exit_state,
-    } = use_exit_animation(UseExitAnimationInput::new(element, is_open.into()));
+    } = use_exit_animation(UseExitAnimationInput {
+        element,
+        is_open: is_open.into(),
+        on_exit: None,
+    });
 
     view! {
         <Button on_press=move |_| is_open.update(|open| *open = !*open)>
@@ -34,8 +38,11 @@ pub fn AnimationDemo() -> impl IntoView {
 #[component]
 fn AnimatedPanel(element: CapturedElement, is_exiting: Signal<bool>) -> impl IntoView {
     // Created with each mount: an enter animation is tracked once per hook.
-    let UseEnterAnimationReturn { is_entering } =
-        use_enter_animation(UseEnterAnimationInput::new(element));
+    let UseEnterAnimationReturn { is_entering } = use_enter_animation(UseEnterAnimationInput {
+        element,
+        is_ready: Signal::stored(true),
+        on_enter: None,
+    });
 
     view! {
         <div

@@ -2,10 +2,7 @@ use std::collections::HashSet;
 
 use leptonic::{
     atoms::grid::{Grid, GridCell, GridRow, GridRowGroup},
-    hooks::{
-        Key, SelectionBehavior, SelectionMode, use_collection,
-        collections::Selection,
-    },
+    hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_collection},
 };
 use leptos::prelude::*;
 
@@ -43,7 +40,9 @@ pub fn GridMessagesDemo() -> impl IntoView {
                 keys.join(", ")
             }
         });
-        let opened = opened.get().map_or_else(|| "none".to_owned(), |key| key.to_string());
+        let opened = opened
+            .get()
+            .map_or_else(|| "none".to_owned(), |key| key.to_string());
         format!("Selected: {selected}. Opened: {opened}.")
     };
 

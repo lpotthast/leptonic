@@ -95,28 +95,8 @@ impl BrowserTest<str> for ProgressBarTests {
         assert_that!(ids[0]).is_equal_to("test-pb-both");
         assert_that!(page.element(ids[1]).await?.text().await?).is_equal_to("Visible".to_owned());
 
-        // The themed components render their value text.
-        let themed = page.css(".leptonic-meter").await?;
-        assert_that!(
-            themed
-                .find(By::Css(".leptonic-meter-value"))
-                .await?
-                .text()
-                .await?
-        )
-        .is_equal_to("40%".to_owned());
-        let themed = page.css(".leptonic-progress-bar").await?;
-        assert_that!(
-            themed
-                .find(By::Css(".leptonic-progress-info"))
-                .await?
-                .text()
-                .await?
-        )
-        .is_equal_to("60%".to_owned());
-
         // Meter.test.js "renders".
-        let meter = page.css("[role=meter]:not(.leptonic-meter)").await?;
+        let meter = page.css("[role=meter]").await?;
         assert_that!(attr(&meter, "aria-valuenow").await?).is_equal_to(Some("75".to_owned()));
         let meter_label = attr(&meter, "aria-labelledby").await?.unwrap_or_default();
         assert_that!(page.element(&meter_label).await?.text().await?)

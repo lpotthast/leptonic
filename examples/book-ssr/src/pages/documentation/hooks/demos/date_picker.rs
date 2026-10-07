@@ -1,97 +1,180 @@
 use leptonic::{
-    atoms::prelude::Popover,
-    components::prelude::*,
-    hooks::*,
-    prelude::icondata,
-    utils::{
-        CapturedElement,
-        time::{Day, InMonth},
+    atoms::{
+        calendar::{
+            Calendar, CalendarCell, CalendarCellButton, CalendarGrid, CalendarGridBody,
+            CalendarGridHeader, CalendarHeaderCell, CalendarHeaderRow, CalendarHeading,
+            CalendarNextButton, CalendarPreviousButton, CalendarWeek,
+        },
+        popover::Popover,
     },
+    components::prelude::{Checkbox, Icon},
+    hooks::{
+        IntoAttrs, Placement, UseButtonReturn,
+        datepicker::{
+            DateFieldData, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
+            UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
+            UseDatePickerStateInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
+            use_date_picker, use_date_picker_state, use_date_segment,
+        },
+        use_button,
+    },
+    jiff::civil::Date,
+    prelude::{ValueBinding, icondata},
+    utils::{CapturedElement, id::use_id},
 };
-use leptos::{html, prelude::*};
-use time::OffsetDateTime;
-
-// Stopgaps until leptonic has a segment atom and the calendar cells move the browser focus themselves.
-use super::{
-    calendar_focus::{follow_focused_date, week_key},
-    date_segments::{DateSegments, SegmentControls},
-};
+use leptos::prelude::*;
 
 #[component]
-pub fn DatePickerDemo() -> impl IntoView {
+pub fn DatePickerHookDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
-
-    let picker = use_date_picker(UseDatePickerInput {
-        label: Some("Departure".to_owned()),
-        is_disabled: disabled.into(),
-        ..Default::default()
-    });
-    let state = picker.state;
-
-    // The field edits the picker's value.
-    let field = use_date_field(UseDateFieldInput {
-        value: state.value,
-        on_change: Some(state.set_value),
-        is_disabled: disabled.into(),
-        is_date_picker: true,
-        ..Default::default()
-    });
-    let controls = SegmentControls::from(&field);
-
-    // The popover is positioned at the whole field. It keeps the focus inside while open and returns it when it
-    // closes.
-    let anchor = CapturedElement::new();
-    let dialog = StoredValue::new(picker.dialog_props);
-    let UseDatePickerCalendarProps {
-        value: calendar_value,
-        on_change: on_pick,
-        min,
-        max,
-        default_focused_value,
-        auto_focus,
+    let state = use_date_picker_state(UseDatePickerStateInput::<Date>::default());
+    let group = CapturedElement::new();
+    // The dialog in the popover: moving the focus into it doesn't leave the picker.
+    let dialog_id = use_id("departure-dialog");
+    let UseDatePickerReturn {
+        label_props,
+        group_props,
+        field_describedby,
+        labelledby,
+        button,
+        dialog_labelledby,
         ..
-    } = picker.calendar_props;
+    } = use_date_picker(
+        UseDatePickerInput {
+            has_label: true.into(),
+            is_disabled: disabled.into(),
+            dialog_id: Signal::stored(Some(dialog_id.clone())),
+            ..UseDatePickerInput::default()
+        },
+        state,
+        group,
+    );
 
-    let status = move || {
-        let date = state.formatted_value.get();
-        if date.is_empty() { "No departure date".to_owned() } else { format!("Departure: {date}") }
-    };
+    // The field edits the picker's value and shares its validation.
+    let field_state = use_date_field_state(UseDateFieldStateInput {
+        value: Some(ValueBinding::new(
+            state.value,
+            Callback::new(move |value| state.set_value(value)),
+        )),
+        granularity: Some(state.granularity),
+        is_disabled: disabled.into(),
+        validation: Some(state.validation),
+        ..UseDateFieldStateInput::default()
+    });
+    let UseDateFieldReturn {
+        field_props,
+        input_props,
+        mut data,
+        ..
+    } = use_date_field(
+        UseDateFieldInput {
+            is_in_picker: true,
+            // Alt + ArrowDown in the field.
+            open: Some(Callback::new(move |()| state.set_open(true))),
+            ..UseDateFieldInput::default()
+        },
+        field_state,
+        CapturedElement::new(),
+        CapturedElement::new(),
+    );
+    // The segments are named and described by the picker: its label, its description and its value.
+    data.aria_labelledby = labelledby;
+    data.aria_describedby = field_describedby;
+
+    let UseButtonReturn {
+        props: button_props,
+        ..
+    } = use_button(button);
+    let (group_attrs, group_styles) = group_props.into_parts();
+    let (field_attrs, field_styles) = field_props.into_parts();
+    let (button_attrs, button_styles) = button_props.into_parts();
+    let segments = field_state.segments;
+    let dialog_labelledby = dialog_labelledby.get_untracked();
 
     view! {
-        <div {..anchor.attr()} class="demo-date-picker">
-            <div {..picker.group_props.into_attrs()} class="demo-date-picker-group">
-                <span {..picker.label_props.into_attrs()} class="demo-date-field-label">"Departure"</span>
-                // Both prop sets carry an `id` and a `role`: spread them on separate elements.
-                <div {..picker.field_props.into_attrs()} class="demo-date-field-input demo-date-picker-input">
-                    <div {..field.field_props.into_attrs()} class="demo-date-picker-segments">
-                        <DateSegments controls is_disabled=disabled is_read_only=false is_invalid=picker.is_invalid/>
-                    </div>
-                    <button {..picker.button_props.into_attrs()} class="demo-date-picker-button">
-                        <Icon icon=icondata::BsCalendar3/>
-                    </button>
+        <div class="demo-date-field">
+            <span {..label_props.into_attrs()} class="demo-field-label">"Departure"</span>
+            <div {..group_attrs} style=group_styles class="demo-date-input">
+                <div {..field_attrs} style=field_styles class="demo-date-segments">
+                    <For
+                        each=move || {
+                            segments.with(|segments| {
+                                segments.iter().enumerate().map(|(index, segment)| (index, segment.kind)).collect::<Vec<_>>()
+                            })
+                        }
+                        key=|key| *key
+                        children=move |(index, kind)| {
+                            let initial = segments.with_untracked(|segments| segments[index].clone());
+                            let segment = Signal::derive(move || {
+                                segments.with(|segments| {
+                                    segments.get(index).filter(|segment| segment.kind == kind).cloned()
+                                })
+                                .unwrap_or_else(|| initial.clone())
+                            });
+                            view! { <Segment segment data/> }
+                        }
+                    />
                 </div>
+                <button {..button_attrs} style=button_styles class="demo-date-picker-button">
+                    <Icon icon=icondata::BsCalendar3/>
+                </button>
             </div>
+            <input {..input_props.into_attrs()}/>
         </div>
 
+        // Positioned at the group. It keeps the focus inside while open and returns it when it closes.
         <Popover
-            is_open=picker.is_open
-            set_open=picker.set_open
-            trigger=anchor
+            is_open=state.overlay.is_open
+            set_open={move |is_open| state.set_open(is_open)}
+            trigger=group
             placement=Placement::BottomStart
             classes="demo-date-picker-popover"
         >
-            <div
-                id=dialog.with_value(|dialog| dialog.id.clone())
-                role=dialog.with_value(|dialog| dialog.role)
-                aria-modal=dialog.with_value(|dialog| dialog.aria_modal)
-                aria-labelledby=dialog.with_value(|dialog| dialog.aria_labelledby.clone())
-            >
-                // Created on every opening, so that it starts at the current value.
-                <PickerCalendar value=calendar_value on_pick min max default_focused_value auto_focus/>
+            <div id=dialog_id.clone() role="dialog" aria-labelledby=dialog_labelledby.clone()>
+                // Created on every opening: it starts at the picker's date, with the focus.
+                <Calendar
+                    value=state.date_value
+                    on_change={move |date: Option<Date>| {
+                        if let Some(date) = date {
+                            state.select_date(date);
+                        }
+                    }}
+                    auto_focus=true
+                    classes="demo-date-picker-calendar"
+                >
+                    <header class="demo-calendar-header">
+                        <CalendarPreviousButton classes="demo-calendar-nav">
+                            <Icon icon=icondata::BsChevronLeft/>
+                        </CalendarPreviousButton>
+                        <CalendarHeading classes="demo-calendar-title"/>
+                        <CalendarNextButton classes="demo-calendar-nav">
+                            <Icon icon=icondata::BsChevronRight/>
+                        </CalendarNextButton>
+                    </header>
+                    <CalendarGrid classes="demo-calendar-grid">
+                        <CalendarGridHeader>
+                            <CalendarHeaderRow children=|day| view! { <CalendarHeaderCell>{day}</CalendarHeaderCell> }/>
+                        </CalendarGridHeader>
+                        <CalendarGridBody children=|week| view! {
+                            <CalendarWeek week children=|date| view! {
+                                <CalendarCell date>
+                                    <CalendarCellButton classes="demo-calendar-day"/>
+                                </CalendarCell>
+                            }/>
+                        }/>
+                    </CalendarGrid>
+                </Calendar>
             </div>
         </Popover>
 
-        <p class="demo-status">{status}</p>
+        <p class="demo-status">
+            {move || {
+                state.value.get().map_or_else(
+                    || "No departure date".to_owned(),
+                    |date| format!("Departure on {}", date.strftime("%A, %B %-d, %Y")),
+                )
+            }}
+        </p>
 
         <div class="demo-controls">
             <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
@@ -99,98 +182,22 @@ pub fn DatePickerDemo() -> impl IntoView {
     }
 }
 
-/// A single-month calendar built from the calendar hooks, configured from the picker's `calendar_props`.
+/// An editable segment, or a literal between them.
 #[component]
-fn PickerCalendar(
-    value: Signal<Option<OffsetDateTime>>,
-    on_pick: Callback<OffsetDateTime>,
-    min: Option<OffsetDateTime>,
-    max: Option<OffsetDateTime>,
-    default_focused_value: Option<OffsetDateTime>,
-    auto_focus: bool,
-) -> impl IntoView {
-    let calendar = use_calendar_state(UseCalendarStateInput {
-        default_value: value.get_untracked(),
-        min,
-        max,
-        default_focused_value,
-        on_change: Some(Callback::new(move |date: Option<OffsetDateTime>| {
-            if let Some(date) = date {
-                on_pick.run(date);
-            }
-        })),
-        ..Default::default()
-    });
-    let grid = use_calendar_grid(UseCalendarGridInput::from_calendar_state(calendar));
-
-    let grid_ref = NodeRef::<html::Table>::new();
-    follow_focused_date(calendar.focused_date, grid_ref, auto_focus);
-
-    view! {
-        <div class="demo-calendar-header">
-            <Button
-                on_press=move |_| calendar.focus_previous_page.run(())
-                variant=ButtonVariant::Flat
-                attr:aria-label="Previous month"
-            >
-                <Icon icon=icondata::BsChevronLeft/>
-            </Button>
-            <span class="demo-calendar-title">
-                {move || format!("{} {}", calendar.focused_month_name.get(), calendar.focused_year.get())}
-            </span>
-            <Button
-                on_press=move |_| calendar.focus_next_page.run(())
-                variant=ButtonVariant::Flat
-                attr:aria-label="Next month"
-            >
-                <Icon icon=icondata::BsChevronRight/>
-            </Button>
-        </div>
-        <table node_ref=grid_ref class="demo-calendar-grid" {..grid.grid_props.into_attrs()}>
-            <thead>
-                <tr {..grid.header_props.into_attrs()}>
-                    {grid.weekday_labels.into_iter().map(|label| view! { <th>{label}</th> }).collect_view()}
-                </tr>
-            </thead>
-            <tbody>
-                <For each=move || calendar.weeks.get() key=week_key let(week)>
-                    <tr>
-                        {week.days.into_iter().map(|day| view! { <DayCell calendar day/> }).collect_view()}
-                    </tr>
-                </For>
-            </tbody>
-        </table>
+fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl IntoView {
+    let kind = segment.with_untracked(|segment| segment.kind);
+    let text = move || segment.with(|segment| segment.text.clone());
+    if kind == DateSegmentType::Literal {
+        return view! {
+            <span aria-hidden="true" class="demo-date-segment" data-type=kind.as_str()>{text}</span>
+        }
+        .into_any();
     }
-}
-
-#[component]
-fn DayCell(calendar: UseCalendarStateReturn, day: Day) -> impl IntoView {
-    let date = day.date_time;
-    let cell = use_calendar_cell(UseCalendarCellInput {
-        day,
-        is_focused: Signal::derive(move || calendar.is_cell_focused.run(date)),
-        is_selected: Signal::derive(move || calendar.is_selected.run(date)),
-        is_disabled: calendar.is_disabled,
-        on_select: Some(Callback::new(move |day: Day| calendar.select_date.run(day.date_time))),
-        // Moving the cursor to a day of another month on mousedown would switch the month before the click
-        // lands. Those days are selected (and focused) by `on_select` instead.
-        on_focus: Some(Callback::new(move |day: Day| {
-            if day.in_month == InMonth::Current {
-                calendar.set_focused_date.run(day.date_time);
-            }
-        })),
-    });
-
+    let UseDateSegmentReturn { segment_props } =
+        use_date_segment(segment, data, CapturedElement::new());
+    let (attrs, styles) = segment_props.into_parts();
     view! {
-        <td {..cell.cell_props.into_attrs()}>
-            <button
-                class="demo-calendar-day"
-                data-outside-month=cell.is_outside_month.then_some("")
-                data-today=cell.is_today.then_some("")
-                {..cell.button_props.into_attrs()}
-            >
-                {cell.formatted_date}
-            </button>
-        </td>
+        <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>
     }
+    .into_any()
 }

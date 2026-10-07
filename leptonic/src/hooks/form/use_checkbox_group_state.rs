@@ -197,6 +197,7 @@ pub fn use_checkbox_group_state(input: UseCheckboxGroupStateInput) -> CheckboxGr
     let value = set_value.value;
     let default_value = value.get_untracked();
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value,
         validate,

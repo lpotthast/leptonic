@@ -18,6 +18,7 @@ use crate::{
         aria::AriaRole,
         classes::Classes,
         data_attributes::flag,
+        default_class::with_default_class,
         id::{ensure_element_id, use_id},
         styles::Styles,
     },
@@ -61,6 +62,8 @@ struct TriggerPress {
 /// Give each disclosure an `id` to address it in `default_expanded_keys` and `expanded_keys`.
 ///
 /// Data attributes: `data-disabled`.
+///
+/// Default class: `leptonic-DisclosureGroup`.
 #[component]
 #[allow(clippy::implicit_hasher)]
 pub fn DisclosureGroup(
@@ -84,6 +87,7 @@ pub fn DisclosureGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-DisclosureGroup", classes);
     let (value, on_expanded_change) =
         ValueBinding::from_state_props(expanded_keys, set_expanded_keys, on_expanded_change);
     let state = use_disclosure_group_state(UseDisclosureGroupStateInput {
@@ -114,6 +118,8 @@ pub fn DisclosureGroup(
 /// ```
 ///
 /// Data attributes: `data-expanded`, `data-disabled`, `data-focus-visible-within`.
+///
+/// Default class: `leptonic-Disclosure`.
 #[component]
 pub fn Disclosure(
     /// The disclosure's key in a surrounding [`DisclosureGroup`].
@@ -134,6 +140,7 @@ pub fn Disclosure(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Disclosure", classes);
     let group = use_context::<DisclosureGroupState>();
     let key = id.unwrap_or_else(|| Key::from(use_id("disclosure")));
     // In a group, the group's expanded keys hold the state.
@@ -172,7 +179,7 @@ pub fn Disclosure(
         ..
     } = use_disclosure(UseDisclosureInput {
         is_disabled,
-        ..UseDisclosureInput::new(disclosure_state)
+        state: disclosure_state,
     });
 
     // The panel is named by the trigger: its own id, else the hook's, which it gets once rendered
@@ -276,6 +283,8 @@ pub fn DisclosureTrigger(children: Children) -> impl IntoView {
 /// expands or collapses.
 ///
 /// Data attributes: `data-focus-visible-within`.
+///
+/// Default class: `leptonic-DisclosurePanel`.
 #[component]
 pub fn DisclosurePanel(
     /// `Group` (default), or `Region` for an important section that should be a landmark.
@@ -285,6 +294,7 @@ pub fn DisclosurePanel(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-DisclosurePanel", classes);
     let Some(context) = use_context::<DisclosureContext>() else {
         crate::utils::dev_warn!("A <DisclosurePanel> must be inside a <Disclosure>.");
         return ().into_any();

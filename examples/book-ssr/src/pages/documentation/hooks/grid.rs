@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid_2d::Grid2dDemo;
@@ -27,24 +26,50 @@ pub fn PageUseGrid() -> impl IntoView {
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::{hooks::*, utils::CapturedElement};
+                        use leptonic::{
+                            hooks::{
+                                collections::{CollectionOptions, SelectionOptions},
+                                *,
+                            },
+                            utils::CapturedElement,
+                        };
                         use leptos::prelude::*;
 
                         let collection = use_collection(|b| {
                             b.row("ada", "Ada", |r| { r.cell("Ada"); r.cell("Admin"); });
                             b.row("bob", "Bob", |r| { r.cell("Bob"); r.cell("User"); });
                         });
-                        let state = use_grid_state(UseGridStateInput::new(collection));
+                        let state = use_grid_state(UseGridStateInput {
+                            collection,
+                            selection: SelectionOptions::default(),
+                            focus_mode: GridFocusMode::Row,
+                        });
                         let UseGridReturn { props, data } = use_grid(UseGridInput {
+                            state,
+                            element: CapturedElement::new(),
+                            id: None,
                             aria_label: "Users".into(),
-                            ..UseGridInput::new(state, CapturedElement::new())
+                            aria_labelledby: None,
+                            keyboard_delegate: None,
+                            options: CollectionOptions::default(),
+                            keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
+                            should_select_on_press_up: false,
+                            on_row_action: None,
+                            on_cell_action: None,
                         });
 
                         // Per row:
-                        let row = use_grid_row(UseGridRowInput { grid: data.clone(), key: Key::from("ada") });
+                        let row = use_grid_row(UseGridRowInput { grid: data.clone(), key: Key::from("ada"), on_context_menu: None });
                         let (row_attrs, row_styles) = row.row_props.into_parts();
                         // Per cell:
-                        let cell = use_grid_cell(UseGridCellInput::new(data.clone(), Key::cell(&Key::from("ada"), 0)));
+                        let cell = use_grid_cell(UseGridCellInput {
+                            grid: data.clone(),
+                            key: Key::cell(&Key::from("ada"), 0),
+                            id: None,
+                            focus_mode: None,
+                            allows_arrow_navigation: false,
+                            should_select_on_press_up: false,
+                        });
                         let (cell_attrs, cell_styles) = cell.grid_cell_props.into_parts();
                     "#)}
                 </Code>
@@ -64,8 +89,9 @@ pub fn PageUseGrid() -> impl IntoView {
 
             <Section title="use_grid_state">
                 <p>
-                    "Holds the rows and cells, the row selection and the focus. Create the input with "
-                    <Code inline=true>"UseGridStateInput::new(collection)"</Code>" (rows focused first, no selection)."
+                    "Holds the rows and cells, the row selection and the focus. Pass a "
+                    <Code inline=true>"UseGridStateInput"</Code>" with every field named; the Default column gives the value "
+                    "for fields you don\u{2019}t need (rows focused first, no selection)."
                 </p>
                 <Section title="Input" id="use-grid-state-input">
                     <ApiTable kind=ApiKind::Input of="UseGridStateInput">
@@ -96,7 +122,7 @@ pub fn PageUseGrid() -> impl IntoView {
             <Section title="use_grid">
                 <p>"Keyboard navigation, selection and ARIA attributes for the grid element."</p>
                 <Section title="Input" id="use-grid-input">
-                    <p>"Create the input with "<Code inline=true>"UseGridInput::new(state, element)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseGridInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseGridInput">
                         <ApiRow name="state" ty="GridState">"From "<Code inline=true>"use_grid_state"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The grid element; the props capture it. Required."</ApiRow>
@@ -150,6 +176,9 @@ pub fn PageUseGrid() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseGridRowInput">
                         <ApiRow name="grid" ty="GridData">"From "<Code inline=true>"use_grid"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The row\u{2019}s key in the collection. Required."</ApiRow>
+                        <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>" default="None">
+                            "Called when a context menu is requested on the row (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the row\u{2019}s menu then replaces the browser\u{2019}s."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
                 <Section title="Return" id="use-grid-row-return">
@@ -174,7 +203,8 @@ pub fn PageUseGrid() -> impl IntoView {
                     " owns its presses instead: a click or "<Keys keys="Enter"/>" runs the action."
                 </p>
                 <Section title="Input" id="use-grid-cell-input">
-                    <p>"Create the input with "<Code inline=true>"UseGridCellInput::new(grid, key)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseGridCellInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseGridCellInput">
                         <ApiRow name="grid" ty="GridData">"From "<Code inline=true>"use_grid"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The cell\u{2019}s key, "<Code inline=true>"Key::cell(&row, column)"</Code>". Required."</ApiRow>

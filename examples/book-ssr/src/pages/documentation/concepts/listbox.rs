@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::listbox::ListboxConceptDemo;
@@ -19,6 +18,13 @@ pub fn PageListboxOverview() -> impl IntoView {
             <Section title="When to Use">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow><TableCell>"Present a visible list of selectable items"</TableCell><TableCell><b>"Listbox"</b></TableCell></TableRow>
+                    <TableRow>
+                        <TableCell>"Present thousands of options"</TableCell>
+                        <TableCell>
+                            "A listbox in a "<Link href=routes::doc::collection_state::Virtualizer.materialize()>"Virtualizer"</Link>
+                            ", which renders only the options in view"
+                        </TableCell>
+                    </TableRow>
                     <TableRow><TableCell>"Choose from a dropdown"</TableCell><TableCell><Link href=routes::doc::Select.materialize()>"Select"</Link></TableCell></TableRow>
                     <TableRow><TableCell>"Toggle independent boolean options"</TableCell><TableCell><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link>" group"</TableCell></TableRow>
                     <TableRow><TableCell>"Choose one from a visible set"</TableCell><TableCell><Link href=routes::doc::Radio.materialize()>"Radio"</Link>" group"</TableCell></TableRow>
@@ -93,7 +99,7 @@ pub fn PageListboxOverview() -> impl IntoView {
                         <Keys keys="Option"/>" instead of "<Keys keys="Control"/>" on macOS)."
                     </KeyRow>
                     <KeyRow keys="Enter">"Perform the option\u{2019}s action; without one, select it."</KeyRow>
-                    <KeyRow keys="Control + A">"Select all options (multiple selection; "<Keys keys="Command + A"/>" on macOS)."</KeyRow>
+                    <KeyRow keys="Control + A">"Select all options (multiple selection; "<Keys keys="Meta + A"/>" on macOS)."</KeyRow>
                     <KeyRow keys="Escape">"Clear the selection."</KeyRow>
                     <KeyRow keys="Any character">"Focus the next option whose text starts with the typed text."</KeyRow>
                 </KeyboardTable>
@@ -105,6 +111,7 @@ pub fn PageListboxOverview() -> impl IntoView {
                 <li><Link href=routes::doc::Select.materialize()>"Select"</Link></li>
                 <li><Link href=routes::doc::GridList.materialize()>"Grid List"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+                <li><Link href=routes::doc::collection_state::Virtualizer.materialize()>"Virtualizer"</Link></li>
             </SeeAlso>
         </DocPage>
     }

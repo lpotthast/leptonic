@@ -1,11 +1,9 @@
 //! Test fixtures driven by the browser tests in `leptonic/tests/`.
 //!
-//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms`, `hooks` or
-//! `components`. To add one, create a module with a page component and register it in
+//! Every fixture is reachable at `/{group}/{name}`, where `group` is `atoms` or `hooks`. To add one, create a module with a page component and register it in
 //! [`FIXTURES`].
 
 pub mod atoms;
-pub mod components;
 pub mod hooks;
 
 use leptos::{prelude::*, web_sys};
@@ -25,48 +23,6 @@ impl Fixture {
 }
 
 pub const FIXTURES: &[Fixture] = &[
-    Fixture {
-        group: "components",
-        name: "button",
-        title: "Button components",
-        view: || view! { <components::button::PageComponentButton /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "color-picker",
-        title: "Color picker component",
-        view: || view! { <components::color_picker::PageComponentColorPicker /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "select",
-        title: "Select components",
-        view: || view! { <components::select::PageComponentSelect /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "slider",
-        title: "Slider components",
-        view: || view! { <components::slider::PageComponentSlider /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "table",
-        title: "Table components",
-        view: || view! { <components::table::PageComponentTable /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "text-field",
-        title: "Text field components",
-        view: || view! { <components::text_field::PageComponentTextField /> }.into_any(),
-    },
-    Fixture {
-        group: "components",
-        name: "tiptap-editor",
-        title: "Tiptap editor component",
-        view: || view! { <components::tiptap_editor::PageComponentTiptapEditor /> }.into_any(),
-    },
     Fixture {
         group: "atoms",
         name: "overlay-position",
@@ -129,9 +85,39 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "atoms",
+        name: "context-menu",
+        title: "Context menus",
+        view: || view! { <atoms::context_menu::PageAtomContextMenu /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
         name: "menu",
         title: "Menu atoms",
         view: || view! { <atoms::menu::PageAtomMenu /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "toast",
+        title: "Toast",
+        view: || view! { <atoms::toast::PageAtomToast /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "toast-single",
+        title: "One toast at a time",
+        view: || view! { <atoms::toast_single::PageAtomToastSingle /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "virtual_list",
+        title: "VirtualList",
+        view: || view! { <atoms::virtual_list::PageAtomVirtualList /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "virtualizer",
+        title: "Virtualizer",
+        view: || view! { <atoms::virtualizer::PageAtomVirtualizer /> }.into_any(),
     },
     Fixture {
         group: "atoms",
@@ -192,6 +178,18 @@ pub const FIXTURES: &[Fixture] = &[
         name: "toggle-button",
         title: "Toggle Button",
         view: || view! { <atoms::toggle_button::PageAtomToggleButton /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "global-shortcuts",
+        title: "use_global_shortcuts",
+        view: || view! { <hooks::global_shortcuts::PageHookGlobalShortcuts /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
+        name: "landmark",
+        title: "use_landmark",
+        view: || view! { <hooks::landmark::PageHookLandmark /> }.into_any(),
     },
     Fixture {
         group: "hooks",
@@ -426,6 +424,24 @@ pub const FIXTURES: &[Fixture] = &[
         name: "table-resizing",
         title: "Table column resizing",
         view: || view! { <atoms::table_resizing::PageAtomTableResizing /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "date-field",
+        title: "Date and time fields",
+        view: || view! { <atoms::date_field::PageAtomDateField /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "calendar",
+        title: "Calendar",
+        view: || view! { <atoms::calendar::PageAtomCalendar /> }.into_any(),
+    },
+    Fixture {
+        group: "atoms",
+        name: "tag-group",
+        title: "TagGroup",
+        view: || view! { <atoms::tag_group::PageAtomTagGroup /> }.into_any(),
     },
     Fixture {
         group: "atoms",

@@ -39,7 +39,10 @@ pub fn EventPropagationPressDemo() -> impl IntoView {
             <button {..button_attrs} style=button_styles type="button" class="demo-btn">"Button"</button>
         </div>
         <p class="demo-status">
-            {move || format!("Button pressed {} times, card pressed {} times.", button_presses.get(), card_presses.get())}
+            {move || {
+                let times = |n: u32| if n == 1 { "1 time".to_owned() } else { format!("{n} times") };
+                format!("Button pressed {}, card pressed {}.", times(button_presses.get()), times(card_presses.get()))
+            }}
         </p>
         <div class="demo-controls">
             <Checkbox is_selected=button_bubbles set_selected=set_button_bubbles>

@@ -25,15 +25,6 @@ pub struct UseColorChannelFieldInput<C: ColorValue> {
     pub field: UseNumberFieldInput<f64>,
 }
 
-impl<C: ColorValue> UseColorChannelFieldInput<C> {
-    pub fn new(state: ColorChannelFieldState<C>) -> Self {
-        Self {
-            state,
-            field: UseNumberFieldInput::new(state.number),
-        }
-    }
-}
-
 /// Behavior and accessibility of a field editing one channel of a color: a number field whose
 /// label defaults to the channel's name when there is no other label.
 pub fn use_color_channel_field<C: ColorValue>(

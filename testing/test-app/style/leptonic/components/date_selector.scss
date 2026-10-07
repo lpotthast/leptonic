@@ -1,0 +1,194 @@
+// The themed calendar (`DateSelector`), built on the calendar atoms: state comes as data attributes.
+.leptonic-date-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    width: 21em;
+    max-width: 100%;
+    font-size: var(--datetime-font-size, 1em);
+    color: var(--datetime-day-text-color);
+
+    button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0.125em solid transparent;
+        padding: 0;
+        cursor: pointer;
+        user-select: none;
+
+        &[data-focus-visible] {
+            outline: 3px solid var(--brand-color);
+            outline-offset: 2px;
+        }
+
+        &[data-disabled] {
+            cursor: default;
+        }
+    }
+
+    .leptonic-date-selector-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .leptonic-date-selector-heading {
+        font-weight: bold;
+        font-size: 1.15em;
+        border-radius: 0.5em;
+        padding: 0.4em 0.6em;
+        color: var(--datetime-action-text-color);
+
+        &[data-hovered] {
+            background-color: var(--datetime-action-hover-background-color);
+        }
+    }
+
+    .leptonic-date-selector-previous,
+    .leptonic-date-selector-next {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 2.5em;
+        height: 2.5em;
+        border-radius: 50%;
+        color: var(--datetime-action-text-color);
+
+        &[data-hovered] {
+            background-color: var(--datetime-action-hover-background-color);
+        }
+
+        &[data-disabled] {
+            color: var(--datetime-action-disabled-text-color);
+            background-color: transparent;
+        }
+    }
+
+    .leptonic-date-selector-arrow {
+        width: 0.6em;
+        height: 0.6em;
+        margin-left: 0.2em;
+        border-left: 0.15em solid currentColor;
+        border-bottom: 0.15em solid currentColor;
+        transform: rotate(45deg);
+    }
+
+    .leptonic-date-selector-next .leptonic-date-selector-arrow {
+        margin-left: 0;
+        margin-right: 0.2em;
+        transform: rotate(-135deg);
+    }
+
+    .leptonic-date-selector-arrow:dir(rtl) {
+        scale: -1 1;
+    }
+
+    .leptonic-date-selector-grid {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .leptonic-date-selector-weekday {
+        padding: 0.5em 0;
+        text-align: center;
+        font-weight: 700;
+        color: var(--datetime-weekday-name-color);
+    }
+
+    .leptonic-date-selector-cell {
+        padding: 0.1em;
+    }
+
+    .leptonic-date-selector-day {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        aspect-ratio: 1;
+        border: 0.125em solid transparent;
+        border-radius: 50%;
+        cursor: pointer;
+        user-select: none;
+
+        &[data-hovered] {
+            color: var(--datetime-day-hover-text-color);
+            background-color: var(--datetime-day-hover-background-color);
+        }
+
+        &[data-today] {
+            border-color: var(--datetime-current-day-border-color);
+        }
+
+        &[data-selected] {
+            color: var(--datetime-staging-day-text-color);
+            background-color: var(--datetime-staging-day-background-color);
+        }
+
+        &[data-outside-month] {
+            color: var(--datetime-day-from-different-month-text-color);
+            background-color: transparent;
+            cursor: default;
+        }
+
+        &[data-disabled],
+        &[data-unavailable] {
+            color: var(--datetime-disabled-day-text-color);
+            cursor: default;
+
+            &[data-hovered] {
+                background-color: var(--datetime-disabled-day-hover-background-color);
+            }
+        }
+
+        &[data-unavailable] {
+            text-decoration: line-through;
+        }
+
+        &[data-invalid][data-selected] {
+            background-color: var(--danger-color);
+        }
+
+        &[data-focus-visible] {
+            outline: 3px solid var(--brand-color);
+            outline-offset: 2px;
+        }
+    }
+
+    .leptonic-date-selector-picks {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5em;
+    }
+
+    .leptonic-date-selector-pick {
+        padding: 0.75em;
+        border-radius: 10em;
+
+        &[data-hovered] {
+            background-color: var(--datetime-action-hover-background-color);
+        }
+
+        &[data-current] {
+            border-color: var(--datetime-current-month-border-color);
+        }
+
+        &[data-selected] {
+            color: var(--datetime-staging-month-text-color);
+            background-color: var(--datetime-staging-month-background-color);
+        }
+
+        &[data-disabled] {
+            color: var(--datetime-action-disabled-text-color);
+            background-color: transparent;
+        }
+    }
+
+    .leptonic-date-selector-error {
+        color: var(--danger-color);
+
+        &:empty {
+            display: none;
+        }
+    }
+}

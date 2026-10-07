@@ -18,7 +18,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_slider_state`]. Start from [`UseColorSliderStateInput::new`].
+/// Input of [`use_color_slider_state`].
 #[derive(Debug, Clone, Copy)]
 pub struct UseColorSliderStateInput<C: ColorValue> {
     /// The initial color.
@@ -33,21 +33,6 @@ pub struct UseColorSliderStateInput<C: ColorValue> {
     pub on_change: Option<Callback<C>>,
     /// Called with the color when the user stops dragging (or after a keyboard change).
     pub on_change_end: Option<Callback<C>>,
-}
-
-impl<C: ColorValue> UseColorSliderStateInput<C> {
-    /// A horizontal slider of `channel`, starting at `default_value`.
-    pub fn new(default_value: C, channel: C::Channel) -> Self {
-        Self {
-            default_value,
-            value: None,
-            channel,
-            is_disabled: Signal::stored(false),
-            orientation: Signal::stored(Orientation::Horizontal),
-            on_change: None,
-            on_change_end: None,
-        }
-    }
 }
 
 /// The state of a color slider: the color, and the slider of its channel.
@@ -147,7 +132,11 @@ pub fn use_color_slider_state<C: ColorValue>(
                 }
             })
         }),
-        ..UseSliderStateInput::new(range.min_value, range.max_value)
+        default_values: None,
+        min_value: Signal::stored(range.min_value),
+        max_value: Signal::stored(range.max_value),
+        format_options: Signal::default(),
+        on_change: None,
     });
 
     ColorSliderState {

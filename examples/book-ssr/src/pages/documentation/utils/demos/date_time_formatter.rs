@@ -1,19 +1,19 @@
 use leptonic::{
     components::prelude::*,
     hooks::{Orientation, collections::Key},
+    jiff::civil::date,
     utils::{
         date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, DateTimeStyle},
         i18n::Locale,
     },
 };
 use leptos::prelude::*;
-use time::{Duration, OffsetDateTime};
 
 #[component]
 pub fn DateTimeFormatterDemo() -> impl IntoView {
     let locale = RwSignal::new(Locale::default());
-    // A fixed moment (14 March 2026, 15:09:26 UTC), so that the server renders the same text as the browser.
-    let moment = OffsetDateTime::UNIX_EPOCH + Duration::seconds(1_773_500_966);
+    // A fixed moment (14 March 2026, 15:09:26), so that the server renders the same text as the browser.
+    let moment = date(2026, 3, 14).at(15, 9, 26, 0);
 
     let format = move |date_style: Option<DateTimeStyle>, time_style: Option<DateTimeStyle>| {
         move || {
@@ -27,7 +27,11 @@ pub fn DateTimeFormatterDemo() -> impl IntoView {
     };
 
     let on_locale_change = move |key: Option<Key>| {
-        if let Some(new_locale) = key.as_ref().and_then(Key::as_str).and_then(|tag| tag.parse().ok()) {
+        if let Some(new_locale) = key
+            .as_ref()
+            .and_then(Key::as_str)
+            .and_then(|tag| tag.parse().ok())
+        {
             locale.set(new_locale);
         }
     };

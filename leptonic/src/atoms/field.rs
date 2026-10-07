@@ -13,8 +13,8 @@ use web_sys::MouseEvent;
 use crate::{
     hooks::{IntoAttrs, LabelElementType, UseLabelProps, ValidationResult, ValidityStateSnapshot},
     utils::{
-        CapturedElement, EventHandler, SlotProps, classes::Classes, dev_warn, styles::Styles,
-        use_slot,
+        CapturedElement, EventHandler, SlotProps, classes::Classes,
+        default_class::with_default_class, dev_warn, styles::Styles, use_slot,
     },
 };
 
@@ -143,12 +143,15 @@ pub enum TextElement {
 }
 
 /// The visible label of the atom around it (see [`LabelContext`]). Outside one, a plain `<label>`.
+///
+/// Default class: `leptonic-Label`.
 #[component]
 pub fn Label(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Label", classes);
     match use_context::<LabelContext>() {
         Some(LabelContext {
             props,
@@ -176,6 +179,8 @@ pub fn Label(
 
 /// A description of the field around it, referenced by the field (`aria-describedby`) while
 /// rendered.
+///
+/// Default class: `leptonic-Description`.
 #[component]
 pub fn Description(
     #[prop(optional)] element: TextElement,
@@ -183,6 +188,7 @@ pub fn Description(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Description", classes);
     let props = use_context::<FieldContext>().map_or_else(
         || {
             // Outside a field, the id is referenced by nothing.
@@ -199,6 +205,8 @@ pub fn Description(
 /// The validation errors of the field around it, rendered only while it is invalid. It shows its
 /// children, else `message` for the validation result (e.g. by its `validation_details`), else the
 /// field's validation errors (and nothing when there are none).
+///
+/// Default class: `leptonic-FieldError`.
 #[component]
 pub fn FieldError(
     #[prop(optional)] element: TextElement,
@@ -209,6 +217,7 @@ pub fn FieldError(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<ChildrenFn>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-FieldError", classes);
     let ctx = use_context::<FieldContext>();
     if ctx.is_none() {
         dev_warn!("A <FieldError> shows nothing outside a field (TextField, Checkbox, ...).");

@@ -1,10 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
-    dnd_drag_to_drop::DragToDropDemo, dnd_quick_start::DndQuickStartDemo,
-    dnd_reorder::ReorderDemo,
+    dnd_drag_to_drop::DragToDropDemo, dnd_quick_start::DndQuickStartDemo, dnd_reorder::ReorderDemo,
 };
 use crate::{kit::*, routes};
 
@@ -163,7 +161,7 @@ fn UseDragSection() -> impl IntoView {
             </p>
 
             <Section title="Input" id="use-drag-input">
-                <p>"Create the input with "<Code inline=true>"UseDragInput::new(get_items)"</Code>", which sets the defaults below."</p>
+                <p>"Pass a "<Code inline=true>"UseDragInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseDragInput">
                     <ApiRow name="get_items" ty="Callback<(), Vec<DragItem>>">"The dragged data, read when a drag starts. Required."</ApiRow>
                     <ApiRow name="get_allowed_drop_operations" ty="Option<Callback<(), Vec<DropOperation>>>" default="None">
@@ -211,12 +209,18 @@ fn UseDragSection() -> impl IntoView {
                         use leptonic::hooks::*;
 
                         let UseDragReturn { drag_props, is_dragging, .. } = use_drag(UseDragInput {
+                            get_items: Callback::new(|()| vec![DragItem::text("Hello")]),
+                            get_allowed_drop_operations: None,
+                            preview: None,
+                            on_drag_start: None,
+                            on_drag_move: None,
                             on_drag_end: Some(Callback::new(|e: DragEndEvent| {
                                 if e.drop_operation == DropOperation::Move {
                                     // Remove the moved data.
                                 }
                             })),
-                            ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("Hello")]))
+                            has_drag_button: false,
+                            is_disabled: Signal::stored(false),
                         });
 
                         view! {
@@ -245,7 +249,7 @@ fn UseDropSection() -> impl IntoView {
             </p>
 
             <Section title="Input" id="use-drop-input">
-                <p>"Create the input with "<Code inline=true>"UseDropInput::new(element)"</Code>", which sets the defaults below."</p>
+                <p>"Pass a "<Code inline=true>"UseDropInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseDropInput">
                     <ApiRow name="element" ty="CapturedElement">"The drop target element. The props capture it. Required."</ApiRow>
                     <ApiRow name="get_drop_operation" ty="Option<Callback<DropOperationQuery, DropOperation>>" default="None">
@@ -295,6 +299,7 @@ fn UseDropSection() -> impl IntoView {
                         use leptonic::{hooks::*, utils::CapturedElement};
 
                         let UseDropReturn { drop_props, is_drop_target, .. } = use_drop(UseDropInput {
+                            element: CapturedElement::new(),
                             // Accept images only, as copies.
                             get_drop_operation: Some(Callback::new(|q: DropOperationQuery| {
                                 if q.types.has(&DragType::from("image/*")) && q.allowed_operations.contains(&DropOperation::Copy) {
@@ -303,6 +308,11 @@ fn UseDropSection() -> impl IntoView {
                                     DropOperation::Cancel
                                 }
                             })),
+                            get_drop_operation_for_point: None,
+                            on_drop_enter: None,
+                            on_drop_move: None,
+                            on_drop_activate: None,
+                            on_drop_exit: None,
                             on_drop: Some(Callback::new(|e: DropEvent| {
                                 for item in e.items {
                                     if let DropItem::File(file) = item {
@@ -310,7 +320,8 @@ fn UseDropSection() -> impl IntoView {
                                     }
                                 }
                             })),
-                            ..UseDropInput::new(CapturedElement::new())
+                            has_drop_button: false,
+                            is_disabled: Signal::stored(false),
                         });
 
                         view! {
@@ -429,10 +440,16 @@ fn CollectionsExample() -> impl IntoView {
                     };
 
                     // Once, for the collection (`list` from `use_list_state`, `element` captured by the grid list's props):
-                    let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput::new(
+                    let drag_state = use_draggable_collection_state(UseDraggableCollectionStateInput {
                         list,
-                        Callback::new(|keys: HashSet<Key>| keys.iter().map(|k| DragItem::text(k.to_string())).collect()),
-                    ));
+                        get_items: Callback::new(|keys: HashSet<Key>| keys.iter().map(|k| DragItem::text(k.to_string())).collect()),
+                        preview: None,
+                        get_allowed_drop_operations: None,
+                        on_drag_start: None,
+                        on_drag_move: None,
+                        on_drag_end: None,
+                        is_disabled: Signal::stored(false),
+                    });
                     use_draggable_collection(drag_state, element);
                     let drop_state = use_droppable_collection_state(UseDroppableCollectionStateInput {
                         list,
@@ -485,8 +502,8 @@ fn DraggableCollectionHooks() -> impl IntoView {
         <Section title="use_draggable_collection_state">
             <Section title="Input" id="use-draggable-collection-state-input">
                 <p>
-                    "Create the input with "<Code inline=true>"UseDraggableCollectionStateInput::new(list, get_items)"</Code>
-                    ", which sets the defaults below."
+                    "Pass a "<Code inline=true>"UseDraggableCollectionStateInput"</Code>" with every field named; the Default "
+                    "column gives the value for fields you don\u{2019}t need."
                 </p>
                 <ApiTable kind=ApiKind::Input of="UseDraggableCollectionStateInput">
                     <ApiRow name="list" ty="ListState">"The collection and its selection. Required."</ApiRow>
@@ -797,11 +814,18 @@ fn UseAutoScrollSection() -> impl IntoView {
                     let element = CapturedElement::new();
                     let auto_scroll = use_auto_scroll(element);
                     let UseDropReturn { drop_props, .. } = use_drop(UseDropInput {
+                        element,
+                        get_drop_operation: None,
+                        get_drop_operation_for_point: None,
+                        on_drop_enter: None,
                         on_drop_move: Some(Callback::new(move |e: DropMoveEvent| auto_scroll.move_to(e.x, e.y))),
+                        on_drop_activate: None,
                         on_drop_exit: Some(Callback::new(move |_| auto_scroll.stop())),
                         on_drop: Some(Callback::new(move |_| auto_scroll.stop())),
-                        ..UseDropInput::new(element)
+                        has_drop_button: false,
+                        is_disabled: Signal::stored(false),
                     });
+
                 ")}
             </Code>
         </Section>
@@ -881,7 +905,7 @@ fn DataModel() -> impl IntoView {
                     <Code inline=true>"Move"</Code>", "<Code inline=true>"Copy"</Code>", "<Code inline=true>"Link"</Code>
                     " or "<Code inline=true>"Cancel"</Code>" (no drop). Drags list the operations they allow in order of "
                     "preference; drop targets choose one. During pointer drags, modifier keys restrict the allowed operations: "
-                    "on macOS "<Keys keys="Option"/>" copies, "<Keys keys="Control"/>" links and "<Keys keys="Command"/>" moves; elsewhere "
+                    "on macOS "<Keys keys="Option"/>" copies, "<Keys keys="Control"/>" links and "<Keys keys="Meta"/>" moves; elsewhere "
                     <Keys keys="Control"/>" copies, "<Keys keys="Alt"/>" links and "<Keys keys="Shift"/>" moves."
                 </p>
             </Section>

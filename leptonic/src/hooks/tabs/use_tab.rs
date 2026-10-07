@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/tabs/useTab.ts @ 99e6102368
+use crate::hooks::collections::SelectOnPressUp;
 use leptos::{
     attr::{self, Attr},
     prelude::*,
@@ -38,18 +39,7 @@ pub struct UseTabInput {
     pub key: Key,
     pub is_disabled: Signal<bool>,
     /// Select when the press ends instead of when it starts. Defaults to `true` for links.
-    pub should_select_on_press_up: Option<bool>,
-}
-
-impl UseTabInput {
-    pub fn new(list: TabListItemData, key: Key) -> Self {
-        Self {
-            list,
-            key,
-            is_disabled: Signal::stored(false),
-            should_select_on_press_up: None,
-        }
-    }
+    pub should_select_on_press_up: SelectOnPressUp,
 }
 
 /// Return value of [`use_tab`].
@@ -127,12 +117,13 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         id: Some(list.tabs.tab_id(&key)),
         collection_id: list.collection_id,
         is_disabled,
-        should_select_on_press_up: should_select_on_press_up.unwrap_or(is_link),
+        should_select_on_press_up: should_select_on_press_up.resolve(|| is_link),
         allows_different_press_origin: false,
         on_action: None,
         link_behavior: LinkBehavior::Selection,
         focus: None,
         should_use_virtual_focus: false,
+        on_context_menu: None,
     });
     let (mut item, styles) = props.into_inner();
     let item_tabindex = item.tabindex;

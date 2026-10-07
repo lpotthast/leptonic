@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::combobox::ComboboxDemo;
@@ -48,8 +47,11 @@ pub fn PageUseCombobox() -> impl IntoView {
                 <Section title="Example" id="use-combobox-state-example">
                 <Code language=Language::Rust>
                     {indoc!(r#"
+                        use std::collections::HashSet;
+
                         use leptonic::hooks::{
-                            Key, UseComboBoxStateInput, use_collection, use_combobox_state, use_contains_filter,
+                            ComboBoxMenuTrigger, Key, SelectMode, UseComboBoxStateInput, ValidationBehavior, use_collection,
+                            use_combobox_state, use_contains_filter,
                         };
                         use leptos::{logging::log, prelude::*};
 
@@ -59,10 +61,26 @@ pub fn PageUseCombobox() -> impl IntoView {
                             b.item("durian", "Durian").disabled(true);
                         });
                         let state = use_combobox_state(UseComboBoxStateInput {
+                            collection,
                             filter: Some(use_contains_filter()),
+                            selection_mode: SelectMode::Single,
                             default_value: vec![Key::from("banana")],
+                            value: None,
                             on_change: Some(Callback::new(|keys: Vec<Key>| log!("{keys:?}"))),
-                            ..UseComboBoxStateInput::new(collection)
+                            default_input_value: None,
+                            input_value: None,
+                            on_input_change: None,
+                            disabled_keys: Signal::stored(HashSet::new()),
+                            menu_trigger: ComboBoxMenuTrigger::Input,
+                            allows_empty_collection: false,
+                            allows_custom_value: false,
+                            should_close_on_blur: true,
+                            is_read_only: Signal::stored(false),
+                            on_open_change: None,
+                            is_invalid: Signal::stored(false),
+                            validate: None,
+                            validation_behavior: ValidationBehavior::Aria,
+                            name: None,
                         });
                     "#)}
                 </Code>
@@ -70,8 +88,8 @@ pub fn PageUseCombobox() -> impl IntoView {
 
                 <Section title="Input" id="use-combobox-state-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseComboBoxStateInput::new(collection)"</Code>
-                        " and set further fields with struct update syntax."
+                        "Pass a "<Code inline=true>"UseComboBoxStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseComboBoxStateInput">
                         <ApiRow name="collection" ty="CollectionMemo">
@@ -316,9 +334,22 @@ pub fn PageUseCombobox() -> impl IntoView {
                         let popover = CapturedElement::new();
                         let UseComboBoxReturn { label_on_click, input, input_props, button, listbox } =
                             use_combobox(UseComboBoxInput {
+                                state,
+                                id: None,
+                                is_disabled: false.into(),
+                                is_read_only: false.into(),
+                                is_required: false,
                                 has_label: true.into(),
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
+                                placeholder: None,
+                                name: None,
+                                should_focus_wrap: false,
+                                keyboard_delegate: None,
                                 popover,
-                                ..UseComboBoxInput::new(state)
+                                on_focus: None,
+                                on_blur: None,
                             });
 
                         let UseTextFieldReturn { label_props, input_props: field_props, .. } = use_text_field(input);
@@ -353,8 +384,9 @@ pub fn PageUseCombobox() -> impl IntoView {
 
                 <Section title="Input" id="use-combobox-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseComboBoxInput::new(state)"</Code>
-                        " and set further fields with struct update syntax."
+                        "Pass a "<Code inline=true>"UseComboBoxInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need."
+
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseComboBoxInput">
                         <ApiRow name="state" ty="ComboBoxState">"From "<Code inline=true>"use_combobox_state"</Code>"."</ApiRow>

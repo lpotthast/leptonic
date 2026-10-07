@@ -1,11 +1,12 @@
 use leptonic::{
     hooks::{
-        IntoAttrs, Key, ListState, Node, Orientation, SelectionMode, use_collection, use_list_state,
+        IntoAttrs, Key, ListState, Node, Orientation, SelectionMode,
         collections::{
-            CollectionOptions, LinkBehavior, ListLayout, Selection, SelectionOptions, UseListStateInput,
-            UseSelectableItemInput, UseSelectableItemReturn, UseSelectableListInput, use_selectable_item,
-            use_selectable_list,
+            CollectionOptions, LinkBehavior, ListLayout, Selection, SelectionOptions,
+            UseListStateInput, UseSelectableItemInput, UseSelectableItemReturn,
+            UseSelectableListInput, use_selectable_item, use_selectable_list,
         },
+        use_collection, use_list_state,
     },
     utils::CapturedElement,
 };
@@ -37,6 +38,7 @@ pub fn CollectionStateDemo() -> impl IntoView {
         element: CapturedElement::new(),
         orientation: Orientation::Vertical,
         layout: ListLayout::Stack,
+        layout_delegate: None,
         keyboard_delegate: None,
         options: CollectionOptions::default(),
     })
@@ -45,9 +47,18 @@ pub fn CollectionStateDemo() -> impl IntoView {
     let items = move || collection.with(|c| c.items().cloned().collect::<Vec<Node>>());
 
     let status = move || {
-        let mut names: Vec<String> = state.selection.selected_keys().iter().map(ToString::to_string).collect();
+        let mut names: Vec<String> = state
+            .selection
+            .selected_keys()
+            .iter()
+            .map(ToString::to_string)
+            .collect();
         names.sort();
-        if names.is_empty() { "Nothing selected.".to_owned() } else { format!("Selected: {}.", names.join(", ")) }
+        if names.is_empty() {
+            "Nothing selected.".to_owned()
+        } else {
+            format!("Selected: {}.", names.join(", "))
+        }
     };
 
     // The hooks bring behavior, not semantics: the roles and ARIA states are up to the concept you build.
@@ -86,6 +97,7 @@ fn FruitItem(state: ListState, collection_id: String, node: Node) -> impl IntoVi
         should_select_on_press_up: false,
         allows_different_press_origin: false,
         on_action: None,
+        on_context_menu: None,
         link_behavior: LinkBehavior::default(),
         focus: None,
         should_use_virtual_focus: false,

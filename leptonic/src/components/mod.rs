@@ -6,8 +6,8 @@ pub mod checkbox;
 pub mod chip;
 pub mod collapsible;
 pub mod color_picker;
+pub mod date_picker;
 pub mod date_selector;
-pub mod datetime_input;
 pub mod drawer;
 pub mod grid;
 pub mod icon;
@@ -41,6 +41,7 @@ pub mod transitions;
 pub mod typography;
 
 pub mod prelude {
+    // The theme lives with the atoms (atoms-only apps use it too); `Root` needs it.
     #[cfg(feature = "sanitize")]
     pub use super::sanitized_html::SanitizedHtml;
     #[cfg(feature = "tiptap")]
@@ -59,8 +60,8 @@ pub mod prelude {
         chip::{Chip, ChipColor},
         collapsible::{Collapsible, CollapsibleBody, CollapsibleHeader, Collapsibles},
         color_picker::{ColorPalette, ColorPicker, ColorPreview, HueSlider},
+        date_picker::DatePicker,
         date_selector::DateSelector,
-        datetime_input::DateTimeInput,
         drawer::{Drawer, DrawerSide},
         grid::{Col, ColAlign, Grid, Row},
         icon::Icon,
@@ -89,7 +90,7 @@ pub mod prelude {
         },
         tabs::Tabs,
         text_field::{SearchField, TextField},
-        theme::{LeptonicTheme, Theme, ThemeContext, ThemeProvider, ThemeToggle, use_theme},
+        theme::{ThemeIcon, ThemeToggle},
         tile::Tile,
         toast::{Toast, ToastRoot, ToastTimeout, ToastVariant, Toasts},
         transitions::{
@@ -101,5 +102,6 @@ pub mod prelude {
         },
         typography::{Code, Language, Li, Ul},
     };
+    pub use crate::atoms::theme::{LeptonicTheme, Theme, ThemeContext, ThemeProvider, use_theme};
     pub use crate::hooks::LinkTarget;
 }

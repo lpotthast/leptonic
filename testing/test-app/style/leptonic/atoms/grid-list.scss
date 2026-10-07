@@ -1,0 +1,146 @@
+// Upstream: ../starters/docs/src/GridList.css @ 99e610236
+// Upstream: ../starters/docs/src/GridList.tsx @ 99e610236
+//
+// `GridList` and `GridListItem`, as the starter's cards (an image, a label, a description).
+// Markup of an item, as the starter's examples:
+//
+//   <GridListItem key=..>
+//     <img src=.. alt="" />
+//     <span class="text">"Desert Sunset"</span>
+//     <span class="text description">"PNG • 2/3/2024"</span>
+//   </GridListItem>
+//
+// The layout follows the grid list's `data-layout` (`grid`, as the starter's default, or `stack`).
+// Variants: `attr:data-size="small"` on the grid list for smaller cards.
+
+.leptonic-GridList {
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-2);
+  scroll-padding: var(--spacing-2);
+  border-radius: var(--radius);
+  max-height: inherit;
+  overflow: auto;
+  forced-color-adjust: none;
+  outline: none;
+  width: 100%;
+  max-height: 500px;
+  min-height: 100px;
+  box-sizing: border-box;
+  --grid-item-size: 200px;
+
+  &[data-layout='grid']:not([data-empty]) {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: repeat(auto-fit, minmax(100px, var(--grid-item-size)));
+  }
+
+  &[data-size='small'] {
+    --grid-item-size: 150px;
+  }
+
+  @media (width < 500px) {
+    &[data-layout='grid'] {
+      --grid-item-size: 150px;
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  &[data-layout='stack']:not([data-empty]) {
+    display: grid;
+    grid-template-columns: auto;
+    align-items: center;
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+  }
+
+  &[data-empty] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-style: italic;
+  }
+}
+
+.leptonic-GridListItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  border-radius: var(--radius);
+  outline: none;
+  cursor: default;
+  color: var(--text-color);
+  font: var(--font-size) system-ui;
+  box-sizing: border-box;
+  padding-bottom: var(--spacing-4);
+  background: var(--overlay-background);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  min-width: 0;
+  max-width: 250px;
+  overflow: clip;
+  position: relative;
+  transform: translateZ(0);
+  transition-property: scale;
+  transition-duration: 200ms;
+  -webkit-tap-highlight-color: transparent;
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  &[data-pressed] {
+    scale: 0.98;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    border: 2px solid light-dark(black, white);
+    outline: 2px solid light-dark(rgb(255 255 255 / 0.7), rgb(0 0 0 / 0.7));
+    outline-offset: -4px;
+    opacity: 0;
+    transition: opacity 200ms;
+  }
+
+  &[data-selected] {
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+  }
+
+  img {
+    width: 100%;
+    height: var(--grid-item-size);
+    object-fit: cover;
+    padding-bottom: var(--spacing-2);
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    flex-shrink: 0;
+  }
+
+  .text {
+    padding: 0 var(--spacing-4);
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+
+    &:not(.description) {
+      font-weight: 500;
+    }
+
+    &.description {
+      font-size: var(--font-size-sm);
+    }
+  }
+}

@@ -2,14 +2,14 @@
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    atoms::field::LabelPresence,
     atoms::{
-        field::LabelContext,
+        field::{LabelContext, LabelPresence},
         progress_bar::{ValueContext, fill, value_text},
     },
     hooks::{IntoAttrs, UseMeterInput, UseProgressBarReturn, use_meter},
     utils::{
         classes::Classes,
+        default_class::with_default_class,
         number_formatter::NumberFormatOptions,
         number_value::{NumberSignal, NumberValue},
         styles::Styles,
@@ -42,6 +42,8 @@ use crate::{
 ///     </Meter>
 /// }
 /// ```
+///
+/// Default class: `leptonic-Meter`.
 #[allow(clippy::too_many_arguments)]
 #[component]
 pub fn Meter<T: NumberValue>(
@@ -71,6 +73,7 @@ pub fn Meter<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Meter", classes);
     let defaults = UseMeterInput::<T>::default();
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let has_label = label_presence.has_label;
@@ -103,19 +106,25 @@ pub fn Meter<T: NumberValue>(
 }
 
 /// The filled part of a [`Meter`]'s track: as wide as the value (in percent of its container).
+///
+/// Default class: `leptonic-MeterFill`.
 #[component]
 pub fn MeterFill(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MeterFill", classes);
     fill(classes, styles)
 }
 
 /// The formatted value of a [`Meter`] (its `aria-valuetext`).
+///
+/// Default class: `leptonic-MeterValueText`.
 #[component]
 pub fn MeterValueText(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MeterValueText", classes);
     value_text(classes, styles)
 }

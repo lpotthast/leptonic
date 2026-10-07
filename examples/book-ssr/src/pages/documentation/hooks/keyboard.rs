@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{keyboard::KeyboardDemo, keyboard_shortcuts::KeyboardShortcutsDemo};
@@ -146,6 +145,12 @@ pub fn PageUseKeyboard() -> impl IntoView {
                     <Code inline=true>"use_menu_trigger"</Code></Link>" opens its menu with the arrow keys."
                 </p>
 
+                <p>
+                    "Shortcuts of the whole page, which work wherever the focus is (e.g. "<Keys keys="Control + K"/>" ("
+                    <Keys keys="Meta + K"/>" on macOS) opening a search), are bound with "
+                    <Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link>"."
+                </p>
+
                 <Section title="Shortcut">
                     <p>
                         "A "<Code inline=true>"Shortcut"</Code>" is one key plus the exact set of modifiers that must be held: "
@@ -190,6 +195,15 @@ pub fn PageUseKeyboard() -> impl IntoView {
                             <TableCell><Code inline=true>".matches(&event)"</Code></TableCell>
                             <TableCell>"Whether a "<Code inline=true>"KeyboardEvent"</Code>" triggers the shortcut on the current platform."</TableCell>
                         </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>".keys(apple)"</Code></TableCell>
+                            <TableCell>
+                                "The keys to show for the shortcut, as "<Code inline=true>"KeyboardKey"</Code>"s: the modifiers in the "
+                                "order of the platform (Apple\u{2019}s when "<Code inline=true>"apple"</Code>" is true), then the key. The "
+                                <Link href=routes::doc::kbd::Atom.materialize()><Code inline=true>"ShortcutKeys"</Code></Link>
+                                " atom shows them."
+                            </TableCell>
+                        </TableRow>
                     </DocTable>
                 </Section>
 
@@ -229,7 +243,9 @@ pub fn PageUseKeyboard() -> impl IntoView {
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
                 <li><Link href=routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
                 <li><Link href=routes::doc::interactions::UseHover.materialize()>"use_hover"</Link></li>
+                <li><Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+                <li><Link href=routes::doc::kbd::Atom.materialize()>"Kbd Atom"</Link></li>
                 <li><Link href=routes::doc::EventPropagation.materialize()>"Event Propagation"</Link></li>
             </SeeAlso>
         </DocPage>

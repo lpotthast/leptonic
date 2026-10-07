@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_area::ColorAreaConceptDemo;
@@ -72,11 +71,6 @@ pub fn PageColorAreaOverview() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                 </DocTable>
-                <p>
-                    "There is no color area component of its own; the "
-                    <Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link>
-                    " include a themed saturation and value area, "<Code inline=true>"ColorPalette"</Code>", built on the atom."
-                </p>
             </Section>
 
             <Section title="Quick Start">

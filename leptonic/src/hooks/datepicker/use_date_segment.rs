@@ -1,649 +1,743 @@
-// Upstream: react-aria/src/datepicker/useDateSegment.ts @ 6f664fe911
+// Upstream: react-aria/src/datepicker/useDateSegment.ts @ 99e6102368
 use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
+    attr::{
+        self, Attr,
+        custom::{CustomAttr, custom_attribute},
+    },
+    ev::{self, On, SharedEventCallback},
     prelude::*,
 };
-use web_sys::{FocusEvent, KeyboardEvent};
+use web_sys::{FocusEvent, InputEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
-use super::incomplete_date::IncompleteDate;
+use super::{
+    format::{DateFormatter, FormatOptions},
+    types::{DateSegment, DateSegmentType, DateValue, Granularity, HourCycle, MaxGranularity},
+    use_date_field::{DateFieldData, display_name},
+};
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{
+        IntoAttrs, PropsWithStyles, UseKeyboardInput, UseSpinButtonInput, UseSpinButtonReturn,
+        form::use_label::labels, use_keyboard, use_spin_button,
+    },
     utils::{
-        EventHandler,
-        aria::{AriaDisabled, AriaInvalid, AriaReadonly, AriaRole},
+        CapturedElement, ElementCaptureAttr, EventHandler,
+        aria::AriaRole,
+        date_time_formatter::{DateTimeFormatOptions, DateTimeFormatter, MonthFormat},
+        filter::{CollatorOptions, Filter},
+        i18n::{use_direction, use_locale},
+        id::use_id,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        locale::WritingDirection,
+        number_formatter::NumberFormatOptions,
+        number_parser::NumberParser,
+        platform::device::is_ios,
+        styles::Styles,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/datepicker/useDateSegment.ts
-
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// DIFFERENT BEHAVIOR
-// - Digit accumulation: Implemented directly here rather than in a separate
-//   utility. Typed digits accumulate in an internal buffer; auto-advance
-//   triggers when the parsed value * 10 would exceed max or max digits reached.
-// - Keyboard callbacks take `DateSegmentType` instead of index: the parent
-//   `use_date_field` state hook operates on types, not indices.
+// ## API DIFFERENCES
+// - Takes the field's `DateFieldData` (react-aria: a `WeakMap` keyed by the state) and the
+//   segment as a signal (its kind stays: a field keeps a segment per kind).
+// - For editable segments and the time zone only: literals are rendered hidden from assistive
+//   technology by the caller (react-aria returns `aria-hidden` for them).
 //
-// LEPTOS-SPECIFIC ADAPTATIONS
-// - ARIA value attributes are reactive `Signal`s rather than static strings,
-//   derived from the segment data.
-// - Uses `StoredValue<String>` for the digit accumulation buffer.
+// ## OMITTED FEATURES
+// - Localized segment names (see `use_date_field`).
 //
+// =============================================================================
 
-/// The type of date segment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DateSegmentType {
-    /// Year segment (e.g., "2024")
-    Year,
-    /// Month segment (e.g., "01" or "January")
-    Month,
-    /// Day segment (e.g., "15")
-    Day,
-    /// Hour segment (e.g., "14")
-    Hour,
-    /// Minute segment (e.g., "30")
-    Minute,
-    /// Second segment (e.g., "45")
-    Second,
-    /// AM/PM segment
-    DayPeriod,
-    /// Literal segment (e.g., "/" or ":")
-    Literal,
-}
-
-impl DateSegmentType {
-    /// Returns a human-readable label for screen readers.
-    pub fn aria_label(self) -> &'static str {
-        match self {
-            Self::Year => "year",
-            Self::Month => "month",
-            Self::Day => "day",
-            Self::Hour => "hour",
-            Self::Minute => "minute",
-            Self::Second => "second",
-            Self::DayPeriod => "AM/PM",
-            Self::Literal => "",
-        }
-    }
-}
-
-/// A segment of a date/time value.
-#[derive(Debug, Clone)]
-pub struct DateSegment {
-    /// The type of this segment.
-    pub segment_type: DateSegmentType,
-
-    /// The text representation of this segment.
-    pub text: String,
-
-    /// The numeric value (if applicable).
-    pub value: Option<i32>,
-
-    /// The minimum valid value.
-    pub min_value: Option<i32>,
-
-    /// The maximum valid value.
-    pub max_value: Option<i32>,
-
-    /// Whether this segment is editable.
-    pub is_editable: bool,
-
-    /// Whether this segment is a placeholder.
-    pub is_placeholder: bool,
-}
-
-impl DateSegment {
-    /// Creates a literal segment (non-editable separator).
-    pub fn literal(text: &str) -> Self {
-        Self {
-            segment_type: DateSegmentType::Literal,
-            text: text.to_string(),
-            value: None,
-            min_value: None,
-            max_value: None,
-            is_editable: false,
-            is_placeholder: false,
-        }
-    }
-
-    /// Creates a year segment.
-    pub fn year(value: Option<i32>) -> Self {
-        Self {
-            segment_type: DateSegmentType::Year,
-            text: value.map_or_else(|| "yyyy".to_string(), |v| format!("{v:04}")),
-            value,
-            min_value: Some(1),
-            max_value: Some(9999),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates a month segment.
-    pub fn month(value: Option<u8>) -> Self {
-        Self {
-            segment_type: DateSegmentType::Month,
-            text: value.map_or_else(|| "mm".to_string(), |v| format!("{v:02}")),
-            value: value.map(i32::from),
-            min_value: Some(1),
-            max_value: Some(12),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates a day segment.
-    pub fn day(value: Option<u8>, max: u8) -> Self {
-        Self {
-            segment_type: DateSegmentType::Day,
-            text: value.map_or_else(|| "dd".to_string(), |v| format!("{v:02}")),
-            value: value.map(i32::from),
-            min_value: Some(1),
-            max_value: Some(i32::from(max)),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates an hour segment.
-    pub fn hour(value: Option<u8>, is_24_hour: bool) -> Self {
-        let (min, max) = if is_24_hour { (0, 23) } else { (1, 12) };
-        Self {
-            segment_type: DateSegmentType::Hour,
-            text: value.map_or_else(|| "--".to_string(), |v| format!("{v:02}")),
-            value: value.map(i32::from),
-            min_value: Some(min),
-            max_value: Some(max),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates a minute segment.
-    pub fn minute(value: Option<u8>) -> Self {
-        Self {
-            segment_type: DateSegmentType::Minute,
-            text: value.map_or_else(|| "--".to_string(), |v| format!("{v:02}")),
-            value: value.map(i32::from),
-            min_value: Some(0),
-            max_value: Some(59),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates a second segment.
-    pub fn second(value: Option<u8>) -> Self {
-        Self {
-            segment_type: DateSegmentType::Second,
-            text: value.map_or_else(|| "--".to_string(), |v| format!("{v:02}")),
-            value: value.map(i32::from),
-            min_value: Some(0),
-            max_value: Some(59),
-            is_editable: true,
-            is_placeholder: value.is_none(),
-        }
-    }
-
-    /// Creates an AM/PM segment.
-    pub fn day_period(is_pm: Option<bool>) -> Self {
-        Self {
-            segment_type: DateSegmentType::DayPeriod,
-            text: match is_pm {
-                Some(true) => "PM".to_string(),
-                Some(false) | None => "AM".to_string(),
-            },
-            value: is_pm.map(i32::from),
-            min_value: Some(0),
-            max_value: Some(1),
-            is_editable: true,
-            is_placeholder: is_pm.is_none(),
-        }
-    }
-}
-
-/// Input parameters for the `use_date_segment` hook.
-#[derive(Debug, Clone)]
-pub struct UseDateSegmentInput {
-    /// The segment data.
-    pub segment: DateSegment,
-
-    /// Whether the segment is focused.
-    pub is_focused: Signal<bool>,
-
-    /// Whether the field is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the field is read-only.
-    pub is_read_only: Signal<bool>,
-
-    /// Callback when the segment value changes (typed digit or AM/PM).
-    pub on_change: Option<Callback<i32>>,
-
-    /// Callback when increment is requested (`ArrowUp`).
-    pub on_increment: Option<Callback<()>>,
-
-    /// Callback when decrement is requested (`ArrowDown`).
-    pub on_decrement: Option<Callback<()>>,
-
-    /// Callback to focus the next segment.
-    pub on_focus_next: Option<Callback<()>>,
-
-    /// Callback to focus the previous segment.
-    pub on_focus_previous: Option<Callback<()>>,
-
-    /// Callback to clear the segment (Backspace/Delete).
-    pub on_clear: Option<Callback<()>>,
-
-    /// Callback for page-up increment.
-    pub on_increment_page: Option<Callback<()>>,
-
-    /// Callback for page-down decrement.
-    pub on_decrement_page: Option<Callback<()>>,
-
-    /// Callback to set segment to max (End key).
-    pub on_increment_to_max: Option<Callback<()>>,
-
-    /// Callback to set segment to min (Home key).
-    pub on_decrement_to_min: Option<Callback<()>>,
-
-    /// Callback when segment loses focus.
-    pub on_blur: Option<Callback<()>>,
-
-    /// Whether the field is invalid (for aria-invalid on the segment).
-    pub is_invalid: Signal<bool>,
-}
-
-/// The return value of the `use_date_segment` hook.
-#[derive(Debug)]
+/// Return value of [`use_date_segment`].
 pub struct UseDateSegmentReturn {
-    /// Props for the segment element. Call `.into_attrs()` for view spreading.
-    pub segment_props: UseDateSegmentProps,
-
-    /// The segment data.
-    pub segment: DateSegment,
+    pub segment_props: PropsWithStyles<UseDateSegmentProps>,
 }
 
-/// Props from `use_date_segment` for the segment element.
+/// Props of a date segment (a `div` or `span`, editable as text).
 #[derive(Debug)]
 pub struct UseDateSegmentProps {
+    pub id: String,
     pub role: AriaRole,
-    pub tabindex: Signal<&'static str>,
-    pub aria_label: &'static str,
     pub aria_valuenow: Signal<Option<String>>,
+    pub aria_valuetext: Signal<Option<String>>,
     pub aria_valuemin: Signal<Option<String>>,
     pub aria_valuemax: Signal<Option<String>>,
-    pub aria_valuetext: Signal<String>,
-    pub aria_readonly: Signal<Option<AriaReadonly>>,
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub aria_invalid: Signal<Option<AriaInvalid>>,
-    pub content_editable: Option<&'static str>,
-    pub input_mode: Option<&'static str>,
+    pub aria_label: Signal<Option<String>>,
+    pub aria_labelledby: Signal<Option<String>>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_invalid: Signal<Option<&'static str>>,
+    pub aria_readonly: Signal<Option<&'static str>>,
+    pub aria_required: Signal<Option<&'static str>>,
+    pub aria_disabled: Signal<Option<&'static str>>,
     pub data_placeholder: Signal<Option<&'static str>>,
+    pub contenteditable: Signal<Option<&'static str>>,
+    pub spellcheck: Signal<Option<&'static str>>,
+    pub autocorrect: Signal<Option<&'static str>>,
+    pub enterkeyhint: Signal<Option<&'static str>>,
+    pub inputmode: Signal<Option<&'static str>>,
+    pub tabindex: Signal<Option<i32>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_keyup: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+    pub on_beforeinput: EventHandler<InputEvent>,
+    pub on_input: EventHandler<web_sys::Event>,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_mousedown: EventHandler<MouseEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
+
+pub type UseDateSegmentAttrs = (
+    (
+        Attr<attr::Id, String>,
+        Attr<attr::Role, AriaRole>,
+        Attr<attr::AriaValuenow, Signal<Option<String>>>,
+        Attr<attr::AriaValuetext, Signal<Option<String>>>,
+        Attr<attr::AriaValuemin, Signal<Option<String>>>,
+        Attr<attr::AriaValuemax, Signal<Option<String>>>,
+        Attr<attr::AriaLabel, Signal<Option<String>>>,
+        Attr<attr::AriaLabelledby, Signal<Option<String>>>,
+        Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    ),
+    (
+        Attr<attr::AriaInvalid, Signal<Option<&'static str>>>,
+        Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
+        Attr<attr::AriaRequired, Signal<Option<&'static str>>>,
+        Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+        CustomAttr<&'static str, Signal<Option<&'static str>>>,
+        Attr<attr::Contenteditable, Signal<Option<&'static str>>>,
+        Attr<attr::Spellcheck, Signal<Option<&'static str>>>,
+        CustomAttr<&'static str, Signal<Option<&'static str>>>,
+        Attr<attr::Enterkeyhint, Signal<Option<&'static str>>>,
+        Attr<attr::Inputmode, Signal<Option<&'static str>>>,
+        Attr<attr::Tabindex, Signal<Option<i32>>>,
+    ),
+    (
+        On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+        On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+        On<ev::focus, SharedEventCallback<FocusEvent>>,
+        On<ev::blur, SharedEventCallback<FocusEvent>>,
+        On<ev::beforeinput, SharedEventCallback<InputEvent>>,
+        On<ev::input, SharedEventCallback<web_sys::Event>>,
+        On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+        On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+        ElementCaptureAttr,
+    ),
+);
 
 impl IntoAttrs for UseDateSegmentProps {
     type Attrs = UseDateSegmentAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
-            Attr(attr::AriaValuetext, self.aria_valuetext),
-            Attr(attr::AriaReadonly, self.aria_readonly),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaInvalid, self.aria_invalid),
-            self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            (
+                Attr(attr::Id, self.id),
+                Attr(attr::Role, self.role),
+                Attr(attr::AriaValuenow, self.aria_valuenow),
+                Attr(attr::AriaValuetext, self.aria_valuetext),
+                Attr(attr::AriaValuemin, self.aria_valuemin),
+                Attr(attr::AriaValuemax, self.aria_valuemax),
+                Attr(attr::AriaLabel, self.aria_label),
+                Attr(attr::AriaLabelledby, self.aria_labelledby),
+                Attr(attr::AriaDescribedby, self.aria_describedby),
+            ),
+            (
+                Attr(attr::AriaInvalid, self.aria_invalid),
+                Attr(attr::AriaReadonly, self.aria_readonly),
+                Attr(attr::AriaRequired, self.aria_required),
+                Attr(attr::AriaDisabled, self.aria_disabled),
+                custom_attribute("data-placeholder", self.data_placeholder),
+                Attr(attr::Contenteditable, self.contenteditable),
+                Attr(attr::Spellcheck, self.spellcheck),
+                custom_attribute("autocorrect", self.autocorrect),
+                Attr(attr::Enterkeyhint, self.enterkeyhint),
+                Attr(attr::Inputmode, self.inputmode),
+                Attr(attr::Tabindex, self.tabindex),
+            ),
+            (
+                self.on_keydown.into_on(ev::keydown),
+                self.on_keyup.into_on(ev::keyup),
+                self.on_focus.into_on(ev::focus),
+                self.on_blur.into_on(ev::blur),
+                self.on_beforeinput.into_on(ev::beforeinput),
+                self.on_input.into_on(ev::input),
+                self.on_pointerdown.into_on(ev::pointerdown),
+                self.on_mousedown.into_on(ev::mousedown),
+                self.element_capture,
+            ),
         )
     }
 }
 
-/// Attributes for the date segment element.
-pub type UseDateSegmentAttrs = (
-    Attr<attr::Role, AriaRole>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaLabel, &'static str>,
-    Attr<attr::AriaValuenow, Signal<Option<String>>>,
-    Attr<attr::AriaValuemin, Signal<Option<String>>>,
-    Attr<attr::AriaValuemax, Signal<Option<String>>>,
-    Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-);
+/// The day period names (AM, PM) of a locale: as typed by the first letter.
+fn day_periods(locale: &crate::utils::i18n::Locale) -> [String; 2] {
+    let formatter = DateFormatter::new(
+        locale,
+        &FormatOptions {
+            granularity: Granularity::Hour,
+            max_granularity: MaxGranularity::Hour,
+            time_zone: None,
+            hide_time_zone: true,
+            hour_cycle: Some(HourCycle::H12),
+            show_era: false,
+            should_force_leading_zeros: false,
+        },
+    );
+    [0, 12].map(|hour| {
+        formatter
+            .format_to_parts(&jiff::civil::date(2001, 1, 1).at(hour, 0, 0, 0))
+            .into_iter()
+            .find(|(kind, _)| *kind == Some(DateSegmentType::DayPeriod))
+            .map_or_else(
+                || {
+                    if hour == 0 {
+                        "AM".to_owned()
+                    } else {
+                        "PM".to_owned()
+                    }
+                },
+                |(_, text)| text,
+            )
+    })
+}
 
-/// Provides the behavior and accessibility for a date segment.
-///
-/// A date segment is a single editable part of a date field (year, month, day, etc.).
-/// Implements digit accumulation, keyboard navigation, and ARIA spinbutton semantics.
-///
-/// # Example
-///
-/// ```ignore
-/// let segment = use_date_segment(UseDateSegmentInput {
-///     segment: DateSegment::month(Some(3)),
-///     is_focused: Signal::derive(|| false),
-///     is_disabled: Signal::derive(|| false),
-///     is_read_only: Signal::derive(|| false),
-///     on_increment: Some(Callback::new(|_| { /* increment month */ })),
-///     on_decrement: Some(Callback::new(|_| { /* decrement month */ })),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <span {..segment.segment_props.into_attrs()}>
-///         {segment.segment.text.clone()}
-///     </span>
-/// }
-/// ```
+/// The era names (BC, AD), without a common prefix, as typed by the first letter.
+fn eras(locale: &crate::utils::i18n::Locale) -> [String; 2] {
+    let formatter = DateFormatter::new(
+        locale,
+        &FormatOptions {
+            granularity: Granularity::Day,
+            max_granularity: MaxGranularity::Year,
+            time_zone: None,
+            hide_time_zone: true,
+            hour_cycle: None,
+            show_era: true,
+            should_force_leading_zeros: false,
+        },
+    );
+    let mut names = [jiff::civil::date(0, 1, 1), jiff::civil::date(1, 1, 1)].map(|date| {
+        formatter
+            .format_to_parts(&date)
+            .into_iter()
+            .find(|(kind, _)| *kind == Some(DateSegmentType::Era))
+            .map(|(_, text)| text)
+            .unwrap_or_default()
+    });
+    let prefix = names[0]
+        .chars()
+        .zip(names[1].chars())
+        .take_while(|(a, b)| a == b)
+        .count();
+    if prefix > 0 {
+        for name in &mut names {
+            *name = name.chars().skip(prefix).collect();
+        }
+    }
+    names
+}
+
+/// Behavior and accessibility of a segment of a date field (react-aria's `useDateSegment`): a
+/// spin button (arrows, Page Up/Down, Home/End) editable as text. Typing digits fills it (moving
+/// on once no further digit fits), letters choose the day period and era, Backspace deletes a
+/// digit; the selection stays collapsed (Android Chrome's composition would break the DOM).
 #[allow(clippy::too_many_lines)]
-pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
-    let UseDateSegmentInput {
-        segment,
-        is_focused,
-        is_disabled: disabled,
-        is_read_only,
-        on_change,
-        on_increment,
-        on_decrement,
-        on_focus_next,
-        on_focus_previous,
-        on_clear,
-        on_increment_page,
-        on_decrement_page,
-        on_increment_to_max,
-        on_decrement_to_min,
-        on_blur,
-        is_invalid,
-    } = input;
-    let segment = segment.clone();
-    let is_editable = segment.is_editable;
-    let segment_type = segment.segment_type;
-    let max_digits = IncompleteDate::max_digits(segment_type);
-
-    // Digit accumulation buffer.
+pub fn use_date_segment<V: DateValue>(
+    segment: Signal<DateSegment>,
+    data: DateFieldData<V>,
+    element: CapturedElement,
+) -> UseDateSegmentReturn {
+    let state = data.state;
+    let kind = segment.with_untracked(|segment| segment.kind);
+    let locale = use_locale();
+    let direction = use_direction();
     let entered_keys = StoredValue::new(String::new());
 
-    // Segment value/text stored for reactive ARIA attributes.
-    let seg_value = segment.value;
-    let seg_text = segment.text.clone();
-    let seg_min = segment.min_value;
-    let seg_max = segment.max_value;
-    let seg_is_placeholder = segment.is_placeholder;
-
-    // Compute tabindex: 0 if focused and editable, -1 otherwise.
-    let tabindex = Signal::derive(move || {
-        if is_focused.get() && is_editable {
-            "0"
-        } else {
-            "-1"
+    // "6 – June" for numeric months, "1 PM" for hours.
+    let text_value = Signal::derive(move || {
+        let segment = segment.get();
+        if segment.is_placeholder {
+            return String::new();
+        }
+        match kind {
+            DateSegmentType::Month => {
+                let month = DateTimeFormatter::new(
+                    &locale.get(),
+                    DateTimeFormatOptions {
+                        month: Some(MonthFormat::Long),
+                        ..DateTimeFormatOptions::default()
+                    },
+                )
+                .format_date(state.date_value.get().date());
+                if month == segment.text {
+                    month
+                } else {
+                    format!("{} – {month}", segment.text)
+                }
+            }
+            DateSegmentType::Hour => {
+                let options = state.format_options();
+                DateFormatter::new(
+                    &locale.get(),
+                    &FormatOptions {
+                        granularity: Granularity::Hour,
+                        max_granularity: MaxGranularity::Hour,
+                        time_zone: None,
+                        hide_time_zone: true,
+                        ..options
+                    },
+                )
+                .format(&state.date_value.get())
+            }
+            _ => segment.text,
         }
     });
 
-    // Reactive ARIA attributes.
-    let aria_readonly =
-        Signal::derive(move || (is_read_only.get() || !is_editable).then_some(AriaReadonly::True));
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-    let aria_invalid_signal = Signal::derive(move || is_invalid.get().then_some(AriaInvalid::True));
+    let reset_keys = move || entered_keys.set_value(String::new());
+    let UseSpinButtonReturn { props: spin, .. } = use_spin_button(UseSpinButtonInput {
+        value: Signal::derive(move || segment.get().value.map(f64::from)),
+        text_value: Signal::derive(move || Some(text_value.get())),
+        min_value: Signal::derive(move || segment.get().min_value.map(f64::from)),
+        max_value: Signal::derive(move || segment.get().max_value.map(f64::from)),
+        is_disabled: state.is_disabled,
+        is_read_only: Signal::derive(move || {
+            state.is_read_only.get() || !segment.get().is_editable
+        }),
+        is_required: state.is_required,
+        on_increment: Some(Callback::new(move |()| {
+            reset_keys();
+            state.increment(kind);
+        })),
+        on_decrement: Some(Callback::new(move |()| {
+            reset_keys();
+            state.decrement(kind);
+        })),
+        on_increment_page: Some(Callback::new(move |()| {
+            reset_keys();
+            state.increment_page(kind);
+        })),
+        on_decrement_page: Some(Callback::new(move |()| {
+            reset_keys();
+            state.decrement_page(kind);
+        })),
+        on_increment_to_max: Some(Callback::new(move |()| {
+            reset_keys();
+            state.increment_to_max(kind);
+        })),
+        on_decrement_to_min: Some(Callback::new(move |()| {
+            reset_keys();
+            state.decrement_to_min(kind);
+        })),
+    });
 
-    let aria_valuenow = Signal::derive(move || seg_value.map(|v| v.to_string()));
-    let aria_valuemin = Signal::derive(move || seg_min.map(|v| v.to_string()));
-    let aria_valuemax = Signal::derive(move || seg_max.map(|v| v.to_string()));
-    let seg_text_clone = seg_text.clone();
-    let aria_valuetext = Signal::derive(move || seg_text_clone.clone());
+    let parser = Memo::new_with_compare(
+        move |_| {
+            NumberParser::new(
+                &locale.get(),
+                &NumberFormatOptions {
+                    maximum_fraction_digits: Some(0),
+                    ..NumberFormatOptions::default()
+                },
+            )
+        },
+        |_, _| true,
+    );
+    let is_partial_number = move |text: &str| {
+        parser.with_untracked(|parser| parser.is_valid_partial_number::<i64>(text, None, None))
+    };
+    let parse = move |text: &str| parser.with_untracked(|parser| parser.parse::<i64>(text));
 
-    let data_placeholder = Signal::derive(move || {
-        if seg_is_placeholder {
-            Some("true")
+    let backspace = move || {
+        let segment = segment.get_untracked();
+        if segment.text == segment.placeholder {
+            data.focus_previous();
+        }
+        if is_partial_number(&segment.text)
+            && !state.is_read_only.get_untracked()
+            && !segment.is_placeholder
+        {
+            let mut text = segment.text.clone();
+            text.pop();
+            let parsed = parse(&text);
+            match parsed
+                .and_then(|parsed| i32::try_from(parsed).ok())
+                .filter(|parsed| *parsed != 0)
+            {
+                Some(parsed) if !text.is_empty() => {
+                    state.set_segment(kind, parsed);
+                    entered_keys.set_value(text);
+                }
+                _ => {
+                    state.clear_segment(kind);
+                    entered_keys.set_value(String::new());
+                }
+            }
+        } else if matches!(kind, DateSegmentType::DayPeriod | DateSegmentType::Era) {
+            state.clear_segment(kind);
+        }
+    };
+    let keyboard = use_keyboard(UseKeyboardInput {
+        shortcuts: Some(
+            KeyboardShortcuts::new()
+                .on(Shortcut::key("Backspace"), move |_: &KeyboardEvent| {
+                    backspace();
+                })
+                .on(Shortcut::key("Delete"), move |_: &KeyboardEvent| {
+                    backspace();
+                })
+                // Firefox fires no `selectstart` for Ctrl/Cmd+A.
+                .on(Shortcut::key("a").primary(), |_: &KeyboardEvent| {}),
+        ),
+        allow_repeats: true,
+        ..UseKeyboardInput::default()
+    });
+
+    let filter = Memo::new_with_compare(
+        move |_| Filter::new(&locale.get(), &CollatorOptions::default()),
+        |_, _| true,
+    );
+    let starts_with =
+        move |name: &str, key: &str| filter.with_untracked(|filter| filter.starts_with(name, key));
+    let day_periods = Memo::new(move |_| day_periods(&locale.get()));
+    let eras = Memo::new(move |_| {
+        if kind == DateSegmentType::Era {
+            eras(&locale.get())
+        } else {
+            Default::default()
+        }
+    });
+
+    let on_input = move |key: &str| {
+        if state.is_disabled.get_untracked() || state.is_read_only.get_untracked() {
+            return;
+        }
+        let text = format!("{}{key}", entered_keys.get_value());
+        match kind {
+            DateSegmentType::DayPeriod => {
+                let [am, pm] = day_periods.get_untracked();
+                if starts_with(&am, key) {
+                    state.set_segment(DateSegmentType::DayPeriod, 0);
+                } else if starts_with(&pm, key) {
+                    state.set_segment(DateSegmentType::DayPeriod, 1);
+                } else {
+                    return;
+                }
+                data.focus_next();
+            }
+            DateSegmentType::Era => {
+                if let Some(index) = eras
+                    .get_untracked()
+                    .iter()
+                    .position(|era| starts_with(era, key))
+                {
+                    state.set_segment(DateSegmentType::Era, i32::try_from(index).unwrap_or(1));
+                    data.focus_next();
+                }
+            }
+            DateSegmentType::Day
+            | DateSegmentType::Hour
+            | DateSegmentType::Minute
+            | DateSegmentType::Second
+            | DateSegmentType::Month
+            | DateSegmentType::Year => {
+                if !is_partial_number(&text) {
+                    return;
+                }
+                let Some(number) = parse(&text) else {
+                    return;
+                };
+                let max = segment
+                    .with_untracked(|segment| segment.max_value)
+                    .map(i64::from);
+                // A number beyond the maximum starts over with the typed digit.
+                let value = if max.is_some_and(|max| number > max) {
+                    parse(key).unwrap_or(number)
+                } else {
+                    number
+                };
+                state.set_segment(kind, i32::try_from(value).unwrap_or(0));
+                // Moves on once no further digit fits.
+                let is_full = max.is_some_and(|max| {
+                    number * 10 > max || text.chars().count() >= max.to_string().len()
+                });
+                if is_full {
+                    entered_keys.set_value(String::new());
+                    data.focus_next();
+                } else {
+                    entered_keys.set_value(text);
+                }
+            }
+            DateSegmentType::Literal | DateSegmentType::TimeZoneName => {}
+        }
+    };
+
+    let collapse_selection = move || {
+        #[cfg(not(feature = "ssr"))]
+        if let Some(element) = element.get_untracked()
+            && let Some(window) = leptos_use::use_window().as_ref()
+            && let Ok(Some(selection)) = window.get_selection()
+        {
+            let _ = selection.collapse(Some(&**element));
+        }
+    };
+
+    // While a segment has the focus, a selection inside it stays collapsed.
+    #[cfg(not(feature = "ssr"))]
+    {
+        let handle = leptos_use::use_event_listener(
+            leptos_use::use_document(),
+            ev::selectionchange,
+            move |_| {
+                let Some(segment_element) = element.get_untracked() else {
+                    return;
+                };
+                let Some(window) = leptos_use::use_window().as_ref().cloned() else {
+                    return;
+                };
+                let Ok(Some(selection)) = window.get_selection() else {
+                    return;
+                };
+                let is_inside = selection.anchor_node().is_some_and(|anchor| {
+                    let segment: &web_sys::Element = &segment_element;
+                    crate::utils::shadow_dom::node_contains(segment.as_ref(), &anchor)
+                });
+                let is_active = segment_element
+                    .owner_document()
+                    .as_ref()
+                    .and_then(crate::utils::shadow_dom::get_active_element)
+                    .is_some_and(|active| active == *segment_element);
+                if is_inside && is_active {
+                    let _ = selection.collapse(Some(&**segment_element));
+                }
+            },
+        );
+        on_cleanup(handle);
+    }
+
+    // A removed focused segment hands the focus to the previous one (else the next). react-aria
+    // checks the active element before the DOM removal (a layout effect's cleanup); Leptos
+    // removes the element first, so whether it had the focus is tracked: set on focus, cleared
+    // on blur once the element turns out to still be there (a removal blurs it, too). The state
+    // is kept outside the reactive graph, which may be disposed by then.
+    #[cfg(not(feature = "ssr"))]
+    let had_focus = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    #[cfg(not(feature = "ssr"))]
+    let track_focus = {
+        use std::sync::atomic::Ordering;
+        let on_focus = std::sync::Arc::clone(&had_focus);
+        let on_blur = std::sync::Arc::clone(&had_focus);
+        (
+            EventHandler::new(move |_: FocusEvent| on_focus.store(true, Ordering::Relaxed)),
+            EventHandler::new(move |e: FocusEvent| {
+                let had_focus = std::sync::Arc::clone(&on_blur);
+                let target = send_wrapper::SendWrapper::new(e.target());
+                queue_microtask(move || {
+                    let connected = target
+                        .as_ref()
+                        .and_then(|target| wasm_bindgen::JsCast::dyn_ref::<web_sys::Node>(target))
+                        .is_some_and(web_sys::Node::is_connected);
+                    if connected {
+                        had_focus.store(false, Ordering::Relaxed);
+                    }
+                });
+            }),
+        )
+    };
+    #[cfg(feature = "ssr")]
+    let track_focus = (EventHandler::default(), EventHandler::default());
+    #[cfg(not(feature = "ssr"))]
+    {
+        let had_focus = std::sync::Arc::clone(&had_focus);
+        on_cleanup(move || {
+            if !had_focus.load(std::sync::atomic::Ordering::Relaxed) {
+                return;
+            }
+            // Unless the focus went elsewhere meanwhile.
+            let active = leptos_use::use_document()
+                .as_ref()
+                .and_then(crate::utils::shadow_dom::get_active_element);
+            let is_lost =
+                active.is_none_or(|active| active.tag_name().eq_ignore_ascii_case("body"));
+            if is_lost && !data.focus_previous() {
+                data.focus_next();
+            }
+        });
+    }
+
+    let composition = StoredValue::new(None::<String>);
+    let on_beforeinput = EventHandler::new(move |e: InputEvent| {
+        let Some(segment_element) = element.get_untracked() else {
+            return;
+        };
+        e.prevent_default();
+        match e.input_type().as_str() {
+            "deleteContentBackward" | "deleteContentForward" => {
+                if is_partial_number(&segment.get_untracked().text)
+                    && !state.is_read_only.get_untracked()
+                {
+                    backspace();
+                }
+            }
+            "insertCompositionText" => {
+                // It can't be canceled: restored on `input`.
+                let text = segment_element.text_content();
+                composition.set_value(text.clone());
+                // Safari stays composing otherwise.
+                segment_element.set_text_content(text.as_deref());
+            }
+            _ => {
+                if let Some(data) = e.data() {
+                    on_input(&data);
+                }
+            }
+        }
+    });
+    let on_input_event = EventHandler::new(move |e: web_sys::Event| {
+        let Some(e) = wasm_bindgen::JsCast::dyn_ref::<InputEvent>(&e) else {
+            return;
+        };
+        if e.input_type() == "insertCompositionText" {
+            if let Some(segment_element) = element.get_untracked() {
+                segment_element.set_text_content(composition.get_value().as_deref());
+            }
+            // Android types letters as compositions; also Pinyin on iOS.
+            if let Some(data) = e.data() {
+                let [am, pm] = day_periods.get_untracked();
+                if starts_with(&am, &data) || starts_with(&pm, &data) {
+                    on_input(&data);
+                }
+            }
+        }
+    });
+
+    let on_focus = EventHandler::new(move |_: FocusEvent| {
+        reset_keys();
+        #[cfg(not(feature = "ssr"))]
+        if let Some(segment_element) = element.get_untracked() {
+            use crate::utils::scroll::{
+                ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport,
+            };
+            scroll_into_viewport(
+                Some(&segment_element),
+                &ScrollIntoViewportOpts {
+                    containing_element: Some(get_scroll_parent(&segment_element, false)),
+                },
+            );
+        }
+        // Collapsed, or Chrome fires no input events.
+        collapse_selection();
+    });
+
+    // Spin buttons can't be focused with VoiceOver on iOS.
+    let as_textbox = is_ios() || kind == DateSegmentType::TimeZoneName;
+    let unless_textbox = move |signal: Signal<Option<String>>| {
+        Signal::derive(move || if as_textbox { None } else { signal.get() })
+    };
+    let aria_valuetext = spin.aria_valuetext;
+
+    // Only the first segment is described (unless invalid): read once, not on every segment.
+    let is_first = Signal::derive(move || {
+        state.segments.with(|segments| {
+            segments
+                .iter()
+                .find(|segment| segment.is_editable)
+                .map(|segment| segment.kind)
+        }) == Some(kind)
+    });
+    let describedby = data.aria_describedby;
+    let aria_describedby = Signal::derive(move || {
+        if is_first.get() || state.is_invalid.get() {
+            describedby.get()
         } else {
             None
         }
     });
 
-    let aria_label = segment_type.aria_label();
+    let id = use_id("date-segment");
+    // The field's label after the segment's name (VoiceOver on iOS doesn't announce groups).
+    let field_label = data.aria_label;
+    let field_labelledby = data.aria_labelledby;
+    let label_id = id.clone();
+    let label = Signal::derive(move || {
+        let labelledby = field_labelledby.get();
+        let name = display_name(kind);
+        let label = format!(
+            "{name}{}{}",
+            field_label
+                .get()
+                .map(|label| format!(", {label}"))
+                .unwrap_or_default(),
+            if labelledby.is_some() { ", " } else { "" },
+        );
+        labels(&label_id, Some(label), labelledby)
+    });
+    let is_editable = Signal::derive(move || {
+        !state.is_disabled.get() && !state.is_read_only.get() && segment.get().is_editable
+    });
+    let editable_flag =
+        move |value: &'static str| Signal::derive(move || is_editable.get().then_some(value));
+    let flag = |signal: Signal<bool>| Signal::derive(move || signal.get().then_some("true"));
 
-    // Content editable and input mode for editable segments.
-    let content_editable = if is_editable { Some("true") } else { None };
-    let input_mode = if !is_editable {
-        None
-    } else if segment_type == DateSegmentType::DayPeriod {
-        Some("text")
-    } else {
-        Some("numeric")
-    };
-
-    // Role depends on whether segment is editable.
-    let role = if is_editable {
-        AriaRole::Spinbutton
-    } else {
-        AriaRole::Presentation
-    };
-
-    // ---- Keyboard handler ----
-    let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() || is_read_only.get_untracked() || !is_editable {
-            return;
+    let mut styles = Styles::new().add_unchecked("caret-color", "transparent");
+    if direction.get_untracked() == WritingDirection::Rtl {
+        // Placeholders and values in left-to-right order (a left-to-right embedding).
+        styles = styles.add_unchecked("unicode-bidi", "embed");
+        if !matches!(
+            kind,
+            DateSegmentType::DayPeriod | DateSegmentType::Era | DateSegmentType::TimeZoneName
+        ) {
+            styles = styles.add_unchecked("direction", "ltr");
         }
-
-        let key = e.key();
-
-        match key.as_str() {
-            "ArrowUp" => {
-                e.prevent_default();
-                if let Some(cb) = on_increment {
-                    cb.run(());
-                }
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                if let Some(cb) = on_decrement {
-                    cb.run(());
-                }
-            }
-            "ArrowRight" => {
-                e.prevent_default();
-                if let Some(cb) = on_focus_next {
-                    cb.run(());
-                }
-            }
-            "ArrowLeft" => {
-                e.prevent_default();
-                if let Some(cb) = on_focus_previous {
-                    cb.run(());
-                }
-            }
-            "PageUp" => {
-                e.prevent_default();
-                if let Some(cb) = on_increment_page {
-                    cb.run(());
-                }
-            }
-            "PageDown" => {
-                e.prevent_default();
-                if let Some(cb) = on_decrement_page {
-                    cb.run(());
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                if let Some(cb) = on_decrement_to_min {
-                    cb.run(());
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                if let Some(cb) = on_increment_to_max {
-                    cb.run(());
-                }
-            }
-            "Backspace" => {
-                e.prevent_default();
-                let keys = entered_keys.get_value();
-                if keys.is_empty() {
-                    // No accumulated digits: clear the segment and focus previous.
-                    if seg_is_placeholder {
-                        // Already placeholder, just focus previous.
-                        if let Some(cb) = on_focus_previous {
-                            cb.run(());
-                        }
-                    } else if let Some(cb) = on_clear {
-                        cb.run(());
-                    }
-                } else {
-                    // Remove last accumulated digit.
-                    let mut new_keys = keys;
-                    new_keys.pop();
-                    if new_keys.is_empty() {
-                        entered_keys.set_value(String::new());
-                        if let Some(cb) = on_clear {
-                            cb.run(());
-                        }
-                    } else if let Ok(val) = new_keys.parse::<i32>() {
-                        entered_keys.set_value(new_keys);
-                        if let Some(cb) = on_change {
-                            cb.run(val);
-                        }
-                    }
-                }
-            }
-            "Delete" => {
-                e.prevent_default();
-                entered_keys.set_value(String::new());
-                if let Some(cb) = on_clear {
-                    cb.run(());
-                }
-            }
-            "a" | "A" if segment_type == DateSegmentType::DayPeriod => {
-                e.prevent_default();
-                if let Some(cb) = on_change {
-                    cb.run(0); // AM
-                }
-            }
-            "p" | "P" if segment_type == DateSegmentType::DayPeriod => {
-                e.prevent_default();
-                if let Some(cb) = on_change {
-                    cb.run(1); // PM
-                }
-            }
-            digit
-                if digit.len() == 1 && digit.chars().next().is_some_and(|c| c.is_ascii_digit()) =>
-            {
-                e.prevent_default();
-                handle_digit_input(
-                    digit,
-                    entered_keys,
-                    max_digits,
-                    seg_max.unwrap_or(i32::MAX),
-                    on_change,
-                    on_focus_next,
-                );
-            }
-            _ => {}
-        }
-    };
-
-    // ---- Focus handler ----
-    let handle_focus = move |_e: FocusEvent| {
-        // Clear digit accumulation on focus.
-        entered_keys.set_value(String::new());
-    };
-
-    // ---- Blur handler ----
-    let handle_blur = move |_e: FocusEvent| {
-        entered_keys.set_value(String::new());
-        if let Some(cb) = on_blur {
-            cb.run(());
-        }
-    };
+    }
 
     UseDateSegmentReturn {
-        segment_props: UseDateSegmentProps {
-            role,
-            tabindex,
-            aria_label,
-            aria_valuenow,
-            aria_valuemin,
-            aria_valuemax,
-            aria_valuetext,
-            aria_readonly,
-            aria_disabled,
-            aria_invalid: aria_invalid_signal,
-            content_editable,
-            input_mode,
-            data_placeholder,
-            on_keydown: EventHandler::new(handle_keydown),
-            on_focus: EventHandler::new(handle_focus),
-            on_blur: EventHandler::new(handle_blur),
-        },
-        segment,
-    }
-}
-
-/// Handle digit input with accumulation and auto-advance.
-fn handle_digit_input(
-    digit: &str,
-    entered_keys: StoredValue<String>,
-    max_digits: usize,
-    max_value: i32,
-    on_change: Option<Callback<i32>>,
-    on_focus_next: Option<Callback<()>>,
-) {
-    let mut keys = entered_keys.get_value();
-    keys.push_str(digit);
-
-    if let Ok(parsed) = keys.parse::<i32>() {
-        if let Some(cb) = on_change {
-            cb.run(parsed);
-        }
-
-        // Auto-advance: if adding another digit would exceed max, or we've
-        // reached max digits, advance to next segment.
-        let would_exceed = parsed.checked_mul(10).is_some_and(|v| v > max_value);
-        if would_exceed || keys.len() >= max_digits {
-            entered_keys.set_value(String::new());
-            if let Some(cb) = on_focus_next {
-                cb.run(());
-            }
-        } else {
-            entered_keys.set_value(keys);
-        }
-    }
-}
-
-impl Default for UseDateSegmentInput {
-    fn default() -> Self {
-        Self {
-            segment: DateSegment::literal(""),
-            is_focused: Signal::derive(|| false),
-            is_disabled: Signal::derive(|| false),
-            is_read_only: Signal::derive(|| false),
-            on_change: None,
-            on_increment: None,
-            on_decrement: None,
-            on_focus_next: None,
-            on_focus_previous: None,
-            on_clear: None,
-            on_increment_page: None,
-            on_decrement_page: None,
-            on_increment_to_max: None,
-            on_decrement_to_min: None,
-            on_blur: None,
-            is_invalid: Signal::derive(|| false),
-        }
+        segment_props: PropsWithStyles::new(
+            UseDateSegmentProps {
+                id,
+                role: if as_textbox {
+                    AriaRole::Textbox
+                } else {
+                    spin.role
+                },
+                aria_valuenow: unless_textbox(spin.aria_valuenow),
+                aria_valuetext: Signal::derive(move || (!as_textbox).then(|| aria_valuetext.get())),
+                aria_valuemin: unless_textbox(spin.aria_valuemin),
+                aria_valuemax: unless_textbox(spin.aria_valuemax),
+                aria_label: Signal::derive(move || label.get().0),
+                aria_labelledby: Signal::derive(move || label.get().1),
+                aria_describedby,
+                aria_invalid: flag(state.is_invalid),
+                aria_readonly: Signal::derive(move || {
+                    (state.is_read_only.get() || !segment.get().is_editable).then_some("true")
+                }),
+                aria_required: spin.aria_required,
+                aria_disabled: spin.aria_disabled,
+                data_placeholder: Signal::derive(move || {
+                    segment.get().is_placeholder.then_some("true")
+                }),
+                contenteditable: editable_flag("true"),
+                spellcheck: editable_flag("false"),
+                autocorrect: editable_flag("off"),
+                enterkeyhint: editable_flag("next"),
+                inputmode: Signal::derive(move || {
+                    (is_editable.get()
+                        && !matches!(kind, DateSegmentType::DayPeriod | DateSegmentType::Era))
+                    .then_some("numeric")
+                }),
+                tabindex: Signal::derive(move || (!state.is_disabled.get()).then_some(0)),
+                on_keydown: spin.on_keydown.chain(keyboard.props.on_keydown),
+                on_keyup: spin.on_keyup.chain(keyboard.props.on_keyup),
+                on_focus: spin.on_focus.chain(on_focus).chain(track_focus.0),
+                on_blur: spin.on_blur.chain(track_focus.1),
+                on_beforeinput,
+                on_input: on_input_event,
+                // The field's group mustn't handle presses on segments; the browser focuses them.
+                on_pointerdown: EventHandler::new(|e: PointerEvent| e.stop_propagation()),
+                on_mousedown: EventHandler::new(|e: MouseEvent| e.stop_propagation()),
+                element_capture: element.attr(),
+            },
+            styles,
+        ),
     }
 }

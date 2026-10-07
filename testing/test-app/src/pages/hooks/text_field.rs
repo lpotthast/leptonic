@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use leptonic::hooks::InputType;
+use leptonic::hooks::TextFieldElement;
+use leptonic::hooks::ValidationBehavior;
 use leptonic::hooks::{
     IntoAttrs, UseTextFieldInput, UseTextFieldReturn, UseTextFieldStateInput, use_text_field,
     use_text_field_state,
@@ -33,7 +36,44 @@ pub fn PageHookTextField() -> impl IntoView {
                 Ok(())
             }
         })),
-        ..UseTextFieldInput::new(state)
+        state,
+        id: None,
+        element: TextFieldElement::Input,
+        input_type: Signal::stored(InputType::Text),
+        is_disabled: Signal::stored(false),
+        is_read_only: Signal::stored(false),
+        is_required: Signal::stored(false),
+        is_invalid: Signal::stored(false),
+        validation_behavior: ValidationBehavior::default(),
+        validation: None,
+        form: None,
+        placeholder: MaybeProp::default(),
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        auto_complete: None,
+        auto_capitalize: None,
+        auto_correct: None,
+        spell_check: None,
+        input_mode: None,
+        enter_key_hint: None,
+        auto_focus: false,
+        exclude_from_tab_order: false,
+        label_id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+        aria_errormessage: None,
+        aria_activedescendant: Signal::stored(None),
+        aria_autocomplete: None,
+        aria_haspopup: None,
+        aria_controls: Signal::stored(None),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+        on_key_down: None,
+        on_key_up: None,
+        shortcuts: None,
     });
 
     view! {

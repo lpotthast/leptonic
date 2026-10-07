@@ -124,6 +124,7 @@ axum-server = { version = "0.8.0", features = ["tls-rustls"], optional = true }
 console_error_panic_hook = "0.1.7"
 htmd = { version = "0.5.1", optional = true }
 scraper = { version = "0.22", optional = true }
+icondata = "0.7.0"
 indoc = "2.0.7"
 #leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
 leptonic = { path = "../../leptonic", features = ["full"] }
@@ -133,6 +134,7 @@ leptos = { version = "0.8.17", features = [] }
 leptos-routes = { git = "https://github.com/lpotthast/leptos-routes", branch = "main" }
 leptos-styles = "0.1.0"
 leptos-use = "0.19.2"
+leptos_icons = "0.7.1"
 leptos_axum = { version = "0.8.8", optional = true }
 markup5ever_rcdom = { version = "0.38", optional = true }
 leptos_meta = { version = "0.8.6", features = [] }
@@ -142,14 +144,12 @@ ringbuf = "0.4.8"
 send_wrapper = "0.6"
 serde = { version = "1", features = ["derive"] }
 strum = { version = "0.27.2", features = ["derive"] }
-time = { version = "0.3.47", features = ["wasm-bindgen"] }
 tokio = { version = "1.51.1", features = ["rt-multi-thread", "signal"], optional = true }
 tower = { version = "0.5.3", optional = true }
 tower-http = { version = "0.6.8", features = ["full"], optional = true }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 tracing-wasm = "0.2.1"
-uuid = { version = "1.22.0", features = ["js", "v4", "serde"] }
 wasm-bindgen = "0.2.117"
 wasm-bindgen-futures = "0.4.64"
 web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Response"] }

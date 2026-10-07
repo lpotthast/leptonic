@@ -59,11 +59,14 @@ pub fn PressLongDemo() -> impl IntoView {
             "Long press me"
         </button>
 
+        <p class="demo-status">
+            {move || match lp_count.get() {
+                1 => "Long-pressed 1 time.".to_owned(),
+                n => format!("Long-pressed {n} times."),
+            }}
+        </p>
         <div class="demo-controls">
             <Checkbox is_selected=lp_disabled set_selected=set_lp_disabled>"Disabled"</Checkbox>
-        </div>
-
-        <div class="demo-form demo-mt-1">
             <NumberField
                 label="Threshold (ms)"
                 value=threshold_ms set_value=threshold_ms
@@ -72,13 +75,6 @@ pub fn PressLongDemo() -> impl IntoView {
                 step=100_u64
             />
         </div>
-
-        <p class="demo-status">
-            {move || match lp_count.get() {
-                1 => "Long-pressed 1 time.".to_owned(),
-                n => format!("Long-pressed {n} times."),
-            }}
-        </p>
 
         <p>"Last " {move || lp_events.with(Observer::occupied_len)} " events:"</p>
         <pre class="demo-event-log">

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::search_field::SearchFieldAtomDemo;
@@ -203,7 +202,6 @@ pub fn PageAtomSearchField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::SearchField.materialize()>"Search Field overview"</Link></li>
                 <li><Link href=routes::doc::search_field::Hook.materialize()>"use_search_field"</Link></li>
-                <li><Link href=routes::doc::search_field::Component.materialize()>"Search Field Component"</Link></li>
                 <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>

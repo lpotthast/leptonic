@@ -70,43 +70,6 @@
     &[data-focus-visible] input { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
 }
 
-// A checkbox drawn next to its visually hidden input: the `<label>` carries the state.
-.demo-check {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--book-space-s);
-    cursor: pointer;
-    user-select: none;
-
-    // The ring goes around the drawn control instead (see below).
-    &[data-focus-visible] { outline: none; }
-    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
-    &[data-readonly] { cursor: default; }
-}
-
-.demo-check-box {
-    display: inline-flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    width: 1.1em;
-    height: 1.1em;
-    border: 2px solid var(--book-muted-color);
-    border-radius: var(--book-radius-s);
-    color: var(--book-on-brand-color);
-    font-size: var(--book-font-size-s);
-    line-height: 1;
-    transition: background-color var(--book-transition), border-color var(--book-transition);
-
-    .demo-check[data-hovered] & { border-color: var(--brand-color); }
-    .demo-check[data-selected] &,
-    .demo-check[data-indeterminate] & { background: var(--brand-color); border-color: var(--brand-color); }
-    .demo-check[data-selected] &::after { content: "\2713"; }
-    .demo-check[data-indeterminate] &::after { content: "\2013"; }
-    .demo-check[data-focus-visible] & { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
-    .demo-check[data-invalid] & { border-color: var(--danger-color); }
-}
-
 // A radio drawn next to its visually hidden input.
 .demo-radio {
     display: inline-flex;
@@ -314,8 +277,3 @@
 .demo-slider-purple { --demo-slider-accent: var(--book-categorical-3); }
 
 .demo-slider-orange { --demo-slider-accent: var(--book-categorical-4); }
-
-// Volume slider: a slider between two icons.
-.demo-volume-icon { width: 2.5em; height: 2.5em; }
-
-.demo-volume-slider { width: 10em; }

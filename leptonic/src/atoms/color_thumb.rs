@@ -9,7 +9,9 @@ use crate::{
         UseColorWheelInputProps, UseColorWheelThumbProps, UseFocusRingInput, UseFocusRingReturn,
         UseHoverInput, UseSliderThumbInputProps, UseSliderThumbProps, use_focus_ring, use_hover,
     },
-    utils::{classes::Classes, data_attributes::flag, styles::Styles},
+    utils::{
+        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
+    },
 };
 
 /// The props a [`ColorThumb`] takes from the color atom around it, once.
@@ -79,6 +81,8 @@ impl ColorThumbContext {
 /// # Panics
 ///
 /// Outside a color atom, or as its second thumb.
+///
+/// Default class: `leptonic-ColorThumb`.
 #[component]
 pub fn ColorThumb(
     #[prop(into, optional)] classes: Classes,
@@ -87,6 +91,7 @@ pub fn ColorThumb(
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorThumb", classes);
     let ColorThumbContext {
         color,
         is_dragging,

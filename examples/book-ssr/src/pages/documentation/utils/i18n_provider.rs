@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::i18n_provider::I18nProviderDemo;
@@ -202,7 +201,7 @@ pub fn PageI18nProvider() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::utilities::NumberFormatter.materialize()>"NumberFormatter"</Link>" \u{2014} numbers, currencies and plural categories"</li>
                 <li><Link href=routes::doc::utilities::DateTimeFormatter.materialize()>"DateTimeFormatter"</Link>" \u{2014} dates and times"</li>
-                <li><Link href=routes::doc::utilities::ListFormatter.materialize()>"ListFormatter"</Link>" \u{2014} \u{201c}A, B and C\u{201d}"</li>
+                <li><Link href=routes::doc::utilities::ListFormatter.materialize()>"ListFormatter"</Link>" \u{2014} \u{201c}A, B, and C\u{201d}"</li>
                 <li><Link href=routes::doc::utilities::Collator.materialize()>"Collator"</Link>" \u{2014} sorting and filtering text"</li>
                 <li><Link href=routes::doc::Ssr.materialize()>"Server-Side Rendering"</Link></li>
                 <li><Link href=routes::doc::Accessibility.materialize()>"Accessibility"</Link></li>

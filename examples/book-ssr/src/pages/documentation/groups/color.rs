@@ -1,8 +1,9 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use super::demos::{color::ColorPopoverDemo, color_names::ColorNamesDemo};
+use super::demos::{
+    color::ColorPopoverDemo, color_alpha::ColorAlphaDemo, color_names::ColorNamesDemo,
+};
 use crate::{kit::*, routes};
 
 #[component]
@@ -54,10 +55,6 @@ pub fn PageColor() -> impl IntoView {
             <Section title="Decision Guide">
                 <DocTable headers=&["If you want to\u{2026}", "Use"]>
                     <TableRow>
-                        <TableCell>"Drop in a complete color picker"</TableCell>
-                        <TableCell><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></TableCell>
-                    </TableRow>
-                    <TableRow>
                         <TableCell>"Build a picker of your own from several parts sharing one color"</TableCell>
                         <TableCell><Link href=routes::doc::color_picker::Atom.materialize()>"Color Picker Atom"</Link></TableCell>
                     </TableRow>
@@ -91,7 +88,7 @@ pub fn PageColor() -> impl IntoView {
             <Section title="Quick Start">
                 <p>
                     "A button showing the current color opens a "
-                    <Link href=routes::doc::color_picker::Component.materialize()>"ColorPicker"</Link>" in a "
+                    <Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker"</Link>" in a "
                     <Link href=routes::doc::Popover.materialize()>"popover"</Link>"; the "
                     <Link href=routes::doc::color_swatch::Atom.materialize()>"ColorSwatch"</Link>" in the button follows "
                     "every change, and the button\u{2019}s label names the color:"
@@ -132,14 +129,29 @@ pub fn PageColor() -> impl IntoView {
                     </DocTable>
                     <p>
                         <Code inline=true>"RGB8"</Code>" displays as a hex code ("<Code inline=true>"#4287F5"</Code>") and parses "
-                        "one with "<Code inline=true>"RGB8::from_hex"</Code>". The color types have no alpha channel yet."
+                        "one with "<Code inline=true>"RGB8::from_hex"</Code>"."
                     </p>
+                </Section>
+
+                <Section title="Alpha">
+                    <p>
+                        <Code inline=true>"Alpha<C>"</Code>" adds an alpha channel to any of the three types, from "
+                        <Code inline=true>"0.0"</Code>" (transparent) to "<Code inline=true>"1.0"</Code>" (opaque): "
+                        <Code inline=true>"Alpha::new(hsv).with_alpha(0.5)"</Code>". Its channels are the color\u{2019}s, wrapped "
+                        "in "<Code inline=true>"AlphaChannel::Color"</Code>", plus "<Code inline=true>"AlphaChannel::Alpha"</Code>
+                        ", so every color hook and atom edits alpha too. In "<Code inline=true>"view!"</Code>", put a "
+                        "turbofish in braces: "<Code inline=true>"<ColorSlider channel={AlphaChannel::<HsvChannel>::Alpha}>"</Code>
+                        ". An alpha slider\u{2019}s value text is only the percentage, without a color name."
+                    </p>
+                    <Demo description="A hue and an alpha slider of one color, with its swatch on a checkerboard" source=include_str!("demos/color_alpha.rs")>
+                        <ColorAlphaDemo/>
+                    </Demo>
                 </Section>
 
                 <Section title="ColorValue">
                     <p>
                         "The color hooks and atoms are generic over the "<Code inline=true>"ColorValue"</Code>" trait, which "
-                        "the three types implement. Each type brings its own channel enum, so you can\u{2019}t ask an RGB color "
+                        "the three types and their "<Code inline=true>"Alpha"</Code>" versions implement. Each type brings its own channel enum, so you can\u{2019}t ask an RGB color "
                         "for its hue: the compiler rejects it. Props that only show a color, such as a swatch\u{2019}s or a "
                         "preview\u{2019}s "<Code inline=true>"color"</Code>", take a "<Code inline=true>"ColorProp"</Code>
                         " instead: any color value or a signal of one."
@@ -151,15 +163,20 @@ pub fn PageColor() -> impl IntoView {
 
                                 fn get_channel_value(&self, channel: Self::Channel) -> f64;
                                 fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
+                                const HAS_ALPHA: bool = false;
+
+                                fn channels() -> Vec<Self::Channel>;
                                 fn get_channel_range(channel: Self::Channel) -> ColorChannelRange;
                                 fn get_channel_name(channel: Self::Channel) -> &'static str;
+                                fn is_alpha_channel(channel: Self::Channel) -> bool;
                                 fn format_channel_value(&self, channel: Self::Channel) -> String;
                                 fn to_css_string(&self) -> String;
+                                fn to_css_string_with_alpha(&self, alpha: f64) -> String;
                                 fn to_rgb8(&self) -> RGB8;
                                 fn hue_channel() -> Option<Self::Channel>;
                                 fn color_name(&self) -> String;
                                 fn hue_name(&self) -> String;
-                                // ... and the gradients the hooks draw.
+                                // ... plus axis, display-color and gradient helpers the hooks use.
                             }
                         ")}
                     </Code>
@@ -173,9 +190,10 @@ pub fn PageColor() -> impl IntoView {
 
                 <Section title="Color">
                     <p>
-                        <Code inline=true>"Color"</Code>" holds a color of any of the three types ("<Code inline=true>"Color::Rgb"</Code>", "
-                        <Code inline=true>"Color::Hsv"</Code>", "<Code inline=true>"Color::Hsl"</Code>") and keeps the space it was "
-                        "set in: a gray set as HSV keeps its hue, which RGB would lose. That makes it the color that parts of "
+                        <Code inline=true>"Color"</Code>" holds a color of any of the three types, with alpha: it is "
+                        <Code inline=true>"Alpha<OpaqueColor>"</Code>", where "<Code inline=true>"OpaqueColor"</Code>" is one of "
+                        <Code inline=true>"Rgb"</Code>", "<Code inline=true>"Hsv"</Code>" and "<Code inline=true>"Hsl"</Code>
+                        ". Create one with "<Code inline=true>"Color::from(..)"</Code>". It keeps the space it was set in: a gray set as HSV keeps its hue, which RGB would lose. That makes it the color that parts of "
                         "different spaces share, such as those of a "<Link href=routes::doc::ColorPicker.materialize()>"color picker"</Link>
                         ". Its default is black."
                     </p>
@@ -186,11 +204,12 @@ pub fn PageColor() -> impl IntoView {
                             let color = Color::from(HSV { hue: 210.0, saturation: 0.6, value: 0.8 });
                             let rgb: RGB8 = color.to::<RGB8>();
 
-                            // CSS-like text: #rgb, #rrggbb, rgb(r, g, b), hsb(h, s%, b%) and hsl(h, s%, l%).
-                            let parsed = "hsl(210, 60%, 50%)".parse::<Color>(); // Ok(Color::Hsl(..))
+                            // CSS-like text: #rgb, #rgba, #rrggbb, #rrggbbaa, rgb(r, g, b), rgba(r, g, b, a),
+                            // hsb(h, s%, b%), hsba(..), hsl(h, s%, l%) and hsla(..).
+                            let parsed = "hsl(210, 60%, 50%)".parse::<Color>(); // Ok(Color::from(..))
                             let invalid = "teal".parse::<Color>(); // Err(ParseColorError), no color keywords
 
-                            // Displays as a CSS color, "rgb(r, g, b)".
+                            // Displays as a CSS color: "rgb(r, g, b)", or "rgba(r, g, b, a)" when transparent.
                             let css = color.to_string();
                         "#)}
                     </Code>
@@ -203,7 +222,9 @@ pub fn PageColor() -> impl IntoView {
                         "perceptual OKLCH space; "<Code inline=true>"hue_name()"</Code>" names only its hue (\u{201c}blue\u{201d}). "
                         "The color controls use them so that colors aren\u{2019}t conveyed by sight alone: a swatch is named "
                         "after its color, and the value texts of areas, sliders and wheels end with the color\u{2019}s name (the "
-                        "hue\u{2019}s, on a hue). The names are English for every locale."
+                        "hue\u{2019}s, on a hue). A transparent color\u{2019}s name ends with its transparency (\u{201c}vibrant "
+                        "red, 80% transparent\u{201d}); a fully transparent swatch is named \u{201c}transparent\u{201d}. The names are "
+                        "English for every locale."
                     </p>
                     <p>"Type a color to see how it parses and what it is called:"</p>
                     <Demo description="A text field parsing a CSS-like color, with its swatch, color name and hue name" source=include_str!("demos/color_names.rs")>

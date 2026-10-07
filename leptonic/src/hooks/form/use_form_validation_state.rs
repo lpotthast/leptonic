@@ -163,6 +163,10 @@ pub struct UseFormValidationStateInput<T: Send + Sync + 'static> {
     /// Returns `Ok(())` for valid, `Err(messages)` for invalid.
     pub validate: Option<ValidateFn<T>>,
 
+    /// The field's own validation (e.g. a date outside min and max), after `validate`'s
+    /// (react-aria's `builtinValidation`).
+    pub builtin_validation: Signal<Option<ValidationResult>>,
+
     /// Validation behavior mode.
     pub validation_behavior: ValidationBehavior,
 
@@ -280,9 +284,13 @@ where
         is_invalid,
         value,
         validate,
+        builtin_validation,
         validation_behavior,
         name,
     } = input;
+    // A valid result is no error.
+    let builtin_validation =
+        Signal::derive(move || builtin_validation.get().filter(|result| result.is_invalid));
 
     // Store validate function for closure capture.
     let validate = StoredValue::new(validate);
@@ -370,6 +378,7 @@ where
         native_validity_readers.read_all();
         let error = client_error
             .get_untracked()
+            .or_else(|| builtin_validation.get_untracked())
             .unwrap_or_else(|| next_validation.get_value());
         if error != last_error.get_value() {
             last_error.set_value(error.clone());
@@ -384,6 +393,7 @@ where
             .get()
             .or_else(|| server_error.get())
             .or_else(|| client_error.get())
+            .or_else(|| builtin_validation.get())
             .unwrap_or(DEFAULT_VALIDATION_RESULT)
     });
 
@@ -399,6 +409,7 @@ where
             .get()
             .or_else(|| server_error.get())
             .or_else(|| client_error.get())
+            .or_else(|| builtin_validation.get())
             .unwrap_or_else(|| current_validity.get()),
     });
 

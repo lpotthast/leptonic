@@ -149,6 +149,7 @@ pub fn use_radio_group_state(input: UseRadioGroupStateInput) -> RadioGroupState 
     let default_value = selected_value.get_untracked();
     let (last_focused_value, set_last_focused) = signal(None);
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value: selected_value,
         validate,

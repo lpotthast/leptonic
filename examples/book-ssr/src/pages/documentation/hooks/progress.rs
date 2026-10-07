@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::progress_bar::ProgressBarHookDemo;
@@ -139,7 +138,6 @@ pub fn PageUseProgressBar() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::ProgressBar.materialize()>"Progress Bar overview"</Link></li>
                 <li><Link href=routes::doc::progress_bar::Atom.materialize()>"Progress Bar Atoms"</Link></li>
-                <li><Link href=routes::doc::progress_bar::Component.materialize()>"Progress Bar Component"</Link></li>
                 <li><Link href=routes::doc::meter::Hook.materialize()>"use_meter"</Link></li>
             </SeeAlso>
         </DocPage>

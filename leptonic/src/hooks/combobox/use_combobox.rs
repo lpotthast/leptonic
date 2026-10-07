@@ -12,6 +12,9 @@ use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, MouseEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
+use crate::hooks::InputType;
+use crate::hooks::TextFieldElement;
+use crate::hooks::ValidationBehavior;
 use crate::{
     hooks::{
         IntoAttrs,
@@ -89,30 +92,6 @@ pub struct UseComboBoxInput {
     pub popover: CapturedElement,
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
-}
-
-impl UseComboBoxInput {
-    /// An enabled combo box for `state`, with all other settings at their defaults.
-    pub fn new(state: ComboBoxState) -> Self {
-        Self {
-            state,
-            id: None,
-            is_disabled: Signal::stored(false),
-            is_read_only: Signal::stored(false),
-            is_required: false,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            placeholder: None,
-            name: None,
-            should_focus_wrap: false,
-            keyboard_delegate: None,
-            popover: CapturedElement::new(),
-            on_focus: None,
-            on_blur: None,
-        }
-    }
 }
 
 /// Return value of [`use_combobox`].
@@ -411,7 +390,25 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
             e.continue_propagation();
         })),
         shortcuts: Some(shortcuts),
-        ..UseTextFieldInput::new(text_field_state)
+        state: text_field_state,
+        element: TextFieldElement::Input,
+        input_type: Signal::stored(InputType::Text),
+        validate: None,
+        validation_behavior: ValidationBehavior::default(),
+        validation: None,
+        form: None,
+        pattern: None,
+        min_length: None,
+        max_length: None,
+        auto_capitalize: None,
+        input_mode: None,
+        enter_key_hint: None,
+        auto_focus: false,
+        exclude_from_tab_order: false,
+        aria_errormessage: None,
+        aria_haspopup: None,
+        on_focus_change: None,
+        on_key_up: None,
     };
 
     // Pressing the button focuses the input and toggles the popover.
@@ -569,7 +566,17 @@ pub fn use_combobox(input: UseComboBoxInput) -> UseComboBoxReturn {
         },
         should_select_on_press_up: true,
         should_focus_on_hover: true,
-        ..UseListBoxInput::new(state.list, listbox_element)
+        state: state.list,
+        element: listbox_element,
+        orientation: Orientation::Vertical,
+        layout: ListLayout::Stack,
+        layout_delegate: None,
+        is_virtualized: false,
+        keyboard_delegate: None,
+        on_action: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     };
 
     UseComboBoxReturn {

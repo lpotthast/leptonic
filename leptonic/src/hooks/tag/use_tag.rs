@@ -7,6 +7,7 @@ use leptos::{
 };
 
 use super::TagGroupData;
+use crate::hooks::FocusMode;
 use crate::{
     hooks::{
         IntoAttrs, PropsWithStyles,
@@ -113,7 +114,13 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         is_pressed,
         allows_selection,
         ..
-    } = use_grid_list_item(UseGridListItemInput::new(list, key.clone()));
+    } = use_grid_list_item(UseGridListItemInput {
+        list,
+        key: key.clone(),
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+        on_context_menu: None,
+    });
     let (mut row, row_styles) = row_props.into_inner();
 
     let key = StoredValue::new(key);

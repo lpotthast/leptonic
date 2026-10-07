@@ -233,6 +233,28 @@ async fn sorting(page: &Page<'_>) -> Result<(), Report> {
     let name = column_header(page, "Files", "Name").await?;
     assert_that!(attr(&name, "aria-sort").await?).is_equal_to(Some("none".to_owned()));
 
+    // The sort describes the table and is announced ("sortable" in useTable's tests).
+    let expected = "sorted by column Type in ascending order";
+    page.wait_for_selector("[data-live-announcer] [aria-live=assertive] div")
+        .await?;
+    // Visually hidden: read the text content.
+    let announced = page
+        .css("[data-live-announcer] [aria-live=assertive]")
+        .await?
+        .prop("textContent")
+        .await?
+        .unwrap_or_default();
+    assert_that!(announced.as_str()).contains(expected);
+    let files = grid(page, "Files").await?;
+    let describedby = attr(&files, "aria-describedby").await?.unwrap_or_default();
+    let description = page
+        .element(&describedby)
+        .await?
+        .prop("textContent")
+        .await?
+        .unwrap_or_default();
+    assert_that!(description.as_str()).is_equal_to(expected);
+
     // With the keyboard: Enter on the focused header.
     page.wait_for_focus("columnheader", Some("Type")).await?;
     page.send_keys_to_active(Key::Enter).await?;

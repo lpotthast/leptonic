@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_area::ColorAreaAtomDemo;
@@ -179,7 +178,6 @@ pub fn PageAtomColorArea() -> impl IntoView {
                 <li><Link href=routes::doc::color_swatch::Atom.materialize()>"Color Swatch Atom"</Link></li>
                 <li><Link href=routes::doc::color_slider::Atom.materialize()>"Color Slider Atoms"</Link></li>
                 <li><Link href=routes::doc::color_wheel::Atom.materialize()>"Color Wheel Atoms"</Link></li>
-                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
             </SeeAlso>
         </DocPage>
     }

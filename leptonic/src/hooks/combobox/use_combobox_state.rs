@@ -121,34 +121,6 @@ pub struct UseComboBoxStateInput {
     pub name: Option<String>,
 }
 
-impl UseComboBoxStateInput {
-    /// A single-selection combo box over `collection`, showing all options (no filter).
-    pub fn new(collection: CollectionMemo) -> Self {
-        Self {
-            collection,
-            filter: None,
-            selection_mode: SelectMode::Single,
-            default_value: Vec::new(),
-            value: None,
-            on_change: None,
-            default_input_value: None,
-            input_value: None,
-            on_input_change: None,
-            disabled_keys: Signal::stored(HashSet::new()),
-            menu_trigger: ComboBoxMenuTrigger::Input,
-            allows_empty_collection: false,
-            allows_custom_value: false,
-            should_close_on_blur: true,
-            is_read_only: Signal::stored(false),
-            on_open_change: None,
-            is_invalid: Signal::stored(false),
-            validate: None,
-            validation_behavior: ValidationBehavior::default(),
-            name: None,
-        }
-    }
-}
-
 /// The state of a combo box: its options (filtered by the input text), selection, input text,
 /// popover and validation.
 #[derive(Clone, Copy)]
@@ -630,6 +602,7 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
 
     let selection = base.selection;
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value: Signal::derive(move || ComboBoxValue {
             input_value: input_value.get(),
@@ -679,11 +652,13 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
     let last_value_ref = StoredValue::new(default_value);
     let last_selected_text = StoredValue::new(untrack(|| state.selected_text()));
     Effect::new(move |_| {
-        let focused = is_focused.get();
-        let is_open = menu.overlay.is_open.get();
+        // Upstream sources before the memos derived from them (the input text, value and
+        // collection before `filtered`). reactive_graph 0.2 checks an effect's sources in read order, with
+        // the effect as observer: a memo recomputed while checking a downstream memo doesn't mark
+        // the effect dirty, and is clean (unchanged) when checked itself. A value and collection
+        // derived from one app memo, read after `filtered` (unchanged by the update), never
+        // re-ran this effect (agnite dev-ui, `combobox_tests`).
         let input = input_value.get();
-        let filtered_size = filtered.with(|c| c.size());
-        let show_all = show_all_items.get();
         let value = ordered(original, selection.selected_keys());
         let selected_text = original.with(|c| {
             value
@@ -692,6 +667,10 @@ pub fn use_combobox_state(input: UseComboBoxStateInput) -> ComboBoxState {
                 .and_then(|key| c.get(key).map(|n| n.text_value.to_string()))
                 .unwrap_or_default()
         });
+        let focused = is_focused.get();
+        let is_open = menu.overlay.is_open.get();
+        let filtered_size = filtered.with(|c| c.size());
+        let show_all = show_all_items.get();
 
         untrack(|| {
             let last_value = inner.last_value.get_value();
@@ -784,7 +763,24 @@ mod tests {
             let state = use_combobox_state(UseComboBoxStateInput {
                 value: Some(value.into()),
                 input_value: Some(text.into()),
-                ..UseComboBoxStateInput::new(fruits())
+                collection: fruits(),
+                filter: None,
+                selection_mode: SelectMode::Single,
+                default_value: Vec::new(),
+                on_change: None,
+                default_input_value: None,
+                on_input_change: None,
+                disabled_keys: Signal::stored(HashSet::new()),
+                menu_trigger: ComboBoxMenuTrigger::Input,
+                allows_empty_collection: false,
+                allows_custom_value: false,
+                should_close_on_blur: true,
+                is_read_only: Signal::stored(false),
+                on_open_change: None,
+                is_invalid: Signal::stored(false),
+                validate: None,
+                validation_behavior: ValidationBehavior::default(),
+                name: None,
             });
             assert_that!(state.value()).is_equal_to(vec![Key::from("banana")]);
             assert_that!(state.input_value()).is_equal_to("Ban".to_owned());

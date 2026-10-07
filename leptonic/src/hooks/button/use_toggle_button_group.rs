@@ -32,15 +32,6 @@ pub struct UseToggleButtonGroupInput {
     pub toolbar: UseToolbarInput,
 }
 
-impl UseToggleButtonGroupInput {
-    pub fn new(state: ToggleGroupState) -> Self {
-        Self {
-            state,
-            toolbar: UseToolbarInput::default(),
-        }
-    }
-}
-
 /// Output of [`use_toggle_button_group`].
 #[derive(Debug)]
 pub struct UseToggleButtonGroupReturn {
@@ -97,16 +88,6 @@ pub struct UseToggleButtonGroupItemInput {
     pub key: Key,
     /// The button's further settings.
     pub button: UseButtonInput,
-}
-
-impl UseToggleButtonGroupItemInput {
-    pub fn new(group: ToggleGroupState, key: impl Into<Key>) -> Self {
-        Self {
-            group,
-            key: key.into(),
-            button: UseButtonInput::default(),
-        }
-    }
 }
 
 /// A toggle button in a [`use_toggle_button_group`]: selects or deselects its key. In a

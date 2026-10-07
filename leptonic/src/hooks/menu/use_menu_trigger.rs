@@ -262,10 +262,34 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
         }
     };
 
-    // A right click outside closes a context menu, so the browser's context menu appears instead.
-    // Everything outside the menu is inert, so the click's target is the body.
-    #[cfg(not(feature = "ssr"))]
     if trigger == MenuTriggerType::ContextMenu {
+        close_context_menu_on_outside_right_click(state);
+    }
+
+    UseMenuTriggerReturn {
+        button,
+        menu_props: UseMenuTriggerMenuProps {
+            id: Signal::stored(menu_id),
+            aria_labelledby: Signal::stored(menu_trigger_id),
+            auto_focus: Signal::derive(move || {
+                Some(match state.focus_strategy() {
+                    Some(FocusStrategy::First) => AutoFocus::First,
+                    Some(FocusStrategy::Last) => AutoFocus::Last,
+                    None => AutoFocus::Selected,
+                })
+            }),
+            on_close: Callback::new(move |()| state.close()),
+        },
+    }
+}
+
+/// While a context menu is open, a right click outside closes it, so the browser's context menu
+/// appears instead. Everything outside the menu is inert, so the click's target is the body.
+pub(crate) fn close_context_menu_on_outside_right_click<S: MenuTriggerStateApi>(state: S) {
+    #[cfg(feature = "ssr")]
+    let _ = state;
+    #[cfg(not(feature = "ssr"))]
+    {
         use leptos::ev;
         use leptos_use::use_document;
         use send_wrapper::SendWrapper;
@@ -299,21 +323,5 @@ pub fn use_menu_trigger<S: MenuTriggerStateApi>(
             listener.set_value(Some(SendWrapper::new(handle)));
         });
         on_cleanup(move || listener.set_value(None));
-    }
-
-    UseMenuTriggerReturn {
-        button,
-        menu_props: UseMenuTriggerMenuProps {
-            id: Signal::stored(menu_id),
-            aria_labelledby: Signal::stored(menu_trigger_id),
-            auto_focus: Signal::derive(move || {
-                Some(match state.focus_strategy() {
-                    Some(FocusStrategy::First) => AutoFocus::First,
-                    Some(FocusStrategy::Last) => AutoFocus::Last,
-                    None => AutoFocus::Selected,
-                })
-            }),
-            on_close: Callback::new(move |()| state.close()),
-        },
     }
 }

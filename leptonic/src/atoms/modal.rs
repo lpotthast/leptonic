@@ -8,7 +8,10 @@ use crate::{
         UseModalBackdropInput, UseModalBackdropReturn, UseModalInput, UseModalReturn,
         UseOverlayAttrs, use_enter_animation, use_exit_animation, use_modal, use_modal_backdrop,
     },
-    utils::{CapturedElement, classes::Classes, data_attributes::flag, styles::Styles},
+    utils::{
+        CapturedElement, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles, use_viewport_size::use_viewport_size,
+    },
 };
 
 /// Context provided by [`ModalBackdrop`] for [`ModalContent`].
@@ -35,6 +38,12 @@ struct ModalBackdropContext {
 ///     </ModalContent>
 /// </ModalBackdrop>
 /// ```
+///
+/// Data attributes: `data-entering`, `data-exiting`. CSS variables (as react-aria-components'
+/// `ModalOverlay`): `--visual-viewport-width`, `--visual-viewport-height`, `--page-width`,
+/// `--page-height`.
+///
+/// Default class: `leptonic-ModalBackdrop`.
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn ModalBackdrop(
@@ -71,6 +80,7 @@ pub fn ModalBackdrop(
 
     children: ChildrenFn,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ModalBackdrop", classes);
     let state = super::dialog::overlay_open_state(
         is_open,
         set_open,
@@ -82,7 +92,8 @@ pub fn ModalBackdrop(
         is_dismissable,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
-        ..UseModalBackdropInput::new(state)
+        state,
+        is_entering: Signal::stored(false),
     });
     let is_open = state.is_open;
 
@@ -101,6 +112,22 @@ pub fn ModalBackdrop(
 
     let modal_props_attrs = StoredValue::new(modal_props.into_attrs());
 
+    // As react-aria-components' `ModalOverlay`: the visual viewport's and the page's size, for
+    // styling (e.g. a backdrop covering the page, a modal fitting above the on-screen keyboard).
+    let viewport = use_viewport_size();
+    let size_styles = move || {
+        let viewport = viewport.get();
+        let page = page_size();
+        Styles::new()
+            .add_unchecked("--visual-viewport-width", format!("{}px", viewport.width))
+            .add_unchecked("--visual-viewport-height", format!("{}px", viewport.height))
+            .add_optional_unchecked("--page-width", page.map(|(width, _)| format!("{width}px")))
+            .add_optional_unchecked(
+                "--page-height",
+                page.map(|(_, height)| format!("{height}px")),
+            )
+    };
+
     // Store children, classes, styles in StoredValue (Copy) so Show's Fn closure can call it repeatedly.
     let children = StoredValue::new(children);
     let classes = StoredValue::new(classes);
@@ -109,46 +136,52 @@ pub fn ModalBackdrop(
     // The context reaches only this backdrop's content: with several backdrops side by side, each
     // `ModalContent` gets its own backdrop's props.
     view! {
-        <Provider value=ModalBackdropContext {
-            modal_props_attrs,
-            modal,
-            is_exiting,
-        }>
-            // No portal container while closed: a modal would make it inert.
-            <Show when=move || is_open.get() || is_exiting.get()>
-                {
-                    // Per opening: the entry of this opening's element.
-                    let entering = CapturedElement::new();
-                    let is_entering = use_enter_animation(UseEnterAnimationInput::new(entering))
-                        .is_entering;
-                    view! {
-                <Portal>
-                    <div
-                        {..backdrop.attr().chain(entering.attr())}
-                        class=classes.get_value().add("leptonic-modal-backdrop")
-                        style=styles.get_value()
-                        data-entering=flag(is_entering)
-                        data-exiting=flag(is_exiting)
-                    >
-                        // Pressing in the modal must not toggle it through the trigger's responder.
-                        // A dialog inside switches on this modal's containment (which it has
-                        // anyway), not that of an overlay around it.
-                        <ClearTriggerContexts>
-                            <Provider value=OverlayFocusContain::new()>{(children.get_value())()}</Provider>
-                        </ClearTriggerContexts>
-                    </div>
-                </Portal>
+            <Provider value=ModalBackdropContext {
+                modal_props_attrs,
+                modal,
+                is_exiting,
+            }>
+                // No portal container while closed: a modal would make it inert.
+                <Show when=move || is_open.get() || is_exiting.get()>
+                    {
+                        // Per opening: the entry of this opening's element.
+                        let entering = CapturedElement::new();
+                        let is_entering = use_enter_animation(UseEnterAnimationInput {
+    element: entering,
+    is_ready: Signal::stored(true),
+    on_enter: None,
+    })
+                            .is_entering;
+                        view! {
+                    <Portal>
+                        <div
+                            {..backdrop.attr().chain(entering.attr())}
+                            class=classes.get_value().add("leptonic-modal-backdrop")
+                            style=move || size_styles().merge(styles.get_value())
+                            data-entering=flag(is_entering)
+                            data-exiting=flag(is_exiting)
+                        >
+                            // Pressing in the modal must not toggle it through the trigger's responder.
+                            // A dialog inside switches on this modal's containment (which it has
+                            // anyway), not that of an overlay around it.
+                            <ClearTriggerContexts>
+                                <Provider value=OverlayFocusContain::new()>{(children.get_value())()}</Provider>
+                            </ClearTriggerContexts>
+                        </div>
+                    </Portal>
+                        }
                     }
-                }
-            </Show>
-        </Provider>
-    }
+                </Show>
+            </Provider>
+        }
 }
 
 /// The modal panel. Wraps children with [`FocusScope`] for focus trapping
 /// and applies `aria-modal` via `use_modal`.
 ///
 /// Must be a child of [`ModalBackdrop`].
+///
+/// Default class: `leptonic-ModalContent`.
 #[component]
 pub fn ModalContent(
     /// Whether to trap focus within the modal.
@@ -169,11 +202,17 @@ pub fn ModalContent(
 
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ModalContent", classes);
     let ctx = expect_context::<ModalBackdropContext>();
 
     let UseModalReturn { modal_props } = use_modal(UseModalInput { is_disabled: false });
     let entering = CapturedElement::new();
-    let is_entering = use_enter_animation(UseEnterAnimationInput::new(entering)).is_entering;
+    let is_entering = use_enter_animation(UseEnterAnimationInput {
+        element: entering,
+        is_ready: Signal::stored(true),
+        on_enter: None,
+    })
+    .is_entering;
 
     view! {
         <FocusScope
@@ -195,4 +234,22 @@ pub fn ModalContent(
             </div>
         </FocusScope>
     }
+}
+
+/// The page's scrollable size (react-aria-components' `ModalOverlay`), without fractional parts
+/// (which make Firefox add scrollbars). `None` during server-side rendering.
+fn page_size() -> Option<(f64, f64)> {
+    let document = leptos_use::use_document();
+    let document = document.as_ref()?;
+    let scrolling = document
+        .body()
+        .map(web_sys::Element::from)
+        .filter(|body| crate::utils::scroll::is_scrollable(body, false))
+        .or_else(|| document.scrolling_element())
+        .or_else(|| document.document_element())?;
+    let rect = scrolling.get_bounding_client_rect();
+    Some((
+        f64::from(scrolling.scroll_width()) - rect.width() % 1.0,
+        f64::from(scrolling.scroll_height()) - rect.height() % 1.0,
+    ))
 }

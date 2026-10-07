@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::switch::SwitchDemo;
@@ -40,7 +39,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 <Section title="Input" id="use-switch-input">
                     <p>
                         <Code inline=true>"UseSwitchInput"</Code>" is an alias of "<Code inline=true>"UseToggleInput"</Code>
-                        ". Create it with "<Code inline=true>"UseSwitchInput::new(state)"</Code>"."
+                        ". Name both fields; "<Code inline=true>"ToggleOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseToggleInput">
                         <ApiRow name="state" ty="ToggleState">"Whether the switch is on, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
@@ -90,7 +89,8 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let state = use_toggle_state(UseToggleStateInput::default());
-                        let toggle = use_toggle(UseToggleInput::new(state));
+                        let toggle = use_toggle(UseToggleInput { state, options: ToggleOptions::default() });
+
                         let (label_attrs, label_styles) = toggle.label_props.into_parts();
                         let (input_attrs, input_styles) = toggle.input_props.into_parts();
 
@@ -111,7 +111,6 @@ pub fn PageUseSwitchHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Switch.materialize()>"Switch overview"</Link></li>
                 <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
-                <li><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
                 <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
             </SeeAlso>

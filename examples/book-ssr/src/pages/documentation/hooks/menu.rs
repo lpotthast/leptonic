@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::menu::MenuDemo;
@@ -232,8 +231,8 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                 <Section title="Input" id="use-menu-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseMenuInput::new(state, element)"</Code>
-                        " and set further fields with struct update syntax."
+                        "Pass a "<Code inline=true>"UseMenuInput"</Code>" with every field named; the Default column gives the "
+                        "value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseMenuInput">
                         <ApiRow name="state" ty="ListState">
@@ -302,17 +301,21 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         });
 
                         let UseMenuReturn { props, data } = use_menu(UseMenuInput {
+                            state,
+                            element: CapturedElement::new(),
                             // From `use_menu_trigger`, when the menu opens from a button.
                             id: Some(menu_props.id.get_untracked()),
+                            aria_label: MaybeProp::default(),
                             aria_labelledby: menu_props.aria_labelledby.into(),
                             options: CollectionOptions {
                                 auto_focus: menu_props.auto_focus,
                                 should_focus_wrap: true,
                                 ..CollectionOptions::default()
                             },
+                            keyboard_delegate: None,
                             on_action: Some(Callback::new(|key: Key| log!("{key}"))),
                             on_close: Some(menu_props.on_close),
-                            ..UseMenuInput::new(state, CapturedElement::new())
+                            submenu: None,
                         });
 
                         view! { <ul {..props.into_attrs()}>/* items and sections, see below */</ul> }
@@ -332,9 +335,10 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseMenuItemInput">
                         <ApiRow name="menu" ty="MenuData">"The menu, from "<Code inline=true>"use_menu"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The item\u{2019}s key in the menu\u{2019}s collection. Required."</ApiRow>
-                        <ApiRow name="should_close_on_select" ty="Option<bool>">
+                        <ApiRow name="should_close_on_select" ty="CloseOnSelect">
                             "Whether activating the item closes the menu, see "<AnchorLink href="#close-behavior">"Close Behavior"</AnchorLink>
-                            ". Required; "<Code inline=true>"None"</Code>" for the default."
+                            ". Required; "<Code inline=true>"CloseOnSelect::Auto"</Code>" (from "
+                            <Code inline=true>"leptonic::hooks::collections"</Code>") for the default."
                         </ApiRow>
                         <ApiRow name="submenu_trigger" ty="Option<SubmenuTriggerItem>">
                             "Makes the item open a submenu (from "<Code inline=true>"use_submenu_trigger"</Code>"): it has no "
@@ -370,10 +374,12 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Section title="Example" id="use-menu-item-example">
                 <Code language=Language::Rust>
                     {indoc!(r"
+                        use leptonic::hooks::{*, collections::CloseOnSelect};
+
                         let UseMenuItemReturn { props, label_props, is_focused, .. } = use_menu_item(UseMenuItemInput {
                             menu: data.clone(),
                             key,
-                            should_close_on_select: None,
+                            should_close_on_select: CloseOnSelect::Auto,
                             submenu_trigger: None,
                         });
                         let (attrs, styles) = props.into_parts();
@@ -407,11 +413,12 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                 <Section title="Close Behavior">
                     <p>
-                        "With "<Code inline=true>"should_close_on_select: None"</Code>", activating an item calls the menu\u{2019}s "
+                        "With "<Code inline=true>"should_close_on_select: CloseOnSelect::Auto"</Code>" (from "
+                        <Code inline=true>"leptonic::hooks::collections"</Code>"), activating an item calls the menu\u{2019}s "
                         <Code inline=true>"on_close"</Code>" unless the user is building up a selection: "<Keys keys="Enter"/>
                         " always closes, "<Keys keys="Space"/>" closes action menus only, and a click closes unless the menu "
-                        "allows multiple selection. Links always close. "<Code inline=true>"Some(true)"</Code>" and "
-                        <Code inline=true>"Some(false)"</Code>" override this."
+                        "allows multiple selection. Links always close. "<Code inline=true>"Always"</Code>" and "
+                        <Code inline=true>"Never"</Code>" override this."
                     </p>
                 </Section>
             </Section>
@@ -501,8 +508,8 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 </p>
                 <Section title="Input" id="use-submenu-trigger-input">
                     <p>
-                        <Code inline=true>"UseSubmenuTriggerInput::new(state, trigger, parent_menu, submenu)"</Code>
-                        " sets the defaults; change the rest with struct update syntax."
+                        "Pass a "<Code inline=true>"UseSubmenuTriggerInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseSubmenuTriggerInput">
                         <ApiRow name="state" ty="SubmenuTriggerState">"From "<Code inline=true>"use_submenu_trigger_state"</Code>". Required."</ApiRow>
@@ -561,7 +568,15 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Section title="Example" id="use-submenu-trigger-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::{hooks::*, utils::CapturedElement};
+                            use std::time::Duration;
+
+                            use leptonic::{
+                                hooks::{
+                                    collections::{CloseOnSelect, CollectionOptions},
+                                    *,
+                                },
+                                utils::CapturedElement,
+                            };
 
                             // `root` is the state of the menu tree's trigger, `parent_menu` the element
                             // of the menu holding the "share" item, `data` that menu's `MenuData` and
@@ -572,26 +587,41 @@ pub fn PageUseMenuHook() -> impl IntoView {
                             });
                             let submenu_element = CapturedElement::new();
                             let UseSubmenuTriggerReturn { trigger, submenu, should_close_on_interact_outside } =
-                                use_submenu_trigger(UseSubmenuTriggerInput::new(
+                                use_submenu_trigger(UseSubmenuTriggerInput {
                                     state,
-                                    CapturedElement::new(),
+                                    trigger: CapturedElement::new(),
                                     parent_menu,
-                                    submenu_element,
-                                ));
+                                    submenu: submenu_element,
+                                    kind: SubmenuKind::Menu,
+                                    is_disabled: Signal::stored(false),
+                                    delay: Duration::from_millis(200),
+                                });
 
                             // The trigger item.
                             let item = use_menu_item(UseMenuItemInput {
                                 menu: data.clone(),
                                 key: Key::from("share"),
-                                should_close_on_select: None,
+                                should_close_on_select: CloseOnSelect::Auto,
                                 submenu_trigger: Some(trigger),
                             });
 
                             // The submenu, rendered in a popover while `state.is_open` is true.
                             let share_menu = use_menu(UseMenuInput {
+                                state: share_state,
+                                element: submenu_element,
+                                id: None,
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: MaybeProp::default(),
+                                options: CollectionOptions {
+                                    should_focus_wrap: true,
+                                    ..CollectionOptions::default()
+                                },
+                                keyboard_delegate: None,
+                                on_action: None,
+                                on_close: None,
                                 submenu: Some(submenu),
-                                ..UseMenuInput::new(share_state, submenu_element)
                             });
+
                         "#)}
                     </Code>
                 </Section>

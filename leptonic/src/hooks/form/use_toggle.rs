@@ -144,15 +144,6 @@ pub struct UseToggleInput {
     pub options: ToggleOptions,
 }
 
-impl UseToggleInput {
-    pub fn new(state: ToggleState) -> Self {
-        Self {
-            state,
-            options: ToggleOptions::default(),
-        }
-    }
-}
-
 /// Output of [`use_toggle`] (and [`use_checkbox`](super::use_checkbox),
 /// [`use_switch`](super::use_switch)).
 #[derive(Debug)]
@@ -412,6 +403,7 @@ pub(crate) fn use_toggle_with(
 
     let validation = group_validation.unwrap_or_else(|| {
         use_form_validation_state(UseFormValidationStateInput {
+            builtin_validation: Signal::default(),
             is_invalid,
             value: state.is_selected,
             validate,
@@ -419,11 +411,12 @@ pub(crate) fn use_toggle_with(
             name: name.clone(),
         })
     });
-    use_form_validation(UseFormValidationInput::new(
+    use_form_validation(UseFormValidationInput {
         element,
-        validation,
+        state: validation,
         validation_behavior,
-    ));
+        focus: None,
+    });
     use_form_reset(UseFormResetInput {
         element,
         initial_value: state.default_selected,

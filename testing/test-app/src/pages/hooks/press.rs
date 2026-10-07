@@ -40,6 +40,7 @@ pub fn PageHookPress() -> impl IntoView {
             <BasicPress />
             <DisableOnPressStart />
             <CheckboxInForm />
+            <PreventFocusPress />
             <NestedPress id="test-press-nested-stop" continue_inner=false />
             <NestedPress id="test-press-nested-continue" continue_inner=true />
             <button id="test-press-elsewhere">"Elsewhere"</button>
@@ -59,7 +60,7 @@ fn BasicPress() -> impl IntoView {
         <section>
             <h2>"Basic"</h2>
             <div id="test-press-target" role="button" tabindex="0" {..attrs} style=styles>
-                "Press me"
+                <span id="test-press-label">"Press me"</span>
             </div>
             <button id="test-press-toggle-disabled" on:click=move |_| disabled.update(|d| *d = !*d)>
                 "Toggle disabled"
@@ -168,6 +169,28 @@ fn NestedPress(id: &'static str, continue_inner: bool) -> impl IntoView {
             </div>
             <div>"Outer: " <span id=format!("{id}-outer-log")>{outer_log.render()}</span></div>
             <div>"Inner: " <span id=format!("{id}-inner-log")>{inner_log.render()}</span></div>
+        </section>
+    }
+}
+
+/// A button pressed without taking focus (`prevent_focus_on_press`): focus stays on the input
+/// before it, which logs its blur events to `#test-press-keep-blurs`.
+#[component]
+fn PreventFocusPress() -> impl IntoView {
+    let presses = RwSignal::new(0);
+    let blurs = RwSignal::new(0);
+    let UsePressReturn { props, .. } = use_press(UsePressInput {
+        prevent_focus_on_press: Signal::stored(true),
+        on_press: Some(Callback::new(move |_| presses.update(|p| *p += 1))),
+        ..UsePressInput::default()
+    });
+    let (attrs, styles) = props.into_parts();
+    view! {
+        <section>
+            <input id="test-press-keep-input" on:blur=move |_| blurs.update(|b| *b += 1) />
+            <button id="test-press-keep" {..attrs} style=styles>"Press without focus"</button>
+            <div>"Presses: " <span id="test-press-keep-presses">{presses}</span></div>
+            <div>"Blurs: " <span id="test-press-keep-blurs">{blurs}</span></div>
         </section>
     }
 }

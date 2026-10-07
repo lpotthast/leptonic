@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::tabs::TabsConceptDemo;
@@ -57,14 +56,6 @@ pub fn PageTabsOverview() -> impl IntoView {
                             "styled through data attributes. The recommended starting point."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></TableCell>
-                        <TableCell>
-                            "Themed tabs with a tab bar and panels, configured per tab with a name and a label. They predate "
-                            "the tab hooks and are not built on them: their tabs can only be selected with a pointer, without "
-                            "keyboard navigation, "<Code inline=true>"aria-selected"</Code>" or tab-to-panel references."
-                        </TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -115,16 +106,11 @@ pub fn PageTabsOverview() -> impl IntoView {
                     <KeyRow keys="Enter / Space">"Select the focused tab (manual activation; otherwise moving selects)."</KeyRow>
                 </KeyboardTable>
 
-                <p>
-                    "The "<Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link>" render the roles, but "
-                    "none of the keyboard interaction or the other attributes."
-                </p>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></li>
                 <li><Link href=routes::doc::tabs::Atom.materialize()>"Tabs Atoms"</Link></li>
-                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
                 <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>

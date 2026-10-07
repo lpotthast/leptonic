@@ -6,7 +6,11 @@ use leptos::prelude::*;
 
 #[component]
 pub fn ColorFieldConceptDemo() -> impl IntoView {
-    let color = RwSignal::new(Some(RGB8 { r: 30, g: 110, b: 200 }));
+    let color = RwSignal::new(Some(RGB8 {
+        r: 30,
+        g: 110,
+        b: 200,
+    }));
 
     view! {
         <ColorField value=color set_value=color classes="demo-field">

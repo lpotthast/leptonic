@@ -70,18 +70,9 @@ pub struct UseGridListItemInput {
     /// Let ArrowLeft/ArrowRight move between the row's children even with
     /// `KeyboardNavigationBehavior::Tab`.
     pub allows_arrow_navigation: bool,
-}
-
-impl UseGridListItemInput {
-    /// The row `key` of `list`, focused as a whole.
-    pub fn new(list: GridListData, key: Key) -> Self {
-        Self {
-            list,
-            key,
-            focus_mode: FocusMode::Row,
-            allows_arrow_navigation: false,
-        }
-    }
+    /// Called when a context menu is requested on the row (right click, Shift+F10, the context
+    /// menu key; a long press on iOS unless it selects).
+    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_grid_list_item`].
@@ -189,6 +180,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         key,
         focus_mode,
         allows_arrow_navigation,
+        on_context_menu,
     } = input;
     let GridListData {
         state,
@@ -324,6 +316,7 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         link_behavior,
         focus: Some(Callback::new(move |()| focus_row())),
         should_use_virtual_focus: false,
+        on_context_menu,
     });
     let (mut item_props, item_styles) = item_props.into_inner();
 

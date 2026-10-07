@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -212,9 +211,10 @@ pub fn PageAtomMenu() -> impl IntoView {
                 <Section title="Props" id="menuitem-props">
                     <ApiTable kind=ApiKind::Props of="MenuItem">
                         <ApiRow name="key" ty="Key">"The item\u{2019}s key in the menu\u{2019}s collection. Required."</ApiRow>
-                        <ApiRow name="should_close_on_select" ty="Option<bool>" default="None">
-                            "Whether activating the item closes the menu. "<Code inline=true>"None"</Code>": unless the menu "
-                            "allows multiple selection, or the item was checked with "<Keys keys="Space"/>"."
+                        <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
+                            "Whether activating the item closes the menu: "<Code inline=true>"Always"</Code>", "
+                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (unless the menu allows multiple selection, or "
+                            "the item was checked with "<Keys keys="Space"/>"). A "<Code inline=true>"bool"</Code>" converts into it."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the item element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The item\u{2019}s content."</ApiRow>

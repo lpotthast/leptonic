@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::button::ButtonDemo;
@@ -206,7 +205,6 @@ pub fn PageAtomButton() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Button.materialize()>"Button overview"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
-                <li><Link href=routes::doc::button::Component.materialize()>"Button Components"</Link></li>
                 <li><Link href=routes::doc::toggle_button::Atom.materialize()>"Toggle Button Atoms"</Link></li>
                 <li><Link href=routes::doc::link::Atom.materialize()>"Link Atoms"</Link></li>
             </SeeAlso>

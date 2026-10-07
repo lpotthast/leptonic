@@ -38,7 +38,13 @@ pub fn ComboBoxConceptDemo() -> impl IntoView {
             </ComboBoxPopover>
         </ComboBox>
         <p class="demo-status">
-            "Selected: "{move || value.with(|keys| keys.first().map_or_else(|| "none".to_owned(), ToString::to_string))}"."
+            "Selected: "
+            {move || {
+                // The status names the country; the keys are its ISO codes.
+                let name = |key: &Key| countries.with(|c| c.get(key).map(|node| node.text_value.to_string()));
+                value.with(|keys| keys.first().and_then(name)).unwrap_or_else(|| "none".to_owned())
+            }}
+            "."
         </p>
     }
 }

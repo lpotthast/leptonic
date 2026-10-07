@@ -3,6 +3,7 @@ use leptos_classes::Classes;
 use leptos_styles::Styles;
 
 use super::icon::Icon;
+use crate::utils::live_announcer::Assertiveness;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlertVariant {
@@ -69,6 +70,10 @@ pub fn Alert(
     #[prop(optional)] alert_content: Option<AlertContent>,
     #[prop(optional)] alert_append: Option<AlertAppend>,
     #[prop(optional)] default_icon_slot: AlertIconSlot,
+    /// How urgently it is announced when it appears: `Assertive` (default) interrupts
+    /// (`role="alert"`), `Polite` waits (`role="status"`, e.g. "Saved").
+    #[prop(default = Assertiveness::Assertive)]
+    assertiveness: Assertiveness,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
@@ -78,7 +83,10 @@ pub fn Alert(
             style=styles
             data-variant=variant.to_str()
             // Announced when it appears (react-spectrum's `InlineAlert`).
-            role="alert"
+            role=match assertiveness {
+                Assertiveness::Assertive => "alert",
+                Assertiveness::Polite => "status",
+            }
         >
             {match alert_prepend {
                 Some(slot) => {

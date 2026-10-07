@@ -26,7 +26,12 @@ pub fn DragToDropDemo() -> impl IntoView {
             last_drag.set(format!("Note ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
-        ..UseDragInput::new(Callback::new(|()| vec![DragItem::text("Water the plants")]))
+        get_items: Callback::new(|()| vec![DragItem::text("Water the plants")]),
+        get_allowed_drop_operations: None,
+        preview: None,
+        on_drag_start: None,
+        on_drag_move: None,
+        has_drag_button: false,
     });
     // A link: a URL in two representations. Links can only be copied or linked, not moved.
     let link = use_drag(UseDragInput {
@@ -37,13 +42,17 @@ pub fn DragToDropDemo() -> impl IntoView {
             last_drag.set(format!("Link ({:?})", e.drop_operation));
         })),
         is_disabled: disabled.into(),
-        ..UseDragInput::new(Callback::new(|()| {
+        get_items: Callback::new(|()| {
             vec![
                 DragItem::new()
                     .with("text/uri-list", URL)
                     .with("text/plain", URL),
             ]
-        }))
+        }),
+        preview: None,
+        on_drag_start: None,
+        on_drag_move: None,
+        has_drag_button: false,
     });
 
     view! {
@@ -120,7 +129,14 @@ fn Target(
                 }
             });
         })),
-        ..UseDropInput::new(CapturedElement::new())
+        element: CapturedElement::new(),
+        get_drop_operation_for_point: None,
+        on_drop_enter: None,
+        on_drop_move: None,
+        on_drop_activate: None,
+        on_drop_exit: None,
+        has_drop_button: false,
+        is_disabled: Signal::stored(false),
     });
 
     view! {

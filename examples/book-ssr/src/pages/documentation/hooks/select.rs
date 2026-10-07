@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::select::SelectDemo;
@@ -41,8 +40,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                 <Section title="Input" id="use-select-state-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseSelectStateInput::new(collection)"</Code>
-                        " and change the fields you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseSelectStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseSelectStateInput">
@@ -63,9 +62,9 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="disabled_keys" ty="Signal<HashSet<Key>>" default="empty">
                             "Options that can\u{2019}t be focused or selected."
                         </ApiRow>
-                        <ApiRow name="should_close_on_select" ty="Option<bool>" default="None">
-                            "Close the popover when an option is selected. "<Code inline=true>"None"</Code>": in "
-                            <Code inline=true>"Single"</Code>" mode."
+                        <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
+                            "Close the popover when an option is selected: "<Code inline=true>"Always"</Code>", "
+                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (in "<Code inline=true>"Single"</Code>" mode)."
                         </ApiRow>
                         <ApiRow name="allows_empty_collection" ty="bool" default="false">
                             "Allow opening the popover without options, e.g. to show an empty state."
@@ -155,13 +154,29 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-select-state-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{Key, UseSelectStateInput, use_select_state};
+                            use std::collections::HashSet;
+
+                            use leptonic::hooks::{
+                                Key, SelectMode, UseSelectStateInput, ValidationBehavior, collections::CloseOnSelect,
+                                use_select_state,
+                            };
                             use leptos::{logging::log, prelude::*};
 
                             let state = use_select_state(UseSelectStateInput {
+                                collection,
+                                selection_mode: SelectMode::Single,
                                 default_value: vec![Key::from("banana")],
+                                value: None,
                                 on_change: Some(Callback::new(|keys: Vec<Key>| log!("{keys:?}"))),
-                                ..UseSelectStateInput::new(collection)
+                                disabled_keys: Signal::stored(HashSet::new()),
+                                should_close_on_select: CloseOnSelect::Auto,
+                                allows_empty_collection: false,
+                                default_open: false,
+                                on_open_change: None,
+                                is_invalid: Signal::stored(false),
+                                validate: None,
+                                validation_behavior: ValidationBehavior::Aria,
+                                name: None,
                             });
 
                             state.selected_key();          // Some(Key::from("banana"))
@@ -182,8 +197,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                 <Section title="Input" id="use-select-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseSelectInput::new(state)"</Code>
-                        " and change the fields you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseSelectInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseSelectInput">
@@ -247,7 +262,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Example" id="use-select-example">
                     <Code language=Language::Rust>
                         {indoc!(r#"
-                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, use_button, use_select};
+                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, ValidationBehavior, use_button, use_select};
 
                             let UseSelectReturn {
                                 label_props,
@@ -258,9 +273,21 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 hidden_select,
                                 ..
                             } = use_select(UseSelectInput {
+                                state,
+                                id: None,
+                                is_disabled: false.into(),
+                                is_required: false,
                                 has_label: true.into(),
+                                aria_label: MaybeProp::default(),
+                                aria_labelledby: None,
+                                aria_describedby: None,
+                                keyboard_delegate: None,
+                                on_focus: None,
+                                on_blur: None,
+                                on_focus_change: None,
                                 name: Some("fruit".to_owned()),
-                                ..UseSelectInput::new(state)
+                                form: None,
+                                validation_behavior: ValidationBehavior::Aria,
                             });
 
                             let button = use_button(trigger);
@@ -290,7 +317,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <Section title="Input" id="use-hidden-select-input">
                     <p>
                         "Usually "<Code inline=true>"use_select"</Code>"\u{2019}s "<Code inline=true>"hidden_select"</Code>
-                        ". The struct has no constructor, so building it yourself means setting every field."
+                        ". Building it yourself means naming every field."
+
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseHiddenSelectInput">
@@ -362,7 +390,6 @@ pub fn PageUseSelectHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Select.materialize()>"Select overview"</Link></li>
                 <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
-                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
                 <li><Link href=routes::doc::listbox::Hook.materialize()>"Listbox Hooks"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
                 <li><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></li>

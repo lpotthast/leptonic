@@ -195,6 +195,7 @@ pub fn use_color_field_state(input: UseColorFieldStateInput) -> ColorFieldState 
     });
 
     let validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid,
         value: color_value,
         validate,

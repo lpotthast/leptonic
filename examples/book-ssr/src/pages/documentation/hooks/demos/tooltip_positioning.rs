@@ -33,7 +33,19 @@ fn PositionedTooltip(label: &'static str, placement: Placement) -> impl IntoView
     let position = use_overlay_position(UseOverlayPositionInput {
         placement: Signal::stored(placement),
         offset: Signal::stored(6.0),
-        ..UseOverlayPositionInput::new(trigger_element, trigger.is_open)
+        target: trigger_element,
+        is_open: trigger.is_open,
+        container_padding: Signal::stored(12.0),
+        cross_offset: Signal::stored(0.0),
+        should_flip: Signal::stored(true),
+        boundary: None,
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        should_update_position: Signal::stored(true),
+        target_rect: Signal::stored(None),
+        scroll: None,
+        on_close: None,
     });
 
     let is_open = trigger.is_open;

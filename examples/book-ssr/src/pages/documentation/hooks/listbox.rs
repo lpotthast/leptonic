@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::listbox::ListboxDemo;
@@ -97,8 +96,8 @@ pub fn PageUseListbox() -> impl IntoView {
 
                 <Section title="Input" id="use-listbox-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseListBoxInput::new(state, element)"</Code>
-                        " and change the fields you need with struct update syntax."
+                        "Pass a "<Code inline=true>"UseListBoxInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseListBoxInput">
@@ -121,6 +120,17 @@ pub fn PageUseListbox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>" default="None">
                             "Replaces the list keyboard navigation."
+                        </ApiRow>
+                        <ApiRow name="layout_delegate" ty="Option<Arc<dyn LayoutDelegate>>" default="None">
+                            "Where options are on screen, for paging and scrolling to the focused option when only the "
+                            "visible ones are rendered (virtualized): the "<Code inline=true>"layout_delegate()"</Code>" of "
+                            <Link href=routes::doc::collection_state::UseVirtualizerState.materialize()>"use_virtualizer_state"</Link>
+                            ". Default: the rendered option elements."
+                        </ApiRow>
+                        <ApiRow name="is_virtualized" ty="bool" default="false">
+                            "Only the visible options are rendered: each option then announces its position ("
+                            <Code inline=true>"aria-posinset"</Code>", "<Code inline=true>"aria-setsize"</Code>"). See "
+                            <Link href=format!("{}#virtualizing-a-collection-hook", routes::doc::collection_state::UseVirtualizerState.materialize())>"Virtualizing a Collection Hook"</Link>"."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions" default="CollectionOptions::default()">
                             "Keyboard and focus behavior, see "<Link href=format!("{}#collectionoptions", routes::doc::CollectionState.materialize())>"CollectionOptions"</Link>"."
@@ -161,12 +171,26 @@ pub fn PageUseListbox() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             let UseListBoxReturn { props, data } = use_listbox(UseListBoxInput {
+                                state,
+                                element: CapturedElement::new(),
+                                id: None,
                                 aria_label: "Fruits".into(),
+                                aria_labelledby: Signal::stored(None),
+                                orientation: Orientation::Vertical,
+                                layout: ListLayout::Stack,
+                                keyboard_delegate: None,
+                                layout_delegate: None,
+                                is_virtualized: false,
                                 options: CollectionOptions {
                                     should_focus_wrap: true,
                                     ..CollectionOptions::default()
                                 },
-                                ..UseListBoxInput::new(state, CapturedElement::new())
+                                should_select_on_press_up: false,
+                                should_focus_on_hover: false,
+                                on_action: None,
+                                on_focus: None,
+                                on_blur: None,
+                                on_focus_change: None,
                             });
 
                             view! {
@@ -184,13 +208,16 @@ pub fn PageUseListbox() -> impl IntoView {
                     "Renders one option. It only needs the listbox data and the option\u{2019}s key. Whether it is "
                     "selected, focused or disabled, its text and its link all come from the list state and the collection. "
                     "It handles selection on press ("<Keys keys="Shift"/>" + click selects a range, "<Keys keys="Control"/>
-                    " + click, or "<Keys keys="Command"/>" + click on macOS, an individual option), focus and hover."
+                    " + click, or "<Keys keys="Meta"/>" + click on macOS, an individual option), focus and hover."
                 </p>
 
                 <Section title="Input" id="use-option-input">
                     <ApiTable kind=ApiKind::Input of="UseOptionInput">
                         <ApiRow name="list" ty="ListBoxData">"The listbox, from "<Code inline=true>"use_listbox"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The option\u{2019}s key in the listbox\u{2019}s collection. Required."</ApiRow>
+                        <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>" default="None">
+                            "Called when a context menu is requested on the option (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the option\u{2019}s menu then replaces the browser\u{2019}s."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -228,7 +255,8 @@ pub fn PageUseListbox() -> impl IntoView {
                     <Code language=Language::Rust>
                         {indoc!(r#"
                             let UseOptionReturn { props, is_selected, is_focus_visible, .. } =
-                                use_option(UseOptionInput { list: data.clone(), key: Key::from("apple") });
+                                use_option(UseOptionInput { list: data.clone(), key: Key::from("apple"), on_context_menu: None });
+
                             let (attrs, styles) = props.into_parts();
 
                             view! {
@@ -306,6 +334,7 @@ pub fn PageUseListbox() -> impl IntoView {
                 <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
                 <li><Link href=routes::doc::combobox::Hook.materialize()>"Combobox Hooks"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
+                <li><Link href=routes::doc::collection_state::UseVirtualizerState.materialize()>"use_virtualizer_state"</Link></li>
             </SeeAlso>
         </DocPage>
     }

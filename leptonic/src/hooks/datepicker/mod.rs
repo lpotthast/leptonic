@@ -1,19 +1,23 @@
-pub mod incomplete_date;
-pub mod incomplete_time;
-pub mod use_date_field;
-pub mod use_date_field_state;
-pub mod use_date_picker;
-pub mod use_date_picker_state;
-pub mod use_date_segment;
-pub mod use_time_field;
-pub mod use_time_field_state;
+//! Date and time fields and pickers on `jiff`: react-aria's
+//! `useDateField`, `useTimeField`, `useDatePicker`, `useDateRangePicker` and their states.
 
-pub use incomplete_date::*;
-pub use incomplete_time::*;
+mod format;
+mod incomplete_date;
+mod placeholders;
+mod types;
+mod use_date_field;
+mod use_date_field_state;
+mod use_date_picker;
+mod use_date_picker_state;
+mod use_date_range_picker_state;
+mod use_date_segment;
+mod use_time_field_state;
+
+pub use types::*;
 pub use use_date_field::*;
 pub use use_date_field_state::*;
 pub use use_date_picker::*;
 pub use use_date_picker_state::*;
+pub use use_date_range_picker_state::*;
 pub use use_date_segment::*;
-pub use use_time_field::*;
 pub use use_time_field_state::*;

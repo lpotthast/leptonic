@@ -1,3 +1,5 @@
+use leptonic::hooks::collections::CollectionOptions;
+use leptonic::hooks::collections::SelectionOptions;
 use leptonic::{
     hooks::{
         GridListData, IntoAttrs, UseTreeInput, UseTreeItemInput, UseTreeItemReturn,
@@ -8,6 +10,7 @@ use leptonic::{
     utils::CapturedElement,
 };
 use leptos::prelude::*;
+use std::collections::HashSet;
 
 /// A file tree built from the tree hooks, all items collapsed:
 /// Documents (Project (Report, Budget), CV), Photos (Cat), Notes.
@@ -26,10 +29,20 @@ pub fn PageHookTree() -> impl IntoView {
         });
         b.item("notes", "Notes");
     });
-    let state = use_tree_state(UseTreeStateInput::new(collection));
+    let state = use_tree_state(UseTreeStateInput {
+        collection,
+        selection: SelectionOptions::default(),
+        default_expanded_keys: HashSet::new(),
+        on_expanded_change: None,
+    });
     let tree = use_tree(UseTreeInput {
         aria_label: "Files".into(),
-        ..UseTreeInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: None,
+        options: CollectionOptions::default(),
+        on_action: None,
     });
     let data = tree.data;
     let visible = state.list.collection;

@@ -1,3 +1,5 @@
+use leptonic::hooks::Orientation;
+use leptonic::hooks::collections::SelectOnPressUp;
 use leptonic::{
     hooks::{
         IntoAttrs, Key, KeyboardActivation, TabListData, TabListItemData, UseTabInput,
@@ -17,7 +19,12 @@ const TABS: [(&str, &str, &str); 3] = [
 /// One tab, rendered with `use_tab`.
 #[component]
 fn DemoTab(list: TabListItemData, key: &'static str, label: &'static str) -> impl IntoView {
-    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput::new(list, Key::from(key)));
+    let UseTabReturn { tab_props, .. } = use_tab(UseTabInput {
+        list,
+        key: Key::from(key),
+        is_disabled: Signal::stored(false),
+        should_select_on_press_up: SelectOnPressUp::Auto,
+    });
     let (attrs, styles) = tab_props.into_parts();
 
     view! { <div {..attrs} class="demo-hook-tab" style=styles>{label}</div> }
@@ -32,7 +39,11 @@ pub fn TabsManualDemo() -> impl IntoView {
     });
     let state = use_tab_list_state(UseTabListStateInput {
         default_selected_key: Some(Key::from("drafts")),
-        ..UseTabListStateInput::new(collection)
+        collection,
+        selected_key: None,
+        on_selection_change: None,
+        disabled_keys: Signal::default(),
+        is_disabled: Signal::stored(false),
     });
     let tabs = TabListData::new(state);
 
@@ -40,7 +51,10 @@ pub fn TabsManualDemo() -> impl IntoView {
     let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
         keyboard_activation: KeyboardActivation::Manual,
         aria_label: "Mailbox".into(),
-        ..UseTabListInput::new(tabs.clone(), CapturedElement::new())
+        tabs: tabs.clone(),
+        element: CapturedElement::new(),
+        orientation: Orientation::Horizontal,
+        aria_labelledby: None,
     });
     let panel = use_tab_panel(UseTabPanelInput { tabs, key: None });
 

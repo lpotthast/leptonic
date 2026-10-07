@@ -1,4 +1,4 @@
-use leptonic::{atoms::checkbox, components::prelude::Checkbox};
+use leptonic::atoms::checkbox;
 use leptos::prelude::*;
 
 #[component]
@@ -25,9 +25,18 @@ pub fn CheckboxAtomDemo() -> impl IntoView {
         <p class="demo-status">{move || if subscribed.get() { "Subscribed." } else { "Not subscribed." }}</p>
 
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-            <Checkbox is_selected=read_only set_selected=read_only>"Read-only"</Checkbox>
-            <Checkbox is_selected=indeterminate set_selected=indeterminate>"Indeterminate"</Checkbox>
+            <checkbox::Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </checkbox::Checkbox>
+            <checkbox::Checkbox is_selected=read_only set_selected=read_only classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Read-only"
+            </checkbox::Checkbox>
+            <checkbox::Checkbox is_selected=indeterminate set_selected=indeterminate classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Indeterminate"
+            </checkbox::Checkbox>
         </div>
     }
 }

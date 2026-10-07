@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::radio::RadioConceptDemo;
@@ -63,10 +62,6 @@ pub fn PageRadioOverview() -> impl IntoView {
                             " with label, description and error message parts, styled through data attributes."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></TableCell>
-                        <TableCell>"Themed "<Code inline=true>"RadioGroup"</Code>" and "<Code inline=true>"Radio"</Code>" with label and description."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -127,7 +122,6 @@ pub fn PageRadioOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::radio::Hook.materialize()>"Radio Hooks"</Link></li>
                 <li><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></li>
-                <li><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></li>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link></li>
                 <li><Link href=routes::doc::Select.materialize()>"Select"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>

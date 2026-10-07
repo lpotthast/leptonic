@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::color_wheel::ColorWheelDemo;
@@ -35,8 +34,25 @@ pub fn PageUseColorWheel() -> impl IntoView {
                         };
                         use leptos::prelude::*;
 
-                        let state = use_color_wheel_state(UseColorWheelStateInput::new(HSV::new(), HsvChannel::Hue));
-                        let wheel = use_color_wheel(UseColorWheelInput::new(state, 100.0, 74.0));
+                        let state = use_color_wheel_state(UseColorWheelStateInput {
+                            default_value: HSV::new(),
+                            value: None,
+                            channel: HsvChannel::Hue,
+                            is_disabled: false.into(),
+                            on_change: None,
+                            on_change_end: None,
+                        });
+                        let wheel = use_color_wheel(UseColorWheelInput {
+                            state,
+                            outer_radius: 100.0,
+                            inner_radius: 74.0,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            aria_details: None,
+                            name: None,
+                            form: None,
+                        });
                         let (track_attrs, track_styles) = wheel.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = wheel.thumb_props.into_parts();
                         let (input_attrs, input_styles) = wheel.input_props.into_parts();
@@ -84,17 +100,17 @@ pub fn PageUseColorWheel() -> impl IntoView {
 
                 <Section title="Input" id="use-color-wheel-state-input">
                     <p>
-                        "Start from "<Code inline=true>"UseColorWheelStateInput::new(default_value, channel)"</Code>
-                        " and change single fields:"
+                        "Pass a "<Code inline=true>"UseColorWheelStateInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseColorWheelStateInput">
-                        <ApiRow name="default_value" ty="C">"The initial color. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="default_value" ty="C">"The initial color. Required."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<C>>" default="None">
                             "The color as app state, replacing "<Code inline=true>"default_value"</Code>": "
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
                             <Code inline=true>"ValueBinding::new(signal, callback)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The color type\u{2019}s hue channel. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="channel" ty="C::Channel">"The color type\u{2019}s hue channel. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the wheel is disabled."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<C>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
                         <ApiRow name="on_change_end" ty="Option<Callback<C>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
@@ -159,16 +175,16 @@ pub fn PageUseColorWheel() -> impl IntoView {
 
                 <Section title="Input" id="use-color-wheel-input">
                     <p>
-                        "Start from "<Code inline=true>"UseColorWheelInput::new(state, outer_radius, inner_radius)"</Code>
-                        " and change single fields:"
+                        "Pass a "<Code inline=true>"UseColorWheelInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
+
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseColorWheelInput">
                         <ApiRow name="state" ty="ColorWheelState<C>">
-                            "The state from "<Code inline=true>"use_color_wheel_state"</Code>". Required (an argument of "
-                            <Code inline=true>"new"</Code>")."
+                            "The state from "<Code inline=true>"use_color_wheel_state"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="outer_radius" ty="f64">"The ring\u{2019}s outer radius, in pixels. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
-                        <ApiRow name="inner_radius" ty="f64">"The ring\u{2019}s inner radius, in pixels. Required (an argument of "<Code inline=true>"new"</Code>")."</ApiRow>
+                        <ApiRow name="outer_radius" ty="f64">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
+                        <ApiRow name="inner_radius" ty="f64">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                             "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the channel\u{2019}s name does."
                         </ApiRow>

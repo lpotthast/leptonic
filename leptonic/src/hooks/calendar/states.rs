@@ -1,0 +1,219 @@
+// Upstream: react-aria/src/calendar/utils.ts @ 99e6102368
+//! What the calendar hooks share: either calendar state, the calendar's data for its grids and
+//! cells, and the descriptions of dates and ranges.
+
+use jiff::civil::Date;
+use leptos::prelude::*;
+
+use super::{use_calendar_state::CalendarState, use_range_calendar_state::RangeCalendarState};
+use crate::utils::{
+    date::DateRange,
+    date_time_formatter::{
+        DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
+    },
+    i18n::Locale,
+};
+
+/// The English strings of the calendar hooks (react-aria: `@react-aria/calendar`'s messages),
+/// until leptonic has localized strings.
+pub(crate) mod strings {
+    pub(crate) const NEXT: &str = "Next";
+    pub(crate) const PREVIOUS: &str = "Previous";
+
+    pub(crate) fn selected_date(date: &str) -> String {
+        format!("Selected Date: {date}")
+    }
+    pub(crate) fn selected_range(range: &str) -> String {
+        format!("Selected Range: {range}")
+    }
+    pub(crate) fn date_range(start: &str, end: &str) -> String {
+        format!("{start} to {end}")
+    }
+    pub(crate) fn today(date: &str) -> String {
+        format!("Today, {date}")
+    }
+    pub(crate) fn today_selected(date: &str) -> String {
+        format!("Today, {date} selected")
+    }
+    pub(crate) fn selected(date: &str) -> String {
+        format!("{date} selected")
+    }
+    pub(crate) const MINIMUM_DATE: &str = "First available date";
+    pub(crate) const MAXIMUM_DATE: &str = "Last available date";
+    pub(crate) const START_RANGE_SELECTION: &str = "Click to start selecting date range";
+    pub(crate) const FINISH_RANGE_SELECTION: &str = "Click to finish selecting date range";
+}
+
+/// A calendar's state: a single date or a range (react-aria: `CalendarState | RangeCalendarState`).
+#[derive(Clone, Copy)]
+pub enum CalendarStates {
+    Single(CalendarState),
+    Range(RangeCalendarState),
+}
+
+impl From<CalendarState> for CalendarStates {
+    fn from(state: CalendarState) -> Self {
+        Self::Single(state)
+    }
+}
+
+impl From<RangeCalendarState> for CalendarStates {
+    fn from(state: RangeCalendarState) -> Self {
+        Self::Range(state)
+    }
+}
+
+impl CalendarStates {
+    /// The calendar part (focus, visible range, navigation).
+    pub fn calendar(&self) -> CalendarState {
+        match self {
+            Self::Single(state) => *state,
+            Self::Range(state) => state.calendar,
+        }
+    }
+
+    /// The range state, for a range calendar.
+    pub fn range(&self) -> Option<RangeCalendarState> {
+        match self {
+            Self::Single(_) => None,
+            Self::Range(state) => Some(*state),
+        }
+    }
+
+    pub fn is_value_invalid(&self) -> Signal<bool> {
+        match self {
+            Self::Single(state) => state.is_value_invalid,
+            Self::Range(state) => state.is_value_invalid,
+        }
+    }
+
+    pub fn is_selected(&self, date: Date) -> bool {
+        match self {
+            Self::Single(state) => state.is_selected(date),
+            Self::Range(state) => state.is_selected(date),
+        }
+    }
+
+    pub fn is_invalid(&self, date: Date) -> bool {
+        match self {
+            Self::Single(state) => state.is_invalid(date),
+            Self::Range(state) => state.is_invalid(date),
+        }
+    }
+
+    /// Whether `date` can't be focused or selected (a range calendar also checks the available
+    /// range around the anchor).
+    pub fn is_cell_disabled(&self, date: Date) -> bool {
+        let calendar = self.calendar();
+        calendar.is_disabled.get()
+            || !calendar.visible_range.get().contains(date)
+            || self.is_invalid(date)
+    }
+
+    pub fn select_focused_date(&self) {
+        match self {
+            Self::Single(state) => state.select_focused_date(),
+            Self::Range(state) => state.select_focused_date(),
+        }
+    }
+
+    pub fn select_date(&self, date: Date) {
+        match self {
+            Self::Single(state) => state.select_date(date),
+            Self::Range(state) => state.select_date(date),
+        }
+    }
+}
+
+/// What a calendar passes to its grids and cells (react-aria's `hookData`).
+#[derive(Clone)]
+pub struct CalendarData {
+    pub state: CalendarStates,
+    pub aria_label: MaybeProp<String>,
+    pub aria_labelledby: Option<String>,
+    /// The id of the calendar's error message while it is rendered (cells with invalid dates
+    /// refer to it).
+    pub error_message_id: Signal<Option<String>>,
+    /// A description of the selection, e.g. "Selected Date: Monday, May 20, 2024".
+    pub selected_date_description: Signal<String>,
+}
+
+/// A formatter for full dates: "Monday, May 20, 2024".
+pub(crate) fn full_date_formatter(locale: &Locale) -> DateTimeFormatter {
+    DateTimeFormatter::new(
+        locale,
+        DateTimeFormatOptions {
+            weekday: Some(DateTimeFormat::Long),
+            month: Some(MonthFormat::Long),
+            day: Some(NumericFormat::Numeric),
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        },
+    )
+}
+
+/// The description of the selection (react-aria's `useSelectedDateDescription`).
+pub(crate) fn selected_date_description(state: &CalendarStates, locale: &Locale) -> String {
+    let (start, end) = match *state {
+        CalendarStates::Single(state) => {
+            let value = state.value.get();
+            (value, value)
+        }
+        CalendarStates::Range(state) => {
+            if state.anchor_date.get().is_some() {
+                return String::new();
+            }
+            let range = state.highlighted_range.get();
+            (range.map(|r| r.start), range.map(|r| r.end))
+        }
+    };
+    let (Some(start), Some(end)) = (start, end) else {
+        return String::new();
+    };
+    let formatter = full_date_formatter(locale);
+    if start == end {
+        strings::selected_date(&formatter.format_date(start))
+    } else {
+        strings::selected_range(&strings::date_range(
+            &formatter.format_date(start),
+            &formatter.format_date(end),
+        ))
+    }
+}
+
+/// The description of the visible range (react-aria's `useVisibleRangeDescription`): "May 2024"
+/// for a month, "May 2024 to July 2024" for months, else the dates.
+pub(crate) fn visible_range_description(range: DateRange, locale: &Locale) -> String {
+    let months = DateTimeFormatter::new(
+        locale,
+        DateTimeFormatOptions {
+            month: Some(MonthFormat::Long),
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        },
+    );
+    if range.start == range.start.first_of_month() {
+        if range.end == range.start.last_of_month() {
+            return months.format_date(range.start);
+        }
+        if range.end == range.end.last_of_month() {
+            return strings::date_range(
+                &months.format_date(range.start),
+                &months.format_date(range.end),
+            );
+        }
+    }
+    let dates = DateTimeFormatter::new(
+        locale,
+        DateTimeFormatOptions {
+            month: Some(MonthFormat::Long),
+            day: Some(NumericFormat::Numeric),
+            year: Some(NumericFormat::Numeric),
+            ..DateTimeFormatOptions::default()
+        },
+    );
+    strings::date_range(
+        &dates.format_date(range.start),
+        &dates.format_date(range.end),
+    )
+}

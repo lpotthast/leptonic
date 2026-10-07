@@ -8,7 +8,11 @@ use leptos::prelude::*;
 #[component]
 pub fn ColorFieldAtomDemo() -> impl IntoView {
     // The hex field and the three channel fields edit the same color.
-    let color = RwSignal::new(Some(RGB8 { r: 30, g: 110, b: 200 }));
+    let color = RwSignal::new(Some(RGB8 {
+        r: 30,
+        g: 110,
+        b: 200,
+    }));
     let disabled = RwSignal::new(false);
 
     let channel_fields = [RgbChannel::Red, RgbChannel::Green, RgbChannel::Blue]

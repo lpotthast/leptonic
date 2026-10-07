@@ -1,7 +1,10 @@
+use leptonic::hooks::GridFocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     hooks::{
-        GridData, IntoAttrs, Key, SelectionMode, UseGridCellInput, UseGridInput, UseGridReturn, UseGridRowInput,
-        UseGridStateInput,
+        GridData, IntoAttrs, Key, SelectionMode, UseGridCellInput, UseGridInput, UseGridReturn,
+        UseGridRowInput, UseGridStateInput,
         collections::{Selection, SelectionOptions},
         use_collection, use_grid, use_grid_cell, use_grid_row, use_grid_row_group, use_grid_state,
     },
@@ -18,9 +21,30 @@ type Color = (&'static str, (u8, u8, u8));
 
 /// Color palettes: one grid row each, with the palette's name in the first cell and one cell per color.
 const PALETTES: [(&str, [Color; 3]); 3] = [
-    ("Warm", [("Red", (0xf4, 0x43, 0x36)), ("Orange", (0xff, 0x98, 0x00)), ("Amber", (0xff, 0xc1, 0x07))]),
-    ("Cool", [("Indigo", (0x3f, 0x51, 0xb5)), ("Blue", (0x21, 0x96, 0xf3)), ("Cyan", (0x00, 0xbc, 0xd4))]),
-    ("Green", [("Teal", (0x00, 0x96, 0x88)), ("Green", (0x4c, 0xaf, 0x50)), ("Lime", (0xcd, 0xdc, 0x39))]),
+    (
+        "Warm",
+        [
+            ("Red", (0xf4, 0x43, 0x36)),
+            ("Orange", (0xff, 0x98, 0x00)),
+            ("Amber", (0xff, 0xc1, 0x07)),
+        ],
+    ),
+    (
+        "Cool",
+        [
+            ("Indigo", (0x3f, 0x51, 0xb5)),
+            ("Blue", (0x21, 0x96, 0xf3)),
+            ("Cyan", (0x00, 0xbc, 0xd4)),
+        ],
+    ),
+    (
+        "Green",
+        [
+            ("Teal", (0x00, 0x96, 0x88)),
+            ("Green", (0x4c, 0xaf, 0x50)),
+            ("Lime", (0xcd, 0xdc, 0x39)),
+        ],
+    ),
 ];
 
 #[component]
@@ -46,7 +70,8 @@ pub fn Grid2dDemo() -> impl IntoView {
             selection: Some(selection.into()),
             ..SelectionOptions::default()
         },
-        ..UseGridStateInput::new(collection)
+        collection,
+        focus_mode: GridFocusMode::Row,
     });
     // The cells have an action, so presses on a cell run it; palettes are selected on the row.
     let UseGridReturn { props, data } = use_grid(UseGridInput {
@@ -54,7 +79,15 @@ pub fn Grid2dDemo() -> impl IntoView {
         on_cell_action: Some(Callback::new(move |key: Key| {
             activated.set(collection.with(|c| c.get(&key).map(|node| node.text_value.to_string())));
         })),
-        ..UseGridInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: None,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
+        on_row_action: None,
     });
     let row_group = use_grid_row_group();
 
@@ -89,9 +122,17 @@ fn PaletteRow(grid: GridData, palette: &'static str, colors: [Color; 3]) -> impl
     let row = use_grid_row(UseGridRowInput {
         grid: grid.clone(),
         key: row_key.clone(),
+        on_context_menu: None,
     });
     let (row_attrs, row_styles) = row.row_props.into_parts();
-    let name = use_grid_cell(UseGridCellInput::new(grid.clone(), Key::cell(&row_key, 0)));
+    let name = use_grid_cell(UseGridCellInput {
+        grid: grid.clone(),
+        key: Key::cell(&row_key, 0),
+        id: None,
+        focus_mode: None,
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
+    });
     let (name_attrs, name_styles) = name.grid_cell_props.into_parts();
 
     view! {
@@ -111,7 +152,14 @@ fn PaletteRow(grid: GridData, palette: &'static str, colors: [Color; 3]) -> impl
 /// A color cell. It shows no text, so it is named by `aria-label`.
 #[component]
 fn Swatch(grid: GridData, key: Key, name: &'static str, color: CssColor) -> impl IntoView {
-    let cell = use_grid_cell(UseGridCellInput::new(grid, key));
+    let cell = use_grid_cell(UseGridCellInput {
+        grid,
+        key,
+        id: None,
+        focus_mode: None,
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
+    });
     let (attrs, styles) = cell.grid_cell_props.into_parts();
     // The color is per-cell data; everything else lives in `.demo-palette-cell`.
     let styles = styles.add(BackgroundColorProperty.declare(color));

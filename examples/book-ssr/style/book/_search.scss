@@ -2,14 +2,31 @@
 
 @use "theme" as *;
 
-.leptonic-btn.doc-search-trigger {
+// The app bar button opening the search (leptonic's `Button` atom), with the shortcut (`ShortcutKeys` atom).
+.doc-search-trigger {
+  display: inline-flex;
+  align-items: center;
   gap: var(--book-space-s);
   min-width: 14em;
   padding: var(--book-space-s) var(--book-space-m);
+  border: 0.125em solid var(--book-border-color);
   border-radius: var(--book-radius-pill);
+  background: none;
   color: inherit;
+  font: inherit;
   font-size: var(--book-font-size-s);
-  text-transform: none;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--book-transition);
+
+  &[data-hovered] {
+    background-color: var(--book-hover-background-color);
+  }
+
+  &[data-focus-visible] {
+    outline: 2px solid var(--book-focus-color);
+    outline-offset: 2px;
+  }
 
   .doc-search-trigger-text {
     flex: 1;
@@ -17,45 +34,156 @@
     text-align: start;
   }
 
-  .doc-search-trigger-kbd {
+  .doc-search-trigger-keys {
+    display: inline-flex;
     font-size: var(--book-font-size-xs);
+
+    > kbd {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25em;
+    }
+
+    kbd kbd {
+      @include key-cap;
+
+      font-size: 1em;
+      font-weight: 700;
+    }
   }
 
   @media (width <= $small) {
     min-width: auto;
 
     .doc-search-trigger-text,
-    .doc-search-trigger-kbd {
+    .doc-search-trigger-keys {
       display: none;
     }
   }
 }
 
-.leptonic-modal.doc-search-modal {
+// The search dialog (leptonic's modal atoms), centered over the dimmed page.
+.doc-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--book-z-modal);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--book-space-s);
+  background: var(--book-backdrop-color);
+  backdrop-filter: blur(5px);
+
+  &[data-entering] {
+    animation: book-fade-in var(--book-transition);
+  }
+
+  &[data-exiting] {
+    animation: book-fade-in var(--book-transition) reverse forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-entering],
+    &[data-exiting] {
+      animation: none;
+    }
+  }
+}
+
+.doc-search-modal {
+  display: flex;
+  flex-direction: column;
   width: 37.5rem;
   max-width: 90vw;
   height: 28rem;
   max-height: 60vh;
   overflow: hidden;
-
-  .leptonic-modal-header {
-    flex-shrink: 0;
-    align-items: stretch;
-  }
-
-  .leptonic-modal-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    align-items: stretch;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
+  padding: var(--book-space-l) var(--book-space-l) var(--book-space-m);
+  border-radius: var(--book-radius-l);
+  background-color: var(--book-surface-color);
+  color: var(--main-color);
+  box-shadow: var(--book-shadow);
+  outline: none;
 }
 
-// The search field: leptonic's themed `SearchField`.
-.leptonic-search-field.doc-search-field {
-  margin: 0;
+.doc-search-dialog {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  outline: none;
+}
+
+.doc-search-header {
+  flex-shrink: 0;
+  padding-bottom: var(--book-space-m);
+}
+
+.doc-search-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// The search field (leptonic's `SearchField` atom): an icon, the input and the clear button in one box.
+.doc-search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--book-space-s);
+  padding: 0 var(--book-space-s) 0 var(--book-space-m);
+  border: 1px solid var(--book-border-color);
+  border-radius: var(--book-radius-m);
+  background-color: var(--book-surface-color-raised);
+
+  // Text fields show their focus whenever they have it.
+  &:focus-within {
+    border-color: var(--book-focus-color);
+    box-shadow: 0 0 0 1px var(--book-focus-color);
+  }
+
+  .doc-search-field-icon {
+    color: var(--book-muted-color);
+  }
+
+  .doc-search-input {
+    flex: 1;
+    min-width: 0;
+    padding: var(--book-space-m) 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    outline: none;
+
+    &::placeholder {
+      color: var(--book-muted-color);
+    }
+
+    // The field has its own clear button.
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  .doc-search-clear {
+    display: inline-flex;
+    padding: var(--book-space-xs);
+    border: none;
+    border-radius: var(--book-radius-s);
+    background: none;
+    color: var(--book-muted-color);
+    cursor: pointer;
+
+    &[data-hovered] {
+      color: var(--main-color);
+      background-color: var(--book-hover-background-color);
+    }
+  }
+
+  &[data-empty] .doc-search-clear {
+    visibility: hidden;
+  }
 }
 
 .doc-search-results {
@@ -70,7 +198,7 @@
   }
 }
 
-.leptonic-link.doc-search-result {
+a.doc-search-result {
   display: flex;
   min-width: 0;
   overflow: hidden;

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{checkbox::CheckboxAtomDemo, checkbox_group::CheckboxGroupAtomDemo};
@@ -218,7 +217,6 @@ pub fn PageAtomCheckbox() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox overview"</Link></li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
-                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
                 <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>

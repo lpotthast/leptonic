@@ -5,8 +5,8 @@
 #
 #   // Upstream: react-aria/src/interactions/usePress.ts @ 6f664fe911
 #
-# The path is relative to react-spectrum's `packages/` directory, the hash is the react-spectrum commit the file was
-# last synced against. This script lists, per leptonic file, the upstream commits touching those files since then.
+# The path is relative to react-spectrum's `packages/` directory (the atom theme's stylesheets name
+# `../starters/docs/src/...`), the hash is the react-spectrum commit the file was last synced against. This script lists, per leptonic file, the upstream commits touching those files since then.
 #
 # Usage:
 #   scripts/upstream-drift.sh [-v] [PATH_FILTER]   Report drift (most drifted first). -v lists the commits.
@@ -66,7 +66,7 @@ while IFS= read -r file; do
     report+="$total"$'\t'"${file#"$ROOT"/}"$'\n'
     [[ $verbose -eq 1 ]] && report+="$details"
   fi
-done < <(grep -rlE '^// Upstream: ' "$ROOT/leptonic/src" "$ROOT/leptonic/tests" | sort)
+done < <(grep -rlE '^// Upstream: ' "$ROOT/leptonic/src" "$ROOT/leptonic/tests" "$ROOT/leptonic-theme/scss" | sort)
 
 if [[ -z "$report" ]]; then
   echo "No upstream drift."

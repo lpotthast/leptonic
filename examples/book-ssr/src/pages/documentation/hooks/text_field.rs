@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::text_field_basic::TextFieldBasicDemo;
@@ -30,8 +29,48 @@ pub fn PageUseTextField() -> impl IntoView {
 
                         let name = use_text_field_state(UseTextFieldStateInput::default());
                         let field = use_text_field(UseTextFieldInput {
+                            state: name,
                             has_label: true.into(),
-                            ..UseTextFieldInput::new(name)
+                            // Everything else off:
+                            id: None,
+                            element: TextFieldElement::Input,
+                            input_type: Signal::stored(InputType::Text),
+                            is_disabled: false.into(),
+                            is_read_only: false.into(),
+                            is_required: false.into(),
+                            is_invalid: false.into(),
+                            validate: None,
+                            validation_behavior: ValidationBehavior::Aria,
+                            validation: None,
+                            name: None,
+                            form: None,
+                            placeholder: MaybeProp::default(),
+                            pattern: None,
+                            min_length: None,
+                            max_length: None,
+                            auto_complete: None,
+                            auto_capitalize: None,
+                            auto_correct: None,
+                            spell_check: None,
+                            input_mode: None,
+                            enter_key_hint: None,
+                            auto_focus: false,
+                            exclude_from_tab_order: false,
+                            label_id: None,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            aria_errormessage: None,
+                            aria_activedescendant: Signal::stored(None),
+                            aria_autocomplete: None,
+                            aria_haspopup: None,
+                            aria_controls: Signal::stored(None),
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
+                            on_key_down: None,
+                            on_key_up: None,
+                            shortcuts: None,
                         });
 
                         view! {
@@ -113,8 +152,8 @@ pub fn PageUseTextField() -> impl IntoView {
                 <p>"Wires the input to its label, description and error message, and validates the value."</p>
                 <Section title="Input" id="use-text-field-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseTextFieldInput::new(state)"</Code>" and set further fields "
-                        "with struct update syntax."
+                        "Pass a "<Code inline=true>"UseTextFieldInput"</Code>" with every field named; the Default column "
+                        "gives the value for fields you don\u{2019}t need."
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseTextFieldInput">
@@ -257,7 +296,6 @@ pub fn PageUseTextField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::TextField.materialize()>"Text Field overview"</Link></li>
                 <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
-                <li><Link href=routes::doc::text_field::Component.materialize()>"Text Field Component"</Link></li>
                 <li><Link href=routes::doc::search_field::Hook.materialize()>"use_search_field"</Link></li>
                 <li><Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link></li>
                 <li><Link href=routes::doc::field::Hook.materialize()>"Field Hooks"</Link></li>

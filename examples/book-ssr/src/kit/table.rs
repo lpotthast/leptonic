@@ -1,35 +1,39 @@
 use std::str::FromStr;
 
-use leptonic::{
-    components::{
-        prelude::{Code, KbdConcatenate, KbdKey, KbdShortcutRoot},
-        table::{
-            Table, TableBody, TableCell, TableContainer, TableHeader, TableHeaderCell, TableRow,
-        },
-    },
-    utils::key::KeyboardKey,
-};
+use leptonic::{atoms::kbd::Keys as KeyCaps, utils::key::KeyboardKey};
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
 
-/// A plain documentation table with the given column headers, built from leptonic's table components. Rows are
-/// `<TableRow>`s of `<TableCell>`s.
+use super::Code;
+
+/// A plain documentation table with the given column headers. Rows are [`TableRow`]s of [`TableCell`]s.
+///
+/// A static `<table>`: leptonic's `Table` atom is an interactive grid (keyboard navigation, selection), which reference
+/// tables don't need.
 #[component]
 pub fn DocTable(headers: &'static [&'static str], children: Children) -> impl IntoView {
     view! {
-        <TableContainer classes="doc-table-container">
-            <Table classes="doc-table">
-                <TableHeader>
-                    <TableRow>
-                        {headers
-                            .iter()
-                            .map(|header| view! { <TableHeaderCell min_width=false>{*header}</TableHeaderCell> })
-                            .collect_view()}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>{children()}</TableBody>
-            </Table>
-        </TableContainer>
+        <div class="doc-table-container">
+            <table class="doc-table">
+                <thead>
+                    <tr>{headers.iter().map(|header| view! { <th>{*header}</th> }).collect_view()}</tr>
+                </thead>
+                <tbody>{children()}</tbody>
+            </table>
+        </div>
     }
+}
+
+/// A row of a [`DocTable`].
+#[component]
+pub fn TableRow(children: Children) -> impl IntoView {
+    view! { <tr>{children()}</tr> }
+}
+
+/// A cell of a [`TableRow`].
+#[component]
+pub fn TableCell(#[prop(into, optional)] classes: Classes, children: Children) -> impl IntoView {
+    view! { <td class=classes>{children()}</td> }
 }
 
 /// What an [`ApiTable`] documents. Decides the columns.
@@ -186,11 +190,16 @@ pub fn KeyRow(keys: &'static str, children: Children) -> impl IntoView {
     }
 }
 
-/// Keys in prose or tables, rendered with leptonic's `KbdKey`.
+/// Keys in prose or tables, rendered as key caps by leptonic's `Keys` atom (`<kbd>`s, styled by `.doc-keys` in
+/// `_article.scss`).
 ///
 /// `keys` is written as displayed: alternatives separated by `" / "`, key combinations joined with `" + "`. Keys are
 /// [`KeyboardKey`] names (`"ArrowDown"`, `"PageUp"`, `"Control"`, `"Command"`); a few descriptions of key groups
-/// (`KEY_DESCRIPTIONS`) render as text. A unit test checks the names of all pages.
+/// (`KEY_DESCRIPTIONS`) are allowed too, as text when alone. A unit test checks the names of all pages.
+///
+/// The keys are shown as written, on every platform: leptonic's `ShortcutKeys` atom shows a shortcut in the keys of
+/// the reader's platform (Command on Apple devices for the primary modifier), while these tables document specific
+/// keys ("Control + X / Command + X").
 #[component]
 pub fn Keys(keys: &'static str) -> impl IntoView {
     keys.split(" / ")
@@ -214,31 +223,22 @@ const KEY_DESCRIPTIONS: &[&str] = &[
     "A\u{2013}Z",
 ];
 
-/// A key combination like `"Shift + Tab"`: a single key, or keys joined in one `KbdShortcutRoot`.
+/// A key combination like `"Shift + Tab"`: its keys as key caps in one `<kbd class="doc-keys">`, joined by `+`
+/// (leptonic's `Keys` atom). A description of a key group (`"Arrow keys"`) alone is text; in a combination
+/// (`"Shift + Arrow keys"`) it is a key cap too.
 #[component]
 fn KeyCombination(combination: &'static str) -> impl IntoView {
-    let keys: Vec<&'static str> = combination.split(" + ").collect();
-    let key = |name: &'static str| {
-        let Ok(key) = KeyboardKey::from_str(name);
-        match key {
-            KeyboardKey::Other(_) => name.into_any(),
-            key => view! { <KbdKey key/> }.into_any(),
-        }
-    };
-    if let [single] = keys.as_slice() {
-        return key(single);
+    let keys: Vec<KeyboardKey> = combination
+        .split(" + ")
+        .map(|name| {
+            let Ok(key) = KeyboardKey::from_str(name);
+            key
+        })
+        .collect();
+    if let [KeyboardKey::Other(_)] = keys.as_slice() {
+        return combination.into_any();
     }
-    let last = keys.len() - 1;
-    view! {
-        <KbdShortcutRoot>
-            {keys
-                .into_iter()
-                .enumerate()
-                .map(|(i, k)| view! { {key(k)}{(i < last).then(|| view! { <KbdConcatenate/> })} })
-                .collect_view()}
-        </KbdShortcutRoot>
-    }
-    .into_any()
+    view! { <KeyCaps keys classes="doc-keys"/> }.into_any()
 }
 
 #[cfg(test)]

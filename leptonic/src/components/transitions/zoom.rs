@@ -1,17 +1,17 @@
 use leptos::prelude::*;
-use leptos_classes::Classes;
-use leptos_styles::Styles;
 
+use super::transition;
+use crate::utils::{classes::Classes, styles::Styles};
+
+/// Zooms its children in from nothing.
 #[component]
 pub fn Zoom(
-    inn: Signal<bool>,
+    /// Whether the children are shown: a value or any signal.
+    #[prop(into)]
+    is_shown: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    view! {
-        <div class=classes.add("leptonic-zoom") style=styles data-in=move || inn.get()>
-            {children()}
-        </div>
-    }
+    transition("leptonic-zoom", is_shown, classes, styles, children)
 }

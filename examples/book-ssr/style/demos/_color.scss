@@ -57,6 +57,14 @@
     box-shadow: inset 0 0 0 1px var(--book-border-color);
 }
 
+// Behind a transparent color: a checkerboard, as image editors show transparency.
+.demo-color-checkerboard {
+    flex-shrink: 0;
+    height: fit-content;
+    border-radius: var(--book-radius-m);
+    background: repeating-conic-gradient(#c8c8c8 0% 25%, #ffffff 0% 50%) 0 0 / 1em 1em;
+}
+
 .demo-color-atoms-values {
     display: grid;
     grid-template-columns: auto auto;
@@ -396,17 +404,6 @@
     margin-right: var(--book-space-s);
     border-radius: var(--book-radius-s);
     box-shadow: inset 0 0 0 1px var(--book-border-color);
-}
-
-// Color picker parts at a fixed size.
-.demo-color-palette-small {
-    width: 10em;
-    height: 5em;
-}
-
-.demo-color-preview-large {
-    width: 5em;
-    height: 5em;
 }
 
 // -- Color names (Color overview) --

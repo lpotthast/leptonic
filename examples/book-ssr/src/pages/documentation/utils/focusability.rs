@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focusability::FocusabilityDemo;
@@ -11,7 +10,7 @@ pub fn PageFocusability() -> impl IntoView {
         <DocPage title="focusability">
             <p>
                 "The functions of "<Code inline=true>"leptonic::utils::focusability"</Code>" tell whether an element can take "
-                "focus and whether "<Keys keys="Tab"/>" reaches it. Focus scopes, focus managers and "
+                "focus, whether "<Keys keys="Tab"/>" reaches it, and whether keys pressed there are typing. Focus scopes, focus managers and "
                 <Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link>
                 " decide with them; use them when you move focus yourself. See the "
                 <Link href=routes::doc::Focus.materialize()>"Focus overview"</Link>" for the other focus building blocks."
@@ -23,6 +22,7 @@ pub fn PageFocusability() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r"
                         use leptonic::utils::focusability::{is_tabbable, TABBABLE_SELECTOR};
+                        use wasm_bindgen::JsCast;
 
                         // The first element of a container that Tab would reach.
                         let first_tab_stop = container
@@ -93,10 +93,44 @@ pub fn PageFocusability() -> impl IntoView {
                 </p>
             </Section>
 
+            <Section title="is_text_input">
+                <p>
+                    <Code inline=true>"is_text_input(&Element) -> bool"</Code>" is true for elements that take text: an "
+                    <Code inline=true>"<input>"</Code>" of a text-like type (any type but checkbox, radio, range, color, "
+                    "file, image, button, submit and reset), a "<Code inline=true>"<textarea>"</Code>" and editable content ("
+                    <Code inline=true>"contenteditable"</Code>", also inside it). Focus rings use it: typing in a text field "
+                    "doesn\u{2019}t count as keyboard navigation."
+                </p>
+            </Section>
+
+            <Section title="is_typing_target">
+                <p>
+                    <Code inline=true>"is_typing_target(&Element) -> bool"</Code>" tells whether keys pressed at the "
+                    "element are the user typing: it is a text input ("<Code inline=true>"is_text_input"</Code>") or a "
+                    <Code inline=true>"<select>"</Code>", where typing picks an option. Shortcuts without modifiers, such as "
+                    <Keys keys="/"/>", shouldn\u{2019}t act there; "
+                    <Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link>
+                    " checks the target of each key press with it."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r"
+                        use leptonic::utils::focusability::is_typing_target;
+                        use wasm_bindgen::JsCast;
+
+                        // In a keydown handler: leave the key to the field the user types in.
+                        let typing = event
+                            .target()
+                            .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+                            .is_some_and(|target| is_typing_target(&target));
+                    ")}
+                </Code>
+            </Section>
+
             <SeeAlso>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus overview"</Link></li>
                 <li><Link href=routes::doc::focus::UseFocusManager.materialize()>"use_focus_manager"</Link></li>
                 <li><Link href=routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
+                <li><Link href=routes::doc::interactions::UseGlobalShortcuts.materialize()>"use_global_shortcuts"</Link></li>
                 <li><Link href=format!("{}#focus-safely", routes::doc::focus::UseFocusable.materialize())>"focus_safely"</Link></li>
             </SeeAlso>
         </DocPage>

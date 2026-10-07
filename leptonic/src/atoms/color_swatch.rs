@@ -9,12 +9,15 @@ use crate::{
     utils::{
         classes::Classes,
         color::{Color, ColorProp},
+        default_class::with_default_class,
         styles::Styles,
     },
 };
 
 /// A swatch showing a color: an image named after the color, with the color as its background.
 /// Size it with styles or classes.
+///
+/// Default class: `leptonic-ColorSwatch`.
 #[component]
 pub fn ColorSwatch(
     /// The color to show: any color value or signal of one. Default: the color of the
@@ -32,6 +35,7 @@ pub fn ColorSwatch(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSwatch", classes);
     let color = color
         .map(|ColorProp(color)| color)
         .or_else(|| {
@@ -49,7 +53,8 @@ pub fn ColorSwatch(
         color_name,
         aria_label,
         aria_labelledby,
-        ..UseColorSwatchInput::new(color)
+        color: Into::<crate::utils::color::ColorProp>::into(color).0,
+        id: None,
     })
     .color_swatch_props
     .into_parts();

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focus_within::FocusWithinDemo;
@@ -95,7 +94,7 @@ pub fn PageUseFocusWithin() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "Click into the field, then tab between the field and the buttons: focus stays within the group, so "
-                    "neither callback fires. tab out of the group to end the focus-within state."
+                    "neither callback fires. Tab out of the group to end the focus-within state."
                 </p>
 
                 <Demo

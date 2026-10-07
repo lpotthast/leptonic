@@ -11,7 +11,8 @@ fn is_email(email: &str) -> bool {
 #[component]
 pub fn FieldEmailDemo() -> impl IntoView {
     let email = RwSignal::new("ferris@".to_owned());
-    let is_invalid = Signal::derive(move || email.with(|email| !email.is_empty() && !is_email(email)));
+    let is_invalid =
+        Signal::derive(move || email.with(|email| !email.is_empty() && !is_email(email)));
 
     let UseFieldReturn {
         label_props,

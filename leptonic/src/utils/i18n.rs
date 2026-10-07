@@ -176,9 +176,9 @@ pub fn I18nProvider(
         }),
     };
 
-    provide_context(context);
-
-    children()
+    // Only for the children: a component body has no owner of its own, so `provide_context`
+    // would also reach the provider's siblings (and views they create later).
+    crate::utils::scoped_context::scoped_view(move || provide_context(context), children)
 }
 
 /// The I18n context (to read or change the locale), if within an `I18nProvider`.

@@ -14,8 +14,9 @@ use crate::{
         use_exit_animation, use_popover,
     },
     utils::{
-        CapturedElement, classes::Classes, data_attributes::flag, focus::focus_safely,
-        point::Point, shadow_dom::get_active_element, styles::Styles,
+        CapturedElement, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, focus::focus_safely, point::Point,
+        shadow_dom::get_active_element, styles::Styles,
     },
 };
 
@@ -54,6 +55,8 @@ use crate::{
 /// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`, after flipping). CSS
 /// variables: `--trigger-width` (the trigger's width, e.g. for a popover as wide as its trigger)
 /// and `--trigger-anchor-point` (the point closest to the trigger, e.g. as `transform-origin`).
+///
+/// Default class: `leptonic-Popover`.
 #[component]
 #[allow(clippy::needless_pass_by_value, clippy::too_many_arguments)]
 pub fn Popover(
@@ -112,6 +115,7 @@ pub fn Popover(
     #[prop(into, optional)] styles: Styles,
     children: ChildrenFn,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Popover", classes);
     let context = use_context::<DialogTriggerContext>();
     let state =
         super::dialog::overlay_open_state(is_open, set_open, default_open, on_open_change, context);
@@ -165,7 +169,10 @@ pub fn Popover(
         should_close_on_interact_outside,
         group: Some(group.element()),
         is_submenu: submenu.is_some(),
-        ..UsePopoverInput::new(state)
+        state,
+        arrow_size: Signal::stored(None),
+        boundary: None,
+        target_rect: Signal::stored(None),
     });
     // The trigger's `aria-controls`.
     if let Some(context) = context {
@@ -407,47 +414,48 @@ pub(crate) fn render_popover<S: OverlayState, L: Fn() -> Option<String> + 'stati
     };
 
     view! {
-        // No portal container while closed: a modal would make it inert.
-        <Show when=move || is_open.get() || is_exiting.get()>
-            {
-                // Entering once the placement is known (react-aria-components).
-                let entering = CapturedElement::new();
-                let is_entering = use_enter_animation(UseEnterAnimationInput {
-                    is_ready: Signal::derive(move || placement.get().is_some() && is_open.get()),
-                    ..UseEnterAnimationInput::new(entering)
-                })
-                .is_entering;
-                // A non-modal popover contains focus once a dialog is inside (per opening).
-                let overlay = OverlayFocusContain::new();
-                let contain = Signal::derive(move || {
-                    // Not while exiting: the page is usable again.
-                    (modality.is_modal() || is_dialog.get() || overlay.contain().get())
-                        && !is_exiting.get()
-                });
-                match group {
-                    // A root popover renders the container its submenus' popovers mount into.
-                    PopoverGroup::Root(container) => Either::Left(view! {
-                        <Portal>
-                            <Provider value=overlay>
-                                {underlay()}
-                                <div style="display: contents" {..container.attr()}>
-                                    <Provider value=PopoverGroupContext(container)>
-                                        {popover(contain, entering, is_entering)}
-                                    </Provider>
-                                </div>
-                            </Provider>
-                        </Portal>
-                    }),
-                    PopoverGroup::Sub(root) => Either::Right(view! {
-                        <Portal nostrip:mount=root.get_untracked().map(|root| (*root).clone())>
-                            <Provider value=overlay>
-                                {underlay()}
-                                {popover(contain, entering, is_entering)}
-                            </Provider>
-                        </Portal>
-                    }),
+            // No portal container while closed: a modal would make it inert.
+            <Show when=move || is_open.get() || is_exiting.get()>
+                {
+                    // Entering once the placement is known (react-aria-components).
+                    let entering = CapturedElement::new();
+                    let is_entering = use_enter_animation(UseEnterAnimationInput {
+                        is_ready: Signal::derive(move || placement.get().is_some() && is_open.get()),
+                        element: entering,
+    on_enter: None
+                    })
+                    .is_entering;
+                    // A non-modal popover contains focus once a dialog is inside (per opening).
+                    let overlay = OverlayFocusContain::new();
+                    let contain = Signal::derive(move || {
+                        // Not while exiting: the page is usable again.
+                        (modality.is_modal() || is_dialog.get() || overlay.contain().get())
+                            && !is_exiting.get()
+                    });
+                    match group {
+                        // A root popover renders the container its submenus' popovers mount into.
+                        PopoverGroup::Root(container) => Either::Left(view! {
+                            <Portal>
+                                <Provider value=overlay>
+                                    {underlay()}
+                                    <div style="display: contents" {..container.attr()}>
+                                        <Provider value=PopoverGroupContext(container)>
+                                            {popover(contain, entering, is_entering)}
+                                        </Provider>
+                                    </div>
+                                </Provider>
+                            </Portal>
+                        }),
+                        PopoverGroup::Sub(root) => Either::Right(view! {
+                            <Portal nostrip:mount=root.get_untracked().map(|root| (*root).clone())>
+                                <Provider value=overlay>
+                                    {underlay()}
+                                    {popover(contain, entering, is_entering)}
+                                </Provider>
+                            </Portal>
+                        }),
+                    }
                 }
-            }
-        </Show>
-    }
+            </Show>
+        }
 }

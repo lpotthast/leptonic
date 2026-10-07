@@ -22,6 +22,8 @@ pub mod utils;
 
 // Let's make some types of our public API more easily accessible.
 pub use crate::utils::scroll_behavior::ScrollBehavior;
+/// The date crate of leptonic's date APIs (calendars, date fields).
+pub use jiff;
 
 pub mod prelude {
     // Reexport
@@ -164,20 +166,36 @@ pub enum Mount {
     WhenShown,
 }
 
-/// Create a read-write signal pair that automatically syncs the stored value in the browsers
-/// `LocalStorage`. When called, the value is read back from storage.
-/// When the value is not found, `initial` is set.
+/// Create a read-write signal pair kept in the browser's `LocalStorage` under `key`.
+///
+/// It starts with `initial`, as the server renders it (the server has no storage), so hydration
+/// matches; once hydrated, the stored value (if any) replaces it, and every change is stored. In
+/// apps that render on the server, the stored value therefore shows one frame after loading.
 pub fn signal_ls<
     T: Send + Sync + Clone + serde::Serialize + serde::de::DeserializeOwned + 'static,
 >(
     key: &'static str,
     initial: T,
 ) -> (ReadSignal<T>, WriteSignal<T>) {
-    let (signal, set_signal) = signal(read_from_local_storage::<T>(key).unwrap_or(initial));
-
-    track_in_local_storage(key, signal);
-
-    (signal, set_signal)
+    let (value, set_value) = signal(initial);
+    // Effects run on the client only, after hydration. The first run loads, later runs store (a
+    // separate storing effect could store `initial` before the load).
+    Effect::new(move |loaded: Option<()>| {
+        if loaded.is_none() {
+            if let Some(stored) = read_from_local_storage::<T>(key) {
+                set_value.set(stored);
+            }
+            value.track();
+            return;
+        }
+        if let Some(window) = &*use_window()
+            && let Ok(Some(storage)) = window.local_storage()
+            && let Ok(json) = value.with(serde_json::to_string)
+        {
+            let _ = storage.set(key, &json);
+        }
+    });
+    (value, set_value)
 }
 
 #[must_use]

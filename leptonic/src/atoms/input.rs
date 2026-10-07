@@ -12,7 +12,9 @@ use leptos::{
 
 use crate::{
     hooks::{IntoAttrs, UseHoverInput, UseTextFieldInputProps, use_hover},
-    utils::{classes::Classes, data_attributes::flag, styles::Styles},
+    utils::{
+        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -75,11 +77,18 @@ impl InputContext {
 ///
 /// Data attributes: `data-focused`, `data-focus-visible`, `data-hovered`, `data-disabled`,
 /// `data-invalid`.
+///
+/// Default class: `leptonic-Input`.
 #[component]
 pub fn Input(
+    /// The `<input>` element, e.g. to focus it from a shortcut (react-aria-components: a
+    /// forwarded `ref`).
+    #[prop(optional)]
+    node_ref: NodeRef<leptos::html::Input>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Input", classes);
     let ctx = expect_context::<InputContext>();
     let state = ctx.state;
     let hover = use_hover(UseHoverInput {
@@ -92,6 +101,7 @@ pub fn Input(
             {..(ctx.attrs)()}
             {..hover.props.into_attrs()}
             {..state_attributes(state, hover.is_hovered)}
+            node_ref=node_ref
             class=classes
             style=styles
         />
@@ -101,11 +111,17 @@ pub fn Input(
 /// The `<textarea>` of the field around it (for multi-line text).
 ///
 /// Data attributes: as [`Input`].
+///
+/// Default class: `leptonic-TextArea`.
 #[component]
 pub fn TextArea(
+    /// The `<textarea>` element (react-aria-components: a forwarded `ref`).
+    #[prop(optional)]
+    node_ref: NodeRef<leptos::html::Textarea>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-TextArea", classes);
     let ctx = expect_context::<InputContext>();
     let state = ctx.state;
     let Some(text_field) = ctx.text_field else {
@@ -128,6 +144,7 @@ pub fn TextArea(
             {..props.into_attrs()}
             {..hover.props.into_attrs()}
             {..state_attributes(state, hover.is_hovered)}
+            node_ref=node_ref
             class=classes
             style=styles
         >

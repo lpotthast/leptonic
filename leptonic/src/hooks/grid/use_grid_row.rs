@@ -35,6 +35,9 @@ pub struct UseGridRowInput {
     pub grid: GridData,
     /// The row's key in the grid's collection.
     pub key: Key,
+    /// Called when a context menu is requested on the row (right click, Shift+F10, the context
+    /// menu key; a long press on iOS unless it selects).
+    pub on_context_menu: Option<Callback<crate::hooks::ContextMenuEvent>>,
 }
 
 /// Return value of [`use_grid_row`].
@@ -79,7 +82,11 @@ impl IntoAttrs for UseGridRowProps {
 
 /// A row of a grid: selected and activated by press (via `use_selectable_item`).
 pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
-    let UseGridRowInput { grid, key } = input;
+    let UseGridRowInput {
+        grid,
+        key,
+        on_context_menu,
+    } = input;
     let GridData {
         state,
         collection_id,
@@ -115,6 +122,7 @@ pub fn use_grid_row(input: UseGridRowInput) -> UseGridRowReturn {
         link_behavior: crate::hooks::collections::LinkBehavior::Action,
         focus: None,
         should_use_virtual_focus: false,
+        on_context_menu,
     });
     let (item, styles) = props.into_inner();
 

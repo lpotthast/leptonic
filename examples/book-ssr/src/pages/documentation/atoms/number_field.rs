@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::number_field::NumberFieldAtomDemo;
@@ -240,7 +239,6 @@ pub fn PageAtomNumberField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::NumberField.materialize()>"Number Field overview"</Link></li>
                 <li><Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link></li>
-                <li><Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link></li>
                 <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
                 <li><Link href=routes::doc::Form.materialize()>"Form"</Link></li>

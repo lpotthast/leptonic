@@ -20,25 +20,25 @@ behavior.
   library" in its "Book" section, and keep using the leptonic piece. No book-local replacements.
 - **Demos** show the layer of their page: a hook demo spreads the hook onto plain elements, an atom demo uses the atom.
   Everything around the demonstrated element (open buttons, "Disabled" checkboxes, reset buttons, form fields) uses
-  leptonic like any app would.
+  leptonic's atoms like any app would, styled by the book (see "Demo controls" in section 5).
 
-| Need                                   | Use                                                                                         |
-|----------------------------------------|---------------------------------------------------------------------------------------------|
-| Button (text or icon)                  | `components::Button`; icon-only: `variant=ButtonVariant::Flat` + `Icon` + `attr:aria-label` |
-| Link to a page / external / in-page    | `Link`, `AnchorLink`; a link that looks like a button: `LinkButton`                        |
-| Dialog                                 | `Modal` (+ `ModalHeader`, `ModalTitle`, `ModalBody`, `ModalFooter`)                         |
-| Panel covering the page (mobile menu)  | atoms `ModalBackdrop` + `ModalContent` + `Dialog` (until the Drawer is rebuilt on them)     |
-| Show/hide section                      | `use_disclosure` + `use_disclosure_state` (kit `Disclosure`)                                |
+| Need                                   | Use                                                                                                                                                |
+|----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| Button (text or icon)                  | `components::Button`; icon-only: `variant=ButtonVariant::Flat` + `Icon` + `attr:aria-label`                                                        |
+| Link to a page / external / in-page    | `Link`, `AnchorLink`; a link that looks like a button: `LinkButton`                                                                                |
+| Dialog                                 | `Modal` (+ `ModalHeader`, `ModalTitle`, `ModalBody`, `ModalFooter`)                                                                                |
+| Panel covering the page (mobile menu)  | `Drawer` (`is_open` + `set_open`), with a close button inside                                                                                      |
+| Show/hide section                      | `use_disclosure` + `use_disclosure_state` (kit `Disclosure`)                                                                                       |
 | Checkbox, switch, radio, toggle button | `Checkbox`, `Switch` (`is_selected` + `set_selected`), `RadioGroup` + `Radio` (`value` + `set_value`); toggle buttons: atoms `ToggleButton(Group)` |
-| Text, search and number fields         | `TextField`, `SearchField`, `NumberField` (`value` + `set_value`)                            |
-| Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::key("k").primary()`)                       |
-| Key caps                               | `KbdKey`, `KbdShortcut`; in pages kit `Keys keys="Shift + Tab"`, in tables `KeyRow`        |
-| Data table                             | `Table*` components; in pages kit `DocTable` with `TableRow`/`TableCell` rows            |
-| Code                                   | `Code` (inline or with `language`; blocks get leptonic's copy button)                      |
-| Icons                                  | `Icon` with `icondata` Bootstrap icons (`Bs*`)                                              |
-| Screen reader announcements            | `utils::live_announcer::announce_polite`                                                    |
-| Theme switching                        | `ThemeToggle` inside `Root`                                                                 |
-| Layout                                 | CSS (flex/grid) with the tokens below; `Stack` where a plain stack is meant                 |
+| Text, search and number fields         | `TextField`, `SearchField`, `NumberField` (`value` + `set_value`)                                                                                  |
+| Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::key("k").primary()`)                                                                              |
+| Key caps                               | `ShortcutKeys` atom (a `Shortcut`, per platform), `Keys` atom (keys as given); in pages kit `Keys keys="Shift + Tab"`, in tables `KeyRow`          |
+| Data table                             | `Table*` components; in pages kit `DocTable` with `TableRow`/`TableCell` rows                                                                      |
+| Code                                   | kit `Code` (inline or with `language`; blocks are highlighted and get a copy button)                                                               |
+| Icons                                  | `Icon` with `icondata` Bootstrap icons (`Bs*`)                                                                                                     |
+| Screen reader announcements            | `utils::live_announcer::announce_polite`                                                                                                           |
+| Theme switching                        | `ThemeToggle` inside `Root`                                                                                                                        |
+| Layout                                 | CSS (flex/grid) with the tokens below; `Stack` where a plain stack is meant                                                                        |
 
 ## 2. Design tokens
 
@@ -48,22 +48,22 @@ Leptonic's own theme variables (`--brand-color`, `--danger-color`, `--typography
 
 ### Color
 
-| Token                                           | Use                                                              |
-|-------------------------------------------------|------------------------------------------------------------------|
-| `--main-color`, `--main-background-color`       | Page text and background                                         |
-| `--brand-color`                                 | Accent fills and borders: demo frames, current item backgrounds, focus |
-| `--book-brand-text-color`                       | Brand-colored text (links in prose, current tab, demo triggers): 4.5:1 on every surface |
-| `--brand-color-subtle`                          | Tinted backgrounds (selected rows, highlights)                   |
-| `--book-on-brand-color`                         | Text on `--brand-color` or a badge color                         |
-| `--book-surface-color`, `--book-surface-color-raised` | Cards, panels, popovers; raised: inputs, key caps, hovered surfaces |
-| `--book-hover-background-color`                 | Hovered rows and list items                                      |
-| `--book-border-color`                           | Borders and separators                                           |
-| `--book-muted-color`                            | Secondary text (descriptions, labels, placeholders)              |
-| `--book-focus-color`                            | Focus rings drawn by the book                                    |
-| `--book-backdrop-color`                         | Behind modal overlays                                            |
-| `--success-color`, `--warn-color`, `--danger-color`, `--info-color` | Status (leptonic theme): valid/invalid, meters, errors |
-| `--book-categorical-1` ... `-4`                 | Distinguishing series in demos (slider accents, chart bars)      |
-| `--book-badge-{hook,atom,comp,util}-color`      | Layer badges and layer markers                                   |
+| Token                                                               | Use                                                                                     |
+|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| `--main-color`, `--main-background-color`                           | Page text and background                                                                |
+| `--brand-color`                                                     | Accent fills and borders: demo frames, current item backgrounds, focus                  |
+| `--book-brand-text-color`                                           | Brand-colored text (links in prose, current tab, demo triggers): 4.5:1 on every surface |
+| `--brand-color-subtle`                                              | Tinted backgrounds (selected rows, highlights)                                          |
+| `--book-on-brand-color`                                             | Text on `--brand-color` or a badge color                                                |
+| `--book-surface-color`, `--book-surface-color-raised`               | Cards, panels, popovers; raised: inputs, key caps, hovered surfaces                     |
+| `--book-hover-background-color`                                     | Hovered rows and list items                                                             |
+| `--book-border-color`                                               | Borders and separators                                                                  |
+| `--book-muted-color`                                                | Secondary text (descriptions, labels, placeholders)                                     |
+| `--book-focus-color`                                                | Focus rings drawn by the book                                                           |
+| `--book-backdrop-color`                                             | Behind modal overlays                                                                   |
+| `--success-color`, `--warn-color`, `--danger-color`, `--info-color` | Status (leptonic theme): valid/invalid, meters, errors                                  |
+| `--book-categorical-1` ... `-4`                                     | Distinguishing series in demos (slider accents, chart bars)                             |
+| `--book-badge-{hook,atom,comp,util}-color`                          | Layer badges and layer markers                                                          |
 
 Every color works in both themes: the dark theme redefines the same tokens. Never write `#fff`, `white`, `black` or
 `rgba(...)` outside `_theme.scss`; the one exception is `transparent`. Text meets WCAG AA in both themes: 4.5:1
@@ -148,18 +148,110 @@ A demo is code readers copy. It shows one thing well, and everything around the 
 
 - **State is visible:** a `<p class="demo-status">` below the demo shows the current value or the last event ("Last
   action: copy."), with correct grammar ("1 time", "2 times"). Event logs use `ringbuf::HeapRb` capped at 50 entries
-  in a `demo-log`. No other status classes.
-- **Disabling:** where the concept supports disabling, a `Checkbox` labelled "Disabled" in a `demo-controls` row
-  below the demo toggles it. Further switches of a demo (read-only, orientation, ...) go into the same row.
+  in a `demo-event-log`. No other status classes.
+- **Disabling:** where the concept supports disabling, the standard demo control (a `Checkbox` atom, see "Demo
+  controls" below) labelled "Disabled" in a `demo-controls` row below the demo toggles it. Further switches of a demo
+  (read-only, orientation, ...) go into the same row.
+- **The book styles every demo itself.** Leptonic ships no stylesheet for its atoms: every demo is styled by the
+  book's demo stylesheets (`style/demos/`), with the book's tokens. Demos use atoms and hooks only, never the
+  components layer (`leptonic::components`); the component themes (`leptonic-themes`) stay loaded only until the last
+  component demo is gone.
 - **The layer of the page is styled through what it renders:** atom demos style the atom only through its data
-  attributes (`[data-pressed]`, `[data-selected]`, `[data-focus-visible]`, ...); hook demos style what the hook sets
-  (ARIA attributes, the hook's state attributes). No mirrored classes (`.selected`, `.pressed`), no `:hover`,
-  `:focus` or `:disabled` where the layer provides an attribute.
+  attributes (`[data-pressed]`, `[data-selected]`, `[data-focus-visible]`, ...), on a book class passed as `classes`
+  or on the atom's default class `leptonic-<AtomName>` (e.g. `.leptonic-ListBoxItem`); hook demos style the plain
+  elements they render with book classes, through what the hook sets (ARIA attributes, the hook's state
+  attributes). No mirrored classes (`.selected`, `.pressed`), no `:hover`, `:focus` or `:disabled` where the layer
+  provides an attribute. Markup an atom doesn't render (a checkbox's box, a switch's track, a select's caret) is the
+  demo's own, `aria-hidden`.
 - **Standalone:** a demo's source compiles on its own in an app (no `crate::routes`, no book helpers); a Quick Start
   demo is short (a few dozen lines). Names in demos are real words, not `foo`.
 - **Accessible:** every control has a name, decorative glyphs and emoji are `aria-hidden` (or use `Icon`), demos
   don't trap focus, and nothing relies on color or hover alone.
 - **No restated defaults** in demo sources: set only what the demo is about, with struct update syntax.
+
+### Demo controls
+
+The controls around a demo (options like "Disabled", a button opening an overlay, a field feeding a value) are
+leptonic atoms with the book's demo classes. They read like any app's code: copy the markup, then replace the classes
+with your own styles. The classes used by demos of several groups live in `style/demos/_shared.scss`; a concept's own
+classes in its group's stylesheet (move a rule to `_shared.scss` once another group uses it).
+
+The standard control, a checkbox (`_shared.scss`; `atoms/demos/{button,checkbox,link,switch}.rs` use it):
+
+```rust
+use leptonic::atoms::checkbox::Checkbox;
+
+<div class="demo-controls">
+    <Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+        <span class="demo-check-box" aria-hidden="true"></span>
+        "Disabled"
+    </Checkbox>
+</div>
+```
+
+The markup of the other atoms demos use most (their classes: `_shared.scss` unless named):
+
+```rust
+// Button: `demo-btn`, or `demo-btn-primary` / `demo-btn-danger` for a demo's main or destructive action.
+<Button on_press=move |_| open.set(true) classes="demo-btn">"Open"</Button>
+
+// Toggle button: `demo-toggle-button`; a group of them: `ToggleButtonGroup` with `demo-toggle-group`.
+<ToggleButton is_selected=bold set_selected=bold classes="demo-toggle-button">"Bold"</ToggleButton>
+
+// Switch (`_fields.scss`): the track and thumb are the demo's own markup.
+<Switch is_selected=wifi set_selected=wifi classes="demo-switch">
+    <span class="demo-switch-track" aria-hidden="true"><span class="demo-switch-thumb"></span></span>
+    "Wi-Fi"
+</Switch>
+
+// Radio group (`demo-radio`, `demo-radio-circle` in `_fields.scss`; the group classes in `_fields.scss`).
+<RadioGroup value=plan set_value=plan classes="demo-choice-group">
+    <Label classes="demo-choice-group-label">"Plan"</Label>
+    <div class="demo-choice-group-items">
+        <Radio value="free" classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Free"</Radio>
+        <Radio value="pro" classes="demo-radio"><span class="demo-radio-circle" aria-hidden="true"></span>"Pro"</Radio>
+    </div>
+</RadioGroup>
+
+// Text field: `demo-field`, `demo-field-label`, `demo-atom-input`, `demo-field-error`
+// (`demo-field-description` in `_fields.scss`).
+<TextField value=name set_value=name classes="demo-field">
+    <Label classes="demo-field-label">"Name"</Label>
+    <Input classes="demo-atom-input"/>
+    <FieldError classes="demo-field-error"/>
+</TextField>
+
+// Select (`demo-sel-*` in `_pickers.scss`): the caret is the demo's own markup.
+<Select collection=offices value=office set_value=office classes="demo-sel">
+    <Label classes="demo-sel-label">"Office"</Label>
+    <SelectTrigger classes="demo-sel-trigger">
+        <SelectValue placeholder="Choose an office" classes="demo-sel-value"/>
+        <span class="demo-sel-caret" aria-hidden="true">"\u{25bc}"</span>
+    </SelectTrigger>
+    <SelectPopover classes="demo-sel-popover">
+        <ListBox classes="demo-sel-listbox">/* ListBoxItem classes="demo-sel-item" */</ListBox>
+    </SelectPopover>
+</Select>
+
+// Slider (`demo-slider-*` in `_fields.scss`).
+<Slider min_value=0 max_value=100 default_values=vec![50_u8] classes="demo-slider">
+    <Label classes="demo-slider-label">"Volume"</Label>
+    <SliderTrack classes="demo-slider-track">
+        <SliderFill classes="demo-slider-fill"/>
+        <SliderThumb classes="demo-slider-thumb"/>
+    </SliderTrack>
+    <SliderOutput classes="demo-slider-output"/>
+</Slider>
+```
+
+### Demo stylesheets
+
+- **Atom demos** are styled by the book's demo classes (or the atoms' default classes `leptonic-<AtomName>`) and the
+  atoms' data attributes, nothing else. A "Styling" section of an atom page shows how to style the atom (its default
+  class, data attributes and the markup to render inside it) with the book's own CSS as the example.
+- **Hook demos** render plain elements with book classes and style them through the attributes the hooks set.
+- **Layout** classes (`demo-controls`, `demo-control-row`, `demo-form`, ...) arrange demos; they don't style atoms.
+- **Rules of removed demos are removed** with them (the unit test `every_rule_belongs_to_a_used_class` lists them).
 
 **Styling snippets on pages** (the CSS in "Styling" sections) use stand-ins for the reader's own design tokens,
 `var(--accent)`, `var(--surface)`, `var(--border)`, `var(--muted)` and `var(--focus)`, never literal colors. Short

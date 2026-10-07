@@ -3,7 +3,7 @@ use leptos::prelude::*;
 
 use crate::{
     hooks::{PlacementAxis, PropsWithStyles, UseOverlayArrowAttrs, UseOverlayArrowProps},
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, default_class::with_default_class, styles::Styles},
 };
 
 // =============================================================================
@@ -51,6 +51,8 @@ impl OverlayArrowContext {
 ///
 /// Data attributes: `data-placement` (`top`, `bottom`, `left` or `right`: the overlay's side of the
 /// trigger).
+///
+/// Default class: `leptonic-OverlayArrow`.
 #[component]
 pub fn OverlayArrow(
     #[prop(into, optional)] classes: Classes,
@@ -59,6 +61,7 @@ pub fn OverlayArrow(
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-OverlayArrow", classes);
     let Some(ctx) = use_context::<OverlayArrowContext>() else {
         crate::utils::dev_warn!("An <OverlayArrow> must be inside a <Popover> or <Tooltip>.");
         return ().into_any();

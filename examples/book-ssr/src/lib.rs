@@ -12,7 +12,6 @@ pub mod pages;
 mod route_defs;
 pub use route_defs::routes;
 pub mod search;
-pub mod sheet;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

@@ -29,17 +29,6 @@ pub struct UseGridStateInput {
     pub focus_mode: GridFocusMode,
 }
 
-impl UseGridStateInput {
-    /// A grid focusing rows, without selection.
-    pub fn new(collection: CollectionMemo) -> Self {
-        Self {
-            collection,
-            selection: SelectionOptions::default(),
-            focus_mode: GridFocusMode::Row,
-        }
-    }
-}
-
 /// The state of a grid: its rows and cells, selection and focus.
 #[derive(Debug, Clone, Copy)]
 pub struct GridState {

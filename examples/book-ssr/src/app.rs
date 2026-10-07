@@ -1,20 +1,29 @@
+use std::time::Duration;
+
 use leptonic::{
-    atoms::prelude::{AnchorLink as AnchorLinkAtom, VisuallyHidden},
-    components::prelude::*,
-    hooks::LinkTarget,
-    prelude::*,
-    utils::{css::em, focus::focus_element},
+    atoms::prelude::{
+        AnchorLink, Button, Dialog, LeptonicTheme, Link, ModalBackdrop, ModalContent, Switch,
+        Theme, ThemeProvider, Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion,
+        ToastTitle, VisuallyHidden, use_theme,
+    },
+    components::prelude::{Leptonic, ToastRoot},
+    hooks::{
+        IntoAttrs, LandmarkController, LandmarkRole, LinkTarget, ToastOptions, ToastQueue,
+        UseLandmarkInput, use_landmark,
+    },
+    signal_ls,
+    utils::{
+        CapturedElement,
+        aria::{AriaExpanded, AriaHasPopup},
+        focus::focus_element,
+    },
 };
 use leptos::prelude::*;
 use leptos_meta::{Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{components::Router, hooks::use_location};
-use leptos_use::{use_document, use_media_query};
+use leptos_use::{use_document, use_media_query, use_window};
 
-use crate::{
-    pages::documentation::doc_search::DocSearch,
-    routes,
-    sheet::{Sheet, SheetSide},
-};
+use crate::{kit::Icon, pages::documentation::doc_search::DocSearch, routes};
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 
@@ -24,8 +33,7 @@ const VERSION_LABEL: &str = "v0.6.0 (main)";
 const GITHUB_URL: &str = "https://github.com/lpotthast/leptonic";
 
 /// Describes the book where a page has no description of its own (search engines, link previews).
-pub const SITE_DESCRIPTION: &str =
-    "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks, atoms and themed components.";
+pub const SITE_DESCRIPTION: &str = "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks, atoms and themed components.";
 
 /// Id of every page's `<main>`, the target of the skip link.
 pub const MAIN_ID: &str = "book-main";
@@ -78,6 +86,11 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
+    // The reader's theme, remembered in the browser.
+    let (theme, set_theme) = signal_ls("theme", LeptonicTheme::default());
+    let toasts = BookToasts(ToastQueue::new(None));
+    provide_context(toasts);
+
     view! {
         <Meta name="theme-color" content="#e66956"/>
 
@@ -89,20 +102,85 @@ pub fn App() -> impl IntoView {
         // Fallback; every page sets its own title (and description).
         <Title text="Leptonic"/>
 
-        <Root default_theme=LeptonicTheme::default()>
-            <Router>
-                <Layout>
-                    { routes::route_tree() }
-                </Layout>
-            </Router>
-        </Root>
+        <ThemeProvider theme set_theme>
+            <ComponentDemoContexts>
+                <Router>
+                    <Layout>
+                        { routes::route_tree() }
+                    </Layout>
+                </Router>
+            </ComponentDemoContexts>
+            <BookToastRegion toasts/>
+        </ThemeProvider>
+    }
+}
+
+/// What the demos of leptonic's themed components (shown until the book moves them onto atoms) read from the
+/// components' `Root`: the `Toasts` of a `ToastRoot`, and the `Leptonic` context (`Select` asks whether the device is
+/// a desktop). The book itself doesn't use them.
+#[component]
+fn ComponentDemoContexts(children: Children) -> impl IntoView {
+    let is_mobile_device = Signal::derive(|| {
+        use_window().as_ref().is_some_and(|window| {
+            window
+                .navigator()
+                .user_agent()
+                .is_ok_and(|agent| agent.to_lowercase().contains("mobi"))
+        })
+    });
+    provide_context(Leptonic {
+        is_mobile_device,
+        is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
+    });
+    view! { <ToastRoot>{children()}</ToastRoot> }
+}
+
+/// A toast of the book: a title and a sentence.
+#[derive(Debug, Clone)]
+pub struct BookToast {
+    pub title: String,
+    pub description: String,
+}
+
+/// The book's toasts, shown at the bottom of the window. Pages show one with [`BookToasts::show`].
+#[derive(Clone, Copy)]
+pub struct BookToasts(ToastQueue<BookToast>);
+
+impl BookToasts {
+    /// Shows `toast` for a few seconds.
+    pub fn show(self, toast: BookToast) {
+        self.0.add(
+            toast,
+            ToastOptions {
+                timeout: Some(Duration::from_secs(5)),
+                ..ToastOptions::default()
+            },
+        );
+    }
+}
+
+/// The region of the book's toasts (leptonic's toast atoms), rendered at the end of the page while there are toasts.
+#[component]
+fn BookToastRegion(toasts: BookToasts) -> impl IntoView {
+    view! {
+        <ToastRegion queue=toasts.0 classes="book-toast-region" let:toast>
+            <Toast toast=toast.clone() classes="book-toast">
+                <ToastContent classes="book-toast-content">
+                    <ToastTitle classes="book-toast-title">{toast.content.title.clone()}</ToastTitle>
+                    <ToastDescription>{toast.content.description.clone()}</ToastDescription>
+                </ToastContent>
+                <ToastCloseButton classes="book-icon-button">
+                    <Icon icon=icondata::BsXLg/>
+                </ToastCloseButton>
+            </Toast>
+        </ToastRegion>
     }
 }
 
 /// Responsive layout state shared by the app shell and the documentation layout.
 ///
 /// On large screens, the documentation navigation is a sidebar next to doc pages and the app bar shows every link. On
-/// small screens (`is_small`), both are menus covering the page ([`Sheet`]s), opened through the app bar.
+/// small screens (`is_small`), both are menus covering the page ([`MenuDrawer`]s), opened through the app bar.
 #[derive(Debug, Clone, Copy)]
 pub struct AppLayoutContext {
     pub is_small: Signal<bool>,
@@ -153,56 +231,74 @@ pub fn Layout(children: Children) -> impl IntoView {
     };
 
     view! {
-        // The app bar (a `<header>`) is layered by leptonic's theme; the skip link shows inside it while focused.
-        <AppBar attr:id="book-app-bar">
-            <div id="book-app-bar-content">
-                <Stack orientation=StackOrientation::Horizontal spacing=em(0.5)>
-                    <SkipLink/>
-                    {move || match (is_doc.get(), is_small.get()) {
-                        (false, true) => logo().into_any(),
-                        (true, true) => view! {
-                            <MenuButton label="Documentation menu" icon=icondata::BsList open=ctx.doc_menu_open/>
-                            {logo}
-                        }.into_any(),
-                        (_, false) => view! {
-                            {logo}
-                            <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
-                        }.into_any(),
-                    }}
-                </Stack>
+        <AppBar>
+            <div class="book-app-bar-group">
+                <SkipLink/>
+                {move || match (is_doc.get(), is_small.get()) {
+                    (false, true) => logo().into_any(),
+                    (true, true) => view! {
+                        <MenuButton label="Documentation menu" icon=icondata::BsList open=ctx.doc_menu_open/>
+                        {logo}
+                    }.into_any(),
+                    (_, false) => view! {
+                        {logo}
+                        <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
+                    }.into_any(),
+                }}
+            </div>
 
-                <Stack orientation=StackOrientation::Horizontal spacing=em(1.0)>
-                    <DocSearch/>
-                    {move || if is_small.get() {
-                        view! {
-                            <MenuButton label="Menu" icon=icondata::BsThreeDots open=ctx.main_menu_open/>
-                        }.into_any()
-                    } else {
-                        view! {
-                            <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
-                            <GithubLink/>
-                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark classes="book-theme-toggle"/>
-                        }.into_any()
-                    }}
-                </Stack>
+            <div class="book-app-bar-group book-app-bar-end">
+                <DocSearch/>
+                {move || if is_small.get() {
+                    view! {
+                        <MenuButton label="Menu" icon=icondata::BsThreeDots open=ctx.main_menu_open/>
+                    }.into_any()
+                } else {
+                    view! {
+                        <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
+                        <GithubLink/>
+                        <ThemeToggle/>
+                    }.into_any()
+                }}
             </div>
         </AppBar>
 
         <div id="book-page">{children()}</div>
 
-        <Sheet
-            is_open=Signal::derive(move || is_small.get() && ctx.main_menu_open.get())
-            on_close=move |()| ctx.main_menu_open.set(false)
+        <MenuDrawer
+            side=MenuSide::Right
             label="Menu"
-            side=SheetSide::Right
+            is_open=Signal::derive(move || is_small.get() && ctx.main_menu_open.get())
+            open=ctx.main_menu_open
         >
             <nav class="book-main-menu" aria-label="Main">
                 <Link href=routes::Doc.materialize() classes="book-docs-link">"Docs"</Link>
                 <Link href=routes::doc::Changelog.materialize() classes="book-version-link">{VERSION_LABEL}</Link>
                 <GithubLink/>
-                <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark classes="book-theme-toggle"/>
+                <ThemeToggle/>
             </nav>
-        </Sheet>
+        </MenuDrawer>
+    }
+}
+
+/// The app bar: the page's `<header>`, registered as its banner landmark (F6 reaches it), fixed at the top.
+#[component]
+fn AppBar(children: Children) -> impl IntoView {
+    let element = CapturedElement::new();
+    let landmark = use_landmark(
+        UseLandmarkInput {
+            role: LandmarkRole::Banner,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            focus: None,
+        },
+        element,
+    );
+
+    view! {
+        <header {..landmark.props.into_attrs()} {..element.attr()} id="book-app-bar">
+            {children()}
+        </header>
     }
 }
 
@@ -211,6 +307,10 @@ pub fn Layout(children: Children) -> impl IntoView {
 #[component]
 fn SkipLink() -> impl IntoView {
     let focus_main = move |_| {
+        // The main landmark takes the focus as with Alt + F6; before hydration, the link's `#book-main` scrolls there.
+        if LandmarkController::new().focus_main() {
+            return;
+        }
         if let Some(main) = use_document()
             .as_ref()
             .and_then(|document| document.get_element_by_id(MAIN_ID))
@@ -221,27 +321,71 @@ fn SkipLink() -> impl IntoView {
 
     view! {
         <VisuallyHidden is_focusable=true classes="book-skip-link">
-            <AnchorLinkAtom href=format!("#{MAIN_ID}") scroll_behavior=None on_press=focus_main>
+            <AnchorLink href=format!("#{MAIN_ID}") scroll_behavior=None on_press=focus_main>
                 "Skip to content"
-            </AnchorLinkAtom>
+            </AnchorLink>
         </VisuallyHidden>
     }
 }
 
-/// An app bar button opening a menu [`Sheet`].
+/// An app bar button opening a [`MenuDrawer`].
 #[component]
 fn MenuButton(label: &'static str, icon: icondata::Icon, open: RwSignal<bool>) -> impl IntoView {
     view! {
         <Button
             on_press=move |_| open.set(true)
-            variant=ButtonVariant::Flat
             aria_haspopup=Some(AriaHasPopup::Dialog)
             aria_expanded=Signal::derive(move || Some(AriaExpanded::from(open.get())))
+            aria_label=label
             classes="book-icon-button"
-            attr:aria-label=label
         >
             <Icon icon/>
         </Button>
+    }
+}
+
+/// The side of the screen a [`MenuDrawer`] slides in from. Physical, also in right-to-left pages.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MenuSide {
+    Left,
+    Right,
+}
+
+/// A menu of small screens: a modal dialog covering the page from one side (leptonic's modal atoms), with a close
+/// button at its top. Escape and a press outside close it; the focus stays inside while it is open and returns to
+/// the button that opened it. It slides in and out (`data-entering`/`data-exiting`, see `_shell.scss`).
+#[component]
+pub fn MenuDrawer(
+    side: MenuSide,
+    /// The dialog's name.
+    label: &'static str,
+    #[prop(into)] is_open: Signal<bool>,
+    /// The open state the menu's own controls set (closing).
+    open: RwSignal<bool>,
+    children: ChildrenFn,
+) -> impl IntoView {
+    let side = match side {
+        MenuSide::Left => "book-menu-left",
+        MenuSide::Right => "book-menu-right",
+    };
+    let children = StoredValue::new(children);
+    view! {
+        <ModalBackdrop is_open set_open=open is_dismissable=true classes="book-menu-backdrop">
+            <ModalContent classes=["book-menu", side]>
+                <Dialog aria_label=label classes="book-menu-dialog">
+                    <div class="book-menu-header">
+                        <Button
+                            on_press=move |_| open.set(false)
+                            aria_label="Close menu"
+                            classes="book-icon-button"
+                        >
+                            <Icon icon=icondata::BsXLg/>
+                        </Button>
+                    </div>
+                    {children.get_value()()}
+                </Dialog>
+            </ModalContent>
+        </ModalBackdrop>
     }
 }
 
@@ -251,5 +395,82 @@ fn GithubLink() -> impl IntoView {
         <Link href=GITHUB_URL target=LinkTarget::Blank classes="book-github-link">
             <Icon icon=icondata::BsGithub aria_label="Leptonic on GitHub"/>
         </Link>
+    }
+}
+
+/// Switches between the light and the dark theme (leptonic's `Switch` atom on the theme of the `ThemeProvider`),
+/// showing the sun or the moon in its knob.
+#[component]
+fn ThemeToggle() -> impl IntoView {
+    let theme = use_theme::<LeptonicTheme>()
+        .expect("the book renders the theme toggle inside its `ThemeProvider`");
+    let is_dark = Signal::derive(move || theme.theme().get() == LeptonicTheme::Dark);
+    let set_dark = move |dark: bool| {
+        theme.set_theme(if dark {
+            LeptonicTheme::Dark
+        } else {
+            LeptonicTheme::Light
+        });
+    };
+
+    view! {
+        <Switch is_selected=is_dark set_selected=set_dark aria_label="Dark theme" classes="book-theme-toggle">
+            <span class="book-theme-toggle-track" aria-hidden="true">
+                <span class="book-theme-toggle-knob">
+                    {move || {
+                        let icon = if is_dark.get() { icondata::BsMoon } else { icondata::BsSun };
+                        view! { <Icon icon/> }
+                    }}
+                </span>
+            </span>
+        </Switch>
+    }
+}
+
+/// A page's `<main>` (with the id [`MAIN_ID`]), registered as the main landmark: F6 and Shift + F6 move between the
+/// landmarks, Alt + F6 jumps here.
+#[component]
+pub fn MainLandmark(class: &'static str, children: Children) -> impl IntoView {
+    let element = CapturedElement::new();
+    let landmark = use_landmark(
+        UseLandmarkInput {
+            role: LandmarkRole::Main,
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            focus: None,
+        },
+        element,
+    );
+
+    view! {
+        <main {..landmark.props.into_attrs()} {..element.attr()} id=MAIN_ID class=class>
+            {children()}
+        </main>
+    }
+}
+
+/// A `<nav>` of the shell, registered as a navigation landmark named `label`.
+#[component]
+pub fn NavLandmark(
+    label: &'static str,
+    #[prop(optional)] id: Option<&'static str>,
+    #[prop(optional)] class: Option<&'static str>,
+    children: Children,
+) -> impl IntoView {
+    let element = CapturedElement::new();
+    let landmark = use_landmark(
+        UseLandmarkInput {
+            role: LandmarkRole::Navigation,
+            aria_label: label.into(),
+            aria_labelledby: None,
+            focus: None,
+        },
+        element,
+    );
+
+    view! {
+        <nav {..landmark.props.into_attrs()} {..element.attr()} id=id class=class>
+            {children()}
+        </nav>
     }
 }

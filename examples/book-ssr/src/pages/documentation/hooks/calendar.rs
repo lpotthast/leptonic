@@ -1,5 +1,3 @@
-use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -9,624 +7,587 @@ use super::demos::{
 use crate::{kit::*, routes};
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageCalendarHooks() -> impl IntoView {
     view! {
         <DocPage title="Calendar Hooks">
             <p>
-                "The calendar hooks build month calendars for picking a single date or a date range, with a keyboard "
-                "accessible grid of days. See the "<Link href=routes::doc::Calendar.materialize()>"Calendar overview"</Link>
-                " for concept guidance."
+                "The calendar hooks build calendars for picking a date or a range of dates: a keyboard accessible grid of "
+                "days with buttons to page through the months. See the "
+                <Link href=routes::doc::Calendar.materialize()>"Calendar overview"</Link>" for concept guidance."
             </p>
 
+            <ReactAria hook="useCalendar"/>
             <ReactAria hook="useRangeCalendar"/>
 
-            <Section title="Architecture">
-                <p>"A calendar is composed of a state hook, one grid and one cell per day:"</p>
+            <p>"A calendar is a state hook, a calendar hook, a grid hook per month and a cell hook per day:"</p>
 
-                <DocTable headers=&["Hook", "Responsibility"]>
-                    <TableRow>
-                        <TableCell><AnchorLink href="#use-calendar-state"><Code inline=true>"use_calendar_state"</Code></AnchorLink></TableCell>
-                        <TableCell>
-                            "Owns the selected date and the focused date (the keyboard cursor), computes the weeks of "
-                            "the focused month and provides all navigation and query callbacks."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><AnchorLink href="#use-range-calendar-state"><Code inline=true>"use_range_calendar_state"</Code></AnchorLink></TableCell>
-                        <TableCell>
-                            "Wraps "<Code inline=true>"use_calendar_state"</Code>" and adds range selection: the anchor "
-                            "date, the highlighted range and the rules for unavailable dates."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><AnchorLink href="#use-range-calendar"><Code inline=true>"use_range_calendar"</Code></AnchorLink></TableCell>
-                        <TableCell>"Creates the range state and the attributes of the calendar container."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><AnchorLink href="#use-calendar-grid"><Code inline=true>"use_calendar_grid"</Code></AnchorLink></TableCell>
-                        <TableCell>"The grid of days: ARIA attributes, weekday labels and the keyboard handling."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><AnchorLink href="#use-calendar-cell"><Code inline=true>"use_calendar_cell"</Code></AnchorLink></TableCell>
-                        <TableCell>"One day: the grid cell, the button inside it, its label, roving tabindex and click selection."</TableCell>
-                    </TableRow>
-                </DocTable>
+            <DocTable headers=&["Hook", "Responsibility"]>
+                <TableRow>
+                    <TableCell><AnchorLink href="#use-calendar-state"><Code inline=true>"use_calendar_state"</Code></AnchorLink></TableCell>
+                    <TableCell>
+                        "The selected date, the focused date (the keyboard cursor) and the visible range, which follows "
+                        "the focused date; navigation and selection methods."
+                    </TableCell>
+                </TableRow>
+                <TableRow>
+                    <TableCell><AnchorLink href="#use-range-calendar-state"><Code inline=true>"use_range_calendar_state"</Code></AnchorLink></TableCell>
+                    <TableCell>"A calendar state whose selection is a range, chosen by two selections or by dragging."</TableCell>
+                </TableRow>
+                <TableRow>
+                    <TableCell>
+                        <AnchorLink href="#use-calendar"><Code inline=true>"use_calendar"</Code></AnchorLink>", "
+                        <AnchorLink href="#use-range-calendar"><Code inline=true>"use_range_calendar"</Code></AnchorLink>
+                    </TableCell>
+                    <TableCell>
+                        "The calendar element, its previous and next buttons, its title and the announcements of the "
+                        "month and the selection."
+                    </TableCell>
+                </TableRow>
+                <TableRow>
+                    <TableCell><AnchorLink href="#use-calendar-grid"><Code inline=true>"use_calendar_grid"</Code></AnchorLink></TableCell>
+                    <TableCell>"A month\u{2019}s grid of days: its label, the weekday names, the number of weeks and the keyboard."</TableCell>
+                </TableRow>
+                <TableRow>
+                    <TableCell><AnchorLink href="#use-calendar-cell"><Code inline=true>"use_calendar_cell"</Code></AnchorLink></TableCell>
+                    <TableCell>"A day: its label, selection by press or drag, and the browser focus following the focused date."</TableCell>
+                </TableRow>
+                <TableRow>
+                    <TableCell>
+                        <AnchorLink href="#use-calendar-heading"><Code inline=true>"use_calendar_heading"</Code></AnchorLink>", "
+                        <AnchorLink href="#use-calendar-month-picker"><Code inline=true>"use_calendar_month_picker"</Code></AnchorLink>", "
+                        <AnchorLink href="#use-calendar-year-picker"><Code inline=true>"use_calendar_year_picker"</Code></AnchorLink>
+                    </TableCell>
+                    <TableCell>"Headings of further months, and pickers to jump to a month or a year."</TableCell>
+                </TableRow>
+            </DocTable>
 
-                <p>
-                    "There is no "<Code inline=true>"use_calendar"</Code>" hook for single dates: compose "
-                    <Code inline=true>"use_calendar_state"</Code>" with the grid and cell hooks directly, as the demo "
-                    "below does. The hooks never render anything; the month header, the navigation buttons and the "
-                    "markup of the grid are yours."
-                </p>
-
-                <p>
-                    "Dates are "<Code inline=true>"time::OffsetDateTime"</Code>" values from the "
-                    <Link href="https://docs.rs/time" target=LinkTarget::Blank>"time"</Link>" crate. The grid data uses "
-                    <Code inline=true>"Week"</Code>", "<Code inline=true>"Day"</Code>" and "<Code inline=true>"InMonth"</Code>
-                    " from "<Code inline=true>"leptonic::utils::time"</Code>"; ranges are "
-                    <Code inline=true>"DateRange"</Code>" values."
-                </p>
-            </Section>
-
-            <Section title="Example">
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        use leptonic::{hooks::*, utils::time::{Day, InMonth}};
-                        use leptos::prelude::*;
-
-                        let state = use_calendar_state(UseCalendarStateInput {
-                            on_change: Some(Callback::new(|date| leptos::logging::log!("{date:?}"))),
-                            ..Default::default()
-                        });
-
-                        // Wires the grid's keyboard handling to the state's navigation callbacks.
-                        let grid = use_calendar_grid(UseCalendarGridInput {
-                            aria_label: "Appointment date".into(),
-                            ..UseCalendarGridInput::from_calendar_state(state)
-                        });
-
-                        view! {
-                            <table {..grid.grid_props.into_attrs()}>
-                                <thead>
-                                    <tr {..grid.header_props.into_attrs()}>
-                                        {grid.weekday_labels.into_iter().map(|label| view! { <th>{label}</th> }).collect_view()}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    // A date can appear twice in the grid: key the weeks by their first day and its month.
-                                    <For
-                                        each=move || state.weeks.get()
-                                        key=|week| week.days.first().map(|day| (day.date_time.date(), day.in_month as u8))
-                                        let(week)
-                                    >
-                                        <tr>{week.days.into_iter().map(|day| view! { <DayCell state day/> }).collect_view()}</tr>
-                                    </For>
-                                </tbody>
-                            </table>
-                        }
-
-                        #[component]
-                        fn DayCell(state: UseCalendarStateReturn, day: Day) -> impl IntoView {
-                            let date = day.date_time;
-                            let cell = use_calendar_cell(UseCalendarCellInput {
-                                day,
-                                is_focused: Signal::derive(move || state.is_cell_focused.run(date)),
-                                is_selected: Signal::derive(move || state.is_selected.run(date)),
-                                is_disabled: state.is_disabled,
-                                on_select: Some(Callback::new(move |day: Day| state.select_date.run(day.date_time))),
-                                // Days of the neighboring months are focused by `select_date` instead (see Focus Management).
-                                on_focus: Some(Callback::new(move |day: Day| {
-                                    if day.in_month == InMonth::Current {
-                                        state.set_focused_date.run(day.date_time);
-                                    }
-                                })),
-                            });
-                            view! {
-                                <td {..cell.cell_props.into_attrs()}>
-                                    <button {..cell.button_props.into_attrs()}>{cell.formatted_date}</button>
-                                </td>
-                            }
-                        }
-                    "#)}
-                </Code>
-            </Section>
+            <p>
+                "The hooks render nothing: the header, the buttons and the markup of the grid are yours. The "
+                <Link href=routes::doc::calendar::Atom.materialize()>"Calendar Atoms"</Link>" render them for you. Dates are "
+                <Link href="https://docs.rs/jiff/latest/jiff/civil/struct.Date.html" target=LinkTarget::Blank>
+                    <Code inline=true>"jiff::civil::Date"</Code>
+                </Link>" values, re-exported as "<Code inline=true>"leptonic::jiff"</Code>"."
+            </p>
 
             <Section title="Demo">
                 <p>
-                    "A single-date calendar. Click a day or move with the arrow keys and press "<Keys keys="Enter"/>
-                    ". Days of the neighboring months are dimmed but selectable. Like every demo on this page, it "
-                    "moves the browser focus with the helper shown under "<AnchorLink href="#focus-management">"Focus Management"</AnchorLink>"."
+                    "A calendar for a single date. Click a day, or tab into the grid, move with the arrow keys and press "
+                    <Keys keys="Enter"/>". The days of the neighboring months fill the first and last week; they can\u{2019}t "
+                    "be selected. The days carry the cell\u{2019}s state as data attributes for the stylesheet."
                 </p>
 
-                <Demo description="Single-date calendar built from use_calendar_state, use_calendar_grid and use_calendar_cell" source=include_str!("demos/calendar_single.rs")>
+                <Demo
+                    description="Single-date calendar built from use_calendar_state, use_calendar, use_calendar_grid and use_calendar_cell"
+                    source=include_str!("demos/calendar_single.rs")
+                    source_open=true
+                >
                     <CalendarSingleDemo/>
                 </Demo>
             </Section>
 
             <Section title="use_calendar_state">
+                <p>
+                    "Creates the state of a calendar. Without a value or a focused date, the calendar shows the month of "
+                    "today; on the server, that is the server\u{2019}s today."
+                </p>
+
                 <Section title="Input" id="use-calendar-state-input">
                     <p><Code inline=true>"UseCalendarStateInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
 
-                    <ApiTable kind=ApiKind::Input of="UseCalendarStateInput">
-                        <ApiRow name="default_value" ty="Option<OffsetDateTime>" default="None">"The initially selected date."</ApiRow>
-                        <ApiRow name="default_focused_value" ty="Option<OffsetDateTime>" default="None">
-                            "The initially focused date, which also decides the month shown first. Falls back to "
-                            <Code inline=true>"default_value"</Code>", then to the current time (local, UTC if the offset "
-                            "is unknown, e.g. on the server). Clamped to "<Code inline=true>"min"</Code>" and "
-                            <Code inline=true>"max"</Code>"."
+                    <ApiTable kind=ApiKind::Input of="calendar::use_calendar_state::UseCalendarStateInput">
+                        <ApiRow name="default_value" ty="Option<Date>" default="None">"The initially selected date."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<Option<Date>>>" default="None">
+                            "The selected date as app state (e.g. a "<Code inline=true>"ValueBinding"</Code>" from an "
+                            <Code inline=true>"RwSignal"</Code>"), replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
-                        <ApiRow name="min, max" ty="Option<OffsetDateTime>" default="None">
-                            "The selectable range. Days outside it are disabled, and focus can\u{2019}t leave it."
+                        <ApiRow name="on_change" ty="Option<Callback<Option<Date>>>" default="None">"Called with the newly selected date."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>" default="None">
+                            "The first and last selectable date. Days outside are disabled, and the focused date stays within."
                         </ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                            "Disables selection and the grid\u{2019}s keyboard handling."
+                        <ApiRow name="is_date_unavailable" ty="Option<Callback<Date, bool>>" default="None">
+                            "Whether a date can\u{2019}t be selected, e.g. because it is booked. Unavailable days can still take the focus."
                         </ApiRow>
-                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Focus still moves, but nothing can be selected."</ApiRow>
-                        <ApiRow name="is_date_unavailable" ty="Option<Callback<OffsetDateTime, bool>>" default="None">
-                            "Marks dates as unavailable, e.g. booked days. Unavailable days stay focusable."
-                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Nothing can be focused or selected."</ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The focus still moves, but nothing can be selected."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
-                            "Marks the value invalid while "<Code inline=true>"true"</Code>", e.g. from form validation. Feeds "
-                            <Code inline=true>"is_value_invalid"</Code>"."
+                            "Marks the value invalid, e.g. after form validation. Adds to "<Code inline=true>"is_value_invalid"</Code>"."
                         </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Option<OffsetDateTime>>>" default="None">"Called when the selected date changes."</ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<OffsetDateTime>>" default="None">"Called when the focused date changes."</ApiRow>
-                        <ApiRow name="first_day_of_week" ty="time::Weekday" default="Monday">
-                            "The first column of "<Code inline=true>"weeks"</Code>". Pass the matching "
-                            <Code inline=true>"start_of_week"</Code>" to "<Code inline=true>"use_calendar_grid"</Code>"."
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Whether the focused date takes the browser focus when the calendar is rendered."</ApiRow>
+                        <ApiRow name="default_focused_value" ty="Option<Date>" default="None">
+                            "The initially focused date, which decides the month shown first. Default: the value, else today, "
+                            "within the minimum and maximum."
+                        </ApiRow>
+                        <ApiRow name="focused_value" ty="Option<ValueBinding<Date>>" default="None">
+                            "The focused date as app state, replacing "<Code inline=true>"default_focused_value"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the newly focused date."</ApiRow>
+                        <ApiRow name="visible_duration" ty="DateDuration" default="DateDuration::months(1)">
+                            "How much is visible at once: months, or a number of weeks or days, see "
+                            <AnchorLink href="#several-months">"Several Months"</AnchorLink>"."
+                        </ApiRow>
+                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">
+                            "Whether the previous and next buttons page by the whole visible duration ("
+                            <Code inline=true>"Visible"</Code>") or by one unit of it ("<Code inline=true>"Single"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="selection_alignment" ty="SelectionAlignment" default="Center">
+                            "Where the initially focused date sits in a visible duration of several months: "
+                            <Code inline=true>"Start"</Code>", "<Code inline=true>"Center"</Code>" or "<Code inline=true>"End"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">
+                            "The first day of the week. Default: the locale\u{2019}s (Sunday in the US, Monday in most of Europe)."
+                        </ApiRow>
+                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">
+                            "A fixed number of week rows, e.g. 6, so that the calendar keeps its height from month to month."
                         </ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-calendar-state-return">
                     <p>
-                        <Code inline=true>"UseCalendarStateReturn"</Code>" is "<Code inline=true>"Copy"</Code>
-                        "; pass it to the Leptos components rendering your cells."
+                        <Code inline=true>"CalendarState"</Code>" is "<Code inline=true>"Copy"</Code>
+                        ": pass it to the Leptos components rendering your parts."
                     </p>
 
-                    <ApiTable kind=ApiKind::Return of="UseCalendarStateReturn">
-                        <ApiRow name="value" ty="Signal<Option<OffsetDateTime>>">"The selected date."</ApiRow>
-                        <ApiRow name="focused_date" ty="Signal<OffsetDateTime>">
-                            "The keyboard cursor. Always set; the grid shows its month."
+                    <ApiTable kind=ApiKind::Return of="CalendarState">
+                        <ApiRow name="value" ty="Signal<Option<Date>>">"The selected date."</ApiRow>
+                        <ApiRow name="focused_date" ty="Signal<Date>">"The keyboard cursor. Always visible."</ApiRow>
+                        <ApiRow name="visible_range" ty="Signal<DateRange>">"The visible dates, e.g. the first and last day of the month."</ApiRow>
+                        <ApiRow name="is_focused" ty="Signal<bool>">"Whether a grid of the calendar has the focus."</ApiRow>
+                        <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>">"The inputs."</ApiRow>
+                        <ApiRow name="is_value_invalid" ty="Signal<bool>">
+                            "Whether the value is outside the minimum and maximum, unavailable, or marked invalid."
                         </ApiRow>
-                        <ApiRow name="weeks" ty="Signal<Vec<Week>>">
-                            "Six weeks of seven "<Code inline=true>"Day"</Code>"s for the focused month, including days of "
-                            "the previous and next month. Recomputed whenever the focused date or the value changes."
-                        </ApiRow>
-                        <ApiRow name="focused_year, focused_month_name" ty="Memo<i32>, Memo<String>">
-                            "The year and the English month name of the focused date, for a heading."
-                        </ApiRow>
-                        <ApiRow name="is_previous_visible_range_invalid, is_next_visible_range_invalid" ty="Signal<bool>">
-                            "Whether the previous or next month lies entirely outside "<Code inline=true>"min"</Code>
-                            " / "<Code inline=true>"max"</Code>". Use them to disable the month buttons."
-                        </ApiRow>
-                        <ApiRow name="is_disabled, is_read_only, is_value_invalid" ty="Signal<bool>">
-                            "The inputs, and whether the value is outside "<Code inline=true>"min"</Code>" / "
-                            <Code inline=true>"max"</Code>", unavailable or externally invalid."
-                        </ApiRow>
-                        <ApiRow name="is_focused" ty="Signal<bool>">
-                            "Whether the grid has focus, as reported through "<Code inline=true>"set_focused"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="select_date" ty="Callback<OffsetDateTime>">
-                            "Focuses and selects a date. Dates outside "<Code inline=true>"min"</Code>" / "
-                            <Code inline=true>"max"</Code>" are ignored; an unavailable date selects the closest "
-                            "earlier available date."
-                        </ApiRow>
-                        <ApiRow name="select_focused_date" ty="Callback<()>">"Selects the focused date with the same rules."</ApiRow>
-                        <ApiRow name="set_value" ty="Callback<Option<OffsetDateTime>>">
-                            "Sets or clears the value without these checks (ignored while disabled or read-only)."
-                        </ApiRow>
-                        <ApiRow name="set_focused_date, set_focused" ty="Callback<OffsetDateTime>, Callback<bool>">
-                            "Move the cursor (clamped to "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>
-                            ") and record grid focus."
-                        </ApiRow>
-                        <ApiRow name="focus_next_day, focus_previous_day, focus_next_row, focus_previous_row" ty="Callback<()>">
-                            "Move the cursor by one day or one week."
-                        </ApiRow>
-                        <ApiRow name="focus_next_page, focus_previous_page" ty="Callback<()>">
-                            "Move the cursor to the first day of the next or previous month."
-                        </ApiRow>
-                        <ApiRow name="focus_section_start, focus_section_end" ty="Callback<()>">
-                            "Move the cursor to the first or last day of its month."
-                        </ApiRow>
-                        <ApiRow name="focus_next_section, focus_previous_section" ty="Callback<bool>">
-                            <Code inline=true>"false"</Code>": like the page callbacks. "<Code inline=true>"true"</Code>
-                            ": the same day one year later or earlier."
-                        </ApiRow>
-                        <ApiRow name="is_selected, is_cell_focused" ty="Callback<OffsetDateTime, bool>">
-                            "Whether a day is the selected or the focused date (compared by calendar day)."
-                        </ApiRow>
-                        <ApiRow name="is_cell_disabled, is_cell_unavailable" ty="Callback<OffsetDateTime, bool>">
-                            "Whether a day is disabled (calendar disabled, or outside "<Code inline=true>"min"</Code>
-                            " / "<Code inline=true>"max"</Code>") or unavailable."
-                        </ApiRow>
-                        <ApiRow name="months, years, years_range" ty="Signal<Vec<Month>>, Signal<Vec<Year>>, Signal<String>">
-                            "Grids for month and year pickers: the twelve months of the focused year and a page of twelve "
-                            "years, with a label such as \u{201c}2022 - 2033\u{201d}."
-                        </ApiRow>
-                        <ApiRow name="focus_month" ty="Callback<time::Month>">"Moves the cursor to a month of its year."</ApiRow>
-                        <ApiRow name="focus_year" ty="Callback<i32>">"Moves the cursor to a year."</ApiRow>
-                        <ApiRow name="navigate_years_backward, navigate_years_forward" ty="Callback<()>">
-                            "Page through the years grid by twelve years."
-                        </ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>">"The inputs."</ApiRow>
+                        <ApiRow name="visible_duration" ty="DateDuration">"The input."</ApiRow>
+                        <ApiRow name="first_day_of_week" ty="Signal<Weekday>">"The first day of the week: the input, else the locale\u{2019}s."</ApiRow>
                     </ApiTable>
 
-                    <p>"Each day of "<Code inline=true>"weeks"</Code>" is a "<Code inline=true>"Day"</Code>":"</p>
-                    <ApiTable kind=ApiKind::Fields of="Day">
-                        <ApiRow name="date_time" ty="OffsetDateTime">"The day, at the time of the focused date."</ApiRow>
-                        <ApiRow name="index" ty="u8">"The day of the month, starting at 1."</ApiRow>
-                        <ApiRow name="in_month" ty="InMonth">
-                            <Code inline=true>"Previous"</Code>", "<Code inline=true>"Current"</Code>" or "
-                            <Code inline=true>"Next"</Code>": the month the day belongs to, relative to the shown one."
-                        </ApiRow>
-                        <ApiRow name="disabled" ty="bool">"Outside "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>"."</ApiRow>
-                        <ApiRow name="unavailable" ty="bool">"Rejected by "<Code inline=true>"is_date_unavailable"</Code>"."</ApiRow>
-                        <ApiRow name="is_focused" ty="bool">"The focused day of the shown month."</ApiRow>
-                        <ApiRow name="is_selected" ty="bool">"The selected date."</ApiRow>
-                        <ApiRow name="is_now" ty="bool">"Today."</ApiRow>
-                        <ApiRow name="highlighted" ty="bool">"Always "<Code inline=true>"false"</Code>"; range highlighting comes from the range state."</ApiRow>
-                    </ApiTable>
-                    <p>
-                        "Key "<Code inline=true>"For"</Code>" loops over days by "<Code inline=true>"date_time"</Code>" and "
-                        <Code inline=true>"in_month"</Code>": a date can appear twice in the grid (as a day of the previous or "
-                        "next month)."
-                    </p>
+                    <p>"Its methods move the focused date and select:"</p>
+                    <DocTable headers=&["Method", "Does"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"select_date(date)"</Code>", "<Code inline=true>"select_focused_date()"</Code></TableCell>
+                            <TableCell>
+                                "Select a date (not while disabled or read-only). "<Code inline=true>"select_date"</Code>" selects "
+                                "the closest earlier available date in place of an unavailable one; "
+                                <Code inline=true>"select_focused_date"</Code>" does nothing on an unavailable one."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_value(value)"</Code></TableCell>
+                            <TableCell>
+                                "Sets or clears the value, within the minimum and maximum; an unavailable date becomes the "
+                                "previous available one. Does nothing while the calendar is disabled or read-only."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"set_focused_date(date)"</Code>", "<Code inline=true>"set_focused(bool)"</Code></TableCell>
+                            <TableCell>
+                                "Move the focused date (within the minimum and maximum; the visible range follows), and "
+                                "record whether a grid has the focus. While it has, the focused date\u{2019}s cell takes the "
+                                "browser focus."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"focus_next_day()"</Code>", "<Code inline=true>"focus_previous_day()"</Code>", "
+                                <Code inline=true>"focus_next_row()"</Code>", "<Code inline=true>"focus_previous_row()"</Code>
+                            </TableCell>
+                            <TableCell>"Move the focused date by a day or a week."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"focus_next_page()"</Code>", "<Code inline=true>"focus_previous_page()"</Code></TableCell>
+                            <TableCell>"Show the next or previous page and move the focused date by as much, keeping its day."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"focus_next_section(larger)"</Code>", "<Code inline=true>"focus_previous_section(larger)"</Code>
+                            </TableCell>
+                            <TableCell>
+                                "In a month view, the same day a month later or earlier ("<Code inline=true>"larger"</Code>": a year); in a "
+                                "week view a week ("<Code inline=true>"larger"</Code>": a month); in a day view a page."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"focus_section_start()"</Code>", "<Code inline=true>"focus_section_end()"</Code></TableCell>
+                            <TableCell>"The first or last day of the focused date\u{2019}s month (or week, in a week view)."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"is_selected(date)"</Code>", "<Code inline=true>"is_cell_focused(date)"</Code>", "
+                                <Code inline=true>"is_cell_disabled(date)"</Code>", "<Code inline=true>"is_cell_unavailable(date)"</Code>", "
+                                <Code inline=true>"is_invalid(date)"</Code>
+                            </TableCell>
+                            <TableCell>
+                                "Queries per date (tracked): selected, focused, disabled (calendar disabled, not visible or "
+                                "outside the minimum and maximum), unavailable, outside the minimum and maximum."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>
+                                <Code inline=true>"is_previous_visible_range_invalid()"</Code>", "
+                                <Code inline=true>"is_next_visible_range_invalid()"</Code>
+                            </TableCell>
+                            <TableCell>"Whether the previous or next page lies wholly outside the minimum and maximum."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"dates_in_week(week, from)"</Code>", "<Code inline=true>"weeks_in_month(from)"</Code></TableCell>
+                            <TableCell>
+                                "The dates of a week row of the month starting at "<Code inline=true>"from"</Code>" (default: "
+                                "the visible range\u{2019}s start), and the number of week rows. "<Code inline=true>"None"</Code>
+                                " marks days before the first representable date."
+                            </TableCell>
+                        </TableRow>
+                    </DocTable>
                 </Section>
             </Section>
 
             <Section title="use_range_calendar_state">
+                <p>"Creates the state of a calendar whose selection is a range."</p>
+
                 <Section title="Input" id="use-range-calendar-state-input">
                     <p>
                         <Code inline=true>"UseRangeCalendarStateInput"</Code>" implements "<Code inline=true>"Default"</Code>
-                        ". Most fields work as in "<Code inline=true>"UseCalendarStateInput"</Code>"."
+                        ". The fields shared with "<AnchorLink href="#use-calendar-state-input"><Code inline=true>"UseCalendarStateInput"</Code></AnchorLink>
+                        " work the same."
                     </p>
 
-                    <ApiTable kind=ApiKind::Input of="UseRangeCalendarStateInput">
+                    <ApiTable kind=ApiKind::Input of="calendar::use_range_calendar_state::UseRangeCalendarStateInput">
                         <ApiRow name="default_value" ty="Option<DateRange>" default="None">"The initially selected range."</ApiRow>
-                        <ApiRow name="default_focused_value" ty="Option<OffsetDateTime>" default="None">
-                            "Falls back to the start of "<Code inline=true>"default_value"</Code>", then to now."
+                        <ApiRow name="value" ty="Option<ValueBinding<Option<DateRange>>>" default="None">
+                            "The selected range as app state, replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
-                        <ApiRow name="min, max" ty="Option<OffsetDateTime>" default="None">
-                            "The selectable range. Days outside it are disabled, and focus can\u{2019}t leave it."
-                        </ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
-                            "Disables selection and the grid\u{2019}s keyboard handling."
-                        </ApiRow>
-                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"Focus still moves, but nothing can be selected."</ApiRow>
-                        <ApiRow name="is_date_unavailable" ty="Option<Callback<OffsetDateTime, bool>>" default="None">
-                            "Marks dates as unavailable, e.g. booked days. Unavailable days stay focusable."
-                        </ApiRow>
-                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
-                            "Marks the value invalid while "<Code inline=true>"true"</Code>", e.g. from form validation. Feeds "
-                            <Code inline=true>"is_value_invalid"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<DateRange>>" default="None">
-                            "Called when a range is completed or set with "<Code inline=true>"set_value"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="on_focus_change" ty="Option<Callback<OffsetDateTime>>" default="None">"Called when the focused date changes."</ApiRow>
-                        <ApiRow name="first_day_of_week" ty="time::Weekday" default="Monday">
-                            "The first column of "<Code inline=true>"weeks"</Code>". Pass the matching "
-                            <Code inline=true>"start_of_week"</Code>" to "<Code inline=true>"use_calendar_grid"</Code>"."
+                        <ApiRow name="on_change" ty="Option<Callback<Option<DateRange>>>" default="None">"Called with the newly selected range."</ApiRow>
+                        <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>" default="None">"The first and last selectable date."</ApiRow>
+                        <ApiRow name="is_date_unavailable" ty="Option<Callback<(Date, Option<Date>), bool>>" default="None">
+                            "Whether a date can\u{2019}t be selected, given the first selected day of a range in progress (the "
+                            "anchor), e.g. to limit the length of a stay."
                         </ApiRow>
                         <ApiRow name="allows_non_contiguous_ranges" ty="bool" default="false">
-                            "Whether a range may span unavailable dates. By default, the end of a range stops at the last "
+                            "Whether a range may span unavailable dates. By default, a range in progress ends at the last "
                             "available date before the next unavailable one."
+                        </ApiRow>
+                        <ApiRow name="is_disabled, is_read_only, is_invalid" ty="Signal<bool>" default="false">"As in a single-date calendar."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Whether the focused date takes the browser focus when the calendar is rendered."</ApiRow>
+                        <ApiRow name="default_focused_value" ty="Option<Date>" default="None">"The initially focused date. Default: the range\u{2019}s start, else today."</ApiRow>
+                        <ApiRow name="focused_value" ty="Option<ValueBinding<Date>>" default="None">"The focused date as app state."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the newly focused date."</ApiRow>
+                        <ApiRow name="visible_duration" ty="DateDuration" default="DateDuration::months(1)">"How much is visible at once."</ApiRow>
+                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">"How the previous and next buttons page."</ApiRow>
+                        <ApiRow name="selection_alignment" ty="Option<SelectionAlignment>" default="None">
+                            "Where the initially focused date sits in several visible months. Default: centered, or at the "
+                            "start if the range wouldn\u{2019}t fit then."
+                        </ApiRow>
+                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
+                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">"A fixed number of week rows."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-range-calendar-state-return">
+                    <ApiTable kind=ApiKind::Return of="RangeCalendarState">
+                        <ApiRow name="calendar" ty="CalendarState">
+                            "The calendar: focused date, visible range and navigation. While a range is being selected, its "
+                            "minimum and maximum narrow to the available dates around the anchor."
+                        </ApiRow>
+                        <ApiRow name="value" ty="Signal<Option<DateRange>>">"The selected range."</ApiRow>
+                        <ApiRow name="anchor_date" ty="Signal<Option<Date>>">"The first selected day of a range in progress."</ApiRow>
+                        <ApiRow name="highlighted_range" ty="Signal<Option<DateRange>>">
+                            "The range to show as selected: from the anchor to the focused date while selecting, else the value."
+                        </ApiRow>
+                        <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the user drags to select a range."</ApiRow>
+                        <ApiRow name="is_value_invalid" ty="Signal<bool>">
+                            "Whether an end of the range is outside the minimum and maximum or unavailable, or the range is "
+                            "marked invalid."
                         </ApiRow>
                     </ApiTable>
 
                     <p>
-                        <Code inline=true>"DateRange"</Code>" has public "<Code inline=true>"start"</Code>" and "
-                        <Code inline=true>"end"</Code>" fields ("<Code inline=true>"Option<OffsetDateTime>"</Code>"), the "
-                        "constructors "<Code inline=true>"new(start, end)"</Code>" and "<Code inline=true>"empty()"</Code>
-                        " (its "<Code inline=true>"Default"</Code>"), "<Code inline=true>"contains(&date)"</Code>
-                        " (inclusive) and "<Code inline=true>"is_complete()"</Code>"."
+                        <Code inline=true>"select_date(date)"</Code>" and "<Code inline=true>"select_focused_date()"</Code>
+                        " set the anchor first, then the other end, which sets the value. "
+                        <Code inline=true>"commit_selection()"</Code>" finishes a range in progress at the focused date, "
+                        <Code inline=true>"highlight_date(date)"</Code>" moves the focused date while selecting (hovering), "
+                        <Code inline=true>"set_anchor_date(None)"</Code>" cancels a range in progress, "
+                        <Code inline=true>"clear_selection()"</Code>" also clears the value, and "
+                        <Code inline=true>"set_value(range)"</Code>" sets it. "<Code inline=true>"is_selected(date)"</Code>
+                        " and "<Code inline=true>"is_invalid(date)"</Code>" answer for the highlighted range and the "
+                        "available dates around the anchor."
+                    </p>
+                    <p>
+                        "A "<Code inline=true>"DateRange"</Code>" ("<Code inline=true>"leptonic::utils::date"</Code>") has "
+                        "the fields "<Code inline=true>"start"</Code>" and "<Code inline=true>"end"</Code>", both included. "
+                        <Code inline=true>"DateRange::between(a, b)"</Code>" orders two dates; "
+                        <Code inline=true>"contains(date)"</Code>" checks a date."
                     </p>
                 </Section>
+            </Section>
 
-                <Section title="Return" id="use-range-calendar-state-return">
-                    <ApiTable kind=ApiKind::Return of="UseRangeCalendarStateReturn">
-                        <ApiRow name="calendar" ty="UseCalendarStateReturn">
-                            "The inner calendar state: "<Code inline=true>"focused_date"</Code>", "<Code inline=true>"weeks"</Code>
-                            ", the navigation callbacks and the heading. Its "<Code inline=true>"value"</Code>" and "
-                            <Code inline=true>"is_selected"</Code>" only know the initial start date; use the range\u{2019}s fields below."
-                        </ApiRow>
-                        <ApiRow name="value" ty="Signal<DateRange>">"The selected range."</ApiRow>
-                        <ApiRow name="anchor_date" ty="Signal<Option<OffsetDateTime>>">
-                            "The first date of a selection in progress. "<Code inline=true>"None"</Code>" when no selection is in progress."
-                        </ApiRow>
-                        <ApiRow name="highlighted_range" ty="Signal<DateRange>">
-                            "While selecting: the range from the anchor to the focused date, in either order. Otherwise the value."
-                        </ApiRow>
-                        <ApiRow name="is_selected" ty="Callback<OffsetDateTime, bool>">
-                            "Whether a day lies in the highlighted range and is neither disabled nor unavailable."
-                        </ApiRow>
-                        <ApiRow name="select_date, select_focused_date" ty="Callback<OffsetDateTime>, Callback<()>">
-                            "The first call sets the anchor, the second completes the range and calls "
-                            <Code inline=true>"on_change"</Code>". The date is clamped to "<Code inline=true>"min"</Code>
-                            " / "<Code inline=true>"max"</Code>" and to the available stretch around the anchor; an "
-                            "unavailable date is replaced by the closest earlier available one."
-                        </ApiRow>
-                        <ApiRow name="highlight_date" ty="Callback<OffsetDateTime>">
-                            "Moves the focused date while a selection is in progress, e.g. on hover. Does nothing otherwise."
-                        </ApiRow>
-                        <ApiRow name="set_anchor_date" ty="Callback<Option<OffsetDateTime>>">
-                            "Starts a selection, or cancels it with "<Code inline=true>"None"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="set_value" ty="Callback<DateRange>">
-                            "Sets the range and calls "<Code inline=true>"on_change"</Code>" (ignored while disabled or read-only)."
-                        </ApiRow>
-                        <ApiRow name="clear" ty="Callback<()>">
-                            "Clears the value and any selection in progress, without calling "<Code inline=true>"on_change"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="is_value_invalid" ty="Signal<bool>">
-                            "Whether an end of the range is outside "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>
-                            " or unavailable, or "<Code inline=true>"is_invalid"</Code>" is set. Always "
-                            <Code inline=true>"false"</Code>" (unless externally invalid) while a selection is in progress."
+            <Section title="use_calendar">
+                <p>
+                    <Code inline=true>"use_calendar(input, state)"</Code>" connects a "<Code inline=true>"CalendarState"</Code>
+                    " with the calendar\u{2019}s element, labelled by "<Code inline=true>"aria_label"</Code>" and the visible "
+                    "month (\u{201c}Appointment date, March 2026\u{201d}). It announces the new month when the previous or next "
+                    "button pages, and the new selection."
+                </p>
+
+                <Section title="Input" id="use-calendar-input">
+                    <p><Code inline=true>"UseCalendarInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
+
+                    <ApiTable kind=ApiKind::Input of="UseCalendarInput">
+                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                            "Ids of elements labelling, describing or detailing the calendar."
                         </ApiRow>
                     </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-calendar-return">
+                    <ApiTable kind=ApiKind::Return of="UseCalendarReturn">
+                        <ApiRow name="calendar_props" ty="UseCalendarProps">
+                            "For the calendar element: its id, "<Code inline=true>"role=\"application\""</Code>" and label."
+                        </ApiRow>
+                        <ApiRow name="previous_button, next_button" ty="UseButtonInput">
+                            "The page buttons, for "<Link href=routes::doc::button::Hook.materialize()><Code inline=true>"use_button"</Code></Link>
+                            ": named \u{201c}Previous\u{201d} and \u{201c}Next\u{201d}, disabled where the minimum or maximum ends "
+                            "the dates. A button disabled while focused hands the focus to the grid."
+                        </ApiRow>
+                        <ApiRow name="error_message_props" ty="SlotProps">
+                            "For an error message: invalid selected days refer to it with "<Code inline=true>"aria-describedby"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="title" ty="Signal<String>">"The visible range: \u{201c}March 2026\u{201d}."</ApiRow>
+                        <ApiRow name="data" ty="CalendarData">"What the grids and cells need. Clone it for each."</ApiRow>
+                    </ApiTable>
+
+                    <p>
+                        <Code inline=true>"CalendarData"</Code>" holds the "<Code inline=true>"state"</Code>", a "
+                        <Code inline=true>"CalendarStates"</Code>": "<Code inline=true>"Single(CalendarState)"</Code>" or "
+                        <Code inline=true>"Range(RangeCalendarState)"</Code>". Its "<Code inline=true>"calendar()"</Code>
+                        " gives the calendar state of either, "<Code inline=true>"range()"</Code>" the range state of a range calendar."
+                    </p>
                 </Section>
             </Section>
 
             <Section title="use_range_calendar">
                 <p>
-                    "Creates the range state from the same input and returns the attributes of the calendar container."
+                    <Code inline=true>"use_range_calendar(input, state, commit_behavior)"</Code>" is "
+                    <AnchorLink href="#use-calendar"><Code inline=true>"use_calendar"</Code></AnchorLink>" for a "
+                    <Code inline=true>"RangeCalendarState"</Code>", with the same input and return. When a pointer is released "
+                    "outside the days, or the focus leaves the calendar, while a range is in progress, "
+                    <Code inline=true>"commit_behavior"</Code>" decides what happens: "<Code inline=true>"Select"</Code>
+                    " (the default) finishes the range at the focused date, "<Code inline=true>"Reset"</Code>" drops it and "
+                    "keeps the previous value, "<Code inline=true>"Clear"</Code>" also clears the value."
                 </p>
-
-                <Section title="Input" id="use-range-calendar-input">
-                    <p>
-                        <Code inline=true>"UseRangeCalendarInput"</Code>" has exactly the fields of "
-                        <AnchorLink href="#use-range-calendar-state-input"><Code inline=true>"UseRangeCalendarStateInput"</Code></AnchorLink>
-                        " and implements "<Code inline=true>"Default"</Code>"."
-                    </p>
-                </Section>
-
-                <Section title="Return" id="use-range-calendar-return">
-                    <ApiTable kind=ApiKind::Return of="UseRangeCalendarReturn">
-                        <ApiRow name="calendar_props" ty="UseRangeCalendarProps">
-                            "An id, "<Code inline=true>"role=\"application\""</Code>", "
-                            <Code inline=true>"aria-label=\"Date range picker\""</Code>", "<Code inline=true>"aria-disabled"</Code>
-                            " and a keydown handler that cancels a selection in progress on "<Keys keys="Escape"/>". Spread with "
-                            <Code inline=true>"{..calendar_props.into_attrs()}"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="state" ty="UseRangeCalendarStateReturn">"The range state."</ApiRow>
-                        <ApiRow name="calendar_id" ty="String">"The id of the container."</ApiRow>
-                    </ApiTable>
-                </Section>
             </Section>
 
             <Section title="use_calendar_grid">
                 <p>
-                    "The keyboard handling lives on the grid (the keys are listed on the "
-                    <Link href=routes::doc::Calendar.materialize()>"Calendar"</Link>" overview): it listens for "<Code inline=true>"keydown"</Code>
-                    " events bubbling up from the day buttons and calls the navigation callbacks you pass. "
-                    <Code inline=true>"UseCalendarGridInput::from_calendar_state(state)"</Code>" and "
-                    <Code inline=true>"from_range_calendar_state(state)"</Code>" wire all of them; override single "
-                    "fields with struct update syntax."
+                    "The grid of a month: a "<Code inline=true>"<table>"</Code>" with "<Code inline=true>"role=\"grid\""</Code>
+                    ", labelled by the calendar\u{2019}s label and the month. It handles the keys (listed on the "
+                    <Link href=format!("{}#accessibility", routes::doc::Calendar.materialize())>"Calendar overview"</Link>
+                    ") for the cells inside."
                 </p>
 
                 <Section title="Input" id="use-calendar-grid-input">
-                    <ApiTable kind=ApiKind::Input of="UseCalendarGridInput">
-                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
-                            "Accessible name of the grid. The constructors leave it empty."
+                    <p>"Pass a "<Code inline=true>"UseCalendarGridInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
+                    <ApiTable kind=ApiKind::Input of="calendar::use_calendar_grid::UseCalendarGridInput">
+                        <ApiRow name="data" ty="CalendarData">"The calendar\u{2019}s data. Required."</ApiRow>
+                        <ApiRow name="start_date" ty="Option<Signal<Date>>" default="None">
+                            "The first day of the grid\u{2019}s month. Default: the visible range\u{2019}s start; set it for "
+                            "the further months of a calendar showing several."
                         </ApiRow>
-                        <ApiRow name="weekday_labels" ty="Vec<String>" default="Mon \u{2026} Sun">
-                            "Column labels, Monday first. Rotated by "<Code inline=true>"start_of_week"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="start_of_week" ty="u8" default="0">
-                            "The first column: 0 is Monday, 6 is Sunday. Must match the state\u{2019}s "
-                            <Code inline=true>"first_day_of_week"</Code>"; the constructors don\u{2019}t set it."
-                        </ApiRow>
-                        <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>" default="false">
-                            "Set "<Code inline=true>"aria-disabled"</Code>" / "<Code inline=true>"aria-readonly"</Code>
-                            ". A disabled grid ignores all keys."
-                        </ApiRow>
-                        <ApiRow name="is_range" ty="bool" default="false">"Sets "<Code inline=true>"aria-multiselectable"</Code>"."</ApiRow>
-                        <ApiRow name="on_select_focused_date" ty="Option<Callback<()>>" default="None">"Called on "<Keys keys="Enter"/>" and "<Keys keys="Space"/>"."</ApiRow>
-                        <ApiRow name="on_focus_previous_day, on_focus_next_day" ty="Option<Callback<()>>" default="None">
-                            "Called on "<Keys keys="ArrowLeft"/>" / "<Keys keys="ArrowRight"/>"."
-                        </ApiRow>
-                        <ApiRow name="on_focus_previous_week, on_focus_next_week" ty="Option<Callback<()>>" default="None">
-                            "Called on "<Keys keys="ArrowUp"/>" / "<Keys keys="ArrowDown"/>"."
-                        </ApiRow>
-                        <ApiRow name="on_focus_previous_section, on_focus_next_section" ty="Option<Callback<bool>>" default="None">
-                            "Called on "<Keys keys="PageUp"/>" / "<Keys keys="PageDown"/>", with "<Code inline=true>"true"</Code>
-                            " while "<Keys keys="Shift"/>" is held."
-                        </ApiRow>
-                        <ApiRow name="on_focus_section_start, on_focus_section_end" ty="Option<Callback<()>>" default="None">
-                            "Called on "<Keys keys="Home"/>" / "<Keys keys="End"/>"."
-                        </ApiRow>
-                        <ApiRow name="on_cancel_selection" ty="Option<Callback<()>>" default="None">
-                            "Called on "<Keys keys="Escape"/>". Range calendars clear the anchor."
-                        </ApiRow>
-                        <ApiRow name="on_focus, on_blur" ty="Option<Callback<()>>" default="None">
-                            "Called on "<Code inline=true>"focus"</Code>" / "<Code inline=true>"blur"</Code>" of the grid element itself."
+                        <ApiRow name="end_date" ty="Option<Signal<Date>>" default="None">"The grid\u{2019}s last day. Default: the visible range\u{2019}s end."</ApiRow>
+                        <ApiRow name="weekday_style" ty="DateTimeFormat" default="Narrow">
+                            "How the weekday names are formatted: "<Code inline=true>"Narrow"</Code>" (\u{201c}M\u{201d}), "
+                            <Code inline=true>"Short"</Code>" (\u{201c}Mon\u{201d}) or "<Code inline=true>"Long"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-calendar-grid-return">
-                    <ApiTable kind=ApiKind::Return of="UseCalendarGridReturn">
+                    <ApiTable kind=ApiKind::Return of="calendar::use_calendar_grid::UseCalendarGridReturn">
                         <ApiRow name="grid_props" ty="UseCalendarGridProps">
-                            "Id, "<Code inline=true>"role=\"grid\""</Code>", "<Code inline=true>"aria-label"</Code>", "
-                            <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-readonly"</Code>", "
-                            <Code inline=true>"aria-multiselectable"</Code>" and the key and focus handlers, for a "
-                            <Code inline=true>"<table>"</Code>"."
+                            "For the "<Code inline=true>"<table>"</Code>": id, role, label, "<Code inline=true>"aria-readonly"</Code>", "
+                            <Code inline=true>"aria-disabled"</Code>", "<Code inline=true>"aria-multiselectable"</Code>
+                            " (range calendars) and the focus and key handlers."
                         </ApiRow>
-                        <ApiRow name="header_props" ty="UseCalendarGridHeaderProps">
-                            <Code inline=true>"role=\"row\""</Code>" and "<Code inline=true>"aria-hidden=\"true\""</Code>
-                            " for the header row: each day\u{2019}s label already names it, so screen readers skip the column headers."
+                        <ApiRow name="start_date" ty="Signal<Date>">"The first day of the grid\u{2019}s month."</ApiRow>
+                        <ApiRow name="week_days" ty="Signal<Vec<String>>">
+                            "The weekday names in column order, in the locale\u{2019}s language. Hide the header row from "
+                            "assistive technology: each day\u{2019}s label names its weekday."
                         </ApiRow>
-                        <ApiRow name="weekday_labels" ty="Vec<String>">"The labels in column order."</ApiRow>
-                        <ApiRow name="grid_id" ty="String">"The id of the grid."</ApiRow>
+                        <ApiRow name="weeks_in_month" ty="Signal<u8>">"The number of week rows."</ApiRow>
                     </ApiTable>
+
+                    <p>
+                        "Render a row per week and get its days from "<Code inline=true>"dates_in_week(week, Some(start_date))"</Code>
+                        " of the calendar state, as the demo does."
+                    </p>
                 </Section>
             </Section>
 
             <Section title="use_calendar_cell">
+                <p>
+                    "A day: a "<Code inline=true>"<td>"</Code>" with "<Code inline=true>"role=\"gridcell\""</Code>" and a "
+                    "button inside it, which takes the focus. Pressing the button selects the day. The button takes the "
+                    "browser focus when its day becomes the focused date while the grid has the focus, and scrolls into view "
+                    "when the keyboard moved it there."
+                </p>
+
                 <Section title="Input" id="use-calendar-cell-input">
-                    <ApiTable kind=ApiKind::Input of="UseCalendarCellInput">
-                        <ApiRow name="day" ty="Day">"The day from the state\u{2019}s "<Code inline=true>"weeks"</Code>"."</ApiRow>
-                        <ApiRow name="is_focused" ty="Signal<bool>">
-                            "Whether this day is the focused date; typically "<Code inline=true>"state.is_cell_focused"</Code>"."
+                    <p>"Pass a "<Code inline=true>"UseCalendarCellInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
+                    <ApiTable kind=ApiKind::Input of="calendar::use_calendar_cell::UseCalendarCellInput">
+                        <ApiRow name="data" ty="CalendarData">"The calendar\u{2019}s data. Required."</ApiRow>
+                        <ApiRow name="date" ty="Signal<Date>">
+                            "The day. Required. It may change: a calendar can keep its cells, and the focus in them, while it pages."
                         </ApiRow>
-                        <ApiRow name="is_selected" ty="Signal<bool>">
-                            "Whether this day is selected: "<Code inline=true>"is_selected"</Code>" of the calendar or the range state."
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the day regardless of the calendar."</ApiRow>
+                        <ApiRow name="is_outside_month" ty="Signal<bool>" default="false">
+                            "Whether the day belongs to another month than the grid\u{2019}s. Such days are shown but disabled."
                         </ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the calendar is disabled. Days outside "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>" are disabled anyway."</ApiRow>
-                        <ApiRow name="on_select" ty="Option<Callback<Day>>">
-                            "Called when the day is clicked, unless it is outside "<Code inline=true>"min"</Code>" / "
-                            <Code inline=true>"max"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="on_focus" ty="Option<Callback<Day>>">
-                            "Called when the button receives focus (by click or "<Keys keys="Tab"/>"). Move the state\u{2019}s "
-                            "focused date there."
-                        </ApiRow>
+                        <ApiRow name="element" ty="CapturedElement" default="CapturedElement::new()">"Captures the button element, which the hook focuses."</ApiRow>
+
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-calendar-cell-return">
-                    <ApiTable kind=ApiKind::Return of="UseCalendarCellReturn">
+                    <ApiTable kind=ApiKind::Return of="calendar::use_calendar_cell::UseCalendarCellReturn">
                         <ApiRow name="cell_props" ty="UseCalendarCellProps">
-                            <Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-selected"</Code>" and "
-                            <Code inline=true>"aria-disabled"</Code>" for the "<Code inline=true>"<td>"</Code>"."
+                            "For the "<Code inline=true>"<td>"</Code>": "<Code inline=true>"role=\"gridcell\""</Code>", "
+                            <Code inline=true>"aria-selected"</Code>", "<Code inline=true>"aria-disabled"</Code>" and "
+                            <Code inline=true>"aria-invalid"</Code>"."
                         </ApiRow>
-                        <ApiRow name="button_props" ty="UseCalendarCellButtonProps">
-                            <Code inline=true>"role=\"button\""</Code>", a roving "<Code inline=true>"tabindex"</Code>
-                            " (0 on the focused date), an "<Code inline=true>"aria-label"</Code>" such as "
-                            "\u{201c}12 March 2026, today, selected\u{201d}, "<Code inline=true>"aria-disabled"</Code>
-                            ", the click handler and "<Code inline=true>"data-focus-visible"</Code>" for keyboard focus."
+                        <ApiRow name="button_props" ty="PropsWithStyles<UseCalendarCellButtonProps>">
+                            "For the button: "<Code inline=true>"role=\"button\""</Code>", a roving "<Code inline=true>"tabindex"</Code>
+                            " (0 on the focused date), a label such as \u{201c}Today, Thursday, March 12, 2026 selected\u{201d}, "
+                            "the press handlers and the element capture. Spread it with "<Code inline=true>"into_parts()"</Code>"."
                         </ApiRow>
-                        <ApiRow name="formatted_date" ty="String">"The day of the month, the button\u{2019}s text."</ApiRow>
-                        <ApiRow name="is_today, is_outside_month" ty="bool">
-                            "Whether the day is today, and whether it belongs to the previous or next month."
+                        <ApiRow name="is_pressed, is_focused, is_selected" ty="Signal<bool>">
+                            "Whether the day is pressed, the focused date while the grid has the focus, and selected (in a "
+                            "range calendar: in the highlighted range)."
                         </ApiRow>
-                        <ApiRow name="is_selected, is_focused" ty="Signal<bool>">"The inputs, passed through."</ApiRow>
-                        <ApiRow name="is_disabled" ty="Signal<bool>">"The input, or the day is outside "<Code inline=true>"min"</Code>" / "<Code inline=true>"max"</Code>"."</ApiRow>
-                        <ApiRow name="is_focus_visible" ty="Signal<bool>">"Whether the button has keyboard focus."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">
+                            "Whether the day can\u{2019}t be focused or selected: disabled calendar, outside the visible range, "
+                            "the minimum and maximum or the grid\u{2019}s month."
+                        </ApiRow>
+                        <ApiRow name="is_unavailable" ty="Signal<bool>">"Whether the day is unavailable."</ApiRow>
+                        <ApiRow name="is_outside_visible_range" ty="Signal<bool>">"Whether the day lies outside the visible range."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the day is part of an invalid selection."</ApiRow>
+                        <ApiRow name="is_today" ty="Signal<bool>">
+                            "Whether the day is today in the browser. Always "<Code inline=true>"false"</Code>" on the server, "
+                            "whose today may be another day."
+                        </ApiRow>
+                        <ApiRow name="formatted_date" ty="Signal<String>">"The day of the month, formatted for the locale: the button\u{2019}s text."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
 
-            <Section title="Focus Management">
+            <Section title="use_calendar_heading">
                 <p>
-                    "Keyboard navigation changes the state\u{2019}s "<Code inline=true>"focused_date"</Code>
-                    ", and the cells move their "<Code inline=true>"tabindex"</Code>" accordingly. The cells don\u{2019}t "
-                    "move the browser focus yet, so the demos focus the button with "<Code inline=true>"tabindex=\"0\""</Code>
-                    " after each change with this helper. It skips the change when focus has moved elsewhere, e.g. to the "
-                    "month buttons, so that paging with a mouse doesn\u{2019}t pull focus into the grid, and it keys the "
-                    "weeks so that the focused button survives moving within a month. It is a stopgap: drop it once the "
-                    "cells move the focus themselves."
+                    <Code inline=true>"use_calendar_heading(&states, offset, format)"</Code>" returns the heading of a "
+                    "month as a "<Code inline=true>"Signal<String>"</Code>": \u{201c}March 2026\u{201d}, "
+                    <Code inline=true>"offset"</Code>" months after the first visible one (for calendars showing several), "
+                    "formatted with a "<Code inline=true>"CalendarHeadingFormat"</Code>". A calendar showing weeks or days "
+                    "gets a range of dates. Hide the heading from assistive technology: the calendar\u{2019}s label names the "
+                    "visible range already."
                 </p>
 
-                <Code language=Language::Rust>{include_str!("demos/calendar_focus.rs")}</Code>
-
-                <p>
-                    "Wire "<Code inline=true>"on_focus"</Code>" of each cell to "<Code inline=true>"set_focused_date"</Code>
-                    ", so that clicking or tabbing to a day moves the cursor there. Skip days of the neighboring "
-                    "months: the button receives focus on "<Code inline=true>"mousedown"</Code>", and moving the cursor "
-                    "there switches the month and removes the button before the click arrives. "
-                    <Code inline=true>"select_date"</Code>" moves the cursor for them instead."
-                </p>
+                <ApiTable kind=ApiKind::Fields of="CalendarHeadingFormat">
+                    <ApiRow name="day" ty="Option<NumericFormat>">"Includes the day; always for weeks and days. Default: "<Code inline=true>"None"</Code>"."</ApiRow>
+                    <ApiRow name="month" ty="MonthFormat">"The month: \u{201c}March\u{201d}, \u{201c}Mar\u{201d}, \u{201c}3\u{201d}, \u{2026} Default: "<Code inline=true>"Long"</Code>"."</ApiRow>
+                    <ApiRow name="year" ty="NumericFormat">"The year: \u{201c}2026\u{201d} or \u{201c}26\u{201d}. Default: "<Code inline=true>"Numeric"</Code>"."</ApiRow>
+                </ApiTable>
             </Section>
 
-            <Section title="Dates and Times">
+            <Section title="use_calendar_month_picker">
                 <p>
-                    "The hooks work with "<Code inline=true>"time::OffsetDateTime"</Code>" values: each "
-                    <Code inline=true>"Day"</Code>" of the grid has the time of day and offset of the focused date. "
-                    <Code inline=true>"min"</Code>", "<Code inline=true>"max"</Code>" and "
-                    <Code inline=true>"DateRange::contains"</Code>" compare full timestamps, so give them the same time "
-                    "of day and offset as the grid\u{2019}s days. The demos keep everything at midnight UTC by passing "
-                    <Code inline=true>"default_focused_value"</Code>" (or "<Code inline=true>"default_value"</Code>"). "
-                    "Without it, the grid starts at the current time, and a "<Code inline=true>"max"</Code>
-                    " at midnight disables its own day."
+                    <Code inline=true>"use_calendar_month_picker(&states, format)"</Code>" lists the months of the focused "
+                    "date\u{2019}s year, formatted with a "<Code inline=true>"MonthFormat"</Code>", for a select or a grid of "
+                    "buttons that jumps to a month. Picking one moves the focused date there."
                 </p>
-                <p>"Selected values carry the time of day of the grid\u{2019}s days, not that of a previous value."</p>
+
+                <ApiTable kind=ApiKind::Return of="UseCalendarPickerReturn">
+                    <ApiRow name="aria_label" ty="&'static str">"Names the picker: \u{201c}Month\u{201d}."</ApiRow>
+                    <ApiRow name="value" ty="Signal<i16>">"The focused date\u{2019}s month (1 to 12)."</ApiRow>
+                    <ApiRow name="items" ty="Signal<Vec<CalendarPickerItem>>">
+                        "The months, each with its "<Code inline=true>"id"</Code>" (the month), the "<Code inline=true>"date"</Code>
+                        " it focuses and its "<Code inline=true>"formatted"</Code>" name."
+                    </ApiRow>
+                    <ApiRow name="on_change" ty="Callback<i16>">"Moves the focused date to a month (an item\u{2019}s id)."</ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="use_calendar_year_picker">
+                <p>
+                    <Code inline=true>"use_calendar_year_picker(&states, visible_years, format)"</Code>" lists "
+                    <Code inline=true>"visible_years"</Code>" years (default 20) around the focused date\u{2019}s year, within "
+                    "the minimum and maximum. It returns the same "
+                    <AnchorLink href="#use-calendar-month-picker"><Code inline=true>"UseCalendarPickerReturn"</Code></AnchorLink>
+                    ", named \u{201c}Year\u{201d}; the items\u{2019} ids are the years."
+                </p>
             </Section>
 
             <Section title="Range Selection">
                 <p>
-                    "A range is selected in two steps: the first click (or "<Keys keys="Enter"/>") sets the "
-                    <Code inline=true>"anchor_date"</Code>", the second completes the range. In between, "
-                    <Code inline=true>"highlighted_range"</Code>" spans from the anchor to the focused date, so moving "
-                    "with the arrow keys previews the range. Hovering previews it as well when you call "
-                    <Code inline=true>"highlight_date"</Code>" from "<Code inline=true>"pointerenter"</Code>
-                    ". The second date may lie before the anchor; the range is ordered for you. "<Keys keys="Escape"/>
-                    " cancels the selection and keeps the previous value. A selection in progress stays open when "
-                    "focus leaves the calendar, and ranges can\u{2019}t be selected by dragging."
+                    "A range is selected by two presses (or "<Keys keys="Enter"/>"): the first sets the anchor, the second "
+                    "the other end. In between, the highlighted range runs from the anchor to the focused date, so the "
+                    "arrow keys and hovering preview it. With a mouse or a finger, dragging from one day to another selects "
+                    "the range in one go, and dragging an end of the selected range moves that end. "<Keys keys="Escape"/>
+                    " cancels a range in progress."
                 </p>
                 <p>
-                    "Style the range from the cells: "<Code inline=true>"aria-selected"</Code>" marks every day in the "
-                    "highlighted range, and comparing a day with "<Code inline=true>"highlighted_range"</Code>
-                    " gives you its first and last day."
+                    "The cells don\u{2019}t tell you which day starts or ends the range: compare their day with "
+                    <Code inline=true>"highlighted_range"</Code>", as the demo does to round the ends of the band."
                 </p>
 
-                <Demo description="Range calendar built from use_range_calendar, with a hover preview" source=include_str!("demos/calendar_range.rs")>
+                <Demo description="Range calendar built from use_range_calendar_state and use_range_calendar" source=include_str!("demos/calendar_range.rs")>
                     <CalendarRangeDemo/>
                 </Demo>
             </Section>
 
             <Section title="Unavailable Dates">
                 <p>
-                    "Two mechanisms restrict selection. "<Code inline=true>"min"</Code>" and "<Code inline=true>"max"</Code>
-                    " disable the days outside them: they get "<Code inline=true>"aria-disabled"</Code>" and focus "
-                    "can\u{2019}t reach them. "<Code inline=true>"is_date_unavailable"</Code>" marks single days, such as "
-                    "booked nights, that stay focusable but can\u{2019}t be selected. In a range calendar, a range "
-                    "can\u{2019}t span an unavailable day unless "<Code inline=true>"allows_non_contiguous_ranges"</Code>
-                    " is set: once the anchor is set, the end stops at the last available day before the next booked one."
+                    "Two inputs restrict the selection. "<Code inline=true>"min_value"</Code>" and "<Code inline=true>"max_value"</Code>
+                    " disable the days outside them: they can\u{2019}t take the focus, and the page buttons stop there. "
+                    <Code inline=true>"is_date_unavailable"</Code>" marks single days, such as booked nights: they can take "
+                    "the focus, but pressing them does nothing. A range can\u{2019}t span an unavailable day unless "
+                    <Code inline=true>"allows_non_contiguous_ranges"</Code>" is set: once the anchor is set, the days beyond "
+                    "the next booked one are disabled."
                 </p>
-                <p>
-                    "Selecting an unavailable date, by click, "<Code inline=true>"select_date"</Code>" or "<Keys keys="Enter"/>
-                    ", currently selects the closest earlier available date instead. To ignore such attempts, as this demo does, "
-                    "call "<Code inline=true>"select_date"</Code>" only for available days and replace the grid\u{2019}s "
-                    <Code inline=true>"on_select_focused_date"</Code>" with a callback that skips unavailable dates. While "
-                    "a range selection is in progress, the cursor can still move past the next unavailable day; the "
-                    "highlighted range then shows that day, but the completed range stops before the unavailable one."
-                </p>
-                <p>
-                    "The demo uses "<Code inline=true>"use_range_calendar_state"</Code>" without the container hook and "
-                    "starts weeks on Sunday."
-                </p>
+                <p>"The demo also starts its weeks on Sunday."</p>
 
-                <Demo description="Booking calendar with min, max, booked days and Sunday as the first day of the week" source=include_str!("demos/calendar_unavailable.rs")>
+                <Demo description="Booking calendar with a minimum, a maximum and booked days, weeks starting on Sunday" source=include_str!("demos/calendar_unavailable.rs")>
                     <CalendarUnavailableDemo/>
                 </Demo>
             </Section>
 
-            <Section title="Announcements">
+            <Section title="Several Months">
                 <p>
-                    "The state announces the new month and year through the live announcer when the focused date "
-                    "enters another month. The focused date never leaves "<Code inline=true>"min"</Code>" / "
-                    <Code inline=true>"max"</Code>"."
+                    "With "<Code inline=true>"visible_duration: DateDuration::months(2)"</Code>", the visible range spans two "
+                    "months: render a grid per month and give the second one "<Code inline=true>"start_date"</Code>" and "
+                    <Code inline=true>"end_date"</Code>" a month after the visible range\u{2019}s start (the "
+                    <Link href=format!("{}#calendargrid", routes::doc::calendar::Atom.materialize())>"CalendarGrid"</Link>
+                    " atom does this with its "<Code inline=true>"offset"</Code>"). The page buttons then move by two months, "
+                    "or by one with "<Code inline=true>"PageBehavior::Single"</Code>". A duration in weeks or days shows "
+                    "that many days in a single grid."
                 </p>
             </Section>
 
             <Section title="Internationalization">
-                <p>"The calendar hooks are not localized yet:"</p>
-                <ul>
-                    <li>
-                        "Month names ("<Code inline=true>"focused_month_name"</Code>", the months grid), the cells\u{2019} "
-                        <Code inline=true>"aria-label"</Code>"s and the month announcements are English."
-                    </li>
-                    <li>
-                        "The weekday labels default to English abbreviations. Pass your own "
-                        <Code inline=true>"weekday_labels"</Code>", Monday first."
-                    </li>
-                    <li>
-                        "The first day of the week is not derived from a locale. Set "<Code inline=true>"first_day_of_week"</Code>
-                        " on the state and the matching "<Code inline=true>"start_of_week"</Code>" on the grid."
-                    </li>
-                    <li>
-                        "Right-to-left layouts are not supported: "<Keys keys="ArrowLeft"/>" always moves to the previous day."
-                    </li>
-                    <li>"Only the Gregorian calendar is supported."</li>
-                </ul>
+                <p>
+                    "The weekday names, the month names, the day numbers and the first day of the week follow the locale of "
+                    "the surrounding "<Link href=routes::doc::utilities::I18nProvider.materialize()>"I18nProvider"</Link>
+                    ", and the arrow keys follow the writing direction. The labels and announcements (\u{201c}Previous\u{201d}, "
+                    "\u{201c}Today\u{201d}, \u{201c}selected\u{201d}, \u{201c}Selected Range\u{201d}, the range selection "
+                    "prompts) are English, and only the Gregorian calendar is supported."
+                </p>
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Calendar.materialize()>"Calendar"</Link></li>
-                <li><Link href=routes::doc::calendar::Component.materialize()>"Calendar Component"</Link></li>
+                <li><Link href=routes::doc::Calendar.materialize()>"Calendar overview"</Link></li>
+                <li><Link href=routes::doc::calendar::Atom.materialize()>"Calendar Atoms"</Link></li>
                 <li><Link href=routes::doc::date_picker::Hook.materialize()>"Date Picker Hooks"</Link></li>
-                <li><Link href=routes::doc::DateField.materialize()>"Date Field Hooks"</Link></li>
                 <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link></li>
             </SeeAlso>
         </DocPage>

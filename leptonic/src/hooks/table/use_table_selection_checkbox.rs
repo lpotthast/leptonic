@@ -54,6 +54,6 @@ pub fn use_table_select_all_checkbox(table: &TableData) -> UseCheckboxInput {
             aria_label: "Select All".into(),
             ..ToggleOptions::default()
         },
-        ..UseCheckboxInput::new(state)
+        state,
     }
 }

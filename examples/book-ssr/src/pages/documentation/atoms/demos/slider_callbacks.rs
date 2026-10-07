@@ -8,7 +8,8 @@ use leptos::prelude::*;
 pub fn SliderCallbacksDemo() -> impl IntoView {
     let (last_change, set_last_change) = signal(None::<u8>);
     let (last_change_end, set_last_change_end) = signal(None::<u8>);
-    let show = |value: Option<u8>| value.map_or_else(|| "none yet".to_owned(), |value| value.to_string());
+    let show =
+        |value: Option<u8>| value.map_or_else(|| "none yet".to_owned(), |value| value.to_string());
 
     view! {
         // `on_change`: every change, also while dragging. `on_change_end`: when the user lets go (or after a

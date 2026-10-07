@@ -15,7 +15,7 @@ use crate::{
         use_radio_group_state,
     },
     utils::{
-        classes::Classes, data_attributes::flag, styles::Styles,
+        classes::Classes, data_attributes::flag, default_class::with_default_class, styles::Styles,
         visually_hidden::visually_hidden_styles,
     },
 };
@@ -46,6 +46,8 @@ pub struct RadioGroupCtx {
 ///
 /// Data attributes: `data-orientation`, `data-disabled`, `data-readonly`, `data-required`,
 /// `data-invalid`.
+///
+/// Default class: `leptonic-RadioGroup`.
 #[allow(clippy::too_many_arguments)]
 #[component]
 pub fn RadioGroup(
@@ -81,6 +83,7 @@ pub fn RadioGroup(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-RadioGroup", classes);
     let validation_behavior = use_validation_behavior(validation_behavior);
     let (value, on_change) =
         crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
@@ -117,7 +120,11 @@ pub fn RadioGroup(
         aria_describedby,
         orientation,
         form,
-        ..UseRadioGroupInput::new(state)
+        state,
+        aria_errormessage: None,
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
     });
     let ctx = RadioGroupCtx { data, is_invalid };
     let label = LabelContext::span(label_props).with_presence(label_presence);
@@ -154,6 +161,8 @@ pub fn RadioGroup(
 ///
 /// Data attributes: `data-selected`, `data-pressed`, `data-hovered`, `data-focused`,
 /// `data-focus-visible`, `data-disabled`, `data-readonly`, `data-invalid`, `data-required`.
+///
+/// Default class: `leptonic-Radio`.
 #[component]
 pub fn Radio(
     /// The value the radio selects.
@@ -172,6 +181,7 @@ pub fn Radio(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Radio", classes);
     let group = expect_context::<RadioGroupCtx>();
     let state = group.data.state;
     let radio = use_radio(UseRadioInput {
@@ -182,7 +192,15 @@ pub fn Radio(
         aria_describedby,
         auto_focus,
         on_focus_change,
-        ..UseRadioInput::new(group.data, value)
+        group: group.data,
+        value,
+        on_focus: None,
+        on_blur: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_up: None,
+        on_press: None,
+        on_press_change: None,
     });
     let hover = use_hover(UseHoverInput {
         is_disabled: radio.is_disabled,

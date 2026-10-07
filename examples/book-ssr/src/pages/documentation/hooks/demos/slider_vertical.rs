@@ -13,13 +13,40 @@ pub fn SliderVerticalDemo() -> impl IntoView {
     let state = use_slider_state(UseSliderStateInput {
         default_values: Some(vec![60.0]),
         orientation: Signal::stored(Orientation::Vertical),
-        ..UseSliderStateInput::new(0.0, 100.0)
+        value: None,
+        min_value: Signal::stored(0.0),
+        max_value: Signal::stored(100.0),
+        step: Signal::stored(1.0),
+        is_disabled: Signal::default(),
+        format_options: Signal::default(),
+        value_label: None,
+        page_size: None,
+        on_change: None,
+        on_change_end: None,
     });
     let slider = use_slider(UseSliderInput {
         has_label: Signal::stored(true),
-        ..UseSliderInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
     });
-    let thumb = use_slider_thumb(UseSliderThumbInput::new(state, &slider));
+    let thumb = use_slider_thumb(UseSliderThumbInput {
+        state,
+        slider: slider.data.clone(),
+        track: slider.track_element,
+        index: 0,
+        is_disabled: Signal::default(),
+        is_required: Signal::default(),
+        is_invalid: Signal::default(),
+        name: None,
+        form: None,
+        has_label: Signal::stored(false),
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+    });
     let focus_ring = use_focus_ring(UseFocusRingInput {
         within: true,
         ..UseFocusRingInput::default()

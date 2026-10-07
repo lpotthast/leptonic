@@ -57,6 +57,47 @@
 
 .demo-mb-1            { margin-bottom: var(--book-space-m); }
 
+// -- Demo controls --
+
+// The standard control of a demo's options ("Disabled", "Read-only", ...) and the checkbox of every atom demo: the
+// `Checkbox` atom (a `<label>` around a visually hidden input, carrying the state as data attributes) with a drawn
+// box as its first child. Markup and use: `STYLE_GUIDE.md`, "Demo controls".
+.demo-check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-s);
+    cursor: pointer;
+    user-select: none;
+
+    // The ring goes around the drawn control instead (see below).
+    &[data-focus-visible] { outline: none; }
+    &[data-disabled] { opacity: 0.5; cursor: not-allowed; }
+    &[data-readonly] { cursor: default; }
+}
+
+.demo-check-box {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    border: 2px solid var(--book-muted-color);
+    border-radius: var(--book-radius-s);
+    color: var(--book-on-brand-color);
+    font-size: var(--book-font-size-s);
+    line-height: 1;
+    transition: background-color var(--book-transition), border-color var(--book-transition);
+
+    .demo-check[data-hovered] & { border-color: var(--brand-color); }
+    .demo-check[data-selected] &,
+    .demo-check[data-indeterminate] & { background: var(--brand-color); border-color: var(--brand-color); }
+    .demo-check[data-selected] &::after { content: "\2713"; }
+    .demo-check[data-indeterminate] &::after { content: "\2013"; }
+    .demo-check[data-focus-visible] & { outline: 2px solid var(--book-focus-color); outline-offset: 2px; }
+    .demo-check[data-invalid] & { border-color: var(--danger-color); }
+}
+
 // -- Buttons --
 
 // A neutral button. Atoms render `data-hovered`, `data-pressed` and `data-focus-visible`; plain buttons get the
@@ -184,6 +225,30 @@ textarea.demo-atom-input { min-height: 4em; resize: vertical; font: inherit; }
 
 // The range input of hook-built sliders, color areas and wheels: invisible over the control, but focusable.
 .demo-visually-hidden-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.0001; pointer-events: none; }
+
+// -- Keys --
+
+// The keys of a shortcut (the `ShortcutKeys` atom): one key cap per inner <kbd>, the "+" between them muted.
+.demo-shortcut-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--book-space-xs);
+    font-family: var(--typography-code-font-family);
+    font-size: var(--book-font-size-s);
+
+    kbd {
+        min-width: 1.5em;
+        padding: 0 var(--book-space-xs);
+        border: 1px solid var(--book-border-color);
+        border-radius: var(--book-radius-s);
+        background: var(--book-surface-color-raised);
+        color: var(--main-color);
+        text-align: center;
+        box-shadow: var(--book-shadow-s);
+    }
+
+    [data-separator] { color: var(--book-muted-color); }
+}
 
 // -- Event logs and states --
 

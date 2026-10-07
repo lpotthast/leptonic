@@ -61,23 +61,6 @@ pub struct UseCheckboxGroupInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
-impl UseCheckboxGroupInput {
-    pub fn new(state: CheckboxGroupState) -> Self {
-        Self {
-            state,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            form: None,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        }
-    }
-}
-
 /// What the checkboxes of a group need from it.
 #[derive(Debug, Clone)]
 pub struct CheckboxGroupData {
@@ -229,19 +212,6 @@ pub struct UseCheckboxGroupItemInput {
     pub options: ToggleOptions,
 }
 
-impl UseCheckboxGroupItemInput {
-    pub fn new(group: CheckboxGroupData, value: Key) -> Self {
-        Self {
-            group,
-            value,
-            is_indeterminate: Signal::stored(false),
-            on_change: None,
-            validate: None,
-            options: ToggleOptions::default(),
-        }
-    }
-}
-
 impl std::fmt::Debug for UseCheckboxGroupItemInput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UseCheckboxGroupItemInput")
@@ -297,6 +267,7 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
 
     // The checkbox's own validation, merged into the group's.
     let realtime_validation = use_form_validation_state(UseFormValidationStateInput {
+        builtin_validation: Signal::default(),
         is_invalid: Signal::stored(false),
         value: toggle_state.is_selected,
         validate,

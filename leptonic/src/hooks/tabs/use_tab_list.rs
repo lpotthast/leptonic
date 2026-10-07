@@ -91,19 +91,6 @@ pub struct UseTabListInput {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseTabListInput {
-    pub fn new(tabs: TabListData, element: CapturedElement) -> Self {
-        Self {
-            tabs,
-            element,
-            orientation: Orientation::Horizontal,
-            keyboard_activation: KeyboardActivation::Automatic,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-        }
-    }
-}
-
 /// Return value of [`use_tab_list`].
 #[derive(Debug)]
 pub struct UseTabListReturn {
@@ -184,7 +171,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
         delegate,
         element,
         options: CollectionOptions {
-            select_on_focus: Some(keyboard_activation == KeyboardActivation::Automatic),
+            select_on_focus: (keyboard_activation == KeyboardActivation::Automatic).into(),
             disallow_empty_selection: true,
             link_behavior: LinkBehavior::Selection,
             ..CollectionOptions::default()

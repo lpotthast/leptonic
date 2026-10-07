@@ -6,11 +6,15 @@ use crate::{
     Out,
     atoms::field::LabelPresence,
     hooks::{
-        AutoCapitalize, EnterKeyHint, InputMode, InputType, IntoAttrs, UseButtonInput,
-        UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput, UseTextFieldStateInput,
-        ValidateFn, ValidationBehavior, use_button, use_search_field, use_text_field_state,
+        AutoCapitalize, EnterKeyHint, InputMode, InputType, IntoAttrs, TextFieldElement,
+        UseButtonInput, UseSearchFieldInput, UseSearchFieldReturn, UseTextFieldInput,
+        UseTextFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_search_field,
+        use_text_field_state,
     },
-    utils::{classes::Classes, data_attributes::flag, scoped_context::scoped_view, styles::Styles},
+    utils::{
+        classes::Classes, data_attributes::flag, default_class::with_default_class,
+        scoped_context::scoped_view, styles::Styles,
+    },
 };
 
 // =============================================================================
@@ -41,6 +45,8 @@ struct SearchFieldCtx {
 ///
 /// Data attributes: `data-empty`, `data-disabled`, `data-invalid`, `data-readonly`,
 /// `data-required`.
+///
+/// Default class: `leptonic-SearchField`.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn SearchField(
@@ -97,6 +103,7 @@ pub fn SearchField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SearchField", classes);
     let (value, on_change) =
         crate::utils::ValueBinding::from_state_props(value, set_value, on_change);
     let state = use_text_field_state(UseTextFieldStateInput {
@@ -113,35 +120,52 @@ pub fn SearchField(
     } = use_search_field(UseSearchFieldInput {
         on_submit,
         on_clear,
-        ..UseSearchFieldInput::new(UseTextFieldInput {
-            id,
-            input_type,
-            is_disabled,
-            is_read_only,
-            is_required,
-            is_invalid,
-            validate,
-            validation_behavior: use_validation_behavior(validation_behavior),
-            name,
-            form,
-            placeholder,
-            pattern,
-            min_length,
-            max_length,
-            auto_complete,
-            auto_capitalize,
-            auto_correct,
-            spell_check,
-            input_mode,
-            enter_key_hint,
-            auto_focus,
-            has_label,
-            aria_label,
-            aria_labelledby,
-            aria_describedby,
-            on_focus_change,
-            ..UseTextFieldInput::new(state)
-        })
+        text_field: UseTextFieldInput {
+            input_type: Signal::stored(InputType::Search),
+            ..UseTextFieldInput {
+                id,
+                input_type,
+                is_disabled,
+                is_read_only,
+                is_required,
+                is_invalid,
+                validate,
+                validation_behavior: use_validation_behavior(validation_behavior),
+                name,
+                form,
+                placeholder,
+                pattern,
+                min_length,
+                max_length,
+                auto_complete,
+                auto_capitalize,
+                auto_correct,
+                spell_check,
+                input_mode,
+                enter_key_hint,
+                auto_focus,
+                has_label,
+                aria_label,
+                aria_labelledby,
+                aria_describedby,
+                on_focus_change,
+                state,
+                element: TextFieldElement::Input,
+                validation: None,
+                exclude_from_tab_order: false,
+                label_id: None,
+                aria_errormessage: None,
+                aria_activedescendant: Signal::stored(None),
+                aria_autocomplete: None,
+                aria_haspopup: None,
+                aria_controls: Signal::stored(None),
+                on_focus: None,
+                on_blur: None,
+                on_key_down: None,
+                on_key_up: None,
+                shortcuts: None,
+            }
+        },
     });
     let is_invalid = text_field.is_invalid;
     let is_empty = Signal::derive(move || state.value.with(String::is_empty));
@@ -178,12 +202,15 @@ pub fn SearchField(
 /// field's `data-empty`.
 ///
 /// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+///
+/// Default class: `leptonic-SearchFieldClearButton`.
 #[component]
 pub fn SearchFieldClearButton(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-SearchFieldClearButton", classes);
     let ctx = expect_context::<SearchFieldCtx>();
     let input = ctx.clear_button.get_value();
     let is_disabled = input.is_disabled;

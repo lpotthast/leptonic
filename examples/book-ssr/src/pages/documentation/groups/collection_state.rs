@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::collection_state::CollectionStateDemo;
@@ -21,6 +20,10 @@ pub fn PageCollectionState() -> impl IntoView {
                 "own, or when you want to drive one of leptonic\u{2019}s from your app state. The concepts\u{2019} hooks "
                 "and atoms call them for you."
             </p>
+
+            <Section title="Pages">
+                <SectionMembers overview=routes::doc::CollectionState.materialize()/>
+            </Section>
 
             <Section title="Relationships">
                 <DocTable headers=&["Building block", "Role"]>
@@ -64,6 +67,13 @@ pub fn PageCollectionState() -> impl IntoView {
                             <AnchorLink href="#use-type-select">"use_type_select"</AnchorLink>
                         </TableCell>
                         <TableCell>"Which item the arrow keys, page keys and typed text lead to, per layout."</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>
+                            <Link href=routes::doc::collection_state::Virtualizer.materialize()>"Virtualizer"</Link>", "
+                            <Link href=routes::doc::collection_state::UseVirtualizerState.materialize()>"use_virtualizer_state"</Link>
+                        </TableCell>
+                        <TableCell>"Renders only the visible items of long collections."</TableCell>
                     </TableRow>
                 </DocTable>
                 <p>
@@ -342,7 +352,7 @@ pub fn PageCollectionState() -> impl IntoView {
                     <p>
                         <Code inline=true>"Selection"</Code>" is either "<Code inline=true>"Selection::All"</Code>" (every "
                         "selectable item, without listing their keys, after "<Keys keys="Control + A"/>" ("
-                        <Keys keys="Command + A"/>" on macOS)) or "<Code inline=true>"Selection::Keys(..)"</Code>
+                        <Keys keys="Meta + A"/>" on macOS)) or "<Code inline=true>"Selection::Keys(..)"</Code>
                         "; build one with "<Code inline=true>"Selection::keys([..])"</Code>". "
                         <Code inline=true>"Selection"</Code>", "<Code inline=true>"SelectionOptions"</Code>" and the input "
                         "structs of this page are in "<Code inline=true>"leptonic::hooks::collections"</Code>"."
@@ -464,15 +474,15 @@ pub fn PageCollectionState() -> impl IntoView {
                         "Keep "<Keys keys="Escape"/>" from clearing the selection."
                     </ApiRow>
                     <ApiRow name="disallow_select_all" ty="bool" default="false">
-                        "Disable "<Keys keys="Control + A"/>" ("<Keys keys="Command + A"/>" on macOS)."
+                        "Disable "<Keys keys="Control + A"/>" ("<Keys keys="Meta + A"/>" on macOS)."
                     </ApiRow>
                     <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">
                         <Code inline=true>"ClearSelection"</Code>": "<Keys keys="Escape"/>" clears the selection. "
                         <Code inline=true>"None"</Code>": the key press bubbles, e.g. to close a popover."
                     </ApiRow>
-                    <ApiRow name="select_on_focus" ty="Option<bool>" default="None">
-                        "Select items as keyboard focus moves to them. "<Code inline=true>"None"</Code>": with the "
-                        <Code inline=true>"Replace"</Code>" selection behavior."
+                    <ApiRow name="select_on_focus" ty="SelectOnFocus" default="Auto">
+                        "Select items as keyboard focus moves to them: "<Code inline=true>"Always"</Code>", "
+                        <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (with the "<Code inline=true>"Replace"</Code>" selection behavior)."
                     </ApiRow>
                     <ApiRow name="disallow_type_ahead" ty="bool" default="false">"Disable jumping to items by typing."</ApiRow>
                     <ApiRow name="allows_tab_navigation" ty="bool" default="false">
@@ -540,7 +550,7 @@ pub fn PageCollectionState() -> impl IntoView {
                         </KeyRow>
                         <KeyRow keys="PageDown / PageUp">"Move focus by the visible height."</KeyRow>
                         <KeyRow keys="Control + A">
-                            "With multiple selection: select all ("<Keys keys="Command + A"/>" on macOS)."
+                            "With multiple selection: select all ("<Keys keys="Meta + A"/>" on macOS)."
                         </KeyRow>
                         <KeyRow keys="Escape">"Clear the selection (see "<Code inline=true>"escape_key_behavior"</Code>")."</KeyRow>
                         <KeyRow keys="Any character">"Type-ahead, see "<AnchorLink href="#use-type-select">"use_type_select"</AnchorLink>"."</KeyRow>
@@ -573,6 +583,12 @@ pub fn PageCollectionState() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="keyboard_delegate" ty="Option<Signal<Arc<dyn KeyboardDelegate>>>">
                             "Replaces the list keyboard delegate. Required ("<Code inline=true>"None"</Code>" for the default)."
+                        </ApiRow>
+                        <ApiRow name="layout_delegate" ty="Option<Arc<dyn LayoutDelegate>>">
+                            "Where items are on screen when only the visible ones are rendered (virtualized), for paging and "
+                            "scrolling to the focused item: the "<Code inline=true>"layout_delegate()"</Code>" of "
+                            <Link href=routes::doc::collection_state::UseVirtualizerState.materialize()>"use_virtualizer_state"</Link>
+                            ". Required ("<Code inline=true>"None"</Code>": the rendered item elements)."
                         </ApiRow>
                         <ApiRow name="options" ty="CollectionOptions">
                             "See "<AnchorLink href="#collectionoptions">"CollectionOptions"</AnchorLink>". Required."
@@ -611,6 +627,9 @@ pub fn PageCollectionState() -> impl IntoView {
                             "The item\u{2019}s action, e.g. opening a detail view. Without a selection mode, pressing performs "
                             "it; with one, "<Keys keys="Enter"/>" or a double-click does (with the "<Code inline=true>"Replace"</Code>
                             " behavior). Required."
+                        </ApiRow>
+                        <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>">
+                            "Called when a context menu is requested on the item (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the item\u{2019}s menu then replaces the browser\u{2019}s. Required; "<Code inline=true>"None"</Code>" keeps the browser\u{2019}s menu."
                         </ApiRow>
                         <ApiRow name="link_behavior" ty="LinkBehavior">
                             "See "<AnchorLink href="#collectionoptions">"CollectionOptions"</AnchorLink>". Required."

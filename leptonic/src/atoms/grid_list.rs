@@ -5,17 +5,18 @@ use leptos::{context::Provider, prelude::*};
 use crate::{
     Out,
     hooks::{
-        DisabledBehavior, GridListData, IntoAttrs, KeyboardNavigationBehavior, SelectionBehavior,
-        SelectionMode, UseGridListInput, UseGridListItemInput, UseGridListItemReturn,
-        UseGridListReturn,
+        DisabledBehavior, FocusMode, GridListData, IntoAttrs, KeyboardNavigationBehavior,
+        SelectionBehavior, SelectionMode, UseFocusRingInput, UseGridListInput,
+        UseGridListItemInput, UseGridListItemReturn, UseGridListReturn,
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout,
-            ListState, Selection, SelectionOptions, UseListStateInput, use_list_state,
+            Selection, SelectionOptions, UseListStateInput, use_list_state,
         },
-        use_grid_list, use_grid_list_item,
+        use_focus_ring, use_grid_list, use_grid_list_item,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -24,6 +25,11 @@ use crate::{
 ///
 /// The rows come from `collection`: render one [`GridListItem`] per collection item, in
 /// collection order.
+///
+/// Data attributes (as react-aria-components): `data-empty`, `data-focused`, `data-focus-visible`,
+/// `data-layout` (`stack`/`grid`).
+///
+/// Default class: `leptonic-GridList`.
 #[component]
 #[allow(
     clippy::too_many_lines,
@@ -31,13 +37,9 @@ use crate::{
     clippy::implicit_hasher
 )]
 pub fn GridList(
-    /// The rows. Required unless `state` is given.
-    #[prop(into, optional)]
-    collection: Option<CollectionMemo>,
-    /// Use an existing list state instead of creating one from `collection` and the selection
-    /// props.
-    #[prop(optional)]
-    state: Option<ListState>,
+    /// The rows.
+    #[prop(into)]
+    collection: CollectionMemo,
     #[prop(into, optional)] selection_mode: Signal<SelectionMode>,
     #[prop(optional)] selection_behavior: SelectionBehavior,
     /// The initially selected keys.
@@ -71,13 +73,10 @@ pub fn GridList(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridList", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
-    let state = state.unwrap_or_else(|| {
-        let collection = collection.unwrap_or_else(|| {
-            crate::utils::dev_warn!("GridList: neither `collection` nor `state` given");
-            Memo::new(|_| std::sync::Arc::default())
-        });
+    let state = {
         use_list_state(UseListStateInput {
             collection,
             selection: SelectionOptions {
@@ -92,7 +91,16 @@ pub fn GridList(
                 ..SelectionOptions::default()
             },
         })
-    });
+    };
+
+    // As react-aria-components: the layout, emptiness and focus for styling.
+    let data_layout = match layout {
+        ListLayout::Stack => "stack",
+        ListLayout::Grid => "grid",
+    };
+    let collection = state.collection;
+    let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
+    let focus_ring = use_focus_ring(UseFocusRingInput::default());
 
     let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
         aria_label,
@@ -106,12 +114,26 @@ pub fn GridList(
             ..CollectionOptions::default()
         },
         on_action,
-        ..UseGridListInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        keyboard_delegate: None,
+        should_select_on_press_up: false,
+        tree: None,
     });
 
     view! {
         <Provider value=data>
-            <div {..props.into_attrs()} class=classes style=styles>
+            <div
+                {..props.into_attrs()}
+                {..focus_ring.props.into_attrs()}
+                class=classes
+                style=styles
+                data-empty=flag(is_empty)
+                data-focused=flag(focus_ring.is_focused)
+                data-focus-visible=flag(focus_ring.is_focus_visible)
+                data-layout=data_layout
+            >
                 {children()}
             </div>
         </Provider>
@@ -119,10 +141,13 @@ pub fn GridList(
 }
 
 /// A row of a [`GridList`], for the collection item `key`: an outer `role="row"` element with a
-/// single `role="gridcell"` holding the children.
+/// single `role="gridcell"` (`display: contents`, so the row lays out the children) holding the
+/// children.
 ///
 /// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
 /// `data-pressed` on the row for styling.
+///
+/// Default class: `leptonic-GridListItem`.
 #[component]
 pub fn GridListItem(
     /// The row's key in the grid list's collection.
@@ -136,6 +161,7 @@ pub fn GridListItem(
     styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridListItem", classes);
     let list = expect_context::<GridListData>();
     let UseGridListItemReturn {
         row_props,
@@ -146,7 +172,14 @@ pub fn GridListItem(
         is_disabled,
         is_pressed,
         ..
-    } = use_grid_list_item(UseGridListItemInput::new(list, key));
+    } = use_grid_list_item(UseGridListItemInput {
+        // Inside a `ContextMenuTrigger`: its menu opens on this row.
+        on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
+        list,
+        key,
+        focus_mode: FocusMode::Row,
+        allows_arrow_navigation: false,
+    });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
 
@@ -161,7 +194,9 @@ pub fn GridListItem(
             data-disabled=flag(is_disabled)
             data-pressed=flag(is_pressed)
         >
-            <div {..grid_cell_props.into_attrs()}>{children()}</div>
+            <div {..grid_cell_props.into_attrs()} style="display: contents">
+                {children()}
+            </div>
         </div>
     }
 }

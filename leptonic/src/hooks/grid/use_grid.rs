@@ -82,25 +82,6 @@ pub struct UseGridInput {
     pub on_cell_action: Option<Callback<Key>>,
 }
 
-impl UseGridInput {
-    /// A grid for `state`, with all other settings at their defaults.
-    pub fn new(state: GridState, element: CapturedElement) -> Self {
-        Self {
-            state,
-            element,
-            id: None,
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            keyboard_delegate: None,
-            options: CollectionOptions::default(),
-            keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
-            should_select_on_press_up: false,
-            on_row_action: None,
-            on_cell_action: None,
-        }
-    }
-}
-
 /// What rows and cells need to know about their grid. Pass it to `use_grid_row` and
 /// `use_grid_cell`.
 #[derive(Clone)]
@@ -142,6 +123,8 @@ pub struct UseGridProps {
     pub aria_label: MaybeProp<String>,
     pub aria_labelledby: Option<String>,
     pub aria_multiselectable: Signal<Option<AriaMultiselectable>>,
+    /// E.g. a table's sort description.
+    pub aria_describedby: Signal<Option<String>>,
     /// Keyboard navigation, type-ahead and focus handling (`use_selectable_collection`).
     pub collection: UseSelectableCollectionProps,
     pub tabbable_child: UseHasTabbableChildProps,
@@ -153,6 +136,7 @@ pub type UseGridAttrs = (
     Attr<attr::AriaLabel, MaybeProp<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaMultiselectable, Signal<Option<AriaMultiselectable>>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     UseSelectableCollectionAttrs,
     UseHasTabbableChildAttrs,
 );
@@ -167,6 +151,7 @@ impl IntoAttrs for UseGridProps {
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
             self.collection.into_attrs(),
             self.tabbable_child.into_attrs(),
         )
@@ -297,6 +282,7 @@ pub fn use_grid(input: UseGridInput) -> UseGridReturn {
                 (selection.selection_mode() == SelectionMode::Multiple)
                     .then_some(AriaMultiselectable::True)
             }),
+            aria_describedby: Signal::stored(None),
             collection,
             tabbable_child: tabbable_child.props,
         },

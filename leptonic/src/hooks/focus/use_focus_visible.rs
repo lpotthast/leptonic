@@ -18,7 +18,8 @@ use crate::utils::key::{KeyboardEventKey, KeyboardKey};
 use crate::{
     Out,
     utils::{
-        EventAccessors, focusability, platform::device::is_mac, virtual_click::is_virtual_click,
+        EventAccessors, focusability, platform::device::is_mac,
+        prevent_focus::is_ignoring_focus_events, virtual_click::is_virtual_click,
     },
 };
 
@@ -589,6 +590,10 @@ fn register_window_listeners(
         window.as_ref(),
         "blur",
         move |_: web_sys::FocusEvent| {
+            // Focus moved back by `prevent_focus` (react-aria's `ignoreFocusEvent`).
+            if is_ignoring_focus_events() {
+                return;
+            }
             state.set_has_event_before_focus(false);
             state.set_has_blurred_window_recently(true);
         },
@@ -600,6 +605,10 @@ fn register_window_listeners(
         window.as_ref(),
         "focus",
         move |e: web_sys::FocusEvent| {
+            // Focus moved back by `prevent_focus` (react-aria's `ignoreFocusEvent`).
+            if is_ignoring_focus_events() {
+                return;
+            }
             // Guard: skip focus events on window or document targets (Firefox iframe workaround).
             if let Some(target) = e.target()
                 && (target.dyn_ref::<web_sys::Window>().is_some()

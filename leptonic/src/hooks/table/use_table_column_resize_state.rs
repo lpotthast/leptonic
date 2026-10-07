@@ -40,17 +40,6 @@ pub struct UseTableColumnResizeStateInput {
     pub default_min_width: Option<Arc<DefaultMinWidth>>,
 }
 
-impl UseTableColumnResizeStateInput {
-    pub fn new(table_state: TableState, table_width: Signal<f64>) -> Self {
-        Self {
-            table_state,
-            table_width,
-            default_width: None,
-            default_min_width: None,
-        }
-    }
-}
-
 impl std::fmt::Debug for UseTableColumnResizeStateInput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("UseTableColumnResizeStateInput")
@@ -176,6 +165,10 @@ pub fn use_table_column_resize_state(
 
 #[cfg(test)]
 mod tests {
+    use crate::hooks::{
+        GridFocusMode,
+        collections::{DisabledBehavior, SelectionOptions},
+    };
     use assertr::prelude::*;
 
     use super::*;
@@ -202,11 +195,23 @@ mod tests {
                         .default_width(ColumnSize::Fr(4.0));
                 }))
             });
-            let table_state = use_table_state(UseTableStateInput::new(table));
-            let state = use_table_column_resize_state(UseTableColumnResizeStateInput::new(
+            let table_state = use_table_state(UseTableStateInput {
+                table,
+                selection: SelectionOptions {
+                    disabled_behavior: DisabledBehavior::Selection,
+                    ..SelectionOptions::default()
+                },
+                focus_mode: GridFocusMode::Row,
+                default_sort_descriptor: None,
+                sort_descriptor: None,
+                on_sort_change: None,
+            });
+            let state = use_table_column_resize_state(UseTableColumnResizeStateInput {
                 table_state,
-                Signal::stored(600.0),
-            ));
+                table_width: Signal::stored(600.0),
+                default_width: None,
+                default_min_width: None,
+            });
             assert_that!(widths(&state, &["name", "type", "level"]))
                 .is_equal_to(vec![100.0, 100.0, 400.0]);
 
@@ -235,11 +240,23 @@ mod tests {
                     t.column("level", "Level");
                 }))
             });
-            let table_state = use_table_state(UseTableStateInput::new(table));
-            let state = use_table_column_resize_state(UseTableColumnResizeStateInput::new(
+            let table_state = use_table_state(UseTableStateInput {
+                table,
+                selection: SelectionOptions {
+                    disabled_behavior: DisabledBehavior::Selection,
+                    ..SelectionOptions::default()
+                },
+                focus_mode: GridFocusMode::Row,
+                default_sort_descriptor: None,
+                sort_descriptor: None,
+                on_sort_change: None,
+            });
+            let state = use_table_column_resize_state(UseTableColumnResizeStateInput {
                 table_state,
-                Signal::stored(400.0),
-            ));
+                table_width: Signal::stored(400.0),
+                default_width: None,
+                default_min_width: None,
+            });
             state.update_resized_columns(&Key::from("name"), 10.0);
             assert_that!(widths(&state, &["name", "level"])).is_equal_to(vec![75.0, 325.0]);
             assert_that!(state.column_min_width(&Key::from("name"))).is_equal_to(75.0);

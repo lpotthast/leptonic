@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::select::SelectConceptDemo;
@@ -48,13 +47,6 @@ pub fn PageSelectOverview() -> impl IntoView {
                         <TableCell>
                             "Unstyled trigger, value, popover and hidden form element with that behavior. The options are a "
                             "listbox, so they can have sections and descriptions; you style the parts through data attributes."
-                        </TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></TableCell>
-                        <TableCell>
-                            "Themed selects over your own option type, with a search input in the popover: one option, one "
-                            "or none, or several."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -110,7 +102,6 @@ pub fn PageSelectOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::select::Hook.materialize()>"Select Hooks"</Link></li>
                 <li><Link href=routes::doc::select::Atom.materialize()>"Select Atoms"</Link></li>
-                <li><Link href=routes::doc::select::Component.materialize()>"Select Components"</Link></li>
                 <li><Link href=routes::doc::Combobox.materialize()>"Combobox"</Link></li>
                 <li><Link href=routes::doc::Listbox.materialize()>"Listbox"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>

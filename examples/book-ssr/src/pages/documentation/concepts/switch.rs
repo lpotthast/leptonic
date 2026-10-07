@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::switch::SwitchConceptDemo;
@@ -56,10 +55,6 @@ pub fn PageSwitchOverview() -> impl IntoView {
                         <TableCell><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></TableCell>
                         <TableCell>"An unstyled "<Code inline=true>"Switch"</Code>" you draw with your children, styled through data attributes."</TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></TableCell>
-                        <TableCell>"A themed switch with sizes, a sliding or stationary variant and optional on/off icons."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -102,7 +97,6 @@ pub fn PageSwitchOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
                 <li><Link href=routes::doc::switch::Atom.materialize()>"Switch Atom"</Link></li>
-                <li><Link href=routes::doc::switch::Component.materialize()>"Switch Component"</Link></li>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox"</Link></li>
                 <li><Link href=routes::doc::ToggleButton.materialize()>"Toggle Button"</Link></li>
             </SeeAlso>

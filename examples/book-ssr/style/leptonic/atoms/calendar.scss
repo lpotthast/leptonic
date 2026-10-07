@@ -1,0 +1,129 @@
+// Upstream: ../starters/docs/src/Calendar.css @ 99e610236
+// Upstream: ../starters/docs/src/Calendar.tsx @ 99e610236
+//
+// `Calendar` and its parts (`CalendarHeading`, `CalendarGrid`, `CalendarHeaderCell`,
+// `CalendarCellButton`, `CalendarErrorMessage`); the cell button rules apply in a
+// `RangeCalendar` too (`range-calendar.scss` adds to them).
+//
+// Markup (as the starter):
+//   <Calendar>
+//     <div class="months">
+//       <div class="month">  (one per visible month)
+//         <header>
+//           <CalendarPreviousButton attr:data-variant="quiet">(chevron svg)</CalendarPreviousButton>
+//           <CalendarHeading />
+//           <CalendarNextButton attr:data-variant="quiet">(chevron svg)</CalendarNextButton>
+//         </header>
+//         <CalendarGrid>
+//           <CalendarGridHeader><CalendarHeaderRow>{CalendarHeaderCell}</CalendarHeaderRow></CalendarGridHeader>
+//           <CalendarGridBody>{CalendarWeek {CalendarCell <CalendarCellButton attr:data-variant="quiet" />}}</CalendarGridBody>
+//         </CalendarGrid>
+//       </div>
+//     </div>
+//     <CalendarErrorMessage />
+//   </Calendar>
+// The cell buttons are quiet buttons (`attr:data-variant="quiet"` on each, as the starter);
+// the previous/next buttons are the starter's quiet `Button`s.
+@use "utilities";
+
+@layer utilities {
+  .leptonic-Calendar .leptonic-CalendarCellButton {
+    @include utilities.button-base;
+  }
+}
+
+.leptonic-Calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: fit-content;
+  max-width: 100%;
+  color: var(--text-color);
+  font: var(--font-size) system-ui;
+
+  .months {
+    display: flex;
+    gap: var(--spacing-3);
+  }
+
+  .month {
+    width: calc(var(--spacing-9) * 7);
+    min-width: calc(var(--spacing-7) * 7);
+    container-type: inline-size;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    margin: 0 var(--spacing-1) var(--spacing-4) var(--spacing-1);
+    min-height: var(--spacing-8);
+
+    .leptonic-CalendarHeading {
+      flex: 1;
+      margin: 0;
+      text-align: center;
+      font-size: var(--font-size-lg);
+    }
+  }
+
+  .leptonic-CalendarGrid {
+    border-collapse: collapse;
+    border-spacing: 0;
+    width: 100%;
+    table-layout: fixed;
+
+    td,
+    th {
+      padding: 0;
+    }
+  }
+
+  .leptonic-CalendarErrorMessage {
+    font: var(--font-size-sm) system-ui;
+    color: var(--invalid-color);
+  }
+}
+
+.leptonic-CalendarHeaderCell {
+  font-size: var(--font-size-sm);
+}
+
+.leptonic-CalendarCellButton {
+  --gap: var(--spacing-1);
+  width: calc((100cqw / 7) - var(--gap));
+  aspect-ratio: 1;
+  margin: calc(var(--gap) / 2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size);
+  text-align: center;
+  border-radius: 9999px;
+  cursor: default;
+  forced-color-adjust: none;
+  transition: scale 200ms;
+  -webkit-tap-highlight-color: transparent;
+
+  @media (min-resolution: 200dpi) {
+    @container (width < 300px) {
+      --gap: 0px;
+    }
+  }
+
+  &[data-disabled] {
+    opacity: 0.5;
+  }
+
+  &[data-pressed] {
+    scale: 0.9;
+  }
+
+  &[data-unavailable] {
+    text-decoration: line-through;
+    color: var(--invalid-color);
+  }
+
+  &[data-invalid] {
+    --button-color: var(--invalid-color);
+  }
+}

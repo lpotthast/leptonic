@@ -4,8 +4,8 @@ use std::sync::Arc;
 use leptos::prelude::*;
 
 use super::{
-    CollectionOptions, DomLayoutDelegate, KeyboardDelegate, ListKeyboardDelegate, ListLayout,
-    ListState, UseSelectableCollectionInput, UseSelectableCollectionReturn,
+    CollectionOptions, DomLayoutDelegate, KeyboardDelegate, LayoutDelegate, ListKeyboardDelegate,
+    ListLayout, ListState, UseSelectableCollectionInput, UseSelectableCollectionReturn,
     use_selectable_collection,
 };
 use crate::utils::{
@@ -34,6 +34,9 @@ pub struct UseSelectableListInput {
     pub layout: ListLayout,
     /// Replaces the list keyboard delegate.
     pub keyboard_delegate: Option<Signal<Arc<dyn KeyboardDelegate>>>,
+    /// Where the items are, for the list keyboard delegate. Default: measured in the DOM (a
+    /// virtualizer's layout knows items that aren't rendered).
+    pub layout_delegate: Option<Arc<dyn LayoutDelegate>>,
     pub options: CollectionOptions,
 }
 
@@ -46,11 +49,15 @@ pub fn use_selectable_list(input: UseSelectableListInput) -> UseSelectableCollec
         orientation,
         layout,
         keyboard_delegate,
+        layout_delegate,
         options,
     } = input;
 
-    let delegate = keyboard_delegate
-        .unwrap_or_else(|| use_list_keyboard_delegate(state, element, orientation, layout));
+    let delegate = keyboard_delegate.unwrap_or_else(|| {
+        let layout_delegate = layout_delegate
+            .unwrap_or_else(|| Arc::new(DomLayoutDelegate::new(element, state.item_elements)));
+        use_list_keyboard_delegate_with(state, orientation, layout, layout_delegate)
+    });
 
     use_selectable_collection(UseSelectableCollectionInput {
         selection: state.selection,
@@ -69,9 +76,20 @@ pub fn use_list_keyboard_delegate(
     orientation: Orientation,
     layout: ListLayout,
 ) -> Signal<Arc<dyn KeyboardDelegate>> {
+    let layout_delegate = Arc::new(DomLayoutDelegate::new(element, state.item_elements));
+    use_list_keyboard_delegate_with(state, orientation, layout, layout_delegate)
+}
+
+/// The keyboard delegate of a list with the given [`LayoutDelegate`] (e.g. a virtualizer's
+/// layout).
+pub fn use_list_keyboard_delegate_with(
+    state: ListState,
+    orientation: Orientation,
+    layout: ListLayout,
+    layout_delegate: Arc<dyn LayoutDelegate>,
+) -> Signal<Arc<dyn KeyboardDelegate>> {
     let locale = use_locale();
     let direction = use_direction();
-    let layout_delegate = Arc::new(DomLayoutDelegate::new(element, state.item_elements));
     Signal::derive(move || {
         let collator = locale.with(|locale| Collator::new(locale, &CollatorOptions::default()));
         Arc::new(

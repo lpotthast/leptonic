@@ -43,6 +43,7 @@ pub fn use_grid_selection_checkbox(input: UseGridSelectionCheckboxInput) -> UseC
             aria_label: "Select".into(),
             ..ToggleOptions::default()
         },
-        ..UseCheckboxInput::new(state)
+        state,
+        is_indeterminate: Signal::stored(false),
     }
 }

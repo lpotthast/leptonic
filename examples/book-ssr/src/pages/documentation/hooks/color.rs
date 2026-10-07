@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -69,20 +68,34 @@ pub fn PageUseColorHooks() -> impl IntoView {
 
                         // Interactive parts edit the picker's color ...
                         let area_state = use_color_area_state(UseColorAreaStateInput {
+                            default_value: HSV::new(),
                             value: Some(hsv),
                             x_channel: Some(HsvChannel::Saturation),
                             y_channel: Some(HsvChannel::Brightness),
-                            ..UseColorAreaStateInput::new(HSV::new())
+                            x_channel_step: None,
+                            y_channel_step: None,
+                            on_change: None,
+                            on_change_end: None,
                         });
                         let hue_state = use_color_slider_state(UseColorSliderStateInput {
+                            default_value: HSV::new(),
                             value: Some(hsv),
-                            ..UseColorSliderStateInput::new(HSV::new(), HsvChannel::Hue)
+                            channel: HsvChannel::Hue,
+                            is_disabled: false.into(),
+                            orientation: Signal::stored(Orientation::Horizontal),
+                            on_change: None,
+                            on_change_end: None,
                         });
 
                         // ... and a display-only part reads it.
-                        let swatch = use_color_swatch(UseColorSwatchInput::new(Signal::derive(move || {
-                            picker.color.get().to::<HSV>()
-                        })));
+                        let swatch = use_color_swatch(UseColorSwatchInput {
+                            color: picker.color,
+                            color_name: MaybeProp::default(),
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            id: None,
+                        });
+
                     ")}
                 </Code>
             </Section>
@@ -155,7 +168,6 @@ pub fn PageUseColorHooks() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::ColorPicker.materialize()>"Color Picker"</Link></li>
                 <li><Link href=routes::doc::color_picker::Atom.materialize()>"Color Picker Atom"</Link></li>
-                <li><Link href=routes::doc::color_picker::Component.materialize()>"Color Picker Components"</Link></li>
                 <li><Link href=routes::doc::color_area::Hook.materialize()>"Color Area Hooks"</Link></li>
                 <li><Link href=routes::doc::color_wheel::Hook.materialize()>"Color Wheel Hooks"</Link></li>
                 <li><Link href=routes::doc::color_swatch::Hook.materialize()>"use_color_swatch"</Link></li>

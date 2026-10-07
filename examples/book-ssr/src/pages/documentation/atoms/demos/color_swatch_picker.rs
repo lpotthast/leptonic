@@ -7,10 +7,22 @@ use leptos::prelude::*;
 /// The colors to pick from. They must differ as hex codes.
 const PALETTE: [RGB8; 6] = [
     RGB8 { r: 170, g: 0, b: 0 },
-    RGB8 { r: 255, g: 136, b: 0 },
+    RGB8 {
+        r: 255,
+        g: 136,
+        b: 0,
+    },
     RGB8 { r: 0, g: 136, b: 0 },
-    RGB8 { r: 0, g: 136, b: 255 },
-    RGB8 { r: 0, g: 136, b: 136 },
+    RGB8 {
+        r: 0,
+        g: 136,
+        b: 255,
+    },
+    RGB8 {
+        r: 0,
+        g: 136,
+        b: 136,
+    },
     RGB8 { r: 0, g: 0, b: 136 },
 ];
 

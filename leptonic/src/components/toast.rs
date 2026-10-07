@@ -1,9 +1,17 @@
-use std::fmt::Debug;
+//! Styled toasts on the toast atoms: a `ToastRoot` (part of `Root`) shows the toasts pushed to the
+//! `Toasts` context.
+use std::time::Duration;
 
 use leptos::prelude::*;
-use uuid::Uuid;
 
-use crate::components::icon::Icon;
+use crate::{
+    atoms::toast::{
+        Toast as ToastAtom, ToastCloseButton, ToastContent, ToastDescription, ToastRegion,
+        ToastTitle,
+    },
+    components::icon::Icon,
+    hooks::{ToastOptions, ToastQueue},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter, Default)]
 pub enum ToastVariant {
@@ -31,35 +39,28 @@ impl std::fmt::Display for ToastVariant {
     }
 }
 
-#[derive(Clone)]
-pub struct Toast {
-    pub id: Uuid,
-    pub created_at: time::OffsetDateTime,
-    pub variant: ToastVariant,
-    pub header: ViewFn,
-    pub body: ViewFn,
-    pub timeout: ToastTimeout,
-}
-
-impl Debug for Toast {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Toast")
-            .field("id", &self.id)
-            .field("created_at", &self.created_at)
-            .field("variant", &self.variant)
-            .field("header", &"... (ViewFn)")
-            .field("body", &"... (ViewFn)")
-            .field("timeout", &self.timeout)
-            .finish()
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(unused)]
+/// When a toast closes by itself. Hovering or focusing the toasts pauses the time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ToastTimeout {
+    /// Only when closed (toasts with actions shouldn't time out).
     None,
+    /// After 5 seconds (the least react-aria recommends).
+    #[default]
     DefaultDelay,
-    CustomDelay(time::Duration),
+    CustomDelay(Duration),
+}
+
+impl ToastTimeout {
+    /// The default delay.
+    pub const DEFAULT_DELAY: Duration = Duration::from_secs(5);
+
+    pub const fn duration(self) -> Option<Duration> {
+        match self {
+            Self::None => None,
+            Self::DefaultDelay => Some(Self::DEFAULT_DELAY),
+            Self::CustomDelay(delay) => Some(delay),
+        }
+    }
 }
 
 impl std::fmt::Display for ToastTimeout {
@@ -72,137 +73,96 @@ impl std::fmt::Display for ToastTimeout {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+/// A toast: its header names it, its body describes it.
+#[derive(Clone)]
+pub struct Toast {
+    pub variant: ToastVariant,
+    pub header: ViewFn,
+    pub body: ViewFn,
+    pub timeout: ToastTimeout,
+}
+
+impl std::fmt::Debug for Toast {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Toast")
+            .field("variant", &self.variant)
+            .field("timeout", &self.timeout)
+            .finish_non_exhaustive()
+    }
+}
+
+/// The toasts shown by the `ToastRoot` around (a context: `expect_context::<Toasts>()`).
+#[derive(Clone, Copy)]
 pub struct Toasts {
-    pub toasts: ReadSignal<Vec<Toast>>,
-    set_toasts: WriteSignal<Vec<Toast>>,
+    queue: ToastQueue<Toast>,
+}
+
+impl std::fmt::Debug for Toasts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Toasts").finish_non_exhaustive()
+    }
 }
 
 impl Toasts {
-    /// Adds a toast and schedules its removal.
-    pub fn push(&self, toast: Toast) {
-        let setter = self.set_toasts;
-
-        // Prepare cleanup. We do it before adding the toast so that we can save a clone.
-        // Display durations for toasts are generally high (order of seconds), so this is not a problem.
-        if toast.timeout != ToastTimeout::None {
-            set_timeout(
-                move || {
-                    setter.update(|toasts| {
-                        if let Some(idx) = toasts.iter().position(|it| it.id == toast.id) {
-                            toasts.remove(idx);
-                        }
-                    });
-                },
-                match &toast.timeout {
-                    ToastTimeout::None => unreachable!(),
-                    ToastTimeout::DefaultDelay => std::time::Duration::from_secs(3),
-                    ToastTimeout::CustomDelay(delay) => std::time::Duration::from_nanos(
-                        delay.whole_nanoseconds().try_into().unwrap_or(u64::MAX),
-                    ),
-                },
-            );
-        }
-
-        setter.update(|toasts| toasts.push(toast));
+    /// Shows a toast (above the others); returns its key, to close it with.
+    pub fn push(&self, toast: Toast) -> String {
+        let timeout = toast.timeout.duration();
+        self.queue.add(
+            toast,
+            ToastOptions {
+                timeout,
+                on_close: None,
+            },
+        )
     }
 
-    pub fn try_remove(&self, id: Uuid) -> Option<Toast> {
-        self.set_toasts.update_ret(|toasts| {
-            toasts
-                .iter()
-                .position(|it| it.id == id)
-                .map(|idx| toasts.remove(idx))
-        })
+    /// Closes a toast.
+    pub fn close(&self, key: &str) {
+        self.queue.close(key);
     }
 
-    /// Removes all toasts. Does not interfere with scheduled removals of pushed toasts.
+    /// Closes all toasts.
     pub fn clear(&self) {
-        self.set_toasts.update(Vec::clear);
+        self.queue.clear();
+    }
+
+    /// The queue (e.g. for `on_close` callbacks: `queue().add(..)`).
+    pub const fn queue(&self) -> ToastQueue<Toast> {
+        self.queue
     }
 }
 
-pub trait SignalUpdateExt<T> {
-    fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O>;
-}
-
-impl<T: Send + Sync + 'static> SignalUpdateExt<T> for WriteSignal<T> {
-    fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O> {
-        self.try_update(f).unwrap_or_else(|| {
-            tracing::warn!("Attempted to update a signal after it was disposed.");
-            None
-        })
-    }
-}
-
+/// Provides `Toasts` and shows them: a region at the bottom of the page (a landmark F6 reaches),
+/// each toast an alert dialog with a close button. Part of `Root`.
 #[component]
-pub fn ToastRoot(children: Children) -> impl IntoView {
-    let (toasts, set_toasts) = signal(Vec::new());
-
-    provide_context::<Toasts>(Toasts { toasts, set_toasts });
+pub fn ToastRoot(
+    /// How many toasts show at once (default: all).
+    #[prop(optional)]
+    max_visible_toasts: Option<usize>,
+    children: Children,
+) -> impl IntoView {
+    let queue = ToastQueue::<Toast>::new(max_visible_toasts);
+    provide_context(Toasts { queue });
 
     view! {
         {children()}
-
-        <div class="leptonic-toasts">
-            <For
-                each=move || toasts.get()
-                key=|toast| toast.id
-                children=move |toast| {
-                    view! { <Toast toast /> }
+        <ToastRegion queue=queue classes="leptonic-toasts" let:toast>
+            {
+                let Toast { variant, header, body, .. } = toast.content.clone();
+                view! {
+                    <ToastAtom toast=toast classes="leptonic-toast" attr:data-variant=variant.as_str()>
+                        <ToastContent classes="leptonic-toast-content">
+                            <ToastTitle classes="leptonic-toast-header">{header.run()}</ToastTitle>
+                            <ToastDescription classes="leptonic-toast-message">
+                                {body.run()}
+                            </ToastDescription>
+                        </ToastContent>
+                        <ToastCloseButton classes="leptonic-toast-close">
+                            <Icon icon=icondata::BsXCircleFill />
+                        </ToastCloseButton>
+                    </ToastAtom>
                 }
-            />
-        </div>
-    }
-}
-
-// TODO: Incorporate
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ToastHorizontalPosition {
-    Left,
-    Right,
-}
-
-// TODO: Incorporate
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum ToastVerticalPosition {
-    Top,
-    Bottom,
-}
-
-#[component]
-#[allow(clippy::needless_pass_by_value)]
-pub fn Toast(toast: Toast) -> impl IntoView {
-    let manually_closable = match toast.timeout {
-        ToastTimeout::None => true,
-        ToastTimeout::DefaultDelay => false,
-        ToastTimeout::CustomDelay(duration) => duration.whole_seconds() > 10,
-    };
-
-    view! {
-        <div class="leptonic-toast" id=toast.id.to_string() data-variant=toast.variant.as_str()>
-            <div class="leptonic-toast-header">
-                {toast.header.run()}
-                {if manually_closable {
-                    view! {
-                        <div>
-                            <Icon
-                                attr:class="dismiss"
-                                icon=icondata::BsXCircleFill
-                                on:click=move |_e| {
-                                    expect_context::<Toasts>().try_remove(toast.id);
-                                }
-                            />
-                        </div>
-                    }
-                        .into_any()
-                } else {
-                    ().into_any()
-                }}
-            </div>
-            <div class="leptonic-toast-message">{toast.body.run()}</div>
-        </div>
+            }
+        </ToastRegion>
     }
 }

@@ -48,18 +48,6 @@ pub struct UseTreeStateInput {
     pub on_expanded_change: Option<Callback<HashSet<Key>>>,
 }
 
-impl UseTreeStateInput {
-    /// A tree without selection, all items collapsed.
-    pub fn new(collection: CollectionMemo) -> Self {
-        Self {
-            collection,
-            selection: SelectionOptions::default(),
-            default_expanded_keys: HashSet::new(),
-            on_expanded_change: None,
-        }
-    }
-}
-
 /// The state of a tree: its visible items (with selection and focus) and which items are
 /// expanded.
 #[derive(Debug, Clone, Copy)]

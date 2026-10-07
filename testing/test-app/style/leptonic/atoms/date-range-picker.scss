@@ -1,0 +1,97 @@
+// Upstream: ../starters/docs/src/DateRangePicker.css @ 99e610236
+// Upstream: ../starters/docs/src/DateRangePicker.tsx @ 99e610236
+//
+// `DateRangePicker`, its `DatePickerGroup` (an inset field holding both inputs) and
+// `DatePickerButton`. The `DateSegment`s are styled by `date-field.scss`, the button's look by
+// the field button rule of `form.scss`, the range calendar by `range-calendar.scss`.
+//
+// Markup (as the starter):
+//   <DateRangePicker>
+//     <Label />
+//     <DatePickerGroup>
+//       <div class="date-fields">
+//         <DateInput part=RangePart::Start>{|segment| <DateSegment segment /> }</DateInput>
+//         <span aria-hidden="true">"–"</span>
+//         <DateInput part=RangePart::End>{|segment| <DateSegment segment /> }</DateInput>
+//       </div>
+//       <DatePickerButton>(chevron-down svg)</DatePickerButton>
+//     </DatePickerGroup>
+//     <Description /> <FieldError />
+//     <Popover>(no arrow) <Dialog><RangeCalendar /></Dialog></Popover>
+//   </DateRangePicker>
+@use "utilities";
+
+@layer utilities {
+  .leptonic-DateRangePicker .leptonic-DatePickerGroup {
+    @include utilities.inset;
+  }
+}
+
+.leptonic-DateRangePicker {
+  color: var(--text-color);
+  max-width: 100%;
+
+  .leptonic-DatePickerGroup {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    min-width: 220px;
+    max-width: 100%;
+    height: var(--spacing-8);
+    box-sizing: border-box;
+    overflow: clip;
+    position: relative;
+    padding: 0 var(--spacing-1) 0 var(--spacing-3);
+    border-radius: var(--radius);
+    font-size: var(--font-size);
+    color: var(--field-text-color);
+    white-space: nowrap;
+    cursor: text;
+
+    &[data-focus-within] {
+      outline: 2px solid var(--focus-ring-color);
+      outline-offset: -1px;
+    }
+
+    &[data-disabled] {
+      color: var(--text-color-disabled);
+    }
+  }
+
+  .date-fields {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    overflow-x: auto;
+    overflow-y: clip;
+    scrollbar-width: none;
+  }
+
+  .leptonic-DatePickerButton {
+    margin-left: auto;
+  }
+
+  [slot='start'] ~ span {
+    padding: 0 4px;
+  }
+
+  [slot='end'] {
+    margin-right: 1.75rem;
+    flex: 1;
+  }
+
+  .leptonic-DateInput {
+    width: unset;
+    min-width: unset;
+    padding: unset;
+    border: unset;
+    box-shadow: none;
+    background: none;
+    height: auto;
+    line-height: normal;
+    &[data-focus-within] {
+      outline: unset;
+    }
+  }
+}

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use leptonic::hooks::collections::CollectionOptions;
 use leptonic::{
     hooks::{
         GridListData, IntoAttrs, SelectionMode, UseTreeInput, UseTreeItemInput, UseTreeItemReturn,
@@ -45,11 +46,17 @@ pub fn TreeDemo() -> impl IntoView {
             ..SelectionOptions::default()
         },
         default_expanded_keys: HashSet::from([Key::from("documents")]),
-        ..UseTreeStateInput::new(collection)
+        collection,
+        on_expanded_change: None,
     });
     let tree = use_tree(UseTreeInput {
         aria_label: "Files".into(),
-        ..UseTreeInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: None,
+        options: CollectionOptions::default(),
+        on_action: None,
     });
     let data = tree.data;
     // The visible items, in order: children of collapsed items are left out.

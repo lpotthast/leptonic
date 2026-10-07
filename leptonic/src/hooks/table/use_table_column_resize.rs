@@ -35,6 +35,7 @@ use crate::{
         pointer_type::PointerType,
         shadow_dom::get_active_element,
         style::TouchActionProperty,
+        styles::Styles,
         use_description::use_description,
         visually_hidden::visually_hidden_styles,
     },
@@ -72,28 +73,6 @@ pub struct UseTableColumnResizeInput {
     pub on_resize: Option<Callback<HashMap<Key, ColumnSize>>>,
     /// Called with the column sizes when resizing ends.
     pub on_resize_end: Option<Callback<HashMap<Key, ColumnSize>>>,
-}
-
-impl UseTableColumnResizeInput {
-    pub fn new(
-        state: TableColumnResizeState,
-        table: TableData,
-        column: Key,
-        element: CapturedElement,
-    ) -> Self {
-        Self {
-            state,
-            table,
-            column,
-            aria_label: messages::RESIZER.to_owned(),
-            element,
-            trigger: None,
-            is_disabled: Signal::stored(false),
-            on_resize_start: None,
-            on_resize: None,
-            on_resize_end: None,
-        }
-    }
 }
 
 /// Output of [`use_table_column_resize`].
@@ -572,7 +551,10 @@ pub fn use_table_column_resize(input: UseTableColumnResizeInput) -> UseTableColu
                 on_dblclick: press_props.on_dblclick,
                 element_capture: move_props.element_capture,
             },
-            press_styles.add(TouchActionProperty.declare(TouchAction::None)),
+            // Over the press styles' `touch-action` (`merge` keeps the first, `add` would duplicate).
+            Styles::new()
+                .add(TouchActionProperty.declare(TouchAction::None))
+                .merge(press_styles),
         ),
         input_props: PropsWithStyles::new(
             UseTableColumnResizeInputProps {

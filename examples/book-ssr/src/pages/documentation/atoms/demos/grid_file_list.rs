@@ -3,10 +3,7 @@ use std::collections::HashSet;
 use leptonic::{
     atoms::grid_list::{GridList, GridListItem},
     components::prelude::{Button, ButtonVariant, Icon},
-    hooks::{
-        Key, SelectionBehavior, SelectionMode, use_list_collection,
-        collections::Selection,
-    },
+    hooks::{Key, SelectionBehavior, SelectionMode, collections::Selection, use_list_collection},
     prelude::icondata,
 };
 use leptos::prelude::*;
@@ -17,7 +14,11 @@ type File = (&'static str, &'static str, icondata::Icon);
 const FILES: [File; 5] = [
     ("doc", "Document.pdf", icondata::BsFileEarmarkPdf),
     ("photo", "Photo.jpg", icondata::BsFileEarmarkImage),
-    ("sheet", "Spreadsheet.xlsx", icondata::BsFileEarmarkSpreadsheet),
+    (
+        "sheet",
+        "Spreadsheet.xlsx",
+        icondata::BsFileEarmarkSpreadsheet,
+    ),
     ("slides", "Presentation.pptx", icondata::BsFileEarmarkSlides),
     ("archive", "Archive.zip", icondata::BsFileEarmarkZip),
 ];

@@ -19,7 +19,7 @@ pub fn CheckboxBasicDemo() -> impl IntoView {
             value: Some("accepted".to_owned()),
             ..ToggleOptions::default()
         },
-        ..UseCheckboxInput::new(state)
+        state,
     });
     let (label_attrs, label_styles) = checkbox.label_props.into_parts();
     let (input_attrs, input_styles) = checkbox.input_props.into_parts();

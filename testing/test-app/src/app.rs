@@ -1,4 +1,4 @@
-use leptonic::components::{root::Root, theme::LeptonicTheme};
+use leptonic::atoms::theme::{LeptonicTheme, ThemeProvider};
 use leptos::prelude::*;
 use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{components::*, hooks::use_params_map, path};
@@ -46,7 +46,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css") />
         <Title text="Leptonic Test App" />
 
-        <Root default_theme=LeptonicTheme::default()>
+        <ThemeProvider default_theme=LeptonicTheme::default()>
             <Router>
                 <Routes fallback=|| view! { <p>"Not Found"</p> }>
                     <Route path=path!("/") view=PageIndex />
@@ -54,13 +54,9 @@ pub fn App() -> impl IntoView {
                     // static assets under `/pkg/...` and serve HTML in their place.
                     <Route path=path!("/atoms/:name") view=|| view! { <PageFixture group="atoms" /> } />
                     <Route path=path!("/hooks/:name") view=|| view! { <PageFixture group="hooks" /> } />
-                    <Route
-                        path=path!("/components/:name")
-                        view=|| view! { <PageFixture group="components" /> }
-                    />
                 </Routes>
             </Router>
-        </Root>
+        </ThemeProvider>
     }
 }
 

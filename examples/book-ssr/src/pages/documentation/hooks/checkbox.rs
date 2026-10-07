@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{checkbox_basic::CheckboxBasicDemo, checkbox_group::CheckboxGroupDemo};
@@ -99,8 +98,8 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
                 <Section title="Input" id="use-checkbox-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseCheckboxInput::new(state)"</Code>" and set further fields "
-                        "with struct update syntax."
+                        "Pass a "<Code inline=true>"UseCheckboxInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need."
                     </p>
                     <ApiTable kind=ApiKind::Input of="UseCheckboxInput">
                         <ApiRow name="state" ty="ToggleState">"The checkbox\u{2019}s state, from "<Code inline=true>"use_toggle_state"</Code>". Required."</ApiRow>
@@ -317,7 +316,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-checkbox-group-item-input">
-                    <p>"Create it with "<Code inline=true>"UseCheckboxGroupItemInput::new(group.data, key)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseCheckboxGroupItemInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseCheckboxGroupItemInput">
                         <ApiRow name="group" ty="CheckboxGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_checkbox_group"</Code>". Required."</ApiRow>
                         <ApiRow name="value" ty="Key">"The checkbox\u{2019}s value in the group, also its form value. Required."</ApiRow>
@@ -380,8 +379,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                                 })),
                                 ..ToggleOptions::default()
                             },
-                            ..UseCheckboxInput::new(state)
+                            state,
+                            is_indeterminate: false.into(),
                         });
+
                     "#)}
                 </Code>
             </Section>
@@ -389,7 +390,6 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Checkbox.materialize()>"Checkbox overview"</Link></li>
                 <li><Link href=routes::doc::checkbox::Atom.materialize()>"Checkbox Atoms"</Link></li>
-                <li><Link href=routes::doc::checkbox::Component.materialize()>"Checkbox Components"</Link></li>
                 <li><Link href=routes::doc::switch::Hook.materialize()>"Switch Hooks"</Link></li>
                 <li><Link href=routes::doc::toggle_button::Hook.materialize()>"Toggle Button Hooks"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>

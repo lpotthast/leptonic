@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
+use leptonic::hooks::PopoverModality;
 use leptonic::{
     atoms::focus_scope::FocusScope,
     components::prelude::Checkbox,
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode, UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn,
-        UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerStateInput,
-        UsePopoverInput, UsePopoverReturn,
+        IntoAttrs, MenuData, MenuTriggerType, OverlayTriggerType, Placement, SelectionMode,
+        UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
+        UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerStateInput, UsePopoverInput,
+        UsePopoverReturn,
         collections::{
             AutoFocus, CollectionBuilder, CollectionOptions, Key, NodeKind, Selection,
             SelectionOptions, UseListStateInput, use_collection, use_list_state,
@@ -30,7 +32,9 @@ pub fn MenuDemo() -> impl IntoView {
     let disabled = RwSignal::new(false);
 
     let status = move || {
-        let action = last_action.get().map_or_else(|| "none".to_owned(), |key| key.to_string());
+        let action = last_action
+            .get()
+            .map_or_else(|| "none".to_owned(), |key| key.to_string());
         let view = view_selection.with(|selection| match selection {
             Selection::All => "all".to_owned(),
             Selection::Keys(keys) if keys.is_empty() => "none".to_owned(),
@@ -111,7 +115,21 @@ fn MenuButton(
     } = use_popover(UsePopoverInput {
         placement: Signal::stored(Placement::BottomStart),
         offset: Signal::stored(4.0),
-        ..UsePopoverInput::new(state.overlay)
+        state: state.overlay,
+        trigger: CapturedElement::new(),
+        cross_offset: Signal::stored(0.0),
+        container_padding: Signal::stored(12.0),
+        should_flip: Signal::stored(true),
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        boundary: None,
+        target_rect: Signal::stored(None),
+        modality: PopoverModality::Modal,
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        group: None,
+        is_submenu: false,
     });
     let (popover_attrs, popover_styles) = popover_props.into_parts();
     let contents = StoredValue::new(contents);
@@ -165,7 +183,11 @@ fn Menu(
     let state = use_list_state(UseListStateInput {
         collection,
         selection: SelectionOptions {
-            selection_mode: Signal::stored(if selection.is_some() { SelectionMode::Multiple } else { SelectionMode::None }),
+            selection_mode: Signal::stored(if selection.is_some() {
+                SelectionMode::Multiple
+            } else {
+                SelectionMode::None
+            }),
             selection: selection.map(Into::into),
             ..SelectionOptions::default()
         },
@@ -180,7 +202,11 @@ fn Menu(
         },
         on_action,
         on_close: Some(on_close),
-        ..UseMenuInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        aria_label: MaybeProp::default(),
+        keyboard_delegate: None,
+        submenu: None,
     });
 
     // Top-level nodes are items or sections; a section lists the keys of its items.
@@ -252,7 +278,7 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
     } = use_menu_item(UseMenuItemInput {
         menu,
         key,
-        should_close_on_select: None,
+        should_close_on_select: leptonic::hooks::collections::CloseOnSelect::Auto,
         submenu_trigger: None,
     });
     let (attrs, styles) = props.into_parts();

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{table::TableAtomDemo, table_resizing::TableResizingAtomDemo};
@@ -423,7 +422,6 @@ pub fn PageAtomTable() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Table.materialize()>"Table overview"</Link></li>
                 <li><Link href=routes::doc::table::Hook.materialize()>"Table Hooks"</Link></li>
-                <li><Link href=routes::doc::table::Component.materialize()>"Table Components"</Link></li>
                 <li><Link href=routes::doc::grid::Atom.materialize()>"Grid Atoms"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>

@@ -19,6 +19,140 @@ pub struct Size {
     pub height: f64,
 }
 
+/// A corner of a [`Rect`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RectCorner {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+// Upstream: react-stately/src/virtualizer/Rect.ts @ 99e6102368
+impl Rect {
+    pub const fn new(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    /// The maximum x-coordinate in the rectangle.
+    pub fn max_x(&self) -> f64 {
+        self.x + self.width
+    }
+
+    /// The maximum y-coordinate in the rectangle.
+    pub fn max_y(&self) -> f64 {
+        self.y + self.height
+    }
+
+    pub fn area(&self) -> f64 {
+        self.width * self.height
+    }
+
+    /// The position of `corner`.
+    pub fn corner(&self, corner: RectCorner) -> crate::utils::point::Point {
+        use crate::utils::point::Point;
+        match corner {
+            RectCorner::TopLeft => Point::new(self.x, self.y),
+            RectCorner::TopRight => Point::new(self.max_x(), self.y),
+            RectCorner::BottomLeft => Point::new(self.x, self.max_y()),
+            RectCorner::BottomRight => Point::new(self.max_x(), self.max_y()),
+        }
+    }
+
+    /// Whether this rectangle and `rect` overlap (rectangles without area never do).
+    pub fn intersects(&self, rect: &Rect) -> bool {
+        self.area() > 0.0
+            && rect.area() > 0.0
+            && self.x <= rect.x + rect.width
+            && rect.x <= self.x + self.width
+            && self.y <= rect.y + rect.height
+            && rect.y <= self.y + self.height
+    }
+
+    /// Whether this rectangle fully contains `rect`.
+    pub fn contains_rect(&self, rect: &Rect) -> bool {
+        self.x <= rect.x
+            && self.y <= rect.y
+            && self.max_x() >= rect.max_x()
+            && self.max_y() >= rect.max_y()
+    }
+
+    pub fn contains_point(&self, point: crate::utils::point::Point) -> bool {
+        self.x <= point.x && self.y <= point.y && self.max_x() >= point.x && self.max_y() >= point.y
+    }
+
+    /// The first corner of this rectangle (top to bottom, left to right) inside `rect`.
+    pub fn corner_in_rect(&self, rect: &Rect) -> Option<RectCorner> {
+        [
+            RectCorner::TopLeft,
+            RectCorner::TopRight,
+            RectCorner::BottomLeft,
+            RectCorner::BottomRight,
+        ]
+        .into_iter()
+        .find(|corner| rect.contains_point(self.corner(*corner)))
+    }
+
+    /// Whether the positions are equal.
+    pub fn point_equals(&self, other: &Rect) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+
+    /// Whether the sizes are equal.
+    pub fn size_equals(&self, size: Size) -> bool {
+        self.width == size.width && self.height == size.height
+    }
+
+    /// The smallest rectangle containing both.
+    #[must_use]
+    pub fn union(&self, other: &Rect) -> Rect {
+        let x = self.x.min(other.x);
+        let y = self.y.min(other.y);
+        Rect::new(
+            x,
+            y,
+            self.max_x().max(other.max_x()) - x,
+            self.max_y().max(other.max_y()) - y,
+        )
+    }
+
+    /// The overlap of both; all zero if they don't intersect.
+    #[must_use]
+    pub fn intersection(&self, other: &Rect) -> Rect {
+        if !self.intersects(other) {
+            return Rect::default();
+        }
+        let x = self.x.max(other.x);
+        let y = self.y.max(other.y);
+        Rect::new(
+            x,
+            y,
+            self.max_x().min(other.max_x()) - x,
+            self.max_y().min(other.max_y()) - y,
+        )
+    }
+}
+
+// Upstream: react-stately/src/virtualizer/Size.ts @ 99e6102368
+impl Size {
+    /// A size, negative values clamped to 0.
+    pub fn new(width: f64, height: f64) -> Self {
+        Self {
+            width: width.max(0.0),
+            height: height.max(0.0),
+        }
+    }
+
+    pub fn area(&self) -> f64 {
+        self.width * self.height
+    }
+}
+
 /// Where items are and what is visible: the geometry keyboard navigation needs for grid layouts
 /// and page up/down.
 pub trait LayoutDelegate: Send + Sync {

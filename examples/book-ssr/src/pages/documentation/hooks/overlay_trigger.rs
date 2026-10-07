@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -46,8 +45,16 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
                         use leptonic::hooks::*;
 
                         let (is_open, set_is_open) = signal(false);
-                        let UseOverlayReturn { props: overlay_props, id, .. } =
-                            use_overlay(UseOverlayInput::new(is_open.into(), Callback::new(move |()| set_is_open.set(false))));
+                        let UseOverlayReturn { props: overlay_props, id, .. } = use_overlay(UseOverlayInput {
+                            is_open: is_open.into(),
+                            on_close: Callback::new(move |()| set_is_open.set(false)),
+                            is_dismissable: Signal::stored(false),
+                            should_close_on_blur: Signal::stored(false),
+                            is_keyboard_dismiss_disabled: Signal::stored(false),
+                            should_close_on_interact_outside: None,
+                            group: None,
+                        });
+
 
                         let UseOverlayTriggerReturn { props: trigger_props } = use_overlay_trigger(UseOverlayTriggerInput {
                             show: is_open.into(),

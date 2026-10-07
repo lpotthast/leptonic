@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::text_field::TextFieldConceptDemo;
@@ -75,10 +74,6 @@ pub fn PageTextFieldOverview() -> impl IntoView {
                             <Link href=routes::doc::Form.materialize()>"Form"</Link>" to validate on submission."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><Link href=routes::doc::text_field::Component.materialize()>"Text Field Component"</Link></TableCell>
-                        <TableCell>"A themed text field taking its label, description and validation as props."</TableCell>
-                    </TableRow>
                 </DocTable>
             </Section>
 
@@ -112,7 +107,6 @@ pub fn PageTextFieldOverview() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
                 <li><Link href=routes::doc::text_field::Atom.materialize()>"Text Field Atoms"</Link></li>
-                <li><Link href=routes::doc::text_field::Component.materialize()>"Text Field Component"</Link></li>
                 <li><Link href=routes::doc::SearchField.materialize()>"Search Field"</Link></li>
                 <li><Link href=routes::doc::NumberField.materialize()>"Number Field"</Link></li>
                 <li><Link href=routes::doc::Field.materialize()>"Field"</Link></li>

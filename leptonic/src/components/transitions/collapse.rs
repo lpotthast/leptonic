@@ -1,60 +1,42 @@
-use leptos::{html::Div, prelude::*};
+use leptos::prelude::*;
 
-use crate::utils::{
-    classes::Classes,
-    css::{CssDimension, Size, computed_size, px},
-    style::{HeightProperty, MinHeightProperty, MinWidthProperty, WidthProperty},
-    styles::Styles,
-};
+use super::transition;
+use crate::utils::{classes::Classes, styles::Styles};
 
+/// The direction a [`Collapse`] collapses in.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum CollapseAxis {
+    /// Its width.
     X,
+    /// Its height.
     #[default]
     Y,
 }
 
+/// Expands its children to their full height (or width) and collapses them to nothing. Follows
+/// changes of their size while shown.
 #[component]
 pub fn Collapse(
-    #[prop(into)] show: Signal<bool>,
+    /// Whether the children are shown: a value or any signal.
+    #[prop(into)]
+    is_shown: Signal<bool>,
     #[prop(optional)] axis: CollapseAxis,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let content: NodeRef<Div> = NodeRef::new();
-
-    let axis_dimension = Signal::derive(move || {
-        let show = show.get();
-        let el_axis_dimension = content.get().map_or(0, |el| match axis {
-            CollapseAxis::X => el.scroll_width(),
-            CollapseAxis::Y => el.scroll_height(),
-        });
-        px(f64::from(if show { el_axis_dimension } else { 0 }))
+    let classes = classes.add(match axis {
+        CollapseAxis::X => "leptonic-collapse-x",
+        CollapseAxis::Y => "leptonic-collapse-y",
     });
-
-    let zero: Size = computed_size(CssDimension::Zero);
-    let styles = match axis {
-        CollapseAxis::X => styles
-            .add(MinWidthProperty.declare(zero))
-            .add_reactive(move || WidthProperty.declare(computed_size(axis_dimension.get()))),
-        CollapseAxis::Y => styles
-            .add(MinHeightProperty.declare(zero))
-            .add_reactive(move || HeightProperty.declare(computed_size(axis_dimension.get()))),
-    };
-    let classes = classes.add("leptonic-collapse").add(match axis {
-        CollapseAxis::X => "width",
-        CollapseAxis::Y => "height",
-    });
-
-    view! {
-        <div
-            class=classes
-            style=styles
-        >
-            <div class="content" class:show=move || show.get() node_ref=content>
-                {children()}
-            </div>
-        </div>
-    }
+    // The grid track animates between nothing and the content's size; the content clips.
+    transition(
+        "leptonic-collapse",
+        is_shown,
+        classes,
+        styles,
+        Box::new(move || {
+            view! { <div class="leptonic-collapse-content">{children()}</div> }.into_any()
+        }),
+    )
 }

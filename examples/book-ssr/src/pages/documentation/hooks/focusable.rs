@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::focusable::FocusableDemo;
@@ -74,6 +73,7 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{components::prelude::Button, hooks::*};
+                        use leptos::{logging::log, prelude::*};
 
                         // A scrollable region has to be focusable, so keyboard users can scroll it.
                         let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {

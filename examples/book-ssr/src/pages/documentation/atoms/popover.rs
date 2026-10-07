@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{popover::PopoverDemo, popover_animated::PopoverAnimatedDemo};
@@ -339,18 +338,12 @@ pub fn PageAtomPopover() -> impl IntoView {
                         " atoms render their listbox in popovers of their own ("<Code inline=true>"SelectPopover"</Code>", "
                         <Code inline=true>"ComboBoxPopover"</Code>") that share the popover\u{2019}s rendering and data attributes."
                     </li>
-                    <li>
-                        "The themed "<Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link>
-                        " is a "<Code inline=true>"DialogTrigger"</Code>", a non-modal "<Code inline=true>"Popover"</Code>
-                        " and a "<Code inline=true>"Dialog"</Code>"."
-                    </li>
                 </ul>
             </Section>
 
             <SeeAlso>
                 <li><Link href=routes::doc::Popover.materialize()>"Popover overview"</Link></li>
                 <li><Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link></li>
-                <li><Link href=routes::doc::popover::Component.materialize()>"Popover Component"</Link></li>
                 <li><Link href=routes::doc::dialog::Atom.materialize()>"Dialog Atoms"</Link></li>
                 <li><Link href=routes::doc::tooltip::Atom.materialize()>"Tooltip Atoms"</Link></li>
                 <li><Link href=routes::doc::overlay_behavior::DismissButton.materialize()>"DismissButton"</Link></li>

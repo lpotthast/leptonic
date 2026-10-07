@@ -82,29 +82,6 @@ pub struct UseSelectInput {
     pub validation_behavior: ValidationBehavior,
 }
 
-impl UseSelectInput {
-    /// An enabled select for `state`, with all other settings at their defaults.
-    pub fn new(state: SelectState) -> Self {
-        Self {
-            state,
-            id: None,
-            is_disabled: Signal::stored(false),
-            is_required: false,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            keyboard_delegate: None,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-            name: None,
-            form: None,
-            validation_behavior: ValidationBehavior::default(),
-        }
-    }
-}
-
 /// Return value of [`use_select`].
 pub struct UseSelectReturn {
     pub label_props: UseSelectLabelProps,
@@ -390,7 +367,17 @@ pub fn use_select(input: UseSelectInput) -> UseSelectReturn {
         should_select_on_press_up: true,
         should_focus_on_hover: true,
         on_blur: Some(listbox_on_blur),
-        ..UseListBoxInput::new(state.list, listbox_element)
+        state: state.list,
+        element: listbox_element,
+        aria_label: MaybeProp::default(),
+        orientation: Orientation::Vertical,
+        layout: ListLayout::Stack,
+        layout_delegate: None,
+        is_virtualized: false,
+        keyboard_delegate: None,
+        on_action: None,
+        on_focus: None,
+        on_focus_change: None,
     };
 
     UseSelectReturn {

@@ -3,7 +3,7 @@
 use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
-use super::use_text_field::{InputType, UseTextFieldInput, UseTextFieldReturn, use_text_field};
+use super::use_text_field::{UseTextFieldInput, UseTextFieldReturn, use_text_field};
 use crate::{
     hooks::button::use_button::UseButtonInput,
     utils::{
@@ -36,27 +36,13 @@ use crate::{
 /// Input of [`use_search_field`].
 #[derive(Clone)]
 pub struct UseSearchFieldInput {
-    /// The text field (value state, labelling, validation, ...). [`UseSearchFieldInput::new`] sets
-    /// its `input_type` to `Search`.
+    /// The text field (value state, labelling, validation, ...), its `input_type`
+    /// `InputType::Search`.
     pub text_field: UseTextFieldInput,
     /// Called with the value when Enter is pressed. Without it, Enter submits the form.
     pub on_submit: Option<Callback<String>>,
     /// Called when Escape or the clear button empties the field.
     pub on_clear: Option<Callback<()>>,
-}
-
-impl UseSearchFieldInput {
-    /// A search field (`type="search"`) for the text field `text_field`.
-    pub fn new(text_field: UseTextFieldInput) -> Self {
-        Self {
-            text_field: UseTextFieldInput {
-                input_type: Signal::stored(InputType::Search),
-                ..text_field
-            },
-            on_submit: None,
-            on_clear: None,
-        }
-    }
 }
 
 /// Return value of [`use_search_field`].
@@ -73,12 +59,11 @@ pub struct UseSearchFieldReturn {
 ///
 /// ```ignore
 /// let state = use_text_field_state(UseTextFieldStateInput::default());
+/// // `text_field`: a `UseTextFieldInput` of `state` (every field named), `input_type` `Search`.
 /// let search = use_search_field(UseSearchFieldInput {
+///     text_field,
 ///     on_submit: Some(Callback::new(|query: String| run(query))),
-///     ..UseSearchFieldInput::new(UseTextFieldInput {
-///         aria_label: "Search".into(),
-///         ..UseTextFieldInput::new(state)
-///     })
+///     on_clear: None,
 /// });
 /// let clear = use_button(search.clear_button);
 /// view! {

@@ -19,6 +19,8 @@ use crate::utils::CapturedElement;
 pub struct ItemElements {
     /// Every registration gets an id, so an item only removes its own registration.
     elements: StoredValue<(u64, HashMap<Key, (u64, CapturedElement)>)>,
+    /// Notified when an item registers or unregisters (see [`ItemElements::get_tracked`]).
+    changed: Trigger,
 }
 
 impl Default for ItemElements {
@@ -31,6 +33,7 @@ impl ItemElements {
     pub fn new() -> Self {
         Self {
             elements: StoredValue::new((0, HashMap::new())),
+            changed: Trigger::new(),
         }
     }
 
@@ -38,6 +41,7 @@ impl ItemElements {
     /// item) is cleaned up.
     pub fn register(&self, key: Key, element: CapturedElement) {
         let elements = self.elements;
+        let changed = self.changed;
         let (id, previous) = elements
             .try_update_value(|(next_id, map)| {
                 let id = *next_id;
@@ -82,7 +86,19 @@ impl ItemElements {
                     map.remove(&key);
                 }
             });
+            // (A no-op once the collection is disposed.)
+            changed.notify();
         });
+        self.changed.notify();
+    }
+
+    /// The element of `key`, tracking whether it is rendered: a reactive context runs again when
+    /// the item renders (e.g. an item a virtualizer renders once it is focused).
+    pub fn get_tracked(&self, key: &Key) -> Option<SendWrapper<web_sys::Element>> {
+        self.changed.track();
+        self.elements
+            .with_value(|(_, map)| map.get(key).map(|(_, element)| *element))
+            .and_then(|element| element.get())
     }
 
     /// The element of `key`, if it is rendered.

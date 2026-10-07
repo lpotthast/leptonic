@@ -3,8 +3,8 @@
 
 use leptos::{context::Provider, prelude::*};
 
-use super::color_picker::ColorPickerContext;
 use super::{
+    color_picker::ColorPickerContext,
     color_thumb::{ColorThumbContext, SliderThumbParts, ThumbParts},
     field::{LabelContext, LabelPresence},
 };
@@ -20,6 +20,7 @@ use crate::{
         classes::Classes,
         color::{ColorChannel, ColorValue},
         data_attributes::flag,
+        default_class::with_default_class,
         orientation::Orientation,
         styles::Styles,
     },
@@ -61,6 +62,8 @@ struct ColorSliderContext {
 /// ```
 ///
 /// Data attributes: `data-orientation`, `data-disabled`.
+///
+/// Default class: `leptonic-ColorSlider`.
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
@@ -99,6 +102,7 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSlider", classes);
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
     let (binding, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let binding = binding.or_else(ColorPickerContext::binding::<Ch::Color>);
@@ -108,7 +112,8 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
         orientation,
         on_change,
         on_change_end,
-        ..UseColorSliderStateInput::new(default_value.unwrap_or_default(), channel)
+        default_value: default_value.unwrap_or_default(),
+        channel,
     });
     let UseColorSliderReturn {
         slider,
@@ -121,7 +126,8 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
         aria_labelledby,
         name,
         form,
-        ..UseColorSliderInput::new(state)
+        state,
+        aria_describedby: None,
     });
 
     let label = LabelContext::span(UseLabelProps {
@@ -177,12 +183,15 @@ pub fn ColorSlider<Ch: ColorChannel<Color: Default>>(
 /// # Panics
 ///
 /// Outside a [`ColorSlider`], or as its second track.
+///
+/// Default class: `leptonic-ColorSliderTrack`.
 #[component]
 pub fn ColorSliderTrack(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSliderTrack", classes);
     let ColorSliderContext {
         orientation,
         is_disabled,
@@ -219,11 +228,14 @@ pub fn ColorSliderTrack(
 /// # Panics
 ///
 /// Outside a [`ColorSlider`], or as its second output.
+///
+/// Default class: `leptonic-ColorSliderOutput`.
 #[component]
 pub fn ColorSliderOutput(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorSliderOutput", classes);
     let ColorSliderContext {
         orientation,
         is_disabled,

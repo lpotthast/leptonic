@@ -104,7 +104,15 @@ fn MenuButton(
         modality: PopoverModality::Modal,
         is_keyboard_dismiss_disabled: false.into(),
         should_close_on_interact_outside: None,
-        ..UsePopoverInput::new(state.overlay)
+        state: state.overlay,
+        trigger: CapturedElement::new(),
+        max_height: Signal::stored(None),
+        arrow_size: Signal::stored(None),
+        arrow_boundary_offset: Signal::stored(0.0),
+        boundary: None,
+        target_rect: Signal::stored(None),
+        group: None,
+        is_submenu: false,
     });
     let (popover_attrs, popover_styles) = popover_props.into_parts();
     let contents = StoredValue::new(contents);
@@ -170,7 +178,11 @@ fn Menu(
         },
         on_action: Some(on_action),
         on_close: Some(on_close),
-        ..UseMenuInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        aria_label: MaybeProp::default(),
+        keyboard_delegate: None,
+        submenu: None,
     });
 
     // Render the collection: items, and sections with their items.
@@ -235,7 +247,7 @@ fn MenuItem(menu: MenuData, key: Key) -> impl IntoView {
     } = use_menu_item(UseMenuItemInput {
         menu,
         key,
-        should_close_on_select: None,
+        should_close_on_select: leptonic::hooks::collections::CloseOnSelect::Auto,
         submenu_trigger: None,
     });
     let (attrs, styles) = props.into_parts();

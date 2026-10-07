@@ -1,0 +1,76 @@
+// Upstream: ../starters/docs/src/ColorSlider.css @ 99e610236
+// Upstream: ../starters/docs/src/ColorSlider.tsx @ 99e610236
+//
+// `ColorSlider`, `ColorSliderOutput`, `ColorSliderTrack`; the thumb is styled by
+// `color-thumb.scss`. Orientation as `data-orientation` (`"horizontal"`, `"vertical"`). Not
+// ported: the starter's checkerboard behind the track's gradient (an inline background its
+// component sets; the atom's track sets the gradient as an inline `background`).
+//
+// Markup (as the starter):
+//   <ColorSlider>
+//     <Label /> <ColorSliderOutput />
+//     <ColorSliderTrack><ColorThumb /></ColorSliderTrack>
+//   </ColorSlider>
+
+.leptonic-ColorSlider {
+  display: grid;
+  grid-template-areas:
+    'label output'
+    'track track';
+  grid-template-columns: 1fr auto;
+  gap: var(--spacing-1);
+
+  .leptonic-Label {
+    grid-area: label;
+  }
+
+  .leptonic-ColorSliderOutput {
+    grid-area: output;
+    text-align: end;
+    font: var(--font-size) system-ui;
+    color: var(--text-color);
+  }
+
+  .leptonic-ColorSliderTrack {
+    grid-area: track;
+    border-radius: var(--radius);
+  }
+
+  &[data-orientation='horizontal'] {
+    width: 100%;
+    max-width: 300px;
+
+    .leptonic-ColorSliderTrack {
+      height: var(--spacing-6);
+    }
+
+    .leptonic-ColorThumb {
+      top: 50%;
+    }
+  }
+
+  &[data-orientation='vertical'] {
+    height: 200px;
+    display: block;
+
+    .leptonic-Label,
+    .leptonic-ColorSliderOutput {
+      display: none;
+    }
+
+    .leptonic-ColorSliderTrack {
+      width: var(--spacing-6);
+      height: 100%;
+    }
+
+    .leptonic-ColorThumb {
+      left: 50%;
+    }
+  }
+
+  &[data-disabled] {
+    .leptonic-ColorSliderTrack {
+      background: gray !important;
+    }
+  }
+}

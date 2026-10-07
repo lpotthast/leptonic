@@ -1,5 +1,10 @@
 use std::sync::Arc;
 
+use leptonic::hooks::GridFocusMode;
+use leptonic::hooks::KeyboardNavigationBehavior;
+use leptonic::hooks::collections::CollectionOptions;
+use leptonic::hooks::collections::DisabledBehavior;
+use leptonic::hooks::collections::SelectionOptions;
 use leptonic::{
     hooks::{
         ColumnBound, ColumnSize, IntoAttrs, TableCollection, TableColumnResizeState, TableData,
@@ -89,16 +94,40 @@ pub fn TableResizingHookDemo() -> impl IntoView {
             }
         }))
     });
-    let state = use_table_state(UseTableStateInput::new(table));
+    let state = use_table_state(UseTableStateInput {
+        table,
+        selection: SelectionOptions {
+            disabled_behavior: DisabledBehavior::Selection,
+            ..SelectionOptions::default()
+        },
+        focus_mode: GridFocusMode::Row,
+        default_sort_descriptor: None,
+        sort_descriptor: None,
+        on_sort_change: None,
+    });
     let UseTableReturn { props, data } = use_table(UseTableInput {
         aria_label: "Files".into(),
-        ..UseTableInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        aria_labelledby: None,
+        keyboard_delegate: None,
+        options: CollectionOptions::default(),
+        keyboard_navigation_behavior: KeyboardNavigationBehavior::default(),
+        should_select_on_press_up: false,
+        on_row_action: None,
+        on_cell_action: None,
     });
 
     // The columns share the width of the scroll container around the table.
     let container = NodeRef::<html::Div>::new();
     let width = use_element_size(container).width;
-    let resize = use_table_column_resize_state(UseTableColumnResizeStateInput::new(state, width));
+    let resize = use_table_column_resize_state(UseTableColumnResizeStateInput {
+        table_state: state,
+        table_width: width,
+        default_width: None,
+        default_min_width: None,
+    });
 
     let headers = COLUMNS
         .map(|(key, _)| view! { <ColumnHeader table=data.clone() resize column=Key::from(key)/> })
@@ -156,7 +185,11 @@ fn ColumnHeader(table: TableData, resize: TableColumnResizeState, column: Key) -
         let column = column.clone();
         move || WidthProperty.declare(computed_size(computed_px(resize.column_width(&column))))
     };
-    let header = use_table_column_header(UseTableColumnHeaderInput::new(table, column));
+    let header = use_table_column_header(UseTableColumnHeaderInput {
+        table,
+        key: column,
+        allows_arrow_navigation: false,
+    });
     let (attrs, styles) = header.column_header_props.into_parts();
 
     view! {
@@ -171,12 +204,18 @@ fn ColumnHeader(table: TableData, resize: TableColumnResizeState, column: Key) -
 /// The visually hidden range input inside it holds the focus and tells screen readers the column width.
 #[component]
 fn Resizer(table: TableData, resize: TableColumnResizeState, column: Key) -> impl IntoView {
-    let resizer = use_table_column_resize(UseTableColumnResizeInput::new(
-        resize,
+    let resizer = use_table_column_resize(UseTableColumnResizeInput {
+        state: resize,
         table,
         column,
-        CapturedElement::new(),
-    ));
+        aria_label: "Resizer".to_owned(),
+        element: CapturedElement::new(),
+        trigger: None,
+        is_disabled: Signal::stored(false),
+        on_resize_start: None,
+        on_resize: None,
+        on_resize_end: None,
+    });
     let is_resizing = resizer.is_resizing;
     let (attrs, styles) = resizer.resizer_props.into_parts();
     let (input_attrs, input_styles) = resizer.input_props.into_parts();
@@ -200,6 +239,7 @@ fn FileRow(table: TableData, file: File) -> impl IntoView {
     let row = use_table_row(UseTableRowInput {
         table: table.clone(),
         key: key.clone(),
+        on_context_menu: None,
     });
     let (attrs, styles) = row.row_props.into_parts();
     let cells = [file.name, file.kind, file.size, file.modified]
@@ -213,7 +253,13 @@ fn FileRow(table: TableData, file: File) -> impl IntoView {
 
 #[component]
 fn Cell(table: TableData, key: Key, children: Children) -> impl IntoView {
-    let cell = use_table_cell(UseTableCellInput::new(table, key));
+    let cell = use_table_cell(UseTableCellInput {
+        table,
+        key,
+        focus_mode: None,
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
+    });
     let (attrs, styles) = cell.grid_cell_props.into_parts();
 
     view! { <td {..attrs} style=styles>{children()}</td> }

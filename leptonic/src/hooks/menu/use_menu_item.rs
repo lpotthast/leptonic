@@ -1,4 +1,5 @@
 // Upstream: react-aria/src/menu/useMenuItem.ts @ 99e6102368
+use crate::hooks::collections::CloseOnSelect;
 use leptos::{
     attr::{self, Attr},
     ev,
@@ -63,7 +64,7 @@ pub struct UseMenuItemInput {
     pub key: Key,
     /// Close the menu after the item was activated. `None`: unless the menu allows multiple
     /// selection, or the item was checked with Space.
-    pub should_close_on_select: Option<bool>,
+    pub should_close_on_select: CloseOnSelect,
     /// Makes the item open a submenu (from `use_submenu_trigger`): it has no action, never closes
     /// the menu and isn't selectable.
     pub submenu_trigger: Option<SubmenuTriggerItem>,
@@ -218,6 +219,7 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         link_behavior: LinkBehavior::None,
         focus: None,
         should_use_virtual_focus: false,
+        on_context_menu: None,
     });
     let (mut item_props, item_styles) = item_props.into_inner();
     if let Some(trigger) = &submenu_trigger {
@@ -355,14 +357,13 @@ pub fn use_menu_item(input: UseMenuItemInput) -> UseMenuItemReturn {
         }
         let mode = untrack(|| selection.selection_mode());
         let is_link = untrack(|| selection.is_link(&key));
-        let should_close =
-            should_close_on_select.unwrap_or_else(|| match interaction.get_value() {
-                // Enter always closes; Space only where it doesn't toggle a selection.
-                Some(Interaction::Keyboard { key }) => {
-                    key == "Enter" || mode == SelectionMode::None || is_link
-                }
-                _ => mode != SelectionMode::Multiple || is_link,
-            });
+        let should_close = should_close_on_select.resolve(|| match interaction.get_value() {
+            // Enter always closes; Space only where it doesn't toggle a selection.
+            Some(Interaction::Keyboard { key }) => {
+                key == "Enter" || mode == SelectionMode::None || is_link
+            }
+            _ => mode != SelectionMode::Multiple || is_link,
+        });
         if should_close && let Some(on_close) = on_close {
             on_close.run(());
         }

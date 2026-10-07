@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::grid_list::GridListDemo;
@@ -26,7 +25,10 @@ pub fn PageGridListHooks() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{
-                            hooks::{*, collections::{SelectionOptions, UseListStateInput}},
+                            hooks::{
+                                collections::{CollectionOptions, ListLayout, SelectionOptions, UseListStateInput},
+                                *,
+                            },
                             utils::CapturedElement,
                         };
                         use leptos::prelude::*;
@@ -38,12 +40,28 @@ pub fn PageGridListHooks() -> impl IntoView {
                         );
                         let state = use_list_state(UseListStateInput { collection: files, selection: SelectionOptions::default() });
                         let UseGridListReturn { props, data } = use_grid_list(UseGridListInput {
+                            state,
+                            element: CapturedElement::new(),
+                            id: None,
                             aria_label: "Files".into(),
-                            ..UseGridListInput::new(state, CapturedElement::new())
+                            aria_labelledby: Signal::stored(None),
+                            layout: ListLayout::Stack,
+                            keyboard_delegate: None,
+                            options: CollectionOptions::default(),
+                            keyboard_navigation_behavior: KeyboardNavigationBehavior::Arrow,
+                            should_select_on_press_up: false,
+                            on_action: None,
+                            tree: None,
                         });
 
                         // Per row:
-                        let row = use_grid_list_item(UseGridListItemInput::new(data.clone(), Key::from("Notes.txt")));
+                        let row = use_grid_list_item(UseGridListItemInput {
+                            list: data.clone(),
+                            key: Key::from("Notes.txt"),
+                            focus_mode: FocusMode::Row,
+                            allows_arrow_navigation: false,
+                            on_context_menu: None,
+                        });
                         let (row_attrs, row_styles) = row.row_props.into_parts();
                         view! {
                             <div {..row_attrs} style=row_styles>
@@ -57,7 +75,7 @@ pub fn PageGridListHooks() -> impl IntoView {
             <Section title="Demo">
                 <p>
                     "A file list with the "<Code inline=true>"Replace"</Code>" selection behavior: a click selects a file ("
-                    <Keys keys="Control"/>" + click, "<Keys keys="Command"/>" + click on macOS, adds to the selection), and "
+                    <Keys keys="Control"/>" + click, "<Keys keys="Meta"/>" + click on macOS, adds to the selection), and "
                     <Keys keys="Enter"/>" or a double click opens it. "<Keys keys="ArrowRight"/>" moves to a row\u{2019}s "
                     "remove button; removing a file moves the focus to its neighbor."
                 </p>
@@ -77,7 +95,7 @@ pub fn PageGridListHooks() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-grid-list-input">
-                    <p>"Create the input with "<Code inline=true>"UseGridListInput::new(state, element)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseGridListInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseGridListInput">
                         <ApiRow name="state" ty="ListState">"The rows and their selection, from "<Code inline=true>"use_list_state"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The grid element; the props capture it. Required."</ApiRow>
@@ -125,7 +143,8 @@ pub fn PageGridListHooks() -> impl IntoView {
             <Section title="use_grid_list_item">
                 <p>"A row with a single cell holding its content."</p>
                 <Section title="Input" id="use-grid-list-item-input">
-                    <p>"Create the input with "<Code inline=true>"UseGridListItemInput::new(data, key)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseGridListItemInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseGridListItemInput">
                         <ApiRow name="list" ty="GridListData">"The grid list, from "<Code inline=true>"use_grid_list"</Code>". Required."</ApiRow>
                         <ApiRow name="key" ty="Key">"The row\u{2019}s key in the collection. Required."</ApiRow>
@@ -135,6 +154,9 @@ pub fn PageGridListHooks() -> impl IntoView {
                         <ApiRow name="allows_arrow_navigation" ty="bool" default="false">
                             "Let "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" move between the row\u{2019}s children even with "
                             <Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="on_context_menu" ty="Option<Callback<ContextMenuEvent>>" default="None">
+                            "Called when a context menu is requested on the row (right click, "<Keys keys="Shift + F10"/>", the context menu key, a long press on iOS); the row\u{2019}s menu then replaces the browser\u{2019}s."
                         </ApiRow>
                     </ApiTable>
                 </Section>

@@ -1,3 +1,4 @@
+use leptonic::utils::scroll_behavior::ScrollBehavior;
 use leptonic::{components::prelude::Checkbox, hooks::*};
 use leptos::prelude::*;
 
@@ -13,7 +14,8 @@ pub fn AnchorLinkDemo() -> impl IntoView {
             aria_label: "Jump to the returns policy".into(),
             ..UseLinkInput::default()
         },
-        ..UseAnchorLinkInput::new("#use-anchor-link-demo-target")
+        href: "#use-anchor-link-demo-target".into(),
+        scroll_behavior: Some(ScrollBehavior::default()),
     });
     let (link_attrs, link_styles) = link.props.into_parts();
 

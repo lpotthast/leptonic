@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::overlay::BasicOverlayDemo;
@@ -19,8 +18,8 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <Section title="Input">
                 <p>
-                    "Create the input with "<Code inline=true>"UseOverlayInput::new(is_open, on_close)"</Code>
-                    " and enable further ways to dismiss with struct update syntax."
+                    "Pass a "<Code inline=true>"UseOverlayInput"</Code>" with every field named; the Default column gives the "
+                    "value for fields you don\u{2019}t need."
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseOverlayInput">
@@ -74,9 +73,15 @@ pub fn PageUseOverlay() -> impl IntoView {
                         let (is_open, set_is_open) = signal(false);
 
                         let UseOverlayReturn { props, .. } = use_overlay(UseOverlayInput {
+                            is_open: is_open.into(),
+                            on_close: Callback::new(move |()| set_is_open.set(false)),
                             is_dismissable: Signal::stored(true),
-                            ..UseOverlayInput::new(is_open.into(), Callback::new(move |()| set_is_open.set(false)))
+                            should_close_on_blur: Signal::stored(false),
+                            is_keyboard_dismiss_disabled: Signal::stored(false),
+                            should_close_on_interact_outside: None,
+                            group: None,
                         });
+
                         // The overlay renders again on every opening, so its attributes are cloned per render.
                         let attrs = StoredValue::new(props.into_attrs());
 

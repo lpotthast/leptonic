@@ -1,0 +1,48 @@
+// Upstream: ../starters/docs/src/ComboBox.css @ 99e610236
+// Upstream: ../starters/docs/src/ComboBox.tsx @ 99e610236
+//
+// `ComboBox` with its `Input`, `ComboBoxButton` (the starter's `FieldButton`, see `form.scss`)
+// and `ComboBoxPopover` (a popover as wide as the input; its list box is styled in
+// `list-box.scss`). Markup, as the starter's (the input and button in a `combobox-field` row):
+//
+//   <ComboBox ..>
+//     <Label>..</Label>
+//     <div class="combobox-field">
+//       <Input />
+//       <ComboBoxButton><svg class="lucide-chevron-down" ..>..</svg></ComboBoxButton>
+//     </div>
+//     <Description>..</Description>
+//     <FieldError />
+//     <ComboBoxPopover><ListBox>..</ListBox></ComboBoxPopover>
+//   </ComboBox>
+@use "utilities";
+
+@layer utilities {
+  .leptonic-ComboBox .leptonic-Input {
+    @include utilities.inset;
+  }
+}
+
+.leptonic-ComboBox {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-color);
+  width: calc(var(--spacing) * 50);
+
+  .combobox-field {
+    display: flex;
+    align-items: center;
+    height: var(--spacing-8);
+    width: 100%;
+  }
+
+  .leptonic-Input {
+    width: 100%;
+    padding: 0 calc(var(--spacing-3) + var(--spacing-6)) 0 var(--spacing-3);
+  }
+}
+
+.leptonic-ComboBoxPopover[data-trigger='ComboBox'] {
+  width: var(--trigger-width);
+  padding: 0;
+}

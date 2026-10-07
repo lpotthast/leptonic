@@ -47,19 +47,6 @@ pub struct UseModalBackdropInput {
     pub is_entering: Signal<bool>,
 }
 
-impl UseModalBackdropInput {
-    /// A modal for `state`, closed by Escape but not by outside interaction.
-    pub fn new(state: OverlayTriggerState) -> Self {
-        Self {
-            state,
-            is_dismissable: Signal::stored(false),
-            is_keyboard_dismiss_disabled: Signal::stored(false),
-            should_close_on_interact_outside: None,
-            is_entering: Signal::stored(false),
-        }
-    }
-}
-
 /// The return value of the `use_modal_backdrop` hook.
 pub struct UseModalBackdropReturn {
     /// Props for the modal content element (overlay container).
@@ -102,8 +89,11 @@ impl IntoAttrs for UseModalBackdropModalProps {
 /// let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
 /// let UseModalBackdropReturn { modal_props, .. } =
 ///     use_modal_backdrop(UseModalBackdropInput {
-///         is_dismissable: true,
-///         ..UseModalBackdropInput::new(state)
+///         state,
+///         is_dismissable: Signal::stored(true),
+///         is_keyboard_dismiss_disabled: Signal::stored(false),
+///         should_close_on_interact_outside: None,
+///         is_entering: Signal::stored(false),
 ///     });
 ///
 /// view! {

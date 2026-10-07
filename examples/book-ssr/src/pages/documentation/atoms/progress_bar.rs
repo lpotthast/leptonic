@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::progress_bar::ProgressBarAtomDemo;
@@ -147,7 +146,6 @@ pub fn PageAtomProgressBar() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::ProgressBar.materialize()>"Progress Bar overview"</Link></li>
                 <li><Link href=routes::doc::progress_bar::Hook.materialize()>"use_progress_bar"</Link></li>
-                <li><Link href=routes::doc::progress_bar::Component.materialize()>"Progress Bar Component"</Link></li>
                 <li><Link href=routes::doc::meter::Atom.materialize()>"Meter Atoms"</Link></li>
                 <li><Link href=routes::doc::field::Atom.materialize()>"Field Atoms"</Link></li>
             </SeeAlso>

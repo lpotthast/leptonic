@@ -4,12 +4,8 @@ use leptos::{attr, attr::Attr, prelude::*};
 use crate::{
     hooks::{IntoAttrs, PropsWithStyles},
     utils::{
-        aria::AriaRole,
-        color::{Color, ColorProp},
-        css::ForcedColorAdjust,
-        id::use_id,
-        style::ForcedColorAdjustProperty,
-        styles::Styles,
+        aria::AriaRole, color::Color, css::ForcedColorAdjust, id::use_id,
+        style::ForcedColorAdjustProperty, styles::Styles,
     },
 };
 
@@ -19,15 +15,14 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The color is any color value or signal of one (`ColorProp`, react-aria: a `Color` or a
-//   string); a swatch always has one (react-aria: optional, transparent white by default;
-//   leptonic's colors have no transparency yet).
+//   string); a swatch always has one (react-aria: optional, transparent by default).
 //
 // ## OMITTED FEATURES
 // - Localized strings: "color swatch" and the color names are English.
 //
 // =============================================================================
 
-/// Input of [`use_color_swatch`]. Start from [`UseColorSwatchInput::new`].
+/// Input of [`use_color_swatch`].
 #[derive(Debug, Clone)]
 pub struct UseColorSwatchInput {
     /// The color to show.
@@ -39,19 +34,6 @@ pub struct UseColorSwatchInput {
     pub aria_labelledby: Option<String>,
     /// The swatch's id. Generated when `None`.
     pub id: Option<String>,
-}
-
-impl UseColorSwatchInput {
-    /// A swatch of `color`: any color value or signal of one.
-    pub fn new(color: impl Into<ColorProp>) -> Self {
-        Self {
-            color: color.into().0,
-            color_name: MaybeProp::default(),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            id: None,
-        }
-    }
 }
 
 /// Return value of [`use_color_swatch`].
@@ -103,7 +85,15 @@ pub fn use_color_swatch(input: UseColorSwatchInput) -> UseColorSwatchReturn {
     } = input;
     let id = id.unwrap_or_else(|| use_id("color-swatch"));
     let aria_label = Signal::derive(move || {
-        let name = color_name.get().unwrap_or_else(|| color.get().color_name());
+        // A fully transparent color is "transparent" (react-aria).
+        let name = color_name.get().unwrap_or_else(|| {
+            let color = color.get();
+            if color.alpha <= 0.0 {
+                "transparent".to_owned()
+            } else {
+                color.color_name()
+            }
+        });
         match aria_label.get().filter(|label| !label.is_empty()) {
             Some(label) => format!("{name}, {label}"),
             None => name,

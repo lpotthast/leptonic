@@ -1,7 +1,6 @@
-use leptonic::components::prelude::AnchorLink;
 use leptos::{context::Provider, prelude::*};
 
-use super::page::TocRegistry;
+use super::{AnchorLink, page::TocRegistry};
 
 /// The enclosing page or section: its heading level (the page title is level 1) and anchor id.
 #[derive(Debug, Clone)]
@@ -49,7 +48,7 @@ pub fn Section(
 /// A heading with a "direct link" anchor, as rendered by pages and sections.
 pub(super) fn heading(level: u8, id: Oco<'static, str>, title: &'static str) -> AnyView {
     let link = view! {
-        <AnchorLink href=format!("#{id}") aria_label=format!("Direct link to section: {title}")/>
+        <AnchorLink href=format!("#{id}") aria_label=format!("Direct link to section: {title}") classes="doc-heading-anchor"/>
     };
     match level {
         1 => view! { <h1 id=id>{title}{link}</h1> }.into_any(),

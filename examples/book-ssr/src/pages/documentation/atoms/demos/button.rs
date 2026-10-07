@@ -1,4 +1,4 @@
-use leptonic::{atoms::prelude as atoms, components::prelude::Checkbox};
+use leptonic::atoms::prelude as atoms;
 use leptos::prelude::*;
 
 #[component]
@@ -17,7 +17,10 @@ pub fn ButtonDemo() -> impl IntoView {
             }}
         </p>
         <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+            <atoms::Checkbox is_selected=disabled set_selected=disabled classes="demo-check">
+                <span class="demo-check-box" aria-hidden="true"></span>
+                "Disabled"
+            </atoms::Checkbox>
         </div>
     }
 }

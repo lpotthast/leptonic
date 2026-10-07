@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::radio::RadioDemo;
@@ -31,10 +30,37 @@ pub fn PageUseRadioHook() -> impl IntoView {
                             ..UseRadioGroupStateInput::default()
                         });
                         let group = use_radio_group(UseRadioGroupInput {
+                            state,
                             has_label: true.into(),
-                            ..UseRadioGroupInput::new(state)
+                            orientation: Orientation::Vertical,
+                            id: None,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            aria_errormessage: None,
+                            form: None,
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
                         });
-                        let small = use_radio(UseRadioInput::new(group.data, "s"));
+                        let small = use_radio(UseRadioInput {
+                            group: group.data,
+                            value: Key::from("s"),
+                            is_disabled: false.into(),
+                            id: None,
+                            aria_label: MaybeProp::default(),
+                            aria_labelledby: None,
+                            aria_describedby: None,
+                            auto_focus: false,
+                            on_focus: None,
+                            on_blur: None,
+                            on_focus_change: None,
+                            on_press_start: None,
+                            on_press_end: None,
+                            on_press_up: None,
+                            on_press: None,
+                            on_press_change: None,
+                        });
                         let (label_attrs, label_styles) = small.label_props.into_parts();
                         let (input_attrs, input_styles) = small.input_props.into_parts();
 
@@ -138,7 +164,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-radio-group-input">
-                    <p>"Create it with "<Code inline=true>"UseRadioGroupInput::new(state)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseRadioGroupInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseRadioGroupInput">
                         <ApiRow name="state" ty="RadioGroupState">"From "<Code inline=true>"use_radio_group_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
@@ -189,7 +215,8 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 </p>
 
                 <Section title="Input" id="use-radio-input">
-                    <p>"Create it with "<Code inline=true>"UseRadioInput::new(group.data, value)"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseRadioInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
+
                     <ApiTable kind=ApiKind::Input of="UseRadioInput">
                         <ApiRow name="group" ty="RadioGroupData">"The "<Code inline=true>"data"</Code>" of "<Code inline=true>"use_radio_group"</Code>". Required."</ApiRow>
                         <ApiRow name="value" ty="Key">"The value the radio selects. Required."</ApiRow>
@@ -230,7 +257,6 @@ pub fn PageUseRadioHook() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Radio.materialize()>"Radio overview"</Link></li>
                 <li><Link href=routes::doc::radio::Atom.materialize()>"Radio Atoms"</Link></li>
-                <li><Link href=routes::doc::radio::Component.materialize()>"Radio Components"</Link></li>
                 <li><Link href=routes::doc::checkbox::Hook.materialize()>"Checkbox Hooks"</Link></li>
                 <li><Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link></li>
             </SeeAlso>

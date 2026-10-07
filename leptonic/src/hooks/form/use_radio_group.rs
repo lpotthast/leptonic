@@ -63,25 +63,6 @@ pub struct UseRadioGroupInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
-impl UseRadioGroupInput {
-    pub fn new(state: RadioGroupState) -> Self {
-        Self {
-            state,
-            id: None,
-            has_label: Signal::stored(false),
-            aria_label: MaybeProp::default(),
-            aria_labelledby: None,
-            aria_describedby: None,
-            aria_errormessage: None,
-            orientation: Orientation::Vertical,
-            form: None,
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        }
-    }
-}
-
 /// What the radios of a group need from it.
 #[derive(Debug, Clone, Copy)]
 pub struct RadioGroupData {

@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{tabs::TabsAtomDemo, tabs_vertical::TabsVerticalAtomDemo};
@@ -209,13 +208,20 @@ pub fn PageAtomTabs() -> impl IntoView {
                 <p>
                     "The content of the tab with the same key, as a "<Code inline=true>"<div role=\"tabpanel\">"</Code>
                     ". It is rendered only while its tab is selected, so switching tabs unmounts the previous panel and "
-                    "resets its state. Without tabbable content, the panel is a tab stop."
+                    "resets its state, unless "<Code inline=true>"should_force_mount"</Code>" keeps it. Without tabbable "
+                    "content, the panel is a tab stop."
                 </p>
                 <Section title="Props" id="tab-panel-props">
                     <ApiTable kind=ApiKind::Props of="TabPanel">
                         <ApiRow name="key" ty="Key">"The panel\u{2019}s tab."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the panel."</ApiRow>
-                        <ApiRow name="children" ty="ChildrenFn">"The panel content, rendered each time the tab is selected."</ApiRow>
+                        <ApiRow name="should_force_mount" ty="bool" default="false">
+                            "Keep the panel mounted while its tab isn\u{2019}t selected (inert, with "<Code inline=true>"data-inert"</Code>
+                            "), so that state inside it survives switching tabs. Hide it with CSS."
+                        </ApiRow>
+                        <ApiRow name="children" ty="ChildrenFn">
+                            "The panel content, rendered each time the tab is selected (once, with "<Code inline=true>"should_force_mount"</Code>")."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -234,19 +240,21 @@ pub fn PageAtomTabs() -> impl IntoView {
                         <Code inline=true>"disabled_keys"</Code>" or "<Code inline=true>"is_disabled"</Code>"."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"Tab"</Code>": the tab is being pressed."</ApiRow>
+                    <ApiRow name="data-hovered" ty="true">"On "<Code inline=true>"Tab"</Code>": a pointer hovers the tab."</ApiRow>
+                    <ApiRow name="data-focus-visible" ty="true">
+                        "On "<Code inline=true>"Tab"</Code>": the tab has keyboard focus; draw a focus ring."
+                    </ApiRow>
+                    <ApiRow name="data-inert" ty="true">
+                        "On a force-mounted "<Code inline=true>"TabPanel"</Code>": its tab isn\u{2019}t selected."
+                    </ApiRow>
                 </ApiTable>
-                <p>
-                    "A "<Code inline=true>"Tab"</Code>" currently has no "<Code inline=true>"data-hovered"</Code>" or "
-                    <Code inline=true>"data-focus-visible"</Code>"; use "<Code inline=true>":hover"</Code>" and "
-                    <Code inline=true>":focus-visible"</Code>" for those."
-                </p>
             </Section>
 
             <Section title="Styling">
                 <p>
                     "The atoms bring no styles. Pass "<Code inline=true>"classes"</Code>" and target the state with attribute "
                     "selectors. "<Code inline=true>"data-focused"</Code>" is also set after a click, so draw focus rings with "
-                    <Code inline=true>":focus-visible"</Code>". Lay out a vertical tab list through the "
+                    <Code inline=true>"data-focus-visible"</Code>". Lay out a vertical tab list through the "
                     <Code inline=true>"data-orientation"</Code>" of "<Code inline=true>"Tabs"</Code>":"
                 </p>
                 <Code language=Language::Css>
@@ -256,7 +264,8 @@ pub fn PageAtomTabs() -> impl IntoView {
                         .my-tabs[data-orientation="vertical"] .my-tab-list { flex-direction: column; }
                         .my-tab[data-selected] { border-bottom: 2px solid var(--accent); }
                         .my-tab[data-disabled] { color: var(--muted); }
-                        .my-tab:focus-visible { outline: 2px solid var(--focus); }
+                        .my-tab[data-hovered] { color: var(--text); }
+                        .my-tab[data-focus-visible] { outline: 2px solid var(--focus); }
                     "#)}
                 </Code>
             </Section>
@@ -280,7 +289,8 @@ pub fn PageAtomTabs() -> impl IntoView {
                     "#)}
                 </Code>
                 <p>
-                    "Need panels that stay mounted while hidden, or a tab built from your own element? Use the "
+                    "Panels that stay mounted while hidden: set "<Code inline=true>"should_force_mount"</Code>" on their "
+                    <Code inline=true>"TabPanel"</Code>". A tab built from your own element: use the "
                     <Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link>" directly."
                 </p>
             </Section>
@@ -288,7 +298,6 @@ pub fn PageAtomTabs() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Tabs.materialize()>"Tabs overview"</Link></li>
                 <li><Link href=routes::doc::tabs::Hook.materialize()>"Tabs Hooks"</Link></li>
-                <li><Link href=routes::doc::tabs::Component.materialize()>"Tabs Components"</Link></li>
                 <li><Link href=routes::doc::CollectionState.materialize()>"Collection State"</Link></li>
             </SeeAlso>
         </DocPage>

@@ -186,6 +186,27 @@ pub(crate) fn dedup_ids(ids: &mut Vec<String>) {
     ids.retain(|id| seen.insert(id.clone()));
 }
 
+/// react-aria's `useLabels`: with both a label and labelling ids, the element's own id joins
+/// them (first), so that the label is part of its name.
+pub(crate) fn labels(
+    id: &str,
+    aria_label: Option<String>,
+    aria_labelledby: Option<String>,
+) -> (Option<String>, Option<String>) {
+    let labelledby = match (aria_label.as_ref(), aria_labelledby) {
+        (Some(_), Some(ids)) => {
+            let mut all = vec![id.to_owned()];
+            all.extend(ids.split_whitespace().map(str::to_owned));
+            dedup_ids(&mut all);
+            Some(all.join(" "))
+        }
+        (_, ids) => ids
+            .map(|ids| ids.trim().to_owned())
+            .filter(|ids| !ids.is_empty()),
+    };
+    (aria_label, labelledby)
+}
+
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;

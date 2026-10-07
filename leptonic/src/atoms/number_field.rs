@@ -15,10 +15,10 @@ use crate::{
         UseNumberFieldStateInput, ValidateFn, ValidationBehavior, use_button, use_focus_ring,
         use_hover, use_number_field, use_number_field_state,
     },
-    utils::number_value::OptionalNumberSignal,
     utils::{
         NumberValue, ValueBinding, classes::Classes, data_attributes::flag,
-        number_formatter::NumberFormatOptions, scoped_context::scoped_view, styles::Styles,
+        default_class::with_default_class, number_formatter::NumberFormatOptions,
+        number_value::OptionalNumberSignal, scoped_context::scoped_view, styles::Styles,
     },
 };
 
@@ -58,6 +58,8 @@ struct NumberFieldCtx {
 /// With a `name`, a hidden input submits the value with a form.
 ///
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
+///
+/// Default class: `leptonic-NumberField`.
 #[allow(clippy::too_many_arguments, clippy::needless_pass_by_value)]
 #[component]
 pub fn NumberField<T: NumberValue>(
@@ -114,6 +116,7 @@ pub fn NumberField<T: NumberValue>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-NumberField", classes);
     let (value, on_change) = ValueBinding::from_state_props(
         value.map(OptionalNumberSignal::into_signal),
         set_value,
@@ -165,7 +168,11 @@ pub fn NumberField<T: NumberValue>(
         increment_aria_label,
         decrement_aria_label,
         on_focus_change,
-        ..UseNumberFieldInput::new(state)
+        state,
+        on_focus: None,
+        on_blur: None,
+        on_key_down: None,
+        on_key_up: None,
     });
 
     // Contexts for the children only, with the `<div>` as the root (getting attributes set on the
@@ -233,12 +240,15 @@ pub fn NumberField<T: NumberValue>(
 ///
 /// Data attributes: `data-hovered`, `data-focus-within`, `data-focus-visible`, `data-disabled`,
 /// `data-invalid`.
+///
+/// Default class: `leptonic-NumberFieldGroup`.
 #[component]
 pub fn NumberFieldGroup(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-NumberFieldGroup", classes);
     let ctx = expect_context::<NumberFieldCtx>();
     let ring = use_focus_ring(UseFocusRingInput {
         within: true,
@@ -271,12 +281,15 @@ pub fn NumberFieldGroup(
 /// order, the arrow keys step from the input).
 ///
 /// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+///
+/// Default class: `leptonic-NumberFieldIncrementButton`.
 #[component]
 pub fn NumberFieldIncrementButton(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-NumberFieldIncrementButton", classes);
     let ctx = expect_context::<NumberFieldCtx>();
     stepper_button(ctx.increment.get_value(), classes, styles, children)
 }
@@ -284,12 +297,15 @@ pub fn NumberFieldIncrementButton(
 /// The button decrementing the [`NumberField`] around it ("Decrease <label>").
 ///
 /// Data attributes: `data-pressed`, `data-hovered`, `data-disabled`.
+///
+/// Default class: `leptonic-NumberFieldDecrementButton`.
 #[component]
 pub fn NumberFieldDecrementButton(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-NumberFieldDecrementButton", classes);
     let ctx = expect_context::<NumberFieldCtx>();
     stepper_button(ctx.decrement.get_value(), classes, styles, children)
 }

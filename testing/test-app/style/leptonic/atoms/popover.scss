@@ -1,0 +1,98 @@
+// Upstream: ../starters/docs/src/Popover.css @ 99e610236
+// Upstream: ../starters/docs/src/Popover.tsx @ 99e610236
+//
+// `Popover`, the popovers of `Select` and `ComboBox` (`SelectPopover`, `ComboBoxPopover`), and an
+// `OverlayArrow` inside them. Markup: the starter puts an arrow first into every popover except a
+// menu's, a select's and a combo box's:
+//
+//   <Popover>
+//     <OverlayArrow>
+//       <svg width="12" height="12" viewBox="0 0 12 12"><path d="M0 0 L6 6 L12 0" /></svg>
+//     </OverlayArrow>
+//     ..
+//   </Popover>
+//
+// Variants by the popover's `data-trigger` (`MenuTrigger`, `SubmenuTrigger`: no padding) and
+// `data-placement` (the arrow's direction; entering and exiting slide in from the trigger).
+
+.leptonic-Popover,
+.leptonic-SelectPopover,
+.leptonic-ComboBoxPopover {
+  --background-color: var(--overlay-background);
+
+  outline: 1px solid var(--overlay-border);
+  box-sizing: border-box;
+  filter: drop-shadow(var(--popover-shadow));
+  border-radius: var(--radius-lg);
+  background: var(--background-color);
+  color: var(--text-color);
+  transition:
+    transform 200ms,
+    opacity 200ms;
+  font: var(--font-size) system-ui;
+  padding: 8px;
+  overflow: auto;
+
+  &[data-trigger='MenuTrigger'],
+  &[data-trigger='SubmenuTrigger'] {
+    padding: 0;
+  }
+
+  .leptonic-OverlayArrow svg {
+    display: block;
+    fill: var(--background-color);
+    stroke: var(--overlay-border);
+    paint-order: stroke;
+    stroke-width: 2px;
+  }
+
+  &[data-entering],
+  &[data-exiting] {
+    transform: var(--origin);
+    opacity: 0;
+  }
+
+  &[data-placement='top'] {
+    --origin: translateY(8px);
+
+    &:has(.leptonic-OverlayArrow) {
+      margin-bottom: 6px;
+    }
+  }
+
+  &[data-placement='bottom'] {
+    --origin: translateY(-8px);
+
+    &:has(.leptonic-OverlayArrow) {
+      margin-top: 6px;
+    }
+
+    .leptonic-OverlayArrow svg {
+      transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement='right'] {
+    --origin: translateX(-8px);
+
+    &:has(.leptonic-OverlayArrow) {
+      margin-left: 6px;
+    }
+
+    .leptonic-OverlayArrow svg {
+      transform: rotate(90deg);
+    }
+  }
+
+  &[data-placement='left'] {
+    --origin: translateX(8px);
+
+    &:has(.leptonic-OverlayArrow) {
+      margin-right: 6px;
+    }
+
+    .leptonic-OverlayArrow svg {
+      transform: rotate(-90deg);
+    }
+  }
+}

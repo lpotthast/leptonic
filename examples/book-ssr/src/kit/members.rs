@@ -1,10 +1,6 @@
-use leptonic::components::{
-    prelude::*,
-    table::{TableCell, TableRow},
-};
 use leptos::prelude::*;
 
-use super::DocTable;
+use super::{DocTable, Link, TableCell, TableRow};
 use crate::nav::{NavEntry, nav};
 
 /// The pages of the navigation group whose overview page is `overview`, as a table of name, layers and summary.
@@ -73,8 +69,9 @@ mod tests {
     /// The paths of the routes directly below `/doc` (`routes::doc::<Name>`), by route name: `mod date_time` with
     /// `#[route("/date-time")]` is `DateTime`, at `/doc/date-time`.
     fn doc_routes() -> HashMap<String, String> {
-        let source = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/routes.rs"))
-            .expect("routes.rs is readable");
+        let source =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/routes.rs"))
+                .expect("routes.rs is readable");
         let file = syn::parse_file(&source).expect("routes.rs parses");
         let module = |items: &[Item], name: &str| -> Option<ItemMod> {
             items.iter().find_map(|item| match item {

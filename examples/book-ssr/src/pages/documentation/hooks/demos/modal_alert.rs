@@ -8,7 +8,13 @@ pub fn AlertDialogDemo() -> impl IntoView {
     let (deleted, set_deleted) = signal(false);
 
     let state = use_overlay_trigger_state(UseOverlayTriggerStateInput::default());
-    let UseModalBackdropReturn { modal_props, .. } = use_modal_backdrop(UseModalBackdropInput::new(state));
+    let UseModalBackdropReturn { modal_props, .. } = use_modal_backdrop(UseModalBackdropInput {
+        state,
+        is_dismissable: Signal::stored(false),
+        is_keyboard_dismiss_disabled: Signal::stored(false),
+        should_close_on_interact_outside: None,
+        is_entering: Signal::stored(false),
+    });
     let UseModalReturn {
         modal_props: aria_modal_props,
     } = use_modal(UseModalInput::default());

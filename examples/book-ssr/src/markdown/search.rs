@@ -88,7 +88,8 @@ impl MarkdownCache {
                 let path = md_path.strip_suffix(".md").unwrap_or(md_path);
                 let search = &doc.search;
                 // The title says it all: describe the page. Otherwise show where the query occurs.
-                let snippet = if search.title_lower.contains(&query) && !doc.description.is_empty() {
+                let snippet = if search.title_lower.contains(&query) && !doc.description.is_empty()
+                {
                     doc.description.clone()
                 } else {
                     search.text_lower.find(&query).map_or_else(

@@ -3,8 +3,8 @@
 
 use leptos::prelude::*;
 
-use super::color_picker::ColorPickerContext;
 use super::{
+    color_picker::ColorPickerContext,
     field::{FieldContext, LabelContext, LabelPresence},
     form::use_validation_behavior,
     input::{InputContext, InputState},
@@ -13,8 +13,8 @@ use crate::{
     Out,
     hooks::{
         IntoAttrs, UseColorChannelFieldInput, UseColorChannelFieldStateInput, UseColorFieldInput,
-        UseColorFieldReturn, UseColorFieldStateInput, UseNumberFieldReturn, ValidateFn,
-        ValidationBehavior, use_color_channel_field, use_color_channel_field_state,
+        UseColorFieldReturn, UseColorFieldStateInput, UseNumberFieldInput, UseNumberFieldReturn,
+        ValidateFn, ValidationBehavior, use_color_channel_field, use_color_channel_field_state,
         use_color_field, use_color_field_state,
     },
     utils::{
@@ -22,6 +22,7 @@ use crate::{
         classes::Classes,
         color::{ColorChannel, RGB8},
         data_attributes::flag,
+        default_class::with_default_class,
         scoped_context::scoped_view,
         styles::Styles,
     },
@@ -43,6 +44,8 @@ use crate::{
 /// `FieldError`.
 ///
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
+///
+/// Default class: `leptonic-ColorField`.
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn ColorField(
@@ -86,6 +89,7 @@ pub fn ColorField(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let value = value.or_else(ColorPickerContext::optional_binding::<RGB8>);
     let state = use_color_field_state(UseColorFieldStateInput {
@@ -122,7 +126,11 @@ pub fn ColorField(
         auto_focus,
         is_wheel_disabled,
         on_focus_change,
-        ..UseColorFieldInput::new(state)
+        state,
+        on_focus: None,
+        on_blur: None,
+        on_key_down: None,
+        on_key_up: None,
     });
     let provide = move || {
         provide_context(LabelContext::label(label_props).with_presence(label_presence));
@@ -179,6 +187,8 @@ pub fn ColorField(
 /// `Description` and a `FieldError`. Without a label, the channel's name labels it.
 ///
 /// Data attributes: `data-disabled`, `data-readonly`, `data-required`, `data-invalid`.
+///
+/// Default class: `leptonic-ColorChannelField`.
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
@@ -219,6 +229,7 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-ColorChannelField", classes);
     let (value, on_change) = ValueBinding::from_state_props(value, set_value, on_change);
     let value = value.or_else(ColorPickerContext::optional_binding::<Ch::Color>);
     let state = use_color_channel_field_state(UseColorChannelFieldStateInput {
@@ -231,10 +242,31 @@ pub fn ColorChannelField<Ch: ColorChannel<Color: Default>>(
         validation_behavior: use_validation_behavior(validation_behavior),
         name: name.clone(),
         on_change,
-        ..UseColorChannelFieldStateInput::new(channel)
+        channel,
     });
     let label_presence = LabelPresence::new(aria_label, aria_labelledby.as_ref());
-    let mut input = UseColorChannelFieldInput::new(state);
+    let mut input = UseColorChannelFieldInput {
+        state,
+        field: UseNumberFieldInput {
+            state: state.number,
+            id: None,
+            has_label: Signal::stored(false),
+            aria_label: MaybeProp::default(),
+            aria_labelledby: None,
+            aria_describedby: None,
+            is_required: Signal::stored(false),
+            placeholder: MaybeProp::default(),
+            auto_focus: false,
+            is_wheel_disabled: false,
+            increment_aria_label: MaybeProp::default(),
+            decrement_aria_label: MaybeProp::default(),
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+            on_key_down: None,
+            on_key_up: None,
+        },
+    };
     input.field.id = id;
     input.field.has_label = label_presence.has_label;
     input.field.aria_label = aria_label;

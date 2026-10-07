@@ -1,0 +1,71 @@
+// Upstream: ../starters/docs/src/Tooltip.css @ 99e610236
+// Upstream: ../starters/docs/src/Tooltip.tsx @ 99e610236
+//
+// `Tooltip` and an `OverlayArrow` inside it. Markup: the starter puts an arrow first into every
+// tooltip:
+//
+//   <Tooltip>
+//     <OverlayArrow>
+//       <svg width="8" height="8" viewBox="0 0 8 8"><path d="M0 0 L4 4 L8 0" /></svg>
+//     </OverlayArrow>
+//     "Save"
+//   </Tooltip>
+//
+// `data-placement` turns the arrow; entering and exiting slide in from the trigger.
+
+.leptonic-Tooltip {
+  box-shadow: 0 8px 20px rgba(0 0 0 / 0.1);
+  border-radius: var(--radius);
+  background: var(--highlight-background);
+  color: var(--highlight-foreground);
+  forced-color-adjust: none;
+  outline: none;
+  padding: var(--spacing-1) var(--spacing-2);
+  max-width: 150px;
+  /* fixes FF gap */
+  transform: translate3d(0, 0, 0);
+  transition:
+    transform 200ms,
+    opacity 200ms;
+  font: var(--font-size) system-ui;
+
+  &[data-entering],
+  &[data-exiting] {
+    transform: var(--origin);
+    opacity: 0;
+  }
+
+  &[data-placement='top'] {
+    margin-bottom: 10px;
+    --origin: translateY(4px);
+  }
+
+  &[data-placement='bottom'] {
+    margin-top: 10px;
+    --origin: translateY(-4px);
+    & .leptonic-OverlayArrow svg {
+      transform: rotate(180deg);
+    }
+  }
+
+  &[data-placement='right'] {
+    margin-left: 10px;
+    --origin: translateX(-4px);
+    & .leptonic-OverlayArrow svg {
+      transform: rotate(90deg);
+    }
+  }
+
+  &[data-placement='left'] {
+    margin-right: 10px;
+    --origin: translateX(4px);
+    & .leptonic-OverlayArrow svg {
+      transform: rotate(-90deg);
+    }
+  }
+
+  .leptonic-OverlayArrow svg {
+    display: block;
+    fill: var(--highlight-background);
+  }
+}

@@ -57,6 +57,17 @@
 // Wrapping row of key caps.
 .demo-key-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--book-space-xs); }
 
+// Actions and their shortcuts, side by side.
+.demo-shortcut-list {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: var(--book-space-s) var(--book-space-l);
+    align-items: center;
+    margin: 0;
+
+    dd { margin: 0; }
+}
+
 // -- Sanitized HTML --
 
 // The rendered HTML, framed so that it stands apart from the page.

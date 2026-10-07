@@ -12,22 +12,24 @@ use super::{
 use crate::{
     Out,
     hooks::{
-        IntoAttrs, MenuData, MenuTriggerState, MenuTriggerType, OverlayTriggerType, Placement,
-        PressResponderTrigger, SelectionBehavior, SelectionMode, SeparatorElementType, SubmenuKind,
-        SubmenuProps, SubmenuTriggerItem, UseMenuInput, UseMenuItemInput, UseMenuItemReturn,
-        UseMenuReturn, UseMenuSectionInput, UseMenuSectionReturn, UseMenuTriggerInput,
-        UseMenuTriggerMenuProps, UseMenuTriggerReturn, UseMenuTriggerStateInput,
-        UseSubmenuTriggerInput, UseSubmenuTriggerReturn, UseSubmenuTriggerStateInput,
+        ContextMenuEvent, IntoAttrs, MenuData, MenuTriggerState, MenuTriggerStateApi,
+        MenuTriggerType, OverlayTriggerType, Placement, PressResponderTrigger, SelectionBehavior,
+        SelectionMode, SeparatorElementType, SubmenuKind, SubmenuProps, SubmenuTriggerItem,
+        UseMenuInput, UseMenuItemInput, UseMenuItemReturn, UseMenuReturn, UseMenuSectionInput,
+        UseMenuSectionReturn, UseMenuTriggerInput, UseMenuTriggerMenuProps, UseMenuTriggerReturn,
+        UseMenuTriggerStateInput, UseSubmenuTriggerInput, UseSubmenuTriggerReturn,
+        UseSubmenuTriggerStateInput, close_context_menu_on_outside_right_click,
         collections::{
-            AutoFocus, CollectionMemo, CollectionOptions, Key, ListState, Node, Selection,
-            SelectionOptions, UseListStateInput, use_list_state,
+            AutoFocus, CloseOnSelect, CollectionMemo, CollectionOptions, FocusStrategy, Key,
+            ListState, Node, Selection, SelectionOptions, UseListStateInput, use_list_state,
         },
         use_menu, use_menu_item, use_menu_section, use_menu_trigger, use_menu_trigger_state,
         use_submenu_trigger, use_submenu_trigger_state,
     },
     utils::{
         CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
-        scoped_context::scoped_view, styles::Styles,
+        default_class::with_default_class, point::Point, scoped_context::scoped_view,
+        styles::Styles,
     },
 };
 
@@ -80,12 +82,20 @@ struct SubmenuItemContext(Option<(Key, SubmenuTriggerItem)>);
 #[derive(Debug, Clone)]
 struct SubmenuMenuContext(Option<(SubmenuProps, CapturedElement)>);
 
-/// Context from [`MenuItem`] to its label, description and shortcut.
+/// Context from [`MenuItem`] to its label, description and shortcut, and its state for the item's
+/// content (e.g. a check mark while selected: `use_context::<MenuItemCtx>()`).
 #[derive(Debug, Clone)]
-struct MenuItemCtx {
+pub struct MenuItemCtx {
     label: StoredValue<Option<SlotProps>>,
     description: StoredValue<Option<SlotProps>>,
     shortcut: StoredValue<Option<SlotProps>>,
+    pub is_selected: Signal<bool>,
+    pub is_focused: Signal<bool>,
+    pub is_focus_visible: Signal<bool>,
+    pub is_disabled: Signal<bool>,
+    pub is_pressed: Signal<bool>,
+    /// The menu's selection mode (the item is a `menuitemcheckbox` or `menuitemradio` with one).
+    pub selection_mode: Signal<SelectionMode>,
 }
 
 /// Opens the [`Menu`] in the [`Popover`](super::popover::Popover) inside it when its pressable child
@@ -194,6 +204,110 @@ pub fn MenuTrigger(
     )
 }
 
+/// What the items inside a [`ContextMenuTrigger`] call when a context menu is requested on
+/// them: their key, the request, and their element (the menu is labelled by and placed at it).
+#[derive(Clone, Copy)]
+pub(crate) struct ContextMenuTargetContext {
+    pub(crate) open: Callback<(Key, ContextMenuEvent)>,
+}
+
+impl ContextMenuTargetContext {
+    /// The `on_context_menu` of the item `key` inside a `ContextMenuTrigger`, if any.
+    pub(crate) fn for_item(key: &Key) -> Option<Callback<ContextMenuEvent>> {
+        let context = use_context::<Self>()?;
+        let key = key.clone();
+        Some(Callback::new(move |e: ContextMenuEvent| {
+            context.open.run((key.clone(), e));
+        }))
+    }
+}
+
+/// The item a [`ContextMenuTrigger`]'s menu was opened for.
+#[derive(Debug, Clone, Copy)]
+pub struct ContextMenuTarget(pub Signal<Option<Key>>);
+
+/// The item the [`ContextMenuTrigger`] around opened its menu for (e.g. for the menu's
+/// `on_action`); `None` outside of one.
+pub fn use_context_menu_target() -> Signal<Option<Key>> {
+    use_context::<ContextMenuTarget>().map_or_else(|| Signal::stored(None), |target| target.0)
+}
+
+/// Opens its menu where a context menu is requested on an item of the collection inside: a
+/// `GridListItem`, `TableRow` or `ListBoxItem` (right click, Shift+F10, the context menu key, a
+/// long press on iOS). Put the collection and a `Popover` with a `Menu` inside; the menu is
+/// labelled by the item, opens at the point (at the item's center from the keyboard), and the
+/// focus returns to the item when it closes. [`use_context_menu_target`] tells the item.
+///
+/// react-aria-components has no row-level context menus (an addition): a `MenuTrigger` with
+/// `trigger=ContextMenu` opens at one trigger element.
+#[component]
+pub fn ContextMenuTrigger(
+    #[prop(into, optional)] is_disabled: Signal<bool>,
+    /// Called when the menu opens or closes.
+    #[prop(into, optional)]
+    on_open_change: Option<Callback<bool>>,
+    children: Children,
+) -> impl IntoView {
+    let menu_state = use_menu_trigger_state(UseMenuTriggerStateInput {
+        on_open_change,
+        ..UseMenuTriggerStateInput::default()
+    });
+    close_context_menu_on_outside_right_click(menu_state);
+    // The item the menu is for: its key, element (the popover's anchor) and id (the menu's name).
+    let target_key = RwSignal::new(None::<Key>);
+    let target_id = RwSignal::new(String::new());
+    let target = CapturedElement::new();
+    let open = Callback::new(move |(key, e): (Key, ContextMenuEvent)| {
+        if is_disabled.get_untracked() {
+            return;
+        }
+        let element: &web_sys::Element = &e.target;
+        // The focus returns to the item when the menu closes.
+        crate::utils::focus::focus_element(element, true);
+        target.set(element.clone());
+        target_id.set(element.id());
+        target_key.set(Some(key));
+        let rect = element.get_bounding_client_rect();
+        menu_state.set_point(Some(Point {
+            x: rect.x() + e.x,
+            y: rect.y() + e.y,
+        }));
+        menu_state.open(None);
+    });
+    let overlay_trigger = DialogTriggerContext::new(menu_state.overlay, target);
+    let menu_id = crate::utils::id::use_id("menu");
+    let menu_context = MenuTriggerContext {
+        menu_props: UseMenuTriggerMenuProps {
+            id: Signal::stored(menu_id),
+            aria_labelledby: target_id.into(),
+            auto_focus: Signal::derive(move || {
+                Some(match menu_state.focus_strategy() {
+                    Some(FocusStrategy::First) => AutoFocus::First,
+                    Some(FocusStrategy::Last) => AutoFocus::Last,
+                    None => AutoFocus::Selected,
+                })
+            }),
+            on_close: Callback::new(move |()| menu_state.close()),
+        },
+        trigger: overlay_trigger,
+    };
+    scoped_view(
+        move || {
+            provide_context(overlay_trigger);
+            provide_context(menu_context);
+            provide_context(RootMenuState(menu_state));
+            provide_context(ContextMenuTargetContext { open });
+            provide_context(ContextMenuTarget(target_key.into()));
+            // At the point, below and after it (react-aria-components' context menus).
+            provide_context(Some(PopoverDefaults {
+                placement: Placement::BottomStart,
+                offset: 0.0,
+            }));
+        },
+        children,
+    )
+}
+
 /// A headless menu: a list of actions (or of options to check). Arrow keys and type-ahead move
 /// focus; pressing an item (or Enter/Space) performs `on_action` and closes the menu of a
 /// [`MenuTrigger`].
@@ -203,8 +317,10 @@ pub fn MenuTrigger(
 /// between them renders as `role="separator"`. Inside a `MenuTrigger`, the menu is labelled by
 /// the trigger and focuses its first, last or selected item when it opens.
 ///
-/// Data attributes of items: `data-focused`, `data-focus-visible`, `data-selected`,
-/// `data-disabled`, `data-pressed`.
+/// Data attributes: `data-empty` on the menu; on items `data-focused`, `data-focus-visible`,
+/// `data-selected`, `data-disabled`, `data-pressed`, `data-selection-mode` (`single`/`multiple`).
+///
+/// Default class: `leptonic-Menu`.
 #[component]
 #[allow(clippy::too_many_lines, clippy::implicit_hasher)]
 pub fn Menu(
@@ -248,6 +364,7 @@ pub fn Menu(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Menu", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     // A submenu takes its settings from its `SubmenuTrigger`, not from the root trigger.
@@ -312,6 +429,8 @@ pub fn Menu(
         (own, ctx) => own.or(ctx.map(|ctx| ctx.menu_props.on_close)),
     };
 
+    let collection = state.collection;
+    let is_empty = Signal::derive(move || collection.with(|c| c.items().next().is_none()));
     let UseMenuReturn { props, data } = use_menu(UseMenuInput {
         id: trigger_ctx.map(|ctx| ctx.menu_props.id.get_untracked()),
         aria_label,
@@ -324,7 +443,9 @@ pub fn Menu(
         on_action,
         on_close,
         submenu,
-        ..UseMenuInput::new(state, element)
+        state,
+        element,
+        keyboard_delegate: None,
     });
     view! {
         <Provider value=data>
@@ -337,7 +458,7 @@ pub fn Menu(
             <Provider value=SeparatorContext {
                 element_type: SeparatorElementType::Div,
             }>
-                <div {..props.into_attrs()} class=classes style=styles>
+                <div {..props.into_attrs()} class=classes style=styles data-empty=flag(is_empty)>
                     {children()}
                 </div>
             </Provider>
@@ -351,6 +472,8 @@ pub fn Menu(
 
 /// An item of a [`Menu`], for the collection item `key`: `menuitem`, or `menuitemcheckbox` /
 /// `menuitemradio` in a menu with selection.
+///
+/// Default class: `leptonic-MenuItem`.
 #[component]
 pub fn MenuItem(
     /// The item's key in the menu's collection.
@@ -358,12 +481,13 @@ pub fn MenuItem(
     key: Key,
     /// Whether activating the item closes the menu. Default: unless the menu allows multiple
     /// selection, or the item was checked with Space.
-    #[prop(optional)]
-    should_close_on_select: Option<bool>,
+    #[prop(into, optional)]
+    should_close_on_select: CloseOnSelect,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MenuItem", classes);
     let menu = expect_context::<MenuData>();
     // The trigger item of a `SubmenuTrigger`.
     let submenu_trigger = use_context::<SubmenuItemContext>()
@@ -378,6 +502,8 @@ pub fn MenuItem(
             trigger
         });
     let has_submenu = submenu_trigger.is_some();
+    let selection = menu.state.selection;
+    let selection_mode = Signal::derive(move || selection.selection_mode());
     let is_open = submenu_trigger
         .as_ref()
         .map_or_else(|| Signal::stored(false), |trigger| trigger.is_open);
@@ -401,6 +527,17 @@ pub fn MenuItem(
         label: StoredValue::new(Some(label_props)),
         description: StoredValue::new(Some(description_props)),
         shortcut: StoredValue::new(Some(keyboard_shortcut_props)),
+        is_selected,
+        is_focused,
+        is_focus_visible,
+        is_disabled,
+        is_pressed,
+        selection_mode,
+    };
+    let data_selection_mode = move || match selection_mode.get() {
+        SelectionMode::None => None,
+        SelectionMode::Single => Some("single"),
+        SelectionMode::Multiple => Some("multiple"),
     };
     let (attrs, item_styles) = props.into_parts();
     let styles = item_styles.merge(styles);
@@ -418,6 +555,7 @@ pub fn MenuItem(
                 data-pressed=flag(is_pressed)
                 data-has-submenu=has_submenu.then_some("true")
                 data-open=flag(is_open)
+                data-selection-mode=data_selection_mode
             >
                 {children()}
             </div>
@@ -479,7 +617,10 @@ pub fn SubmenuTrigger(
         kind,
         is_disabled,
         delay: delay.unwrap_or(std::time::Duration::from_millis(200)),
-        ..UseSubmenuTriggerInput::new(state, trigger, parent_menu, submenu)
+        state,
+        trigger,
+        parent_menu,
+        submenu,
     });
     let popover = SubmenuPopoverContext {
         should_close_on_interact_outside: StoredValue::new(should_close_on_interact_outside),
@@ -535,23 +676,29 @@ where
 }
 
 /// The main text of a [`MenuItem`] (labels the item).
+///
+/// Default class: `leptonic-MenuItemLabel`.
 #[component]
 pub fn MenuItemLabel(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MenuItemLabel", classes);
     let ctx = expect_context::<MenuItemCtx>();
     slot(ctx.label, "MenuItemLabel", classes, styles, children)
 }
 
 /// Secondary text of a [`MenuItem`] (describes the item).
+///
+/// Default class: `leptonic-MenuItemDescription`.
 #[component]
 pub fn MenuItemDescription(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MenuItemDescription", classes);
     let ctx = expect_context::<MenuItemCtx>();
     slot(
         ctx.description,
@@ -563,12 +710,15 @@ pub fn MenuItemDescription(
 }
 
 /// The keyboard shortcut of a [`MenuItem`] (e.g. "Ctrl+C"), announced with the item.
+///
+/// Default class: `leptonic-MenuItemShortcut`.
 #[component]
 pub fn MenuItemShortcut(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MenuItemShortcut", classes);
     let ctx = expect_context::<MenuItemCtx>();
     slot(ctx.shortcut, "MenuItemShortcut", classes, styles, children)
 }
@@ -601,6 +751,8 @@ fn slot(
 
 /// A group of items in a [`Menu`], for the collection section `key`. Renders the section's header
 /// (if the collection has one) followed by the children.
+///
+/// Default class: `leptonic-MenuSection`.
 #[component]
 pub fn MenuSection(
     /// The section's key in the menu's collection.
@@ -611,6 +763,8 @@ pub fn MenuSection(
     #[prop(into, optional)] heading_classes: Classes,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-MenuSection", classes);
+    let heading_classes = with_default_class("leptonic-MenuSectionHeading", heading_classes);
     let menu = expect_context::<MenuData>();
     let UseMenuSectionReturn {
         item_props,

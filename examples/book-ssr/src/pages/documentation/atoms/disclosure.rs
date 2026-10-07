@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::disclosure::DisclosureAtomDemo;
@@ -191,7 +190,6 @@ pub fn PageAtomDisclosure() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::Disclosure.materialize()>"Disclosure overview"</Link></li>
                 <li><Link href=routes::doc::disclosure::Hook.materialize()>"Disclosure Hooks"</Link></li>
-                <li><Link href=routes::doc::disclosure::Component.materialize()>"Disclosure Components"</Link></li>
                 <li><Link href=routes::doc::button::Atom.materialize()>"Button Atoms"</Link></li>
             </SeeAlso>
         </DocPage>

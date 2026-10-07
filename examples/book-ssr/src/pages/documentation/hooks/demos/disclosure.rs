@@ -12,7 +12,7 @@ pub fn DisclosureDemo() -> impl IntoView {
         ..
     } = use_disclosure(UseDisclosureInput {
         is_disabled: disabled.into(),
-        ..UseDisclosureInput::new(state)
+        state,
     });
     // The trigger is a button: `use_button` with the disclosure's configuration.
     let (button_attrs, button_styles) = use_button(button).props.into_parts();

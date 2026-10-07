@@ -14,7 +14,7 @@ pub fn TransitionsCollapseXDemo() -> impl IntoView {
                 {move || if expanded.get() { "Hide sidebar" } else { "Show sidebar" }}
             </Button>
             <div class="demo-transitions-row">
-                <Collapse show=expanded axis=CollapseAxis::X>
+                <Collapse is_shown=expanded axis=CollapseAxis::X>
                     <nav class="demo-transitions-sidebar">"Sidebar"</nav>
                 </Collapse>
                 <div class="demo-transitions-panel demo-transitions-main">"Main content takes the remaining width."</div>

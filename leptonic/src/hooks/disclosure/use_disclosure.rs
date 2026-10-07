@@ -39,16 +39,6 @@ pub struct UseDisclosureInput {
     pub is_disabled: Signal<bool>,
 }
 
-impl UseDisclosureInput {
-    /// An enabled disclosure for `state`.
-    pub fn new(state: DisclosureState) -> Self {
-        Self {
-            state,
-            is_disabled: Signal::stored(false),
-        }
-    }
-}
-
 /// Return value of [`use_disclosure`].
 #[derive(Debug)]
 pub struct UseDisclosureReturn {
@@ -125,7 +115,10 @@ impl UseDisclosurePanelProps {
 ///
 /// ```ignore
 /// let state = use_disclosure_state(UseDisclosureStateInput::default());
-/// let disclosure = use_disclosure(UseDisclosureInput::new(state));
+/// let disclosure = use_disclosure(UseDisclosureInput {
+///     state,
+///     is_disabled: Signal::stored(false),
+/// });
 /// let (button_attrs, button_styles) = use_button(disclosure.button).props.into_parts();
 /// view! {
 ///     <button {..button_attrs} style=button_styles>"Details"</button>

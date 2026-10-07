@@ -23,8 +23,7 @@ use crate::{
 //
 // =============================================================================
 
-/// Input of [`use_color_channel_field_state`]. Start from
-/// [`UseColorChannelFieldStateInput::new`].
+/// Input of [`use_color_channel_field_state`].
 #[derive(Clone)]
 pub struct UseColorChannelFieldStateInput<C: ColorValue> {
     /// The initial color (`None`: empty).
@@ -42,24 +41,6 @@ pub struct UseColorChannelFieldStateInput<C: ColorValue> {
     pub name: Option<String>,
     /// Called with the color when the channel's value is committed.
     pub on_change: Option<Callback<Option<C>>>,
-}
-
-impl<C: ColorValue> UseColorChannelFieldStateInput<C> {
-    /// An empty field for `channel`.
-    pub fn new(channel: C::Channel) -> Self {
-        Self {
-            default_value: None,
-            value: None,
-            channel,
-            is_disabled: Signal::stored(false),
-            is_read_only: Signal::stored(false),
-            is_invalid: Signal::stored(false),
-            validate: None,
-            validation_behavior: ValidationBehavior::default(),
-            name: None,
-            on_change: None,
-        }
-    }
 }
 
 /// The state of a field editing one channel of a color.

@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{chip_colors::ChipColorsDemo, chip_dismissible::ChipDismissibleDemo};
@@ -39,6 +38,7 @@ pub fn PageChip() -> impl IntoView {
                     <ApiRow name="dismiss_label" ty="MaybeProp<String>" default="\"Dismiss\"">
                         "Names the dismiss button, e.g. \u{201c}Remove filter\u{201d}."
                     </ApiRow>
+                    <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the dismiss button."</ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                         "Additional classes and styles."
                     </ApiRow>

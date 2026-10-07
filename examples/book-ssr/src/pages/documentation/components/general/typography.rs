@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -121,7 +120,7 @@ pub fn PageTypography() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Layout.materialize()>"Content & Layout"</Link></li>
-                <li><Link href=routes::doc::Kbd.materialize()>"Kbd Components"</Link></li>
+                <li><Link href=routes::doc::kbd::Component.materialize()>"Kbd Components"</Link></li>
                 <li><Link href=routes::doc::SanitizedHtml.materialize()>"Sanitized HTML Component"</Link></li>
                 <li><Link href=routes::doc::Themes.materialize()>"Themes"</Link></li>
             </SeeAlso>

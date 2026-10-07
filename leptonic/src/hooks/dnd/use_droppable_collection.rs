@@ -400,7 +400,10 @@ pub fn use_droppable_collection(
                 clear_global_dnd_state();
             }
         })),
-        ..UseDropInput::new(element)
+        element,
+        get_drop_operation: None,
+        has_drop_button: false,
+        is_disabled: Signal::stored(false),
     });
     // The collection isn't described as a drop target itself (its items and indicators are).
     drop_props.aria_describedby = Signal::stored(None);

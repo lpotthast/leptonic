@@ -16,8 +16,12 @@ pub fn TableContainer(
 
 #[component]
 pub fn Table(
-    #[prop(optional)] bordered: Option<bool>,
-    #[prop(optional)] hoverable: Option<bool>,
+    /// Borders around every cell.
+    #[prop(into, optional)]
+    bordered: Signal<bool>,
+    /// Highlights the hovered row.
+    #[prop(into, optional)]
+    hoverable: Signal<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -26,8 +30,8 @@ pub fn Table(
         <table
             class=classes
                 .add("leptonic-table")
-                .add_reactive("leptonic-table-bordered", bordered.unwrap_or(false))
-                .add_reactive("leptonic-table-hoverable", hoverable.unwrap_or(false))
+                .add_reactive("leptonic-table-bordered", bordered)
+                .add_reactive("leptonic-table-hoverable", hoverable)
             style=styles
         >
             {children()}
@@ -73,7 +77,9 @@ pub fn TableRow(
 
 #[component]
 pub fn TableHeaderCell(
-    #[prop(optional)] min_width: Option<bool>,
+    /// Whether the column keeps its content's minimum width (no wrapping). Default: `true`.
+    #[prop(into, default = Signal::stored(true))]
+    min_width: Signal<bool>,
     /// Makes the header pressable (e.g. to sort by its column): it becomes focusable and reacts to
     /// Enter and Space too.
     #[prop(optional, into)]
@@ -105,7 +111,7 @@ pub fn TableHeaderCell(
             {..press_attrs}
             tabindex=tabindex
             aria-sort=move || aria_sort.get()
-            class=classes.add("leptonic-table-header-cell").add_reactive("min-width", min_width.unwrap_or(true))
+            class=classes.add("leptonic-table-header-cell").add_reactive("min-width", min_width)
             style=styles
         >
             {children()}

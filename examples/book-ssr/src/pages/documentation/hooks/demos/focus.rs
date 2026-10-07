@@ -36,14 +36,13 @@ pub fn FocusDemo() -> impl IntoView {
         <p class="demo-status">
             {move || if is_focused.get() { "The field has focus." } else { "The field doesn\u{2019}t have focus." }}
         </p>
+        <div class="demo-controls">
+            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
+        </div>
 
         <p>"Last " {move || events.with(Observer::occupied_len)} " events:"</p>
         <pre class="demo-event-log">
             {move || events.with(|events| events.iter().rev().cloned().collect::<Vec<_>>().join("\n"))}
         </pre>
-
-        <div class="demo-controls">
-            <Checkbox is_selected=disabled set_selected=disabled>"Disabled"</Checkbox>
-        </div>
     }
 }

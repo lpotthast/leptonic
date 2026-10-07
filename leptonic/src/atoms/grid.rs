@@ -16,7 +16,8 @@ use crate::{
         use_grid_row_group, use_grid_state,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag, styles::Styles,
+        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
+        default_class::with_default_class, styles::Styles,
     },
 };
 
@@ -24,6 +25,8 @@ use crate::{
 ///
 /// The rows and cells come from `collection` (built with `CollectionBuilder::row`): render one
 /// [`GridRow`] per row and one [`GridCell`] per cell, in collection order.
+///
+/// Default class: `leptonic-Grid`.
 #[component]
 #[allow(clippy::too_many_lines, clippy::implicit_hasher)]
 pub fn Grid(
@@ -65,6 +68,7 @@ pub fn Grid(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-Grid", classes);
     let (selection, on_selection_change) =
         ValueBinding::from_state_props(selection, set_selection, on_selection_change);
     let state = use_grid_state(UseGridStateInput {
@@ -94,7 +98,11 @@ pub fn Grid(
         keyboard_navigation_behavior,
         on_row_action,
         on_cell_action,
-        ..UseGridInput::new(state, CapturedElement::new())
+        state,
+        element: CapturedElement::new(),
+        id: None,
+        keyboard_delegate: None,
+        should_select_on_press_up: false,
     });
 
     view! {
@@ -107,12 +115,15 @@ pub fn Grid(
 }
 
 /// A group of rows of a [`Grid`] (`role="rowgroup"`).
+///
+/// Default class: `leptonic-GridRowGroup`.
 #[component]
 pub fn GridRowGroup(
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridRowGroup", classes);
     let row_group = use_grid_row_group();
     view! {
         <div {..row_group.row_group_props.into_attrs()} class=classes style=styles>
@@ -125,6 +136,8 @@ pub fn GridRowGroup(
 ///
 /// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
 /// `data-pressed` for styling.
+///
+/// Default class: `leptonic-GridRow`.
 #[component]
 pub fn GridRow(
     /// The row's key in the grid's collection.
@@ -134,6 +147,7 @@ pub fn GridRow(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridRow", classes);
     let grid = expect_context::<GridData>();
     let UseGridRowReturn {
         row_props,
@@ -142,7 +156,11 @@ pub fn GridRow(
         is_disabled,
         is_pressed,
         ..
-    } = use_grid_row(UseGridRowInput { grid, key });
+    } = use_grid_row(UseGridRowInput {
+        grid,
+        key,
+        on_context_menu: None,
+    });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
     // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
@@ -168,6 +186,8 @@ pub fn GridRow(
 /// A cell of a [`Grid`], for the collection cell `key` (`Key::cell(row, column)`).
 ///
 /// Exposes `data-pressed`, `data-focused` and `data-focus-visible` for styling.
+///
+/// Default class: `leptonic-GridCell`.
 #[component]
 pub fn GridCell(
     /// The cell's key in the grid's collection.
@@ -181,13 +201,18 @@ pub fn GridCell(
     #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
+    let classes = with_default_class("leptonic-GridCell", classes);
     let grid = expect_context::<GridData>();
     let UseGridCellReturn {
         grid_cell_props,
         is_pressed,
     } = use_grid_cell(UseGridCellInput {
         focus_mode,
-        ..UseGridCellInput::new(grid, key)
+        grid,
+        key,
+        id: None,
+        allows_arrow_navigation: false,
+        should_select_on_press_up: false,
     });
 
     let (attrs, cell_styles) = grid_cell_props.into_parts();

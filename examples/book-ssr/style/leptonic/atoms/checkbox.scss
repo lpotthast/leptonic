@@ -1,0 +1,73 @@
+// Upstream: ../starters/docs/src/Checkbox.css @ 99e610236
+// Upstream: ../starters/docs/src/Checkbox.tsx @ 99e610236
+//
+// `Checkbox` (upstream's `CheckboxButton`). Markup: the box as the checkbox's first child, an
+// `indicator` (the utility class) holding the check mark, then the label text:
+//
+//   <div class="indicator">
+//     <svg viewBox="0 0 18 18" aria-hidden="true">
+//       <polyline points="2 9 7 14 16 4" />                  // checked
+//       <rect x="1" y="7.5" width="16" height="3" />         // instead, while indeterminate
+//     </svg>
+//   </div>
+//   "Label"
+//
+// Leptonic has no `CheckboxField` (upstream's wrapper of the checkbox, its description and its
+// error), so its rules are left out.
+.leptonic-Checkbox {
+  --checkmark-color: var(--highlight-foreground);
+
+  display: flex;
+  /* This is needed so the HiddenInput is positioned correctly */
+  position: relative;
+  align-items: center;
+  gap: var(--spacing-2);
+  font: var(--font-size) system-ui;
+  color: var(--text-color);
+  forced-color-adjust: none;
+  -webkit-tap-highlight-color: transparent;
+
+  .indicator {
+    width: calc(var(--spacing) * 4.5);
+    height: calc(var(--spacing) * 4.5);
+    box-sizing: border-box;
+    border-radius: var(--radius-sm);
+    transition: all 200ms;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  svg {
+    width: calc(100% - var(--spacing-2));
+    height: calc(100% - var(--spacing-2));
+    fill: none;
+    stroke: var(--checkmark-color);
+    stroke-width: 3px;
+    stroke-dasharray: 22px;
+    stroke-dashoffset: 66;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: all 200ms;
+  }
+
+  &[data-selected],
+  &[data-indeterminate] {
+    svg {
+      stroke-dashoffset: 44;
+    }
+  }
+
+  &[data-indeterminate] {
+    svg {
+      stroke: none;
+      fill: var(--checkmark-color);
+    }
+  }
+
+  &[data-disabled] {
+    color: var(--text-color-disabled);
+    --checkmark-color: var(--text-color-disabled);
+  }
+}

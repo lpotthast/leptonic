@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::date_time_formatter::DateTimeFormatterDemo;
@@ -10,8 +9,8 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
     view! {
         <DocPage title="DateTimeFormatter">
             <p>
-                "A "<Code inline=true>"DateTimeFormatter"</Code>" writes a "<Code inline=true>"time::OffsetDateTime"</Code>
-                " the way a locale does: \u{201c}March 14, 2026\u{201d} in American English, \u{201c}14 March 2026\u{201d} "
+                "A "<Code inline=true>"DateTimeFormatter"</Code>" writes a "<Code inline=true>"jiff"</Code>" date or date and "
+                "time the way a locale does: \u{201c}March 14, 2026\u{201d} in American English, \u{201c}14 March 2026\u{201d} "
                 "in British English, \u{201c}14. M\u{e4}rz 2026\u{201d} in German. It uses ICU4X, so the server renders the "
                 "same text as the browser. The locale usually comes from the "
                 <Link href=routes::doc::utilities::I18nProvider.materialize()>"I18nProvider"</Link>"."
@@ -32,6 +31,7 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                         };
 
                         let locale = use_locale();
+                        // `post.published_at` is a `jiff::civil::DateTime`.
                         let published = move || {
                             DateTimeFormatter::new(&locale.get(), DateTimeFormatOptions {
                                 date_style: Some(DateTimeStyle::Long),
@@ -59,10 +59,20 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
+                        <TableCell><Code inline=true>"format_date(date)"</Code></TableCell>
+                        <TableCell>
+                            "A "<Code inline=true>"jiff::civil::Date"</Code>" with the options\u{2019} weekday, year, month and day, "
+                            "in the locale\u{2019}s own pattern, e.g. \u{201c}March 2026\u{201d} (year and long month) or "
+                            "\u{201c}Saturday, March 14, 2026\u{201d}. Narrow weekdays and months are their first letter. "
+                            "Without any of these options, the ISO form."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
                         <TableCell><Code inline=true>"format(&date_time)"</Code></TableCell>
                         <TableCell>
-                            "The formatted "<Code inline=true>"OffsetDateTime"</Code>", in the offset it carries. Convert it "
-                            "to the reader\u{2019}s offset first if it should show their local time."
+                            "A "<Code inline=true>"jiff::civil::DateTime"</Code>", a wall-clock date and time. For a "
+                            <Code inline=true>"Zoned"</Code>" moment, convert it to the reader\u{2019}s time zone first and pass "
+                            "its "<Code inline=true>"datetime()"</Code>"."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -103,7 +113,8 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                     <ApiRow name="time_zone" ty="Option<String>" default="None">"The time zone to format in."</ApiRow>
                 </ApiTable>
                 <p>
-                    "Only the styles follow the locale\u{2019}s patterns so far. Single parts are joined with spaces in a "
+                    "In "<Code inline=true>"format"</Code>", only the styles follow the locale\u{2019}s patterns so far "
+                    "("<Code inline=true>"format_date"</Code>" localizes the date parts too). Single parts are joined with spaces in a "
                     "fixed order (weekday, month, day, year, time), with localized names for weekdays and months only, and "
                     <Code inline=true>"era"</Code>", "<Code inline=true>"time_zone"</Code>" and "
                     <Code inline=true>"time_zone_name"</Code>" are not applied yet. Without any option, the date is written "

@@ -1,17 +1,18 @@
 pub mod test_aria_hide_outside;
 pub mod test_breadcrumbs;
 pub mod test_button;
-pub mod test_button_components;
+pub mod test_calendar;
 pub mod test_checkbox;
 pub mod test_color_area;
 pub mod test_color_field;
 pub mod test_color_picker;
-pub mod test_color_picker_component;
 pub mod test_color_slider;
 pub mod test_color_swatch;
 pub mod test_color_wheel;
 pub mod test_combobox;
 pub mod test_context_menu;
+pub mod test_context_menu_atoms;
+pub mod test_date_field;
 pub mod test_dialog;
 pub mod test_disclosure;
 pub mod test_dnd;
@@ -24,6 +25,7 @@ pub mod test_focus_visible;
 pub mod test_focus_within;
 pub mod test_focusable;
 pub mod test_focusable_atom;
+pub mod test_global_shortcuts;
 pub mod test_grid;
 pub mod test_grid_list;
 pub mod test_has_tabbable_child;
@@ -32,6 +34,7 @@ pub mod test_hydration_ids;
 pub mod test_interact_outside;
 pub mod test_keyboard;
 pub mod test_label_slots;
+pub mod test_landmark;
 pub mod test_link;
 pub mod test_listbox;
 pub mod test_live_announcer;
@@ -50,27 +53,26 @@ pub mod test_progress_bar;
 pub mod test_radio_group;
 pub mod test_search_field;
 pub mod test_select;
-pub mod test_select_components;
 pub mod test_server_panics;
 pub mod test_slider;
-pub mod test_slider_components;
 pub mod test_spin_button;
 pub mod test_submenu;
 pub mod test_switch;
 pub mod test_table;
-pub mod test_table_components;
 pub mod test_table_resizing;
 pub mod test_tabs;
 pub mod test_tag_group;
+pub mod test_tag_group_atoms;
 pub mod test_text_field;
 pub mod test_text_field_atom;
-pub mod test_text_field_components;
-pub mod test_tiptap_editor_components;
+pub mod test_toast;
 pub mod test_toggle_button;
 pub mod test_toolbar;
 pub mod test_tooltip;
 pub mod test_tree;
 pub mod test_use_button;
+pub mod test_virtual_list;
+pub mod test_virtualizer;
 
 use std::borrow::Cow;
 
@@ -98,8 +100,10 @@ pub fn all(parallelism: Parallelism) -> BrowserTests<str> {
 fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
     let tests = Selected::new(group);
     if std::env::var("BROWSER_TEST_KNOWN_ISSUES").is_ok_and(|v| v == "1") {
-        // No known issues at the moment. Register `*KnownIssues` tests here.
-        return tests.tests;
+        // Register `*KnownIssues` tests here.
+        return tests
+            .with(test_virtual_list::ComponentSpreadRebuildKnownIssues {})
+            .tests;
     }
     tests
         // First: the slowest test (~16s), so that it overlaps with the others in parallel runs.
@@ -114,16 +118,10 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_keyboard::KeyboardTests {})
         .with(test_color_area::ColorAreaTests {})
         .with(test_color_field::ColorFieldTests {})
-        .with(test_button_components::ButtonComponentsTests {})
         .with(test_color_picker::ColorPickerTests {})
-        .with(test_color_picker_component::ColorPickerComponentTests {})
         .with(test_color_slider::ColorSliderTests {})
         .with(test_color_swatch::ColorSwatchTests {})
         .with(test_color_wheel::ColorWheelTests {})
-        .with(test_select_components::SelectComponentsTests {})
-        .with(test_slider_components::SliderComponentsTests {})
-        .with(test_tiptap_editor_components::TiptapEditorComponentsTests {})
-        .with(test_table_components::TableComponentsTests {})
         .with(test_label_slots::LabelSlotsTests {})
         .with(test_context_menu::ContextMenuTests {})
         .with(test_interact_outside::InteractOutsideTests {})
@@ -148,12 +146,13 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_grid_list::GridListTests {})
         .with(test_table::TableTests {})
         .with(test_tabs::TabsTests {})
+        .with(test_calendar::CalendarTests {})
+        .with(test_date_field::DateFieldTests {})
         .with(test_slider::SliderTests {})
         .with(test_dnd::DndTests {})
         .with(test_text_field::TextFieldTests {})
         .with(test_text_field_atom::TextFieldAtomTests {})
         .with(test_search_field::SearchFieldTests {})
-        .with(test_text_field_components::TextFieldComponentTests {})
         .with(test_combobox::ComboBoxTests {})
         .with(test_checkbox::CheckboxTests {})
         .with(test_radio_group::RadioGroupTests {})
@@ -171,7 +170,15 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_disclosure::DisclosureTests {})
         .with(test_popover::PopoverTests {})
         .with(test_overlay_position::OverlayPositionTests {})
+        .with(test_context_menu_atoms::ContextMenuAtomsTests {})
+        .with(test_global_shortcuts::GlobalShortcutsTests {})
+        .with(test_landmark::LandmarkTests {})
+        .with(test_toast::ToastTests {})
         .with(test_tooltip::TooltipTests {})
+        .with(test_tag_group_atoms::TagGroupAtomTests {})
+        .with(test_virtual_list::VirtualListTests {})
+        .with(test_virtual_list::VirtualListRebuildTests {})
+        .with(test_virtualizer::VirtualizerTests {})
         .with(test_tag_group::TagGroupTests {})
         .with(test_tree::TreeTests {})
         .with(test_hydration_ids::HydrationIdTests {})

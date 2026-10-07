@@ -24,13 +24,38 @@ pub fn SliderCallbacksDemo() -> impl IntoView {
         on_change_end: Some(Callback::new(move |values: Vec<f64>| {
             set_last_change_end.set(values.first().copied());
         })),
-        ..UseSliderStateInput::new(0.0, 100.0)
+        value: None,
+        min_value: Signal::stored(0.0),
+        max_value: Signal::stored(100.0),
+        is_disabled: Signal::default(),
+        orientation: Signal::stored(Orientation::Horizontal),
+        format_options: Signal::default(),
+        value_label: None,
+        page_size: None,
     });
     let slider = use_slider(UseSliderInput {
         has_label: Signal::stored(true),
-        ..UseSliderInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
     });
-    let thumb = use_slider_thumb(UseSliderThumbInput::new(state, &slider));
+    let thumb = use_slider_thumb(UseSliderThumbInput {
+        state,
+        slider: slider.data.clone(),
+        track: slider.track_element,
+        index: 0,
+        is_disabled: Signal::default(),
+        is_required: Signal::default(),
+        is_invalid: Signal::default(),
+        name: None,
+        form: None,
+        has_label: Signal::stored(false),
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
+    });
     let focus_ring = use_focus_ring(UseFocusRingInput {
         within: true,
         ..UseFocusRingInput::default()
@@ -40,7 +65,9 @@ pub fn SliderCallbacksDemo() -> impl IntoView {
     let fill_styles = Styles::new().add_reactive(move || {
         WidthProperty.declare(computed_size(computed_pct(state.thumb_percent(0) * 100.0)))
     });
-    let show = |value: Option<f64>| value.map_or_else(|| "none yet".to_owned(), |value| format!("{value:.0}"));
+    let show = |value: Option<f64>| {
+        value.map_or_else(|| "none yet".to_owned(), |value| format!("{value:.0}"))
+    };
 
     view! {
         <div class="demo-slider demo-slider-orange" {..slider.group_props.into_attrs()}>

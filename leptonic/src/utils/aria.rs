@@ -210,6 +210,85 @@ impl AttributeValue for AriaDescribedby {
     }
 }
 
+/// An `aria-keyshortcuts` value: the shortcuts activating or focusing an element, e.g.
+/// `"Control+K"` (see [`Shortcut::to_aria_keyshortcuts`](crate::utils::keyboard_shortcut::Shortcut::to_aria_keyshortcuts)).
+/// Collect several into one value (space-separated, as the attribute lists them).
+///
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-keyshortcuts>
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AriaKeyshortcuts(String);
+
+impl AriaKeyshortcuts {
+    pub(crate) fn from_value(value: String) -> Self {
+        Self(value)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for AriaKeyshortcuts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl FromIterator<AriaKeyshortcuts> for AriaKeyshortcuts {
+    fn from_iter<I: IntoIterator<Item = AriaKeyshortcuts>>(iter: I) -> Self {
+        Self(iter.into_iter().map(|value| value.0).join(" "))
+    }
+}
+
+impl AttributeValue for AriaKeyshortcuts {
+    type State = <String as AttributeValue>::State;
+    type AsyncOutput = Self;
+    type Cloneable = Self;
+    type CloneableOwned = Self;
+
+    fn html_len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn to_html(self, key: &str, buf: &mut String) {
+        <String as AttributeValue>::to_html(self.0, key, buf);
+    }
+
+    fn to_template(key: &str, buf: &mut String) {
+        <String as AttributeValue>::to_template(key, buf);
+    }
+
+    fn hydrate<const FROM_SERVER: bool>(
+        self,
+        key: &str,
+        el: &leptos::tachys::renderer::types::Element,
+    ) -> Self::State {
+        <String as AttributeValue>::hydrate::<FROM_SERVER>(self.0, key, el)
+    }
+
+    fn build(self, el: &leptos::tachys::renderer::types::Element, key: &str) -> Self::State {
+        <String as AttributeValue>::build(self.0, el, key)
+    }
+
+    fn rebuild(self, key: &str, state: &mut Self::State) {
+        <String as AttributeValue>::rebuild(self.0, key, state);
+    }
+
+    fn into_cloneable(self) -> Self::Cloneable {
+        self
+    }
+
+    fn into_cloneable_owned(self) -> Self::CloneableOwned {
+        self
+    }
+
+    fn dry_resolve(&mut self) {}
+
+    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+        std::future::ready(self)
+    }
+}
+
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaRole {

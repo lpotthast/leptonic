@@ -12,18 +12,42 @@ use leptos::prelude::*;
 pub fn SliderRangeDemo() -> impl IntoView {
     let state = use_slider_state(UseSliderStateInput {
         default_values: Some(vec![20.0, 80.0]),
-        ..UseSliderStateInput::new(0.0, 100.0)
+        value: None,
+        min_value: Signal::stored(0.0),
+        max_value: Signal::stored(100.0),
+        step: Signal::stored(1.0),
+        is_disabled: Signal::default(),
+        orientation: Signal::stored(Orientation::Horizontal),
+        format_options: Signal::default(),
+        value_label: None,
+        page_size: None,
+        on_change: None,
+        on_change_end: None,
     });
     let slider = use_slider(UseSliderInput {
         has_label: Signal::stored(true),
-        ..UseSliderInput::new(state)
+        state,
+        id: None,
+        aria_label: MaybeProp::default(),
+        aria_labelledby: None,
+        aria_describedby: None,
     });
     // One `use_slider_thumb` per value, each with a focus ring that shows while its input has keyboard focus.
     let thumb = |index: usize, label: &'static str| {
         let thumb = use_slider_thumb(UseSliderThumbInput {
             index,
             aria_label: label.into(),
-            ..UseSliderThumbInput::new(state, &slider)
+            state,
+            slider: slider.data.clone(),
+            track: slider.track_element,
+            is_disabled: Signal::default(),
+            is_required: Signal::default(),
+            is_invalid: Signal::default(),
+            name: None,
+            form: None,
+            has_label: Signal::stored(false),
+            aria_labelledby: None,
+            aria_describedby: None,
         });
         let focus_ring = use_focus_ring(UseFocusRingInput {
             within: true,

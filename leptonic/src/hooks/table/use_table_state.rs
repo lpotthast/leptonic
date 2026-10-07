@@ -7,7 +7,7 @@ use super::TableCollection;
 use crate::{
     hooks::{
         GridFocusMode, GridState, UseGridStateInput,
-        collections::{CollectionMemo, DisabledBehavior, Key, SelectionOptions},
+        collections::{CollectionMemo, Key, SelectionOptions},
         use_grid_state,
     },
     utils::ValueBinding,
@@ -23,8 +23,8 @@ use crate::{
 //   rows is up to the caller: rebuild the table collection from the sort descriptor.
 // - The table collection is built by the caller (`TableCollection::build_with`, which also adds
 //   the selection checkbox column) instead of from JSX children.
-// - `UseTableStateInput::new` defaults `disabled_behavior` to `DisabledBehavior::Selection`, as
-//   react-aria does for tables.
+// - react-aria defaults a table's `disabledBehavior` to `selection`; here the caller sets
+//   `selection.disabled_behavior` (the table atoms use `DisabledBehavior::Selection`).
 //
 // ## OMITTED FEATURES
 // - Tree tables (`treeColumn`, `expandedKeys`): trees are grid lists (`hooks::tree`).
@@ -71,24 +71,6 @@ pub struct UseTableStateInput {
     pub sort_descriptor: Option<ValueBinding<Option<SortDescriptor>>>,
     /// Called when the user sorts the table (pressing a sortable column header).
     pub on_sort_change: Option<Callback<SortDescriptor>>,
-}
-
-impl UseTableStateInput {
-    /// A table without selection, focusing rows, with disabled rows still focusable
-    /// (`DisabledBehavior::Selection`).
-    pub fn new(table: Memo<Arc<TableCollection>>) -> Self {
-        Self {
-            table,
-            selection: SelectionOptions {
-                disabled_behavior: DisabledBehavior::Selection,
-                ..SelectionOptions::default()
-            },
-            focus_mode: GridFocusMode::Row,
-            default_sort_descriptor: None,
-            sort_descriptor: None,
-            on_sort_change: None,
-        }
-    }
 }
 
 /// The state of a table: its grid state (rows, cells, selection, focus) and its sorting.
@@ -152,6 +134,7 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
 
 #[cfg(test)]
 mod tests {
+    use crate::hooks::collections::DisabledBehavior;
     use assertr::prelude::*;
 
     use super::*;
@@ -170,7 +153,14 @@ mod tests {
                 on_sort_change: Some(Callback::new(move |d: SortDescriptor| {
                     changes.update(|c| c.push(d));
                 })),
-                ..UseTableStateInput::new(table)
+                table,
+                selection: SelectionOptions {
+                    disabled_behavior: DisabledBehavior::Selection,
+                    ..SelectionOptions::default()
+                },
+                focus_mode: GridFocusMode::Row,
+                default_sort_descriptor: None,
+                sort_descriptor: None,
             });
             let name = Key::from("name");
             state.sort(&name, None);
@@ -204,7 +194,14 @@ mod tests {
             let sort = RwSignal::new(None);
             let state = use_table_state(UseTableStateInput {
                 sort_descriptor: Some(sort.into()),
-                ..UseTableStateInput::new(table)
+                table,
+                selection: SelectionOptions {
+                    disabled_behavior: DisabledBehavior::Selection,
+                    ..SelectionOptions::default()
+                },
+                focus_mode: GridFocusMode::Row,
+                default_sort_descriptor: None,
+                on_sort_change: None,
             });
             let name = Key::from("name");
             state.sort(&name, None);

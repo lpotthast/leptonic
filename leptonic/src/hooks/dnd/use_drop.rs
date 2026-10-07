@@ -82,23 +82,6 @@ pub struct UseDropInput {
     pub is_disabled: Signal<bool>,
 }
 
-impl UseDropInput {
-    pub fn new(element: CapturedElement) -> Self {
-        Self {
-            element,
-            get_drop_operation: None,
-            get_drop_operation_for_point: None,
-            on_drop_enter: None,
-            on_drop_move: None,
-            on_drop_activate: None,
-            on_drop_exit: None,
-            on_drop: None,
-            has_drop_button: false,
-            is_disabled: Signal::stored(false),
-        }
-    }
-}
-
 /// Return value of [`use_drop`].
 pub struct UseDropReturn {
     pub drop_props: UseDropProps,

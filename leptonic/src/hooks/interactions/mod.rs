@@ -1,4 +1,5 @@
 pub mod use_context_menu;
+pub mod use_global_shortcuts;
 pub mod use_hover;
 pub mod use_interact_outside;
 pub mod use_keyboard;
@@ -8,6 +9,7 @@ pub mod use_prevent_scroll;
 pub mod use_scroll_wheel;
 
 pub use use_context_menu::*;
+pub use use_global_shortcuts::*;
 pub use use_hover::*;
 pub use use_interact_outside::*;
 pub use use_keyboard::*;

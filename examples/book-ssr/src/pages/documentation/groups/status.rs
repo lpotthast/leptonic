@@ -1,4 +1,3 @@
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use crate::{kit::*, routes};
@@ -32,10 +31,10 @@ pub fn PageStatus() -> impl IntoView {
                         "and usually disappears after a timeout."
                     </li>
                     <li>
-                        "Screen readers announce an alert as soon as it appears, interrupting the user. They don\u{2019}t "
-                        "notice a toast: announce its message with "
-                        <Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"live_announcer"</Link>
-                        " when it matters to the user."
+                        "Screen readers announce both when they appear. Keyboard users reach the toasts with "
+                        <Keys keys="F6"/>", as the toast region is a "
+                        <Link href=routes::doc::focus::UseLandmark.materialize()>"landmark"</Link>"; an alert is part of "
+                        "the page and reached like the rest of it."
                     </li>
                 </ul>
             </Section>

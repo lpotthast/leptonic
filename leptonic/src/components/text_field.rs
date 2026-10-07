@@ -18,7 +18,7 @@ use crate::{
 
 /// The label, description and error message around a field's input. Built inside the field (the
 /// parts read its contexts).
-fn field_parts(
+pub(crate) fn field_parts(
     label: MaybeProp<String>,
     description: MaybeProp<String>,
     input: impl FnOnce() -> AnyView,

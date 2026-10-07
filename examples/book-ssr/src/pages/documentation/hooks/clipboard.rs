@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{clipboard::ClipboardDemo, clipboard_write_text::ClipboardWriteTextDemo};
@@ -87,9 +86,9 @@ pub fn PageUseClipboard() -> impl IntoView {
 
             <Section title="Demo">
                 <p>
-                    "Focus the list and copy it with "<Keys keys="Control + C"/>" ("<Keys keys="Command + C"/>" on macOS), "
-                    "then paste it back with "<Keys keys="Control + V"/>" ("<Keys keys="Command + V"/>"), or paste lines of "
-                    "text copied anywhere else. Cut ("<Keys keys="Control + X"/>" / "<Keys keys="Command + X"/>") empties "
+                    "Focus the list and copy it with "<Keys keys="Control + C"/>" ("<Keys keys="Meta + C"/>" on macOS), "
+                    "then paste it back with "<Keys keys="Control + V"/>" ("<Keys keys="Meta + V"/>"), or paste lines of "
+                    "text copied anywhere else. Cut ("<Keys keys="Control + X"/>" / "<Keys keys="Meta + X"/>") empties "
                     "the list."
                 </p>
 
@@ -189,7 +188,7 @@ pub fn PageUseClipboard() -> impl IntoView {
                     </KeyRow>
                     <KeyRow keys="Control + V / Command + V">"Pastes into the element."</KeyRow>
                 </KeyboardTable>
-                <p><Keys keys="Command"/>" is the modifier on macOS, "<Keys keys="Control"/>" everywhere else."</p>
+                <p><Keys keys="Meta"/>" is the modifier on macOS, "<Keys keys="Control"/>" everywhere else."</p>
             </Section>
 
             <SeeAlso>

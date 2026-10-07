@@ -1,5 +1,4 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
 use super::demos::{
@@ -31,8 +30,7 @@ pub fn PageUseNumberField() -> impl IntoView {
                 "typed text from "
                 <Link href=format!("{}#use-formatted-text-field", routes::doc::text_field::Hook.materialize())>"use_formatted_text_field"</Link>
                 ". For a ready-made "
-                "field, use the "<Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link>
-                " or the "<Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link>"."
+                "field, use the "<Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link>"."
             </p>
 
             <Section title="Example">
@@ -157,8 +155,9 @@ pub fn PageUseNumberField() -> impl IntoView {
             <Section title="use_number_field">
                 <Section title="Input" id="use-number-field-input">
                     <p>
-                        "Create the input with "<Code inline=true>"UseNumberFieldInput::new(state)"</Code>" and set further "
-                        "fields with struct update syntax. Range, step, format, disabled and read-only state come from the state."
+                        "Pass a "<Code inline=true>"UseNumberFieldInput"</Code>" with every field named; the Default column gives "
+                        "the value for fields you don\u{2019}t need. Range, step, format, disabled and read-only state come from the state."
+
                     </p>
 
                     <ApiTable kind=ApiKind::Input of="UseNumberFieldInput">
@@ -319,7 +318,6 @@ pub fn PageUseNumberField() -> impl IntoView {
             <SeeAlso>
                 <li><Link href=routes::doc::NumberField.materialize()>"Number Field overview"</Link></li>
                 <li><Link href=routes::doc::number_field::Atom.materialize()>"Number Field Atoms"</Link></li>
-                <li><Link href=routes::doc::number_field::Component.materialize()>"Number Field Component"</Link></li>
                 <li><Link href=routes::doc::text_field::Hook.materialize()>"Text Field Hooks"</Link></li>
                 <li><Link href=routes::doc::utilities::UseSpinButton.materialize()>"use_spin_button"</Link></li>
                 <li><Link href=routes::doc::button::Hook.materialize()>"use_button"</Link></li>
