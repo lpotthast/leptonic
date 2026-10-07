@@ -12,7 +12,7 @@ use crate::{
         EventAccessors, EventHandler,
         focusability::{PreventFocusAttr, prevent_focus_attr},
         styles::Styles,
-        visually_hidden::visually_hidden_styles,
+        visually_hidden::visually_hidden_fixed_styles,
     },
 };
 
@@ -122,9 +122,7 @@ fn input_value<V: DateValue>(value: &V, granularity: Granularity) -> String {
     match granularity {
         Granularity::Day => date_time.date().to_string(),
         Granularity::Second => date_time.strftime("%Y-%m-%dT%H:%M:%S").to_string(),
-        Granularity::Hour | Granularity::Minute => {
-            date_time.strftime("%Y-%m-%dT%H:%M").to_string()
-        }
+        Granularity::Hour | Granularity::Minute => date_time.strftime("%Y-%m-%dT%H:%M").to_string(),
     }
 }
 
@@ -157,10 +155,7 @@ pub fn use_hidden_date_input<V: DateValue>(
             aria_hidden: "true",
             prevent_focus: prevent_focus_attr(),
             // Fixed at the top left, so that focusing it doesn't scroll the page.
-            styles: visually_hidden_styles()
-                .add_unchecked("position", "fixed")
-                .add_unchecked("top", "0")
-                .add_unchecked("left", "0"),
+            styles: visually_hidden_fixed_styles(),
         },
         input_props: UseHiddenDateInputProps {
             input_type: Signal::derive(move || {

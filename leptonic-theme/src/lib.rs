@@ -6,19 +6,8 @@ use std::{
 
 use anyhow::{Context, Result};
 use include_dir::{Dir, DirEntry, include_dir};
-use indoc::indoc;
 
 static SCSS_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/scss");
-
-const THEMES_FILE_NAME: &str = "leptonic-themes.scss";
-
-const THEMES_FILE_CONTENT: &str = indoc!(
-    r#"
-    @use "./themes/builder";
-    @use "./themes/light";
-    @use "./themes/dark";
-    "#
-);
 
 /// Write the leptonic theme (SCSS sources) into `path`.
 ///
@@ -38,10 +27,6 @@ pub fn generate(path: impl AsRef<Path>) -> Result<()> {
 
     let mut files: Vec<(PathBuf, &[u8])> = Vec::new();
     collect_files(&SCSS_DIR, &mut files);
-    files.push((
-        PathBuf::from(THEMES_FILE_NAME),
-        THEMES_FILE_CONTENT.as_bytes(),
-    ));
 
     for (relative, content) in &files {
         write_if_changed(&path.join(relative), content)?;
@@ -153,6 +138,9 @@ mod tests {
 
     use super::*;
 
+    /// The atom theme's entry file.
+    const ENTRY_FILE_NAME: &str = "leptonic-atoms.scss";
+
     fn temp_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
             "leptonic-theme-test-{name}-{}-{}",
@@ -172,7 +160,7 @@ mod tests {
 
         generate(&dir).unwrap();
 
-        assert_that!(dir.join(THEMES_FILE_NAME).exists()).is_true();
+        assert_that!(dir.join(ENTRY_FILE_NAME).exists()).is_true();
         assert_that!(stale.exists()).is_false();
         std::fs::remove_dir_all(&dir).unwrap();
     }
@@ -186,8 +174,14 @@ mod tests {
                 assert_that!(handle.join().unwrap()).is_ok();
             }
         });
-        assert_that!(std::fs::read_to_string(dir.join(THEMES_FILE_NAME)).unwrap())
-            .is_equal_to(THEMES_FILE_CONTENT.to_string());
+        assert_that!(std::fs::read_to_string(dir.join(ENTRY_FILE_NAME)).unwrap()).is_equal_to(
+            SCSS_DIR
+                .get_file(ENTRY_FILE_NAME)
+                .unwrap()
+                .contents_utf8()
+                .unwrap()
+                .to_string(),
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

@@ -69,6 +69,22 @@ pub fn PageNumberFormatter() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
+                        <TableCell><Code inline=true>"format_to_parts(value)"</Code></TableCell>
+                        <TableCell>
+                            "The formatted number as a "<Code inline=true>"Vec<NumberPart>"</Code>", to style its parts "
+                            "differently: each part has a "<Code inline=true>"kind"</Code>" ("<Code inline=true>"NumberPartKind"</Code>": "
+                            <Code inline=true>"MinusSign"</Code>", "<Code inline=true>"PlusSign"</Code>", "<Code inline=true>"Integer"</Code>", "
+                            <Code inline=true>"Group"</Code>", "<Code inline=true>"Decimal"</Code>", "<Code inline=true>"Fraction"</Code>", "
+                            <Code inline=true>"PercentSign"</Code>", "<Code inline=true>"Currency"</Code>", "<Code inline=true>"Unit"</Code>
+                            " or "<Code inline=true>"Literal"</Code>") and its text "<Code inline=true>"value"</Code>". Empty for NaN "
+                            "and infinite floats."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"numbering_system()"</Code></TableCell>
+                        <TableCell>"The "<Code inline=true>"NumberingSystem"</Code>" the formatter writes its digits in."</TableCell>
+                    </TableRow>
+                    <TableRow>
                         <TableCell><Code inline=true>"options()"</Code></TableCell>
                         <TableCell>"The options the formatter was created with."</TableCell>
                     </TableRow>
@@ -92,6 +108,15 @@ pub fn PageNumberFormatter() -> impl IntoView {
                     <ApiRow name="currency_display" ty="CurrencyDisplay" default="Symbol">
                         <Code inline=true>"Symbol"</Code>" (\u{201c}\u{20ac}\u{201d}), "<Code inline=true>"NarrowSymbol"</Code>", "
                         <Code inline=true>"Code"</Code>" (\u{201c}EUR\u{201d}) or "<Code inline=true>"Name"</Code>" (\u{201c}euros\u{201d})."
+                    </ApiRow>
+                    <ApiRow name="currency_sign" ty="CurrencySign" default="Standard">
+                        "How negative currency amounts are shown: "<Code inline=true>"Standard"</Code>" (\u{201c}-$1.50\u{201d}) or "
+                        <Code inline=true>"Accounting"</Code>" (\u{201c}($1.50)\u{201d})."
+                    </ApiRow>
+                    <ApiRow name="numbering_system" ty="Option<NumberingSystem>" default="None">
+                        "The digits to format with, e.g. "<Code inline=true>"Arab"</Code>" (\u{201c}\u{0661}\u{0662}\u{0663}\u{201d}) or "
+                        <Code inline=true>"Deva"</Code>". "<Code inline=true>"None"</Code>": the locale\u{2019}s (a "
+                        <Code inline=true>"-u-nu-"</Code>" keyword in the locale, else its default numbering system)."
                     </ApiRow>
                     <ApiRow name="use_grouping" ty="bool" default="true">
                         "Whether to group digits, e.g. thousands."
@@ -158,8 +183,9 @@ pub fn PageNumberFormatter() -> impl IntoView {
                         <TableCell><Code inline=true>"NumberParser::new(locale, options)"</Code></TableCell>
                         <TableCell>
                             "A parser for a "<Code inline=true>"&Locale"</Code>" and "<Code inline=true>"&NumberFormatOptions"</Code>
-                            ". It learns the locale\u{2019}s separators, minus sign, digits and the currency or unit text "
-                            "from the formatter with the same options."
+                            ". It learns the locale\u{2019}s separators, signs, digits and the currency, percent or unit text "
+                            "from the formatter with the same options. Text in another numbering system (e.g. Arabic-Indic "
+                            "digits in an English locale) is read too, when it is valid there."
                         </TableCell>
                     </TableRow>
                     <TableRow>
@@ -175,8 +201,16 @@ pub fn PageNumberFormatter() -> impl IntoView {
                         <TableCell>
                             "Whether "<Code inline=true>"text"</Code>" can still become a valid number while it is typed, "
                             "e.g. \u{201c}-\u{201d} or \u{201c}1,\u{201d} in German. A minus sign is only allowed when "
-                            <Code inline=true>"min"</Code>" (or "<Code inline=true>"T"</Code>") admits negative numbers, a "
-                            "decimal separator only for float types."
+                            <Code inline=true>"min"</Code>" (or "<Code inline=true>"T"</Code>") admits negative numbers, a plus "
+                            "sign only when "<Code inline=true>"max"</Code>" admits positive ones, and a decimal separator only for "
+                            "float types."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"numbering_system(text)"</Code></TableCell>
+                        <TableCell>
+                            "The "<Code inline=true>"NumberingSystem"</Code>" "<Code inline=true>"text"</Code>" is written in: the "
+                            "locale\u{2019}s, or another one in which it is valid."
                         </TableCell>
                     </TableRow>
                 </DocTable>

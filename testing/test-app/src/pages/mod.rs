@@ -229,6 +229,12 @@ pub const FIXTURES: &[Fixture] = &[
     },
     Fixture {
         group: "hooks",
+        name: "clipboard-write",
+        title: "Clipboard writes",
+        view: || view! { <hooks::clipboard_write::PageHookClipboardWrite /> }.into_any(),
+    },
+    Fixture {
+        group: "hooks",
         name: "landmark",
         title: "use_landmark",
         view: || view! { <hooks::landmark::PageHookLandmark /> }.into_any(),

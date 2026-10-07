@@ -73,6 +73,21 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
         disabled_keys,
         is_disabled,
     } = input;
+    // Without a default or bound key, the first enabled tab is selected. Until the first render
+    // completes, that default follows the disabled keys: tabs disabled only as they render (the
+    // `Tab` atom's `is_disabled`) are skipped already while rendering, on the server too, as
+    // react-aria-components knows them from its collection before rendering. It is fixed once
+    // rendered (react-aria computes it once), and replaced by every selection.
+    let first_enabled_default =
+        (default_selected_key.is_none() && selected_key.is_none()).then(|| {
+            let selected = RwSignal::new(None::<Key>);
+            let value = Signal::derive(move || {
+                selected
+                    .get()
+                    .or_else(|| collection.with(|c| disabled_keys.with(|d| default_key(c, d))))
+            });
+            (selected, value)
+        });
     let default_selected_key = default_selected_key
         .or_else(|| untrack(|| collection.with(|c| disabled_keys.with(|d| default_key(c, d)))));
     let list = use_single_select_list_state(UseSingleSelectListStateInput {
@@ -80,16 +95,25 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
         default_selected_key,
         // A tab is always selected: the list's `None` (never written, as the list disallows an
         // empty selection) doesn't reach the app state.
-        selected_key: selected_key.map(|key| {
-            ValueBinding::new(
+        selected_key: match (selected_key, first_enabled_default) {
+            (Some(key), _) => Some(ValueBinding::new(
                 Signal::derive(move || Some(key.value.get())),
                 Callback::new(move |selected: Option<Key>| {
                     if let Some(selected) = selected {
                         key.set(selected);
                     }
                 }),
-            )
-        }),
+            )),
+            (None, Some((selected, value))) => Some(ValueBinding::new(
+                value,
+                Callback::new(move |key: Option<Key>| {
+                    if key.is_some() {
+                        selected.set(key);
+                    }
+                }),
+            )),
+            (None, None) => None,
+        },
         on_selection_change: on_selection_change.map(|on_change| {
             Callback::new(move |key: Option<Key>| {
                 if let Some(key) = key {
@@ -110,6 +134,13 @@ pub fn use_tab_list_state(input: UseTabListStateInput) -> TabListState {
         collection.track();
         disabled_keys.track();
         let mut selected = list.selected_key();
+        // Rendered: the first enabled tab stays selected by default.
+        if last_selected.is_none()
+            && let Some((default, _)) = first_enabled_default
+            && default.with_untracked(Option::is_none)
+        {
+            default.set(selected.clone());
+        }
         let exists = selected
             .as_ref()
             .is_some_and(|key| collection.with(|c| c.contains_key(key)));
@@ -160,6 +191,30 @@ mod tests {
                 }
             }))
         })
+    }
+
+    /// Tabs disabled as they render (before any effect runs, as on the server) are skipped by
+    /// the default selection.
+    #[test]
+    fn the_default_skips_tabs_disabled_while_rendering() {
+        Owner::new().with(|| {
+            let disabled = RwSignal::new(HashSet::new());
+            let state = use_tab_list_state(UseTabListStateInput {
+                selected_key: None,
+                collection: tabs(&["a", "b", "c"]),
+                default_selected_key: None,
+                on_selection_change: None,
+                disabled_keys: disabled.into(),
+                is_disabled: Signal::stored(false),
+            });
+            assert_that!(state.selected_key()).is_equal_to(Some(Key::from("a")));
+            disabled.set(HashSet::from([Key::from("a")]));
+            assert_that!(state.selected_key()).is_equal_to(Some(Key::from("b")));
+            // Selecting replaces the default.
+            state.list.list.selection.select(&Key::from("c"), None);
+            disabled.set(HashSet::from([Key::from("a"), Key::from("b")]));
+            assert_that!(state.selected_key()).is_equal_to(Some(Key::from("c")));
+        });
     }
 
     #[test]

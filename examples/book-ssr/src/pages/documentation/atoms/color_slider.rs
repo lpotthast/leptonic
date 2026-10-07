@@ -76,7 +76,7 @@ pub fn PageAtomColorSlider() -> impl IntoView {
 
             <Section title="ColorSlider">
                 <p>
-                    "Renders the slider\u{2019}s group "<Code inline=true>"<div>"</Code>" and provides its parts: a "
+                    "Renders the slider\u{2019}s "<Code inline=true>"<div>"</Code>" and provides its parts: a "
                     <Link href=routes::doc::field::Atom.materialize()><Code inline=true>"Label"</Code></Link>", a "
                     <Code inline=true>"ColorSliderOutput"</Code>" and a "<Code inline=true>"ColorSliderTrack"</Code>". Bind the "
                     "color with "<Code inline=true>"value"</Code>" and "<Code inline=true>"set_value"</Code>", or let the slider "
@@ -106,7 +106,7 @@ pub fn PageAtomColorSlider() -> impl IntoView {
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the slider."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input; its value is the channel\u{2019}s value."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of a form the input belongs to."</ApiRow>
-                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the group."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the slider element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The label, output and track. Required."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -115,7 +115,8 @@ pub fn PageAtomColorSlider() -> impl IntoView {
             <Section title="ColorSliderTrack">
                 <p>
                     "The track: a "<Code inline=true>"<div>"</Code>" with the channel\u{2019}s gradient as background, which "
-                    "moves the thumb to a pressed point. Put the "<Code inline=true>"ColorThumb"</Code>" in it. It panics "
+                    "moves the thumb to a pressed point. It is the slider\u{2019}s group ("<Code inline=true>"role=\"group\""</Code>
+                    ", named by the slider\u{2019}s label). Put the "<Code inline=true>"ColorThumb"</Code>" in it. It panics "
                     "outside a "<Code inline=true>"ColorSlider"</Code>" and as a second track."
                 </p>
 

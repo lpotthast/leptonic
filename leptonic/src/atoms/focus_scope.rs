@@ -1,51 +1,61 @@
 // Upstream: react-aria/src/focus/FocusScope.tsx @ 99e6102368
-#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
-
 use leptos::{html, prelude::*};
+#[cfg(not(feature = "ssr"))]
 use leptos_use::{
     UseEventListenerOptions, use_document, use_event_listener, use_event_listener_with_options,
 };
+#[cfg(not(feature = "ssr"))]
 use wasm_bindgen::JsCast;
 
 use crate::{
-    hooks::{FocusManager, FocusManagerOptions},
+    hooks::FocusManager,
+    utils::{classes::Classes, scoped_context::scoped_view, styles::Styles},
+};
+#[cfg(not(feature = "ssr"))]
+use crate::{
+    hooks::FocusManagerOptions,
     utils::{
-        classes::Classes,
-        focus_scope_tree::{self, FocusScopeParentContext},
+        EventAccessors, focus_scope_tree,
         focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
         key::{KeyboardEventKey, KeyboardKey},
-        scoped_context::scoped_view,
+        shadow_dom::{get_active_element, node_contains},
         shadow_tree_walker::ShadowTreeWalker,
-        styles::Styles,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/FocusScope.tsx
-
+// =============================================================================
 // REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The restore event is `leptonic-focus-scope-restore` ([`RESTORE_FOCUS_EVENT`]; react-aria:
+//   `react-aria-focus-scope-restore`): leptonic's own event, so it can't collide with an
+//   embedded react-aria.
+// - The scope's element takes the atom's `classes` and `styles`. React-aria renders no element.
 //
 // ## DIFFERENT BEHAVIOR
+// - A wrapper `<div style="display: contents">` instead of the hidden sentinel `<span>`s around
+//   the children: the scope needs one element for its `NodeRef`, containment checks and
+//   listeners; `display: contents` keeps it out of the layout.
+// - Scopes register in the component body (react-aria: a layout effect), which likewise
+//   registers all scopes mounting together before any auto-focuses.
+// - Restoring skips a node to restore that is the body (focus was already lost when the scope
+//   mounted: Leptos may remove the element that opened the scope before it creates the scope,
+//   where React captures it during render) and falls back to the first element of the nearest
+//   ancestor scope.
 //
-// - Wrapper `<div style="display: contents">` instead of sentinel `<span>` elements
-//   React-aria uses hidden sentinel `<span>` elements with no wrapper around
-//   children. Leptonic uses a wrapper `<div>` (needed for `NodeRef`, `contains()`,
-//   and event listeners) with `display: contents` to remove it from CSS layout.
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Cleanup order: Leptos cleans up child owners before their parent's `on_cleanup` (React runs a
+//   parent's layout cleanups first). A scope inside another one unregisters first, so the outer
+//   scope decides about restoring with the inner one already gone from the tree.
+// - A Tab another scope handled already (`defaultPrevented`) is ignored: Leptos registers the
+//   scopes' document listeners outer scope first (React: inner first), so an outer scope moving
+//   focus into an inner one would have the inner scope move it on again.
+// - Focus escaping a containing scope is recaptured in a microtask after the `focusin` dispatch
+//   (react-aria: synchronously): refocusing inside the listener would dispatch a nested `focusin`
+//   into it ("No Nested Dispatch of the Same Event Type").
 //
-// - Custom event name `leptonic-focus-scope-restore` instead of
-//   `react-aria-focus-scope-restore`
-//
-// - Scopes register in the component body (react-aria: a layout effect), which
-//   likewise registers all scopes mounting together before any auto-focuses.
-//
-// - Restoring skips a node to restore that is the body (focus was already lost
-//   when the scope mounted: Leptos may remove the element that opened the scope
-//   before it creates the scope, where React captures it during render) and
-//   falls back to the first element of the nearest ancestor scope.
-//
-// - Cleanup order: Leptos cleans up child owners before their parent's
-//   `on_cleanup` (React runs a parent's layout cleanups first). A scope inside
-//   another one unregisters first, so the outer scope decides about restoring
-//   with the inner one already gone from the tree.
+// =============================================================================
 
 /// Custom event dispatched before a `FocusScope` restores focus.
 ///
@@ -146,7 +156,8 @@ pub fn FocusScope(
 
             // ---- Scope tree integration ----
             // Discover parent scope (if any) via Leptos context.
-            let parent_id = use_context::<FocusScopeParentContext>().map(|ctx| ctx.scope_id);
+            let parent_id = use_context::<focus_scope_tree::FocusScopeParentContext>()
+                .map(|ctx| ctx.scope_id);
             let scope_id = focus_scope_tree::allocate_id();
 
     // Capture the currently focused element when the scope mounts (before registration).
@@ -271,9 +282,26 @@ pub fn FocusScope(
                     return;
                 }
 
+                // Another scope moved focus for this Tab already: the scopes' document
+                // listeners run in registration order (outer first), and an outer scope's move
+                // into an inner one makes the inner scope active before its listener runs.
+                if e.default_prevented() {
+                    return;
+                }
+
                 // Only handle if this is the innermost containing scope.
                 // If a nested child scope also has contain=true, it handles Tab.
                 if !focus_scope_tree::is_innermost_container(scope_id) {
+                    return;
+                }
+                // With focus outside the scope (e.g. in a top layer), Tab is the browser's.
+                let focus_in_scope = scope_ref.get_untracked().is_some_and(|scope| {
+                    scope
+                        .owner_document()
+                        .and_then(|document| get_active_element(&document))
+                        .is_some_and(|focused| node_contains(scope.as_ref(), focused.as_ref()))
+                });
+                if !focus_in_scope {
                     return;
                 }
 
@@ -285,10 +313,14 @@ pub fn FocusScope(
                     ..Default::default()
                 };
 
-                if e.shift_key() {
-                    fm.focus_previous(opts);
+                let next = if e.shift_key() {
+                    fm.focus_previous(opts)
                 } else {
-                    fm.focus_next(opts);
+                    fm.focus_next(opts)
+                };
+                // As the browser does when tabbing into a text field.
+                if let Some(input) = next.and_then(|next| next.dyn_into::<web_sys::HtmlInputElement>().ok()) {
+                    input.select();
                 }
             },
         );
@@ -305,24 +337,6 @@ pub fn FocusScope(
             );
         });
 
-        // Scope-level focusin: track focused element within the containing scope.
-        Effect::new(move |_| {
-            let Some(scope_el) = scope_ref.get() else {
-                return;
-            };
-
-            let _scope_focusin_cleanup = use_event_listener(
-                scope_el,
-                leptos::ev::focusin,
-                move |e: web_sys::FocusEvent| {
-                    if let Some(target) = e.target()
-                        && let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
-                            focused_node.set_value(Some(html_el.clone()));
-                        }
-                },
-            );
-        });
-
         // Document-level focusin: detect when focus escapes and recapture.
         // Issue 5: Use scope tree to respect nested scopes.
         let fm_contain = focus_manager.clone();
@@ -335,20 +349,17 @@ pub fn FocusScope(
                     return;
                 }
 
-                let target = e.target();
+                let target = e.expect_target();
 
-                let focus_is_within = target.as_ref().is_some_and(|t| {
-                    t.dyn_ref::<web_sys::Element>().is_some_and(|el| {
-                        focus_scope_tree::is_element_in_scope_or_descendant(el, scope_id)
-                    })
+                let focus_is_within = target.dyn_ref::<web_sys::Element>().is_some_and(|el| {
+                    focus_scope_tree::is_element_in_scope_or_descendant(el, scope_id)
                 });
 
                 if focus_is_within {
                     // Focus moved within scope — update tracked node.
-                    if let Some(t) = target.as_ref()
-                        && let Some(html_el) = t.dyn_ref::<web_sys::HtmlElement>() {
-                            focused_node.set_value(Some(html_el.clone()));
-                        }
+                    if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
+                        focused_node.set_value(Some(html_el.clone()));
+                    }
                 } else {
                     // Focus escaped — recapture. Try the last focused node first,
                     // falling back to the first focusable element. After this `focusin`
@@ -400,7 +411,7 @@ pub fn FocusScope(
                     // latest blur counts (react-aria cancels the pending frame): an earlier one
                     // would bring focus back to an element that lost it before.
                     let fm = fm_focusout.clone();
-                    let blurred = e.target().and_then(|t| t.dyn_into::<web_sys::Element>().ok());
+                    let blurred = e.expect_target().dyn_into::<web_sys::Element>().ok();
                     if let Some(pending) = pending_blur.get_value() {
                         pending.cancel();
                     }
@@ -641,7 +652,7 @@ pub fn FocusScope(
             // and the focus manager.
             scoped_view(
                 move || {
-                    provide_context(FocusScopeParentContext { scope_id });
+                    provide_context(focus_scope_tree::FocusScopeParentContext { scope_id });
                     provide_context(FocusScopeContext { focus_manager });
                 },
                 move || {
@@ -682,6 +693,7 @@ fn mark_active_if_focus_within(scope_id: focus_scope_tree::ScopeId) {
 
 /// Dispatch the [`RESTORE_FOCUS_EVENT`] on the target element.
 /// Returns `true` if the event was NOT cancelled (restoration should proceed).
+#[cfg(not(feature = "ssr"))]
 fn dispatch_restore_focus_event(target: &web_sys::Element) -> bool {
     let init = web_sys::CustomEventInit::new();
     init.set_bubbles(true);

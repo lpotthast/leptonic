@@ -30,3 +30,13 @@ session, found with `ListAgents`), and announce breaking changes to the APIs the
 - History: toasts, row context menus, the `clipboard` feature without components, global shortcuts, a public
   typing check, `ShortcutKeys`, the theme without components (2026-10-06/07); the ComboBox read-order bug and the
   modal hide-outside fix were found there.
+
+## Starter templates
+
+- Where: `examples/leptonic-template-{csr,ssr,ssr-nightly,tauri}` (git submodules, own repositories); depend on
+  leptonic from git (`branch = "hooks"`, features `atoms`), so they see library changes only once pushed.
+- Use: `ThemeProvider`, `Button`, `TextField` + `Label` + `Input` (tauri), the atom theme (`style/main.scss`:
+  `@use "./leptonic/leptonic-atoms"`; `style/leptonic` is the build script's copy). Ported from the components
+  2026-10-07 (checked against the working tree with a `--config` patch of the git dependency; their `Cargo.lock`s
+  still pin the old revision: `cargo update -p leptonic` after the push).
+

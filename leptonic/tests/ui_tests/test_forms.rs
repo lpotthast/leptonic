@@ -67,8 +67,9 @@ async fn wait_for_checked(
 ) -> Result<(), Report> {
     page.wait_for_attr(label, "data-selected", expected.then_some("true"))
         .await?;
+    let text = label.text().await?;
     assert_that!(checked(label).await?)
-        .with_detail_message(format!("checked: {}", label.text().await?))
+        .with_detail_message(format!("checked: {text}"))
         .is_equal_to(expected);
     Ok(())
 }
@@ -139,13 +140,18 @@ async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Report> {
         ("2", "Submit radio"),
         ("3", "Submit switch"),
     ] {
-        let input = input(&label(page, text).await?).await?;
-        input.focus().await?;
+        // As upstream: click the control (focusing it), then press Enter.
+        let label = label(page, text).await?;
+        let input = input(&label).await?;
+        label.click().await?;
         page.wait_for_focus_on(&input, text).await?;
+        let before = input.prop("checked").await?;
         page.send_keys_to_active(Key::Enter).await?;
         page.wait_for_text("fm-submits", submits).await?;
         // Enter doesn't toggle.
-        assert_that!(input.prop("checked").await?.as_deref()).is_equal_to(Some("false"));
+        assert_that!(input.prop("checked").await?)
+            .with_detail_message(text)
+            .is_equal_to(before);
     }
     Ok(())
 }

@@ -52,7 +52,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                             <Code inline=true>"value"</Code>" (a "<Code inline=true>"ValueBinding"</Code>" of "<Code inline=true>"state.value"</Code>
                             " and "<Code inline=true>"state.set_value"</Code>"), "<Code inline=true>"granularity"</Code>" and "
                             <Code inline=true>"validation"</Code>"; "<Link href=field_section("use-date-field")>"use_date_field"</Link>
-                            " with "<Code inline=true>"is_in_picker"</Code>" and "<Code inline=true>"open"</Code>"; the segments\u{2019} "
+                            " with "<Code inline=true>"picker"</Code>" (the picker\u{2019}s "<Code inline=true>"state.overlay"</Code>"); the segments\u{2019} "
                             <Code inline=true>"aria_labelledby"</Code>" from "<Code inline=true>"labelledby"</Code>" and "
                             <Code inline=true>"aria_describedby"</Code>" from "<Code inline=true>"field_describedby"</Code>"."
                         </TableCell>
@@ -92,7 +92,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="default_value" ty="Option<V>" default="None">"The initial value."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<Option<V>>>" default="None">"The value as app state."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">"Called with each new value."</ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">"The type, time and zone of a value picked without one. Default: today, midnight."</ApiRow>
+                        <ApiRow name="placeholder_value" ty="Signal<Option<V>>" default="None">"The type, time and zone of a value picked without one. Default: today, midnight."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid value."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
                         <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see use_date_field_state" default="None, None, false, false">
@@ -115,11 +115,11 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="value" ty="Signal<Option<V>>">"The value."</ApiRow>
                         <ApiRow name="date_value" ty="Signal<Option<Date>>">"The calendar\u{2019}s date: the one selected in the popover, else the value\u{2019}s."</ApiRow>
                         <ApiRow name="time_value" ty="Signal<Option<Time>>">"The time: the one selected in the popover, else the value\u{2019}s."</ApiRow>
-                        <ApiRow name="granularity" ty="Granularity">"The finest segment, for the field."</ApiRow>
-                        <ApiRow name="has_time" ty="bool">"Whether the value has a time."</ApiRow>
+                        <ApiRow name="granularity" ty="Signal<Granularity>">"The finest segment, for the field."</ApiRow>
+                        <ApiRow name="has_time" ty="Signal<bool>">"Whether the value has a time."</ApiRow>
                         <ApiRow name="overlay" ty="OverlayTriggerState">"The popover\u{2019}s open state ("<Code inline=true>"overlay.is_open"</Code>")."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the shown validation fails."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation, shared with the field."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation, shared with the field."</ApiRow>
                     </ApiTable>
                     <p>
                         "Methods: "<Code inline=true>"set_value(value)"</Code>", "<Code inline=true>"select_date(date)"</Code>
@@ -134,12 +134,26 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                 <p>
                     "The attributes of a picker: the group of the field and the button is labelled by the label and described "
                     "by the value (\u{201c}Selected Date: June 15, 2024\u{201d}), "<Keys keys="Alt + ArrowDown"/>" in it opens "
-                    "the popover, and the button (\u{201c}Calendar\u{201d}) opens it. Its arguments: the input, the state and a "
-                    <Code inline=true>"CapturedElement"</Code>" for the group (captured by "<Code inline=true>"group_props"</Code>")."
+                    "the popover, and the button (\u{201c}Calendar\u{201d}) opens it."
                 </p>
 
                 <Section title="Input" id="use-date-picker-input">
+                    <p>"Pass a "<Code inline=true>"UseDatePickerInput"</Code>" with every field named:"</p>
                     <ApiTable kind=ApiKind::Input of="datepicker::use_date_picker::UseDatePickerInput">
+                        <ApiRow name="state" ty="DatePickerState<V>">"From "<Code inline=true>"use_date_picker_state"</Code>". Required."</ApiRow>
+                        <ApiRow name="group" ty="CapturedElement">
+                            "The group of the field and the button, captured by "<Code inline=true>"group_props"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="options" ty="DatePickerOptions" default="DatePickerOptions::default()">"The other settings, below."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="DatePickerOptions">
+                    <p>
+                        <Code inline=true>"DatePickerOptions"</Code>" implements "<Code inline=true>"Default"</Code>". "
+                        <Code inline=true>"use_date_range_picker"</Code>" takes them too."
+                    </p>
+                    <ApiTable kind=ApiKind::Fields of="DatePickerOptions">
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker without a label."</ApiRow>
@@ -189,7 +203,7 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="default_value" ty="Option<RangeValue<V>>" default="None">"The initial range."</ApiRow>
                         <ApiRow name="value" ty="Option<ValueBinding<Option<RangeValue<V>>>>" default="None">"The range as app state."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<RangeValue<V>>>>" default="None">"Called with each new range."</ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">"The type, time and zone of dates picked without a value."</ApiRow>
+                        <ApiRow name="placeholder_value" ty="Signal<Option<V>>" default="None">"The type, time and zone of dates picked without a value."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid date of either end."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
                         <ApiRow name="granularity, hour_cycle, hide_time_zone, should_force_leading_zeros" ty="see use_date_field_state" default="None, None, false, false">"For the fields."</ApiRow>
@@ -208,11 +222,11 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                         <ApiRow name="value" ty="Signal<Option<RangeValue<V>>>">"The complete range ("<Code inline=true>"None"</Code>" while an end is missing)."</ApiRow>
                         <ApiRow name="start, end" ty="Signal<Option<V>>">"The ends shown, also of an incomplete range: the fields\u{2019} values."</ApiRow>
                         <ApiRow name="date_range" ty="Signal<Option<DateRange>>">"The range calendar\u{2019}s range."</ApiRow>
-                        <ApiRow name="granularity" ty="Granularity">"The finest segment, for the fields."</ApiRow>
-                        <ApiRow name="has_time" ty="bool">"Whether the values have a time."</ApiRow>
+                        <ApiRow name="granularity" ty="Signal<Granularity>">"The finest segment, for the fields."</ApiRow>
+                        <ApiRow name="has_time" ty="Signal<bool>">"Whether the values have a time."</ApiRow>
                         <ApiRow name="overlay" ty="OverlayTriggerState">"The popover\u{2019}s open state."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the shown validation fails."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation, shared with the fields."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation, shared with the fields."</ApiRow>
                     </ApiTable>
                     <p>
                         "Methods: "<Code inline=true>"set_value(start, end)"</Code>", "<Code inline=true>"set_date_time(part, value)"</Code>
@@ -227,7 +241,8 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                 <p>
                     "The attributes of a range picker: as "<AnchorLink href="#use-date-picker">"use_date_picker"</AnchorLink>
                     ", described by the range (\u{201c}Selected Range: June 1, 2024 to June 15, 2024\u{201d}). It takes a "
-                    <Code inline=true>"UseDatePickerInput"</Code>" and returns a "<Code inline=true>"UseDatePickerReturn"</Code>
+                    <Code inline=true>"UseDateRangePickerInput"</Code>" (the same fields, with a "<Code inline=true>"DateRangePickerState"</Code>
+                    ") and returns a "<Code inline=true>"UseDatePickerReturn"</Code>
                     ". Give each end a field: "<Code inline=true>"use_date_field_state"</Code>" with a binding of "
                     <Code inline=true>"state.start"</Code>" (or "<Code inline=true>"end"</Code>") and "
                     <Code inline=true>"state.set_date_time"</Code>", and "<Code inline=true>"use_date_field"</Code>" named "
@@ -242,23 +257,24 @@ pub fn PageDatePickerHooks() -> impl IntoView {
                                     value,
                                     Callback::new(move |value| state.set_date_time(part, value)),
                                 )),
-                                granularity: Some(state.granularity),
+                                granularity: Signal::derive(move || Some(state.granularity.get())),
                                 validation: Some(state.validation),
                                 ..UseDateFieldStateInput::default()
                             });
-                            let mut field = use_date_field(
-                                UseDateFieldInput {
+                            let mut field = use_date_field(UseDateFieldInput {
+                                state: field_state,
+                                element: CapturedElement::new(),
+                                input_element: CapturedElement::new(),
+                                options: DateFieldOptions {
                                     aria_label: name.to_owned().into(),
                                     aria_labelledby: picker.labelledby.get_untracked(),
-                                    is_in_picker: true,
-                                    focus_manager: Some(picker.focus_manager.clone()),
-                                    open: Some(Callback::new(move |()| state.set_open(true))),
-                                    ..UseDateFieldInput::default()
+                                    picker: Some(DateFieldPicker {
+                                        overlay: state.overlay,
+                                        focus_manager: Some(picker.focus_manager.clone()),
+                                    }),
+                                    ..DateFieldOptions::default()
                                 },
-                                field_state,
-                                CapturedElement::new(),
-                                CapturedElement::new(),
-                            );
+                            });
                             // The segments are described by the picker: its description and its value.
                             field.data.aria_describedby = picker.field_describedby;
                             field

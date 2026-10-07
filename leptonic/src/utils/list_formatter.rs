@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/i18n/useListFormatter.tsx @ 6f664fe911
+// Upstream: react-aria/src/i18n/useListFormatter.tsx @ 99e6102368
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

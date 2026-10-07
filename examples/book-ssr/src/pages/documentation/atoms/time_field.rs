@@ -72,17 +72,17 @@ pub fn PageAtomTimeField() -> impl IntoView {
                         <ApiRow name="value" ty="Option<Signal<Option<T>>>" default="None">"The value (controlled): a value or any signal."</ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<Option<T>>>" default="None">"Receives the new value."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<T>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
+                        <ApiRow name="placeholder_value" ty="MaybeProp<T>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<T>>" default="None">"The earliest and latest valid time."</ApiRow>
-                        <ApiRow name="granularity" ty="Option<Granularity>" default="None">
+                        <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">
                             "The finest segment: "<Code inline=true>"Hour"</Code>", "<Code inline=true>"Minute"</Code>" (the default) or "
                             <Code inline=true>"Second"</Code>"."
                         </ApiRow>
-                        <ApiRow name="hour_cycle" ty="Option<HourCycle>" default="None">
+                        <ApiRow name="hour_cycle" ty="MaybeProp<HourCycle>" default="None">
                             <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
                         </ApiRow>
-                        <ApiRow name="hide_time_zone" ty="bool" default="false">"Hides the time zone of a zoned value."</ApiRow>
-                        <ApiRow name="should_force_leading_zeros" ty="bool" default="false">"Pads the hours to two digits."</ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of a zoned value."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads the hours to two digits."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only, is_required, is_invalid" ty="Signal<bool>" default="false">
                             "As on "<Link href=format!("{}#datefield-props", routes::doc::date_field::Atom.materialize())>"DateField"</Link>"."
                         </ApiRow>

@@ -174,20 +174,16 @@ impl BrowserTest<str> for PopoverTests {
 }
 
 /// A non-modal popover contains the focus while a dialog is inside; reopened without one, it
-/// doesn't (the containment starts over with each opening): Tab leaves it, which closes it.
+/// doesn't (the containment starts over with each opening): Shift+Tab leaves it, which closes it.
 async fn containment_per_opening(page: &Page<'_>) -> Result<(), Report> {
     page.click_element_with_id("test-popover-toggled-trigger")
         .await?;
     page.wait_for_selector("[role=dialog][aria-label=Toggled]")
         .await?;
-    page.driver
-        .execute(
-            "document.getElementById('test-popover-toggled-second').focus()",
-            vec![],
-        )
-        .await?;
-    page.send_keys_to_active(Key::Tab).await?;
-    page.wait_for_active_id("test-popover-toggled-first")
+    focus(page, "test-popover-toggled-first").await?;
+    // Contained: Shift+Tab wraps around.
+    page.press_shift_tab().await?;
+    page.wait_for_active_id("test-popover-toggled-second")
         .await?;
     page.send_keys_to_active(Key::Escape).await?;
     page.wait_for_no_selector("#test-popover-toggled-first")
@@ -201,17 +197,20 @@ async fn containment_per_opening(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_selector("#test-popover-toggled-second")
         .await?;
     assert_that!(page.count_matching("[role=dialog]").await?).is_equal_to(0);
-    page.driver
-        .execute(
-            "document.getElementById('test-popover-toggled-second').focus()",
-            vec![],
-        )
+    focus(page, "test-popover-toggled-first").await?;
+    page.wait_for_active_id("test-popover-toggled-first")
         .await?;
-    page.wait_for_active_id("test-popover-toggled-second")
-        .await?;
-    page.send_keys_to_active(Key::Tab).await?;
+    // Not contained: Shift+Tab moves to the page before the popover, which closes it.
+    page.press_shift_tab().await?;
     page.wait_for_no_selector("#test-popover-toggled-second")
         .await
+}
+
+async fn focus(page: &Page<'_>, id: &str) -> Result<(), Report> {
+    page.driver
+        .execute(&format!("document.getElementById('{id}').focus()"), vec![])
+        .await?;
+    Ok(())
 }
 
 /// The portalled popover renders `dir` from its trigger's locale (react-aria-components).

@@ -10,7 +10,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
     view! {
         <DocPage title="Classes & Styles">
             <p>
-                "Leptonic\u{2019}s atoms and components take a " <Code inline=true>"classes"</Code>
+                "Leptonic\u{2019}s atoms take a " <Code inline=true>"classes"</Code>
                 " and a " <Code inline=true>"styles"</Code>
                 " prop for the element they render. Their types come from two small companion crates, "
                 <Link
@@ -594,7 +594,7 @@ pub fn PageClassesAndStyles() -> impl IntoView {
             </Section>
             <Section title="How Leptonic Uses These Types">
                 <p>
-                    "Atoms and components declare "
+                    "Atoms declare "
                     <Code inline=true>"#[prop(into, optional)] classes: Classes"</Code> " and "
                     <Code inline=true>"#[prop(into, optional)] styles: Styles"</Code> ". Thanks to "
                     <Code inline=true>"into"</Code> ", you can pass a plain "
@@ -602,31 +602,38 @@ pub fn PageClassesAndStyles() -> impl IntoView {
                     ", an array of names, a single typed declaration, or a fully built value, whichever is handiest. "
                     "Those that render no element of their own don\u{2019}t take them: atoms that give their child "
                     "behavior ("<Code inline=true>"Pressable"</Code>", "<Code inline=true>"Hoverable"</Code>", "
-                    <Code inline=true>"Focusable"</Code>", "<Code inline=true>"PressResponder"</Code>", the "
-                    <Code inline=true>"*Trigger"</Code>" atoms), providers that only wrap their children ("<Code inline=true>"Root"</Code>", "
-                    <Code inline=true>"ThemeProvider"</Code>", "<Code inline=true>"ToastRoot"</Code>"), and "
-                    <Code inline=true>"AlertIcon"</Code>"."
+                    <Code inline=true>"Focusable"</Code>", "<Code inline=true>"FocusRing"</Code>", "
+                    <Code inline=true>"PressResponder"</Code>", trigger atoms such as "<Code inline=true>"MenuTrigger"</Code>
+                    " or "<Code inline=true>"DialogTrigger"</Code>"), and atoms that only share state with their children ("
+                    <Code inline=true>"ColorPicker"</Code>", "<Code inline=true>"Virtualizer"</Code>")."
                 </p>
 
                 <p>
-                    "Each of the "<Link href=routes::doc::Architecture.materialize()>"three layers"</Link>" has its own "
+                    "Each of the "<Link href=routes::doc::Architecture.materialize()>"two layers"</Link>" has its own "
                     "part in this. Hooks return the attributes and styles they manage, such as ARIA attributes or "
                     <Code inline=true>"touch-action"</Code> ". Atoms accept your "
                     <Code inline=true>"classes"</Code> " and " <Code inline=true>"styles"</Code>
-                    ", merge the hook styles in front of yours (see "<AnchorLink href="#merge-priority">"Merge Priority"</AnchorLink>
-                    "), and render the element. Components add their theme class, for example "
-                    <Code inline=true>"\"leptonic-btn\""</Code>
-                    ", and pass everything down to the atom:"
+                    ", put their default class "<Code inline=true>"leptonic-<AtomName>"</Code>" in front of your classes, "
+                    "merge the hook styles in front of yours (see "<AnchorLink href="#merge-priority">"Merge Priority"</AnchorLink>
+                    "), and render the element. Leptos components of your own built on atoms take "
+                    <Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" too, add their class, and "
+                    "pass everything down to the atom:"
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(
                         r#"
-                        // Component layer: adds the theme class, passes everything to the atom.
-                        <atoms::button::Button
-                            classes=classes.add("leptonic-btn")
-                            styles=styles
-                        />
+                        use leptonic::{atoms::prelude::Button, utils::{classes::Classes, styles::Styles}};
+
+                        /// The app's save button: adds its class, passes everything to the atom.
+                        #[component]
+                        pub fn SaveButton(
+                            #[prop(into, optional)] classes: Classes,
+                            #[prop(into, optional)] styles: Styles,
+                        ) -> impl IntoView {
+                            // Renders `class="leptonic-Button save-button"`, plus the caller's classes.
+                            view! { <Button classes=classes.add("save-button") styles=styles>"Save"</Button> }
+                        }
                     "#
                     )}
                 </Code>

@@ -95,7 +95,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                             "Spread "<Code inline=true>"{..modal_props.into_attrs()}"</Code>" onto the modal element: its id, "
                             "the element capture, the "<Keys keys="Escape"/>" handler and focus tracking."
                         </ApiRow>
-                        <ApiRow name="id" ty="Oco<'static, str>">
+                        <ApiRow name="id" ty="String">
                             "The id of the modal element, e.g. for the "<Code inline=true>"aria-controls"</Code>" of a trigger."
                         </ApiRow>
                     </ApiTable>
@@ -142,8 +142,8 @@ pub fn PageUseModalHook() -> impl IntoView {
 
                 <Section title="Input" id="use-modal-input">
                     <ApiTable kind=ApiKind::Input of="UseModalInput">
-                        <ApiRow name="is_disabled" ty="bool" default="false">
-                            "Leave out "<Code inline=true>"aria-modal"</Code>"."
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
+                            "Leave out "<Code inline=true>"aria-modal"</Code>" while "<Code inline=true>"true"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>

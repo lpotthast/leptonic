@@ -37,14 +37,12 @@ pub fn PageAccessibility() -> impl IntoView {
                             "tracking it."
                         </TableCell>
                     </TableRow>
-                    <TableRow>
-                        <TableCell><b>"Component"</b></TableCell>
-                        <TableCell>"The atom with the theme\u{2019}s styling, including visible focus rings."</TableCell>
-                    </TableRow>
                 </DocTable>
                 <p>
                     "Whichever layer you use, the behavior is the same; see "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>"."
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>". The looks are yours: "
+                    "your styles (or the optional "<Link href=format!("{}#the-atom-theme", routes::doc::Themes.materialize())>"atom theme"</Link>
+                    ") show focus, states and contrast."
                 </p>
             </Section>
 
@@ -115,17 +113,18 @@ pub fn PageAccessibility() -> impl IntoView {
                     "A focus ring should show when the user navigates with the keyboard, not after every click. "
                     <Link href=routes::doc::focus::UseFocusVisible.materialize()><Code inline=true>"use_focus_visible"</Code></Link>
                     " tracks how the user interacts, and atoms set "<Code inline=true>"data-focus-visible"</Code>
-                    " on the focused element only for keyboard focus. The theme draws the ring from that attribute and "
-                    "removes the browser\u{2019}s own "<Code inline=true>":focus-visible"</Code>" outline:"
+                    " on the focused element only for keyboard focus. Draw the ring from that attribute; if your styles "
+                    "remove the browser\u{2019}s own "<Code inline=true>":focus-visible"</Code>" outline, every interactive "
+                    "element needs a ring of yours:"
                 </p>
                 <Code language=Language::Css>
                     {indoc!(r"
                         *:focus-visible { outline: none; }
-                        [data-focus-visible] { outline: 3px solid var(--brand-color); outline-offset: 2px; }
+                        [data-focus-visible] { outline: 3px solid var(--focus); outline-offset: 2px; }
                     ")}
                 </Code>
                 <p>
-                    "With the theme loaded, elements you build without leptonic have no focus ring. Mark them with "
+                    "Without the browser\u{2019}s outline, elements you build without leptonic have no focus ring. Mark them with "
                     <Link href=routes::doc::focus::FocusRing.materialize()><Code inline=true>"FocusRing"</Code></Link>
                     " (or "<Link href=routes::doc::focus::UseFocusRing.materialize()><Code inline=true>"use_focus_ring"</Code></Link>
                     "), or give them a "<Code inline=true>":focus-visible"</Code>" style of your own."
@@ -174,9 +173,9 @@ pub fn PageAccessibility() -> impl IntoView {
                         " informs leptonic\u{2019}s hooks, not the browser."
                     </li>
                     <li>
-                        <b>"Keep contrast."</b>" When you change theme variables (see "
+                        <b>"Keep contrast."</b>" When you style atoms or change theme variables (see "
                         <Link href=routes::doc::Themes.materialize()>"Themes"</Link>"), check that text, borders of controls "
-                        "and focus rings still contrast with their background, in light and dark theme."
+                        "and focus rings contrast with their background, in light and dark theme."
                     </li>
                     <li>
                         <b>"Don\u{2019}t rely on color alone."</b>" Pair colors with text or icons, e.g. show an error message "
@@ -208,7 +207,7 @@ pub fn PageAccessibility() -> impl IntoView {
             </Section>
 
             <SeeAlso>
-                <li><Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link></li>
+                <li><Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link></li>
                 <li><Link href=routes::doc::Focus.materialize()>"Focus"</Link></li>
                 <li><Link href=routes::doc::Interactions.materialize()>"Interactions"</Link></li>
                 <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"Live Announcer"</Link></li>

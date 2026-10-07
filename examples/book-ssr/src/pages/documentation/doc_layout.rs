@@ -162,7 +162,7 @@ fn SidebarEntry(entry: &'static NavEntry, part: PartKind) -> impl IntoView {
     }
 }
 
-/// One letter per layer (H, A, C): filled for the layers the concept is documented at, plain for the others.
+/// One letter per layer (H, A): filled for the layers the concept is documented at, plain for the others.
 /// Decorative: the concept's page names its layers.
 #[component]
 fn LayerMarks(entry: &'static NavEntry) -> impl IntoView {

@@ -14,7 +14,7 @@ use leptonic::{
         popover::Popover,
     },
     hooks::datepicker::{Granularity, HourCycle, RangePart, RangeValue},
-    jiff::civil::{Date, DateTime, Time, date, time},
+    jiff::civil::{Date, DateTime, Time, date},
     utils::i18n::{I18nProvider, Locale, use_i18n},
 };
 use leptos::prelude::*;
@@ -181,8 +181,8 @@ fn LocaleSwitch(id: &'static str, to: &'static str) -> impl IntoView {
 /// - range-time: a range picker of dates and times (to the second) on January 2023.
 /// - range-open: a range picker of dates and times not closing on select, placeholder time 10:30.
 /// - keys: a date field on December 31, 2024; empty: an empty date field.
-/// - de: a German date field (June 5, 2024); rtl: a Hebrew date picker with a time; ja: a
-///   Japanese 12-hour time field; switch: an English date field switching to Hebrew.
+/// - de: a German date field (June 5, 2024); rtl: a Hebrew date picker with a time; switch: an
+///   English date field switching to Hebrew.
 #[component]
 pub fn PageAtomDatePicker() -> impl IntoView {
     let range_time = RwSignal::new(None::<RangeValue<DateTime>>);
@@ -193,7 +193,6 @@ pub fn PageAtomDatePicker() -> impl IntoView {
     let empty_field = RwSignal::new(None::<Date>);
     let de = RwSignal::new(Some(date(2024, 6, 5)));
     let rtl = RwSignal::new(Some(date(2024, 6, 5).at(9, 30, 0, 0)));
-    let ja = RwSignal::new(Some(time(0, 30, 0, 0)));
     view! {
         <div id="test-page-atom-date-picker">
             <h1>"Date pickers"</h1>
@@ -273,6 +272,36 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                 </I18nProvider>
                 <div>"Value: " <span id="test-dp-de-value">{move || show(de.get())}</span></div>
             </section>
+            // The locale's own 12-hour clock (`Intl`'s `hour12: true`) at 0:30.
+            <section id="test-dp-de-12h">
+                <I18nProvider locale=locale("de-DE")>
+                    <TimeField default_value=Time::constant(0, 30, 0, 0) hour_cycle=HourCycle::H12>
+                        <Label>"Uhrzeit"</Label>
+                        <Segments />
+                    </TimeField>
+                </I18nProvider>
+            </section>
+            // Hour-only: ICU4X's German pattern has a flexible day period ("12 nachts").
+            <section id="test-dp-de-12h-hour">
+                <I18nProvider locale=locale("de-DE")>
+                    <TimeField
+                        default_value=Time::constant(0, 30, 0, 0)
+                        hour_cycle=HourCycle::H12
+                        granularity=Granularity::Hour
+                    >
+                        <Label>"Stunde"</Label>
+                        <Segments />
+                    </TimeField>
+                </I18nProvider>
+            </section>
+            <section id="test-dp-ja-12h">
+                <I18nProvider locale=locale("ja-JP")>
+                    <TimeField default_value=Time::constant(0, 30, 0, 0) hour_cycle=HourCycle::H12>
+                        <Label>"時刻"</Label>
+                        <Segments />
+                    </TimeField>
+                </I18nProvider>
+            </section>
             <section id="test-dp-rtl">
                 <I18nProvider locale=locale("he-IL")>
                     <DatePicker<DateTime>
@@ -286,15 +315,6 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                     </DatePicker<DateTime>>
                 </I18nProvider>
                 <div>"Value: " <span id="test-dp-rtl-value">{move || show(rtl.get())}</span></div>
-            </section>
-            <section id="test-dp-ja">
-                <I18nProvider locale=locale("ja-JP")>
-                    <TimeField value=ja set_value=ja hour_cycle=HourCycle::H12>
-                        <Label>"時刻"</Label>
-                        <Segments />
-                    </TimeField>
-                </I18nProvider>
-                <div>"Value: " <span id="test-dp-ja-value">{move || show(ja.get())}</span></div>
             </section>
             <section id="test-dp-switch">
                 <I18nProvider locale=locale("en-US")>

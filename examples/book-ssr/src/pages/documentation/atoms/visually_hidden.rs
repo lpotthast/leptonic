@@ -33,7 +33,7 @@ pub fn PageAtomVisuallyHidden() -> impl IntoView {
                         <Code inline=true>"TextElement::Span"</Code>". Use "<Code inline=true>"Span"</Code>
                         " inside inline content such as buttons, links and paragraphs."
                     </ApiRow>
-                    <ApiRow name="is_focusable" ty="bool" default="false">
+                    <ApiRow name="is_focusable" ty="Signal<bool>" default="false">
                         "Show the content while focus is within it, e.g. for a skip link."
                     </ApiRow>
                     <ApiRow name="classes" ty="Classes" default="empty">"Additional classes of the element."</ApiRow>

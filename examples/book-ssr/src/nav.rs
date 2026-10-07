@@ -9,7 +9,7 @@
 
 use std::sync::LazyLock;
 
-use leptonic::prelude::icondata::{self, Icon};
+use icondata::{self, Icon};
 
 use crate::routes::doc;
 
@@ -20,12 +20,11 @@ pub enum PageKind {
     Guide,
     /// Overview of a concept group (Fields, Overlays, ...) or a building-block area (Interactions, Focus, ...).
     Overview,
-    /// Overview of a concept implemented at several layers (Button, Slider, ...).
+    /// Overview of a concept implemented at both layers (Button, Slider, ...).
     Concept,
     Hook,
     Atom,
-    Component,
-    /// A function or type from `leptonic::utils`, outside the three layers (e.g. the live announcer, `I18nProvider`).
+    /// A function or type from `leptonic::utils`, outside the two layers (e.g. the live announcer, `I18nProvider`).
     Utility,
 }
 
@@ -38,7 +37,6 @@ impl PageKind {
             Self::Concept => "Concept",
             Self::Hook => "Hook",
             Self::Atom => "Atom",
-            Self::Component => "Component",
             Self::Utility => "Utility",
         }
     }
@@ -48,7 +46,6 @@ impl PageKind {
         match self {
             Self::Hook => Some("hook"),
             Self::Atom => Some("atom"),
-            Self::Component => Some("comp"),
             Self::Utility => Some("util"),
             Self::Guide | Self::Overview | Self::Concept => None,
         }
@@ -59,7 +56,6 @@ impl PageKind {
         match self {
             Self::Hook => Some(Layer::Hook),
             Self::Atom => Some(Layer::Atom),
-            Self::Component => Some(Layer::Component),
             Self::Guide | Self::Overview | Self::Concept | Self::Utility => None,
         }
     }
@@ -70,17 +66,15 @@ impl PageKind {
 pub enum Layer {
     Hook,
     Atom,
-    Component,
 }
 
 impl Layer {
-    pub const ALL: [Layer; 3] = [Layer::Hook, Layer::Atom, Layer::Component];
+    pub const ALL: [Layer; 2] = [Layer::Hook, Layer::Atom];
 
     pub fn kind(self) -> PageKind {
         match self {
             Self::Hook => PageKind::Hook,
             Self::Atom => PageKind::Atom,
-            Self::Component => PageKind::Component,
         }
     }
 
@@ -89,7 +83,6 @@ impl Layer {
         match self {
             Self::Hook => "hook",
             Self::Atom => "atom",
-            Self::Component => "component",
         }
     }
 
@@ -98,7 +91,6 @@ impl Layer {
         match self {
             Self::Hook => "H",
             Self::Atom => "A",
-            Self::Component => "C",
         }
     }
 }
@@ -158,8 +150,6 @@ impl NavTab {
             (Layer::Hook, true) => "Hooks",
             (Layer::Atom, false) => "Atom",
             (Layer::Atom, true) => "Atoms",
-            (Layer::Component, false) => "Component",
-            (Layer::Component, true) => "Components",
         }
     }
 }
@@ -377,7 +367,7 @@ fn getting_started() -> NavGroup {
             ),
             page(
                 "Installation",
-                "Adds leptonic to a Leptos app, with styles and the theme",
+                "Adds leptonic to a Leptos app: features, build configuration, styles and the theme provider",
                 doc::Installation.materialize(),
                 Guide,
             ),
@@ -399,8 +389,8 @@ fn guides() -> NavGroup {
         None,
         vec![
             page(
-                "Hooks, Atoms & Components",
-                "The three layers of leptonic and when to use which",
+                "Hooks & Atoms",
+                "The two layers of leptonic, when to use which, and how to style atoms",
                 doc::Architecture.materialize(),
                 Guide,
             ),
@@ -412,19 +402,19 @@ fn guides() -> NavGroup {
             ),
             page(
                 "Classes & Styles",
-                "Passing classes and typed styles to atoms and components",
+                "Passing classes and typed styles to atoms and through your own Leptos components",
                 doc::ClassesAndStyles.materialize(),
                 Guide,
             ),
             page(
                 "Callbacks",
-                "The prop types components use for callbacks, outputs and views",
+                "The prop types for events, state setters and views, and binding hook state to your app",
                 doc::Callbacks.materialize(),
                 Guide,
             ),
             page(
                 "Themes",
-                "Light and dark themes, switching between them and customizing them",
+                "Themes with ThemeProvider, switching them, and the optional atom theme",
                 doc::Themes.materialize(),
                 Guide,
             ),
@@ -1375,17 +1365,17 @@ mod tests {
                         entry.title
                     ))
                     .is_true();
-                // Strictly ascending: one tab per layer, from hooks to components.
+                // Strictly ascending: one tab per layer, hooks before atoms.
                 assert_that!(entry.tabs.windows(2).all(|w| w[0].layer < w[1].layer))
                     .with_detail_message(format!(
-                        "{}: tabs must be one per layer, in the order hook, atom, component",
+                        "{}: tabs must be one per layer, in the order hook, atom",
                         entry.title
                     ))
                     .is_true();
             } else {
                 assert_that!(entry.kind.layer().is_some() && entry.tabs.is_empty())
                     .with_detail_message(format!(
-                        "{}: a single-layer concept is a hook, atom or component page",
+                        "{}: a single-layer concept is a hook or atom page",
                         entry.title
                     ))
                     .is_true();
@@ -1419,7 +1409,7 @@ mod tests {
         }
     }
 
-    /// A hook and an atom (or component) of the same name are one concept with tabs, not two entries.
+    /// A hook and an atom of the same name are one concept with tabs, not two entries.
     #[test]
     fn concepts_are_not_split_into_layer_entries() {
         let mut seen = HashSet::new();

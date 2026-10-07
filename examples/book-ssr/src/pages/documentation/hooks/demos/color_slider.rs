@@ -60,10 +60,16 @@ pub fn ColorSliderDemo() -> impl IntoView {
     let formatted = state.formatted_value();
 
     view! {
-        <div class="demo-color-slider" {..slider.group_props.into_attrs()}>
+        <div class="demo-color-slider">
             <span {..slider.label_props.into_attrs()}>"Hue"</span>
             <output class="demo-color-slider-output" {..slider.output_props.into_attrs()}>{formatted}</output>
-            <div class="demo-color-slider-track" {..track_attrs} style=slider_track_styles.merge(track_styles)>
+            // The track is the slider's group.
+            <div
+                class="demo-color-slider-track"
+                {..slider.group_props.into_attrs()}
+                {..track_attrs}
+                style=slider_track_styles.merge(track_styles)
+            >
                 <div class="demo-color-slider-thumb" {..thumb_attrs} {..focus_ring.props.into_attrs()} style=thumb_styles>
                     <input {..thumb.input_props.into_attrs()} style=input_styles/>
                 </div>

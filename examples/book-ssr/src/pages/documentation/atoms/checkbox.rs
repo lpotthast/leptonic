@@ -126,6 +126,86 @@ pub fn PageAtomCheckbox() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="CheckboxField">
+                <p>
+                    "For a checkbox with a description or an error message of its own, use a "<Code inline=true>"CheckboxField"</Code>
+                    ": a "<Code inline=true>"<div>"</Code>" around a "<Code inline=true>"CheckboxButton"</Code>" (the clickable "
+                    <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"checkbox\">"</Code>
+                    " and your children), a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
+                    ". It takes the props of "<Code inline=true>"Checkbox"</Code>" (its "<Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" go to the "<Code inline=true>"<div>"</Code>"); in a "<Code inline=true>"CheckboxGroup"</Code>" the group validates, so a "<Code inline=true>"FieldError"</Code>" in it shows nothing. Both render the data attributes below."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <CheckboxField is_selected=accepted set_selected=accepted is_required=true classes="my-checkbox-field">
+                            <CheckboxButton classes="my-checkbox">
+                                <span class="my-checkbox-box" aria-hidden="true"></span>
+                                "I accept the terms"
+                            </CheckboxButton>
+                            <Description>"You can withdraw your consent at any time."</Description>
+                            <FieldError/>
+                        </CheckboxField>
+                    "#)}
+                </Code>
+                <Section title="Props" id="checkboxfield-props">
+                    <ApiTable kind=ApiKind::Props of="CheckboxField">
+                        <ApiRow name="value" ty="Option<Key>" default="None">
+                            "The checkbox\u{2019}s value in its "<Code inline=true>"CheckboxGroup"</Code>
+                            " (required there). The group then holds the selection: "<Code inline=true>"default_selected"</Code>
+                            ", "<Code inline=true>"is_selected"</Code>" and "<Code inline=true>"set_selected"</Code>" don\u{2019}t apply."
+                        </ApiRow>
+                        <ApiRow name="default_selected" ty="bool" default="false">"Whether the checkbox starts checked."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">
+                            "Called when the checkbox is checked or unchecked, also while "<Code inline=true>"is_selected"</Code>
+                            " controls the selection."
+                        </ApiRow>
+                        <ApiRow name="is_selected" ty="Option<Signal<bool>>" default="None">
+                            "Whether the toggle is selected (controlled): a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_selected" ty="Option<Out<bool>>" default="None">
+                            "Receives the selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
+                        </ApiRow>
+                        <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">
+                            "Shows the checkbox as partially checked, whatever its selection."
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the checkbox."</ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The checkbox can be focused but not changed."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the checkbox as required."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the checkbox invalid."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">"Validates the selection."</ApiRow>
+                        <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
+                            "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
+                            <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s "<Code inline=true>"name"</Code>" (in a group: the group\u{2019}s)."</ApiRow>
+                        <ApiRow name="form_value" ty="Option<String>" default="None">
+                            "The value submitted while checked (in a group: "<Code inline=true>"value"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, when it isn\u{2019}t inside it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a checkbox without label text."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the checkbox when it mounts."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the checkbox gains or loses focus."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<div>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"CheckboxButton"</Code>", and a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" as needed. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="CheckboxButton">
+                <p>
+                    "The clickable "<Code inline=true>"<label>"</Code>" of a "<AnchorLink href="#checkboxfield">"CheckboxField"</AnchorLink>
+                    ", around a visually hidden "<Code inline=true>"<input type=\"checkbox\">"</Code>" and your children (the box and the label text). "
+                    "It takes the field\u{2019}s state and renders the data attributes below."
+                </p>
+                <Section title="Props" id="checkboxbutton-props">
+                    <ApiTable kind=ApiKind::Props of="CheckboxButton">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The box and the label text."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="CheckboxGroup">
                 <p>
                     "A "<Code inline=true>"<div role=\"group\">"</Code>" selecting a set of values. Its "<Code inline=true>"Checkbox"</Code>

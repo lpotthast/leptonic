@@ -6,6 +6,7 @@ pub mod test_button;
 pub mod test_calendar;
 pub mod test_checkbox;
 pub mod test_clipboard;
+pub mod test_clipboard_write;
 pub mod test_color_area;
 pub mod test_color_field;
 pub mod test_color_picker;
@@ -54,7 +55,7 @@ pub mod test_menu_atoms;
 pub mod test_menu_trigger;
 pub mod test_move;
 pub mod test_number_field;
-pub mod test_number_field_atom;
+pub mod test_number_field_atoms;
 pub mod test_overlay;
 pub mod test_overlay_position;
 pub mod test_popover;
@@ -62,10 +63,10 @@ pub mod test_press;
 pub mod test_pressable;
 pub mod test_progress_bar;
 pub mod test_radio_group;
+pub mod test_scroll;
 pub mod test_search_field;
 pub mod test_select;
 pub mod test_select_forms;
-pub mod test_scroll;
 pub mod test_separator;
 pub mod test_server_panics;
 pub mod test_slider;
@@ -80,7 +81,7 @@ pub mod test_tabs;
 pub mod test_tag_group;
 pub mod test_tag_group_atoms;
 pub mod test_text_field;
-pub mod test_text_field_atom;
+pub mod test_text_field_atoms;
 pub mod test_theme;
 pub mod test_toast;
 pub mod test_toggle_button;
@@ -160,7 +161,7 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_use_button::UseButtonTests {})
         .with(test_menu_trigger::MenuTriggerTests {})
         .with(test_number_field::NumberFieldTests {})
-        .with(test_number_field_atom::NumberFieldAtomTests {})
+        .with(test_number_field_atoms::NumberFieldAtomTests {})
         .with(test_live_announcer::LiveAnnouncerTests {})
         .with(test_listbox::ListBoxTests {})
         .with(test_listbox_features::ListBoxSectionsTests {})
@@ -200,8 +201,9 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_dnd_collection::DndCollectionTests {})
         .with(test_dnd_collection::DndCollectionTargetTests {})
         .with(test_clipboard::ClipboardTests {})
+        .with(test_clipboard_write::ClipboardWriteTests {})
         .with(test_text_field::TextFieldTests {})
-        .with(test_text_field_atom::TextFieldAtomTests {})
+        .with(test_text_field_atoms::TextFieldAtomTests {})
         .with(test_search_field::SearchFieldTests {})
         .with(test_combobox::ComboBoxTests {})
         .with(test_combobox_forms::ComboBoxCustomValueTests {})
@@ -244,10 +246,22 @@ fn ui_tests(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_visually_hidden::VisuallyHiddenTests {})
         .with(test_separator::SeparatorTests {})
         .with(test_theme::ThemeTests {})
-        .with(test_hydration_ids::HydrationIdTests { shard: 0, shards: 4 })
-        .with(test_hydration_ids::HydrationIdTests { shard: 1, shards: 4 })
-        .with(test_hydration_ids::HydrationIdTests { shard: 2, shards: 4 })
-        .with(test_hydration_ids::HydrationIdTests { shard: 3, shards: 4 })
+        .with(test_hydration_ids::HydrationIdTests {
+            shard: 0,
+            shards: 4,
+        })
+        .with(test_hydration_ids::HydrationIdTests {
+            shard: 1,
+            shards: 4,
+        })
+        .with(test_hydration_ids::HydrationIdTests {
+            shard: 2,
+            shards: 4,
+        })
+        .with(test_hydration_ids::HydrationIdTests {
+            shard: 3,
+            shards: 4,
+        })
         .tests
 }
 

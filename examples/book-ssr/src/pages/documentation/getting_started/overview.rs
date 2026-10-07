@@ -12,14 +12,17 @@ pub fn PageOverview() -> impl IntoView {
             </p>
 
             <p>
-                "It comes in three layers. "<b>"Hooks"</b>", ported from "
+                "It comes in two layers. "<b>"Hooks"</b>", ported from "
                 <Link href="https://react-spectrum.adobe.com/react-aria/" target=LinkTarget::Blank>"react-aria"</Link>
                 ", implement interaction and accessibility: pressing, hovering, keyboard navigation, focus management, "
                 "selection, overlays and the ARIA patterns of menus, listboxes, sliders and more. "<b>"Atoms"</b>
-                " are unstyled Leptos components that apply hooks to one element each. "<b>"Components"</b>" are themed, "
-                "ready-made UI: buttons, text fields, selects, sliders, date pickers, a rich text editor, modals, toasts, "
-                "tabs, tables and more. "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
-                " explains the layers and helps you pick the one that fits your project."
+                " are unstyled Leptos components that apply hooks to one element each: buttons, text fields, selects, "
+                "sliders, date pickers, menus, dialogs, toasts, tabs, tables and more. They bring no styles: you style "
+                "them with your own CSS, through their default classes and the data attributes of their state, or start "
+                "from leptonic\u{2019}s optional atom theme. "
+                <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
+                " explains the layers and helps you pick the one that fits your project; "
+                <Link href=routes::doc::Themes.materialize()>"Themes"</Link>" shows how to style atoms."
             </p>
 
             <p>
@@ -48,11 +51,12 @@ pub fn PageOverview() -> impl IntoView {
                         <b>"Concepts"</b>": the UI elements your app places on its pages (a button, a select, a table), "
                         "in groups by purpose such as "<Link href=routes::doc::Fields.materialize()>"Fields"</Link>" or "
                         <Link href=routes::doc::Overlays.materialize()>"Overlays"</Link>". A concept leptonic implements at "
-                        "several layers has an overview, which explains it and helps you choose a layer, and a tab per layer "
-                        "(Hook, Atom, Component; in the plural when the layer has several pieces) with the full reference. "
-                        "Start with the overview\u{2019}s Quick Start. The markers "<b>"H A C"</b>" next to a concept in the "
-                        "sidebar show which layers it has; missing layers are dimmed. A concept with one layer has a single "
-                        "page."
+                        "both layers has an overview, which explains it and helps you choose a layer, and a tab per layer "
+                        "(Hook and Atom; in the plural when the layer has several pieces) with the full reference, including "
+                        "how to style the atoms. Start with the overview\u{2019}s Quick Start. The markers "<b>"H A"</b>
+                        " next to a concept in the sidebar show which layers it has; a missing layer is dimmed. A concept "
+                        "with one layer has a single page. Parts without behavior, such as cards or stacks, are CSS recipes "
+                        "on their group\u{2019}s overview."
                     </li>
                     <li>
                         <b>"Building blocks"</b>": the hooks, atoms and utilities that give an element one behavior many "

@@ -5,9 +5,9 @@ use leptonic::{
     hooks::{
         IntoAttrs,
         datepicker::{
-            DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, UseDateFieldInput, UseDateFieldReturn,
-            UseDateFieldStateInput, UseDateSegmentInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
-            use_date_segment,
+            DateFieldData, DateFieldOptions, DateSegment, DateSegmentType, UseDateFieldInput,
+            UseDateFieldReturn, UseDateFieldStateInput, UseDateSegmentInput, UseDateSegmentReturn,
+            use_date_field, use_date_field_state, use_date_segment,
         },
     },
     jiff::civil::{Date, Weekday},
@@ -108,12 +108,11 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } =
-        use_date_segment(UseDateSegmentInput {
-            segment,
-            data,
-            element: CapturedElement::new(),
-        });
+    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+        segment,
+        data,
+        element: CapturedElement::new(),
+    });
     let (attrs, styles) = segment_props.into_parts();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>

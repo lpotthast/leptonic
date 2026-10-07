@@ -1264,7 +1264,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             let click_listener = e.expect_current_target().get_owner_document().map(|doc| {
                 let clicked = std::rc::Rc::clone(&clicked);
                 listen_to(&doc, ev::click, true, move |_: MouseEvent| {
-                    clicked.set(true)
+                    clicked.set(true);
                 })
             });
             state.update_value(|s| {

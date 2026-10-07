@@ -45,6 +45,7 @@ pub fn PageFormHooks() -> impl IntoView {
                             validate: Some(Arc::new(|code: &String| {
                                 if code.len() == 8 { Ok(()) } else { Err(vec!["Use eight characters.".to_owned()]) }
                             })),
+                            builtin_validation: Signal::default(),
                             validation_behavior: ValidationBehavior::Native,
                             name: Some("coupon".to_owned()),
                         });
@@ -131,8 +132,8 @@ pub fn PageFormHooks() -> impl IntoView {
                 </Section>
 
                 <Section title="Return" id="use-form-validation-state-return">
-                    <p>"All fields are "<Code inline=true>"Copy"</Code>"."</p>
-                    <ApiTable kind=ApiKind::Return of="UseFormValidationStateReturn">
+                    <p>"A "<Code inline=true>"Copy"</Code>" "<Code inline=true>"FormValidationState"</Code>":"</p>
+                    <ApiTable kind=ApiKind::Return of="FormValidationState">
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the shown result is invalid. Set "<Code inline=true>"aria-invalid"</Code>" from it."</ApiRow>
                         <ApiRow name="validation_errors" ty="Signal<Vec<String>>">"The error messages of the shown result."</ApiRow>
                         <ApiRow name="display_validation" ty="Signal<ValidationResult>">
@@ -142,19 +143,25 @@ pub fn PageFormHooks() -> impl IntoView {
                             "The result for the current value, before it is committed. "<Code inline=true>"use_form_validation"</Code>
                             " passes it to the browser."
                         </ApiRow>
-                        <ApiRow name="update_validation" ty="Callback<ValidationResult>">
-                            "Reports a further result, such as the input\u{2019}s native validity. Shown right away with "
-                            <Code inline=true>"Aria"</Code>", at the next commit with "<Code inline=true>"Native"</Code>"."
-                        </ApiRow>
-                        <ApiRow name="commit_validation" ty="Callback<()>">
-                            "Shows the current result and clears the server errors (the user changed the value)."
-                        </ApiRow>
-                        <ApiRow name="reset_validation" ty="Callback<()>">"Shows the field as valid again, e.g. when its form is reset."</ApiRow>
-                        <ApiRow name="native_validity_readers" ty="NativeValidityReaders">
-                            "Used by "<Code inline=true>"use_form_validation"</Code>" to read the input\u{2019}s native validity "
-                            "before each commit."
-                        </ApiRow>
                     </ApiTable>
+                    <p>"Its methods change the shown result:"</p>
+                    <DocTable headers=&["Method", "Description"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"update_validation(result)"</Code></TableCell>
+                            <TableCell>
+                                "Reports a further result, such as the input\u{2019}s native validity. Shown right away with "
+                                <Code inline=true>"Aria"</Code>", at the next commit with "<Code inline=true>"Native"</Code>"."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"commit_validation()"</Code></TableCell>
+                            <TableCell>"Shows the current result and clears the server errors (the user changed the value)."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"reset_validation()"</Code></TableCell>
+                            <TableCell>"Shows the field as valid again, e.g. when its form is reset."</TableCell>
+                        </TableRow>
+                    </DocTable>
                 </Section>
 
                 <Section title="ValidationResult">
@@ -202,7 +209,7 @@ pub fn PageFormHooks() -> impl IntoView {
                             "The "<Code inline=true>"<input>"</Code>", "<Code inline=true>"<textarea>"</Code>" or "
                             <Code inline=true>"<select>"</Code>" holding the value. Required."
                         </ApiRow>
-                        <ApiRow name="state" ty="UseFormValidationStateReturn">
+                        <ApiRow name="state" ty="FormValidationState">
                             "The result of "<Code inline=true>"use_form_validation_state"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"The same behavior as the state\u{2019}s. Required."</ApiRow>

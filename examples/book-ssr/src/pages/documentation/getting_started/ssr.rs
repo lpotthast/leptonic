@@ -47,8 +47,8 @@ pub fn PageSsr() -> impl IntoView {
 
             <Section title="What Runs Where">
                 <p>
-                    "The bodies of hooks, atoms and components run on the server and again in the browser, where hydration "
-                    "creates every component a second time and attaches it to the server\u{2019}s HTML. Effects, event "
+                    "The bodies of hooks, atoms and your own Leptos components run on the server and again in the browser, where "
+                    "hydration creates every component a second time and attaches it to the server\u{2019}s HTML. Effects, event "
                     "listeners, timers and animation frames only run in the browser. Leptonic follows that split:"
                 </p>
                 <ul>
@@ -125,10 +125,10 @@ pub fn PageSsr() -> impl IntoView {
                     ")}
                 </Code>
                 <p>
-                    "Values that depend on the browser fall back on the server. For example, "
-                    <Code inline=true>"Leptonic::is_mobile_device"</Code>" (from "<Code inline=true>"<Root>"</Code>
-                    "\u{2019}s context) is "<Code inline=true>"false"</Code>" there, as it reads the user agent from the "
-                    "window."
+                    "Values that depend on the browser fall back on the server. For example, the platform checks of "
+                    <Code inline=true>"leptonic::utils::platform"</Code>" ("<Code inline=true>"device::is_mac"</Code>", "
+                    <Code inline=true>"browser::is_safari"</Code>", \u{2026}) are "<Code inline=true>"false"</Code>
+                    " there, as they read the browser\u{2019}s navigator."
                 </p>
             </Section>
 
@@ -225,9 +225,9 @@ pub fn PageSsr() -> impl IntoView {
                     <TableRow>
                         <TableCell>"The stored theme"</TableCell>
                         <TableCell>
-                            <Code inline=true>"<Root>"</Code>" remembers the theme in local storage, which the server "
-                            "can\u{2019}t read: the server renders "<Code inline=true>"default_theme"</Code>", and the page "
-                            "switches to the stored theme when it hydrates (see "
+                            "A theme remembered with "<Code inline=true>"signal_ls"</Code>" lives in local storage, which "
+                            "the server can\u{2019}t read: the server renders the default theme, and the page switches to the "
+                            "stored theme when it hydrates (see "
                             <Link href=routes::doc::Themes.materialize()>"Themes"</Link>")."
                         </TableCell>
                     </TableRow>
@@ -255,7 +255,7 @@ pub fn PageSsr() -> impl IntoView {
 
             <SeeAlso>
                 <li><Link href=routes::doc::Installation.materialize()>"Installation"</Link></li>
-                <li><Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link></li>
+                <li><Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link></li>
                 <li><Link href=routes::doc::Themes.materialize()>"Themes"</Link></li>
                 <li><Link href=routes::doc::Accessibility.materialize()>"Accessibility"</Link></li>
                 <li><Link href=routes::doc::screen_readers::LiveAnnouncer.materialize()>"Live Announcer"</Link></li>

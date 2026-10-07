@@ -36,7 +36,11 @@ impl BrowserTest<str> for ComboBoxCustomValueTests {
         input.send_keys(Key::Down).await?;
         input.send_keys(Key::Enter).await?;
         page.wait_for_text("cbf-custom-changes", "[3]").await?;
-        wait_for!("the input value", "Kangaroo".to_owned(), input_value(&input).await?);
+        wait_for!(
+            "the input value",
+            "Kangaroo".to_owned(),
+            input_value(&input).await?
+        );
 
         // Typed text matching no option is kept when focus leaves, and clears the selection.
         input.send_keys(Key::Control + "a").await?;
@@ -44,7 +48,11 @@ impl BrowserTest<str> for ComboBoxCustomValueTests {
         page.wait_for_no_selector(LISTBOX).await?;
         page.press_tab().await?;
         page.wait_for_text("cbf-custom-changes", "[3]|[]").await?;
-        stays!("the input text", "Wombat".to_owned(), input_value(&input).await?);
+        stays!(
+            "the input text",
+            "Wombat".to_owned(),
+            input_value(&input).await?
+        );
         // The form submits the text (`allows_custom_value` submits the text, not the key).
         assert_that!(form_data(&page, "cbf-custom", "animal").await?)
             .is_equal_to(vec!["Wombat".to_owned()]);
@@ -53,13 +61,21 @@ impl BrowserTest<str> for ComboBoxCustomValueTests {
         input.click().await?;
         input.send_keys("x").await?;
         input.send_keys(Key::Escape).await?;
-        stays!("the input text", "Wombatx".to_owned(), input_value(&input).await?);
+        stays!(
+            "the input text",
+            "Wombatx".to_owned(),
+            input_value(&input).await?
+        );
 
         // Enter commits custom text too; the (empty) value doesn't change again.
         input.send_keys(Key::Control + "a").await?;
         input.send_keys("Emu").await?;
         input.send_keys(Key::Enter).await?;
-        stays!("the input text", "Emu".to_owned(), input_value(&input).await?);
+        stays!(
+            "the input text",
+            "Emu".to_owned(),
+            input_value(&input).await?
+        );
         assert_that!(page.read_text_of("cbf-custom-changes").await?)
             .is_equal_to("[3]|[]".to_owned());
         page.expect_no_page_errors().await
@@ -102,7 +118,11 @@ impl BrowserTest<str> for ComboBoxValidationTests {
             .await?
             .click()
             .await?;
-        wait_for!("the input value", "Cat".to_owned(), input_value(&input).await?);
+        wait_for!(
+            "the input value",
+            "Cat".to_owned(),
+            input_value(&input).await?
+        );
         assert_that!(is_valid(&page, &input).await?).is_true();
         // The error stays until the value is committed (focus leaves).
         assert_that!(input.attr("aria-describedby").await?).is_some();
@@ -118,10 +138,18 @@ impl BrowserTest<str> for ComboBoxValidationTests {
             .await?
             .click()
             .await?;
-        wait_for!("the input value", "Dog".to_owned(), input_value(&input).await?);
+        wait_for!(
+            "the input value",
+            "Dog".to_owned(),
+            input_value(&input).await?
+        );
         page.wait_for_attr(&input, "aria-invalid", Some("true"))
             .await?;
-        wait_for!("the error", "Dogs are not allowed".to_owned(), described_by_text(&page, &input).await?);
+        wait_for!(
+            "the error",
+            "Dogs are not allowed".to_owned(),
+            described_by_text(&page, &input).await?
+        );
         input.send_keys(Key::Control + "a").await?;
         input.send_keys("Ca").await?;
         page.by_role_and_text("option", "Cat")
@@ -185,7 +213,11 @@ impl BrowserTest<str> for ComboBoxMultipleTests {
         page.wait_for_no_selector(LISTBOX).await?;
         // Form reset restores the (empty) default.
         page.click_element_with_id("cbf-multiple-reset").await?;
-        wait_for!("the submitted animals", vec![String::new()], form_data(&page, "cbf-multiple", "animals").await?);
+        wait_for!(
+            "the submitted animals",
+            vec![String::new()],
+            form_data(&page, "cbf-multiple", "animals").await?
+        );
 
         // Required with multiple selection: required only while nothing is selected.
         let input = input_in(&page, "#cbf-multiple-required").await?;
@@ -314,11 +346,7 @@ impl BrowserTest<str> for ComboBoxSectionsTests {
         assert_that!(names).is_equal_to(vec!["Animals".to_owned(), "Birds".to_owned()]);
         input.send_keys("w").await?;
         expect_options(&page, &["Owl"]).await?;
-        assert_that!(
-            page.count_matching("[role=listbox] [role=group]")
-                .await?
-        )
-        .is_equal_to(1);
+        assert_that!(page.count_matching("[role=listbox] [role=group]").await?).is_equal_to(1);
         // The disabled option is skipped.
         input.send_keys(Key::Backspace).await?;
         expect_options(&page, &["Dog", "Owl", "Parrot"]).await?;
@@ -330,9 +358,17 @@ impl BrowserTest<str> for ComboBoxSectionsTests {
         )
         .is_equal_to(Some("true".to_owned()));
         input.send_keys(Key::Down).await?;
-        wait_for!("the active descendant", "Owl".to_owned(), active_descendant_text(&page, &input).await?);
+        wait_for!(
+            "the active descendant",
+            "Owl".to_owned(),
+            active_descendant_text(&page, &input).await?
+        );
         input.send_keys(Key::Enter).await?;
-        wait_for!("the input value", "Owl".to_owned(), input_value(&input).await?);
+        wait_for!(
+            "the input value",
+            "Owl".to_owned(),
+            input_value(&input).await?
+        );
         page.wait_for_no_selector(LISTBOX).await?;
 
         // Enter with the popover closed submits the form.
@@ -351,8 +387,12 @@ impl BrowserTest<str> for ComboBoxSectionsTests {
         .await?;
         input.send_keys(Key::Enter).await?;
         page.wait_for_no_selector(LISTBOX).await?;
-        wait_for!("the input value", "".to_owned(), input_value(&input).await?);
-        stays!("the submissions", "1".to_owned(), page.read_text_of("cbf-submits").await?);
+        wait_for!("the input value", String::new(), input_value(&input).await?);
+        stays!(
+            "the submissions",
+            "1".to_owned(),
+            page.read_text_of("cbf-submits").await?
+        );
         page.expect_no_page_errors().await
     }
 }

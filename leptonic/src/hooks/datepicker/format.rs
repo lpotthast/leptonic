@@ -15,6 +15,10 @@
 // - Era stripping: ICU4X adds an era to years before 1000; `Intl`'s numeric years have none
 //   unless asked for, so it is removed (with its separating literal) unless the era shows
 //   (`show_era`: a value before Christ).
+// - Day periods are AM/PM (`Intl`'s `dayPeriod` with `hour12`): ICU4X's data picks the flexible
+//   day periods of CLDR's `B` patterns for some locales' 12-hour times (German hour-only times:
+//   "12 nachts"), where `Intl` builds the pattern from an `h` skeleton with `a` ("12 AM"). A `B`
+//   field's text is replaced with the locale's AM/PM name.
 // - `resolve_hour_cycle` finds the locale's hour cycle (h11, h12, h23, h24) by formatting 0:00
 //   and 13:00 (react-aria: `Intl.DateTimeFormat#resolvedOptions().hourCycle`).
 // - The parts are ICU4X's datetime parts mapped to segment types (react-stately's
@@ -29,13 +33,14 @@ use icu_datetime::{
     DateTimeFormatter, DateTimeFormatterPreferences,
     fieldsets::{
         builder::{DateFields, FieldSetBuilder, ZoneStyle},
-        enums::CompositeFieldSet,
+        enums::{CompositeFieldSet, TimeFieldSet},
     },
     options::{Alignment, Length, TimePrecision, YearStyle},
+    pattern::{DateTimePattern, DayPeriodNameLength, FixedCalendarDateTimeNames},
     preferences::{HourCycle as IcuHourCycle, NumberingSystem},
 };
 use jiff::tz::TimeZone;
-use writeable::{Part, PartsWrite, Writeable};
+use writeable::{Part, PartsWrite, TryWriteable, Writeable};
 
 use super::{
     incomplete_date::IncompleteDate,
@@ -69,6 +74,8 @@ pub(crate) struct DateFormatter {
     /// Whether an era part shows: ICU4X adds one to years before 1000, `Intl`'s numeric years
     /// (react-aria) have none unless asked for.
     show_era: bool,
+    /// The locale's AM and PM names, replacing flexible day periods (`B`).
+    am_pm: Option<[String; 2]>,
 }
 
 fn preferences(
@@ -77,9 +84,11 @@ fn preferences(
     latin_digits: bool,
 ) -> DateTimeFormatterPreferences {
     let mut prefs = DateTimeFormatterPreferences::from(locale.icu_locale());
+    // The locale's own 12- or 24-hour clock, as `Intl`'s `hour12` (react-aria's `hourCycle`):
+    // a 12-hour clock is h11 in Japan, h12 elsewhere.
     prefs.hour_cycle = hour_cycle.map(|hour_cycle| match hour_cycle {
-        HourCycle::H12 => IcuHourCycle::H12,
-        HourCycle::H24 => IcuHourCycle::H23,
+        HourCycle::H12 => IcuHourCycle::Clock12,
+        HourCycle::H24 => IcuHourCycle::Clock24,
     });
     if latin_digits {
         prefs.numbering_system =
@@ -131,13 +140,15 @@ impl DateFormatter {
         builder.zone_style =
             (time_precision.is_some() && options.time_zone.is_some() && !options.hide_time_zone)
                 .then_some(ZoneStyle::SpecificShort);
-        let formatter = builder.build_composite().ok().and_then(|field_set| {
-            DateTimeFormatter::try_new(preferences(locale, options.hour_cycle, false), field_set)
-                .ok()
-        });
+        let prefs = preferences(locale, options.hour_cycle, false);
+        let formatter = builder
+            .build_composite()
+            .ok()
+            .and_then(|field_set| DateTimeFormatter::try_new(prefs, field_set).ok());
         Self {
             formatter,
             show_era: options.show_era,
+            am_pm: time_precision.and_then(|_| am_pm(prefs)),
         }
     }
 
@@ -166,6 +177,20 @@ impl DateFormatter {
             return vec![(None, value.date_time().to_string())];
         }
         let mut parts = collector.into_parts();
+        if let Some([am, pm]) = &self.am_pm
+            && has_flexible_day_period(&formatted.pattern())
+        {
+            let name = if value.date_time().hour() < 12 {
+                am
+            } else {
+                pm
+            };
+            for (kind, text) in &mut parts {
+                if *kind == Some(DateSegmentType::DayPeriod) {
+                    text.clone_from(name);
+                }
+            }
+        }
         if !self.show_era
             && let Some(index) = parts
                 .iter()
@@ -181,6 +206,38 @@ impl DateFormatter {
         }
         parts
     }
+}
+
+/// The locale's abbreviated AM and PM names (the `a` field).
+fn am_pm(prefs: DateTimeFormatterPreferences) -> Option<[String; 2]> {
+    let mut names = FixedCalendarDateTimeNames::<(), TimeFieldSet>::try_new(prefs).ok()?;
+    names
+        .include_day_period_names(DayPeriodNameLength::Abbreviated)
+        .ok()?;
+    let pattern = DateTimePattern::try_from_pattern_str("a").ok()?;
+    let name = |hour: u8| -> Option<String> {
+        let time = icu_time::Time::try_new(hour, 0, 0, 0).ok()?;
+        let mut text = String::new();
+        names
+            .with_pattern_unchecked(&pattern)
+            .format(&time)
+            .try_write_to(&mut text)
+            .ok()?
+            .ok()?;
+        Some(text)
+    };
+    Some([name(0)?, name(12)?])
+}
+
+/// Whether `pattern` has a flexible day period field (`B`, outside quoted literals).
+fn has_flexible_day_period(pattern: &DateTimePattern) -> bool {
+    let mut quoted = false;
+    pattern.to_string().chars().any(|c| {
+        if c == '\'' {
+            quoted = !quoted;
+        }
+        !quoted && c == 'B'
+    })
 }
 
 /// The ICU4X input of a value: its date, time and time zone (UTC without one).
@@ -317,6 +374,8 @@ pub(crate) fn resolve_hour_cycle(
     let formatter = DateFormatter {
         formatter: Some(formatter),
         show_era: false,
+        // Only the hour is read.
+        am_pm: None,
     };
     let parts =
         |hour: i8| formatter.format_to_parts(&jiff::civil::date(2001, 1, 1).at(hour, 0, 0, 0));
@@ -506,6 +565,51 @@ mod tests {
             .is_equal_to(ResolvedHourCycle::H23);
         assert_that!(resolve_hour_cycle(&locale("de-DE"), Some(HourCycle::H12)))
             .is_equal_to(ResolvedHourCycle::H12);
+        // A 12-hour preference is the locale's 12-hour clock (`Intl`'s `hour12: true`): h11 in
+        // Japan.
+        assert_that!(resolve_hour_cycle(&locale("ja-JP"), Some(HourCycle::H12)))
+            .is_equal_to(ResolvedHourCycle::H11);
+    }
+
+    /// German 12-hour times name the day period AM/PM, as `Intl` does for `hour12: true`
+    /// (`{ hour: "numeric" }`: "12 Uhr AM"), not with the flexible day periods ("nachts") of
+    /// CLDR's `B` patterns.
+    #[test]
+    fn names_german_twelve_hour_day_periods_am_pm() {
+        for granularity in [Granularity::Hour, Granularity::Minute] {
+            let formatter = DateFormatter::new(
+                &locale("de-DE"),
+                &FormatOptions {
+                    max_granularity: MaxGranularity::Hour,
+                    hour_cycle: Some(HourCycle::H12),
+                    ..options(granularity)
+                },
+            );
+            let day_period = formatter
+                .format_to_parts(&date(2001, 1, 1).at(0, 30, 0, 0))
+                .into_iter()
+                .find(|(kind, _)| *kind == Some(DateSegmentType::DayPeriod))
+                .map(|(_, text)| text);
+            assert_that!(day_period)
+                .with_detail_message(format!("{granularity:?}"))
+                .is_equal_to(Some("AM".to_owned()));
+        }
+    }
+
+    /// `Intl.DateTimeFormat("ja-JP", { hour: "numeric", minute: "numeric", hour12: true })`
+    /// formats 0:30 as "午前0:30" (h11, react-aria's `hourCycle: 'h12'`).
+    #[test]
+    fn formats_the_locales_own_twelve_hour_clock() {
+        let formatter = DateFormatter::new(
+            &locale("ja-JP"),
+            &FormatOptions {
+                max_granularity: MaxGranularity::Hour,
+                hour_cycle: Some(HourCycle::H12),
+                ..options(Granularity::Minute)
+            },
+        );
+        assert_that!(formatter.format(&date(2001, 1, 1).at(0, 30, 0, 0)))
+            .is_equal_to("午前0:30".to_owned());
     }
 
     #[test]

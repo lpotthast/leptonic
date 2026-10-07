@@ -22,6 +22,7 @@ pub fn PageUseLandmark() -> impl IntoView {
             <Section title="Input">
                 <p>"Pass a "<Code inline=true>"UseLandmarkInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseLandmarkInput">
+                    <ApiRow name="element" ty="CapturedElement">"The landmark\u{2019}s element, captured by the caller. Required."</ApiRow>
                     <ApiRow name="role" ty="LandmarkRole">
                         "The landmark\u{2019}s role, see "<AnchorLink href="#roles">"Roles"</AnchorLink>". Required."
                     </ApiRow>

@@ -84,10 +84,22 @@ impl BrowserTest<str> for GridListChildNavigationTests {
             page.send_keys_to_active(key).await?;
         }
         page.send_keys_to_active("b ").await?;
-        stays!("the focus on the input", true, page.driver.active_element().await? == input);
-        wait_for!("the input value", "b ".to_owned(), input_value(&input).await?);
+        stays!(
+            "the focus on the input",
+            true,
+            page.driver.active_element().await? == input
+        );
+        wait_for!(
+            "the input value",
+            "b ".to_owned(),
+            input_value(&input).await?
+        );
         page.send_keys_to_active(Key::Enter).await?;
-        stays!("the selection", String::new(), page.read_text_of("glf-input-selection").await?);
+        stays!(
+            "the selection",
+            String::new(),
+            page.read_text_of("glf-input-selection").await?
+        );
         page.expect_no_page_errors().await
     }
 }
@@ -105,6 +117,16 @@ impl BrowserTest<str> for GridListActionsTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/grid-list-features").await?;
+
+        // Hover on rows with an action, none on rows without selection or action.
+        let apple = row(&page, "#glf-action", "Apple").await?;
+        hover(&page, &apple).await?;
+        page.wait_for_attr(&apple, "data-hovered", Some("true"))
+            .await?;
+        let plain = page.css("#glf-children [role=row]").await?;
+        hover(&page, &plain).await?;
+        page.wait_for_attr(&apple, "data-hovered", None).await?;
+        stays!("data-hovered", None, plain.attr("data-hovered").await?);
 
         // Actions without selection: press and Enter.
         row(&page, "#glf-action", "Apple").await?.click().await?;
@@ -142,7 +164,11 @@ impl BrowserTest<str> for GridListActionsTests {
 
         // Links open on press.
         row(&page, "#glf-links", "One").await?.click().await?;
-        wait_for!("the location hash", "#glf-one".to_owned(), hash(&page).await?);
+        wait_for!(
+            "the location hash",
+            "#glf-one".to_owned(),
+            hash(&page).await?
+        );
 
         // Sections: row groups labelled by their header rows.
         let groups = page
@@ -150,10 +176,7 @@ impl BrowserTest<str> for GridListActionsTests {
             .find_all(By::Css("#glf-sections [role=rowgroup]"))
             .await?;
         assert_that!(groups.len()).is_equal_to(2);
-        let header_id = groups[0]
-            .attr("aria-labelledby")
-            .await?
-            .unwrap_or_default();
+        let header_id = groups[0].attr("aria-labelledby").await?.unwrap_or_default();
         let header = page.element(&header_id).await?;
         assert_that!(header.attr("role").await?).is_equal_to(Some("rowheader".to_owned()));
         assert_that!(header.text().await?).is_equal_to("Fruit".to_owned());
@@ -169,7 +192,13 @@ impl BrowserTest<str> for GridListActionsTests {
         let labelledby = banana.attr("aria-labelledby").await?.unwrap_or_default();
         let mut texts = Vec::new();
         for id in labelledby.split_whitespace() {
-            texts.push(page.element(id).await?.prop("textContent").await?.unwrap_or_default());
+            texts.push(
+                page.element(id)
+                    .await?
+                    .prop("textContent")
+                    .await?
+                    .unwrap_or_default(),
+            );
         }
         assert_that!(texts.last().cloned()).is_equal_to(Some("Yellow".to_owned()));
         page.expect_no_page_errors().await
@@ -217,4 +246,14 @@ async fn hash(page: &Page<'_>) -> Result<String, Report> {
         .execute("return window.location.hash;", vec![])
         .await?
         .convert::<String>()?)
+}
+
+/// Moves the pointer over `element`.
+async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
+    page.driver
+        .action_chain()
+        .move_to_element_center(element)
+        .perform()
+        .await?;
+    Ok(())
 }

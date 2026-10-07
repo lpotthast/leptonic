@@ -1,7 +1,7 @@
 // The atom theme: styles for leptonic's atoms, by their default classes (`leptonic-<AtomName>`) and
 // data attributes, ported from react-aria-components' starter styles (`documentation/atom-theme.md`).
 // Light and dark mode follow `data-theme` (`ThemeProvider`), else the system preference. Opt in with
-// `@use "leptonic/leptonic-atoms";` instead of (not together with) the component themes.
+// `@use "leptonic/leptonic-atoms";`.
 @use "atoms/theme";
 @use "atoms/utilities";
 // Buttons and field buttons first: other families adjust them.

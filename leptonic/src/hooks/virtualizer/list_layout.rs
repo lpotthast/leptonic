@@ -18,7 +18,10 @@ use crate::{
 // ## API DIFFERENCES
 // - The anchoring of react-spectrum's AI `ListLayout` (`anchor_to: Some(End)` +
 //   `scroll_end_threshold`, vertical only) is part of this layout; like that one, only a change
-//   of the cross-axis size (the width of a vertical list) throws away measured sizes.
+//   of the cross-axis size (the width of a vertical list) throws away measured sizes. Unlike
+//   that one, a change of `anchor_to` doesn't either: there it is a fixed option, here
+//   `VirtualList` switches it whenever the user scrolls to or away from the end, and dropping
+//   every measured size then made the content jump.
 // - Loaders are always shown as loading (collections have no `isLoading` per loader node).
 //
 // ## OMITTED FEATURES
@@ -558,7 +561,6 @@ impl ListLayout {
             || self.options.loader_size != options.loader_size
             || self.options.gap != options.gap
             || self.options.padding != options.padding
-            || self.options.anchor_to != options.anchor_to
     }
 }
 
@@ -718,9 +720,7 @@ impl Layout for ListLayout {
             edge: ScrollAnchorEdge::End,
             axis: ScrollAnchorAxis::Y,
             threshold: options.scroll_end_threshold,
-            is_anchorable: Some(Arc::new(|info: &LayoutInfo| {
-                info.kind != NodeKind::Loader
-            })),
+            is_anchorable: Some(Arc::new(|info: &LayoutInfo| info.kind != NodeKind::Loader)),
         })
     }
 }

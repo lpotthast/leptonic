@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use leptos::{context::Provider, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
     Out,
@@ -191,8 +191,9 @@ pub fn Virtualizer<L: Layout + Clone>(
         )
         .root
     });
-    provide_context(VirtualizerRenderer { create_root });
-    children()
+    // Only for the children: a context provided in the body would reach later siblings too.
+    let renderer = VirtualizerRenderer { create_root };
+    crate::utils::scoped_context::scoped_view(move || provide_context(renderer), children)
 }
 
 /// A virtualized list of plain rows, e.g. a log: only the visible rows are rendered, positioned

@@ -14,7 +14,7 @@ impl MarkdownCache {
             "# Leptonic Documentation Index\n\n\
              Every page of the leptonic documentation as Markdown, in the order of the book\u{2019}s navigation: \
              getting started and the guides, then the concepts (UI elements such as Button or Table, each documented \
-             at its layers: hooks, atoms and styled components), then the building blocks (hooks, atoms and utilities \
+             at its layers: hooks and unstyled atoms), then the building blocks (hooks, atoms and utilities \
              that give your own elements a behavior shared by many concepts).\n",
         );
         for part in &nav().parts {

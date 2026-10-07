@@ -2,7 +2,6 @@
 // Upstream: react-aria/src/selection/useSelectableList.ts @ 99e6102368
 use std::sync::Arc;
 
-use super::selection::SelectOnFocus;
 use leptos::{
     attr,
     attr::{
@@ -20,6 +19,7 @@ use super::{
     FocusStrategy, Key, KeyboardDelegate, LinkBehavior, NavigationOptions, SelectionBehavior,
     SelectionManager, SelectionMode,
     modifiers::{is_ctrl_key_pressed, is_non_contiguous_selection_modifier_keyboard},
+    selection::SelectOnFocus,
     use_type_select::{UseTypeSelectInput, UseTypeSelectProps, use_type_select},
 };
 use crate::{
@@ -526,16 +526,24 @@ pub fn use_selectable_collection(
         if let Some(key) = focused()
             && let Some(item) = item_elements.get(&key)
         {
-            let active = item.owner_document().as_ref().and_then(get_active_element);
-            let focus_within = active
-                .as_ref()
-                .is_some_and(|a| item.contains(Some(a.unchecked_ref())));
-            if !focus_within && !should_use_virtual_focus {
+            let focus_within = |item: &web_sys::Element| {
+                item.owner_document()
+                    .as_ref()
+                    .and_then(get_active_element)
+                    .is_some_and(|a| item.contains(Some(a.unchecked_ref())))
+            };
+            if !focus_within(&item) && !should_use_virtual_focus {
                 // After this `focusin` dispatch: focusing the item synchronously would dispatch a
                 // nested `focusin` into Leptos' delegated listener, which is still running (and
-                // can't be re-entered).
+                // can't be re-entered). react-aria focuses it right away, before the item reacts
+                // to becoming the focused key; here the item may already have moved focus into
+                // itself (e.g. to its first child), so check again.
                 let item = send_wrapper::SendWrapper::new(item.clone());
-                queue_microtask(move || focus_element(&item, true));
+                queue_microtask(move || {
+                    if !focus_within(&item) {
+                        focus_element(&item, true);
+                    }
+                });
             }
             if modality == Modality::Keyboard {
                 scroll_into_viewport(

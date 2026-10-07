@@ -36,7 +36,7 @@ pub fn PageColorSwatchOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    "See "<Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
 

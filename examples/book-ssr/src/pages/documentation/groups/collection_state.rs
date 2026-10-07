@@ -39,7 +39,6 @@ pub fn PageCollectionState() -> impl IntoView {
                         <TableCell>
                             <AnchorLink href="#use-list-state">"use_list_state"</AnchorLink>", "
                             <AnchorLink href="#use-single-select-list-state">"use_single_select_list_state"</AnchorLink>", "
-                            <AnchorLink href="#use-filtered-list-state">"use_filtered_list_state"</AnchorLink>", "
                             <AnchorLink href="#use-list-state-view">"use_list_state_view"</AnchorLink>
                         </TableCell>
                         <TableCell>
@@ -178,6 +177,14 @@ pub fn PageCollectionState() -> impl IntoView {
                         <TableRow>
                             <TableCell><Code inline=true>"disabled(bool)"</Code></TableCell>
                             <TableCell>"Disables the item: it can\u{2019}t be selected, and by default not focused either."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"disabled_behavior(DisabledBehavior)"</Code></TableCell>
+                            <TableCell>
+                                "How this item behaves while disabled, overriding the selection\u{2019}s "
+                                <AnchorLink href="#selectionoptions">"disabled_behavior"</AnchorLink>": with "
+                                <Code inline=true>"Selection"</Code>", it can still be focused and have actions."
+                            </TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"aria_label(text)"</Code></TableCell>
@@ -320,7 +327,7 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>"."
                         </ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">
                             <Code inline=true>"Toggle"</Code>": a press toggles the item. "<Code inline=true>"Replace"</Code>
                             ": a press replaces the selection with the item, and keyboard focus selects (as in a file manager)."
                         </ApiRow>
@@ -365,7 +372,8 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="selection" ty="SelectionManager">
                             "Selection and focus: queries like "<Code inline=true>"is_selected"</Code>", "
                             <Code inline=true>"selected_keys"</Code>", "<Code inline=true>"focused_key"</Code>" and "
-                            <Code inline=true>"is_disabled"</Code>" (tracked), and mutations like "
+                            <Code inline=true>"is_disabled"</Code>" (tracked; disabled for interaction, by the disabled behavior), "
+                            <Code inline=true>"is_item_disabled"</Code>" (disabled at all, whatever the behavior), and mutations like "
                             <Code inline=true>"select"</Code>", "<Code inline=true>"toggle_selection"</Code>", "
                             <Code inline=true>"replace_selection"</Code>", "<Code inline=true>"set_selected_keys"</Code>", "
                             <Code inline=true>"select_all"</Code>", "<Code inline=true>"clear_selection"</Code>" and "
@@ -412,29 +420,15 @@ pub fn PageCollectionState() -> impl IntoView {
                 </Section>
             </Section>
 
-            <Section title="use_filtered_list_state">
-                <p>
-                    "Views a list state through a filter, e.g. the text typed into a combobox. The filter receives each "
-                    "item\u{2019}s text and node. Selection and focus are shared with the unfiltered state, and "
-                    "\u{201c}select all\u{201d} still covers every item."
-                </p>
-                <Code language=Language::Rust>
-                    {indoc!(r"
-                        use leptonic::hooks::collections::use_filtered_list_state;
-
-                        let visible = use_filtered_list_state(state, move |text, _node| {
-                            text.to_lowercase().contains(&query.get().to_lowercase())
-                        });
-                    ")}
-                </Code>
-            </Section>
-
             <Section title="use_list_state_view">
                 <p>
                     "Shows a list state through another collection, a subset of the state\u{2019}s collection that you "
                     "compute yourself (e.g. the items of the current page, or a server-side search result). Selection and "
                     "focus are shared with the state; when the focused item leaves the view, focus moves to a neighbor. "
-                    <Code inline=true>"use_filtered_list_state"</Code>" is this view with a filtered collection."
+                    "To filter a list, e.g. by the text typed into a combobox, build the view\u{2019}s collection with "
+                    <Code inline=true>"Collection::filter"</Code>": it receives each item\u{2019}s text and node, keeps the "
+                    "children of kept items and drops sections left empty. \u{201c}Select all\u{201d} still covers every item "
+                    "of the state."
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r"
@@ -634,9 +628,10 @@ pub fn PageCollectionState() -> impl IntoView {
                         <ApiRow name="link_behavior" ty="LinkBehavior">
                             "See "<AnchorLink href="#collectionoptions">"CollectionOptions"</AnchorLink>". Required."
                         </ApiRow>
-                        <ApiRow name="focus" ty="Option<Callback<()>>">
-                            "Focuses the item when it becomes the focused key. Required; "<Code inline=true>"None"</Code>
-                            " focuses the element."
+                        <ApiRow name="focus" ty="Option<FocusItem>">
+                            "Moves DOM focus when the item becomes the focused key, in place of focusing the item element, "
+                            "e.g. to a grid row\u{2019}s cell: "<Code inline=true>"FocusItem::new(|| ..)"</Code>". Required; "
+                            <Code inline=true>"None"</Code>" focuses the element."
                         </ApiRow>
                         <ApiRow name="should_use_virtual_focus" ty="bool">
                             "DOM focus stays elsewhere; the item is focused virtually. Required."
@@ -706,13 +701,33 @@ pub fn PageCollectionState() -> impl IntoView {
 
                 <Section title="use_list_keyboard_delegate">
                     <p>
-                        <Code inline=true>"use_list_keyboard_delegate(state: ListState, element: CapturedElement, orientation: Orientation, layout: ListLayout) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
+                        <Code inline=true>"use_list_keyboard_delegate(input: UseListKeyboardDelegateInput) -> Signal<Arc<dyn KeyboardDelegate>>"</Code>
                     </p>
                     <p>
                         "Lists: listboxes, menus, grid lists, tag groups, selects and comboboxes. Moves in collection order, "
                         "skipping disabled items; in a "<Code inline=true>"Grid"</Code>" layout, up and down find the item "
                         "in the same column. Type-ahead compares with the locale\u{2019}s collation."
                     </p>
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseListKeyboardDelegateInput">
+                        <ApiRow name="state" ty="ListState">"The list\u{2019}s collection and selection. Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">
+                            "The list element, in which the rendered items are measured. Required."
+                        </ApiRow>
+                        <ApiRow name="orientation" ty="Orientation">
+                            "The direction the items follow each other: "<Code inline=true>"Vertical"</Code>" or "
+                            <Code inline=true>"Horizontal"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="layout" ty="ListLayout">
+                            <Code inline=true>"Stack"</Code>" (one item per row) or "<Code inline=true>"Grid"</Code>
+                            " (items wrap into rows). Required."
+                        </ApiRow>
+                        <ApiRow name="layout_delegate" ty="Option<Arc<dyn LayoutDelegate>>">
+                            "Where the items are. "<Code inline=true>"None"</Code>" measures the rendered items; pass a "
+                            "virtualizer\u{2019}s "<Code inline=true>"layout_delegate()"</Code>" so that page keys reach items "
+                            "that aren\u{2019}t rendered. Required."
+                        </ApiRow>
+                    </ApiTable>
                 </Section>
 
                 <Section title="use_grid_keyboard_delegate">

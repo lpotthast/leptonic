@@ -153,7 +153,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <ApiTable kind=ApiKind::Input of="UseTabListInput">
                         <ApiRow name="tabs" ty="TabListData">"The tab list, from "<Code inline=true>"TabListData::new(state)"</Code>". Required."</ApiRow>
                         <ApiRow name="element" ty="CapturedElement">"The tab list element; the hook\u{2019}s props capture it. Required."</ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                             "Which arrow keys move between the tabs, see "<AnchorLink href="#orientation">"Orientation"</AnchorLink>
                             "; set as "<Code inline=true>"aria-orientation"</Code>"."
                         </ApiRow>
@@ -193,7 +193,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                             let UseTabListReturn { props, data } = use_tab_list(UseTabListInput {
                                 tabs: tabs.clone(),
                                 element: CapturedElement::new(),
-                                orientation: Orientation::Horizontal,
+                                orientation: Orientation::Horizontal.into(),
                                 keyboard_activation: KeyboardActivation::Automatic,
                                 aria_label: "Product".into(),
                                 aria_labelledby: None,

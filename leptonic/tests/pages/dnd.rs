@@ -32,7 +32,16 @@ const SETTLE: Duration = Duration::from_millis(300);
 /// returns whether the default was prevented.
 const FIRE_DRAG_EVENT: &str = "
     const [element, type, modifiers, at] = arguments;
-    if (type === 'dragstart') { window.__dndTransfer = new DataTransfer(); }
+    if (type === 'dragstart') {
+        // A constructed DataTransfer ignores `effectAllowed` writes (only a real drag's dragstart
+        // may set them): keep both effects as plain properties, as the browser's drag data store.
+        const transfer = new DataTransfer();
+        for (const [name, initial] of [['effectAllowed', 'uninitialized'], ['dropEffect', 'none']]) {
+            let value = initial;
+            Object.defineProperty(transfer, name, { get: () => value, set: v => { value = v; }, configurable: true });
+        }
+        window.__dndTransfer = transfer;
+    }
     const rect = element.getBoundingClientRect();
     const event = new DragEvent(type, {
         dataTransfer: window.__dndTransfer,
@@ -72,7 +81,9 @@ impl DndPage<'_> {
         tokio::time::sleep(SETTLE).await;
         let actual = self.log(id).await?;
         if actual != expected {
-            leptos_browser_test::bail!("the log #{id} changed to {actual:?}, expected {expected:?}");
+            leptos_browser_test::bail!(
+                "the log #{id} changed to {actual:?}, expected {expected:?}"
+            );
         }
         Ok(())
     }
@@ -108,7 +119,8 @@ impl DndPage<'_> {
         kind: &str,
         modifiers: &[&str],
     ) -> Result<bool, Report> {
-        self.fire_drag_event_at(element, kind, modifiers, None).await
+        self.fire_drag_event_at(element, kind, modifiers, None)
+            .await
     }
 
     /// [`fire_drag_event`](Self::fire_drag_event) at `at` (x, y) from the element's top left
@@ -142,7 +154,10 @@ impl DndPage<'_> {
     pub async fn transfer(&self, expression: &str) -> Result<serde_json::Value, Report> {
         Ok(self
             .driver
-            .execute(&format!("return window.__dndTransfer.{expression};"), vec![])
+            .execute(
+                &format!("return window.__dndTransfer.{expression};"),
+                vec![],
+            )
             .await
             .context_with(|| format!("failed to read the transfer's {expression}"))?
             .json()
@@ -204,7 +219,9 @@ impl DndPage<'_> {
         self.settle().await;
         let actual = element.attr(name).await?;
         if actual.as_deref() != expected {
-            leptos_browser_test::bail!("attribute {name} changed to {actual:?}, expected {expected:?}");
+            leptos_browser_test::bail!(
+                "attribute {name} changed to {actual:?}, expected {expected:?}"
+            );
         }
         Ok(())
     }

@@ -401,7 +401,11 @@ impl BrowserTest<str> for SliderTrackTests {
         click_track(&page, "rtl", 140).await?;
         wait_for_last(&page, "rtl", "end", "[30, 80]").await?;
         let thumb = page.css("#rtl-track .thumb").await?;
-        let style = thumb.attr("style").await?.unwrap_or_default().replace(' ', "");
+        let style = thumb
+            .attr("style")
+            .await?
+            .unwrap_or_default()
+            .replace(' ', "");
         assert_that!(style.as_str()).contains("left:70%");
         let rtl = inputs_of(&page, "rtl").await?;
         rtl[0].focus().await?;

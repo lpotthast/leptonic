@@ -133,6 +133,7 @@ impl BrowserTest<str> for ColorSliderDragTests {
         "color_slider_drag_tests".into()
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/atoms/color-slider").await?;
@@ -198,7 +199,11 @@ impl BrowserTest<str> for ColorSliderDragTests {
             .await?;
         let pressed = wait_for_last_hue_near(&page, "change", 180.0).await?;
         expect_active(&page, &vertical).await?;
-        driver.action_chain().move_by_offset(0, -40).perform().await?;
+        driver
+            .action_chain()
+            .move_by_offset(0, -40)
+            .perform()
+            .await?;
         let dragged = wait_for_last_hue_near(&page, "change", pressed + 72.0).await?;
         driver.action_chain().release().perform().await?;
         wait_for_last_hue(&page, &format!("end:{dragged}")).await?;

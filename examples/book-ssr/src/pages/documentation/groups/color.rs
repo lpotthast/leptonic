@@ -129,7 +129,7 @@ pub fn PageColor() -> impl IntoView {
                     </DocTable>
                     <p>
                         <Code inline=true>"RGB8"</Code>" displays as a hex code ("<Code inline=true>"#4287F5"</Code>") and parses "
-                        "one with "<Code inline=true>"RGB8::from_hex"</Code>"."
+                        "one (with or without "<Code inline=true>"#"</Code>", six digits or three) with "<Code inline=true>"\"#4287F5\".parse::<RGB8>()"</Code>"."
                     </p>
                 </Section>
 
@@ -161,22 +161,24 @@ pub fn PageColor() -> impl IntoView {
                             pub trait ColorValue: Clone + Copy + PartialEq + Debug + Send + Sync + From<Color> + Into<Color> + 'static {
                                 type Channel: ColorChannel<Color = Self>;
 
-                                fn channel_value(&self, channel: Self::Channel) -> f64;
-                                fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
                                 const HAS_ALPHA: bool = false;
 
+                                fn channel_value(&self, channel: Self::Channel) -> f64;
+                                fn with_channel_value(&self, channel: Self::Channel, value: f64) -> Self;
                                 fn channels() -> Vec<Self::Channel>;
                                 fn channel_range(channel: Self::Channel) -> ColorChannelRange;
                                 fn channel_name(channel: Self::Channel) -> &'static str;
                                 fn is_alpha_channel(channel: Self::Channel) -> bool;
-                                fn format_channel_value(&self, channel: Self::Channel) -> String;
+                                fn channel_format_options(channel: Self::Channel) -> NumberFormatOptions;
+                                fn format_channel_value(&self, channel: Self::Channel, locale: &Locale) -> String;
                                 fn to_css_string(&self) -> String;
                                 fn to_css_string_with_alpha(&self, alpha: f64) -> String;
                                 fn to_rgb8(&self) -> RGB8;
                                 fn hue_channel() -> Option<Self::Channel>;
                                 fn color_name(&self) -> String;
                                 fn hue_name(&self) -> String;
-                                // ... plus axis, display-color and gradient helpers the hooks use.
+                                // ... plus `color_space_axes`, `display_color`, `opaque` and `area_gradient`,
+                                // which the hooks use.
                             }
                         ")}
                     </Code>

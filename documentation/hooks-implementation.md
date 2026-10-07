@@ -632,7 +632,8 @@ hydration counter, so the server and the hydrating client produce the same ids.
 Call it in the hook body, unconditionally, in the same order on server and client: never in an effect or event
 handler, and never in a code path that exists on only one side (e.g. after an `#[cfg(feature = "ssr")]` early
 return). Otherwise every id created afterwards differs between server and client. The browser test
-`test_hydration_ids.rs` compares the server's HTML with the hydrated DOM; add new fixtures to its page list.
+`test_hydration_ids.rs` compares the server's HTML with the hydrated DOM on every fixture the test app's index
+lists (new fixtures are covered automatically).
 
 ### Element Capture Pattern
 
@@ -849,7 +850,7 @@ It returns a `Copy` state struct (C3) exposing:
 Examples: `UseToggleStateInput::value`, `SelectionOptions::selection`; `UseTextFieldStateInput` is a small complete
 one.
 
-**Atoms and components** (the user's rule, 2026-10-06) take controlled state as two props, never as one binding:
+**Atoms** (the user's rule, 2026-10-06) take controlled state as two props, never as one binding:
 a readable `<x>` (`#[prop(into)] Signal<T>` or `MaybeProp<T>`: a plain value, any signal, a closure) and a writable
 `set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`; for `is_<x>` the setter is
 `set_<x>`). This keeps every usage pattern open instead of forcing an `RwSignal`. Uncontrolled: `default_<x>`, plus

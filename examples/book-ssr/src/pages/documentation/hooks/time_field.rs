@@ -32,17 +32,17 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                     <ApiRow name="default_value" ty="Option<T>" default="None">"The initial value."</ApiRow>
                     <ApiRow name="value" ty="Option<ValueBinding<Option<T>>>" default="None">"The value as app state, replacing "<Code inline=true>"default_value"</Code>"."</ApiRow>
                     <ApiRow name="on_change" ty="Option<Callback<Option<T>>>" default="None">"Called with each new value."</ApiRow>
-                    <ApiRow name="placeholder_value" ty="Option<T>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
+                    <ApiRow name="placeholder_value" ty="Signal<Option<T>>" default="None">"Where empty segments start when stepped. Default: midnight."</ApiRow>
                     <ApiRow name="min_value, max_value" ty="Signal<Option<T>>" default="None">
                         "The earliest and latest valid time (\u{201c}Value must be 8:00 AM or later.\u{201d})."
                     </ApiRow>
-                    <ApiRow name="granularity" ty="Option<Granularity>" default="None">
+                    <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">
                         "The finest segment: "<Code inline=true>"Hour"</Code>", "<Code inline=true>"Minute"</Code>" (the default) or "
                         <Code inline=true>"Second"</Code>"."
                     </ApiRow>
-                    <ApiRow name="hour_cycle" ty="Option<HourCycle>" default="None">"A 12- or 24-hour clock. Default: the locale\u{2019}s."</ApiRow>
-                    <ApiRow name="hide_time_zone" ty="bool" default="false">"Hides the time zone of a zoned value."</ApiRow>
-                    <ApiRow name="should_force_leading_zeros" ty="bool" default="false">"Pads the hours to two digits."</ApiRow>
+                    <ApiRow name="hour_cycle" ty="Signal<Option<HourCycle>>" default="None">"A 12- or 24-hour clock. Default: the locale\u{2019}s."</ApiRow>
+                    <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of a zoned value."</ApiRow>
+                    <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads the hours to two digits."</ApiRow>
                     <ApiRow name="is_disabled, is_read_only, is_required, is_invalid" ty="Signal<bool>" default="false">
                         "As for "<Link href=format!("{}#use-date-field-state-input", routes::doc::date_field::Hook.materialize())>"use_date_field_state"</Link>"."
                     </ApiRow>
@@ -68,10 +68,11 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
 
             <Section title="use_time_field">
                 <p>
-                    <Code inline=true>"use_time_field(input, state, element, input_element)"</Code>" is "
+                    <Code inline=true>"use_time_field"</Code>" is "
                     <Link href=format!("{}#use-date-field", routes::doc::date_field::Hook.materialize())>"use_date_field"</Link>" over "
-                    <Code inline=true>"state.field"</Code>": it takes the same "<Code inline=true>"UseDateFieldInput"</Code>
-                    " and returns the same "<Code inline=true>"UseDateFieldReturn"</Code>" (label, field, hidden input, description "
+                    <Code inline=true>"state.field"</Code>": its "<Code inline=true>"UseTimeFieldInput"</Code>" has the same fields as "
+                    <Code inline=true>"UseDateFieldInput"</Code>" (with the time field state and the same "
+                    <Code inline=true>"DateFieldOptions"</Code>") and it returns the same "<Code inline=true>"UseDateFieldReturn"</Code>" (label, field, hidden input, description "
                     "and error message attributes, and the "<Code inline=true>"data"</Code>" for the segments). Its hidden input "
                     "submits the time, e.g. "<Code inline=true>"08:30:00"</Code>", not a date and time."
                 </p>
@@ -88,14 +89,14 @@ pub fn PageTimeFieldHooks() -> impl IntoView {
                         use leptos::prelude::*;
 
                         let state = use_time_field_state(UseTimeFieldStateInput::<Time>::default());
-                        let field = use_time_field(
-                            UseDateFieldInput { has_label: true.into(), ..UseDateFieldInput::default() },
+                        let field = use_time_field(UseTimeFieldInput {
                             state,
-                            CapturedElement::new(),
-                            CapturedElement::new(),
-                        );
+                            element: CapturedElement::new(),
+                            input_element: CapturedElement::new(),
+                            options: DateFieldOptions { has_label: true.into(), ..DateFieldOptions::default() },
+                        });
                         // Render the label, the group with a segment per `state.field.segments`
-                        // (`use_date_segment(segment, field.data, ..)`) and the hidden input.
+                        // (`use_date_segment(UseDateSegmentInput { segment, data: field.data, element })`) and the hidden input.
                     ")}
                 </Code>
             </Section>

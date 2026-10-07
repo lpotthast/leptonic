@@ -46,7 +46,7 @@ pub fn PageModalOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "The atoms combine the hooks. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
 

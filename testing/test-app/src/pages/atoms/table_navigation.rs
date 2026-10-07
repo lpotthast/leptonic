@@ -19,7 +19,13 @@ use super::listbox::describe_selection;
 /// the label of the notes input, and whether the notes cell also has a button.
 const TAB_ROWS: [(&str, &str, &str, &str, bool); 3] = [
     ("1", "Games", "File folder", "Games notes", true),
-    ("2", "Program Files", "File folder", "Program Files notes", false),
+    (
+        "2",
+        "Program Files",
+        "File folder",
+        "Program Files notes",
+        false,
+    ),
     ("3", "bootmgr", "System file", "bootmgr notes", false),
 ];
 
@@ -227,7 +233,11 @@ fn PagedTable() -> impl IntoView {
 fn ColSpanTable() -> impl IntoView {
     // Per row: (first column, text, span) of each cell.
     let rows: Vec<Vec<(usize, String, usize)>> = vec![
-        vec![(1, "R1C1".into(), 1), (2, "R1 span 2".into(), 2), (4, "R1C4".into(), 1)],
+        vec![
+            (1, "R1C1".into(), 1),
+            (2, "R1 span 2".into(), 2),
+            (4, "R1C4".into(), 1),
+        ],
         (1..=4).map(|c| (c, format!("R2C{c}"), 1)).collect(),
         vec![(1, "R3 span 4".into(), 4)],
         (1..=4).map(|c| (c, format!("R4C{c}"), 1)).collect(),

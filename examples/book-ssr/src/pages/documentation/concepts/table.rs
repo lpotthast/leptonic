@@ -38,8 +38,8 @@ pub fn PageTableOverview() -> impl IntoView {
 
             <Section title="Choose Your Layer">
                 <p>
-                    "Tables exist at all three layers. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    "Tables exist as hooks and atoms. See "
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
 

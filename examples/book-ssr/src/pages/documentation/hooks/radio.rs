@@ -141,7 +141,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="is_disabled, is_read_only, is_required" ty="Signal<bool>">"The group\u{2019}s settings."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation is invalid."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The group\u{2019}s validation state."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The group\u{2019}s validation state."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"The validation behavior of the group."</ApiRow>
                     </ApiTable>
                     <DocTable headers=&["Method", "Description"]>

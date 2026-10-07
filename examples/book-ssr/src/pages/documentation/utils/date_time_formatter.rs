@@ -61,18 +61,26 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                     <TableRow>
                         <TableCell><Code inline=true>"format_date(date)"</Code></TableCell>
                         <TableCell>
-                            "A "<Code inline=true>"jiff::civil::Date"</Code>" with the options\u{2019} weekday, year, month and day, "
-                            "in the locale\u{2019}s own pattern, e.g. \u{201c}March 2026\u{201d} (year and long month) or "
-                            "\u{201c}Saturday, March 14, 2026\u{201d}. Narrow weekdays and months are their first letter. "
-                            "Without any of these options, the ISO form."
+                            "A "<Code inline=true>"jiff::civil::Date"</Code>" with the options\u{2019} weekday, era, year, month and "
+                            "day, in the locale\u{2019}s own pattern, e.g. \u{201c}March 2026\u{201d} (year and long month) or "
+                            "\u{201c}Saturday, March 14, 2026\u{201d}. Without any of these options, the ISO form."
                         </TableCell>
                     </TableRow>
                     <TableRow>
                         <TableCell><Code inline=true>"format(&date_time)"</Code></TableCell>
                         <TableCell>
-                            "A "<Code inline=true>"jiff::civil::DateTime"</Code>", a wall-clock date and time. For a "
-                            <Code inline=true>"Zoned"</Code>" moment, convert it to the reader\u{2019}s time zone first and pass "
-                            "its "<Code inline=true>"datetime()"</Code>"."
+                            "A "<Code inline=true>"jiff::civil::DateTime"</Code>", a wall-clock date and time, with the date and "
+                            "time options or the styles, e.g. \u{201c}Mar 14, 2026, 3:09:26 PM\u{201d}. Without a time option, "
+                            "the date only."
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><Code inline=true>"format_zoned(&zoned)"</Code></TableCell>
+                        <TableCell>
+                            "A "<Code inline=true>"jiff::Zoned"</Code>" moment like "<Code inline=true>"format"</Code>", with its "
+                            "time zone\u{2019}s name if "<Code inline=true>"time_zone_name"</Code>" asks for it, e.g. "
+                            "\u{201c}3:09 PM EDT\u{201d}. To show it in another time zone, convert it with "
+                            <Code inline=true>"Zoned::in_tz"</Code>" first."
                         </TableCell>
                     </TableRow>
                 </DocTable>
@@ -106,19 +114,22 @@ pub fn PageDateTimeFormatter() -> impl IntoView {
                         <Code inline=true>"Numeric"</Code>", "<Code inline=true>"TwoDigit"</Code>", "<Code inline=true>"Long"</Code>
                         " (\u{201c}March\u{201d}), "<Code inline=true>"Short"</Code>" or "<Code inline=true>"Narrow"</Code>"."
                     </ApiRow>
-                    <ApiRow name="hour12" ty="Option<bool>" default="None (24-hour)">"Whether the hour counts to 12."</ApiRow>
-                    <ApiRow name="time_zone_name" ty="Option<TimeZoneFormat>" default="None">
-                        <Code inline=true>"Long"</Code>" or "<Code inline=true>"Short"</Code>" time zone name."
+                    <ApiRow name="hour_cycle" ty="Option<HourCycle>" default="None">
+                        "12 ("<Code inline=true>"H12"</Code>") or 24 ("<Code inline=true>"H24"</Code>") hours. "
+                        <Code inline=true>"None"</Code>": the locale\u{2019}s."
                     </ApiRow>
-                    <ApiRow name="time_zone" ty="Option<String>" default="None">"The time zone to format in."</ApiRow>
+                    <ApiRow name="time_zone_name" ty="Option<TimeZoneFormat>" default="None">
+                        <Code inline=true>"Long"</Code>" or "<Code inline=true>"Short"</Code>" time zone name ("
+                        <Code inline=true>"format_zoned"</Code>" only)."
+                    </ApiRow>
                 </ApiTable>
                 <p>
-                    "In "<Code inline=true>"format"</Code>", only the styles follow the locale\u{2019}s patterns so far "
-                    "("<Code inline=true>"format_date"</Code>" localizes the date parts too). Single parts are joined with spaces in a "
-                    "fixed order (weekday, month, day, year, time), with localized names for weekdays and months only, and "
-                    <Code inline=true>"era"</Code>", "<Code inline=true>"time_zone"</Code>" and "
-                    <Code inline=true>"time_zone_name"</Code>" are not applied yet. Without any option, the date is written "
-                    "as \u{201c}2026-03-14\u{201d}."
+                    "The options are localized as a whole: the date parts from the weekday, year, month and day options, "
+                    "the time precision from the finest of hour, minute and second. The length follows the month\u{2019}s or "
+                    "the weekday\u{2019}s format, so a narrow weekday or month next to other parts is short, and a two-digit "
+                    "month, day or hour pads all numbers. A single date part is written on its own (\u{201c}M\u{201d} for a "
+                    "narrow March). The era shows only when asked for, and the year is never shortened by the locale. "
+                    "Only the Gregorian calendar is supported."
                 </p>
             </Section>
 

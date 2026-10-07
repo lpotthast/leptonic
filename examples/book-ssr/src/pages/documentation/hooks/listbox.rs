@@ -241,6 +241,10 @@ pub fn PageUseListbox() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the option is disabled."</ApiRow>
                         <ApiRow name="is_pressed" ty="Signal<bool>">"Whether the option is being pressed."</ApiRow>
+                        <ApiRow name="is_hovered" ty="Signal<bool>">
+                            "Whether the pointer is over the option (options that can be selected or have an action, or that take "
+                            "focus on hover)."
+                        </ApiRow>
                         <ApiRow name="allows_selection" ty="Signal<bool>">"Whether pressing the option can select it."</ApiRow>
                         <ApiRow name="has_action" ty="Signal<bool>">"Whether the option has an action or link to perform."</ApiRow>
                         <ApiRow name="link" ty="Option<ItemLink>">

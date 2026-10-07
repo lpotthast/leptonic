@@ -56,12 +56,15 @@ pub fn PageUseColorSlider() -> impl IntoView {
                         let (track_attrs, slider_track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
 
+                        // The track is the slider's group: it takes the group props too.
                         view! {
-                            <div {..slider.group_props.into_attrs()}>
-                                <div {..track_attrs} style=slider_track_styles.merge(track_styles)>
-                                    <div {..thumb_attrs} style=thumb_styles>
-                                        <input {..thumb.input_props.into_attrs()} style=input_styles/>
-                                    </div>
+                            <div
+                                {..slider.group_props.into_attrs()}
+                                {..track_attrs}
+                                style=slider_track_styles.merge(track_styles)
+                            >
+                                <div {..thumb_attrs} style=thumb_styles>
+                                    <input {..thumb.input_props.into_attrs()} style=input_styles/>
                                 </div>
                             </div>
                         }
@@ -186,7 +189,8 @@ pub fn PageUseColorSlider() -> impl IntoView {
                 <Section title="Return" id="use-color-slider-return">
                     <ApiTable kind=ApiKind::Return of="UseColorSliderReturn">
                         <ApiRow name="slider" ty="UseSliderReturn">
-                            "The props of the group, label, output and track, as "<Code inline=true>"use_slider"</Code>" returns them."
+                            "The props of the group, label, output and track, as "<Code inline=true>"use_slider"</Code>" returns them. "
+                            "Spread the group props onto the track: the track is the slider\u{2019}s group."
                         </ApiRow>
                         <ApiRow name="thumb" ty="UseSliderThumbReturn">
                             "The props of the thumb and its input (with the color\u{2019}s value text), as "

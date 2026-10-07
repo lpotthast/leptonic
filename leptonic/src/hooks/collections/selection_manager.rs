@@ -237,7 +237,10 @@ impl SelectionManager {
     }
 
     pub fn set_focused(&self, focused: bool) {
-        self.state.is_focused.set(focused);
+        // Like `set_focused_key`: an equal value notifies no one.
+        if self.state.is_focused.get_untracked() != focused {
+            self.state.is_focused.set(focused);
+        }
     }
 
     /// The key of the focused item, if any.
@@ -282,7 +285,11 @@ impl SelectionManager {
         if self.state.child_focus_strategy.get_untracked() != child_focus_strategy {
             self.state.child_focus_strategy.set(child_focus_strategy);
         }
-        if self.state.focused_key.with_untracked(|focused| *focused != key) {
+        if self
+            .state
+            .focused_key
+            .with_untracked(|focused| *focused != key)
+        {
             self.state.focused_key.set(key);
         }
     }
@@ -398,8 +405,9 @@ impl SelectionManager {
             return false;
         }
         let (item_disabled, item_behavior) = self.collection.with(|c| {
-            c.get(key)
-                .map_or((false, None), |node| (node.is_disabled, node.disabled_behavior))
+            c.get(key).map_or((false, None), |node| {
+                (node.is_disabled, node.disabled_behavior)
+            })
         });
         (self.state.disabled_keys.with(|keys| keys.contains(key)) || item_disabled)
             && item_behavior != Some(DisabledBehavior::Selection)

@@ -685,13 +685,8 @@ mod tests {
         let g2 = table.column(&k("g2")).expect("group");
         assert_that!((g2.index, g2.col_span, g2.level)).is_equal_to((1, 1, 1));
         // Header cells know their column.
-        assert_that!(
-            table
-                .collection()
-                .get(&k("g2"))
-                .and_then(|n| n.col_index)
-        )
-        .is_equal_to(Some(1));
+        assert_that!(table.collection().get(&k("g2")).and_then(|n| n.col_index))
+            .is_equal_to(Some(1));
     }
 
     #[test]

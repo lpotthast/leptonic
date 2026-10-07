@@ -177,13 +177,6 @@ async fn keyboard_enter_and_space_press(page: &Page<'_>) -> Result<(), Report> {
 
 async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report> {
     clear_log(page).await?;
-    // DEBUG (temporary): record pointer events reaching the target.
-    page.driver
-        .execute(
-            "window.__dbg = []; for (const t of ['pointerdown','pointerup','pointerleave','pointerenter','pointercancel','click','lostpointercapture','gotpointercapture']) { document.addEventListener(t, e => window.__dbg.push(t + ':' + (e.target.id || e.target.tagName) + ':' + e.pointerType + ':' + window.scrollY), true); }",
-            vec![],
-        )
-        .await?;
     let target = page.element("test-press-target").await?;
     let elsewhere = page.element("test-press-elsewhere").await?;
 
@@ -205,9 +198,6 @@ async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report>
     page.wait_for_text(LOG, "start:mouse,end:mouse").await?;
     assert_that!(page.read_bool("test-press-is-pressed").await?).is_false();
     // No press after all (the click fallback mustn't fire one either).
-    tokio::time::sleep(Duration::from_millis(200)).await;
-    let dbg = page.driver.execute("return window.__dbg.join(' | ');", vec![]).await?;
-    tracing::error!("DEBUG pointer events: {}", dbg.json());
     expect_stays(page, LOG, "start:mouse,end:mouse").await
 }
 
@@ -446,10 +436,15 @@ async fn cancel_on_pointer_exit(page: &Page<'_>) -> Result<(), Report> {
     page.driver
         .action_chain()
         .move_to_element_center(&target)
-        .release()
         .perform()
         .await?;
-    expect_stays(page, log, "start:mouse,end:mouse").await
+    // Back over the element: the press doesn't start again.
+    expect_stays(page, log, "start:mouse,end:mouse").await?;
+    // Released there: a pointer up without a press (react-aria's element `onPointerUp`), no press.
+    page.driver.action_chain().release().perform().await?;
+    page.wait_for_text(log, "start:mouse,end:mouse,up:mouse")
+        .await?;
+    expect_stays(page, log, "start:mouse,end:mouse,up:mouse").await
 }
 
 /// "should handle pointer cancel events".
@@ -471,8 +466,12 @@ async fn pointer_cancel_cancels_the_press(page: &Page<'_>) -> Result<(), Report>
         )
         .await?;
     page.wait_for_text(LOG, "start:mouse,end:mouse").await?;
+    // Released over the element: a pointer up without a press (react-aria's element `onPointerUp`
+    // fires press up when no press is active), no press.
     page.driver.action_chain().release().perform().await?;
-    expect_stays(page, LOG, "start:mouse,end:mouse").await
+    page.wait_for_text(LOG, "start:mouse,end:mouse,up:mouse")
+        .await?;
+    expect_stays(page, LOG, "start:mouse,end:mouse,up:mouse").await
 }
 
 /// "should explicitly call click method when Space key is triggered on a link with href and

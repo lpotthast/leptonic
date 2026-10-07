@@ -9,11 +9,12 @@ use crate::{
         SelectionBehavior, SelectionMode, UseFocusRingInput, UseGridListInput,
         UseGridListItemInput, UseGridListItemReturn, UseGridListReturn, UseGridListSectionInput,
         UseGridListSectionReturn, UseGridListSectionRowHeaderProps, UseGridListSectionRowProps,
+        UseHoverInput,
         collections::{
             AutoFocus, CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, ListLayout,
             Selection, SelectionOptions, UseListStateInput, use_list_state,
         },
-        use_focus_ring, use_grid_list, use_grid_list_item, use_grid_list_section,
+        use_focus_ring, use_grid_list, use_grid_list_item, use_grid_list_section, use_hover,
     },
     utils::{
         CapturedElement, SlotProps, ValueBinding, classes::Classes, data_attributes::flag,
@@ -147,8 +148,8 @@ pub fn GridList(
 /// single `role="gridcell"` (`display: contents`, so the row lays out the children) holding the
 /// children.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
-/// `data-pressed` on the row for styling. A [`GridListItemDescription`] inside describes the row.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
+/// `data-pressed` and `data-hovered` on the row for styling. A [`GridListItemDescription`] inside describes the row.
 ///
 /// Default class: `leptonic-GridListItem`.
 #[component]
@@ -182,6 +183,8 @@ pub fn GridListItem(
         is_focus_visible,
         is_disabled,
         is_pressed,
+        allows_selection,
+        has_action,
         ..
     } = use_grid_list_item(UseGridListItemInput {
         // Inside a `ContextMenuTrigger`: its menu opens on this row.
@@ -196,10 +199,16 @@ pub fn GridListItem(
     let item = GridListItemCtx {
         description_props: StoredValue::new(Some(description_props)),
     };
+    // Interactive rows show hover (react-aria-components' `GridListItem`).
+    let hover = use_hover(UseHoverInput {
+        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+        ..UseHoverInput::default()
+    });
 
     view! {
         <div
             {..attrs}
+            {..hover.props.into_attrs()}
             class=classes
             style=styles
             data-selected=flag(is_selected)
@@ -207,6 +216,7 @@ pub fn GridListItem(
             data-focus-visible=flag(is_focus_visible)
             data-disabled=flag(is_disabled)
             data-pressed=flag(is_pressed)
+            data-hovered=flag(hover.is_hovered)
         >
             <div {..grid_cell_props.into_attrs()} style="display: contents">
                 <Provider value=item>{children()}</Provider>

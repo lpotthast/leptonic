@@ -9,9 +9,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::states::{CalendarData, CalendarStates, visible_range_description};
-use crate::hooks::form::use_label::labels;
 use crate::{
-    hooks::{IntoAttrs, UseKeyboardInput, use_keyboard},
+    hooks::{IntoAttrs, UseKeyboardInput, form::use_label::labels, use_keyboard},
     utils::{
         EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaMultiselectable, AriaReadonly, AriaRole},

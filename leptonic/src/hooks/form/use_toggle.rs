@@ -71,7 +71,8 @@ pub struct ToggleOptions {
     pub is_required: Signal<bool>,
     pub is_invalid: Signal<bool>,
     pub validate: Option<ValidateFn<bool>>,
-    pub validation_behavior: ValidationBehavior,
+    /// When errors show. `None`: `Aria`; for a checkbox group item, the group's.
+    pub validation_behavior: Option<ValidationBehavior>,
     /// The input's `name` (for form submission).
     pub name: Option<String>,
     /// The id of the form the input belongs to, when not its ancestor.
@@ -105,7 +106,7 @@ impl Default for ToggleOptions {
             is_required: Signal::stored(false),
             is_invalid: Signal::stored(false),
             validate: None,
-            validation_behavior: ValidationBehavior::default(),
+            validation_behavior: None,
             name: None,
             form: None,
             value: None,
@@ -406,6 +407,7 @@ pub(crate) fn use_toggle_with(
     focusable_props.on_focus = focusable_props.on_focus.chain(focus_ring.props.on_focus);
     focusable_props.on_blur = focusable_props.on_blur.chain(focus_ring.props.on_blur);
 
+    let validation_behavior = validation_behavior.unwrap_or_default();
     let validation = group_validation.unwrap_or_else(|| {
         use_form_validation_state(UseFormValidationStateInput {
             builtin_validation: Signal::default(),

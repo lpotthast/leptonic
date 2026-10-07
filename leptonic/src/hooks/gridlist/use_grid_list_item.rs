@@ -14,8 +14,8 @@ use crate::{
         IntoAttrs, PropsWithStyles,
         collections::{
             FocusItem, Key, NodeKind, SelectionMode, UseSelectableItemAttrs,
-            UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_selectable_item,
+            UseSelectableItemInput, UseSelectableItemProps, UseSelectableItemReturn,
+            use_selectable_item,
         },
         focus::use_focus_visible::{
             Modality, UseFocusVisibleInput, get_modality, use_focus_visible,

@@ -11,7 +11,8 @@ use crate::{
     hooks::{
         CellFocusMode, ColumnKind, ColumnSize, DisabledBehavior, GridFocusMode, IntoAttrs,
         KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, SortDescriptor,
-        SortDirection, TableCollection, TableColumnResizeState, TableData, UseTableCellInput,
+        SortDirection, TableCollection, TableColumnResizeState, TableData, UseFocusRingInput,
+        UseFocusRingReturn, UseFocusVisibleInput, UseHoverInput, UseTableCellInput,
         UseTableCellReturn, UseTableColumnHeaderInput, UseTableColumnHeaderReturn,
         UseTableColumnResizeInput, UseTableColumnResizeReturn, UseTableColumnResizeStateInput,
         UseTableHeaderPlaceholderInput, UseTableInput, UseTableReturn, UseTableRowInput,
@@ -20,10 +21,11 @@ use crate::{
         collections::{
             CollectionOptions, EscapeKeyBehavior, Key, NodeKind, Selection, SelectionOptions,
         },
-        use_checkbox, use_grid_row_group, use_table, use_table_cell, use_table_column_header,
-        use_table_column_resize, use_table_column_resize_state, use_table_header_placeholder,
-        use_table_header_row, use_table_row, use_table_select_all_checkbox,
-        use_table_selection_checkbox, use_table_state,
+        use_checkbox, use_focus_ring, use_focus_visible, use_grid_row_group, use_hover, use_table,
+        use_table_cell, use_table_column_header, use_table_column_resize,
+        use_table_column_resize_state, use_table_header_placeholder, use_table_header_row,
+        use_table_row, use_table_select_all_checkbox, use_table_selection_checkbox,
+        use_table_state,
     },
     utils::{
         CapturedElement, ValueBinding,
@@ -252,9 +254,14 @@ pub fn Table(
         styles
     };
 
+    // One keyboard-modality signal for the rows and column headers.
+    let focus_visible = TableFocusVisible(
+        use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible,
+    );
     scoped_view(
         move || {
             provide_context(data);
+            provide_context(focus_visible);
             if let Some(column_resize) = column_resize {
                 provide_context(column_resize);
             }
@@ -269,11 +276,17 @@ pub fn Table(
     )
 }
 
+/// Whether focus rings should be visible (keyboard modality), for the rows and column headers of
+/// a [`Table`].
+#[derive(Debug, Clone, Copy)]
+struct TableFocusVisible(Signal<bool>);
+
 /// The header of a [`Table`]: its header rows with the column headers (and, for a selection
 /// checkbox column, a "select all" checkbox in multiple selection mode).
 ///
 /// Column headers expose `data-allows-sorting`, `data-sort-direction` (`ascending` /
-/// `descending`), `data-focused` and `data-pressed` for styling.
+/// `descending`), `data-focused`, `data-focus-visible`, `data-hovered` (sortable columns) and
+/// `data-pressed` for styling.
 ///
 /// Default class: `leptonic-TableHeader`.
 #[component]
@@ -364,7 +377,14 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
     let selection = state.grid.list.selection;
     let focus_key = key.clone();
     let is_focused =
-        move || (selection.is_focused() && selection.is_focused_key(&focus_key)).then_some("true");
+        Signal::derive(move || selection.is_focused() && selection.is_focused_key(&focus_key));
+    let focus_visible = expect_context::<TableFocusVisible>().0;
+    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    // Sortable headers show hover (react-aria-components' `Column`).
+    let hover = use_hover(UseHoverInput {
+        is_disabled: Signal::derive(move || !allows_sorting.get()),
+        ..UseHoverInput::default()
+    });
     let is_selection_column =
         Memo::new(move |_| column.with(|c| c.1 == ColumnKind::SelectionCheckbox));
     let shows_select_all = Memo::new(move |_| {
@@ -431,11 +451,14 @@ fn TableColumnHeader(key: Key) -> impl IntoView {
         <th
             {..attrs}
             {..header.attr()}
+            {..hover.props.into_attrs()}
             class="leptonic-TableColumnHeader"
             style=styles
             data-allows-sorting=flag(allows_sorting.into())
             data-sort-direction=sort_direction
-            data-focused=is_focused
+            data-focused=flag(is_focused)
+            data-focus-visible=flag(is_focus_visible)
+            data-hovered=flag(hover.is_hovered)
             data-pressed=flag(is_pressed)
             data-resizing=is_resizing
         >
@@ -533,7 +556,8 @@ struct RowContext {
 /// A row of a [`Table`], for the collection row `key`. With a selection checkbox column, it
 /// renders the selection cell itself; add one [`TableCell`] per data column.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-disabled` and `data-pressed` for styling.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-hovered` (rows that can
+/// be selected or have an action), `data-disabled` and `data-pressed` for styling.
 ///
 /// Default class: `leptonic-TableRow`.
 #[component]
@@ -562,7 +586,8 @@ pub fn TableRow(
         is_focused,
         is_disabled,
         is_pressed,
-        ..
+        allows_selection,
+        has_action,
     } = use_table_row(UseTableRowInput {
         // Inside a `ContextMenuTrigger`: its menu opens on this row.
         on_context_menu: super::menu::ContextMenuTargetContext::for_item(&key),
@@ -571,15 +596,25 @@ pub fn TableRow(
     });
     let (attrs, row_styles) = row_props.into_parts();
     let styles = row_styles.merge(styles);
+    let focus_visible = expect_context::<TableFocusVisible>().0;
+    let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    // Interactive rows show hover (react-aria-components' `Row`).
+    let hover = use_hover(UseHoverInput {
+        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+        ..UseHoverInput::default()
+    });
 
     view! {
         <Provider value=RowContext { key }>
             <tr
                 {..attrs}
+                {..hover.props.into_attrs()}
                 class=classes
                 style=styles
                 data-selected=flag(is_selected)
                 data-focused=flag(is_focused)
+                data-focus-visible=flag(is_focus_visible)
+                data-hovered=flag(hover.is_hovered)
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
             >
@@ -596,7 +631,7 @@ pub fn TableRow(
 /// The cell is rendered again (with its children) when its column moves, e.g. when columns
 /// before it are added or removed.
 ///
-/// Exposes `data-pressed` for styling.
+/// Exposes `data-pressed`, `data-focus-visible` and `data-hovered` for styling.
 ///
 /// Default class: `leptonic-TableCell`.
 #[component]
@@ -662,9 +697,25 @@ pub fn TableCell(
         });
         let (attrs, cell_styles) = grid_cell_props.into_parts();
         let styles = cell_styles.merge(styles.clone());
+        // Focus on the cell itself, and hover (react-aria-components' `Cell`).
+        let UseFocusRingReturn {
+            props: focus_ring,
+            is_focus_visible,
+            ..
+        } = use_focus_ring(UseFocusRingInput::default());
+        let hover = use_hover(UseHoverInput::default());
 
         view! {
-            <td {..attrs} class=classes.clone() style=styles data-pressed=flag(is_pressed)>
+            <td
+                {..attrs}
+                {..focus_ring.into_attrs()}
+                {..hover.props.into_attrs()}
+                class=classes.clone()
+                style=styles
+                data-pressed=flag(is_pressed)
+                data-focus-visible=flag(is_focus_visible)
+                data-hovered=flag(hover.is_hovered)
+            >
                 {content}
             </td>
         }

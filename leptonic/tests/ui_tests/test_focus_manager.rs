@@ -218,7 +218,8 @@ async fn test_radio_group_none_checked(page: &FocusManagerPage<'_>) -> Result<()
     // Focus the button before the radio group.
     page.click_radio_item("test-fm-radio-none-btn-before")
         .await?;
-    page.wait_for_active_id("test-fm-radio-none-btn-before").await?;
+    page.wait_for_active_id("test-fm-radio-none-btn-before")
+        .await?;
 
     // Tabbable focus_next → should land on the first radio (a) since none are checked.
     page.click_radio_none_focus_next().await?;
@@ -226,7 +227,8 @@ async fn test_radio_group_none_checked(page: &FocusManagerPage<'_>) -> Result<()
 
     // Tabbable focus_next again → should skip radios b and c (same group), land on button after.
     page.click_radio_none_focus_next().await?;
-    page.wait_for_active_id("test-fm-radio-none-btn-after").await?;
+    page.wait_for_active_id("test-fm-radio-none-btn-after")
+        .await?;
 
     Ok(())
 }

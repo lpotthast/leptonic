@@ -30,14 +30,13 @@ pub fn PageUseColorWheel() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             hooks::*,
-                            utils::color::{HSV, HsvChannel},
+                            utils::color::HSV,
                         };
                         use leptos::prelude::*;
 
                         let state = use_color_wheel_state(UseColorWheelStateInput {
                             default_value: HSV::new(),
                             value: None,
-                            channel: HsvChannel::Hue,
                             is_disabled: false.into(),
                             on_change: None,
                             on_change_end: None,
@@ -70,7 +69,7 @@ pub fn PageUseColorWheel() -> impl IntoView {
                 </Code>
                 <p>
                     "Give the thumb a size, a border and a fill, e.g. "<Code inline=true>"state.display_color()"</Code>
-                    "; the demo source shows one way. Without a label, the wheel is named after its channel (\u{201c}Hue\u{201d})."
+                    "; the demo source shows one way. Without a label, the wheel is named after the hue channel (\u{201c}Hue\u{201d})."
                 </p>
             </Section>
 
@@ -93,7 +92,8 @@ pub fn PageUseColorWheel() -> impl IntoView {
                     "increasing clockwise. The other channels keep their values. "<Code inline=true>"C"</Code>" is any "
                     <Link href=format!("{}#colorvalue", routes::doc::Color.materialize())>
                         <Code inline=true>"ColorValue"</Code>
-                    </Link>" with a hue channel ("<Code inline=true>"HSV"</Code>" or "<Code inline=true>"HSL"</Code>"). The "
+                    </Link>": the wheel changes the hue channel of "<Code inline=true>"HSV"</Code>" and "<Code inline=true>"HSL"</Code>
+                    " colors, and the hue of the HSL form of others (RGB), keeping the color type. The "
                     "state owns the color, starting at "<Code inline=true>"default_value"</Code>", unless you bind it to app "
                     "state with "<Code inline=true>"value"</Code>"."
                 </p>
@@ -110,7 +110,6 @@ pub fn PageUseColorWheel() -> impl IntoView {
                             <Code inline=true>"ValueBinding::from(rw_signal)"</Code>" or "
                             <Code inline=true>"ValueBinding::new(signal, callback)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The color type\u{2019}s hue channel. Required."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the wheel is disabled."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<C>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
                         <ApiRow name="on_change_end" ty="Option<Callback<C>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
@@ -122,7 +121,6 @@ pub fn PageUseColorWheel() -> impl IntoView {
                     <ApiTable kind=ApiKind::Return of="ColorWheelState">
                         <ApiRow name="value" ty="Signal<C>">"The color."</ApiRow>
                         <ApiRow name="hue" ty="Signal<f64>">"Its hue, in degrees (0 to 360, exclusive)."</ApiRow>
-                        <ApiRow name="channel" ty="C::Channel">"The hue channel."</ApiRow>
                         <ApiRow name="step, page_step" ty="f64">"The hue\u{2019}s step and page step: 1\u{00b0} and 15\u{00b0}."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Whether the wheel is disabled."</ApiRow>
                         <ApiRow name="is_dragging" ty="Signal<bool>">"Whether the thumb is being dragged."</ApiRow>

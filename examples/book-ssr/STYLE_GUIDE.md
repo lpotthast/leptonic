@@ -7,11 +7,14 @@ part of it shows how leptonic is meant to be used. Page structure and writing ru
 ## 1. Built with leptonic
 
 Everything the book needs that leptonic provides comes from leptonic. The book adds layout and styling, not
-behavior.
+behavior. Leptonic is hooks and unstyled atoms (its components layer is gone), so all of the book's look is its own.
 
-- **Choose the highest layer that fits:** a themed component if it is built on leptonic's hooks, else an atom, else
-  the hook with the book's own markup. Never hand-roll behavior leptonic has: no `on:click` on a raw `<button>`, no
-  `<details>`, no own keyboard handling, no own focus or scroll management.
+- **Use the atom where leptonic has one,** else the hook with the book's own markup. Never hand-roll behavior
+  leptonic has: no `on:click` on a raw `<button>`, no `<details>`, no own keyboard handling, no own focus or scroll
+  management.
+- **The book styles every atom itself** with its tokens (section 2), through the atoms' default classes
+  (`leptonic-<AtomName>`), its own classes and the data attributes. It never loads a leptonic stylesheet, not even the
+  optional atom theme (`leptonic-atoms`), which is for apps.
 - **Book widgets are built from hooks and atoms.** Search, the source disclosure, the navigation menus and the copy
   button are compositions of leptonic pieces (see the table). If a widget would be useful to apps, it belongs in the
   library: propose it there instead of growing the book.
@@ -24,27 +27,29 @@ behavior.
 
 | Need                                   | Use                                                                                                                                                |
 |----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| Button (text or icon)                  | `components::Button`; icon-only: `variant=ButtonVariant::Flat` + `Icon` + `attr:aria-label`                                                        |
-| Link to a page / external / in-page    | `Link`, `AnchorLink`; a link that looks like a button: `LinkButton`                                                                                |
-| Dialog                                 | `Modal` (+ `ModalHeader`, `ModalTitle`, `ModalBody`, `ModalFooter`)                                                                                |
-| Panel covering the page (mobile menu)  | `Drawer` (`is_open` + `set_open`), with a close button inside                                                                                      |
+| Button (text or icon)                  | `Button` atom with `book-button` (`attr:data-variant="secondary"` outlined); icon-only: `book-icon-button` + kit `Icon` + `aria_label`             |
+| Link to a page / external / in-page    | `Link`, `AnchorLink` atoms (kit `Link`, `AnchorLink` in pages); a link that looks like a button: `Link` with `book-button`                         |
+| Dialog                                 | `ModalBackdrop` + `ModalContent` + `Dialog` (with `DialogTitle`) atoms                                                                             |
+| Panel covering the page (mobile menu)  | the shell's `MenuDrawer`: the modal atoms laid out at one edge, with a close button inside                                                         |
 | Show/hide section                      | `use_disclosure` + `use_disclosure_state` (kit `Disclosure`)                                                                                       |
-| Checkbox, switch, radio, toggle button | `Checkbox`, `Switch` (`is_selected` + `set_selected`), `RadioGroup` + `Radio` (`value` + `set_value`); toggle buttons: atoms `ToggleButton(Group)` |
-| Text, search and number fields         | `TextField`, `SearchField`, `NumberField` (`value` + `set_value`)                                                                                  |
+| Checkbox, switch, radio, toggle button | `Checkbox`, `Switch` (`is_selected` + `set_selected`), `RadioGroup` + `Radio` (`value` + `set_value`), `ToggleButton(Group)` atoms                 |
+| Text, search and number fields         | `TextField`, `SearchField`, `NumberField` atoms (`value` + `set_value`) with `Label`, `Input`, `FieldError`                                        |
 | Keyboard shortcut                      | `utils::keyboard_shortcut::Shortcut` (`Shortcut::key("k").primary()`)                                                                              |
 | Key caps                               | `ShortcutKeys` atom (a `Shortcut`, per platform), `Keys` atom (keys as given); in pages kit `Keys keys="Shift + Tab"`, in tables `KeyRow`          |
-| Data table                             | `Table*` components; in pages kit `DocTable` with `TableRow`/`TableCell` rows                                                                      |
+| Data table                             | `Table*` atoms; in pages kit `DocTable` with `TableRow`/`TableCell` rows                                                                           |
 | Code                                   | kit `Code` (inline or with `language`; blocks are highlighted and get a copy button)                                                               |
-| Icons                                  | `Icon` with `icondata` Bootstrap icons (`Bs*`)                                                                                                     |
+| Icons                                  | kit `Icon` with `icondata` Bootstrap icons (`Bs*`)                                                                                                 |
+| Toasts                                 | `BookToasts::show` (the shell's `ToastRegion` and toast atoms on a `ToastQueue`)                                                                   |
 | Screen reader announcements            | `utils::live_announcer::announce_polite`                                                                                                           |
-| Theme switching                        | `ThemeToggle` inside `Root`                                                                                                                        |
-| Layout                                 | CSS (flex/grid) with the tokens below; `Stack` where a plain stack is meant                                                                        |
+| Theme switching                        | the shell's `ThemeToggle` (a `Switch` atom on `use_theme`) inside the app's `ThemeProvider`                                                        |
+| Layout                                 | CSS (flex/grid) with the tokens below                                                                                                              |
 
 ## 2. Design tokens
 
 All tokens are CSS custom properties defined in `style/book/_theme.scss`. Book code uses tokens, not literal values.
-Leptonic's own theme variables (`--brand-color`, `--danger-color`, `--typography-*`, ...) are used where they exist;
-`--book-*` variables cover the rest.
+A few general names, kept from leptonic's former component theme, are defined by the book like all others
+(`--brand-color`, `--main-color`, `--main-background-color`, the status colors, `--font-family`,
+`--typography-code-font-family`); `--book-*` variables cover the rest.
 
 ### Color
 
@@ -61,9 +66,11 @@ Leptonic's own theme variables (`--brand-color`, `--danger-color`, `--typography
 | `--book-muted-color`                                                | Secondary text (descriptions, labels, placeholders)                                     |
 | `--book-focus-color`                                                | Focus rings drawn by the book                                                           |
 | `--book-backdrop-color`                                             | Behind modal overlays                                                                   |
-| `--success-color`, `--warn-color`, `--danger-color`, `--info-color` | Status (leptonic theme): valid/invalid, meters, errors                                  |
+| `--success-color`, `--warn-color`, `--danger-color`, `--info-color` | Status: valid/invalid, meters, errors                                                   |
 | `--book-categorical-1` ... `-4`                                     | Distinguishing series in demos (slider accents, chart bars)                             |
-| `--book-badge-{hook,atom,comp,util}-color`                          | Layer badges and layer markers                                                          |
+| `--book-badge-{hook,atom,util}-color`                               | Layer badges and layer markers                                                          |
+| `--book-app-bar-background-color`, `--book-app-bar-shadow`          | The app bar                                                                             |
+| `--book-switch-off-color`, `--book-switch-knob-color`               | A switch's track when off, its knob (the theme toggle, switch demos)                    |
 
 Every color works in both themes: the dark theme redefines the same tokens. Never write `#fff`, `white`, `black` or
 `rgba(...)` outside `_theme.scss`; the one exception is `transparent`. Text meets WCAG AA in both themes: 4.5:1
@@ -87,7 +94,7 @@ element's font size, so smaller text gets tighter spacing. Use them for padding,
 
 - Fonts: Roboto (`--font-family`) for text, JetBrains Mono (`--typography-code-font-family`) for code and keys.
 - Sizes: `--book-font-size-xs` (0.75em: badges, captions), `-s` (0.85em: secondary text, small controls), `-m` (1em),
-  `-l` (1.25em: card titles), `-xl` (1.5em: icon buttons). Headings in pages come from leptonic's typography; the
+  `-l` (1.25em: card titles), `-xl` (1.5em: icon buttons). Headings in pages are styled in `_article.scss`; the
   welcome and 404 pages may use larger display sizes.
 - Weights: 400 text, 600 emphasis in UI (titles of list items), 700 headings and table heads. No other weights.
 - Code, logs and keys use `--typography-code-font-family`, never a bare `monospace`.
@@ -96,9 +103,12 @@ element's font size, so smaller text gets tighter spacing. Use them for padding,
 
 - Transitions: `var(--book-transition)` (0.15s ease) for color, background and border changes. Anything that moves
   is disabled under `prefers-reduced-motion: reduce`.
-- Layers: `--book-z-sticky` (sticky concept tabs), `--book-z-backdrop` (backdrops of demo overlays, and panels
-  positioned like them: they cover the app bar, which leptonic's theme layers). Popovers and tooltips are layered by
-  leptonic and need no z-index from the book.
+- Layers: `--book-z-sticky` (sticky concept tabs), `--book-z-app-bar` (the app bar, fixed above the page),
+  `--book-z-backdrop` (backdrops of demo overlays, and panels positioned like them: they cover the app bar),
+  `--book-z-modal` (the book's own overlays: the menus of small screens, the search, toasts). Popovers and tooltips
+  are layered by leptonic (positioned overlays) and need no z-index from the book.
+- Sizes: `--book-app-bar-height`, `--book-concept-tabs-height`, `--book-sidebar-width`, `--book-toc-width`,
+  `--book-article-max-width`, in rem, so that they resolve to the same length in every element.
 - Breakpoints: 800px (sidebar becomes a menu, tables stack into cards), 1200px (table of contents hidden), as `$small`
   and `$medium` in `_theme.scss` (`@use "theme" as *;`, then `@media (width <= $small)`). `$small` is coupled with
   `SMALL_SCREEN_MAX_WIDTH` in `src/app.rs`. Pages must fit a 390px screen.
@@ -117,25 +127,28 @@ element's font size, so smaller text gets tighter spacing. Use them for padding,
   blocks (`.doc-table`); demo classes start with `demo-`. Kebab case, no BEM modifiers: state comes from attributes.
 - **Style state through attributes** leptonic sets: `[aria-current]`, `[aria-expanded]`, `[data-selected]`,
   `[data-focus-visible]`, `[data-disabled]`, ... Don't mirror state into classes.
-- **Style leptonic components through their classes and CSS variables** (`.leptonic-btn`, `--button-*`), scoped
-  under a book class. Don't restyle leptonic globally; a fix that every app needs belongs in the theme.
+- **Style atoms through their classes:** a book class passed as `classes` (`book-button`, `demo-btn`), or the
+  atom's default class (`.leptonic-ListBoxItem`) scoped under a book class. Don't restyle a default class globally
+  outside the stylesheet that owns the widget.
+- **Mixins:** `key-cap` (`_theme.scss`, `@use "theme" as *;`) draws a `<kbd>` key cap: the kit's `Keys`, the search
+  button's shortcut and key caps in demos.
 - **No inline styles.** Values computed at runtime use the typed `leptos-styles` API.
-- **Focus** is visible on every interactive element: leptonic's `data-focus-visible` / `:focus-visible` outline in
-  `--book-focus-color`. Never remove an outline without replacing it. Leptonic's reset removes the browser's default
-  outline, so every interactive element a demo styles needs its own focus rule.
+- **Focus** is visible on every interactive element: an outline in `--book-focus-color` on the atom's
+  `[data-focus-visible]` (`:focus-visible` on plain elements). Never remove an outline without replacing it.
 - **No literal z-index in demos:** popovers and tooltips are layered by leptonic; backdrops use `--book-z-backdrop`. **No literal durations:** `--book-transition`.
 - **Both themes, all widths:** check light and dark and a 390px screen (the browser tests do: `just
   book-browser-test`).
 
-## 4. Components and patterns
+## 4. Patterns
 
-- **Icon buttons** (app bar menus, close buttons): flat `Button`, icon at `--book-font-size-xl`, an `aria-label`
-  naming the action, `aria-expanded` when they open something.
+- **Icon buttons** (app bar menus, close buttons): a `Button` atom with `book-icon-button` (no frame, icon at
+  `--book-font-size-xl`), an `aria_label` naming the action, `aria_expanded` when they open something.
 - **Cards** (welcome features, demo frames): `--book-surface-color`, 1px border, `--book-radius-m`, padding
   `--book-space-l`.
 - **Lists of links** (sidebar, table of contents, search results): full-width rows, `--book-space-xs`/`-s` padding,
   `--book-radius-s`, hover `--book-hover-background-color`, current item `[aria-current]` in `--brand-color`.
-- **Badges** (layer of a page): `--book-font-size-xs`, bold, `--book-radius-s`, text `--book-on-brand-color` on the
+- **Badges** (kind of a building block: hook, atom, util) and **layer markers** (`H A` of a concept):
+  `--book-font-size-xs`, bold, `--book-radius-s`, text `--book-on-brand-color` on the
   badge color.
 - **Demo frame** (`Demo`): `--brand-color` border, `--book-radius-m`; "View source" and "View styles" are
   disclosures below the demo.
@@ -153,9 +166,8 @@ A demo is code readers copy. It shows one thing well, and everything around the 
   controls" below) labelled "Disabled" in a `demo-controls` row below the demo toggles it. Further switches of a demo
   (read-only, orientation, ...) go into the same row.
 - **The book styles every demo itself:** every demo is styled by the book's demo stylesheets (`style/demos/`), with
-  the book's tokens. Leptonic's optional atom theme (`leptonic-atoms`) is for apps; the book never loads it. Demos use atoms and hooks only, never the
-  components layer (`leptonic::components`); the component themes (`leptonic-themes`) stay loaded only until the last
-  component demo is gone.
+  the book's tokens. Leptonic's optional atom theme (`leptonic-atoms`) is for apps; the book never loads it. Demos use
+  atoms and hooks only.
 - **The layer of the page is styled through what it renders:** atom demos style the atom only through its data
   attributes (`[data-pressed]`, `[data-selected]`, `[data-focus-visible]`, ...), on a book class passed as `classes`
   or on the atom's default class `leptonic-<AtomName>` (e.g. `.leptonic-ListBoxItem`); hook demos style the plain
@@ -247,7 +259,10 @@ The markup of the other atoms demos use most (their classes: `_shared.scss` unle
 
 - **Atom demos** are styled by the book's demo classes (or the atoms' default classes `leptonic-<AtomName>`) and the
   atoms' data attributes, nothing else. A "Styling" section of an atom page shows how to style the atom (its default
-  class, data attributes and the markup to render inside it) with the book's own CSS as the example.
+  class, data attributes and the markup to render inside it) with the book's own CSS as the example, and ends with
+  one sentence on the optional atom theme (`documentation/documentation-strategy.md`, "Atom page").
+- **Recipes** (parts without behavior: card, stack, app bar, alert, drawer) live on their group's overview, as
+  semantic markup plus CSS with stand-in tokens or a demo styled in the group's stylesheet.
 - **Hook demos** render plain elements with book classes and style them through the attributes the hooks set.
 - **Layout** classes (`demo-controls`, `demo-control-row`, `demo-form`, ...) arrange demos; they don't style atoms.
 - **Rules of removed demos are removed** with them (the unit test `every_rule_belongs_to_a_used_class` lists them).

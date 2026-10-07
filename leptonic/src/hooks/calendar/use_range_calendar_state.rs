@@ -329,9 +329,9 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> RangeCalen
             let start = align_center(
                 range.start,
                 visible_duration,
-                first_day_of_week.get().unwrap_or_else(|| {
-                    crate::utils::date::first_day_of_week(&locale.get())
-                }),
+                first_day_of_week
+                    .get()
+                    .unwrap_or_else(|| crate::utils::date::first_day_of_week(&locale.get())),
                 min_value.get_untracked(),
                 max_value.get_untracked(),
             );

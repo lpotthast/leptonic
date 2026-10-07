@@ -29,6 +29,7 @@ fn checks(group: BrowserTests<str>) -> BrowserTests<str> {
         .with(test_shell::DocMenuTests {})
         .with(test_shell::DemoSourceTests {})
         .with(test_shell::CopyMarkdownTests {})
+        .with(test_shell::FontTests {})
         .with(test_shell::ShellStructureTests {})
         .with(test_shell::NarrowShellTests {})
         .with(test_contrast::ContrastTests {})

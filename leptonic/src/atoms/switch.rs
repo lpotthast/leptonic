@@ -298,7 +298,7 @@ fn use_switch_atom(setup: SwitchSetup) -> UseSwitchReturn {
             is_required,
             is_invalid,
             validate,
-            validation_behavior: use_validation_behavior(validation_behavior),
+            validation_behavior: Some(use_validation_behavior(validation_behavior)),
             name,
             form,
             value: form_value,

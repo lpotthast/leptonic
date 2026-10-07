@@ -41,6 +41,13 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <TableCell><Link href=hooks_section("use-calendar-heading")>"use_calendar_heading"</Link></TableCell>
                     </TableRow>
                     <TableRow>
+                        <TableCell><Code inline=true>"CalendarMonthPicker"</Code>", "<Code inline=true>"CalendarYearPicker"</Code></TableCell>
+                        <TableCell>
+                            <Link href=hooks_section("use-calendar-month-picker")>"use_calendar_month_picker"</Link>", "
+                            <Link href=hooks_section("use-calendar-year-picker")>"use_calendar_year_picker"</Link>
+                        </TableCell>
+                    </TableRow>
+                    <TableRow>
                         <TableCell><Code inline=true>"CalendarPreviousButton"</Code>", "<Code inline=true>"CalendarNextButton"</Code></TableCell>
                         <TableCell>
                             <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>" with the calendar\u{2019}s "
@@ -144,19 +151,19 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="focused_value" ty="Option<Signal<Date>>" default="None">"The focused date (controlled)."</ApiRow>
                         <ApiRow name="set_focused_value" ty="Option<Out<Date>>" default="None">"Receives the focused date."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
-                        <ApiRow name="visible_duration" ty="Option<DateDuration>" default="None">
-                            "How much is visible at once. Default: one month. See "
-                            <AnchorLink href="#calendargrid">"CalendarGrid"</AnchorLink>" for several months."
+                        <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">
+                            "How much is visible at once. See "<AnchorLink href="#calendargrid">"CalendarGrid"</AnchorLink>
+                            " for several months. A change aligns the visible range around the focused date again."
                         </ApiRow>
-                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">
+                        <ApiRow name="page_behavior" ty="Signal<PageBehavior>" default="Visible">
                             "Whether the page buttons move by the visible duration or by one unit of it ("<Code inline=true>"Single"</Code>
                             ", e.g. one month of a two-month calendar)."
                         </ApiRow>
-                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
-                        <ApiRow name="selection_alignment" ty="SelectionAlignment" default="Center">
-                            "Where the initially focused date sits in several visible months."
+                        <ApiRow name="first_day_of_week" ty="MaybeProp<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
+                        <ApiRow name="selection_alignment" ty="Signal<SelectionAlignment>" default="Center">
+                            "Where the focused date sits in several visible months, initially and when the duration changes."
                         </ApiRow>
-                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">
+                        <ApiRow name="weeks_in_month" ty="MaybeProp<u8>" default="None">
                             "A fixed number of week rows, e.g. 6, so that the calendar keeps its height."
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
@@ -191,8 +198,9 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="set_value" ty="Option<Out<Option<DateRange>>>" default="None">"Receives the selected range."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<DateRange>>>" default="None">"Called with the selected range."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>" default="None">"The first and last selectable date."</ApiRow>
-                        <ApiRow name="is_date_unavailable" ty="Option<Callback<(Date, Option<Date>), bool>>" default="None">
-                            "Whether a date can\u{2019}t be selected, given the first selected day of a range in progress."
+                        <ApiRow name="is_date_unavailable" ty="Option<Callback<DateAvailabilityQuery, bool>>" default="None">
+                            "Whether a date can\u{2019}t be selected. The query holds the "<Code inline=true>"date"</Code>" and the "
+                            <Code inline=true>"anchor_date"</Code>", the first selected day of a range in progress."
                         </ApiRow>
                         <ApiRow name="allows_non_contiguous_ranges" ty="bool" default="false">"Whether a range may span unavailable dates."</ApiRow>
                         <ApiRow name="commit_behavior" ty="CommitBehavior" default="Select">
@@ -206,14 +214,14 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <ApiRow name="focused_value" ty="Option<Signal<Date>>" default="None">"The focused date (controlled)."</ApiRow>
                         <ApiRow name="set_focused_value" ty="Option<Out<Date>>" default="None">"Receives the focused date."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the focused date."</ApiRow>
-                        <ApiRow name="visible_duration" ty="Option<DateDuration>" default="None">"How much is visible at once. Default: one month."</ApiRow>
-                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">"How the page buttons move."</ApiRow>
-                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
-                        <ApiRow name="selection_alignment" ty="Option<SelectionAlignment>" default="None">
+                        <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">"How much is visible at once."</ApiRow>
+                        <ApiRow name="page_behavior" ty="Signal<PageBehavior>" default="Visible">"How the page buttons move."</ApiRow>
+                        <ApiRow name="first_day_of_week" ty="MaybeProp<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
+                        <ApiRow name="selection_alignment" ty="MaybeProp<SelectionAlignment>" default="None">
                             "Where the initially focused date sits in several visible months. Default: centered, or at the "
                             "start if the range wouldn\u{2019}t fit then."
                         </ApiRow>
-                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">"A fixed number of week rows."</ApiRow>
+                        <ApiRow name="weeks_in_month" ty="MaybeProp<u8>" default="None">"A fixed number of week rows."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible months."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
@@ -239,6 +247,90 @@ pub fn PageAtomCalendar() -> impl IntoView {
                             <Link href=hooks_section("use-calendar-heading")>"use_calendar_heading"</Link>"."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the heading."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="CalendarMonthPicker">
+                <p>
+                    "Lets the user jump to a month of the focused date\u{2019}s year. It renders no element of its own: its "
+                    <Code inline=true>"children"</Code>" receive the "
+                    <Link href=hooks_section("use-calendar-month-picker-return")>"UseCalendarPickerReturn"</Link>
+                    " (the months, the focused month and "<Code inline=true>"on_change"</Code>", which moves the focused "
+                    "date) and render the picker, e.g. a "<Code inline=true>"<select>"</Code>"."
+                </p>
+
+                <Section title="Props" id="calendarmonthpicker-props">
+                    <ApiTable kind=ApiKind::Props of="CalendarMonthPicker">
+                        <ApiRow name="children" ty="FnOnce(UseCalendarPickerReturn) -> impl IntoView">"Renders the picker. Required."</ApiRow>
+                        <ApiRow name="format" ty="Option<MonthFormat>" default="None">
+                            "How the months are formatted. "<Code inline=true>"None"</Code>": "<Code inline=true>"Short"</Code>
+                            " (\u{201c}Mar\u{201d})."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Example" id="calendarmonthpicker-example">
+                    <p>"A "<Code inline=true>"<select>"</Code>" for either picker, placed in the calendar\u{2019}s header:"</p>
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            use leptonic::{atoms::calendar::*, hooks::calendar::UseCalendarPickerReturn};
+                            use leptos::prelude::*;
+
+                            #[component]
+                            fn PickerSelect(picker: UseCalendarPickerReturn) -> impl IntoView {
+                                let UseCalendarPickerReturn { aria_label, value, items, on_change } = picker;
+                                view! {
+                                    <select
+                                        aria-label=aria_label
+                                        on:change=move |e| {
+                                            if let Ok(id) = event_target_value(&e).parse() {
+                                                on_change.run(id);
+                                            }
+                                        }
+                                    >
+                                        <For each=move || items.get() key=|item| item.id let:item>
+                                            <option value=item.id.to_string() selected=move || value.get() == item.id>
+                                                {item.formatted}
+                                            </option>
+                                        </For>
+                                    </select>
+                                }
+                            }
+
+                            view! {
+                                <Calendar aria_label="Birthday">
+                                    <header>
+                                        <CalendarMonthPicker children=|picker| view! { <PickerSelect picker/> }/>
+                                        <CalendarYearPicker visible_years=100 children=|picker| view! { <PickerSelect picker/> }/>
+                                    </header>
+                                    // The grid, as above.
+                                </Calendar>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
+            </Section>
+
+            <Section title="CalendarYearPicker">
+                <p>
+                    "Lets the user jump to a year: "<Code inline=true>"visible_years"</Code>" years around the focused "
+                    "date\u{2019}s year, within the minimum and maximum. Like "
+                    <AnchorLink href="#calendarmonthpicker">"CalendarMonthPicker"</AnchorLink>", it renders no element: its "
+                    <Code inline=true>"children"</Code>" render the picker from the "<Code inline=true>"UseCalendarPickerReturn"</Code>
+                    ", whose item ids are the years."
+                </p>
+
+                <Section title="Props" id="calendaryearpicker-props">
+                    <ApiTable kind=ApiKind::Props of="CalendarYearPicker">
+                        <ApiRow name="children" ty="FnOnce(UseCalendarPickerReturn) -> impl IntoView">"Renders the picker. Required."</ApiRow>
+                        <ApiRow name="visible_years" ty="Option<u8>" default="None">
+                            "How many years to offer. "<Code inline=true>"None"</Code>": 20."
+                        </ApiRow>
+                        <ApiRow name="format" ty="CalendarYearPickerFormat" default="CalendarYearPickerFormat::default()">
+                            "How the years are formatted, see "
+                            <Link href=hooks_section("use-calendar-year-picker-input")>"use_calendar_year_picker"</Link>"."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -431,7 +523,7 @@ pub fn PageAtomCalendar() -> impl IntoView {
                     <Code inline=true>"CalendarGrid"</Code>" a "<Code inline=true>"<table>"</Code>" ("<Code inline=true>"leptonic-CalendarGrid"</Code>") with header cells ("
                     <Code inline=true>"leptonic-CalendarHeaderCell"</Code>") and weeks ("<Code inline=true>"leptonic-CalendarWeek"</Code>"), "<Code inline=true>"CalendarCell"</Code>" a "
                     <Code inline=true>"<td>"</Code>" ("<Code inline=true>"leptonic-CalendarCell"</Code>") and "<Code inline=true>"CalendarCellButton"</Code>" the day ("
-                    <Code inline=true>"leptonic-CalendarCellButton"</Code>"). The row around the heading and the page buttons\u{2019} arrows are your own "
+                    <Code inline=true>"leptonic-CalendarCellButton"</Code>"). The month and year pickers render elements of your own. The row around the heading and the page buttons\u{2019} arrows are your own "
                     "markup (the arrows "<Code inline=true>"aria-hidden"</Code>": the buttons are named \u{201c}Previous\u{201d} and \u{201c}Next\u{201d}). "
                     "For a range, make the selected days a band and fill its ends; collapse the grid\u{2019}s borders, so that the band "
                     "has no gaps. The demos above use this CSS:"
@@ -477,10 +569,10 @@ pub fn PageAtomCalendar() -> impl IntoView {
                         <Link href=format!("{}#accessibility", routes::doc::Calendar.materialize())>"Calendar overview"</Link>"."
                     </li>
                     <li>
-                        "Parts of your own, such as a month or year picker, get the calendar\u{2019}s state from "
-                        <Code inline=true>"use_calendar_states()"</Code>" inside a calendar and pass it to "
-                        <Link href=hooks_section("use-calendar-month-picker")>"use_calendar_month_picker"</Link>" or "
-                        <Link href=hooks_section("use-calendar-year-picker")>"use_calendar_year_picker"</Link>"."
+                        "Parts of your own get the calendar\u{2019}s state from "<Code inline=true>"use_calendar_states()"</Code>
+                        " inside a calendar and pass it to the "<Link href=routes::doc::calendar::Hook.materialize()>"Calendar Hooks"</Link>
+                        ". For month and year pickers, "<AnchorLink href="#calendarmonthpicker">"CalendarMonthPicker"</AnchorLink>" and "
+                        <AnchorLink href="#calendaryearpicker">"CalendarYearPicker"</AnchorLink>" do this for you."
                     </li>
                     <li>
                         "Inside a "<Link href=routes::doc::date_picker::Atom.materialize()><Code inline=true>"DatePicker"</Code></Link>

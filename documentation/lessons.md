@@ -53,10 +53,10 @@ Nested Dispatch of the Same Event Type", "Props are Single-Use", "Global State a
   can't parse closure parameters with generic type annotations (`move |v: Option<Key>| ..`) as attribute values;
   brace them (`on_change={move |v: Option<Key>| ..}`). `#[prop(optional)]` `Option<T>` props can't receive an
   `Option` through `view!`; components forwarding them build the atom from its props struct.
-- Audit 2026-10-05 (four read-only passes, `documentation/audit-2026-10-05.md`): 18 bug/crash risks, 13 library-wide
-  API conventions to settle, ~78 untested hooks, 101 files on an old upstream commit; PLAN reorganized into the
-  roadmap above. Leptos event delegation is off (tachys `delegation` feature unused): every `on:` handler is its own
-  closure, which is what the nested-dispatch rule protects.
+- Audit 2026-10-05 (four read-only passes; its findings file was deleted 2026-10-07 once absorbed, see git
+  history): 18 bug/crash risks, 13 library-wide API conventions to settle, ~78 untested hooks, 101 files on an old
+  upstream commit; PLAN reorganized into the roadmap above. Leptos event delegation is off (tachys `delegation`
+  feature unused): every `on:` handler is its own closure, which is what the nested-dispatch rule protects.
 - An intermittent menu panic was `FocusScope`'s `FocusManager` reading its disposed `NodeRef` from a pending focus
   callback; the getters now treat a disposed scope as having no element. Found once page errors started to include
   Rust panic messages. `LocalStorage` stored values in hooks that render during SSR panic on the server (dropped on
@@ -74,6 +74,12 @@ Nested Dispatch of the Same Event Type", "Props are Single-Use", "Global State a
   moves 7: additions at an index are counted before that index's move check), so `render_visible_items` mounts the
   rows itself (each built into a child owner, inserted before its visual successor, never moved). Reactive values a
   row needs (its `CapturedElement`) belong to the row's owner, not to the mounting effect's (disposed per run).
+- Item registry vs. re-rendered items (2026-10-07): `ItemElements`' development-only duplicate-key check kept the
+  previously registered item's `CapturedElement` in an effect; when two table cells swapped keys (column reorder),
+  the other cell's old owner was disposed before the effect ran ("already disposed" panic). A deferred callback may
+  only hold another owner's reactive values while that owner provably lives; the registry now keeps every live
+  registration per key (removed by its own cleanup, which runs before the owner's values are disposed) and the
+  check reads only those.
 - `StoredValue::new_local` in code that runs during SSR panics on the server (a request moves between threads):
   keep it behind `cfg(not(feature = "ssr"))`, also in atoms.
 

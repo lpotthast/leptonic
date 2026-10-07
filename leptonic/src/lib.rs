@@ -17,8 +17,6 @@ use leptos_use::use_window;
 
 #[cfg(feature = "atoms")]
 pub mod atoms;
-#[cfg(feature = "components")]
-pub mod components;
 pub mod hooks;
 #[cfg(test)]
 pub(crate) mod testing;
@@ -30,22 +28,13 @@ pub use crate::utils::scroll_behavior::ScrollBehavior;
 pub use jiff;
 
 pub mod prelude {
-    // Reexport
-    #[cfg(feature = "components")]
-    pub use icondata;
-    #[cfg(feature = "tiptap")]
-    pub use leptos_tiptap::*;
-
     pub use super::{
-        FontWeight, Height, Margin, Mount, OptionDeref, Out, Padding, Width,
+        FontWeight, Height, Margin, Mount, Out, Padding, Width,
         utils::{
             aria::{AriaExpanded, AriaHasPopup},
             callback::{ViewCallback, ViewProducer},
         },
     };
-    //pub use crate::atoms::prelude::*;
-    //pub use crate::components::prelude::*;
-    //pub use crate::hooks::prelude::*;
     pub use crate::hooks::IntoAttrs;
     pub use crate::{signal_ls, utils::ValueBinding};
 }
@@ -236,26 +225,6 @@ pub fn track_in_local_storage<T: Send + Sync + serde::Serialize + Clone + 'stati
             Some(())
         }
     });
-}
-
-pub trait OptionDeref<T: std::ops::Deref> {
-    fn deref(&self) -> Option<&T::Target>;
-    fn deref_or<'a>(&'a self, default: &'a T::Target) -> &'a T::Target;
-    fn deref_or_else<'a, F: Fn() -> &'a T::Target>(&'a self, default: F) -> &'a T::Target;
-}
-
-impl<T: std::ops::Deref> OptionDeref<T> for Option<T> {
-    fn deref(&self) -> Option<&T::Target> {
-        self.as_ref().map(std::ops::Deref::deref)
-    }
-
-    fn deref_or<'a>(&'a self, default: &'a T::Target) -> &'a T::Target {
-        self.as_ref().map_or(default, std::ops::Deref::deref)
-    }
-
-    fn deref_or_else<'a, F: Fn() -> &'a T::Target>(&'a self, default: F) -> &'a T::Target {
-        self.as_ref().map_or_else(default, std::ops::Deref::deref)
-    }
 }
 
 pub type Width = utils::css::CssDimension;

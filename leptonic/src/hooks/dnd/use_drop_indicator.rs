@@ -146,7 +146,9 @@ pub fn use_drop_indicator(input: UseDropIndicatorInput) -> UseDropIndicatorRetur
     let collection_id = collection.id.clone();
     let labelled_id = id.clone();
     let aria_labelledby = Signal::derive(move || {
-        target.with(|t| *t == DropTarget::Root).then(|| format!("{labelled_id} {collection_id}"))
+        target
+            .with(|t| *t == DropTarget::Root)
+            .then(|| format!("{labelled_id} {collection_id}"))
     });
     let items = collection.state.list.collection;
     let UseDroppableItemReturn {

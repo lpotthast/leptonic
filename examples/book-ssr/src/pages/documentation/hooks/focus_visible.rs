@@ -163,6 +163,16 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                 </p>
             </Section>
 
+            <Section title="get_pointer_type">
+                <p>
+                    <Code inline=true>"get_pointer_type() -> PointerType"</Code>" reads the pointer type of the last "
+                    "interaction once, without tracking: "<Code inline=true>"Keyboard"</Code>" or "<Code inline=true>"Virtual"</Code>
+                    " for those modalities, else the type of the last pointer event ("<Code inline=true>"Mouse"</Code>", "
+                    <Code inline=true>"Pen"</Code>" or "<Code inline=true>"Touch"</Code>"). It is "<Code inline=true>"Keyboard"</Code>
+                    " before any interaction and during SSR."
+                </p>
+            </Section>
+
             <Section title="set_modality">
                 <p>
                     <Code inline=true>"set_modality(Modality)"</Code>" sets the modality and notifies all subscribers. The next "

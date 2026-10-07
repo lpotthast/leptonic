@@ -352,11 +352,15 @@ impl KeyboardDelegate for GridKeyboardDelegate {
     }
 
     fn key_page_above(&self, from: &Key) -> Option<Key> {
-        self.key_page_above_with(from, |key| self.key_above(key, NavigationOptions::default()))
+        self.key_page_above_with(from, |key| {
+            self.key_above(key, NavigationOptions::default())
+        })
     }
 
     fn key_page_below(&self, from: &Key) -> Option<Key> {
-        self.key_page_below_with(from, |key| self.key_below(key, NavigationOptions::default()))
+        self.key_page_below_with(from, |key| {
+            self.key_below(key, NavigationOptions::default())
+        })
     }
 
     fn key_for_search(&self, search: &str, from: Option<&Key>) -> Option<Key> {

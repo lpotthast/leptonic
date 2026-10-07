@@ -164,25 +164,27 @@ pub fn PageHookDndCollection() -> impl IntoView {
             on_drop_exit: Some(Callback::new(move |e: DroppableCollectionExitEvent| {
                 push(format!("exit {}", describe(&e.target)));
             })),
-            on_insert: Some(Callback::new(move |e: DroppableCollectionInsertDropEvent| {
-                let target = DropTarget::Item(e.target.clone());
-                push(format!(
-                    "insert {} {} {:?}",
-                    describe(&target),
-                    dropped_text(&e.items),
-                    e.drop_operation
-                ));
-                let key = e.target.key.to_string();
-                let index = items
-                    .with_untracked(|items| items.iter().position(|item| item.id == key))
-                    .unwrap_or(0);
-                let index = if e.target.drop_position == DropPosition::After {
-                    index + 1
-                } else {
-                    index
-                };
-                insert(index, &e.items);
-            })),
+            on_insert: Some(Callback::new(
+                move |e: DroppableCollectionInsertDropEvent| {
+                    let target = DropTarget::Item(e.target.clone());
+                    push(format!(
+                        "insert {} {} {:?}",
+                        describe(&target),
+                        dropped_text(&e.items),
+                        e.drop_operation
+                    ));
+                    let key = e.target.key.to_string();
+                    let index = items
+                        .with_untracked(|items| items.iter().position(|item| item.id == key))
+                        .unwrap_or(0);
+                    let index = if e.target.drop_position == DropPosition::After {
+                        index + 1
+                    } else {
+                        index
+                    };
+                    insert(index, &e.items);
+                },
+            )),
             on_root_drop: Some(Callback::new(move |e: DroppableCollectionRootDropEvent| {
                 push(format!(
                     "root {} {:?}",
@@ -191,16 +193,18 @@ pub fn PageHookDndCollection() -> impl IntoView {
                 ));
                 insert(0, &e.items);
             })),
-            on_item_drop: Some(Callback::new(move |e: DroppableCollectionOnItemDropEvent| {
-                push(format!(
-                    "on {} {} {:?}",
-                    e.target.key,
-                    dropped_text(&e.items),
-                    e.drop_operation
-                ));
-            })),
-            get_drop_operation: Some(Callback::new(move |q: CollectionDropOperationQuery| {
-                match &q.target {
+            on_item_drop: Some(Callback::new(
+                move |e: DroppableCollectionOnItemDropEvent| {
+                    push(format!(
+                        "on {} {} {:?}",
+                        e.target.key,
+                        dropped_text(&e.items),
+                        e.drop_operation
+                    ));
+                },
+            )),
+            get_drop_operation: Some(Callback::new(
+                move |q: CollectionDropOperationQuery| match &q.target {
                     DropTarget::Root if only_on => DropOperation::Cancel,
                     DropTarget::Root => DropOperation::Move,
                     DropTarget::Item(t) if t.drop_position != DropPosition::On => {
@@ -216,8 +220,8 @@ pub fn PageHookDndCollection() -> impl IntoView {
                     DropTarget::Item(t) if canceled.contains(&t.key) => DropOperation::Cancel,
                     DropTarget::Item(_) if only_on => DropOperation::Move,
                     DropTarget::Item(_) => DropOperation::Copy,
-                }
-            })),
+                },
+            )),
             ..DroppableCollectionOptions::default()
         },
         is_disabled: Signal::stored(false),

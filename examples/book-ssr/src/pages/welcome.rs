@@ -18,7 +18,7 @@ pub fn PageWelcome() -> impl IntoView {
             <div class="book-welcome-intro">
                 <h1 class="book-welcome-title">"Leptonic"</h1>
                 <p class="book-welcome-tagline">
-                    "Accessible UI building blocks for Leptos: hooks, atoms and themed components."
+                    "Accessible UI building blocks for Leptos: hooks and unstyled atoms."
                 </p>
                 <div class="book-welcome-actions">
                     <AtomLink href=routes::doc::Installation.materialize() classes="book-button">
@@ -32,7 +32,7 @@ pub fn PageWelcome() -> impl IntoView {
                         "Read the overview"
                     </AtomLink>
                 </div>
-                <Code language=Language::Shell classes="book-welcome-install">"cargo add leptonic --features full"</Code>
+                <Code language=Language::Shell classes="book-welcome-install">"cargo add leptonic --features atoms"</Code>
             </div>
 
             <Showcase/>
@@ -42,9 +42,9 @@ pub fn PageWelcome() -> impl IntoView {
                     "Keyboard, pointer, touch and screen reader interaction, ported from react-aria\u{2019}s "
                     "battle-tested hooks."
                 </Feature>
-                <Feature icon=icondata::BsLayers title="Three layers" href=routes::doc::Architecture.materialize()>
-                    "Hooks for full control, unstyled atoms for your own design system, or themed components that "
-                    "work out of the box."
+                <Feature icon=icondata::BsLayers title="Two layers" href=routes::doc::Architecture.materialize()>
+                    "Hooks for full control, or unstyled atoms to style your way \u{2014} from scratch or from an "
+                    "optional theme."
                 </Feature>
                 <Feature icon=icondata::BsBraces title="Rust all the way" href=routes::doc::Ssr.materialize()>
                     "Typed APIs, server-side rendering with hydration, and internationalization without a JavaScript "

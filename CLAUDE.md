@@ -4,8 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Leptonic is a component library for the Leptos web framework (Rust-based reactive web framework). It provides UI
-components with theming capabilities, built on a layered architecture of hooks, atoms, and components.
+Leptonic is a library for the Leptos web framework (Rust-based reactive web framework): accessible hooks ported from
+react-aria and unstyled atoms built on them (ported from react-aria-components), plus an optional CSS theme for the
+atoms.
 
 ## Code Quality Principles
 
@@ -14,11 +15,11 @@ components with theming capabilities, built on a layered architecture of hooks, 
   `Default` + struct update syntax, signals) and document the adaptation as an `API DIFFERENCES` deviation. Use
   generics (or trait objects) wherever they make an API more capable or better typed (e.g. a number field generic over
   its value type instead of JS's `number`).
-- **State props of atoms and components** (the user's rule, 2026-10-06): controlled state is two props, a readable
+- **State props of atoms** (the user's rule, 2026-10-06): controlled state is two props, a readable
   `<x>` (`#[prop(into)]` `Signal<T>`/`MaybeProp<T>`: a plain value, any signal or a closure) and a writable
   `set_<x>: Out<T>` (an `RwSignal`, `WriteSignal`, `StoredValue`, closure or `Callback`), never one combined binding
   that forces e.g. an `RwSignal` (for `is_<x>`, the setter is `set_<x>`: `is_open` + `set_open`). Uncontrolled: `default_<x>`, plus `on_<x>_change` to observe. Hooks keep
-  `ValueBinding` internally (the component builds it from the two props).
+  `ValueBinding` internally (the atom builds it from the two props).
 - **No constructors on input structs** (the user's rule, 2026-10-07): never add `new(..)` (or similar) functions to
   `*Input` types; callers write struct literals with every field named (or `Default` + struct update syntax), so
   creating an input is explicit and its field names stay visible.
@@ -103,7 +104,7 @@ cargo check -p leptonic                    # Quick compilation check
 cargo test -p leptonic                     # Run tests for leptonic crate only
 cargo test -p leptonic test_name           # Run a specific test
 cargo clippy -p leptonic                   # Clippy on leptonic only
-cargo check -p leptonic --features full    # Check atoms/components too (default feature is only `hooks`)
+cargo check -p leptonic --features full    # Check atoms too (default feature is only `hooks`)
 ```
 
 Styling props use the published `leptos-classes` and `leptos-styles` crates. `leptos-styles` only accepts typed
@@ -121,9 +122,8 @@ cd examples/book-ssr && cargo leptos serve          # Equivalent manual command
 
 ## Architecture
 
-The library follows a three-layer hierarchy. The user decided (2026-10-07) to remove the third layer: leptonic
-becomes hooks + atoms + an optional CSS theme for the atoms (`documentation/conventions.md`; the steps are in
-`PLAN.md`). Until then the components still have to compile, but get no new work.
+The library has two layers, hooks and atoms, plus an optional CSS theme for the atoms. The styled components layer
+was removed (the user's decision, 2026-10-07; `documentation/conventions.md`, "No styled components").
 
 1. **Hooks** (`leptonic/src/hooks/`) - Low-level interaction logic (usePress, useFocus, useCalendar). Handle ARIA
    attributes and accessibility. No rendering.
@@ -138,13 +138,9 @@ becomes hooks + atoms + an optional CSS theme for the atoms (`documentation/conv
    Popover), ported from react-aria-components. Styled through their default class (`leptonic-<AtomName>`) and data
    attributes; `leptonic-theme` has an optional atom theme.
 
-3. **Components** (`leptonic/src/components/`) - Pre-built, feature-rich components built on atoms. Include styling and
-   complex behavior (Modal, Select, DateSelector, Table, Toast, Tabs, etc.).
-
 For more details, see: [documentation/architecture.md](documentation/architecture.md).
 For implementation patterns, see: [documentation/hooks-implementation.md](documentation/hooks-implementation.md),
-[documentation/atoms-implementation.md](documentation/atoms-implementation.md),
-[documentation/components-implementation.md](documentation/components-implementation.md).
+[documentation/atoms-implementation.md](documentation/atoms-implementation.md).
 For book-ssr page structure and content guidelines,
 see: [documentation/documentation-strategy.md](documentation/documentation-strategy.md).
 
@@ -152,7 +148,7 @@ see: [documentation/documentation-strategy.md](documentation/documentation-strat
 
 - `leptonic/src/utils/` - Typed ARIA types (`AriaRole`, etc.), event propagation control, focus/scroll utilities,
   i18n/locale, platform detection, color types.
-- `leptonic-theme/` - Theme system with SCSS stylesheets and light/dark themes
+- `leptonic-theme/` - The optional atom theme (SCSS, light and dark), copied into apps by leptonic's build script
 
 ### ICU4X for Internationalization
 
@@ -204,7 +200,9 @@ manual testing during development. It is named "book" following Rust ecosystem c
   and the Markdown export lists every page. `BOOK_TEST_PAGES=<text>` limits them to matching pages.
 - **Built with leptonic**: the book uses leptonic for everything leptonic provides (buttons, links, dialogs,
   disclosures, toggles, tables, keys, ...); its own widgets are compositions of leptonic hooks and atoms. Library
-  gaps are fixed in the library, never worked around in the book. See `examples/book-ssr/STYLE_GUIDE.md`.
+  gaps are fixed in the library, never worked around in the book. The book has its own look: it styles every atom
+  itself (default classes `leptonic-<AtomName>` + data attributes, book tokens) and never loads the atom theme. See
+  `examples/book-ssr/STYLE_GUIDE.md`.
 - **Quality bar**: Must always compile and have zero clippy lints (checked with `clippy::all` and `clippy::pedantic` via
   `[lints.clippy]` in its `Cargo.toml`).
 - **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
@@ -212,31 +210,30 @@ manual testing during development. It is named "book" following Rust ecosystem c
 - **Page structure**: The sidebar (`src/nav.rs`) has three parts: guides; **concepts** (every UI element, e.g.
   Button or Slider, as one entry whose layers are tabs, grouped by purpose); and **building blocks** (hooks, atoms and
   utilities many concepts share, e.g. `use_press`, grouped into areas like Interactions or Focus). Page files live in
-  `src/pages/documentation/` by layer (`hooks/`, `atoms/`, `components/`), plus `concepts/` (concept overviews),
-  `groups/` (group and area overviews) and `getting_started/` (guides). Pages are written with the page kit in
-  `src/kit/`. "Component" means only the styled layer. See `documentation/documentation-strategy.md` for terminology,
+  `src/pages/documentation/` by layer (`hooks/`, `atoms/`, `utils/`), plus `concepts/` (concept overviews),
+  `groups/` (group and area overviews, with recipes for layout pieces leptonic has no atom for) and
+  `getting_started/` (guides). Pages are written with the page kit in
+  `src/kit/`. See `documentation/documentation-strategy.md` for terminology,
   page types, navigation rules, the kit and writing guidelines.
-- **When adding or modifying hooks, atoms, or components**: The corresponding book-ssr documentation page should be
+- **When adding or modifying hooks or atoms**: The corresponding book-ssr documentation page should be
   updated or created to demonstrate the change.
 
 ## Feature Flags
 
-Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `components` (each gates its module). Every
-dependency is declared with `default-features = false` and only the features it needs.
+Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` (each gates its module). Every dependency is
+declared with `default-features = false` and only the features it needs.
 
 - `hooks` - Low-level interaction hooks
-- `atoms` - Headless base components (requires hooks)
-- `components` - Full pre-built components (requires atoms)
-- `clipboard` - Clipboard support
-- `tiptap` - Rich text editor (leptos-tiptap; its JS ships as wasm-bindgen snippets, nothing to copy)
-- `syntax-highlight` (syntect, `utils::syntax_highlight`) / `sanitize` (ammonia, components) - Optional extras
+- `atoms` - Unstyled single-element components (requires hooks)
+- `clipboard` - Clipboard support (`utils::clipboard`)
+- `syntax-highlight` (syntect, `utils::syntax_highlight`) - Syntax highlighting into classed HTML
 - `ssr` / `hydrate` - Server-side rendering support
 - `nightly` - Enables `leptos/nightly`
-- `full` - hooks, atoms, components, clipboard, tiptap, syntax-highlight, sanitize (not ssr/hydrate/nightly)
+- `full` - hooks, atoms, clipboard, syntax-highlight (not ssr/hydrate/nightly)
 
 ## Key Types
 
-- `Out<O, S>` - Flexible output type for component props, accepts WriteSignal, RwSignal, Callback, or function pointers
+- `Out<O, S>` - Flexible output type for atom props, accepts WriteSignal, RwSignal, Callback, or function pointers
 - `Mount` - Controls when child views are mounted (Once vs WhenShown)
 - `Width`, `Height` (aliases of `CssDimension`), `Margin`, `Padding`, `FontWeight` - CSS types from `utils/css.rs`,
   re-exported at the crate root
@@ -257,19 +254,19 @@ is required to build it, not only for leptos-use functions.
 
 ```toml
 [package.metadata.leptonic]
-style-dir = "style/leptonic"   # Where to output generated SCSS
+style-dir = "style/leptonic"   # Where to copy the optional atom theme's SCSS
 ```
 
 The build script finds that `Cargo.toml` by walking up from `OUT_DIR`. A `CARGO_TARGET_DIR` inside the app (e.g.
 `examples/book-ssr/target/<name>`) works as is; one elsewhere needs `LEPTONIC_APP_DIR=<app dir>`, otherwise the
-theme is silently not regenerated.
+theme is silently not copied.
 
 ## Workspace Structure
 
-- `leptonic/` - Core component library
-- `leptonic-theme/` - Theme generation and SCSS
+- `leptonic/` - The library (hooks, atoms, utils)
+- `leptonic-theme/` - The atom theme (SCSS)
 - `examples/book-ssr/` - Documentation app and primary manual testing target
-- `examples/leptonic-template-*` - Starter templates (git submodules)
+- `examples/leptonic-template-*` - Starter templates (git submodules; atoms + the atom theme)
 - `testing/test-app/` - Leptos app that browser tests drive (`just serve-test-app` serves it at
   `http://127.0.0.1:4200` for manual inspection)
 
@@ -279,6 +276,9 @@ Only `leptonic` and `leptonic-theme` are workspace members; `examples/` and `tes
 ## Testing
 
 When generating tests, use the `assertr` library for assertions instead of standard `assert!` macros.
+
+Native unit tests of hooks run inside `crate::testing::with_owner(|| ..)`; call `flush_effects()` to run their Effects
+(`documentation/hooks-implementation.md`, "Native Tests").
 
 ### Browser Tests
 
@@ -308,8 +308,8 @@ Tests must not depend on each other or on shared server state; checks of the who
 - **Known issues**: behavior known to be broken lives in `*KnownIssues` tests that only run with
   `BROWSER_TEST_KNOWN_ISSUES=1` (see `ui_tests::all()`). Move a check into the regular test once it's fixed.
 - **Hydration**: `test_hydration_ids.rs` compares server-rendered ids with the hydrated DOM and checks id
-  references; add fixtures that generate ids to its page list. `test_server_panics.rs` (runs last) fails the run if
-  the server panicked.
+  references on every fixture the test app's index page lists (in 4 parallel shards; no list to maintain).
+  `test_server_panics.rs` (runs last) fails the run if the server panicked.
 - **Running**: `just browser-test`. `BROWSER_TEST_VISIBLE=1` shows the browser, `BROWSER_TEST_PAUSE=1` pauses before
   each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
   `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid_tests`).

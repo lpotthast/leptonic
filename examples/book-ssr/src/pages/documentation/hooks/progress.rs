@@ -47,7 +47,10 @@ pub fn PageUseProgressBar() -> impl IntoView {
                         <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
                     <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
-                    <ApiRow name="percentage" ty="Signal<Option<f64>>">"The value in percent of the range (0 to 100); "<Code inline=true>"None"</Code>" while indeterminate."</ApiRow>
+                    <ApiRow name="percentage" ty="Signal<Option<Fraction>>">
+                        "The value as a share of the range, a "<Code inline=true>"Fraction"</Code>" from 0 to 1 ("
+                        <Code inline=true>"as_percent()"</Code>": 0 to 100); "<Code inline=true>"None"</Code>" while indeterminate."
+                    </ApiRow>
                     <ApiRow name="value_text" ty="Signal<Option<String>>">"The formatted value (or "<Code inline=true>"value_label"</Code>"); "<Code inline=true>"None"</Code>" while indeterminate."</ApiRow>
                 </ApiTable>
             </Section>
@@ -67,7 +70,7 @@ pub fn PageUseProgressBar() -> impl IntoView {
                         });
                         let percentage = progress.percentage;
                         let fill = Styles::new().add_optional(move || {
-                            percentage.get().map(|p| WidthProperty.declare(computed_size(computed_pct(p))))
+                            percentage.get().map(|p| WidthProperty.declare(computed_size(computed_pct(p.as_percent()))))
                         });
 
                         view! {

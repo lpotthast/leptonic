@@ -26,7 +26,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                 </p>
 
                 <ApiTable kind=ApiKind::Input of="UseSeparatorInput">
-                    <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                    <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                         "Whether the separator divides content stacked on top of each other ("<Code inline=true>"Horizontal"</Code>
                         ") or placed side by side ("<Code inline=true>"Vertical"</Code>")."
                     </ApiRow>
@@ -61,7 +61,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
 
                         // Using a <div> element (role="separator" is added)
                         let div_sep = use_separator(UseSeparatorInput {
-                            orientation: Orientation::Vertical,
+                            orientation: Orientation::Vertical.into(),
                             element_type: SeparatorElementType::Div,
                             ..UseSeparatorInput::default()
                         });

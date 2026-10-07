@@ -191,7 +191,7 @@ pub fn PageUseTextField() -> impl IntoView {
                             <Code inline=true>"Aria"</Code>" shows errors as the user types, "<Code inline=true>"Native"</Code>
                             " defers them to form submission."
                         </ApiRow>
-                        <ApiRow name="validation" ty="Option<UseFormValidationStateReturn>" default="None">
+                        <ApiRow name="validation" ty="Option<FormValidationState>" default="None">
                             "The validation state of a field built on the text field whose value isn\u{2019}t the text (e.g. a "
                             "number field). Replaces the text field\u{2019}s own; "<Code inline=true>"is_invalid"</Code>" and "
                             <Code inline=true>"validate"</Code>" are then up to that field."
@@ -258,29 +258,30 @@ pub fn PageUseTextField() -> impl IntoView {
             <Section title="use_formatted_text_field">
                 <p>
                     "Keeps the text of a field with a format, such as a number or a hex color, valid while the user types: "
-                    "it checks every edit with "<Code inline=true>"validate"</Code>" before the browser applies it, and "
-                    "reverts composed text (from an input method or autocorrect) that ends up invalid. The "
-                    <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>
+                    "it checks every edit with the state\u{2019}s "<Code inline=true>"is_valid_text"</Code>" before the browser "
+                    "applies it, and reverts composed text (from an input method or autocorrect) that ends up invalid. The "
+                    <Link href=routes::doc::number_field::Hook.materialize()>"Number Field Hooks"</Link>" and "
+                    <Link href=routes::doc::color_field::Hook.materialize()>"Color Field Hooks"</Link>
                     " use it. Attach the returned handlers to the input next to "<Code inline=true>"use_text_field"</Code>
                     "\u{2019}s props."
                 </p>
-                <DocTable headers=&["Argument", "Type", "Description"]>
-                    <TableRow>
-                        <TableCell><Code inline=true>"element"</Code></TableCell>
-                        <TableCell><Code inline=true>"CapturedElement"</Code></TableCell>
-                        <TableCell>"The input, e.g. "<Code inline=true>"use_text_field"</Code>"\u{2019}s "<Code inline=true>"element"</Code>"."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Code inline=true>"validate"</Code></TableCell>
-                        <TableCell><Code inline=true>"Callback<String, bool>"</Code></TableCell>
-                        <TableCell>"Whether a text may be typed: a valid value, or the beginning of one."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><Code inline=true>"set_input_value"</Code></TableCell>
-                        <TableCell><Code inline=true>"Callback<String>"</Code></TableCell>
-                        <TableCell>"Sets the field\u{2019}s text, to revert an invalid composition."</TableCell>
-                    </TableRow>
-                </DocTable>
+                <Section title="Input" id="use-formatted-text-field-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseFormattedTextFieldInput">
+                        <ApiRow name="element" ty="CapturedElement">
+                            "The input, e.g. "<Code inline=true>"use_text_field"</Code>"\u{2019}s "<Code inline=true>"element"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="state" ty="S: FormattedTextState">"The field\u{2019}s text state. Required."</ApiRow>
+                    </ApiTable>
+                    <p>
+                        "A "<Code inline=true>"FormattedTextState"</Code>" is "<Code inline=true>"Copy"</Code>" and has two methods: "
+                        <Code inline=true>"is_valid_text(&self, &str) -> bool"</Code>" (whether a text may be typed: a valid "
+                        "value, or the beginning of one) and "<Code inline=true>"set_text(&self, String)"</Code>" (sets the text "
+                        "without committing it, to revert an invalid composition). "<Code inline=true>"NumberFieldState"</Code>
+                        " and "<Code inline=true>"ColorFieldState"</Code>" implement it; implement it for the state of a field of "
+                        "your own."
+                    </p>
+                </Section>
                 <Section title="Return" id="use-formatted-text-field-return">
                     <ApiTable kind=ApiKind::Return of="FormattedTextFieldHandlers">
                         <ApiRow name="on_beforeinput" ty="EventHandler<InputEvent>">

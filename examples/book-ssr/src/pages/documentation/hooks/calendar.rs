@@ -122,22 +122,24 @@ pub fn PageCalendarHooks() -> impl IntoView {
                             "The focused date as app state, replacing "<Code inline=true>"default_focused_value"</Code>"."
                         </ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the newly focused date."</ApiRow>
-                        <ApiRow name="visible_duration" ty="DateDuration" default="DateDuration::months(1)">
+                        <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">
                             "How much is visible at once: months, or a number of weeks or days, see "
-                            <AnchorLink href="#several-months">"Several Months"</AnchorLink>"."
+                            <AnchorLink href="#several-months">"Several Months"</AnchorLink>". A change aligns the visible "
+                            "range around the focused date again."
                         </ApiRow>
-                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">
+                        <ApiRow name="page_behavior" ty="Signal<PageBehavior>" default="Visible">
                             "Whether the previous and next buttons page by the whole visible duration ("
                             <Code inline=true>"Visible"</Code>") or by one unit of it ("<Code inline=true>"Single"</Code>")."
                         </ApiRow>
-                        <ApiRow name="selection_alignment" ty="SelectionAlignment" default="Center">
-                            "Where the initially focused date sits in a visible duration of several months: "
+                        <ApiRow name="selection_alignment" ty="Signal<SelectionAlignment>" default="Center">
+                            "Where the focused date sits in a visible duration of several months, initially and when the "
+                            "duration changes: "
                             <Code inline=true>"Start"</Code>", "<Code inline=true>"Center"</Code>" or "<Code inline=true>"End"</Code>"."
                         </ApiRow>
-                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">
-                            "The first day of the week. Default: the locale\u{2019}s (Sunday in the US, Monday in most of Europe)."
+                        <ApiRow name="first_day_of_week" ty="Signal<Option<Weekday>>" default="None">
+                            "The first day of the week. "<Code inline=true>"None"</Code>": the locale\u{2019}s (Sunday in the US, Monday in most of Europe)."
                         </ApiRow>
-                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">
+                        <ApiRow name="weeks_in_month" ty="Signal<Option<u8>>" default="None">
                             "A fixed number of week rows, e.g. 6, so that the calendar keeps its height from month to month."
                         </ApiRow>
                     </ApiTable>
@@ -159,7 +161,7 @@ pub fn PageCalendarHooks() -> impl IntoView {
                             "Whether the value is outside the minimum and maximum, unavailable, or marked invalid."
                         </ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>">"The inputs."</ApiRow>
-                        <ApiRow name="visible_duration" ty="DateDuration">"The input."</ApiRow>
+                        <ApiRow name="visible_duration" ty="Signal<DateDuration>">"The input."</ApiRow>
                         <ApiRow name="first_day_of_week" ty="Signal<Weekday>">"The first day of the week: the input, else the locale\u{2019}s."</ApiRow>
                     </ApiTable>
 
@@ -259,9 +261,10 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<DateRange>>>" default="None">"Called with the newly selected range."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<Date>>" default="None">"The first and last selectable date."</ApiRow>
-                        <ApiRow name="is_date_unavailable" ty="Option<Callback<(Date, Option<Date>), bool>>" default="None">
-                            "Whether a date can\u{2019}t be selected, given the first selected day of a range in progress (the "
-                            "anchor), e.g. to limit the length of a stay."
+                        <ApiRow name="is_date_unavailable" ty="Option<Callback<DateAvailabilityQuery, bool>>" default="None">
+                            "Whether a date can\u{2019}t be selected. The query holds the "<Code inline=true>"date"</Code>" and the "
+                            <Code inline=true>"anchor_date"</Code>", the first selected day of a range in progress, e.g. to "
+                            "limit the length of a stay."
                         </ApiRow>
                         <ApiRow name="allows_non_contiguous_ranges" ty="bool" default="false">
                             "Whether a range may span unavailable dates. By default, a range in progress ends at the last "
@@ -272,14 +275,14 @@ pub fn PageCalendarHooks() -> impl IntoView {
                         <ApiRow name="default_focused_value" ty="Option<Date>" default="None">"The initially focused date. Default: the range\u{2019}s start, else today."</ApiRow>
                         <ApiRow name="focused_value" ty="Option<ValueBinding<Date>>" default="None">"The focused date as app state."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<Date>>" default="None">"Called with the newly focused date."</ApiRow>
-                        <ApiRow name="visible_duration" ty="DateDuration" default="DateDuration::months(1)">"How much is visible at once."</ApiRow>
-                        <ApiRow name="page_behavior" ty="PageBehavior" default="Visible">"How the previous and next buttons page."</ApiRow>
-                        <ApiRow name="selection_alignment" ty="Option<SelectionAlignment>" default="None">
+                        <ApiRow name="visible_duration" ty="Signal<DateDuration>" default="DateDuration::months(1)">"How much is visible at once."</ApiRow>
+                        <ApiRow name="page_behavior" ty="Signal<PageBehavior>" default="Visible">"How the previous and next buttons page."</ApiRow>
+                        <ApiRow name="selection_alignment" ty="Signal<Option<SelectionAlignment>>" default="None">
                             "Where the initially focused date sits in several visible months. Default: centered, or at the "
                             "start if the range wouldn\u{2019}t fit then."
                         </ApiRow>
-                        <ApiRow name="first_day_of_week" ty="Option<Weekday>" default="None">"The first day of the week. Default: the locale\u{2019}s."</ApiRow>
-                        <ApiRow name="weeks_in_month" ty="Option<u8>" default="None">"A fixed number of week rows."</ApiRow>
+                        <ApiRow name="first_day_of_week" ty="Signal<Option<Weekday>>" default="None">"The first day of the week. "<Code inline=true>"None"</Code>": the locale\u{2019}s."</ApiRow>
+                        <ApiRow name="weeks_in_month" ty="Signal<Option<u8>>" default="None">"A fixed number of week rows."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -323,16 +326,17 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
             <Section title="use_calendar">
                 <p>
-                    <Code inline=true>"use_calendar(input, state)"</Code>" connects a "<Code inline=true>"CalendarState"</Code>
+                    <Code inline=true>"use_calendar"</Code>" connects a "<Code inline=true>"CalendarState"</Code>
                     " with the calendar\u{2019}s element, labelled by "<Code inline=true>"aria_label"</Code>" and the visible "
                     "month (\u{201c}Appointment date, March 2026\u{201d}). It announces the new month when the previous or next "
                     "button pages, and the new selection."
                 </p>
 
                 <Section title="Input" id="use-calendar-input">
-                    <p><Code inline=true>"UseCalendarInput"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
+                    <p>"Pass a "<Code inline=true>"UseCalendarInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
 
                     <ApiTable kind=ApiKind::Input of="UseCalendarInput">
+                        <ApiRow name="state" ty="CalendarState">"From "<Code inline=true>"use_calendar_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
                         <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
@@ -369,14 +373,28 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
             <Section title="use_range_calendar">
                 <p>
-                    <Code inline=true>"use_range_calendar(input, state, commit_behavior)"</Code>" is "
+                    <Code inline=true>"use_range_calendar"</Code>" is "
                     <AnchorLink href="#use-calendar"><Code inline=true>"use_calendar"</Code></AnchorLink>" for a "
-                    <Code inline=true>"RangeCalendarState"</Code>", with the same input and return. When a pointer is released "
+                    <Code inline=true>"RangeCalendarState"</Code>", with the same return. When a pointer is released "
                     "outside the days, or the focus leaves the calendar, while a range is in progress, "
                     <Code inline=true>"commit_behavior"</Code>" decides what happens: "<Code inline=true>"Select"</Code>
                     " (the default) finishes the range at the focused date, "<Code inline=true>"Reset"</Code>" drops it and "
                     "keeps the previous value, "<Code inline=true>"Clear"</Code>" also clears the value."
                 </p>
+
+                <Section title="Input" id="use-range-calendar-input">
+                    <ApiTable kind=ApiKind::Input of="UseRangeCalendarInput">
+                        <ApiRow name="state" ty="RangeCalendarState">"From "<Code inline=true>"use_range_calendar_state"</Code>". Required."</ApiRow>
+                        <ApiRow name="commit_behavior" ty="CommitBehavior" default="Select">
+                            "What a press outside the dates or leaving the calendar does with a range being selected."
+                        </ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The calendar element\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the calendar, together with the visible month."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby, aria_details" ty="Option<String>" default="None">
+                            "Ids of elements labelling, describing or detailing the calendar."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <Section title="use_calendar_grid">
@@ -485,47 +503,93 @@ pub fn PageCalendarHooks() -> impl IntoView {
 
             <Section title="use_calendar_heading">
                 <p>
-                    <Code inline=true>"use_calendar_heading(&states, offset, format)"</Code>" returns the heading of a "
-                    "month as a "<Code inline=true>"Signal<String>"</Code>": \u{201c}March 2026\u{201d}, "
-                    <Code inline=true>"offset"</Code>" months after the first visible one (for calendars showing several), "
-                    "formatted with a "<Code inline=true>"CalendarHeadingFormat"</Code>". A calendar showing weeks or days "
+                    <Code inline=true>"use_calendar_heading"</Code>" returns the heading of a month as a "
+                    <Code inline=true>"Signal<String>"</Code>": \u{201c}March 2026\u{201d}. A calendar showing weeks or days "
                     "gets a range of dates. Hide the heading from assistive technology: the calendar\u{2019}s label names the "
                     "visible range already."
                 </p>
 
-                <ApiTable kind=ApiKind::Fields of="CalendarHeadingFormat">
-                    <ApiRow name="day" ty="Option<NumericFormat>">"Includes the day; always for weeks and days. Default: "<Code inline=true>"None"</Code>"."</ApiRow>
-                    <ApiRow name="month" ty="MonthFormat">"The month: \u{201c}March\u{201d}, \u{201c}Mar\u{201d}, \u{201c}3\u{201d}, \u{2026} Default: "<Code inline=true>"Long"</Code>"."</ApiRow>
-                    <ApiRow name="year" ty="NumericFormat">"The year: \u{201c}2026\u{201d} or \u{201c}26\u{201d}. Default: "<Code inline=true>"Numeric"</Code>"."</ApiRow>
-                </ApiTable>
+                <Section title="Input" id="use-calendar-heading-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseCalendarHeadingInput">
+                        <ApiRow name="state" ty="CalendarStates">
+                            "The calendar\u{2019}s state: "<Code inline=true>"data.state"</Code>" of "
+                            <Code inline=true>"use_calendar"</Code>"\u{2019}s data. Required."
+                        </ApiRow>
+                        <ApiRow name="offset" ty="DateDuration">
+                            "How far after the first visible month the heading\u{2019}s month is, for calendars showing several "
+                            "("<Code inline=true>"DateDuration::default()"</Code>" for the first). Required."
+                        </ApiRow>
+                        <ApiRow name="format" ty="CalendarHeadingFormat">
+                            "How the heading is formatted ("<Code inline=true>"CalendarHeadingFormat::default()"</Code>": "
+                            "\u{201c}March 2026\u{201d}). Required."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="CalendarHeadingFormat">
+                    <ApiTable kind=ApiKind::Fields of="CalendarHeadingFormat">
+                        <ApiRow name="day" ty="Option<NumericFormat>" default="None">"Includes the day; always for weeks and days."</ApiRow>
+                        <ApiRow name="month" ty="MonthFormat" default="Long">"The month: \u{201c}March\u{201d}, \u{201c}Mar\u{201d}, \u{201c}3\u{201d}, \u{2026}"</ApiRow>
+                        <ApiRow name="year" ty="NumericFormat" default="Numeric">"The year: \u{201c}2026\u{201d} or \u{201c}26\u{201d}."</ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <Section title="use_calendar_month_picker">
                 <p>
-                    <Code inline=true>"use_calendar_month_picker(&states, format)"</Code>" lists the months of the focused "
-                    "date\u{2019}s year, formatted with a "<Code inline=true>"MonthFormat"</Code>", for a select or a grid of "
-                    "buttons that jumps to a month. Picking one moves the focused date there."
+                    <Code inline=true>"use_calendar_month_picker"</Code>" lists the months of the focused date\u{2019}s year, "
+                    "for a select or a grid of buttons that jumps to a month. Picking one moves the focused date there. The "
+                    <Link href=format!("{}#calendarmonthpicker", routes::doc::calendar::Atom.materialize())>"CalendarMonthPicker"</Link>
+                    " atom renders it as a select."
                 </p>
 
-                <ApiTable kind=ApiKind::Return of="UseCalendarPickerReturn">
-                    <ApiRow name="aria_label" ty="&'static str">"Names the picker: \u{201c}Month\u{201d}."</ApiRow>
-                    <ApiRow name="value" ty="Signal<i16>">"The focused date\u{2019}s month (1 to 12)."</ApiRow>
-                    <ApiRow name="items" ty="Signal<Vec<CalendarPickerItem>>">
-                        "The months, each with its "<Code inline=true>"id"</Code>" (the month), the "<Code inline=true>"date"</Code>
-                        " it focuses and its "<Code inline=true>"formatted"</Code>" name."
-                    </ApiRow>
-                    <ApiRow name="on_change" ty="Callback<i16>">"Moves the focused date to a month (an item\u{2019}s id)."</ApiRow>
-                </ApiTable>
+                <Section title="Input" id="use-calendar-month-picker-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseCalendarMonthPickerInput">
+                        <ApiRow name="state" ty="CalendarStates">"The calendar\u{2019}s state. Required."</ApiRow>
+                        <ApiRow name="format" ty="MonthFormat">
+                            "How the months are formatted, e.g. "<Code inline=true>"MonthFormat::Short"</Code>" (\u{201c}Mar\u{201d}). Required."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-calendar-month-picker-return">
+                    <ApiTable kind=ApiKind::Return of="UseCalendarPickerReturn">
+                        <ApiRow name="aria_label" ty="&'static str">"Names the picker: \u{201c}month\u{201d}."</ApiRow>
+                        <ApiRow name="value" ty="Signal<i16>">"The focused date\u{2019}s month (1 to 12)."</ApiRow>
+                        <ApiRow name="items" ty="Signal<Vec<CalendarPickerItem>>">
+                            "The months, each with its "<Code inline=true>"id"</Code>" (the month), the "<Code inline=true>"date"</Code>
+                            " it focuses and its "<Code inline=true>"formatted"</Code>" name."
+                        </ApiRow>
+                        <ApiRow name="on_change" ty="Callback<i16>">"Moves the focused date to a month (an item\u{2019}s id)."</ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <Section title="use_calendar_year_picker">
                 <p>
-                    <Code inline=true>"use_calendar_year_picker(&states, visible_years, format)"</Code>" lists "
-                    <Code inline=true>"visible_years"</Code>" years (default 20) around the focused date\u{2019}s year, within "
-                    "the minimum and maximum. It returns the same "
-                    <AnchorLink href="#use-calendar-month-picker"><Code inline=true>"UseCalendarPickerReturn"</Code></AnchorLink>
-                    ", named \u{201c}Year\u{201d}; the items\u{2019} ids are the years."
+                    <Code inline=true>"use_calendar_year_picker"</Code>" lists years around the focused date\u{2019}s year, "
+                    "within the minimum and maximum. It returns the same "
+                    <AnchorLink href="#use-calendar-month-picker-return"><Code inline=true>"UseCalendarPickerReturn"</Code></AnchorLink>
+                    ", named \u{201c}year\u{201d}; the items\u{2019} ids are the years. The "
+                    <Link href=format!("{}#calendaryearpicker", routes::doc::calendar::Atom.materialize())>"CalendarYearPicker"</Link>
+                    " atom renders it as a select."
                 </p>
+
+                <Section title="Input" id="use-calendar-year-picker-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseCalendarYearPickerInput">
+                        <ApiRow name="state" ty="CalendarStates">"The calendar\u{2019}s state. Required."</ApiRow>
+                        <ApiRow name="visible_years" ty="u8">"How many years to list, e.g. 20. Required."</ApiRow>
+                        <ApiRow name="format" ty="CalendarYearPickerFormat">
+                            "How the years are formatted: "<Code inline=true>"year"</Code>" ("<Code inline=true>"NumericFormat"</Code>
+                            ", default "<Code inline=true>"Numeric"</Code>") and "<Code inline=true>"era"</Code>" ("
+                            <Code inline=true>"Option<DateTimeFormat>"</Code>"; "<Code inline=true>"None"</Code>" shows the short "
+                            "era for years before Christ only). Required ("<Code inline=true>"CalendarYearPickerFormat::default()"</Code>")."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
             </Section>
 
             <Section title="Range Selection">

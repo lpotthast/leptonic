@@ -36,10 +36,7 @@ impl BrowserTest<str> for ListBoxSectionsTests {
             // The section is the group itself, directly in the listbox.
             assert_that!(group.tag_name().await?).is_equal_to("section".to_owned());
         }
-        let heading_id = groups[0]
-            .attr("aria-labelledby")
-            .await?
-            .unwrap_or_default();
+        let heading_id = groups[0].attr("aria-labelledby").await?.unwrap_or_default();
         let heading = page.element(&heading_id).await?;
         assert_that!(heading.text().await?).is_equal_to("Veggies".to_owned());
         assert_that!(heading.attr("role").await?).is_equal_to(Some("presentation".to_owned()));
@@ -86,6 +83,16 @@ impl BrowserTest<str> for ListBoxReplaceSelectionTests {
         page.goto_path("/atoms/listbox-features").await?;
         let selection = "lbf-replace-selection";
 
+        // "should support hover": interactive options show it, others don't.
+        let cat = option(&page, "#lbf-replace", "Cat").await?;
+        hover(&page, &cat).await?;
+        page.wait_for_attr(&cat, "data-hovered", Some("true"))
+            .await?;
+        let plain = option(&page, "#lbf-horizontal", "Dog").await?;
+        hover(&page, &plain).await?;
+        page.wait_for_attr(&cat, "data-hovered", None).await?;
+        stays!("data-hovered", None, plain.attr("data-hovered").await?);
+
         option(&page, "#lbf-replace", "Cat").await?.click().await?;
         page.wait_for_text(selection, "Cat").await?;
         option(&page, "#lbf-replace", "Dog").await?.click().await?;
@@ -126,7 +133,11 @@ impl BrowserTest<str> for ListBoxReplaceSelectionTests {
         page.wait_for_text(selection, "Kangaroo").await?;
         page.send_keys_to_active(Key::Control + Key::Up).await?;
         page.wait_for_active_text("Dog").await?;
-        stays!("the selection", "Kangaroo".to_owned(), page.read_text_of(selection).await?);
+        stays!(
+            "the selection",
+            "Kangaroo".to_owned(),
+            page.read_text_of(selection).await?
+        );
         // Ctrl+Space toggles the focused option; Enter performs its action.
         page.send_keys_to_active(Key::Control + " ").await?;
         page.wait_for_text(selection, "Dog,Kangaroo").await?;
@@ -168,7 +179,11 @@ impl BrowserTest<str> for ListBoxActionsAndLinksTests {
 
         // Links open on press, also with single selection, and aren't selected.
         option(&page, "#lbf-links", "One").await?.click().await?;
-        wait_for!("the location hash", "#lbf-one".to_owned(), hash(&page).await?);
+        wait_for!(
+            "the location hash",
+            "#lbf-one".to_owned(),
+            hash(&page).await?
+        );
         page.wait_for_active_text("One").await?;
         // ArrowDown onto a link: handled (the default, scrolling, is prevented).
         let prevented = page
@@ -185,11 +200,19 @@ impl BrowserTest<str> for ListBoxActionsAndLinksTests {
         assert_that!(prevented).is_true();
         page.wait_for_active_text("Two").await?;
         page.send_keys_to_active(Key::Enter).await?;
-        wait_for!("the location hash", "#lbf-two".to_owned(), hash(&page).await?);
+        wait_for!(
+            "the location hash",
+            "#lbf-two".to_owned(),
+            hash(&page).await?
+        );
 
         let one = option(&page, "#lbf-links-single", "One").await?;
         one.click().await?;
-        wait_for!("the location hash", "#lbf-one".to_owned(), hash(&page).await?);
+        wait_for!(
+            "the location hash",
+            "#lbf-one".to_owned(),
+            hash(&page).await?
+        );
         stays!(
             "aria-selected",
             Some("false".to_owned()),
@@ -240,7 +263,11 @@ impl BrowserTest<str> for ListBoxLayoutTests {
             ),
             (
                 "#lbf-wrap",
-                [(Key::Up, "Kangaroo"), (Key::Down, "Cat"), (Key::Down, "Dog")],
+                [
+                    (Key::Up, "Kangaroo"),
+                    (Key::Down, "Cat"),
+                    (Key::Down, "Dog"),
+                ],
             ),
         ] {
             option(&page, container, "Cat").await?.click().await?;
@@ -299,21 +326,24 @@ impl BrowserTest<str> for ListBoxDisabledAndEmptyTests {
             assert_that!(dog.attr("aria-disabled").await?).is_none();
             page.send_keys_to_active(" ").await?;
             dog.click().await?;
-            stays!("Dog's aria-selected", Some("false".to_owned()), dog.attr("aria-selected").await?);
+            stays!(
+                "Dog's aria-selected",
+                Some("false".to_owned()),
+                dog.attr("aria-selected").await?
+            );
         }
         // An item disabled without its own behavior is skipped.
         page.send_keys_to_active(Key::Down).await?;
-        stays!("the focused option", "Dog".to_owned(), page.active_element_text().await?);
+        stays!(
+            "the focused option",
+            "Dog".to_owned(),
+            page.active_element_text().await?
+        );
 
         let empty = page.css("#lbf-empty [role=listbox]").await?;
         assert_that!(empty.attr("data-empty").await?).is_equal_to(Some("true".to_owned()));
-        assert_that!(
-            page.css("#lbf-empty [role=option]")
-                .await?
-                .text()
-                .await?
-        )
-        .is_equal_to("No results".to_owned());
+        assert_that!(page.css("#lbf-empty [role=option]").await?.text().await?)
+            .is_equal_to("No results".to_owned());
 
         // Removing the focused option moves focus to the next one.
         option(&page, "#lbf-removal", "Dog").await?.click().await?;
@@ -343,4 +373,14 @@ async fn hash(page: &Page<'_>) -> Result<String, Report> {
         .execute("return window.location.hash;", vec![])
         .await?
         .convert::<String>()?)
+}
+
+/// Moves the pointer over `element`.
+async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
+    page.driver
+        .action_chain()
+        .move_to_element_center(element)
+        .perform()
+        .await?;
+    Ok(())
 }

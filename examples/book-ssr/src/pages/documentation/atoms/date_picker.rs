@@ -123,7 +123,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="value" ty="Option<Signal<Option<V>>>" default="None">"The value (controlled): a value or any signal."</ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<Option<V>>>" default="None">"Receives the new value."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">"Called with each new value."</ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">
+                        <ApiRow name="placeholder_value" ty="MaybeProp<V>" default="None">
                             "Where empty segments start when stepped, and the month the calendar opens on. Default: today, midnight."
                         </ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">
@@ -153,6 +153,9 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                             "Default: the surrounding "<Code inline=true>"Form"</Code>"\u{2019}s, else "<Code inline=true>"Native"</Code>"."
                         </ApiRow>
                         <ApiRow name="name, form" ty="Option<String>" default="None">"The hidden input\u{2019}s name and form."</ApiRow>
+                        <ApiRow name="auto_complete" ty="Option<String>" default="None">
+                            "What the browser may autofill ("<Code inline=true>"autocomplete"</Code>", e.g. "<Code inline=true>"\"bday\""</Code>"), through a visually hidden date input."
+                        </ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the picker is rendered."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the picker when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>
@@ -190,7 +193,7 @@ pub fn PageAtomDatePicker() -> impl IntoView {
                         <ApiRow name="value" ty="Option<Signal<Option<RangeValue<V>>>>" default="None">"The range (controlled)."</ApiRow>
                         <ApiRow name="set_value" ty="Option<Out<Option<RangeValue<V>>>>" default="None">"Receives the new range."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<Option<RangeValue<V>>>>" default="None">"Called with each new range."</ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">"Where empty segments start, and the month the calendar opens on."</ApiRow>
+                        <ApiRow name="placeholder_value" ty="MaybeProp<V>" default="None">"Where empty segments start, and the month the calendar opens on."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">"The earliest and latest valid date of either end."</ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen."</ApiRow>
                         <ApiRow name="allows_non_contiguous_ranges" ty="bool" default="false">"Whether a range may span unavailable dates."</ApiRow>

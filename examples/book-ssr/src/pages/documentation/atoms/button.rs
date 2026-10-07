@@ -31,10 +31,35 @@ pub fn PageAtomButton() -> impl IntoView {
                     <ApiRow name="on_press" ty="Option<Callback<PressEvent>>" default="None">
                         "Called when the button is pressed."
                     </ApiRow>
+                    <ApiRow name="on_press_start, on_press_end, on_press_up" ty="Option<Callback<PressEvent>>" default="None">
+                        "Called when a press starts, when it ends (released or cancelled), and when it is released over the button."
+                    </ApiRow>
+                    <ApiRow name="on_press_change" ty="Option<Callback<bool>>" default="None">
+                        "Called with "<Code inline=true>"true"</Code>" when a press starts and "<Code inline=true>"false"</Code>" when it ends."
+                    </ApiRow>
                     <ApiRow name="on_hover_start, on_hover_end" ty="Option<Callback<HoverStartEvent>>, Option<Callback<HoverEndEvent>>" default="None">
                         "Called when a mouse or pen starts or stops hovering the button."
                     </ApiRow>
+                    <ApiRow name="on_hover_change" ty="Option<Callback<bool>>" default="None">
+                        "Called when the hover state changes."
+                    </ApiRow>
+                    <ApiRow name="on_focus, on_blur" ty="Option<Callback<FocusEvent>>" default="None">
+                        "Called when the button receives or loses focus."
+                    </ApiRow>
+                    <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">
+                        "Called when the focus state changes."
+                    </ApiRow>
+                    <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEventWrapper>>" default="None">
+                        "Called for key presses while the button has focus."
+                    </ApiRow>
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the button is disabled."</ApiRow>
+                    <ApiRow name="is_pending" ty="Signal<bool>" default="false">
+                        "Whether an action the button started is in progress: the button stays focusable but can\u{2019}t be pressed."
+                    </ApiRow>
+                    <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the button when it mounts."</ApiRow>
+                    <ApiRow name="prevent_focus_on_press" ty="bool" default="false">
+                        "Doesn\u{2019}t move focus to the button when it is pressed."
+                    </ApiRow>
                     <ApiRow name="button_type" ty="ButtonType" default="Button">
                         "The "<Code inline=true>"type"</Code>" attribute. The default doesn\u{2019}t submit forms, so a button "
                         "inside a form submits it only with "<Code inline=true>"ButtonType::Submit"</Code>"."
@@ -91,7 +116,6 @@ pub fn PageAtomButton() -> impl IntoView {
                         {indoc!(r#"
                             use leptonic::{
                                 atoms::prelude as atoms,
-                                prelude::icondata,
                                 utils::aria::{AriaCurrent, AriaExpanded},
                             };
                             use leptos::prelude::*;
@@ -162,6 +186,10 @@ pub fn PageAtomButton() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="data-disabled" ty="true">
                         "The button is disabled. The native "<Code inline=true>"disabled"</Code>" attribute is set as well."
+                    </ApiRow>
+                    <ApiRow name="data-pending" ty="true">
+                        "An action the button started is in progress ("<Code inline=true>"is_pending"</Code>"). Render a "
+                        <Code inline=true>"ProgressBar"</Code>" inside the button for it: it names the button while pending."
                     </ApiRow>
                 </ApiTable>
             </Section>
