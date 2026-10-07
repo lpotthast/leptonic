@@ -1,8 +1,21 @@
-# `build.rustflags` come from the repository's `.cargo/config.toml`.
+# `build.rustflags` come from the repository's `.cargo/config.toml`; cargo appends the ones below.
+
+[build]
+# ICU4X uses the book's own data (`ICU4X_DATA_DIR` below) instead of the data of every locale: 3.6 MB less wasm.
+rustflags = ["--cfg=icu4x_custom_data"]
 
 [target.aarch64-apple-darwin]
 # Replaces `build.rustflags` on this target, so it repeats them.
-rustflags = ["--cfg=web_sys_unstable_apis", "--cfg=erase_components", "-C", "link-arg=-fuse-ld=lld"]
+rustflags = [
+    "--cfg=web_sys_unstable_apis",
+    "--cfg=erase_components",
+    "--cfg=icu4x_custom_data",
+    "-C",
+    "link-arg=-fuse-ld=lld",
+]
 
 [env]
 LEPTOS_OUTPUT_NAME = "book-ssr"
+# The locales the book formats with (`just book-icu-data` regenerates it, see `documentation/build-performance.md`).
+# Server and wasm both use it: hydration needs both to format alike.
+ICU4X_DATA_DIR = { value = "icu4x-data", relative = true }

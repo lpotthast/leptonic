@@ -270,6 +270,57 @@ impl BrowserTest<str> for DemoSourceTests {
     }
 }
 
+/// Code blocks are highlighted on pages the client renders itself: the wasm has no highlighter, the server highlights
+/// them (`kit::code`'s `highlight`).
+pub struct CodeHighlightTests {}
+
+/// Whether the current page has highlighted Rust blocks (`syn-` spans from the highlighter).
+const RUST_HIGHLIGHTED: &str = "return document.querySelectorAll('main .doc-code[data-language=rust] .doc-code-text [class*=\"syn-\"]').length > 0;";
+
+#[async_trait]
+impl BrowserTest<str> for CodeHighlightTests {
+    fn name(&self) -> Cow<'_, str> {
+        "code_blocks_are_highlighted_after_client_side_navigation".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        page.set_viewport(1600, 1000).await?;
+
+        // The server highlights the blocks of the page it renders.
+        page.goto("/doc/installation").await?;
+        page.wait_until("the server rendered highlighted blocks", RUST_HIGHLIGHTED)
+            .await?;
+
+        // A link in the sidebar navigates on the client: the page isn't loaded again (the marker survives).
+        driver.execute("window.__noReload = true;", vec![]).await?;
+        driver
+            .find(By::Css("nav a[href='/doc/classes-and-styles']"))
+            .await
+            .context("the sidebar links the classes and styles guide")?
+            .click()
+            .await?;
+        page.wait_until(
+            "the client rendered the classes and styles guide",
+            "return location.pathname === '/doc/classes-and-styles' && document.querySelectorAll('main .doc-code[data-language=rust]').length > 0;",
+        )
+        .await?;
+        page.wait_until(
+            "the server highlighted the new page's blocks",
+            RUST_HIGHLIGHTED,
+        )
+        .await?;
+        let reloaded = page
+            .number("return window.__noReload === true ? 0 : 1;")
+            .await?;
+        assert_that!(reloaded)
+            .with_detail_message("the page was navigated to on the client, not loaded")
+            .is_equal_to(0.0);
+        assert_that!(page.page_errors().await?).is_empty();
+        Ok(())
+    }
+}
+
 /// The page structure: a title per page, a description, landmarks (the app bar in a `<header>`, the navigation and the
 /// table of contents outside `<main>`), headings for the sidebar parts, distinct names for group toggles, and the skip
 /// link as the first focusable element, moving focus to the page content.

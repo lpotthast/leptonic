@@ -220,6 +220,19 @@ The 2026-10-07 react-aria fidelity review was applied the same day by nine agent
 - [ ] CLAUDE.md's `[package.metadata.leptonic]` example is wrong: the build script writes to
   `<style-dir>/leptonic`, so it should read `style-dir = "style"`.
 
+### Build performance
+Numbers, methods and findings: `documentation/build-performance.md` (measure with `scripts/build-bench.sh`).
+- [ ] ICU4X calendars: `utils/date_time_formatter.rs` formats Gregorian weekday/month names with the any-calendar
+  `DateTimeFormatter`; `FixedCalendarDateTimeFormatter<Gregorian, _>` would let the linker drop every other
+  calendar's data and code. Measure; the date field (`hooks/datepicker/format.rs`) needs the locale's calendar.
+- [ ] typed-builder `PropsBuilder::build` is instantiated per combination of props a call site sets (5.5% of the
+  book's IR): measure what grouping rarely used props of the biggest atoms (`TextField`, `DatePicker`,
+  `SearchField`, `Calendar`, `NumberField`) into `Default` structs saves.
+- [ ] Users' guide in the book ("Build times and bundle size"), from the document's "Advice for users".
+- [ ] Decide (user): route splitting with `#[lazy_route]` + `--split` (main module −38%, but ~90 files per first
+  page visit and an unstable Leptos feature: try a coarser grouping first); `ring` instead of `aws-lc-rs` and fewer
+  `tower-http` features for the book's server (−38 s CPU per fresh build).
+
 ### Testing infrastructure
 - [ ] Switch tests onto the polling helpers (`BaseActions::wait_for_value`/`wait_until`/`wait_for_prop`/
   `assert_stays`, and the `wait_for!`/`stays!` macros of `tests/ui_tests/polling.rs`, which work inside
@@ -257,6 +270,9 @@ and, while the book waits for them, under "Waiting on the library" below. Finish
 - [ ] The fidelity wave's API changes (2026-10-07): page texts, code samples and API tables. The old→new list is in
   `documentation/history.md` ("API changes of the fidelity review"). Also: a tab disabled via `Tab::is_disabled` is
   never the default selection (server too); `TabPanels` measures in the next animation frame.
+- [ ] Failing browser tests (2026-10-07, macOS): two shell tests expect `Control+K`, but on macOS the book shows and
+  takes `Meta+K` (`shell_has_titles_landmarks_and_a_skip_link`, `search_opens_with_ctrl_k`); the sidebar test still
+  expects the "C" (component) badge (`sidebar_groups_markers_badges_and_concept_tabs`).
 - [ ] Off the components layer: phases A, B and C done (2026-10-07; see history). Left: the full browser suite on the
   final state (incl. the two shell search tests `search_lists_results_clears_closes_and_opens_the_first` and
   `search_opens_with_ctrl_k`, which failed in partial runs) and a visual pass (light/dark, 390px) over one page per group

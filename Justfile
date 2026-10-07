@@ -99,8 +99,9 @@ verify:
   cargo clippy -p leptonic-theme --tests
   LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --features ssr
   LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
-  LEPTOS_OUTPUT_NAME=book-ssr cargo clippy --manifest-path ./examples/book-ssr/Cargo.toml --features ssr
-  LEPTOS_OUTPUT_NAME=book-ssr cargo clippy --manifest-path ./examples/book-ssr/Cargo.toml --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
+  # From the book's directory, so that its `.cargo/config.toml` (`LEPTOS_OUTPUT_NAME`, ICU4X data) applies.
+  cd ./examples/book-ssr && cargo clippy --features ssr
+  cd ./examples/book-ssr && cargo clippy --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
   just unit-test
   just browser-test
 
@@ -129,6 +130,12 @@ book-serve-isolated port="4300":
     LEPTOS_SITE_ADDR=127.0.0.1:{{port}} \
     LEPTOS_RELOAD_PORT=$(({{port}} + 1)) \
     cargo leptos serve
+
+# The book bakes only the ICU4X data of the locales its demos format with, so that the wasm doesn't carry every
+# locale's data (3.6 MB). Needs `icu4x-datagen` of the book's ICU4X version (the script says which).
+# Regenerate the book's ICU4X data (`examples/book-ssr/icu4x-data`), after updating ICU4X or using another locale.
+book-icu-data:
+  ./scripts/icu-datagen.sh examples/book-ssr examples/book-ssr/icu4x-data ^en ^en-GB ^de ^ar ^ar-EG ^es ^fr ^hi ^ja ^pt ^pt-BR ^sv
 
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
@@ -216,7 +223,7 @@ clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml --no-default-features --features atoms,clipboard
   -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
   -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml
-  -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml
+  -cd ./examples/book-ssr && cargo clippy --tests
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml

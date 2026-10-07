@@ -52,7 +52,8 @@ Several agent sessions work in this repository at the same time, each owning one
   conventions in `documentation/conventions.md` (summary table in `documentation/hooks-implementation.md`); pitfalls
   in `documentation/lessons.md`; consumers in `documentation/consumers.md`; finished work in
   `documentation/history.md`; the atom theme (CSS ported from react-aria-components' starter styles) in
-  `documentation/atom-theme.md`.
+  `documentation/atom-theme.md`; compile times and binary sizes (measurements, findings, advice for users) in
+  `documentation/build-performance.md`.
 - **Book** (`examples/book-ssr/`): todos in `PLAN.md` (section "Book"); page structure, kit and writing rules in
   `documentation/documentation-strategy.md`; look, design tokens and which leptonic piece to use in
   `examples/book-ssr/STYLE_GUIDE.md`.

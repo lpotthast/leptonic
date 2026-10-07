@@ -1,11 +1,10 @@
 use std::time::Duration;
 
+#[cfg(feature = "ssr")]
+use leptonic::utils::syntax_highlight::highlight_to_classed_html;
 use leptonic::{
     atoms::prelude::Button,
-    utils::{
-        clipboard::write_text, live_announcer::announce_polite,
-        syntax_highlight::highlight_to_classed_html,
-    },
+    utils::{clipboard::write_text, live_announcer::announce_polite},
 };
 use leptos::prelude::*;
 use leptos_classes::Classes;
@@ -41,9 +40,10 @@ impl Language {
 ///
 /// A block with a `language` is highlighted (leptonic's `syntax_highlight`), and has a button copying the code.
 ///
-/// The server sends blocks highlighted. The client keeps the server's highlighting when hydrating, and highlights the
-/// blocks of pages it renders itself (client-side navigation) each in its own task after rendering them as plain
-/// text, so that a page with many blocks shows without waiting for them.
+/// The server sends blocks highlighted. The client keeps the server's highlighting when hydrating. Blocks of pages it
+/// renders itself (client-side navigation) show as plain text first and are highlighted by the server (`highlight`),
+/// one request per block: the wasm doesn't contain the highlighter (syntect, 1.35 MB of wasm, see
+/// `documentation/build-performance.md`).
 #[component]
 pub fn Code(
     /// Code in a sentence: no highlighting, no copy button.
@@ -65,18 +65,13 @@ pub fn Code(
     if let Some(language) = language
         && !hydrating()
     {
-        set_timeout(
-            move || {
-                if let Some(highlighted) = code
-                    .try_with_value(|code| highlight_to_classed_html(code, language.token()))
-                    .flatten()
-                {
-                    // The block may be gone by now (the reader navigated on).
-                    let _ = html.try_set(highlighted);
-                }
-            },
-            Duration::ZERO,
-        );
+        let code = code.get_value();
+        leptos::task::spawn_local(async move {
+            if let Ok(Some(highlighted)) = highlight(code, language.token().to_owned()).await {
+                // The block may be gone by now (the reader navigated on).
+                let _ = html.try_set(highlighted);
+            }
+        });
     }
 
     view! {
@@ -89,16 +84,26 @@ pub fn Code(
     .into_any()
 }
 
-/// The block's HTML when it is created: highlighted on the server, plain on the client, which highlights it later or,
-/// when hydrating, keeps the server's (`inner_html` doesn't touch the server's content when hydrating).
+/// The block's HTML when it is created: highlighted on the server, plain on the client, which has it highlighted
+/// later or, when hydrating, keeps the server's (`inner_html` doesn't touch the server's content when hydrating).
 fn initial_html(code: &str, language: Option<Language>) -> String {
-    if cfg!(feature = "ssr")
-        && let Some(highlighted) =
-            language.and_then(|language| highlight_to_classed_html(code, language.token()))
+    #[cfg(feature = "ssr")]
+    if let Some(highlighted) =
+        language.and_then(|language| highlight_to_classed_html(code, language.token()))
     {
         return highlighted;
     }
+    #[cfg(not(feature = "ssr"))]
+    let _ = language;
     escape_html(code)
+}
+
+/// `code` highlighted as `language` (a [`Language::token`]), for blocks the client renders itself.
+#[server]
+// Server functions are `async`; highlighting doesn't wait for anything.
+#[allow(clippy::unused_async)]
+async fn highlight(code: String, language: String) -> Result<Option<String>, ServerFnError> {
+    Ok(highlight_to_classed_html(&code, &language))
 }
 
 /// Whether the client is hydrating the server's HTML.
@@ -159,6 +164,7 @@ mod tests {
             .is_equal_to("a &lt; b &amp;&amp; c &gt; d".to_owned());
     }
 
+    #[cfg(feature = "ssr")]
     #[test]
     fn highlights_the_languages_it_names() {
         for language in [
