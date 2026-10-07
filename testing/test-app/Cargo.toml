@@ -5,7 +5,6 @@ edition = "2024"
 
 [package.metadata.leptos]
 output-name = "leptonic-test-app"
-# `--cfg=erase_components` comes from the repository's `.cargo/config.toml` (identical flags for all builds).
 disable-erase-components = true
 site-root = "target/site"
 site-pkg-dir = "pkg"
@@ -18,6 +17,7 @@ bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]
 lib-default-features = false
+lib-profile-dev = "wasm-dev"
 lib-profile-release = "wasm-release"
 
 [lib]
@@ -40,7 +40,6 @@ axum = { version = "0.8.9", optional = true, default-features = false, features 
 console_error_panic_hook = { version = "0.1.7", default-features = false }
 leptonic = { path = "../../leptonic", default-features = false, features = ["atoms"] }
 leptos = { version = "0.8.22", default-features = false }
-# `default`: `file_and_error_handler` (serving the site's files) is gated on it by name.
 leptos_axum = { version = "0.8.10", optional = true, default-features = false, features = ["default"] }
 leptos_meta = { version = "0.8.7", default-features = false }
 leptos_router = { version = "0.8.17", default-features = false }
@@ -54,6 +53,13 @@ wasm-bindgen = { version = "0.2.129", default-features = false, features = ["std
 # No debug info for dependencies (including leptonic, a path dependency but not a member of this workspace): smaller
 # build directories and faster linking of the server and the wasm bundle.
 debug = false
+
+[profile.wasm-dev]
+inherits = "dev"
+
+[profile.wasm-dev.package.leptonic-test-app]
+debug = false
+strip = "symbols"
 
 [profile.wasm-release]
 inherits = "release"
