@@ -37,7 +37,7 @@ pub fn PageButtonOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "Buttons exist as a hook and an atom. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
 

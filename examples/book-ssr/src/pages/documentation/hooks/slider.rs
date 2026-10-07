@@ -76,6 +76,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             aria_label: "Volume".into(),
                             aria_labelledby: None,
                             aria_describedby: None,
+                            aria_details: None,
                         });
                         let thumb = use_slider_thumb(UseSliderThumbInput {
                             state,
@@ -91,6 +92,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             aria_label: MaybeProp::default(),
                             aria_labelledby: None,
                             aria_describedby: None,
+                            aria_errormessage: None,
+                            aria_details: None,
                         });
                         let (track_attrs, track_styles) = slider.track_props.into_parts();
                         let (thumb_attrs, thumb_styles) = thumb.thumb_props.into_parts();
@@ -286,6 +289,9 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the slider when there is no visible label."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming the slider."</ApiRow>
                         <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of further elements describing every thumb."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">
+                            "Ids of elements with details about every thumb ("<Code inline=true>"aria-details"</Code>")."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -316,6 +322,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 aria_label: MaybeProp::default(),
                                 aria_labelledby: None,
                                 aria_describedby: None,
+                                aria_details: None,
                             });
 
                             view! {
@@ -356,6 +363,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the thumb next to the slider\u{2019}s name, e.g. \u{201c}Minimum\u{201d}."</ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"Ids of further elements naming the thumb."</ApiRow>
                         <ApiRow name="aria_describedby" ty="Option<String>" default="None">"Ids of further elements describing the thumb."</ApiRow>
+                        <ApiRow name="aria_errormessage" ty="Option<String>" default="None">"The id of the element with the thumb\u{2019}s error message."</ApiRow>
+                        <ApiRow name="aria_details" ty="Option<String>" default="None">
+                            "Ids of further elements with details about the thumb (next to the slider\u{2019}s)."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -394,6 +405,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 aria_label: "Maximum".into(),
                                 aria_labelledby: None,
                                 aria_describedby: None,
+                                aria_errormessage: None,
+                                aria_details: None,
                             });
 
                             let (thumb_attrs, thumb_styles) = maximum.thumb_props.into_parts();
@@ -431,7 +444,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         "A custom "<Code inline=true>"SliderMark"</Code>" has a "<Code inline=true>"value"</Code>" ("
                         <Code inline=true>"SliderMarkValue::Value(v)"</Code>", a value of the range, or "
                         <Code inline=true>"SliderMarkValue::Percentage(p)"</Code>", a fraction of the track) and an optional "
-                        <Code inline=true>"name"</Code>". Marks outside the range are left out."
+                        <Code inline=true>"name"</Code>" (a "<Code inline=true>"MaybeProp<String>"</Code>": a text or a signal "
+                        "of one). Marks outside the range are left out."
                     </p>
                 </Section>
 
@@ -439,9 +453,13 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <p>"It returns a "<Code inline=true>"Signal<Vec<ComputedSliderMark>>"</Code>":"</p>
                     <ApiTable kind=ApiKind::Fields of="ComputedSliderMark">
                         <ApiRow name="percentage" ty="f64">"The position along the track, 0.0 to 1.0."</ApiRow>
-                        <ApiRow name="in_range" ty="Signal<bool>">"Whether the mark lies within the selected range."</ApiRow>
-                        <ApiRow name="name" ty="Option<Cow<'static, str>>">"The mark\u{2019}s name, to show next to it."</ApiRow>
+                        <ApiRow name="value" ty="f64">"The value of the range at the mark."</ApiRow>
+                        <ApiRow name="name" ty="Option<String>">"The mark\u{2019}s name, to show next to it."</ApiRow>
                     </ApiTable>
+                    <p>
+                        <Code inline=true>"is_in_range()"</Code>" tells whether the mark lies within the selected range: up to "
+                        "the thumb (one thumb), between the first and the last thumb (several). It tracks the values."
+                    </p>
                 </Section>
 
                 <Section title="Example" id="use-slider-marks-example">
@@ -472,7 +490,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                             style=Styles::new().add(LeftProperty.declare(LengthPercentageAuto::from(
                                                 computed_pct(mark.percentage * 100.0),
                                             )))
-                                            data-in-range=move || mark.in_range.get().then_some("")
+                                            data-in-range={
+                                                let mark = mark.clone();
+                                                move || mark.is_in_range().then_some("")
+                                            }
                                         >
                                             {mark.name.clone().unwrap_or_default()}
                                         </span>

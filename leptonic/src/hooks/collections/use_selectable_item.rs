@@ -428,14 +428,15 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
             selection.set_focused_key(Some(key.get_value()), None);
         }
     };
+    // Without selection or a primary action, pressing does nothing (except focusing the item
+    // virtually).
+    let press_disabled = Signal::derive(move || {
+        !(allows_selection.get()
+            || has_primary_action.get()
+            || (should_use_virtual_focus && !is_disabled.get()))
+    });
     let press = use_press(UsePressInput {
-        // Without selection or a primary action, pressing does nothing (except focusing the item
-        // virtually).
-        is_disabled: Signal::derive(move || {
-            !(allows_selection.get()
-                || has_primary_action.get()
-                || (should_use_virtual_focus && !is_disabled.get()))
-        }),
+        is_disabled: press_disabled,
         prevent_focus_on_press: Signal::stored(should_use_virtual_focus),
         on_press: Some(Callback::new(move |e: PressEvent| {
             virtually_focus(&e, true);
@@ -486,6 +487,14 @@ pub fn use_selectable_item(input: UseSelectableItemInput) -> UseSelectableItemRe
     let on_click = press_props.on_click.chain(move |e: MouseEvent| {
         if link_behavior != LinkBehavior::None && untrack(is_link) && !is_opening_link() {
             e.prevent_default();
+        }
+    });
+    // react-aria leaves the press props off an item that can't be pressed: its disabled press
+    // must not stop the click, which completes the press of an item around it (a grid row
+    // pressed on one of its cells).
+    let on_click = EventHandler::new(move |e: MouseEvent| {
+        if !press_disabled.get_untracked() {
+            on_click.call(e);
         }
     });
 

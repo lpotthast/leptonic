@@ -244,7 +244,8 @@ pub fn Select(
 }
 
 /// The button opening the select's popover. Exposes `data-open`, `data-invalid`,
-/// `data-disabled`, `data-pressed` and (from `use_button`) `data-focus-visible` for styling.
+/// `data-disabled`, `data-pressed`, `data-hovered` and (from `use_button`)
+/// `data-focus-visible` for styling.
 ///
 /// Default class: `leptonic-SelectTrigger`.
 #[component]
@@ -272,6 +273,7 @@ pub fn SelectTrigger(
             data-invalid=flag(ctx.is_invalid)
             data-disabled=flag(ctx.is_disabled)
             data-pressed=flag(button.is_pressed)
+            data-hovered=flag(button.is_hovered)
         >
             {children()}
         </button>

@@ -291,25 +291,39 @@ impl BrowserTest<str> for VirtualListFollowToggleTests {
             )
             .await?;
 
-        // To the middle: following turns off when the scroll ends.
-        page.driver
-            .execute(
-                &format!("{LOG}.scrollTop = {LOG}.scrollHeight / 2;"),
-                vec![],
-            )
-            .await?;
-        page.wait_for_text("test-vl-follow", "not following")
-            .await?;
-        wait_until(&page, &rows_cover_viewport()).await?;
-        // A visible row and its offset in the viewport: the content must not move.
-        let anchor = "(() => { const log = document.getElementById('test-vl-log'); \
+        // A user scroll (one step every 50ms, so it doesn't end in between): up from the end,
+        // then down again, so the rows above the stop were rendered and measured. Then the
+        // first row in view and its offset, before the scroll ends (300ms later) and turns
+        // following off.
+        let anchor = format!(
+            "const log = {LOG}; \
              const row = Array.from(log.querySelectorAll('.line')).map(l => l.parentElement) \
              .find(r => parseFloat(r.style.top) >= log.scrollTop); \
-             return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop); })()";
-        let before = eval_string(&page, anchor).await?;
-        // Settle (a re-layout runs in effects and frames), then re-check.
+             return row.textContent.slice(0, 12) + '@' + (parseFloat(row.style.top) - log.scrollTop);"
+        );
+        let before = page
+            .driver
+            .execute_async(
+                &format!(
+                    "const done = arguments[arguments.length - 1]; \
+                     const anchor = () => {{ {anchor} }}; \
+                     const steps = [...Array(30).fill(-150), ...Array(12).fill(150)]; \
+                     const next = i => {{ \
+                         if (i === steps.length) {{ setTimeout(() => done(anchor()), 120); return; }} \
+                         {LOG}.scrollTop += steps[i]; setTimeout(() => next(i + 1), 50); \
+                     }}; \
+                     next(0);"
+                ),
+                vec![],
+            )
+            .await?
+            .convert::<String>()?;
+        page.wait_for_text("test-vl-follow", "not following")
+            .await?;
+        // Settle (a re-layout runs in effects and frames), then check: the content didn't move.
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        assert_that!(eval_string(&page, anchor).await?).is_equal_to(before);
+        assert_that!(eval_string(&page, &format!("(() => {{ {anchor} }})()")).await?)
+            .is_equal_to(before);
         assert_that!(eval_string(&page, "JSON.stringify(window.__vlReestimated)").await?)
             .is_equal_to("[]".to_owned());
         page.expect_no_page_errors().await

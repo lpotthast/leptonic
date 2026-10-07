@@ -2,9 +2,8 @@
 
 `leptonic-theme/scss/leptonic-atoms.scss` styles leptonic's atoms: a port of react-aria-components' starter styles
 (`~/dev/react-spectrum/starters/docs/src/*.css`, Apache-2.0, Copyright Adobe). Apps opt in with
-`@use "leptonic/leptonic-atoms";` (the build script copies the SCSS into the app's `style-dir`). It replaces the
-component themes (`leptonic-themes.scss`) once the components are gone; until then, use one or the other, never both
-(the components render atoms, so the atom rules would reach into them).
+`@use "leptonic/leptonic-atoms";` (the build script copies the SCSS into the app's `style-dir`). It is leptonic's
+only theme (the component themes went with the components, 2026-10-07).
 
 ## Files
 

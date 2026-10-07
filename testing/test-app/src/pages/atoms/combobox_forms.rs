@@ -81,14 +81,13 @@ pub fn PageAtomComboBoxForms() -> impl IntoView {
             s.item("parrot", "Parrot");
         });
     });
-    let no_dogs: leptonic::hooks::ValidateFn<ComboBoxValue> =
-        Arc::new(|value: &ComboBoxValue| {
-            if value.value.contains(&Key::from("2")) {
-                Err(vec!["Dogs are not allowed".to_owned()])
-            } else {
-                Ok(())
-            }
-        });
+    let no_dogs: leptonic::hooks::ValidateFn<ComboBoxValue> = Arc::new(|value: &ComboBoxValue| {
+        if value.value.contains(&Key::from("2")) {
+            Err(vec!["Dogs are not allowed".to_owned()])
+        } else {
+            Ok(())
+        }
+    });
     let log_open = |log: RwSignal<Vec<String>>| {
         Callback::new(move |change: leptonic::hooks::ComboBoxOpenChange| {
             log.update(|log| {

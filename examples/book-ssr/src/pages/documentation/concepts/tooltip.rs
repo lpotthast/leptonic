@@ -33,7 +33,7 @@ pub fn PageTooltipOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "Tooltips exist as hooks and atoms. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
 

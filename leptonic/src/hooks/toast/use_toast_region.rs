@@ -343,4 +343,3 @@ pub fn use_toast_region<T: Clone + Send + Sync + 'static>(
         },
     }
 }
-

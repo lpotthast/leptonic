@@ -1,9 +1,6 @@
 # leptonic-theme
 
-Provides styling to applications using `leptos` with the `leptonic` component framework.
-
-For installation and usage information, head  to <https://leptonic.dev/doc/installation> and <https://leptonic.dev/doc/themes>.
-
-## MSRV
-
-The minimum supported rust version is `1.60.0`
+The optional atom theme of [`leptonic`](https://github.com/lpotthast/leptonic): SCSS styling leptonic's atoms by
+their default classes (`leptonic-<AtomName>`) and data attributes, ported from react-aria-components' starter styles.
+leptonic's build script copies it into the app's `style-dir` (`[package.metadata.leptonic]`); opt in with
+`@use "leptonic/leptonic-atoms";`.

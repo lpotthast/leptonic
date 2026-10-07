@@ -140,7 +140,10 @@ pub fn PageUseColorField() -> impl IntoView {
 
             <Section title="use_color_field_state">
                 <p>
-                    "Tracks two values: the text in the field and the committed "<Code inline=true>"RGB8"</Code>" color. Typing "
+                    "Tracks two values: the text in the field and the committed color, of any "
+                    <Link href=format!("{}#colorvalue", routes::doc::Color.materialize())><Code inline=true>"ColorValue"</Code></Link>
+                    " type "<Code inline=true>"C"</Code>" ("<Code inline=true>"RGB8"</Code>" when you don\u{2019}t name one; the "
+                    "field edits it as a hex code). Typing "
                     "only accepts hex digits (at most six, after an optional "<Code inline=true>"#"</Code>"); the text is parsed "
                     "when it is committed, as "<Code inline=true>"#RRGGBB"</Code>" or the short form "<Code inline=true>"#RGB"</Code>
                     ". Text that doesn\u{2019}t parse reverts to the last color; an empty field commits as no color. The state "
@@ -151,12 +154,12 @@ pub fn PageUseColorField() -> impl IntoView {
                 <Section title="Input" id="use-color-field-state-input">
                     <p>"Start from "<Code inline=true>"UseColorFieldStateInput::default()"</Code>" and change single fields:"</p>
                     <ApiTable kind=ApiKind::Input of="UseColorFieldStateInput">
-                        <ApiRow name="default_value" ty="Option<RGB8>" default="None">"The initial color; "<Code inline=true>"None"</Code>" starts with an empty field."</ApiRow>
-                        <ApiRow name="value" ty="Option<ValueBinding<Option<RGB8>>>" default="None">
+                        <ApiRow name="default_value" ty="Option<C>" default="None">"The initial color; "<Code inline=true>"None"</Code>" starts with an empty field."</ApiRow>
+                        <ApiRow name="value" ty="Option<ValueBinding<Option<C>>>" default="None">
                             "The color as app state, replacing "<Code inline=true>"default_value"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the field invalid, whatever the validation says."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<Option<RGB8>>>" default="None">
+                        <ApiRow name="validate" ty="Option<ValidateFn<Option<C>>>" default="None">
                             "Validates the committed color: "<Code inline=true>"Err"</Code>" with the error messages."
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior" default="ValidationBehavior::Aria">
@@ -164,16 +167,16 @@ pub fn PageUseColorField() -> impl IntoView {
                             <Code inline=true>"Native"</Code>"), see "<Link href=routes::doc::Forms.materialize()>"Forms & Validation"</Link>"."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The field\u{2019}s name, to match server errors."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Option<RGB8>>>" default="None">"Called with the committed color."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<Option<C>>>" default="None">"Called with the committed color."</ApiRow>
                     </ApiTable>
                 </Section>
 
                 <Section title="Return" id="use-color-field-state-return">
-                    <p>"A "<Code inline=true>"Copy"</Code>" "<Code inline=true>"ColorFieldState"</Code>":"</p>
+                    <p>"A "<Code inline=true>"Copy"</Code>" "<Code inline=true>"ColorFieldState<C>"</Code>":"</p>
                     <ApiTable kind=ApiKind::Return of="ColorFieldState">
                         <ApiRow name="input_value" ty="Signal<String>">"The text in the field."</ApiRow>
-                        <ApiRow name="color_value" ty="Signal<Option<RGB8>>">"The committed color; "<Code inline=true>"None"</Code>" for an empty field."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation state."</ApiRow>
+                        <ApiRow name="color_value" ty="Signal<Option<C>>">"The committed color; "<Code inline=true>"None"</Code>" for an empty field."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation state."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"When errors show."</ApiRow>
                     </ApiTable>
                     <DocTable headers=&["Method", "Description"]>
@@ -223,7 +226,7 @@ pub fn PageUseColorField() -> impl IntoView {
                 <Section title="Input" id="use-color-field-input">
                     <p>"Pass a "<Code inline=true>"UseColorFieldInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseColorFieldInput">
-                        <ApiRow name="state" ty="ColorFieldState">
+                        <ApiRow name="state" ty="ColorFieldState<C>">
                             "The state from "<Code inline=true>"use_color_field_state"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id; generated when "<Code inline=true>"None"</Code>"."</ApiRow>

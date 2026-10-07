@@ -50,8 +50,9 @@ pub fn PageUseMeter() -> impl IntoView {
                         <Code inline=true>"aria-valuetext"</Code>", id and labelling."
                     </ApiRow>
                     <ApiRow name="label_props" ty="UseLabelProps">"Spread on the visible label, a "<Code inline=true>"<span>"</Code>"."</ApiRow>
-                    <ApiRow name="percentage" ty="Signal<Option<f64>>">
-                        "The value in percent of the range (0 to 100), to size a fill with. Always "<Code inline=true>"Some"</Code>
+                    <ApiRow name="percentage" ty="Signal<Option<Fraction>>">
+                        "The value as a share of the range, a "<Code inline=true>"Fraction"</Code>" from 0 to 1 ("
+                        <Code inline=true>"as_percent()"</Code>": 0 to 100), to size a fill with. Always "<Code inline=true>"Some"</Code>
                         " for a meter: the type is shared with "<Code inline=true>"use_progress_bar"</Code>", whose value can be unknown."
                     </ApiRow>
                     <ApiRow name="value_text" ty="Signal<Option<String>>">
@@ -75,7 +76,7 @@ pub fn PageUseMeter() -> impl IntoView {
                             ..UseMeterInput::default()
                         });
                         let fill = Styles::new().add_reactive(move || {
-                            WidthProperty.declare(computed_size(computed_pct(percentage.get().unwrap_or_default())))
+                            WidthProperty.declare(computed_size(computed_pct(percentage.get().unwrap_or_default().as_percent())))
                         });
 
                         view! {

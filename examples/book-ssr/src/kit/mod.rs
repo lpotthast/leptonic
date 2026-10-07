@@ -17,7 +17,6 @@ mod page;
 mod reference;
 mod section;
 mod table;
-mod theme;
 
 pub use code::{Code, Language};
 pub use demo::Demo;
@@ -33,6 +32,4 @@ pub use section::Section;
 pub use table::{
     ApiKind, ApiRow, ApiTable, DocTable, KeyRow, KeyboardTable, Keys, TableCell, TableRow,
 };
-pub use theme::CssVariables;
 
-pub use crate::theme_scss;

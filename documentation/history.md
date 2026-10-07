@@ -3,6 +3,239 @@
 Finished work, moved out of `PLAN.md` (which holds open work only). Most recent first within each part; git
 history has the details.
 
+## Fidelity review 2026-10-07
+
+A read-only review of the whole library against react-spectrum @ 99e6102368 (nine passes: one per family plus
+architecture/docs/tests), applied the same day by nine agents, one per family, failing test first where possible (the
+user: "Improving our integration-test suite is of utmost importance"). Open leftovers are in `PLAN.md`. User
+decisions: modals focus the dialog on open (`ModalContent` `auto_focus` defaults to false) and set no `aria-modal`
+(as upstream); the `LinkButton` atom is removed (use `Link`); the `Propagation` rule covers only press and keyboard
+events (as upstream's `continuePropagation`); the 2026-10-05 audit file is deleted (its open rest is in `PLAN.md`).
+
+- Interactions and focus: `use_press` keyup in the capture phase and dragstart without a panic (leptonic-dd), a child
+  stopping the click cancels the press, the macOS Meta keyup synthesis re-ported (Mac emulated in the test),
+  `on_press_up` on keyup only for unrepeated keys inside the element, the long-press contextmenu blocker removed after
+  release, drag out/in via `pointerenter`/`pointerleave` (`interaction_rect` gone), the `openLink.isOpening` guard;
+  `use_move` re-ported (leptonic-dd: no axis filter, which fixed the sliders' cross-axis arrows), typed keys;
+  `text_selection` on a weak map; `use_focus_visible` synced (window refocus, `invalid`, `get_pointer_type()`); the
+  prevent-focus attribute (tree expand button, hidden select); `use_focus_within` capture listener; the
+  `synthetic_blur` leak; SVG focus; FocusScope select-on-Tab and Tab outside the scope; scroll, platform, open_link,
+  prevent_scroll synced. `upstream-drift.sh` reports no drift.
+- Collections: `Filter` by characters (umlauts, accents), memoized collator/filter per locale, the combo box's custom
+  value/revert and validation, `Collection::build` O(n), separators in filtered collections, `TagGroup` contexts,
+  `HiddenSelect` beyond 300 options, link items under `LinkBehavior::Override`, combo box announcements and hidden
+  form inputs, Select `is_open`/`set_open`, one-element `ListBoxSection` + `ListBoxSectionHeading`, `GridListSection`/
+  `GridListHeader`/`GridListItemDescription`, per-item `disabled_behavior`, reactive `selection_behavior`,
+  `data-hovered` on list box/grid list items and the select trigger.
+- Grid, table, tree, virtualizer, DnD: nested column groups as upstream's `buildHeaderRows`, reactive table atoms,
+  empty tables without keyboard navigation, PageUp/PageDown reaching the headers, `data-hovered`/`data-focus-visible`
+  on grid and table atoms, tree `expanded_keys` binding, ArrowRight on expanded tree rows; `VirtualList` follow mode
+  keeps measured sizes, RTL `scroll_to`, shared layout nodes; keyboard DnD hides with `inert`, registration effects
+  untracked, disabled drags; DnD/clipboard browser tests with synthesized native drags.
+- Overlays: modal decisions above, a `DismissButton` in dismissable modals, reset positions on reopen, popover `dir`,
+  per-opening containment and measurements (closed overlays observe nothing), tooltip `should_skip_animation`, toast
+  focus by key, one-element `MenuSection` with its own selection, `use_overlay`/landmark/`aria_hide_outside` fixtures
+  and tests, DismissButton's upstream tests.
+- Forms: `NumberParser` re-ported from `@internationalized/number` (numbering systems, literals, accounting, Swiss and
+  Arabic separators; ~40 upstream tests + a round-trip matrix), `format_to_parts`, saturating integer values, controlled
+  text field re-sync, server errors after an edit, native custom validity, `use_form_reset` re-synced, `checked` as the
+  default for native form reset, `FormValidationState` (C3), `CheckboxField`/`RadioField`/`SwitchField` (+ `*Button`).
+- Calendar and dates: the range calendar's touch tap, the server's today for SSR, reactive layout and format options,
+  memoized label formatters, BC eras, `CalendarMonthPicker`/`CalendarYearPicker`, autofill (`use_hidden_date_input`),
+  `DateTimeFormatter::format()` on ICU4X field sets, single-input hooks; calendar/date picker browser tests.
+- Slider and color: color area/wheel inputs follow assistive technology, gradient layer order, slider index panic,
+  restricted bound values, per-thumb labels, `ColorWheel` without a channel, localized channel values, `utils::color`
+  split; slider/color browser tests.
+- Button, link, tabs: `Button` pending state (RAC's tests), `ThemeProvider` contexts, modified clicks on anchor links,
+  disabled hook anchors keep their role, `Tab` `is_disabled`, `TabPanels`, force-mounted panels as RAC, `Fraction` for
+  meter/progress, reactive orientations; VisuallyHidden/Separator/Toolbar/Breadcrumbs/Theme tests.
+- Docs and test infrastructure: `crate::testing::{with_owner, flush_effects}` runs Effects in native tests; polling
+  helpers; the hydration id test discovers every fixture (4 shards); `just clippy` also checks the atoms-only set; the
+  test-app no longer generates a theme; atoms/architecture/hooks docs rewritten to the code; `design-collections.md`
+  marked implemented; the narrowed `Propagation` rule documented.
+- The six browser tests still failing after the wave, fixed at their root causes (full suite before: 124 tests, 6
+  failed): `table_selection_tests` (the item registry's duplicate-key check read a disposed `CapturedElement` after
+  two cells swapped keys; the registry now keeps every live registration per key, latest wins), `tabs_tests` (the
+  test expected no event for pressing the selected tab, but upstream's `useSingleSelectListState` reports reselection:
+  expectation corrected) plus `TabPanels` measuring in the next frame, `hydration_id_tests` (a disabled first tab was
+  skipped only in a client Effect; now the default skips disabled tabs while rendering, on the server too),
+  `grid_list_child_navigation_tests` (`SelectionManager::set_focused_key`/`set_focused` notified on unchanged values;
+  the deferred row focus re-checks focus; `test_grid`'s restore step now leaves the grid first, as upstream's browser
+  behavior keeps focus on a cell focused from its own child), `forms_tests` (group items now keep their own
+  validation behavior, as upstream; native validity is re-read when constraint attributes change, via a
+  MutationObserver) and `combobox_multiple_tests` (not reproduced since).
+
+### API changes of the fidelity review (old → new, as the agents reported them)
+
+#### interactions
+- UseTreeItemReturn +expand_button_attrs: PreventFocusAttr (book demos/tree.rs fixed)
+- utils::focusability::{PREVENT_FOCUS_ATTRIBUTE, PreventFocusAttr, prevent_focus_attr}
+- hooks::get_pointer_type()
+- removed utils::{InteractionRect, RectPrecise, is_over}, hooks::PressEvents, focus_scope_tree::{get_active_scope, innermost_containing_ancestor}
+- use_press touch-action on server
+- ShortcutKeys/Keys dir=ltr
+- platform::browser::{is_firefox,is_safari}.
+#### collections
+- use_list_keyboard_delegate(..4..)/_with -> (UseListKeyboardDelegateInput{state,element,orientation,layout,layout_delegate})
+- UseComboBoxInput -is_read_only -name, is_required Signal, placeholder MaybeProp, +form_value ComboBoxFormValue, +form
+- UseComboBoxReturn -label_on_click +form_values
+- UseComboBoxStateInput.on_open_change Callback<ComboBoxOpenChange>
+- ComboBox atom is_required Signal, placeholder MaybeProp, +on_open_change +form_value +form, hidden inputs
+- UseSelectInput -name -validation_behavior, is_required Signal
+- UseSelectStateInput +is_open Option<ValueBinding<bool>>
+- UseHiddenSelectInput -name -validation_behavior, is_required Signal, +label
+- UseHiddenSelectReturn +label +first_input_capture, required Signal
+- Select atom is_required Signal, +is_open +set_open
+- SelectValue placeholder MaybeProp default "Select an item", list join
+- HiddenSelect +label
+- ListBox +empty_state, panics w/o collection
+- ListBoxSection -heading_classes -> <ListBoxSectionHeading>
+- ListBoxItemCtx +is_hovered
+- UseOptionReturn +is_hovered
+- SelectionOptions.selection_behavior Signal
+- atoms selection_behavior into Signal
+- UseSelectableItemInput.focus Option<FocusItem>
+- ItemBuilder::disabled_behavior, Node.disabled_behavior, SelectionManager::is_item_disabled
+- use_filtered_list_state removed (book groups/collection_state.rs documents it)
+- new atoms GridListSection, GridListHeader, GridListItemDescription
+- GridListItem +focus_mode +allows_arrow_navigation
+- utils::filter::{use_collator,use_filter}
+- ComboBoxState name()/validation_behavior()/is_read_only_signal()
+- SelectState name()/validation_behavior(). Book compile fixes: hooks/demos/{select,combobox,grid_list,dnd_reorder}.rs, atoms/demos/{listbox,select}.rs
+- page text code samples still old.
+#### grid
+- use_table_header_placeholder(&data,&key) -> (UseTableHeaderPlaceholderInput{table,key})
+- use_table_selection_checkbox(&t,k) -> (UseTableSelectionCheckboxInput{table,key})
+- use_table_select_all_checkbox(&t) -> (UseTableSelectAllCheckboxInput{table})
+- UseTableColumnResizeInput.aria_label MaybeProp
+- GridState.is_keyboard_navigation_disabled RwSignal -> is_keyboard_navigation_disabled() Signal + set_keyboard_navigation_disabled(bool)
+- UseGridCellProps role/aria_colspan/aria_colindex/colspan Signals + on_pointerdown
+- UseTableRowProps.aria_labelledby Signal<String>
+- UseTreeStateInput +expanded_keys Option<ValueBinding<HashSet<Key>>>
+- UseTreeItemReturn -expand_button_label, has_child_items Signal<bool>
+- Table disabled_behavior DisabledBehavior default Selection
+- ColumnSizes public
+- TableCell children ChildrenFn
+- Table.should_select_on_press_up
+- TableCell/GridCell allows_arrow_navigation
+- data-hovered/focus-visible on grid/table atoms. Virtualizer: use_scroll_view(input,element) -> (UseScrollViewInput{element,..}) Signal options
+- use_virtualizer_item(input,element) -> (UseVirtualizerItemInput{element,..}) update_item_size Callback<ItemSizeChange>
+- state.visible/content_size -> visible()/content_size()
+- ListLayoutOptions.drop_indicator_thickness removed. DnD: get_items Callback<()> -> items Signal<Vec<DragItem>>
+- get_allowed_drop_operations -> allowed_drop_operations Option<Signal<..>>
+- use_draggable_collection(state,element) -> (UseDraggableCollectionInput{..})
+- drop item/indicator target Signal<DropTarget>
+- on_key_down Callback<DropTargetKeyDownEvent>
+- DragPreview.offset Option<Point>
+- ListDropTargetDelegate::with_direction removed. Book compile fixes hooks/demos/{table,table_resizing,tree,virtualizer,dnd_*}.rs
+- texts/API tables in hooks/{table,tree,grid,virtualizer,dnd}.rs + atoms/virtualizer.rs:172 stale.
+#### overlays
+- use_tooltip_trigger(input,state) -> (UseTooltipTriggerInput{state,is_disabled,trigger,should_close_on_press}) no Default
+- return -is_open -trigger_id -tooltip_id (state.overlay.is_open, tooltip_props.id)
+- trigger props -id
+- UseTooltipTriggerTooltipProps -role
+- UseTooltipInput -on_open -on_close, props +role
+- UseOverlayTriggerInput{show, overlay_id:Oco} -> {is_open, overlay_id:String}
+- UseOverlayReturn.id/UsePopoverReturn.id/UseModalBackdropReturn.id Oco->String
+- UseMenuTriggerMenuProps.id Signal<String>->String (Clone not Copy)
+- UseMenuItemProps.aria_expanded Signal<Option<AriaExpanded>>
+- MenuSection props selection_mode, default_selected_keys, selection/set_selection, on_selection_change, disallow_empty_selection, should_close_on_select
+- Menu.should_close_on_select
+- MenuSection DOM <section>+<header>
+- UseModalInput.is_disabled Signal
+- UseModalProps.aria_modal Signal
+- ModalContent contain_focus/restore_focus/auto_focus Signal, auto_focus default false, no aria-modal, DismissButton when dismissable
+- ModalBackdrop no leptonic-modal-backdrop class
+- UseDialogProps.tabindex i32
+- DismissButton on_dismiss required + id
+- use_landmark(input, element) -> UseLandmarkInput{element,..}
+- use_toast(input,queue) -> UseToastInput{queue,..}
+- use_toast_region(input,queue,element) -> UseToastRegionInput{queue,element,..} no Default
+- UseToastContentProps.aria_hidden Signal<Option<AriaHidden>>
+- Popover dir attr. Book compile fixes: hooks/demos/{tooltip_basic,tooltip_positioning,toast}.rs, five use_overlay_trigger demos, use_landmark calls in app.rs, hooks/demos/landmark.rs, groups/demos/layout_app_bar.rs, hooks/landmark.rs
+- texts/indoc still old.
+#### forms
+- UseFormValidationStateReturn -> FormValidationState (.commit_validation()/reset_validation()/update_validation(result)
+- native_validity_readers pub(crate))
+- book API tables in hooks/{form,select,radio,text_field,combobox,date_field,date_picker,number_field,checkbox,color_field}.rs still name old type
+- UseCheckboxGroupItemInput.validate removed -> options.validate
+- use_formatted_text_field(element, validate, set) -> (UseFormattedTextFieldInput{element,state}) + trait FormattedTextState
+- use_slot_id removed
+- NumberFormatOptions + currency_sign, numbering_system
+- NumberFormatter::{format_to_parts, numbering_system}
+- NumberPart/NumberPartKind
+- NumberParser::numbering_system(text)
+- parser + and % rules
+- UseToggleInputProps/UseRadioInputProps + default_checked
+- spin button aria_disabled/readonly/required + number field group aria_disabled typed (AriaDisabled/AriaReadonly/AriaRequired)
+- NumberValue::from_decimal saturates
+- new atoms CheckboxField/CheckboxButton, RadioField/RadioButton, SwitchField/SwitchButton (prelude).
+#### calendar
+- use_calendar(input,state) -> UseCalendarInput{state,id,aria_label,aria_labelledby,aria_describedby,aria_details} no Default
+- use_range_calendar -> UseRangeCalendarInput{state,commit_behavior,..}
+- use_calendar_heading -> UseCalendarHeadingInput{state,offset,format}
+- use_calendar_month_picker -> UseCalendarMonthPickerInput{state,format}
+- use_calendar_year_picker -> UseCalendarYearPickerInput{state,visible_years:u8,format:CalendarYearPickerFormat{year,era}}
+- picker aria_label Month/Year -> month/year
+- Use(Range)CalendarStateInput visible_duration/page_behavior/selection_alignment/first_day_of_week(Signal<Option<Weekday>>)/weeks_in_month Signals
+- CalendarState.visible_duration Signal
+- is_date_unavailable Callback<DateAvailabilityQuery{date,anchor_date},bool>
+- Calendar/RangeCalendar props reactive, first_day_of_week + weeks_in_month MaybeProp
+- use_date_field(input,state,el,input_el) -> UseDateFieldInput{state,element,input_element,options:DateFieldOptions}
+- use_time_field -> UseTimeFieldInput
+- is_in_picker/focus_manager/open -> DateFieldOptions.picker: Option<DateFieldPicker{overlay,focus_manager}>
+- use_date_picker_group(el,bool,open) -> UseDatePickerGroupInput{element,arrow_keys:GroupArrowKeys,overlay}
+- use_date_picker(input,state,group) -> UseDatePickerInput{state,group,options:DatePickerOptions}
+- use_date_range_picker -> UseDateRangePickerInput
+- use_date_segment(seg,data,el) -> UseDateSegmentInput{segment,data,element}
+- state format options Signals
+- DatePickerState/DateRangePickerState granularity + has_time Signals
+- DateField/TimeField/DatePicker/DateRangePicker placeholder_value/granularity/hour_cycle MaybeProp, hide_time_zone/should_force_leading_zeros Signal<bool>, +auto_complete
+- DateTimeFormatOptions hour12 -> hour_cycle Option<HourCycle>, -time_zone (format_zoned), PartialEq
+- HourCycle in utils::date_time_formatter (re-exported by datepicker)
+- new exports CalendarMonthPicker, CalendarYearPicker, use_hidden_date_input. Book demo fixes: hooks/demos/{calendar_single,calendar_range,calendar_unavailable,date_field,time_field,date_picker}.rs.
+#### slider-color
+- get_channel_value/range/name/format_options, get_display_color, get_area_gradient -> without get_
+- get_color_space_axes tuple -> color_space_axes -> ColorSpaceAxes
+- format_channel_value(ch) -> (ch, &Locale)
+- HSV.value/with_value -> brightness/with_brightness
+- RGB8::from_hex -> parse::<RGB8>()
+- into_rgb8/into_hsv removed (to_rgb8()/From)
+- ColorWheel + UseColorWheelStateInput lose channel
+- ColorSlider group on ColorSliderTrack
+- SliderMark.name MaybeProp<String>
+- ComputedSliderMark{percentage,value,name:Option<String>} + is_in_range()
+- UseSliderInput.aria_details
+- UseSliderThumbInput.aria_errormessage/aria_details
+- Slider props is_required, aria_describedby, aria_details
+- SliderThumb props is_required, is_invalid, aria_describedby, aria_errormessage, aria_details
+- UseColorAreaInputProps/UseColorWheelInputProps on_change -> on_input
+- color field state/hook generic.
+#### widgets
+- LinkButton atom removed (book uses Link in pages/welcome.rs AtomLink, err404.rs, atoms/demos/link_button.rs
+- link/button pages, changelog, ApiTable need rewrite)
+- UseTabReturn.tab_props->props
+- UseTabPanelReturn.tab_panel_props->props
+- UseTabPanelInput +aria_describedby +aria_details
+- UseTabListInput/UseToolbarInput/UseSeparatorInput.orientation Signal<Orientation>
+- atoms Tabs/Toolbar/Separator orientation into Signal
+- Separator +id +aria_labelledby
+- UseVisuallyHiddenInput.is_focusable Signal<bool> (atom too)
+- UseProgressBarReturn.percentage Signal<Option<Fraction>> (.as_percent())
+- Button +is_pending + callbacks + auto_focus + prevent_focus_on_press, data-pending
+- use_button +is_pending, id/form attrs Option<String>
+- ThemeProvider +classes, class leptonic-ThemeProvider
+- Tab +is_disabled
+- TabPanels atom
+- TabPanel +aria_describedby/details
+- utils::fraction::Fraction.
+#### misc (coordinator)
+- utils::visually_hidden::visually_hidden_fixed_styles() (new; used by use_hidden_date_input)
+- use_move/use_press: see leptonic-dd's earlier message (use_move re-ported: no axis/constrained mode, UseMoveReturn { props })
+#### later (the six failing tests)
+- ToggleOptions.validation_behavior: ValidationBehavior (default Aria) -> Option<ValidationBehavior> (default None)
+
+
 ## Finished roadmap items
 
 ### R1. Bugs and crash risks (audit §2.1, §3, §1.2 "Bugs")
@@ -558,6 +791,50 @@ with the unused Leptos 0.6 `utils::signals`, `educe`, `indoc`, `leptos_meta`, `r
 modules (they compiled always), `icondata` is optional with `components`, `leptonic-theme` reruns its build when its
 SCSS changes.
 
+Clipboard (2026-10-07, for the book's "Copy as Markdown"): `utils::clipboard::write_text_deferred` writes text that
+is still loading: called in the press handler, it issues `navigator.clipboard.write` with a `ClipboardItem` whose
+text is a promise (Safari keeps the user activation for it), completed when the future gives the text
+(`ClipboardError::NoText` when it gives none). Test `clipboard_write_tests` (CDP grants clipboard read).
+
+`syntect` (2026-10-07): `default-fancy` replaced by `default-syntaxes`, `html` and `regex-fancy` (no theme dumps,
+plist or YAML loaders: the library only highlights with the bundled syntaxes into classed HTML).
+
+Components layer removed (2026-10-07, the user's decision; steps: default classes `leptonic-<AtomName>`, the atom
+theme, the book off `leptonic::components` (book session), the deletion): `leptonic/src/components/`, the features
+`components`, `tiptap`, `sanitize`, `themes` and the deps `icondata`, `leptos-tiptap`, `ammonia`, `ordered-float`;
+`full` = hooks, atoms, clipboard, syntax-highlight; `ToStaticStrRepr` and `OptionDeref` (std's `Option::as_deref`);
+the component stylesheets and themes in `leptonic-theme` (`leptonic-themes.scss` is no longer generated, the theme
+crate copies only the atom theme); `documentation/components-implementation.md`. The starter templates
+(`examples/leptonic-template-*`) were ported to atoms + the atom theme (the user's decision) and got the
+`.cargo/config.toml` leptonic needs. What replaced each component (decided 2026-10-07):
+  - covered by atoms already, the component goes: `Button`, `Link`/`LinkButton` (atoms `Link`, `AnchorLink`,
+    `LinkButton`), `Checkbox`, `Radio`, `Switch`, `TextField`, `NumberField`, `Slider`, `Select` (incl. multiple
+    selection: `SelectMode`), `Tabs`/`Tab`, `Table`, `Meter`, `ProgressBar`, `Separator`, `Modal`, `Popover`,
+    `DateSelector`/`DatePicker` (Calendar/DatePicker atoms), `ColorPicker`, `Collapsible` (`Disclosure`),
+    `Toasts`/`ToastRoot` (`ToastRegion` + `Toast` atoms on a `ToastQueue`), `Kbd`/`KbdShortcut` (`ShortcutKeys`
+    for a `Shortcut` in the platform's form, `Keys` for literal keys);
+  - layout and decoration only, gone (plain markup + CSS; the book shows recipes): `Card`, `Stack`, `Grid`, `Tile`,
+    `Skeleton`, `Typography`, `AppBar` (a `<header>`), `Drawer` (modal atoms + CSS), `Alert` (`role="alert"`
+    markup), `Icon` (use `leptos_icons`), the transitions (atoms expose `data-entering`/`data-exiting` like RAC;
+    animate with CSS);
+  - `Root`: gone; `ThemeProvider` + `ToastRegion` cover it, `--leptonic-vh` is replaced by `dvh` units;
+  - `Code`: gone; `utils::syntax_highlight` (feature `syntax-highlight`) and the clipboard util stay;
+  - `Chip`: gone; the `TagGroup`/`Tag` atoms replace it (done 2026-10-07);
+  - `TiptapEditor` (feature `tiptap`) and `SanitizedHtml` (feature `sanitize`): gone with their features (use
+    `leptos-tiptap` / `ammonia` directly).
+
+Date/time fixes (2026-10-07, from the fidelity review's leftovers):
+- 12-hour times use the locale's own 12-hour clock: `HourCycle::H12`/`H24` map to ICU4X's `Clock12`/`Clock24`
+  (`Intl`'s `hour12`), so ja-JP shows "午前0:30" (h11), not "12" (unit tests in `datepicker/format.rs`).
+- Day periods are AM/PM as in `Intl`: ICU4X's data gives German hour-only 12-hour times CLDR's flexible day periods
+  (`h 'Uhr' B`: "nachts"); a `B` field's text is replaced with the locale's AM/PM name (formatted from an `a`
+  pattern). `names_the_day_periods_of_the_locale` passes again. Browser test `twelve_hour_clocks`
+  (`date_picker_tests`: de-DE minute and hour, ja-JP). ICU4X 2.2 can't format the `B` field at all (a literal "B"),
+  and the apps' lockfiles still had 2.2: the library now requires ICU4X `2.3` (all `icu_*` crates).
+- Not a bug: "a date field's placeholder (`V::today()`) gives a different `aria-valuemax` on server and client".
+  Segment limits don't depend on the placeholder (the day's maximum is a constant, as react-stately's
+  `getMaximumDaysInMonth()`); a browser test with the client's clock set to another month confirmed it.
+
 ## Resolved findings
 
 - Found by the book's re-check (2026-10-06; both done 2026-10-06: `utils::HideMode` exported, Cmd (+ Shift) +
@@ -853,4 +1130,11 @@ Field, Time Field, Color Field/Slider/Wheel, Alert, Toast, ...) get an overview 
 - Virtualizer pages (2026-10-07): `/doc/collection-state/virtualizer` (atoms `Virtualizer` and `VirtualList`, a
   10,000-option ListBox demo and a log demo following its end) and `/doc/collection-state/use-virtualizer-state`
   (the three hooks, `Layout`, `LayoutInfo`, a 100,000-row hook demo), linked from the ListBox pages.
+- Off the components layer (2026-10-07): A — shell, kit (`Code`, `Keys`, `Icon`, `Link`, `DocTable`) and pages on
+  atoms + book styles, `Root` → `ThemeProvider` + the book's toast queue; B — Component tabs removed (redirects to the
+  atom pages' `#styling`), every demo on atoms + book CSS, styling sections on every atom page, recipes for the layout
+  pieces, Chip → Tag Group, Kbd one atom page, Transitions removed, component stylesheet and `ComponentDemoContexts`
+  removed; C — guides, changelog ("Removed: the components layer"), landing page, sidebar markers H/A, strategy and
+  style guide describe hooks + atoms + the optional atom theme. "Copy as Markdown" downloads only on press (5-minute
+  cache) and writes with `write_text_deferred`.
 

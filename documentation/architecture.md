@@ -1,8 +1,8 @@
 # Leptonic Architecture
 
-See CLAUDE.md for the layer overview, feature flags, theme system, and build system. Leptonic is becoming hooks +
-atoms + an optional CSS theme for the atoms (the components layer is being removed, see `PLAN.md`). This document
-shows how the two remaining layers are used; the implementation patterns are in `hooks-implementation.md` (incl.
+See CLAUDE.md for the layer overview, feature flags, theme system, and build system. Leptonic is hooks + atoms + an
+optional CSS theme for the atoms (the styled components layer was removed on 2026-10-07). This document shows how
+the two layers are used; the implementation patterns are in `hooks-implementation.md` (incl.
 form validation and animation hooks) and `atoms-implementation.md`.
 
 ## Layer Examples

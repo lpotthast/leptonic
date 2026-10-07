@@ -438,7 +438,10 @@ fn TableHeaderSections() -> impl IntoView {
                         <tr {..use_table_header_row().into_attrs()}>
                             {cells.into_iter().map(|(key, kind)| match kind {
                                 NodeKind::Placeholder => view! {
-                                    <th {..use_table_header_placeholder(&data, &key).into_attrs()}></th>
+                                    <th {..use_table_header_placeholder(UseTableHeaderPlaceholderInput {
+                                        table: data.clone(),
+                                        key,
+                                    }).into_attrs()}></th>
                                 }.into_any(),
                                 _ => view! { <ColumnHeader table=data.clone() column=key/> }.into_any(),
                             }).collect_view()}
@@ -451,8 +454,9 @@ fn TableHeaderSections() -> impl IntoView {
         <Section title="use_table_header_placeholder">
             <p>
                 "With column groups, a header row has empty cells above the columns that aren\u{2019}t in a group of that "
-                "level (adjacent ones are merged). "<Code inline=true>"use_table_header_placeholder(&data, &key)"</Code>
-                " returns their props: "<Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-colindex"</Code>
+                "level (adjacent ones are merged). "<Code inline=true>"use_table_header_placeholder"</Code>" takes a "
+                <Code inline=true>"UseTableHeaderPlaceholderInput { table, key }"</Code>" (the table data and the "
+                "placeholder\u{2019}s key) and returns their props: "<Code inline=true>"role=\"gridcell\""</Code>", "<Code inline=true>"aria-colindex"</Code>
                 ", and "<Code inline=true>"aria-colspan"</Code>" with "<Code inline=true>"colspan"</Code>" when they span "
                 "several columns. Placeholders can\u{2019}t be focused."
             </p>
@@ -615,14 +619,18 @@ fn TableBodySections() -> impl IntoView {
         <Section title="use_table_selection_checkbox">
             <p>
                 "With "<Code inline=true>"show_selection_checkboxes"</Code>", cell 0 of every row holds a checkbox "
-                "selecting the row. "<Code inline=true>"use_table_selection_checkbox(&data, row_key)"</Code>" returns a "
+                "selecting the row. "<Code inline=true>"use_table_selection_checkbox"</Code>" takes a "
+                <Code inline=true>"UseTableSelectionCheckboxInput { table, key }"</Code>" (the row\u{2019}s key) and returns a "
                 <Code inline=true>"UseCheckboxInput"</Code>" for "<Link href=routes::doc::checkbox::Hook.materialize()>"use_checkbox"</Link>
                 ": checked while the row is selected, disabled when it can\u{2019}t be selected, and labelled "
                 "\u{201c}Select\u{201d} plus the row\u{2019}s row header cells (\u{201c}Select Dune\u{201d})."
             </p>
             <Code language=Language::Rust>
                 {indoc!(r"
-                    let checkbox = use_checkbox(use_table_selection_checkbox(&data, key.clone()));
+                    let checkbox = use_checkbox(use_table_selection_checkbox(UseTableSelectionCheckboxInput {
+                        table: data.clone(),
+                        key: key.clone(),
+                    }));
                     let (attrs, styles) = checkbox.input_props.into_parts();
                     view! {
                         <Cell table=data.clone() key=Key::cell(&key, 0)>
@@ -635,7 +643,7 @@ fn TableBodySections() -> impl IntoView {
 
         <Section title="use_table_select_all_checkbox">
             <p>
-                <Code inline=true>"use_table_select_all_checkbox(&data)"</Code>" returns the "<Code inline=true>"UseCheckboxInput"</Code>
+                <Code inline=true>"use_table_select_all_checkbox(UseTableSelectAllCheckboxInput { table })"</Code>" returns the "<Code inline=true>"UseCheckboxInput"</Code>
                 " of the \u{201c}select all\u{201d} checkbox in the header of the checkbox column: checked when every "
                 "selectable row is selected, indeterminate when some are, labelled \u{201c}Select All\u{201d}. It is "
                 "disabled unless the table has rows and allows multiple selection; with single selection, leave the "
@@ -829,7 +837,7 @@ fn TableResizingSections() -> impl IntoView {
                 "press "<Keys keys="Enter"/>" and resize with the arrow keys. Render the resizer element inside the column "
                 "header and the input inside the resizer. The input is the header\u{2019}s first focusable child, so "
                 "moving onto the header with the arrow keys focuses it. While a column is resized, the table ignores "
-                "the arrow keys. The resizer\u{2019}s texts are English: its label \u{201c}Resizer\u{201d}, the value "
+                "the arrow keys. You give the resizer its label; its other texts are English: the value "
                 "\u{201c}120 pixels\u{201d} and the description \u{201c}Press Enter to start resizing\u{201d}."
             </p>
 
@@ -842,8 +850,8 @@ fn TableResizingSections() -> impl IntoView {
                     <ApiRow name="state" ty="TableColumnResizeState">"From "<Code inline=true>"use_table_column_resize_state"</Code>"."</ApiRow>
                     <ApiRow name="table" ty="TableData">"From "<Code inline=true>"use_table"</Code>". The input is labelled by the column header too."</ApiRow>
                     <ApiRow name="column" ty="Key">"The column this resizer resizes."</ApiRow>
-                    <ApiRow name="aria_label" ty="String" default="\"Resizer\"">
-                        "The input\u{2019}s label. Its "<Code inline=true>"aria-labelledby"</Code>" adds the column "
+                    <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
+                        "The input\u{2019}s label, e.g. \u{201c}Resizer\u{201d}. Its "<Code inline=true>"aria-labelledby"</Code>" adds the column "
                         "header: \u{201c}Resizer Name\u{201d}."
                     </ApiRow>
                     <ApiRow name="element" ty="CapturedElement">"The range input. The input props capture it."</ApiRow>

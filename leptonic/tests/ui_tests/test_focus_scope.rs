@@ -23,22 +23,23 @@ impl BrowserTest<str> for FocusScopeTests {
 
         // Each test navigates to the page fresh to avoid state leakage
         // (e.g., a containing scope staying active from a previous test).
-        if let Err(e) = test_auto_focus(&page).await { eprintln!("TEMPFAIL test_auto_focus: {e:?}"); }
-        if let Err(e) = test_tab_wrapping(&page).await { eprintln!("TEMPFAIL test_tab_wrapping: {e:?}"); }
-        if let Err(e) = test_shift_tab_wrapping(&page).await { eprintln!("TEMPFAIL test_shift_tab_wrapping: {e:?}"); }
-        if let Err(e) = test_focus_restoration(&page).await { eprintln!("TEMPFAIL test_focus_restoration: {e:?}"); }
-        if let Err(e) = test_nested_scopes(&page).await { eprintln!("TEMPFAIL test_nested_scopes: {e:?}"); }
-        if let Err(e) = test_containment_blocks_escape(&page).await { eprintln!("TEMPFAIL test_containment_blocks_escape: {e:?}"); }
-        if let Err(e) = test_outer_to_inner_navigation(&page).await { eprintln!("TEMPFAIL test_outer_to_inner_navigation: {e:?}"); }
-        if let Err(e) = test_nested_restore_focuses_outermost(&page).await { eprintln!("TEMPFAIL test_nested_restore_focuses_outermost: {e:?}"); }
-        if let Err(e) = test_restore_fallback(&page).await { eprintln!("TEMPFAIL test_restore_fallback: {e:?}"); }
-        if let Err(e) = test_dialog_from_menu(&page).await { eprintln!("TEMPFAIL test_dialog_from_menu: {e:?}"); }
-        if let Err(e) = test_restore_on_blur(&page).await { eprintln!("TEMPFAIL test_restore_on_blur: {e:?}"); }
-        if let Err(e) = test_select_on_tab(&page).await { eprintln!("TEMPFAIL test_select_on_tab: {e:?}"); }
-        if let Err(e) = test_tab_outside_the_scope_is_native(&page).await { eprintln!("TEMPFAIL test_tab_outside_the_scope_is_native: {e:?}"); }
-        if let Err(e) = test_runtime_contain(&page).await { eprintln!("TEMPFAIL test_runtime_contain: {e:?}"); }
-        if let Err(e) = test_cancelled_restore(&page).await { eprintln!("TEMPFAIL test_cancelled_restore: {e:?}"); }
-        if let Err(e) = test_tab_out_of_restoring_scope(&page).await { eprintln!("TEMPFAIL test_tab_out_of_restoring_scope: {e:?}"); }
+        test_auto_focus(&page).await?;
+        test_tab_wrapping(&page).await?;
+        test_shift_tab_wrapping(&page).await?;
+        test_focus_restoration(&page).await?;
+        test_nested_scopes(&page).await?;
+        test_containment_blocks_escape(&page).await?;
+        test_outer_to_inner_navigation(&page).await?;
+        test_nested_restore_focuses_outermost(&page).await?;
+        test_restore_fallback(&page).await?;
+        test_dialog_from_menu(&page).await?;
+        test_restore_on_blur(&page).await?;
+        test_select_on_tab(&page).await?;
+        test_tab_outside_the_scope_is_native(&page).await?;
+        test_runtime_contain(&page).await?;
+        test_cancelled_restore(&page).await?;
+        test_tab_out_of_restoring_scope(&page).await?;
+
         Ok(())
     }
 }
@@ -118,14 +119,17 @@ async fn test_nested_scopes(page: &FocusScopePage<'_>) -> Result<(), Report> {
     page.goto().await?;
 
     page.click_nested_inner_btn_1().await?;
-    page.wait_for_active_id("test-fs-nested-inner-btn-1").await?;
+    page.wait_for_active_id("test-fs-nested-inner-btn-1")
+        .await?;
 
     page.send_keys_to_active(Key::Tab).await?;
-    page.wait_for_active_id("test-fs-nested-inner-btn-2").await?;
+    page.wait_for_active_id("test-fs-nested-inner-btn-2")
+        .await?;
 
     // Wraps back to inner btn-1 (stays in inner scope).
     page.send_keys_to_active(Key::Tab).await?;
-    page.wait_for_active_id("test-fs-nested-inner-btn-1").await?;
+    page.wait_for_active_id("test-fs-nested-inner-btn-1")
+        .await?;
 
     Ok(())
 }
@@ -198,7 +202,8 @@ async fn test_outer_to_inner_navigation(page: &FocusScopePage<'_>) -> Result<(),
 
     // Tab from outer button — enters the inner scope.
     page.press_tab().await?;
-    page.wait_for_active_id("test-fs-nested-inner-btn-1").await?;
+    page.wait_for_active_id("test-fs-nested-inner-btn-1")
+        .await?;
 
     Ok(())
 }
@@ -271,7 +276,10 @@ async fn test_restore_on_blur(page: &FocusScopePage<'_>) -> Result<(), Report> {
 /// Upstream: "should select all text in input when tabbing".
 async fn test_select_on_tab(page: &FocusScopePage<'_>) -> Result<(), Report> {
     page.goto().await?;
-    page.element("test-fs-select-input-1").await?.click().await?;
+    page.element("test-fs-select-input-1")
+        .await?
+        .click()
+        .await?;
     page.wait_for_active_id("test-fs-select-input-1").await?;
     for next in [
         "test-fs-select-input-2",
@@ -333,7 +341,8 @@ async fn test_runtime_contain(page: &FocusScopePage<'_>) -> Result<(), Report> {
 
     // Not containing again: Tab leaves the scope.
     page.send_keys_to_active(Key::Enter).await?;
-    page.wait_for_text("test-fs-runtime-toggle", "Contain").await?;
+    page.wait_for_text("test-fs-runtime-toggle", "Contain")
+        .await?;
     page.send_keys_to_active(Key::Tab).await?;
     page.wait_for_active_id("test-fs-runtime-2").await?;
     page.send_keys_to_active(Key::Tab).await?;

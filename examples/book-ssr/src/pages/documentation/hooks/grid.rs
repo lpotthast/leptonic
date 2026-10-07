@@ -111,11 +111,13 @@ pub fn PageUseGrid() -> impl IntoView {
                             ": collection, selection and focus."
                         </ApiRow>
                         <ApiRow name="focus_mode" ty="GridFocusMode">"The focus mode."</ApiRow>
-                        <ApiRow name="is_keyboard_navigation_disabled" ty="RwSignal<bool>">
-                            "While "<Code inline=true>"true"</Code>" (e.g. while a table column is resized), the grid ignores "
-                            "navigation keys."
-                        </ApiRow>
                     </ApiTable>
+                    <p>
+                        <Code inline=true>"set_keyboard_navigation_disabled(true)"</Code>" lets the grid ignore navigation keys "
+                        "(e.g. while the arrow keys resize a table column), "<Code inline=true>"false"</Code>" handles them again; "
+                        <Code inline=true>"is_keyboard_navigation_disabled()"</Code>" reads it as a "<Code inline=true>"Signal<bool>"</Code>
+                        " (for tables also "<Code inline=true>"true"</Code>" while they have no rows)."
+                    </p>
                 </Section>
             </Section>
 

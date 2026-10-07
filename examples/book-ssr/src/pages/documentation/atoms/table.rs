@@ -156,9 +156,9 @@ pub fn PageAtomTable() -> impl IntoView {
                         <ApiRow name="disabled_keys" ty="Option<Signal<HashSet<Key>>>" default="None">
                             "Rows that can\u{2019}t be selected, besides rows built with "<Code inline=true>".disabled(true)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="disabled_behavior" ty="Option<DisabledBehavior>" default="None">
-                            <Code inline=true>"None"</Code>" means "<Code inline=true>"Selection"</Code>": disabled rows can be "
-                            "focused, not selected. "<Code inline=true>"All"</Code>": they can\u{2019}t be focused either."
+                        <ApiRow name="disabled_behavior" ty="DisabledBehavior" default="Selection">
+                            <Code inline=true>"Selection"</Code>": disabled rows can be focused, not selected. "
+                            <Code inline=true>"All"</Code>": they can\u{2019}t be focused either."
                         </ApiRow>
                         <ApiRow name="disallow_empty_selection" ty="bool" default="false">"Keep at least one row selected."</ApiRow>
                         <ApiRow name="escape_key_behavior" ty="EscapeKeyBehavior" default="ClearSelection">"What Escape does."</ApiRow>
@@ -174,6 +174,9 @@ pub fn PageAtomTable() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="keyboard_navigation_behavior" ty="KeyboardNavigationBehavior" default="Arrow">
                             "How the keyboard reaches interactive elements inside cells."
+                        </ApiRow>
+                        <ApiRow name="should_select_on_press_up" ty="bool" default="false">
+                            "Selects rows when a press ends instead of when it starts (e.g. for draggable rows)."
                         </ApiRow>
                         <ApiRow name="on_row_action, on_cell_action" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of an activated row or cell."
@@ -235,8 +238,13 @@ pub fn PageAtomTable() -> impl IntoView {
                             "What gets focus: the cell, or its first focusable child. "<Code inline=true>"None"</Code>": the child, "
                             "or the cell with "<Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
                         </ApiRow>
+                        <ApiRow name="allows_arrow_navigation" ty="bool" default="false">
+                            "Lets "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" move between the cell\u{2019}s children (and "
+                            <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" between rows) even with "
+                            <Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
+                        </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<td>"</Code>"."</ApiRow>
-                        <ApiRow name="children" ty="Option<Children>" default="None">"The cell\u{2019}s content."</ApiRow>
+                        <ApiRow name="children" ty="Option<ChildrenFn>" default="None">"The cell\u{2019}s content."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -253,13 +261,14 @@ pub fn PageAtomTable() -> impl IntoView {
                 </p>
                 <Section title="Props" id="resizable-table-container-props">
                     <ApiTable kind=ApiKind::Props of="ResizableTableContainer">
-                        <ApiRow name="on_resize_start" ty="Option<Callback<HashMap<Key, ColumnSize>>>" default="None">
-                            "Called with the size of every column when the user starts resizing a column."
+                        <ApiRow name="on_resize_start" ty="Option<Callback<ColumnSizes>>" default="None">
+                            "Called with the size of every column when the user starts resizing a column. "
+                            <Code inline=true>"ColumnSizes"</Code>" is a "<Code inline=true>"HashMap<Key, ColumnSize>"</Code>"."
                         </ApiRow>
-                        <ApiRow name="on_resize" ty="Option<Callback<HashMap<Key, ColumnSize>>>" default="None">
+                        <ApiRow name="on_resize" ty="Option<Callback<ColumnSizes>>" default="None">
                             "Called with the sizes whenever a column is resized."
                         </ApiRow>
-                        <ApiRow name="on_resize_end" ty="Option<Callback<HashMap<Key, ColumnSize>>>" default="None">
+                        <ApiRow name="on_resize_end" ty="Option<Callback<ColumnSizes>>" default="None">
                             "Called with the sizes when resizing ends. Columns before the resized one are reported in pixels; "
                             "the columns after it keep their sizes."
                         </ApiRow>
@@ -333,6 +342,14 @@ pub fn PageAtomTable() -> impl IntoView {
                         "On "<Code inline=true>"TableRow"</Code>": the row is disabled. Only with "
                         <Code inline=true>"DisabledBehavior::All"</Code>"; with the default "<Code inline=true>"Selection"</Code>
                         ", a disabled row only shows through its disabled checkbox."
+                    </ApiRow>
+                    <ApiRow name="data-focus-visible" ty="true">
+                        "On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: it has "
+                        "keyboard focus, which should be shown."
+                    </ApiRow>
+                    <ApiRow name="data-hovered" ty="true">
+                        "On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: a "
+                        "pointer is over it."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"TableRow"</Code>", "<Code inline=true>"TableCell"</Code>" and column headers: being pressed."</ApiRow>
                     <ApiRow name="data-resizing" ty="true">

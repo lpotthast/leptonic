@@ -17,10 +17,12 @@ pub fn PageUseOverlayTrigger() -> impl IntoView {
 
             <Section title="Input">
                 <ApiTable kind=ApiKind::Input of="UseOverlayTriggerInput">
-                    <ApiRow name="show" ty="Signal<bool>">"Whether the overlay is shown. Required."</ApiRow>
-                    <ApiRow name="overlay_id" ty="Oco<'static, str>">
+                    <ApiRow name="is_open" ty="Signal<bool>">"Whether the overlay is open. Required."</ApiRow>
+                    <ApiRow name="overlay_id" ty="String">
                         "The overlay\u{2019}s id, as returned by "
-                        <Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>". Required."
+                        <Link href=routes::doc::overlay_behavior::UseOverlay.materialize()>"use_overlay"</Link>" or "
+                        <Link href=routes::doc::popover::Hook.materialize()>"use_popover"</Link>": the trigger\u{2019}s "
+                        <Code inline=true>"aria-controls"</Code>" while the overlay is open. Required."
                     </ApiRow>
                     <ApiRow name="overlay_type" ty="OverlayTriggerType">
                         "What the trigger opens: "<Code inline=true>"Dialog"</Code>", "<Code inline=true>"Menu"</Code>", "

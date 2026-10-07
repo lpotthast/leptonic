@@ -1,8 +1,8 @@
 # Leptonic: guiding decisions and API conventions
 
 Long-term rules for the library (moved out of `PLAN.md`, which holds open work only). `CLAUDE.md` has the
-working rules for agents; `documentation/hooks-implementation.md`, `atoms-implementation.md` and
-`components-implementation.md` the implementation patterns.
+working rules for agents; `documentation/hooks-implementation.md` and `atoms-implementation.md` the implementation
+patterns.
 
 ## Guiding decisions
 
@@ -26,12 +26,12 @@ working rules for agents; `documentation/hooks-implementation.md`, `atoms-implem
 - **Tests are the definition of done.** Pure logic and `*_state` hooks get native unit tests (`testing::with_owner`
   runs their Effects). DOM behavior gets browser tests against `testing/test-app`, derived from react-aria's own
   tests. A hook without a test is not finished.
-- **Docs follow code.** Every hook, atom and component change gets its book-ssr page updated: the library session
+- **Docs follow code.** Every hook and atom change gets its book-ssr page updated: the library session
   sends the new API to the book session, which updates pages, API tables and demos (`CLAUDE.md`, "Working in
   Parallel").
 - **No styled components** (the user's decision, 2026-10-07): leptonic is hooks + atoms. Pre-built, opinionated
   components aren't reusable enough to justify their public surface (apps style atoms themselves, quickly); the
-  `components` layer goes. Kept: an optional CSS theme for the atoms, targeting their default class names and data
+  `components` layer was removed (2026-10-07). Kept: an optional CSS theme for the atoms, targeting their default class names and data
   attributes (as react-aria-components' starter styles target `.react-aria-*` classes). Kept and maintained (the user
   confirmed 2026-10-07, after a doubt about the cost); the book styles the atoms itself.
 - **Default classes** (2026-10-07): every atom rendering its own element starts with
@@ -48,7 +48,7 @@ working rules for agents; `documentation/hooks-implementation.md`, `atoms-implem
 
 ## API conventions (decided 2026-10-05, audit §1)
 
-Every hook, atom and component follows these (the remaining migrations are items in `PLAN.md`). The short table in
+Every hook and atom follows these (the remaining migrations are items in `PLAN.md`). The short table in
 `documentation/hooks-implementation.md` ("API Conventions") and the global entries in `hooks/mod.rs` summarize them;
 per-hook deviation blocks only list what goes beyond them.
 
@@ -62,7 +62,7 @@ per-hook deviation blocks only list what goes beyond them.
   (`set_value`, `toggle`, ...), not `*StateReturn` structs of `Callback` fields with tuple arguments. Reason: methods
   are discoverable, typed and cheap; callbacks-as-getters are a JS props-bag shape.
 - **C4 Hook-owned state:** hooks: `default_*` + `on_*_change` + state methods, or a `ValueBinding` to app state; the
-  mutation path stays the hook's. Atoms and components (the user's rule, 2026-10-06): controlled state as two props,
+  mutation path stays the hook's. Atoms (the user's rule, 2026-10-06): controlled state as two props,
   a readable `<x>` (`#[prop(into)]`: value, any signal, closure) and `set_<x>: Out<T>` (RwSignal, WriteSignal,
   StoredValue, closure, Callback; for `is_<x>` the setter is `set_<x>`), never one combined binding; uncontrolled `default_<x>` + `on_<x>_change`.
   `is_invalid: Signal<bool>` is OR-ed into the validation state (no `Option<Signal<bool>>` where `Some(false)` forces

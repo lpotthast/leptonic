@@ -300,9 +300,12 @@ pub fn use_date_picker_group(
     )
 }
 
-/// The tabbable segments of a field, in document order.
+/// The tabbable elements of a group (its segments, a picker's button), in document order.
 fn tabbable_segments(group: &web_sys::Element) -> Vec<web_sys::Element> {
-    let Ok(candidates) = group.query_selector_all("[tabindex]") else {
+    // Segments, and a picker's button (react-aria: a tabbable tree walker over the group).
+    let Ok(candidates) =
+        group.query_selector_all("[tabindex], button, input, select, textarea, a[href]")
+    else {
         return Vec::new();
     };
     (0..candidates.length())

@@ -7,10 +7,11 @@ use crate::{kit::*, routes};
 #[allow(clippy::too_many_lines)]
 pub fn PageArchitecture() -> impl IntoView {
     view! {
-        <DocPage title="Hooks, Atoms & Components">
+        <DocPage title="Hooks & Atoms">
             <p>
-                "Leptonic is built in three layers. Most concepts (a button, a select, a table) are available as a hook, "
-                "many also as an atom and as a component: pick the layer that gives you the control you need. The "
+                "Leptonic is built in two layers. Most concepts (a button, a select, a table) are available as a hook and "
+                "as an atom: pick the layer that gives you the control you need. Neither brings styles; you style atoms "
+                "with your own CSS, or start from the optional atom theme. The "
                 <Link href=routes::doc::Overview.materialize()>"Overview"</Link>" explains how this book presents the "
                 "layers of a concept."
             </p>
@@ -27,18 +28,24 @@ pub fn PageArchitecture() -> impl IntoView {
                     </TableRow>
                     <TableRow>
                         <TableCell><b>"Atom"</b></TableCell>
-                        <TableCell>"A single semantic HTML element with the hook\u{2019}s behavior built in. No styling."</TableCell>
-                        <TableCell>"Correct semantics and accessibility out of the box, styled by your own CSS."</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell><b>"Component"</b></TableCell>
-                        <TableCell>"Themed, feature-rich UI with colors, variants and CSS variables."</TableCell>
-                        <TableCell>"Standard UI. Use components unless you need more control."</TableCell>
+                        <TableCell>
+                            "A semantic HTML element with the hook\u{2019}s behavior built in, a default class and data "
+                            "attributes for its state. No styling."
+                        </TableCell>
+                        <TableCell>
+                            "Correct semantics and accessibility out of the box, styled by your own CSS. Use atoms unless "
+                            "you need more control."
+                        </TableCell>
                     </TableRow>
                 </DocTable>
                 <p>
-                    "Each layer is a cargo feature that includes the layers below it; see "
-                    <Link href=format!("{}#feature-flags", routes::doc::Installation.materialize())>"Feature Flags"</Link>"."
+                    "Each layer is a cargo feature; "<Code inline=true>"atoms"</Code>" includes "<Code inline=true>"hooks"</Code>
+                    ". See "<Link href=format!("{}#feature-flags", routes::doc::Installation.materialize())>"Feature Flags"</Link>"."
+                </p>
+                <p>
+                    "Parts of a page without behavior, such as cards, stacks or an app bar, need no leptonic piece: build them "
+                    "from HTML elements and CSS. The "<Link href=format!("{}#recipes", routes::doc::Layout.materialize())>"recipes"</Link>
+                    " of Content & Layout show how."
                 </p>
             </Section>
 
@@ -170,52 +177,68 @@ pub fn PageArchitecture() -> impl IntoView {
             <Section title="Atoms">
                 <p>
                     "Atoms are unstyled Leptos components that render a single HTML element with a hook\u{2019}s behavior. "
-                    "They give you accessibility without manual hook setup, expose their state as "
-                    <Code inline=true>"data-*"</Code>" attributes for your CSS ("<Code inline=true>"data-pressed"</Code>", "
-                    <Code inline=true>"data-focus-visible"</Code>", \u{2026}), and fit into any design system."
+                    "They give you accessibility without manual hook setup and fit into any design system. A concept made of "
+                    "several elements (a select with its trigger, popover and list box) is a family of atoms that you compose "
+                    "in your markup, adding elements of your own where you like."
                 </p>
 
                 <Code language=Language::Rust>
                     {indoc!(r#"
-                        use leptonic::atoms::prelude as atoms;
+                        use leptonic::atoms::prelude::Button;
 
                         view! {
-                            <atoms::Button classes="my-button" on_press=move |_| { /* handle press */ }>
-                                "My headless button"
-                            </atoms::Button>
-                        }
-                    "#)}
-                </Code>
-            </Section>
-
-            <Section title="Components">
-                <p>
-                    "Components are ready-made, themed UI built on atoms and hooks. They carry leptonic\u{2019}s CSS classes "
-                    "and data attributes for their look ("<Code inline=true>"data-variant"</Code>", "
-                    <Code inline=true>"data-color"</Code>", "<Code inline=true>"data-size"</Code>") and are styled by the "
-                    <Link href=routes::doc::Themes.materialize()>"themes"</Link>"."
-                </p>
-
-                <Code language=Language::Rust>
-                    {indoc!(r#"
-                        use leptonic::components::prelude::*;
-
-                        view! {
-                            <Button
-                                on_press=move |_| { /* handle press */ }
-                                variant=ButtonVariant::Outlined
-                                color=ButtonColor::Success
-                            >
+                            <Button classes="save-button" on_press=move |_| { /* handle press */ }>
                                 "Save"
                             </Button>
                         }
                     "#)}
                 </Code>
+
+                <Section title="Styling Atoms">
+                    <p>
+                        "Atoms bring no styles. They give your CSS three things to select:"
+                    </p>
+                    <ul>
+                        <li>
+                            <b>"A default class"</b>", "<Code inline=true>"leptonic-<AtomName>"</Code>" (the "
+                            <Code inline=true>"Button"</Code>" atom renders "<Code inline=true>"class=\"leptonic-Button\""</Code>
+                            "), followed by the "<Code inline=true>"classes"</Code>" you pass. Style every instance through the "
+                            "default class, or a single one through a class of your own; see "
+                            <Link href=routes::doc::ClassesAndStyles.materialize()>"Classes & Styles"</Link>"."
+                        </li>
+                        <li>
+                            <b>"Data attributes"</b>" for their state: "<Code inline=true>"data-pressed"</Code>", "
+                            <Code inline=true>"data-hovered"</Code>", "<Code inline=true>"data-focus-visible"</Code>", "
+                            <Code inline=true>"data-selected"</Code>", "<Code inline=true>"data-disabled"</Code>", \u{2026}, "
+                            "present while the state holds. Select them instead of tracking state in classes."
+                        </li>
+                        <li>
+                            <b>"Your own markup"</b>" inside them, for parts that are pure decoration: the box of a checkbox, "
+                            "the track of a switch, the caret of a select. Mark it "<Code inline=true>"aria-hidden"</Code>"."
+                        </li>
+                    </ul>
+
+                    <Code language=Language::Css>
+                        {indoc!(r"
+                            .leptonic-Button { padding: 0.5em 1em; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+                            .leptonic-Button[data-hovered] { border-color: var(--accent); }
+                            .leptonic-Button[data-pressed] { transform: scale(0.97); }
+                            .leptonic-Button[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+                            .leptonic-Button[data-disabled] { opacity: 0.5; }
+                        ")}
+                    </Code>
+
+                    <p>
+                        "Every atom page lists the atom\u{2019}s data attributes and has a \u{201c}Styling\u{201d} section "
+                        "with the CSS this book uses. To start from a finished look instead, use leptonic\u{2019}s optional "
+                        <Link href=format!("{}#the-atom-theme", routes::doc::Themes.materialize())>"atom theme"</Link>"."
+                    </p>
+                </Section>
             </Section>
 
             <Section title="State Props">
                 <p>
-                    "Atoms and components take their state as two props: "<Code inline=true>"x"</Code>" for the value (a "
+                    "Atoms take their state as two props: "<Code inline=true>"x"</Code>" for the value (a "
                     "plain value or any signal) and "<Code inline=true>"set_x"</Code>" to receive changes (an "
                     <Code inline=true>"RwSignal"</Code>", a "<Code inline=true>"WriteSignal"</Code>", a closure or a "
                     <Code inline=true>"Callback"</Code>", see "

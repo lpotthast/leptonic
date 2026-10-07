@@ -12,15 +12,12 @@ use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
-use crate::hooks::collections::Key;
-use crate::hooks::InputType;
-use crate::hooks::TextFieldElement;
 use crate::{
     hooks::{
-        IntoAttrs,
+        InputType, IntoAttrs, TextFieldElement,
         button::use_button::UseButtonInput,
         collections::{
-            AutoFocus, CollectionOptions, FocusStrategy, KeyboardDelegate, LinkBehavior,
+            AutoFocus, CollectionOptions, FocusStrategy, Key, KeyboardDelegate, LinkBehavior,
             ListLayout, UseListKeyboardDelegateInput, UseSelectableCollectionInput,
             use_list_keyboard_delegate, use_selectable_collection,
         },
@@ -725,11 +722,9 @@ fn announce_changes(state: &ComboBoxState) {
         let count = state.list.collection.with(|c| c.size());
         let has_focused_key = state.list.selection.focused_key().is_some();
         untrack(|| {
-            let did_open_without_focused_item = is_open != last_open.get_value()
-                && (!has_focused_key || is_apple_device());
-            if is_open
-                && (did_open_without_focused_item || last_size.get_value() != Some(count))
-            {
+            let did_open_without_focused_item =
+                is_open != last_open.get_value() && (!has_focused_key || is_apple_device());
+            if is_open && (did_open_without_focused_item || last_size.get_value() != Some(count)) {
                 announce_assertive(format!("{} available.", options(count)));
             }
             last_size.set_value(Some(count));

@@ -53,7 +53,7 @@ pub fn PageUseOverlay() -> impl IntoView {
                         <Code inline=true>"focusout"</Code>" handlers. Spread "<Code inline=true>"{..props.into_attrs()}"</Code>
                         " onto the overlay element."
                     </ApiRow>
-                    <ApiRow name="id" ty="Oco<'static, str>">
+                    <ApiRow name="id" ty="String">
                         "The overlay\u{2019}s id. Pass it to "
                         <Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>
                         " as "<Code inline=true>"overlay_id"</Code>"."

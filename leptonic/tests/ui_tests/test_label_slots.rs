@@ -41,27 +41,24 @@ impl BrowserTest<str> for LabelSlotsTests {
                 let label_id = label_id(driver, field, text).await?;
                 assert_that!(label_id.is_some()).is_equal_to(shown);
                 let labelled_by = labelled_by(driver, field, part).await?;
-                match &label_id {
-                    Some(label_id) => {
-                        assert_that!(labelled_by.split(' ').any(|id| id == label_id))
-                            .with_detail_message(format!("{field}: {labelled_by:?}"))
-                            .is_true();
-                    }
-                    None => {
-                        // Every reference resolves, and none to an element with the label's text.
-                        let referenced = referenced_texts(driver, &labelled_by).await?;
-                        assert_that!(referenced.iter().all(Option::is_some))
-                            .with_detail_message(format!("{field}: {labelled_by:?}"))
-                            .is_true();
-                        assert_that!(
-                            referenced
-                                .iter()
-                                .flatten()
-                                .any(|referenced| referenced == text)
-                        )
+                if let Some(label_id) = &label_id {
+                    assert_that!(labelled_by.split(' ').any(|id| id == label_id))
                         .with_detail_message(format!("{field}: {labelled_by:?}"))
-                        .is_false();
-                    }
+                        .is_true();
+                } else {
+                    // Every reference resolves, and none to an element with the label's text.
+                    let referenced = referenced_texts(driver, &labelled_by).await?;
+                    assert_that!(referenced.iter().all(Option::is_some))
+                        .with_detail_message(format!("{field}: {labelled_by:?}"))
+                        .is_true();
+                    assert_that!(
+                        referenced
+                            .iter()
+                            .flatten()
+                            .any(|referenced| referenced == text)
+                    )
+                    .with_detail_message(format!("{field}: {labelled_by:?}"))
+                    .is_false();
                 }
             }
             if shown {

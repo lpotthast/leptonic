@@ -33,14 +33,15 @@ pub fn PageAtomDismissButton() -> impl IntoView {
 
             <Section title="Props">
                 <ApiTable kind=ApiKind::Props of="DismissButton">
-                    <ApiRow name="on_dismiss" ty="Option<Callback<()>>" default="None">
-                        "Called when the button is activated. Close the overlay here."
+                    <ApiRow name="on_dismiss" ty="Callback<()>">
+                        "Called when the button is activated. Close the overlay here. Required."
                     </ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "The button\u{2019}s name. Without it (and without "<Code inline=true>"aria_labelledby"</Code>
                         "), the button is named \u{201c}Dismiss\u{201d}."
                     </ApiRow>
                     <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the button."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The button\u{2019}s id. Generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                 </ApiTable>
             </Section>
 

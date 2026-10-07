@@ -36,6 +36,7 @@ impl BrowserTest<str> for TableSelectionTests {
         select_on_press_down_or_up(&page).await?;
         row_actions(&page).await?;
         changing_columns(&page).await?;
+        hover_and_focus_states(&page).await?;
 
         page.expect_no_page_errors().await
     }
@@ -108,11 +109,10 @@ async fn expect_selection(
 /// perform toggle selection in highlight mode when using modifier keys" (mouse).
 async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     const REPLACE: &str = "Replace table";
-    let checkboxes = table(page, REPLACE)
-        .await?
-        .find_all(By::Css("input[type=checkbox]"))
+    let checkboxes = page
+        .count_matching("[role=grid][aria-label='Replace table'] input[type=checkbox]")
         .await?;
-    assert_that!(checkboxes.len()).is_equal_to(0);
+    assert_that!(checkboxes).is_equal_to(0);
 
     let bootmgr = row(page, REPLACE, "bootmgr").await?;
     let program_files = row(page, REPLACE, "Program Files").await?;
@@ -156,7 +156,10 @@ async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), Repo
     page.goto_path(PATH).await?;
     page.click_element_with_id("test-ts-before-replace").await?;
     page.press_tab().await?;
-    page.wait_for_focus_on(&row(page, "Replace table", "Games").await?, "the first row")
+    let games = row(page, "Replace table", "Games").await?;
+    page.wait_for_focus_on(&games, "the first row").await?;
+    // Focused by keyboard: a focus ring.
+    page.wait_for_attr(&games, "data-focus-visible", Some("true"))
         .await?;
     page.wait_for_text("test-ts-replace-selection", "1").await?;
     page.send_keys_to_active(Key::Down).await?;
@@ -186,6 +189,7 @@ async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
 /// it, a row the browser would drag doesn't lose focus to the pressed cell: the cell drops its
 /// tabindex during the pointer down (useGridCell).
 async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
+    const UP: &str = "Press up table";
     let down = row(page, "Press down table", "Games").await?;
     page.driver
         .action_chain()
@@ -197,9 +201,7 @@ async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     expect_selection(page, "press-down", "1", 1).await?;
 
-    const UP: &str = "Press up table";
     let up = row(page, UP, "Games").await?;
-    page.driver.execute("window.__ev = []; for (const t of ['pointerdown','pointerup','click','mousedown','mouseup','pointercancel']) document.addEventListener(t, e => window.__ev.push(t + ':' + (e.target.tagName) + ':' + e.defaultPrevented), true);", vec![]).await?;
     page.driver
         .action_chain()
         .click_and_hold_element(&up)
@@ -208,11 +210,9 @@ async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
     expect_selection(page, "press-up", "", 0).await?;
     page.driver.action_chain().release().perform().await?;
-    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-    let ev = page.driver.execute("return JSON.stringify(window.__ev) + ' changes=' + document.getElementById('test-ts-press-up-changes').textContent", vec![]).await?;
-    eprintln!("DEBUG EVENTS {:?}", ev.json());
     expect_selection(page, "press-up", "1", 1).await?;
 
+    // A draggable row: the browser's default focus on pointer down skips the pressed cell.
     let program_files = row(page, UP, "Program Files").await?;
     page.driver
         .execute(
@@ -221,7 +221,9 @@ async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
         )
         .await?;
     let type_cell = program_files
-        .find(By::XPath(".//*[@role='gridcell'][normalize-space(.)='File folder']"))
+        .find(By::XPath(
+            ".//*[@role='gridcell'][normalize-space(.)='File folder']",
+        ))
         .await?;
     page.driver
         .action_chain()
@@ -234,6 +236,7 @@ async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     expect_selection(page, "press-up", "2", 2).await?;
     page.wait_for_focus_on(&program_files, "the pressed row")
         .await?;
+    // The cell gets its tabindex back.
     page.wait_for_attr(&type_cell, "tabindex", Some("-1")).await
 }
 
@@ -267,8 +270,10 @@ async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     const COLUMNS: &str = "Columns table";
     let expect_headers = |expected: Vec<&'static str>| async move {
         let expected: Vec<String> = expected.into_iter().map(str::to_owned).collect();
-        page.wait_for_value("the column headers", expected, || column_headers(page, COLUMNS))
-            .await
+        page.wait_for_value("the column headers", expected, || {
+            column_headers(page, COLUMNS)
+        })
+        .await
     };
     let expect_cells = |expected: Vec<&'static str>| async move {
         let expected: Vec<String> = expected.into_iter().map(str::to_owned).collect();
@@ -304,36 +309,100 @@ async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     page.click_element_with_id("test-ts-move-type").await?;
     expect_headers(vec!["", "Name", "Date Modified", "Kind"]).await?;
     expect_cells(vec!["", "Games", "6/7/2020", "File folder"]).await?;
+    // The two swapped cells swapped their keys: navigation reaches both.
     let games = row(page, COLUMNS, "Games").await?;
     page.driver
         .execute("arguments[0].focus()", vec![games.to_json()?])
         .await?;
+    page.wait_for_focus_on(&games, "the Games row").await?;
     page.send_keys_to_active(Key::Left).await?;
     page.wait_for_focus("gridcell", Some("File folder")).await?;
+    page.send_keys_to_active(Key::Left).await?;
+    page.wait_for_focus("gridcell", Some("6/7/2020")).await?;
+    page.send_keys_to_active(Key::Left).await?;
+    page.wait_for_focus("rowheader", Some("Games")).await?;
 
-    // Sortability follows the column.
+    // Sortability follows the column ("should support column hover when sorting is allowed",
+    // "should not show column hover state when column is not sortable").
     let date = table(page, COLUMNS)
         .await?
-        .find(By::XPath(".//*[@role='columnheader'][normalize-space(.)='Date Modified']"))
+        .find(By::XPath(
+            ".//*[@role='columnheader'][normalize-space(.)='Date Modified']",
+        ))
         .await?;
     assert_that!(date.attr("aria-sort").await?).is_none();
+    assert_that!(date.attr("data-allows-sorting").await?).is_none();
+    hover(page, &date).await?;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_that!(date.attr("data-hovered").await?).is_none();
     page.click_element_with_id("test-ts-sort-date").await?;
     page.wait_for_attr(&date, "aria-sort", Some("none")).await?;
     page.wait_for_attr(&date, "data-allows-sorting", Some("true"))
         .await?;
+    hover(page, &date).await?;
+    page.wait_for_attr(&date, "data-hovered", Some("true"))
+        .await?;
+    page.click_element_with_id("test-ts-sort-date").await?;
+    page.wait_for_attr(&date, "aria-sort", None).await?;
+    page.wait_for_attr(&date, "data-allows-sorting", None)
+        .await?;
 
     // Select all only in multiple selection mode.
-    let select_all = "thead input[type=checkbox]";
-    assert_that!(table(page, COLUMNS).await?.find_all(By::Css(select_all)).await?.len())
-        .is_equal_to(1);
+    let select_all = "[role=grid][aria-label='Columns table'] thead input[type=checkbox]";
+    assert_that!(page.count_matching(select_all).await?).is_equal_to(1);
     page.click_element_with_id("test-ts-single").await?;
-    page.wait_for_value("select all checkboxes", 0, || async {
-        Ok(table(page, COLUMNS).await?.find_all(By::Css(select_all)).await?.len())
+    page.wait_for_value("select all checkboxes", 0, || {
+        page.count_matching(select_all)
     })
     .await?;
     page.click_element_with_id("test-ts-single").await?;
-    page.wait_for_value("select all checkboxes", 1, || async {
-        Ok(table(page, COLUMNS).await?.find_all(By::Css(select_all)).await?.len())
+    page.wait_for_value("select all checkboxes", 1, || {
+        page.count_matching(select_all)
     })
     .await
+}
+
+async fn hover(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
+    page.driver
+        .action_chain()
+        .move_to_element_center(element)
+        .perform()
+        .await?;
+    Ok(())
+}
+
+/// `data-hovered` on interactive rows and their cells, and
+/// `data-focus-visible` on cells focused by keyboard (react-aria-components' `Row`, `Cell` and
+/// `Column` render states).
+async fn hover_and_focus_states(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    let games = row(page, "Replace table", "Games").await?;
+    let name_cell = games.find(By::Css("[role=rowheader]")).await?;
+    hover(page, &name_cell).await?;
+    page.wait_for_attr(&games, "data-hovered", Some("true"))
+        .await?;
+    page.wait_for_attr(&name_cell, "data-hovered", Some("true"))
+        .await?;
+    let action_row = row(page, "Action table", "bootmgr").await?;
+    hover(page, &action_row).await?;
+    page.wait_for_attr(&action_row, "data-hovered", Some("true"))
+        .await?;
+    page.wait_for_attr(&games, "data-hovered", None).await?;
+    page.wait_for_attr(&name_cell, "data-hovered", None).await?;
+
+    // Keyboard focus on a cell (and a column header): focus rings.
+    page.click_element_with_id("test-ts-before-escape").await?;
+    page.press_tab().await?;
+    page.wait_for_focus("row", None).await?;
+    page.send_keys_to_active(Key::Right).await?;
+    page.send_keys_to_active(Key::Right).await?;
+    page.wait_for_focus("rowheader", Some("Games")).await?;
+    let focused = page.driver.active_element().await?;
+    page.wait_for_attr(&focused, "data-focus-visible", Some("true"))
+        .await?;
+    page.send_keys_to_active(Key::Up).await?;
+    page.wait_for_focus("columnheader", Some("Name")).await?;
+    let focused = page.driver.active_element().await?;
+    page.wait_for_attr(&focused, "data-focus-visible", Some("true"))
+        .await
 }

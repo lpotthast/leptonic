@@ -784,7 +784,9 @@ async fn selected_days(page: &Page<'_>, name: &str) -> Result<Vec<String>, Repor
     let mut days = Vec::new();
     for button in page
         .driver
-        .find_all(By::Css(format!("#test-calendar-{name} [role=button][data-selected]")))
+        .find_all(By::Css(format!(
+            "#test-calendar-{name} [role=button][data-selected]"
+        )))
         .await?
     {
         days.push(button.text().await?);
@@ -792,7 +794,11 @@ async fn selected_days(page: &Page<'_>, name: &str) -> Result<Vec<String>, Repor
     Ok(days)
 }
 
-async fn wait_for_selected_days(page: &Page<'_>, name: &str, expected: &[&str]) -> Result<(), Report> {
+async fn wait_for_selected_days(
+    page: &Page<'_>,
+    name: &str,
+    expected: &[&str],
+) -> Result<(), Report> {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     loop {
         let days = selected_days(page, name).await?;
@@ -800,7 +806,9 @@ async fn wait_for_selected_days(page: &Page<'_>, name: &str, expected: &[&str]) 
             return Ok(());
         }
         if std::time::Instant::now() > deadline {
-            leptos_browser_test::bail!("expected the selected days {expected:?} of {name}, got {days:?}");
+            leptos_browser_test::bail!(
+                "expected the selected days {expected:?} of {name}, got {days:?}"
+            );
         }
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
@@ -815,7 +823,8 @@ async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
     // Past the drag delay: still only started.
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     assert_that!(selected_days(page, "range-touch").await?).is_equal_to(vec!["11".to_owned()]);
-    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-05 - 2019-06-10".to_owned());
+    assert_that!(value(page, "range-touch").await?)
+        .is_equal_to("2019-06-05 - 2019-06-10".to_owned());
 
     let june13 = date(page, "range-touch", "Thursday, June 13, 2019").await?;
     touch_tap(page, &june13).await?;
@@ -836,8 +845,14 @@ async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
     wait_for_selected_days(page, "range-touch", &["17", "18"]).await?;
     let june23 = date(page, "range-touch", "Sunday, June 23, 2019").await?;
     touch(page, &june23, "pointerenter").await?;
-    wait_for_selected_days(page, "range-touch", &["17", "18", "19", "20", "21", "22", "23"]).await?;
-    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-11 - 2019-06-13".to_owned());
+    wait_for_selected_days(
+        page,
+        "range-touch",
+        &["17", "18", "19", "20", "21", "22", "23"],
+    )
+    .await?;
+    assert_that!(value(page, "range-touch").await?)
+        .is_equal_to("2019-06-11 - 2019-06-13".to_owned());
     touch(page, &june23, "pointerup").await?;
     wait_for_value(page, "range-touch", "2019-06-17 - 2019-06-23").await
 }
@@ -854,7 +869,8 @@ async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> 
     touch(page, &june10, "pointerdown").await?;
     touch(page, &june10, "pointercancel").await?;
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-    assert_that!(value(page, "range-touch").await?).is_equal_to("2019-06-17 - 2019-06-23".to_owned());
+    assert_that!(value(page, "range-touch").await?)
+        .is_equal_to("2019-06-17 - 2019-06-23".to_owned());
     date(page, "range-touch", "Tuesday, June 25, 2019")
         .await?
         .click()
@@ -910,8 +926,13 @@ impl BrowserTest<str> for CalendarTodayTests {
         // Keyboard focus goes there.
         enter(&page, "today").await?;
         let active = page.driver.active_element().await?;
-        assert_that!(attr(&active, "aria-label").await?.unwrap_or_default().as_str())
-            .starts_with("Today, ");
+        assert_that!(
+            attr(&active, "aria-label")
+                .await?
+                .unwrap_or_default()
+                .as_str()
+        )
+        .starts_with("Today, ");
 
         page.expect_no_page_errors().await
     }
@@ -955,7 +976,11 @@ async fn grid_labels(page: &Page<'_>, name: &str) -> Result<Vec<String>, Report>
     Ok(labels)
 }
 
-async fn wait_for_grid_labels(page: &Page<'_>, name: &str, expected: &[&str]) -> Result<(), Report> {
+async fn wait_for_grid_labels(
+    page: &Page<'_>,
+    name: &str,
+    expected: &[&str],
+) -> Result<(), Report> {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     loop {
         let labels = grid_labels(page, name).await?;
@@ -1046,7 +1071,12 @@ async fn two_weeks(page: &Page<'_>) -> Result<(), Report> {
     expect_focus(page, "two-weeks", "Wednesday, June 5, 2019").await?;
     press_keys(page, &[Key::Down, Key::Down]).await?;
     expect_focus(page, "two-weeks", "Wednesday, June 19, 2019").await?;
-    wait_for_grid_label(page, "two-weeks", "two-weeks, June 16, 2019 to June 29, 2019").await
+    wait_for_grid_label(
+        page,
+        "two-weeks",
+        "two-weeks, June 16, 2019 to June 29, 2019",
+    )
+    .await
 }
 
 /// RAC "should support weeksInMonth prop": April 2026 has five week rows, six are shown.
@@ -1072,7 +1102,10 @@ async fn hold_key(page: &Page<'_>, key: &str, repeats: usize) -> Result<(), Repo
              fire('keydown', false);
              for (let i = 0; i < repeats; i++) fire('keydown', true);
              fire('keyup', false);",
-            vec![serde_json::Value::from(key), serde_json::Value::from(repeats)],
+            vec![
+                serde_json::Value::from(key),
+                serde_json::Value::from(repeats),
+            ],
         )
         .await?;
     Ok(())
@@ -1139,8 +1172,11 @@ async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
     wait_for_grid_label(page, "pickers", "Appointment date, June 2026").await?;
     assert_that!(month.prop("value").await?).is_equal_to(Some("6".to_owned()));
 
-    assert_that!(option_texts(&year).await?)
-        .is_equal_to((2016..2036).map(|year| year.to_string()).collect::<Vec<_>>());
+    assert_that!(option_texts(&year).await?).is_equal_to(
+        (2016..2036)
+            .map(|year| year.to_string())
+            .collect::<Vec<_>>(),
+    );
     year.find(By::XPath("option[normalize-space()='2030']"))
         .await?
         .click()
@@ -1153,8 +1189,11 @@ async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
         }
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
-    assert_that!(option_texts(&year).await?)
-        .is_equal_to((2020..2040).map(|year| year.to_string()).collect::<Vec<_>>());
+    assert_that!(option_texts(&year).await?).is_equal_to(
+        (2020..2040)
+            .map(|year| year.to_string())
+            .collect::<Vec<_>>(),
+    );
     Ok(())
 }
 
@@ -1214,7 +1253,8 @@ async fn start_range(page: &Page<'_>, name: &str, start: &str, end: &str) -> Res
         .move_to_element_center(&end)
         .perform()
         .await?;
-    page.wait_for_attr(&end, "data-selected", Some("true")).await
+    page.wait_for_attr(&end, "data-selected", Some("true"))
+        .await
 }
 
 /// The commit behaviors of a range being selected, when the pointer is released on the calendar
@@ -1229,23 +1269,43 @@ async fn commit_behaviors(page: &Page<'_>) -> Result<(), Report> {
         Ok::<(), Report>(())
     };
 
-    start_range(page, "commit-select", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-select",
+        "Tuesday, November 25, 2025",
+        "Thursday, November 20, 2025",
+    )
+    .await?;
     click_heading("commit-select").await?;
     wait_for_value(page, "commit-select", "2025-11-20 - 2025-11-25").await?;
-    start_range(page, "commit-select", "Thursday, November 27, 2025", "Saturday, November 22, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-select",
+        "Thursday, November 27, 2025",
+        "Saturday, November 22, 2025",
+    )
+    .await?;
     page.press_tab().await?;
     wait_for_value(page, "commit-select", "2025-11-22 - 2025-11-27").await?;
 
-    start_range(page, "commit-clear", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-clear",
+        "Tuesday, November 25, 2025",
+        "Thursday, November 20, 2025",
+    )
+    .await?;
     click_heading("commit-clear").await?;
     wait_for_value(page, "commit-clear", "none").await?;
     page.wait_for_count("#test-calendar-commit-clear [data-selected]", 0)
         .await?;
-    start_range(page, "commit-clear", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-clear",
+        "Tuesday, November 25, 2025",
+        "Thursday, November 20, 2025",
+    )
+    .await?;
     page.press_tab().await?;
     page.wait_for_count("#test-calendar-commit-clear [data-selected]", 0)
         .await?;
@@ -1253,16 +1313,27 @@ async fn commit_behaviors(page: &Page<'_>) -> Result<(), Report> {
 
     let november25 = date(page, "commit-reset", "Tuesday, November 25, 2025").await?;
     let november13 = date(page, "commit-reset", "Thursday, November 13, 2025").await?;
-    start_range(page, "commit-reset", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-reset",
+        "Tuesday, November 25, 2025",
+        "Thursday, November 20, 2025",
+    )
+    .await?;
     assert_that!(attr(&november13, "data-selected").await?).is_none();
     click_heading("commit-reset").await?;
-    page.wait_for_attr(&november25, "data-selected", None).await?;
+    page.wait_for_attr(&november25, "data-selected", None)
+        .await?;
     page.wait_for_attr(&november13, "data-selected", Some("true"))
         .await?;
     expect_value_unchanged(page, "commit-reset", "2025-11-13 - 2025-11-15").await?;
-    start_range(page, "commit-reset", "Tuesday, November 25, 2025", "Thursday, November 20, 2025")
-        .await?;
+    start_range(
+        page,
+        "commit-reset",
+        "Tuesday, November 25, 2025",
+        "Thursday, November 20, 2025",
+    )
+    .await?;
     page.press_tab().await?;
     page.wait_for_attr(&november13, "data-selected", Some("true"))
         .await?;

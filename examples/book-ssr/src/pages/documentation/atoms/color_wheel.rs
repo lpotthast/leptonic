@@ -34,7 +34,7 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                     {indoc!(r#"
                         use leptonic::{
                             atoms::prelude::*,
-                            utils::color::{HSV, HsvChannel},
+                            utils::color::HSV,
                         };
                         use leptos::prelude::*;
 
@@ -42,7 +42,6 @@ pub fn PageAtomColorWheel() -> impl IntoView {
 
                         view! {
                             <ColorWheel
-                                channel=HsvChannel::Hue
                                 outer_radius=100.0
                                 inner_radius=74.0
                                 value=color
@@ -56,7 +55,7 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                 </Code>
                 <p>
                     "The radii size the wheel: the track is "<Code inline=true>"2 * outer_radius"</Code>" pixels wide. The "
-                    "channel determines the color type ("<Code inline=true>"HsvChannel::Hue"</Code>": an HSV wheel)."
+                    "value\u{2019}s type is the color type (here "<Code inline=true>"HSV"</Code>")."
                 </p>
             </Section>
 
@@ -79,29 +78,28 @@ pub fn PageAtomColorWheel() -> impl IntoView {
                     "Renders a "<Code inline=true>"<div>"</Code>" with "<Code inline=true>"position: relative"</Code>" around "
                     "the track and the thumb. Bind the color with "<Code inline=true>"value"</Code>" and "
                     <Code inline=true>"set_value"</Code>", or let the wheel own it from "<Code inline=true>"default_value"</Code>
-                    " and listen with "<Code inline=true>"on_change"</Code>". It is generic over the channel type "
-                    <Code inline=true>"Ch"</Code>": pass the hue channel of "<Code inline=true>"HSV"</Code>" or "
-                    <Code inline=true>"HSL"</Code>" (see "
+                    " and listen with "<Code inline=true>"on_change"</Code>". It is generic over the color type "
+                    <Code inline=true>"C"</Code>" (any "
                     <Link href=format!("{}#colorvalue", routes::doc::Color.materialize())>
                         <Code inline=true>"ColorValue"</Code>
-                    </Link>"), and the color type "<Code inline=true>"Ch::Color"</Code>" follows from it. The wheel keeps the "
+                    </Link>"): it changes the hue channel of "<Code inline=true>"HSV"</Code>" and "<Code inline=true>"HSL"</Code>
+                    " colors, and the hue of the HSL form of others (RGB), keeping the color type. The wheel keeps the "
                     "other channels as they are. Inside a "<Link href=routes::doc::color_picker::Atom.materialize()>"ColorPicker"</Link>
                     " atom, leave out "<Code inline=true>"value"</Code>": the wheel changes the picker\u{2019}s color."
                 </p>
 
                 <Section title="Props" id="color-wheel-props">
                     <ApiTable kind=ApiKind::Props of="ColorWheel">
-                        <ApiRow name="channel" ty="Ch">"The color type\u{2019}s hue channel. Required."</ApiRow>
                         <ApiRow name="outer_radius" ty="f64">"The ring\u{2019}s outer radius, in pixels. Required."</ApiRow>
                         <ApiRow name="inner_radius" ty="f64">"The ring\u{2019}s inner radius, in pixels. Required."</ApiRow>
-                        <ApiRow name="value" ty="Option<Signal<Ch::Color>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
-                        <ApiRow name="set_value" ty="Option<Out<Ch::Color>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
-                        <ApiRow name="default_value" ty="Option<Ch::Color>" default="Ch::Color::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
-                        <ApiRow name="on_change" ty="Option<Callback<Ch::Color>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
-                        <ApiRow name="on_change_end" ty="Option<Callback<Ch::Color>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
+                        <ApiRow name="value" ty="Option<Signal<C>>" default="None">"The color (controlled): a value or any signal. "<Code inline=true>"None"</Code>": the color of the "<Code inline=true>"ColorPicker"</Code>" around it, if any."</ApiRow>
+                        <ApiRow name="set_value" ty="Option<Out<C>>" default="None">"Receives the new color: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"</ApiRow>
+                        <ApiRow name="default_value" ty="Option<C>" default="C::default()">"The initial color when "<Code inline=true>"value"</Code>" isn\u{2019}t set."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<C>>" default="None">"Called with the color whenever it changes, also while dragging."</ApiRow>
+                        <ApiRow name="on_change_end" ty="Option<Callback<C>>" default="None">"Called with the color when a drag or a key press ends."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables pointer and keyboard interaction and the input."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
-                            "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the channel\u{2019}s name does."
+                            "Names the wheel. Without it or "<Code inline=true>"aria_labelledby"</Code>", the hue channel\u{2019}s name does."
                         </ApiRow>
                         <ApiRow name="aria_labelledby" ty="Option<String>" default="None">"The ids of the elements naming the wheel."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the input; its value is the hue."</ApiRow>

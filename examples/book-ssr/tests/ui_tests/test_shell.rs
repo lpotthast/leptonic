@@ -511,3 +511,29 @@ impl BrowserTest<str> for CopyMarkdownTests {
         Ok(())
     }
 }
+
+/// The book's fonts: Roboto for text and controls, `JetBrains Mono` for code. Leptonic's atoms bring no styles, so the
+/// book's own base stylesheet has to apply them.
+pub struct FontTests {}
+
+#[async_trait]
+impl BrowserTest<str> for FontTests {
+    fn name(&self) -> Cow<'_, str> {
+        "text_controls_and_code_use_the_book_fonts".into()
+    }
+
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
+        let page = BookPage { driver, base_url };
+        page.goto("/doc/installation").await?;
+        let fonts = page
+            .strings(
+                "return [document.body, document.querySelector('.doc-search-trigger'), document.querySelector('pre code, code.doc-code')]\
+                 .map(e => e ? getComputedStyle(e).fontFamily : 'missing');",
+            )
+            .await?;
+        assert_that!(fonts[0].as_str()).contains("Roboto");
+        assert_that!(fonts[1].as_str()).contains("Roboto");
+        assert_that!(fonts[2].as_str()).contains("JetBrains Mono");
+        Ok(())
+    }
+}

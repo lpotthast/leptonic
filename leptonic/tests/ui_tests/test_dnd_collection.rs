@@ -118,7 +118,10 @@ async fn start_drag(page: &DndPage<'_>, query: &str) -> Result<(), Report> {
 }
 
 async fn focus_draggable(page: &DndPage<'_>) -> Result<(), Report> {
-    page.by_role_and_text("button", "Before").await?.click().await?;
+    page.by_role_and_text("button", "Before")
+        .await?
+        .click()
+        .await?;
     page.press_tab().await?;
     page.wait_for_focus_on(
         &page.by_role_and_text("button", "Drag me").await?,
@@ -137,8 +140,7 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.send_keys_to_active(Key::Down).await?;
     expect_focused_indicator(page, "Drop on One").await?;
     page.send_keys_to_active(Key::Down).await?;
-    expect_focused_indicator(page, "Insert between One and Two")
-        .await?;
+    expect_focused_indicator(page, "Insert between One and Two").await?;
     page.send_keys_to_active(Key::Enter).await?;
     page.wait_for_value(
         "the rows",
@@ -152,7 +154,8 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     )
     .await?;
     let inserted = row(page, "hello world").await?;
-    page.wait_for_focus_on(&inserted, "the inserted row").await?;
+    page.wait_for_focus_on(&inserted, "the inserted row")
+        .await?;
     page.wait_for_attr(&inserted, "aria-selected", Some("true"))
         .await?;
     page.expect_log_settled(
@@ -324,8 +327,7 @@ async fn after_the_last_focused_item(page: &DndPage<'_>) -> Result<(), Report> {
     page.wait_for_focus_on(&row(page, "Two").await?, "row Two")
         .await?;
     drag_from_the_draggable(page).await?;
-    expect_focused_indicator(page, "Insert between Two and Three")
-        .await?;
+    expect_focused_indicator(page, "Insert between Two and Three").await?;
     page.send_keys_to_active(Key::Escape).await
 }
 
@@ -344,8 +346,7 @@ async fn before_the_selected_items(page: &DndPage<'_>) -> Result<(), Report> {
     focus_first_row(page, "").await?;
     select_three_two(page).await?;
     drag_from_the_draggable(page).await?;
-    expect_focused_indicator(page, "Insert between One and Two")
-        .await?;
+    expect_focused_indicator(page, "Insert between One and Two").await?;
     page.send_keys_to_active(Key::Escape).await
 }
 
@@ -427,7 +428,8 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     )
     .await?;
     let inserted = row(page, "hello world").await?;
-    page.wait_for_focus_on(&inserted, "the inserted row").await?;
+    page.wait_for_focus_on(&inserted, "the inserted row")
+        .await?;
     page.wait_for_attr(&inserted, "aria-selected", Some("true"))
         .await?;
     page.expect_log_settled(
@@ -465,7 +467,12 @@ async fn native_drop_on_an_item(page: &DndPage<'_>) -> Result<(), Report> {
     page.wait_for_focus_on(&one_row, "row One").await?;
     page.expect_log_settled(
         LOG,
-        &["enter 1 on", "on 1 hello world Copy", "exit 1 on", "dragend Copy"],
+        &[
+            "enter 1 on",
+            "on 1 hello world Copy",
+            "exit 1 on",
+            "dragend Copy",
+        ],
     )
     .await?;
     assert_that!(row_texts(page).await?).is_equal_to(vec![

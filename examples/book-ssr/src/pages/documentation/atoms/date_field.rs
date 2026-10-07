@@ -138,17 +138,17 @@ pub fn PageAtomDateField() -> impl IntoView {
                         <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">
                             "Called with each new value: once all segments are filled, or with "<Code inline=true>"None"</Code>" once all are cleared."
                         </ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">"Where empty segments start when stepped. Default: today, midnight."</ApiRow>
+                        <ApiRow name="placeholder_value" ty="MaybeProp<V>" default="None">"Where empty segments start when stepped. Default: today, midnight."</ApiRow>
                         <ApiRow name="min_value, max_value" ty="Signal<Option<V>>" default="None">
                             "The earliest and latest valid value. A value outside is invalid (\u{201c}Value must be 3/1/2026 or later.\u{201d})."
                         </ApiRow>
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">"Whether a date can\u{2019}t be chosen; it makes the value invalid."</ApiRow>
-                        <ApiRow name="granularity" ty="Option<Granularity>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
-                        <ApiRow name="hour_cycle" ty="Option<HourCycle>" default="None">
+                        <ApiRow name="granularity" ty="MaybeProp<Granularity>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="MaybeProp<HourCycle>" default="None">
                             <Code inline=true>"H12"</Code>" or "<Code inline=true>"H24"</Code>". Default: the locale\u{2019}s."
                         </ApiRow>
-                        <ApiRow name="hide_time_zone" ty="bool" default="false">"Hides the time zone of zoned values."</ApiRow>
-                        <ApiRow name="should_force_leading_zeros" ty="bool" default="false">"Pads months, days and hours to two digits."</ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Nothing can be focused or edited."</ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The segments take the focus, but can\u{2019}t be edited."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the segments required; with native validation, an empty field blocks submitting its form."</ApiRow>
@@ -163,6 +163,9 @@ pub fn PageAtomDateField() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The hidden input\u{2019}s name in forms."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the hidden input belongs to, when outside it."</ApiRow>
+                        <ApiRow name="auto_complete" ty="Option<String>" default="None">
+                            "What the browser may autofill ("<Code inline=true>"autocomplete"</Code>", e.g. "<Code inline=true>"\"bday\""</Code>"), through a visually hidden date input."
+                        </ApiRow>
                         <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the first segment when the field is rendered."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field when it has no "<Code inline=true>"Label"</Code>"."</ApiRow>

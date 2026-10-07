@@ -1,4 +1,4 @@
-// Upstream: react-aria/src/i18n/useDateFormatter.ts @ 6f664fe911
+// Upstream: react-aria/src/i18n/useDateFormatter.ts @ 99e6102368
 //! Locale-aware formatting of dates and times with ICU4X (react-aria's `useDateFormatter`, a
 //! cached `Intl.DateTimeFormat`).
 

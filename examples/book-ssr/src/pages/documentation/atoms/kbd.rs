@@ -148,11 +148,13 @@ pub fn PageAtomKbd() -> impl IntoView {
                 <p>
                     "Both atoms render one "<Code inline=true>"<kbd>"</Code>" holding a "<Code inline=true>"<kbd>"</Code>
                     " per key, as HTML writes a key combination. A key shown as a glyph or an abbreviation hides it from "
-                    "screen readers and adds its name in visually hidden text. "<Keys keys="Control + K"/>" renders as:"
+                    "screen readers and adds its name in visually hidden text. The outer "<Code inline=true>"<kbd>"</Code>
+                    " is always left-to-right ("<Code inline=true>"dir=\"ltr\""</Code>"), so that a shortcut keeps its order "
+                    "in right-to-left pages. "<Keys keys="Control + K"/>" renders as:"
                 </p>
                 <Code language=Language::Html>
                     {indoc!(r#"
-                        <kbd class="leptonic-ShortcutKeys my-keys">
+                        <kbd dir="ltr" class="leptonic-ShortcutKeys my-keys">
                             <kbd><span aria-hidden="true">Ctrl</span><span style="/* visually hidden */">Control</span></kbd>
                             <span data-separator="" aria-hidden="true">+</span>
                             <kbd>K</kbd>

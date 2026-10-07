@@ -69,7 +69,12 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="allows_empty_collection" ty="bool" default="false">
                             "Allow opening the popover without options, e.g. to show an empty state."
                         </ApiRow>
-                        <ApiRow name="default_open" ty="bool" default="false">"Start with the popover open."</ApiRow>
+                        <ApiRow name="default_open" ty="bool" default="false">
+                            "Start with the popover open. Ignored when "<Code inline=true>"is_open"</Code>" is bound."
+                        </ApiRow>
+                        <ApiRow name="is_open" ty="Option<ValueBinding<bool>>" default="None">
+                            "The open state as app state, replacing "<Code inline=true>"default_open"</Code>"."
+                        </ApiRow>
                         <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">
                             "Called when the popover opens or closes."
                         </ApiRow>
@@ -82,10 +87,11 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">
                             <Code inline=true>"Aria"</Code>" shows errors as the value changes, "<Code inline=true>"Native"</Code>
-                            " defers them to form submission and uses native constraint validation."
+                            " defers them to form submission and uses native constraint validation. The hidden select follows it."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">
-                            "The form field name, used to match server-side validation errors."
+                            "The form field name: the hidden select submits the value under it, and server-side validation "
+                            "errors are matched by it."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -103,7 +109,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             "The popover\u{2019}s open state. Open it through the select\u{2019}s "<Code inline=true>"open"</Code>
                             " and "<Code inline=true>"toggle"</Code>", which only open it with options."
                         </ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation state."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation state."</ApiRow>
                     </ApiTable>
 
                     <p>"Its methods:"</p>
@@ -172,6 +178,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 should_close_on_select: CloseOnSelect::Auto,
                                 allows_empty_collection: false,
                                 default_open: false,
+                                is_open: None,
                                 on_open_change: None,
                                 is_invalid: Signal::stored(false),
                                 validate: None,
@@ -205,7 +212,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         <ApiRow name="state" ty="SelectState">"The state from "<Code inline=true>"use_select_state"</Code>". Required."</ApiRow>
                         <ApiRow name="id" ty="Option<String>" default="None">"The trigger\u{2019}s id, generated when "<Code inline=true>"None"</Code>"."</ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the select is disabled."</ApiRow>
-                        <ApiRow name="is_required" ty="bool" default="false">
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">
                             "Whether a value is required. Enforced by the hidden select with native validation."
                         </ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
@@ -221,9 +228,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             "Called when focus moves to the select (trigger or popover) from outside, or leaves it."
                         </ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called with whether the select has focus."</ApiRow>
-                        <ApiRow name="name" ty="Option<String>" default="None">"The form field name of the hidden select."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the select belongs to, if it is outside of it."</ApiRow>
-                        <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">"Passed on to the hidden select."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -261,8 +266,8 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                 <Section title="Example" id="use-select-example">
                     <Code language=Language::Rust>
-                        {indoc!(r#"
-                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, ValidationBehavior, use_button, use_select};
+                        {indoc!(r"
+                            use leptonic::hooks::{UseSelectInput, UseSelectReturn, use_button, use_select};
 
                             let UseSelectReturn {
                                 label_props,
@@ -276,7 +281,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 state,
                                 id: None,
                                 is_disabled: false.into(),
-                                is_required: false,
+                                is_required: false.into(),
                                 has_label: true.into(),
                                 aria_label: MaybeProp::default(),
                                 aria_labelledby: None,
@@ -285,13 +290,11 @@ pub fn PageUseSelectHook() -> impl IntoView {
                                 on_focus: None,
                                 on_blur: None,
                                 on_focus_change: None,
-                                name: Some("fruit".to_owned()),
                                 form: None,
-                                validation_behavior: ValidationBehavior::Aria,
                             });
 
                             let button = use_button(trigger);
-                        "#)}
+                        ")}
                     </Code>
 
                     <p>
@@ -323,21 +326,25 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
                     <ApiTable kind=ApiKind::Input of="UseHiddenSelectInput">
                         <ApiRow name="state" ty="SelectState">"The select\u{2019}s state. Required."</ApiRow>
-                        <ApiRow name="name" ty="Option<String>">"The form field name."</ApiRow>
                         <ApiRow name="form" ty="Option<String>">"The id of the form, if the select is outside of it."</ApiRow>
                         <ApiRow name="auto_complete" ty="Option<String>">
                             "The "<Code inline=true>"autocomplete"</Code>" hint for autofill. "<Code inline=true>"use_select"</Code>
                             " leaves it at "<Code inline=true>"None"</Code>"."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>">"Disables the form element."</ApiRow>
-                        <ApiRow name="is_required" ty="bool">
-                            "Sets "<Code inline=true>"required"</Code>" (only with native validation)."
+                        <ApiRow name="is_required" ty="Signal<bool>">
+                            "Sets "<Code inline=true>"required"</Code>" (only with native validation, the state\u{2019}s "
+                            <Code inline=true>"validation_behavior"</Code>")."
                         </ApiRow>
-                        <ApiRow name="validation_behavior" ty="ValidationBehavior">"How validation errors are reported."</ApiRow>
                         <ApiRow name="trigger" ty="Option<CapturedElement>">
                             "The select\u{2019}s trigger, focused when the select is its form\u{2019}s first invalid field on submission."
                         </ApiRow>
+                        <ApiRow name="label" ty="MaybeProp<String>">
+                            "The text of the hidden "<Code inline=true>"<label>"</Code>" around the "<Code inline=true>"<select>"</Code>
+                            " (browsers identify fields for autofill by their labels)."
+                        </ApiRow>
                     </ApiTable>
+                    <p>"The form field name is the state\u{2019}s "<Code inline=true>"name"</Code>"."</p>
                 </Section>
 
                 <Section title="Return" id="use-hidden-select-return">
@@ -355,8 +362,15 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             "The "<Code inline=true>"<option>"</Code>"s to render ("<Code inline=true>"value"</Code>", "
                             <Code inline=true>"text"</Code>", "<Code inline=true>"is_selected"</Code>"), starting with an empty one."
                         </ApiRow>
+                        <ApiRow name="label" ty="MaybeProp<String>">
+                            "The text of a "<Code inline=true>"<label>"</Code>" around the "<Code inline=true>"<select>"</Code>"."
+                        </ApiRow>
                         <ApiRow name="input_props" ty="UseHiddenSelectInputProps">
-                            "For the hidden inputs used instead of the "<Code inline=true>"<select>"</Code>"."
+                            "For every hidden input used instead of the "<Code inline=true>"<select>"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="first_input_capture" ty="ElementCaptureAttr">
+                            "Spread on the first hidden input only: form reset and native validation work on it when there is no "
+                            <Code inline=true>"<select>"</Code>"."
                         </ApiRow>
                         <ApiRow name="input_values" ty="Signal<Vec<String>>">
                             "One value per selected key, one empty value without a selection. Render one input per value, "
@@ -370,16 +384,19 @@ pub fn PageUseSelectHook() -> impl IntoView {
                         {indoc!(r"
                             use leptonic::hooks::{IntoAttrs, UseHiddenSelectReturn, use_hidden_select};
 
-                            let UseHiddenSelectReturn { container_props, select_props, options, .. } =
+                            let UseHiddenSelectReturn { container_props, select_props, options, label, .. } =
                                 use_hidden_select(hidden_select);
 
                             view! {
                                 <div {..container_props.into_attrs()}>
-                                    <select {..select_props.into_attrs()}>
-                                        <For each=move || options.get() key=|o| (o.value.clone(), o.is_selected) let:o>
-                                            <option value=o.value selected=o.is_selected>{o.text}</option>
-                                        </For>
-                                    </select>
+                                    <label>
+                                        {move || label.get()}
+                                        <select {..select_props.into_attrs()}>
+                                            <For each=move || options.get() key=|o| (o.value.clone(), o.is_selected) let:o>
+                                                <option value=o.value selected=o.is_selected>{o.text}</option>
+                                            </For>
+                                        </select>
+                                    </label>
                                 </div>
                             }
                         ")}

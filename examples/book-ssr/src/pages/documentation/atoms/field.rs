@@ -88,7 +88,7 @@ pub fn PageAtomField() -> impl IntoView {
                 <Section title="Props" id="label-props">
                     <ApiTable kind=ApiKind::Props of="atoms::field::Label">
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the element."</ApiRow>
-                        <ApiRow name="children" ty="Children">"The label text."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The label text. Without it, the label shows the atom\u{2019}s default text, if it has one (e.g. a color slider\u{2019}s channel name)."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

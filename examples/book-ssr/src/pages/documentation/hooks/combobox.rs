@@ -138,12 +138,13 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "Commit the input and close the popover when focus leaves the combobox."
                         </ApiRow>
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
-                            "Don\u{2019}t open the popover on focus. Pass the same signal to "
-                            <Code inline=true>"use_combobox"</Code>", which blocks editing."
+                            "Makes the input read-only: no editing, no popover, and the button disabled ("
+                            <Code inline=true>"use_combobox"</Code>" reads it from the state)."
                         </ApiRow>
-                        <ApiRow name="on_open_change" ty="Option<Callback<(bool, Option<MenuTriggerAction>)>>" default="None">
-                            "Called when the popover opens or closes. When it opens, the "<Code inline=true>"MenuTriggerAction"</Code>
-                            " tells what opened it: "<Code inline=true>"Input"</Code>" (typing), "<Code inline=true>"Focus"</Code>
+                        <ApiRow name="on_open_change" ty="Option<Callback<ComboBoxOpenChange>>" default="None">
+                            "Called when the popover opens or closes, with "<Code inline=true>"is_open"</Code>" and the "
+                            <Code inline=true>"trigger"</Code>" that opened it ("<Code inline=true>"None"</Code>" when it closed), a "
+                            <Code inline=true>"MenuTriggerAction"</Code>": "<Code inline=true>"Input"</Code>" (typing), "<Code inline=true>"Focus"</Code>
                             " or "<Code inline=true>"Manual"</Code>" (button or arrow keys)."
                         </ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
@@ -159,7 +160,8 @@ pub fn PageUseCombobox() -> impl IntoView {
                             <Code inline=true>"Native"</Code>")."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">
-                            "The field name that server validation errors are matched by."
+                            "The field\u{2019}s form name: what the form submits it under (see "<Code inline=true>"form_value"</Code>
+                            " of "<Code inline=true>"use_combobox"</Code>"), and what server validation errors are matched by."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -176,7 +178,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                             <Code inline=true>"use_combobox"</Code>" hands it to the listbox."
                         </ApiRow>
                         <ApiRow name="selection_mode" ty="SelectMode">"The selection mode."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">
+                        <ApiRow name="validation" ty="FormValidationState">
                             "The validation state, e.g. "<Code inline=true>"validation.is_invalid"</Code>" and "
                             <Code inline=true>"validation.validation_errors"</Code>"."
                         </ApiRow>
@@ -329,22 +331,22 @@ pub fn PageUseCombobox() -> impl IntoView {
                 <Code language=Language::Rust>
                     {indoc!(r#"
                         use leptonic::{hooks::*, utils::CapturedElement};
-                        use leptos::{ev, prelude::*};
+                        use leptos::prelude::*;
 
                         let popover = CapturedElement::new();
-                        let UseComboBoxReturn { label_on_click, input, input_props, button, listbox } =
+                        let UseComboBoxReturn { input, input_props, button, listbox, form_values } =
                             use_combobox(UseComboBoxInput {
                                 state,
                                 id: None,
                                 is_disabled: false.into(),
-                                is_read_only: false.into(),
-                                is_required: false,
+                                is_required: false.into(),
                                 has_label: true.into(),
                                 aria_label: MaybeProp::default(),
                                 aria_labelledby: None,
                                 aria_describedby: None,
-                                placeholder: None,
-                                name: None,
+                                placeholder: MaybeProp::default(),
+                                form_value: ComboBoxFormValue::Key,
+                                form: None,
                                 should_focus_wrap: false,
                                 keyboard_delegate: None,
                                 popover,
@@ -354,13 +356,16 @@ pub fn PageUseCombobox() -> impl IntoView {
 
                         let UseTextFieldReturn { label_props, input_props: field_props, .. } = use_text_field(input);
                         let (button_attrs, button_styles) = use_button(button).props.into_parts();
-                        let label_attrs = (label_on_click.into_on(ev::click),);
                         let listbox = StoredValue::new(listbox);
 
                         view! {
-                            <label {..label_props.into_attrs()} {..label_attrs}>"Fruit"</label>
+                            <label {..label_props.into_attrs()}>"Fruit"</label>
                             <input {..field_props.into_attrs()} {..input_props.into_attrs()}/>
                             <button {..button_attrs} style=button_styles><span aria-hidden="true">"▼"</span></button>
+                            // With a `name` in the state: the selected keys, for form submission.
+                            <For each=move || form_values.get() key=Clone::clone let(value)>
+                                <input type="hidden" name="fruit" value=value/>
+                            </For>
                             <Show when=move || state.is_open()>
                                 <div {..popover.attr()}>
                                     // `use_listbox(listbox.get_value())` and one `use_option` per item of its
@@ -394,11 +399,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                             "Disables the input and the button."
                         </ApiRow>
-                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
-                            "Makes the input read-only and disables the button and the keyboard interaction. Pass the same "
-                            "signal to the state."
-                        </ApiRow>
-                        <ApiRow name="is_required" ty="bool" default="false">"Marks the input as required."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the input as required."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">
                             "Whether you render a visible label with "<Code inline=true>"label_props"</Code>" of "
                             <Code inline=true>"use_text_field"</Code>". It then labels the input, the button and the listbox."
@@ -407,8 +408,15 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "Labels or describes the input when there is no visible label, or in addition to it. "
                             <Code inline=true>"aria_labelledby"</Code>" also labels the button and the listbox."
                         </ApiRow>
-                        <ApiRow name="placeholder" ty="Option<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
-                        <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s form field name."</ApiRow>
+                        <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
+                        <ApiRow name="form_value" ty="ComboBoxFormValue" default="Key">
+                            "What the form submits under the state\u{2019}s "<Code inline=true>"name"</Code>": the selected keys ("
+                            <Code inline=true>"Key"</Code>", in hidden inputs from "<Code inline=true>"form_values"</Code>") or the "
+                            "input\u{2019}s text ("<Code inline=true>"Text"</Code>", always with "<Code inline=true>"allows_custom_value"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="form" ty="Option<String>" default="None">
+                            "The id of the form the combobox belongs to, if it is outside of it."
+                        </ApiRow>
                         <ApiRow name="should_focus_wrap" ty="bool" default="false">
                             "Arrow keys wrap around at the ends of the list."
                         </ApiRow>
@@ -429,10 +437,6 @@ pub fn PageUseCombobox() -> impl IntoView {
 
                 <Section title="Return" id="use-combobox-return">
                     <ApiTable kind=ApiKind::Return of="UseComboBoxReturn">
-                        <ApiRow name="label_on_click" ty="EventHandler<MouseEvent>">
-                            "For the label: clicking it focuses the input and shows its focus ring. Attach it with "
-                            <Code inline=true>"label_on_click.into_on(ev::click)"</Code>"."
-                        </ApiRow>
                         <ApiRow name="input" ty="UseTextFieldInput">
                             "The input\u{2019}s configuration, for "<Code inline=true>"use_text_field"</Code>": the text, "
                             <Code inline=true>"aria-activedescendant"</Code>", "<Code inline=true>"aria-autocomplete=\"list\""</Code>", "
@@ -453,6 +457,12 @@ pub fn PageUseCombobox() -> impl IntoView {
                             "The popover\u{2019}s listbox, for "<Code inline=true>"use_listbox"</Code>": the id the input\u{2019}s "
                             <Code inline=true>"aria-controls"</Code>" points to, the label, virtual focus, selection when "
                             "the press ends, and focus following the pointer."
+                        </ApiRow>
+                        <ApiRow name="form_values" ty="Signal<Vec<String>>">
+                            "With "<Code inline=true>"ComboBoxFormValue::Key"</Code>" and a "<Code inline=true>"name"</Code>": render "
+                            "one "<Code inline=true>"<input type=\"hidden\">"</Code>" per entry, named like the field (with "
+                            <Code inline=true>"form"</Code>"): the selected keys, or one empty value without a selection. Empty "
+                            "otherwise (the input submits its text)."
                         </ApiRow>
                     </ApiTable>
                 </Section>

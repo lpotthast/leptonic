@@ -140,7 +140,6 @@ fn token_colors_meet_wcag_aa_in_both_themes() {
             "--brand-color",
             "--book-badge-hook-color",
             "--book-badge-atom-color",
-            "--book-badge-comp-color",
             "--book-badge-util-color",
         ] {
             check(

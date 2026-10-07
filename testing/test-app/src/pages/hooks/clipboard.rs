@@ -29,33 +29,35 @@ pub fn PageHookClipboard() -> impl IntoView {
         "none" => None,
         kind => {
             let kind = kind.to_owned();
-            Some(Callback::new(move |action: ClipboardAction| match kind.as_str() {
-                "custom" => vec![DragItem::new().with("test", "test data")],
-                "multiple" => vec![
-                    DragItem::new().with("test", "item 1"),
-                    DragItem::new().with("test", "item 2"),
-                ],
-                "types" => vec![
-                    DragItem::new()
-                        .with("test", "test data")
-                        .with("text/plain", "test data"),
-                ],
-                "multiple-types" => vec![
-                    DragItem::new()
-                        .with("test", "item 1")
-                        .with("text/plain", "item 1"),
-                    DragItem::new()
-                        .with("test", "item 2")
-                        .with("text/plain", "item 2"),
-                ],
-                "action" => vec![DragItem::new().with(
-                    match action {
-                        ClipboardAction::Copy => "copy",
-                        ClipboardAction::Cut => "cut",
-                    },
-                    "test data",
-                )],
-                _ => vec![DragItem::text("hello world")],
+            Some(Callback::new(move |action: ClipboardAction| {
+                match kind.as_str() {
+                    "custom" => vec![DragItem::new().with("test", "test data")],
+                    "multiple" => vec![
+                        DragItem::new().with("test", "item 1"),
+                        DragItem::new().with("test", "item 2"),
+                    ],
+                    "types" => vec![
+                        DragItem::new()
+                            .with("test", "test data")
+                            .with("text/plain", "test data"),
+                    ],
+                    "multiple-types" => vec![
+                        DragItem::new()
+                            .with("test", "item 1")
+                            .with("text/plain", "item 1"),
+                        DragItem::new()
+                            .with("test", "item 2")
+                            .with("text/plain", "item 2"),
+                    ],
+                    "action" => vec![DragItem::new().with(
+                        match action {
+                            ClipboardAction::Copy => "copy",
+                            ClipboardAction::Cut => "cut",
+                        },
+                        "test data",
+                    )],
+                    _ => vec![DragItem::text("hello world")],
+                }
             }))
         }
     };

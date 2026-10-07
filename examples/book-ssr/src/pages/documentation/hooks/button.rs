@@ -36,7 +36,7 @@ pub fn PageUseButton() -> impl IntoView {
                         " or "<Code inline=true>"Reset"</Code>". The default doesn\u{2019}t submit forms, so a button inside a "
                         "form submits it only when you ask for it."
                     </ApiRow>
-                    <ApiRow name="id" ty="Option<Oco<'static, str>>" default="None">"The element\u{2019}s id."</ApiRow>
+                    <ApiRow name="id" ty="Option<String>" default="None">"The element\u{2019}s id."</ApiRow>
                     <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">
                         "An accessible name for buttons without visible text, such as icon buttons."
                     </ApiRow>
@@ -44,6 +44,12 @@ pub fn PageUseButton() -> impl IntoView {
                         "The ids of the elements that name the button."
                     </ApiRow>
                     <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Whether the button is disabled."</ApiRow>
+                    <ApiRow name="is_pending" ty="Signal<bool>" default="false">
+                        "Whether an action the button started is in progress: the button stays focusable but ignores presses, "
+                        "hover, keyboard handlers and context menu requests, is "<Code inline=true>"aria-disabled"</Code>", a submit "
+                        "button turns into a plain button (so that the form can\u{2019}t be submitted again), and an anchor loses its "
+                        <Code inline=true>"href"</Code>"."
+                    </ApiRow>
                     <ApiRow name="allow_focus_when_disabled" ty="bool" default="false">
                         "Keeps a disabled button focusable, but out of the tab order, so that focus isn\u{2019}t lost when the "
                         "focused button becomes disabled."

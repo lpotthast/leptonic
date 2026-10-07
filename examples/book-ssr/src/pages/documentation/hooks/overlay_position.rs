@@ -118,13 +118,15 @@ pub fn PageUseOverlayPosition() -> impl IntoView {
                             on_close: None,
                         });
 
+                        // Stored, so that the portal can render them again whenever the overlay opens.
                         let (attrs, styles) = props.into_parts();
+                        let (attrs, styles) = (StoredValue::new(attrs), StoredValue::new(styles));
 
                         view! {
                             <span {..target.attr()}>"Target"</span>
                             <Portal>
                                 <Show when=move || is_open.get()>
-                                    <div {..attrs.clone()} style=styles.clone()>"Positioned overlay"</div>
+                                    <div {..attrs.get_value()} style=styles.get_value()>"Positioned overlay"</div>
                                 </Show>
                             </Portal>
                         }

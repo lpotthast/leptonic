@@ -47,10 +47,11 @@ async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report
         .is_equal_to(Some("button".to_owned()));
     assert_that!(page.attr_of("test-btn-anchor", "href").await?)
         .is_equal_to(Some("#anchor-target".to_owned()));
-    // "handles input elements": `type="button"`, no role.
+    // "handles input elements": `type="button"`, `role="button"`.
     assert_that!(page.attr_of("test-btn-input", "type").await?)
         .is_equal_to(Some("button".to_owned()));
-    assert_that!(page.attr_of("test-btn-input", "role").await?).is_none();
+    assert_that!(page.attr_of("test-btn-input", "role").await?)
+        .is_equal_to(Some("button".to_owned()));
     // "handles target and rel": a new tab also gets `noopener` (a leptonic addition).
     assert_that!(page.attr_of("test-btn-blank", "target").await?)
         .is_equal_to(Some("_blank".to_owned()));

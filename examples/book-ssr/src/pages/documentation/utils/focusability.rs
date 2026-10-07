@@ -83,6 +83,26 @@ pub fn PageFocusability() -> impl IntoView {
                 </p>
             </Section>
 
+            <Section title="PREVENT_FOCUS_ATTRIBUTE">
+                <p>
+                    "An element with the attribute "<Code inline=true>"data-leptonic-prevent-focus"</Code>" (the constant "
+                    <Code inline=true>"PREVENT_FOCUS_ATTRIBUTE"</Code>") is skipped, with its descendants, when leptonic "
+                    "walks the focusable elements: in a "<Link href=routes::doc::focus::FocusScope.materialize()>"FocusScope"</Link>
+                    ", by a "<Link href=routes::doc::focus::UseFocusManager.materialize()>"FocusManager"</Link>" and when a grid "
+                    "cell focuses its first child. The element itself stays focusable. Use it for focusable elements that "
+                    "aren\u{2019}t meant to be reached this way, such as a tree row\u{2019}s expand button or a hidden "
+                    "input for autofill. Spread "<Code inline=true>"prevent_focus_attr()"</Code>" (a "
+                    <Code inline=true>"PreventFocusAttr"</Code>") onto the element:"
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        use leptonic::utils::focusability::prevent_focus_attr;
+
+                        view! { <button {..prevent_focus_attr()} tabindex="-1">"Expand"</button> }
+                    "#)}
+                </Code>
+            </Section>
+
             <Section title="will_open_keyboard">
                 <p>
                     <Code inline=true>"leptonic::utils::will_open_keyboard(&Element) -> bool"</Code>" tells whether focusing "

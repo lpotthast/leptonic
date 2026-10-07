@@ -176,6 +176,11 @@ pub fn PageAtomGrid() -> impl IntoView {
                             ": its first focusable child does. "<Code inline=true>"None"</Code>": "<Code inline=true>"Cell"</Code>
                             " with the "<Code inline=true>"Tab"</Code>" navigation behavior, else "<Code inline=true>"Child"</Code>"."
                         </ApiRow>
+                        <ApiRow name="allows_arrow_navigation" ty="bool" default="false">
+                            "Lets "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" move between the cell\u{2019}s children (and "
+                            <Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" between rows) even with "
+                            <Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
+                        </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the cell."</ApiRow>
                         <ApiRow name="children" ty="Children">"The cell\u{2019}s content."</ApiRow>
                     </ApiTable>
@@ -195,6 +200,7 @@ pub fn PageAtomGrid() -> impl IntoView {
                         "focus, which should be shown."
                     </ApiRow>
                     <ApiRow name="data-pressed" ty="true">"On "<Code inline=true>"GridRow"</Code>" and "<Code inline=true>"GridCell"</Code>": being pressed."</ApiRow>
+                    <ApiRow name="data-hovered" ty="true">"On "<Code inline=true>"GridRow"</Code>": a pointer is over the row."</ApiRow>
                     <ApiRow name="data-disabled" ty="true">"On "<Code inline=true>"GridRow"</Code>": the row is disabled."</ApiRow>
                 </ApiTable>
             </Section>

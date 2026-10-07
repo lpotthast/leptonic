@@ -168,14 +168,25 @@ pub fn PageAtomComboBox() -> impl IntoView {
                         <ApiRow name="is_read_only" ty="Signal<bool>" default="false">
                             "Shows the value without allowing changes."
                         </ApiRow>
-                        <ApiRow name="is_required" ty="bool" default="false">"Marks the input as required."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the input as required."</ApiRow>
+                        <ApiRow name="on_open_change" ty="Option<Callback<ComboBoxOpenChange>>" default="None">
+                            "Called when the popover opens (with what opened it: typing, focus or the button and arrow keys) "
+                            "or closes."
+                        </ApiRow>
                         <ApiRow name="aria_label, aria_labelledby" ty="MaybeProp<String>, Option<String>" default="None">
                             "Labels the combobox when it has no "<Code inline=true>"Label"</Code>
                             ". Without them, a "<Code inline=true>"Label"</Code>" is expected."
                         </ApiRow>
-                        <ApiRow name="placeholder" ty="Option<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
+                        <ApiRow name="placeholder" ty="MaybeProp<String>" default="None">"The input\u{2019}s placeholder."</ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">
-                            "The form field name of the input, also used to match server validation errors."
+                            "The form field name, also used to match server validation errors."
+                        </ApiRow>
+                        <ApiRow name="form_value" ty="ComboBoxFormValue" default="Key">
+                            "What the form submits: the selected keys ("<Code inline=true>"Key"</Code>", in hidden inputs) or the "
+                            "input\u{2019}s text ("<Code inline=true>"Text"</Code>", always with "<Code inline=true>"allows_custom_value"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="form" ty="Option<String>" default="None">
+                            "The id of the form the combobox belongs to, if it is outside of it."
                         </ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>" default="false">
                             "Marks the combobox invalid while "<Code inline=true>"true"</Code>", taking precedence over all other validation; "

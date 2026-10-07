@@ -94,7 +94,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         "Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>
                         " onto the trigger, so the hook can position the popover next to it."
                     </ApiRow>
-                    <ApiRow name="id" ty="Oco<'static, str>">
+                    <ApiRow name="id" ty="String">
                         "The id of the popover element. Pass it to "
                         <Link href=routes::doc::overlay_behavior::UseOverlayTrigger.materialize()>"use_overlay_trigger"</Link>" as "<Code inline=true>"overlay_id"</Code>"."
                     </ApiRow>

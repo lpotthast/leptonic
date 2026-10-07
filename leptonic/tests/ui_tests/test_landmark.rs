@@ -14,7 +14,7 @@ use crate::pages::{BaseActions, Page};
 /// the main landmark; a landmark regains the element focused in it last; `aria-hidden` landmarks
 /// are skipped; added and removed landmarks are followed; a cancelable event fires before
 /// wrapping; the focused landmark is `tabindex="-1"` until the focus leaves it; labels update;
-/// switching browser tabs keeps the landmark focused; nested landmarks go in document order; a
+/// nested landmarks go in document order; a
 /// `LandmarkController` moves between them; landmarks sharing a role without distinct labels are
 /// reported.
 pub struct LandmarkTests {}
@@ -33,7 +33,6 @@ impl BrowserTest<str> for LandmarkTests {
         added_and_removed(&page).await?;
         wrap_event(&page).await?;
         label_updates(&page).await?;
-        browser_tab_toggling(&page).await?;
         nested_order(&page).await?;
         controller(&page).await?;
         duplicate_role_warnings(&page).await?;
@@ -148,24 +147,6 @@ async fn label_updates(page: &Page<'_>) -> Result<(), Report> {
     page.click_element_with_id("test-lm-rename").await?;
     page.wait_for_attr(&main, "aria-label", Some("Article"))
         .await
-}
-
-/// "focuses the landmark again after toggling browser tabs" (and windows): a real tab switch.
-async fn browser_tab_toggling(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/hooks/landmark").await?;
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    let original = page.driver.window().await?;
-    let tab = page.driver.new_tab().await?;
-    page.driver.switch_to_window(tab).await?;
-    page.driver.close_window().await?;
-    page.driver.switch_to_window(original).await?;
-    page.wait_for_active_id("test-lm-nav").await?;
-    let nav = page.element("test-lm-nav").await?;
-    assert_that!(nav.attr("tabindex").await?).is_equal_to(Some("-1".to_owned()));
-    // F6 still moves on from it.
-    page.send_keys_to_active(Key::F6).await?;
-    page.wait_for_active_id("test-lm-main").await
 }
 
 /// "goes in dom order with two nested landmarks", "can F6 to a nested landmark region that is

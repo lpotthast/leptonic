@@ -25,11 +25,11 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                     <li>
                         <AnchorLink href="#use-tooltip-trigger">"use_tooltip_trigger"</AnchorLink>
                         " gives the trigger its handlers (hover, focus, "<Keys keys="Escape"/>", press) and "
-                        <Code inline=true>"aria-describedby"</Code>", and the tooltip its id and role."
+                        <Code inline=true>"aria-describedby"</Code>", and the tooltip its id."
                     </li>
                     <li>
                         <AnchorLink href="#use-tooltip">"use_tooltip"</AnchorLink>
-                        " keeps the tooltip open while the pointer is over it."
+                        " gives the tooltip its role and keeps it open while the pointer is over it."
                     </li>
                 </ol>
                 <p>
@@ -89,11 +89,11 @@ pub fn PageUseTooltipHook() -> impl IntoView {
             <Section title="use_tooltip_trigger">
                 <p>
                     "Takes the state from "<Code inline=true>"use_tooltip_trigger_state"</Code>" in its input. Spread "<Code inline=true>"trigger_props.into_attrs()"</Code>" onto the trigger and put "
-                    <Code inline=true>"tooltip_props.id"</Code>" and "<Code inline=true>"tooltip_props.role"</Code>
-                    " on the tooltip element."
+                    <Code inline=true>"tooltip_props.id"</Code>" on the tooltip element."
                 </p>
 
                 <Section title="Input" id="use-tooltip-trigger-input">
+                    <p>"Pass a "<Code inline=true>"UseTooltipTriggerInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                     <ApiTable kind=ApiKind::Input of="UseTooltipTriggerInput">
                         <ApiRow name="state" ty="TooltipTriggerState">
                             "The tooltip\u{2019}s state, from "<Code inline=true>"use_tooltip_trigger_state"</Code>
@@ -112,12 +112,11 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                 <Section title="Return" id="use-tooltip-trigger-return">
                     <ApiTable kind=ApiKind::Return of="UseTooltipTriggerReturn">
                         <ApiRow name="trigger_props" ty="UseTooltipTriggerProps">
-                            "The trigger\u{2019}s id, "<Code inline=true>"aria-describedby"</Code>" (pointing to the tooltip "
+                            <Code inline=true>"aria-describedby"</Code>" of the trigger (pointing to the tooltip "
                             "while it is open) and its pointer, focus and keyboard handlers."
                         </ApiRow>
                         <ApiRow name="tooltip_props" ty="UseTooltipTriggerTooltipProps">
-                            "The "<Code inline=true>"id"</Code>" and the "<Code inline=true>"role"</Code>" ("
-                            <Code inline=true>"tooltip"</Code>") of the tooltip element."
+                            "The "<Code inline=true>"id"</Code>" of the tooltip element, which describes the trigger while it is open."
                         </ApiRow>
                     </ApiTable>
                 </Section>
@@ -125,7 +124,8 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <Section title="use_tooltip">
                 <p>
-                    "Spread "<Code inline=true>"props.into_attrs()"</Code>" onto the tooltip element. Moving the pointer "
+                    "Spread "<Code inline=true>"props.into_attrs()"</Code>" onto the tooltip element: it gets "
+                    <Code inline=true>"role=\"tooltip\""</Code>". Moving the pointer "
                     "from the trigger onto the tooltip then keeps it open, so a longer text can be read or selected."
                 </p>
 
@@ -141,8 +141,8 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                 <Section title="Return" id="use-tooltip-return">
                     <ApiTable kind=ApiKind::Return of="UseTooltipReturn">
                         <ApiRow name="props" ty="UseTooltipProps">
-                            "The "<Code inline=true>"pointerenter"</Code>" and "<Code inline=true>"pointerleave"</Code>
-                            " handlers of the tooltip."
+                            "The "<Code inline=true>"role"</Code>" ("<Code inline=true>"tooltip"</Code>") and the "
+                            <Code inline=true>"pointerenter"</Code>" and "<Code inline=true>"pointerleave"</Code>" handlers of the tooltip."
                         </ApiRow>
                     </ApiTable>
                 </Section>

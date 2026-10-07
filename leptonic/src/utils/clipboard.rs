@@ -7,6 +7,8 @@ pub enum ClipboardError {
     Unavailable,
     /// The browser refused (no permission, the page isn't focused, an insecure context, ...).
     Denied,
+    /// The text to write didn't come ([`write_text_deferred`]'s future gave `None`).
+    NoText,
 }
 
 impl std::fmt::Display for ClipboardError {
@@ -14,6 +16,7 @@ impl std::fmt::Display for ClipboardError {
         f.write_str(match self {
             Self::Unavailable => "no clipboard available",
             Self::Denied => "the browser denied writing to the clipboard",
+            Self::NoText => "no text to write to the clipboard",
         })
     }
 }
@@ -44,4 +47,73 @@ pub async fn write_text(text: &str) -> Result<(), ClipboardError> {
         .await
         .map(|_| ())
         .map_err(|_| ClipboardError::Denied)
+}
+
+/// Writes text that is still loading to the clipboard, e.g. a "Copy" button for content fetched on
+/// press.
+///
+/// Call it directly in the event handler (the press), not in a task it spawns: browsers only allow
+/// clipboard writes during the user's interaction, and Safari doesn't keep that permission over an
+/// `await` of a download. The write starts right away with a pending clipboard item (`navigator.
+/// clipboard.write([new ClipboardItem({"text/plain": promise})])`), which `text` completes. The
+/// returned future resolves once the text is written.
+///
+/// ```ignore
+/// let on_press = move |_| {
+///     let written = write_text_deferred(async move { fetch_markdown().await.ok() });
+///     leptos::task::spawn_local(async move {
+///         if let Err(err) = written.await {
+///             leptos::logging::warn!("{err}");
+///         }
+///     });
+/// };
+/// ```
+///
+/// # Errors
+///
+/// [`ClipboardError::Unavailable`] without a browser window, [`ClipboardError::NoText`] when `text`
+/// gives `None`, [`ClipboardError::Denied`] when the browser refuses.
+pub fn write_text_deferred(
+    text: impl Future<Output = Option<String>> + 'static,
+) -> impl Future<Output = Result<(), ClipboardError>> {
+    let started = start_deferred_write(text);
+    async move {
+        let (promise, gave_text) = started?;
+        let result = wasm_bindgen_futures::JsFuture::from(promise).await;
+        if !gave_text.get() {
+            return Err(ClipboardError::NoText);
+        }
+        result.map(|_| ()).map_err(|_| ClipboardError::Denied)
+    }
+}
+
+/// Issues the clipboard write synchronously (within the user's interaction); the promise settles
+/// once the text arrived and was written. The flag tells whether `text` gave any.
+fn start_deferred_write(
+    text: impl Future<Output = Option<String>> + 'static,
+) -> Result<(js_sys::Promise, std::rc::Rc<std::cell::Cell<bool>>), ClipboardError> {
+    use wasm_bindgen::JsValue;
+
+    let window = leptos_use::use_window();
+    let navigator = window.navigator().ok_or(ClipboardError::Unavailable)?;
+    let gave_text = std::rc::Rc::new(std::cell::Cell::new(false));
+    // A promise of the text as a `text/plain` blob (Safari takes blobs only).
+    let blob = wasm_bindgen_futures::future_to_promise({
+        let gave_text = std::rc::Rc::clone(&gave_text);
+        async move {
+            let text = text.await.ok_or(JsValue::NULL)?;
+            gave_text.set(true);
+            let parts = js_sys::Array::of1(&JsValue::from_str(&text));
+            let options = web_sys::BlobPropertyBag::new();
+            options.set_type("text/plain");
+            web_sys::Blob::new_with_str_sequence_and_options(&parts, &options).map(JsValue::from)
+        }
+    });
+    let record = js_sys::Object::new();
+    js_sys::Reflect::set(&record, &JsValue::from_str("text/plain"), &blob)
+        .map_err(|_| ClipboardError::Unavailable)?;
+    let item = web_sys::ClipboardItem::new_with_record_from_str_to_blob_promise(&record)
+        .map_err(|_| ClipboardError::Unavailable)?;
+    let promise = navigator.clipboard().write(&js_sys::Array::of1(&item));
+    Ok((promise, gave_text))
 }

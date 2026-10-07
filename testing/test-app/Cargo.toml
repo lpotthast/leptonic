@@ -38,7 +38,9 @@ ssr = [
 [dependencies]
 axum = { version = "0.8.9", optional = true, default-features = false, features = ["http1", "tokio"] }
 console_error_panic_hook = { version = "0.1.7", default-features = false }
-leptonic = { path = "../../leptonic", default-features = false, features = ["atoms"] }
+# `TimeoutFuture`: a stand-in for a download in the clipboard fixture.
+gloo-timers = { version = "0.4.0", default-features = false, features = ["futures"] }
+leptonic = { path = "../../leptonic", default-features = false, features = ["atoms", "clipboard"] }
 leptos = { version = "0.8.22", default-features = false }
 # `default`: `file_and_error_handler` (serving the site's files) is gated on it by name.
 leptos_axum = { version = "0.8.10", optional = true, default-features = false, features = ["default"] }

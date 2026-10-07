@@ -95,6 +95,78 @@ pub fn PageAtomSwitch() -> impl IntoView {
                 </Demo>
             </Section>
 
+            <Section title="SwitchField">
+                <p>
+                    "For a switch with a description or an error message of its own, use a "<Code inline=true>"SwitchField"</Code>
+                    ": a "<Code inline=true>"<div>"</Code>" around a "<Code inline=true>"SwitchButton"</Code>" (the clickable "
+                    <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"checkbox\" role=\"switch\">"</Code>
+                    " and your children), a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
+                    ". It takes the props of "<Code inline=true>"Switch"</Code>" (its "<Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" go to the "<Code inline=true>"<div>"</Code>"). Both render the data attributes below."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <SwitchField is_selected=backups set_selected=backups classes="my-switch-field">
+                            <SwitchButton classes="my-switch">
+                                <span class="my-switch-track" aria-hidden="true"></span>
+                                "Nightly backups"
+                            </SwitchButton>
+                            <Description>"Runs at 2 AM."</Description>
+                            <FieldError/>
+                        </SwitchField>
+                    "#)}
+                </Code>
+                <Section title="Props" id="switchfield-props">
+                    <ApiTable kind=ApiKind::Props of="SwitchField">
+                        <ApiRow name="default_selected" ty="bool" default="false">"Whether the switch starts on."</ApiRow>
+                        <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">
+                            "Called when the switch is turned on or off, also while "<Code inline=true>"is_selected"</Code>
+                            " controls the selection."
+                        </ApiRow>
+                        <ApiRow name="is_selected" ty="Option<Signal<bool>>" default="None">
+                            "Whether the toggle is selected (controlled): a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_selected" ty="Option<Out<bool>>" default="None">
+                            "Receives the selection: an "<Code inline=true>"RwSignal"</Code>", "<Code inline=true>"WriteSignal"</Code>", closure, "<Code inline=true>"Callback"</Code>", \u{2026}"
+                        </ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables the switch."</ApiRow>
+                        <ApiRow name="is_read_only" ty="Signal<bool>" default="false">"The switch can be focused but not changed."</ApiRow>
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">"Marks the switch as required."</ApiRow>
+                        <ApiRow name="is_invalid" ty="Signal<bool>" default="false">"Marks the switch invalid."</ApiRow>
+                        <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">"Validates the selection."</ApiRow>
+                        <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
+                            "When errors are shown. "<Code inline=true>"None"</Code>": the behavior of the surrounding "
+                            <Link href=routes::doc::Form.materialize()>"Form"</Link>", else "<Code inline=true>"Native"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s "<Code inline=true>"name"</Code>"."</ApiRow>
+                        <ApiRow name="form_value" ty="Option<String>" default="None">
+                            "The value submitted while on. Without it, the browser submits "<Code inline=true>"on"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the input belongs to, when it isn\u{2019}t inside it."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a switch without label text."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the switch when it mounts."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the switch gains or loses focus."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<div>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"SwitchButton"</Code>", and a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" as needed. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="SwitchButton">
+                <p>
+                    "The clickable "<Code inline=true>"<label>"</Code>" of a "<AnchorLink href="#switchfield">"SwitchField"</AnchorLink>
+                    ", around a visually hidden "<Code inline=true>"<input type=\"checkbox\" role=\"switch\">"</Code>" and your children (the track and the label text). "
+                    "It takes the field\u{2019}s state and renders the data attributes below."
+                </p>
+                <Section title="Props" id="switchbutton-props">
+                    <ApiTable kind=ApiKind::Props of="SwitchButton">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The track and the label text."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="Data Attributes">
                 <p>"Set to "<Code inline=true>"true"</Code>" on the "<Code inline=true>"<label>"</Code>" while the state applies:"</p>
                 <ApiTable kind=ApiKind::DataAttributes>

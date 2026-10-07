@@ -133,9 +133,10 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">
                             "Validates the selection: "<Code inline=true>"Ok(())"</Code>" or "<Code inline=true>"Err(messages)"</Code>"."
                         </ApiRow>
-                        <ApiRow name="validation_behavior" ty="ValidationBehavior" default="Aria">
+                        <ApiRow name="validation_behavior" ty="Option<ValidationBehavior>" default="None">
                             <Code inline=true>"Aria"</Code>" shows errors as the user edits, "<Code inline=true>"Native"</Code>
-                            " defers them to form submission using native constraint validation."
+                            " defers them to form submission using native constraint validation. "<Code inline=true>"None"</Code>
+                            ": "<Code inline=true>"Aria"</Code>"; for an item of a checkbox group, the group\u{2019}s."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The input\u{2019}s "<Code inline=true>"name"</Code>", for form submission."</ApiRow>
                         <ApiRow name="form" ty="Option<String>" default="None">
@@ -252,7 +253,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>">"The group\u{2019}s settings."</ApiRow>
                         <ApiRow name="is_required" ty="Signal<bool>">"Whether a value is still required: the group is required and nothing is checked."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the displayed validation is invalid."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The group\u{2019}s validation state."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The group\u{2019}s validation state."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"The validation behavior of the group."</ApiRow>
                     </ApiTable>
                     <DocTable headers=&["Method", "Description"]>
@@ -322,12 +323,12 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                         <ApiRow name="value" ty="Key">"The checkbox\u{2019}s value in the group, also its form value. Required."</ApiRow>
                         <ApiRow name="is_indeterminate" ty="Signal<bool>" default="false">"Shows the checkbox as partially checked."</ApiRow>
                         <ApiRow name="on_change" ty="Option<Callback<bool>>" default="None">"Called when this checkbox is checked or unchecked."</ApiRow>
-                        <ApiRow name="validate" ty="Option<ValidateFn<bool>>" default="None">"Validates this checkbox; its errors join the group\u{2019}s."</ApiRow>
                         <ApiRow name="options" ty="ToggleOptions" default="ToggleOptions::default()">
                             "Further settings. "<Code inline=true>"name"</Code>" and "<Code inline=true>"form"</Code>
                             " default to the group\u{2019}s, the form value is "<Code inline=true>"value"</Code>
                             ", and the group\u{2019}s validation behavior applies. The checkbox is disabled, read-only or required when "
-                            "it or its group is."
+                            "it or its group is. Its "<Code inline=true>"validate"</Code>" and "<Code inline=true>"is_invalid"</Code>
+                            " validate this checkbox on its own; its errors join the group\u{2019}s."
                         </ApiRow>
                     </ApiTable>
                 </Section>

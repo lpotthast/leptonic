@@ -66,7 +66,7 @@ pub fn PageNumberFieldOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "Number fields exist as hooks and as atoms. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for how the layers relate."
                 </p>
                 <DocTable headers=&["Layer", "What you get"]>

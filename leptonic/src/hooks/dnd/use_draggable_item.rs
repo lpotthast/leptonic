@@ -97,8 +97,7 @@ pub fn use_draggable_item(input: UseDraggableItemInput) -> UseDraggableItemRetur
     let modality = use_drag_modality();
     // The item itself starts drags (no drag button) in a selectable collection: describe how; it
     // has no click to start them (touch: long press; NVDA/JAWS are in forms mode in collections).
-    let describes =
-        move || !has_drag_button && selection.selection_mode() != SelectionMode::None;
+    let describes = move || !has_drag_button && selection.selection_mode() != SelectionMode::None;
     let item_description = use_description(Signal::derive(move || {
         describes().then(|| {
             let modality = modality.get();

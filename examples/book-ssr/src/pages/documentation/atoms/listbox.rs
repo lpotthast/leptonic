@@ -36,7 +36,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                         </TableCell>
                     </TableRow>
                     <TableRow>
-                        <TableCell><Code inline=true>"ListBoxSection"</Code></TableCell>
+                        <TableCell><Code inline=true>"ListBoxSection"</Code>", "<Code inline=true>"ListBoxSectionHeading"</Code></TableCell>
                         <TableCell><Link href=hook_section("use-listbox-section")>"use_listbox_section"</Link></TableCell>
                     </TableRow>
                 </DocTable>
@@ -120,13 +120,13 @@ pub fn PageAtomListBox() -> impl IntoView {
                         <ApiRow name="collection" ty="Option<CollectionMemo>" default="None">
                             "The options, from "<Code inline=true>"use_collection"</Code>" or "
                             <Code inline=true>"use_list_collection"</Code>". Required unless the listbox is inside a select or "
-                            "combobox, which provides it."
+                            "combobox, which provides it: without either, the listbox panics."
                         </ApiRow>
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             "Whether nothing, one or many options can be selected. "<Code inline=true>"None"</Code>
                             " is a list without selection."
                         </ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">
                             "How pointer presses change the selection: "<Code inline=true>"Toggle"</Code>" the option, or "
                             <Code inline=true>"Replace"</Code>" the selection with it."
                         </ApiRow>
@@ -173,6 +173,11 @@ pub fn PageAtomListBox() -> impl IntoView {
                         <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">
                             "Called with the key of an activated option: pressed without a selection mode, double-clicked, or "
                             <Keys keys="Enter"/>" in "<Code inline=true>"Replace"</Code>" selection behavior."
+                        </ApiRow>
+                        <ApiRow name="empty_state" ty="Option<ViewFn>" default="None">
+                            "Shown while there are no options (also inside a "<Code inline=true>"Select"</Code>" or "
+                            <Code inline=true>"ComboBox"</Code>"), in a "<Code inline=true>"role=\"option\""</Code>" element with "
+                            <Code inline=true>"display: contents"</Code>"."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the listbox "<Code inline=true>"<div>"</Code>"."
@@ -260,10 +265,9 @@ pub fn PageAtomListBox() -> impl IntoView {
 
             <Section title="ListBoxSection">
                 <p>
-                    "A group of options, for a section of the collection. It renders a "<Code inline=true>"<div>"</Code>
-                    " with "<Code inline=true>"role=\"presentation\""</Code>" containing the section\u{2019}s heading (if the "
-                    "collection section has a header) and a "<Code inline=true>"role=\"group\""</Code>" "
-                    <Code inline=true>"<div>"</Code>" with the children, labelled by the heading:"
+                    "A group of options, for a section of the collection: one "<Code inline=true>"<section>"</Code>" with "
+                    <Code inline=true>"role=\"group\""</Code>", holding its children. Render a "<Code inline=true>"ListBoxSectionHeading"</Code>
+                    " in it when the collection section has a header; it labels the group:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"
@@ -282,10 +286,12 @@ pub fn PageAtomListBox() -> impl IntoView {
                         view! {
                             <ListBox collection=produce aria_label="Produce">
                                 <ListBoxSection key="fruit">
+                                    <ListBoxSectionHeading/>
                                     <ListBoxItem key="apple">"Apple"</ListBoxItem>
                                     <ListBoxItem key="banana">"Banana"</ListBoxItem>
                                 </ListBoxSection>
                                 <ListBoxSection key="vegetables">
+                                    <ListBoxSectionHeading/>
                                     <ListBoxItem key="carrot">"Carrot"</ListBoxItem>
                                 </ListBoxSection>
                             </ListBox>
@@ -300,12 +306,30 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <ApiTable kind=ApiKind::Props of="ListBoxSection">
                         <ApiRow name="key" ty="Key">"The section\u{2019}s key in the listbox\u{2019}s collection. Required."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
-                            "Classes and styles of the group "<Code inline=true>"<div>"</Code>" holding the options."
+                            "Classes and styles of the "<Code inline=true>"<section>"</Code>"."
                         </ApiRow>
-                        <ApiRow name="heading_classes" ty="Classes" default="empty">
-                            "Classes of the heading "<Code inline=true>"<div>"</Code>"."
+                        <ApiRow name="children" ty="Children">
+                            "The section\u{2019}s "<Code inline=true>"ListBoxSectionHeading"</Code>" and options, in collection order."
                         </ApiRow>
-                        <ApiRow name="children" ty="Children">"The section\u{2019}s options, in collection order."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="ListBoxSectionHeading">
+                <p>
+                    "The heading of a "<Code inline=true>"ListBoxSection"</Code>": a "<Code inline=true>"<header>"</Code>" naming "
+                    "the group. It shows its children, or else the section\u{2019}s header text from the collection. Assistive "
+                    "technology doesn\u{2019}t see it as a heading (a listbox can\u{2019}t contain headings), only as the "
+                    "group\u{2019}s name. Render one per section, only for sections with a header."
+                </p>
+                <Section title="Props" id="listbox-section-heading-props">
+                    <ApiTable kind=ApiKind::Props of="ListBoxSectionHeading">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
+                            "Classes and styles of the "<Code inline=true>"<header>"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">
+                            "The heading\u{2019}s content. "<Code inline=true>"None"</Code>": the collection\u{2019}s header text."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -342,8 +366,8 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <Code inline=true>"ListBoxItem"</Code>" one with "<Code inline=true>"leptonic-ListBoxItem"</Code>" (its "<Code inline=true>"ListBoxItemLabel"</Code>" and "
                     <Code inline=true>"ListBoxItemDescription"</Code>" are "<Code inline=true>"<span>"</Code>"s with "<Code inline=true>"leptonic-ListBoxItemLabel"</Code>" and "
                     <Code inline=true>"leptonic-ListBoxItemDescription"</Code>"), and "<Code inline=true>"ListBoxSection"</Code>" a group with "
-                    <Code inline=true>"leptonic-ListBoxSection"</Code>" after its heading with "<Code inline=true>"leptonic-ListBoxSectionHeading"</Code>" ("
-                    <Code inline=true>"heading_classes"</Code>"). Your "<Code inline=true>"classes"</Code>" follow the default class. Anything else in an option, like the "
+                    <Code inline=true>"leptonic-ListBoxSection"</Code>" around its "<Code inline=true>"ListBoxSectionHeading"</Code>" ("
+                    <Code inline=true>"leptonic-ListBoxSectionHeading"</Code>"). Your "<Code inline=true>"classes"</Code>" follow the default class. Anything else in an option, like the "
                     "demo\u{2019}s check box, is your own markup: mark it "<Code inline=true>"aria-hidden"</Code>" and style it through the option\u{2019}s "
                     "data attributes. The demo above uses this CSS:"
                 </p>
@@ -377,7 +401,7 @@ pub fn PageAtomListBox() -> impl IntoView {
                     <Code inline=true>"ListBoxItem"</Code>" provides its state as "<Code inline=true>"ListBoxItemCtx"</Code>
                     " context ("<Code inline=true>"is_selected"</Code>", "<Code inline=true>"is_focused"</Code>", "
                     <Code inline=true>"is_focus_visible"</Code>", "<Code inline=true>"is_disabled"</Code>", "
-                    <Code inline=true>"is_pressed"</Code>"). Leptos components inside an option can read it, e.g. a check mark:"
+                    <Code inline=true>"is_pressed"</Code>", "<Code inline=true>"is_hovered"</Code>"). Leptos components inside an option can read it, e.g. a check mark:"
                 </p>
                 <Code language=Language::Rust>
                     {indoc!(r#"

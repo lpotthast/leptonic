@@ -162,7 +162,11 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
                     set_modality.set(current);
                 }
 
-                // Register for future updates.
+                // Register for future updates. A re-run replaces the previous registration,
+                // whose callback belonged to the previous run (and is disposed now).
+                if let Some(old_id) = subscriber_id.get_value() {
+                    state.unregister(old_id);
+                }
                 let id = state.register(is_text_input, move |new_modality: Modality| {
                     set_is_focus_visible.set(is_focus_visible_for_modality(new_modality));
                     set_modality.set(new_modality);

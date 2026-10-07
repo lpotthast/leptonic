@@ -48,7 +48,7 @@ body {
   }
 }
 
-// Buttons of the book's pages (leptonic's `Button` and `LinkButton` atoms): filled with the brand color, or outlined
+// Buttons of the book's pages (leptonic's `Link` atom): filled with the brand color, or outlined
 // (`data-variant="secondary"`).
 .book-button {
   display: inline-flex;

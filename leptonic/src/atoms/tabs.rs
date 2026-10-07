@@ -38,19 +38,18 @@ use crate::{
 // - Render props become `data-*` attributes plus plain children.
 //
 // ## DIFFERENT BEHAVIOR
-// - A `Tab`'s `is_disabled` is known only once the tab renders: keyboard navigation skips it,
-//   but the first enabled tab selected by default is corrected in an effect (on the client), so
-//   the server may render such a tab selected. Disable tabs in the collection or with
-//   `disabled_keys` to have them skipped from the start.
+// - A `Tab`'s `is_disabled` is known only once the tab renders. The first enabled tab selected
+//   by default skips it as the tabs render (on the server too), but a `TabPanel` rendered before
+//   the `TabList` doesn't know it yet. Disable tabs in the collection or with `disabled_keys` to
+//   have them skipped from the start.
+// - `TabPanels` animates from the size it measured after the previous selection change (or
+//   mount), not from the size right before the change, and measures the new size in the next
+//   animation frame (before it is painted). Reason: React renders allow measuring before the DOM
+//   update; Leptos effects run after it, in no fixed order with the effects updating the panels.
 //
 // ## OMITTED FEATURES
 // - `SelectionIndicator` (an indicator sliding between the tabs, built on
 //   `SharedElementTransition`) and tabs as links (`href` on `Tab`): not ported yet.
-//
-// ## DIFFERENT BEHAVIOR
-// - `TabPanels` animates from the size it measured after the previous selection change (or
-//   mount), not from the size right before the change (React renders allow measuring before the
-//   DOM update; Leptos effects run after it).
 // - Slots, the `render` prop and `TabListStateContext`.
 //
 // =============================================================================
@@ -398,17 +397,16 @@ pub fn TabPanels(
     // The size after the last selection change (or mount), to animate from.
     let size = StoredValue::new(None::<(f64, f64)>);
     let has_transition = StoredValue::new(None::<bool>);
-    Effect::new(move |previous: Option<Option<Key>>| {
-        let selected = state.selected_key();
-        let Some(el) = element
-            .get()
-            .and_then(|el| el.dyn_ref::<web_sys::HtmlElement>().cloned())
-        else {
-            return selected;
-        };
+    // Measures the panels at their natural size and, when the selection changed (`animate`) and
+    // the size differs from the stored one, animates from the stored size to the new one.
+    let update = move |el: web_sys::HtmlElement, animate: bool| {
+        // Unmounted before the frame.
+        if size.is_disposed() || has_transition.is_disposed() {
+            return;
+        }
         let window = leptos_use::use_window();
         let Some(window) = window.as_ref() else {
-            return selected;
+            return;
         };
         let has_transition = has_transition.get_value().unwrap_or_else(|| {
             let transition = window
@@ -431,11 +429,8 @@ pub fn TabPanels(
         set_size("auto", "auto");
         let rect = el.get_bounding_client_rect();
         let (width, height) = (rect.width(), rect.height());
-        let changed = previous
-            .as_ref()
-            .is_some_and(|previous| previous.is_some() && *previous != selected);
         if has_transition
-            && changed
+            && animate
             && let Some((old_width, old_height)) = size.get_value()
             && (old_width, old_height) != (width, height)
         {
@@ -464,6 +459,25 @@ pub fn TabPanels(
             });
         }
         size.set_value(Some((width, height)));
+    };
+    Effect::new(move |previous: Option<Option<Key>>| {
+        let selected = state.selected_key();
+        let Some(el) = element
+            .get()
+            .and_then(|el| el.dyn_ref::<web_sys::HtmlElement>().cloned())
+        else {
+            return selected;
+        };
+        let changed = previous
+            .as_ref()
+            .is_some_and(|previous| previous.is_some() && *previous != selected);
+        if changed {
+            // The panels change in effects too, which may run after this one: measure the new
+            // panel in the next frame, after every effect, before it is painted.
+            request_animation_frame(move || update(el, true));
+        } else {
+            update(el, false);
+        }
         selected
     });
 

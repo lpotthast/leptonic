@@ -226,8 +226,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     let range = state.range();
     let formatters = data.formatters;
 
-    let is_focused =
-        memo(move || calendar.is_cell_focused(date.get()) && !is_outside_month.get());
+    let is_focused = memo(move || calendar.is_cell_focused(date.get()) && !is_outside_month.get());
     let is_disabled = memo(move || {
         is_disabled_prop.get() || state.is_cell_disabled(date.get()) || is_outside_month.get()
     });

@@ -24,7 +24,7 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
 
             <Section title="Input">
                 <ApiTable kind=ApiKind::Input of="UseVisuallyHiddenInput">
-                    <ApiRow name="is_focusable" ty="bool" default="false">
+                    <ApiRow name="is_focusable" ty="Signal<bool>" default="false">
                         "Show the element while focus is within it, e.g. for a skip link."
                     </ApiRow>
                 </ApiTable>
@@ -84,7 +84,7 @@ pub fn PageUseVisuallyHidden() -> impl IntoView {
 
             <Section title="Focusable Content">
                 <p>
-                    "With "<Code inline=true>"is_focusable: true"</Code>", the element shows while it or one of its "
+                    "With "<Code inline=true>"is_focusable: true.into()"</Code>", the element shows while it or one of its "
                     "descendants has focus, and hides again when focus leaves it. Without it, a focused element stays "
                     "invisible: keyboard users would lose track of the focus, so set it whenever the hidden content contains "
                     "something focusable."

@@ -24,10 +24,9 @@ use crate::{
             UseDateFieldStateInput, UseDatePickerInput, UseDatePickerReturn,
             UseDatePickerStateInput, UseDateRangePickerInput, UseDateRangePickerStateInput,
             UseDateSegmentInput, UseDateSegmentReturn, UseHiddenDateInputInput,
-            UseHiddenDateInputReturn, UseTimeFieldInput, UseTimeFieldStateInput,
-            use_date_field, use_date_field_state, use_date_picker, use_date_picker_state,
-            use_date_range_picker, use_date_range_picker_state, use_date_segment,
-            use_hidden_date_input, use_time_field,
+            UseHiddenDateInputReturn, UseTimeFieldInput, UseTimeFieldStateInput, use_date_field,
+            use_date_field_state, use_date_picker, use_date_picker_state, use_date_range_picker,
+            use_date_range_picker_state, use_date_segment, use_hidden_date_input, use_time_field,
             use_time_field_state,
         },
         use_button, use_focus_ring, use_hover,
@@ -102,6 +101,7 @@ fn group_state(
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_field<V: DateValue>(
     state: &DateFieldState<V>,
     options: DateFieldOptions,

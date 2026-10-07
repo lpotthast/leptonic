@@ -65,6 +65,9 @@ pub struct UseOptionReturn {
     pub is_focus_visible: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
+    /// Whether the pointer is over the option (options that can be selected or have an action,
+    /// or that take focus on hover).
+    pub is_hovered: Signal<bool>,
     /// Whether pressing the option can select it.
     pub allows_selection: Signal<bool>,
     /// Whether the option has an action (or link) to perform.
@@ -198,18 +201,24 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
     });
 
     let hover_key = key.clone();
+    // Hovering is tracked for interactive options (react-aria-components' `ListBoxItem`
+    // `isHovered`), and moves focus with `should_focus_on_hover` (react-aria's `useOption`).
     let hover = use_hover(UseHoverInput {
-        is_disabled: Signal::derive(move || is_disabled.get() || !should_focus_on_hover),
+        is_disabled: Signal::derive(move || {
+            is_disabled.get()
+                || !(should_focus_on_hover || allows_selection.get() || has_action.get())
+        }),
         on_hover_start: Some(Callback::new(move |_| {
             // Unless the keyboard is in use: hovering moves focus.
-            if get_modality() == Modality::Pointer {
+            if should_focus_on_hover && get_modality() == Modality::Pointer {
                 selection.set_focused(true);
                 selection.set_focused_key(Some(hover_key.clone()), None);
             }
         })),
         ..UseHoverInput::default()
-    })
-    .props;
+    });
+    let is_hovered = hover.is_hovered;
+    let hover = hover.props;
 
     let focus_visible = use_focus_visible(UseFocusVisibleInput::default()).focus_should_be_visible;
     let (item_props, styles) = props.into_inner();
@@ -254,6 +263,7 @@ pub fn use_option(input: UseOptionInput) -> UseOptionReturn {
         is_focus_visible: Signal::derive(move || is_focused.get() && focus_visible.get()),
         is_disabled,
         is_pressed,
+        is_hovered,
         allows_selection,
         has_action,
         link,

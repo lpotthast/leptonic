@@ -9,11 +9,12 @@ use crate::{
         KeyboardNavigationBehavior, SelectionBehavior, SelectionMode, UseFocusRingInput,
         UseFocusRingReturn, UseFocusVisibleInput, UseGridCellInput, UseGridCellReturn,
         UseGridInput, UseGridReturn, UseGridRowInput, UseGridRowReturn, UseGridStateInput,
+        UseHoverInput,
         collections::{
             CollectionMemo, CollectionOptions, EscapeKeyBehavior, Key, Selection, SelectionOptions,
         },
         use_focus_ring, use_focus_visible, use_grid, use_grid_cell, use_grid_row,
-        use_grid_row_group, use_grid_state,
+        use_grid_row_group, use_grid_state, use_hover,
     },
     utils::{
         CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
@@ -144,8 +145,8 @@ pub fn GridRowGroup(
 
 /// A row of a [`Grid`], for the collection row `key`.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
-/// `data-pressed` for styling.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
+/// `data-pressed` and `data-hovered` (rows that can be selected or have an action) for styling.
 ///
 /// Default class: `leptonic-GridRow`.
 #[component]
@@ -165,7 +166,8 @@ pub fn GridRow(
         is_focused,
         is_disabled,
         is_pressed,
-        ..
+        allows_selection,
+        has_action,
     } = use_grid_row(UseGridRowInput {
         grid,
         key,
@@ -176,10 +178,16 @@ pub fn GridRow(
     // Focused by keyboard (react-aria-components: the row's `useFocusRing`).
     let focus_visible = expect_context::<GridFocusVisible>().0;
     let is_focus_visible = Signal::derive(move || is_focused.get() && focus_visible.get());
+    // Interactive rows show hover (react-aria-components' `Row`).
+    let hover = use_hover(UseHoverInput {
+        is_disabled: Signal::derive(move || !allows_selection.get() && !has_action.get()),
+        ..UseHoverInput::default()
+    });
 
     view! {
         <div
             {..attrs}
+            {..hover.props.into_attrs()}
             class=classes
             style=styles
             data-selected=flag(is_selected)
@@ -187,6 +195,7 @@ pub fn GridRow(
             data-focus-visible=flag(is_focus_visible)
             data-disabled=flag(is_disabled)
             data-pressed=flag(is_pressed)
+            data-hovered=flag(hover.is_hovered)
         >
             {children()}
         </div>

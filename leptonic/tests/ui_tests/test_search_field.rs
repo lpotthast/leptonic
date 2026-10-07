@@ -9,7 +9,7 @@ use browser_test::{
 };
 use rootcause::Report;
 
-use super::test_text_field_atom::{
+use super::test_text_field_atoms::{
     check_validity, expect_focused, field_of, is_valid, referenced_texts, wait_for_referenced_texts,
 };
 use crate::pages::{BaseActions, Page};

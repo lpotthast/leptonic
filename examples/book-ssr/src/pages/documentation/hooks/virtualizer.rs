@@ -37,23 +37,21 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             on_visible_rect_change: Callback::new(|_| {}),
                         });
                         let element = CapturedElement::new();
-                        let scroll_view = use_scroll_view(
-                            UseScrollViewInput {
-                                content_size: state.content_size.into(),
-                                on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
-                                on_size_change: Some(Callback::new(move |size| state.set_size(size))),
-                                on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
-                                on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
-                                scroll_direction: ScrollDirection::Vertical,
-                                allows_window_scrolling: false,
-                            },
+                        let scroll_view = use_scroll_view(UseScrollViewInput {
                             element,
-                        );
+                            content_size: state.content_size(),
+                            on_visible_rect_change: Callback::new(move |rect| state.set_visible_rect(rect)),
+                            on_size_change: Some(Callback::new(move |size| state.set_size(size))),
+                            on_scroll_start: Some(Callback::new(move |()| state.start_scrolling())),
+                            on_scroll_end: Some(Callback::new(move |()| state.end_scrolling())),
+                            scroll_direction: ScrollDirection::Vertical.into(),
+                            allows_window_scrolling: false.into(),
+                        });
 
                         view! {
                             <div {..element.attr()} style=scroll_view.scroll_view_styles>
                                 <div style=scroll_view.content_styles>
-                                    <For each=move || state.visible.get() key=|info| info.key.clone() let:info>
+                                    <For each=move || state.visible().get() key=|info| info.key.clone() let:info>
                                         // A Leptos component of yours calling `use_virtualizer_item`.
                                         <VirtualRow info=info state=state/>
                                     </For>
@@ -253,15 +251,21 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                 </Section>
                 <Section title="Return" id="use-virtualizer-state-return">
                     <p>
-                        "A "<Code inline=true>"VirtualizerState"</Code>" (it is "<Code inline=true>"Copy"</Code>"):"
+                        "A "<Code inline=true>"VirtualizerState"</Code>" (it is "<Code inline=true>"Copy"</Code>"), read and "
+                        "changed through its methods:"
                     </p>
-                    <ApiTable kind=ApiKind::Return of="VirtualizerState">
-                        <ApiRow name="visible" ty="RwSignal<Vec<LayoutInfo>>">
-                            "The layout infos to render, parents before children. Empty during server-side rendering."
-                        </ApiRow>
-                        <ApiRow name="content_size" ty="RwSignal<Size>">"The size of the whole content."</ApiRow>
-                    </ApiTable>
                     <DocTable headers=&["Method", "Description"]>
+                        <TableRow>
+                            <TableCell><Code inline=true>"visible()"</Code></TableCell>
+                            <TableCell>
+                                "The layout infos to render (the visible ones and the persisted ones), parents before children, "
+                                "as a signal. Empty during server-side rendering."
+                            </TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"content_size()"</Code></TableCell>
+                            <TableCell>"The size of the scrollable content (for the scroll view\u{2019}s content box), as a signal."</TableCell>
+                        </TableRow>
                         <TableRow>
                             <TableCell>
                                 <Code inline=true>"set_visible_rect(rect)"</Code>", "<Code inline=true>"set_size(size)"</Code>
@@ -316,8 +320,9 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                 <ReactAriaSource path="virtualizer/ScrollView.tsx"/>
                 <Section title="Input" id="use-scroll-view-input">
                     <ApiTable kind=ApiKind::Input of="UseScrollViewInput">
+                        <ApiRow name="element" ty="CapturedElement">"The scroll view element, captured by the caller. Required."</ApiRow>
                         <ApiRow name="content_size" ty="Signal<Size>">
-                            "The size of the content: the state\u{2019}s "<Code inline=true>"content_size"</Code>". Required."
+                            "The size of the content: the state\u{2019}s "<Code inline=true>"content_size()"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="on_visible_rect_change" ty="Callback<Rect>">
                             "Called with the visible area of the content. Required."
@@ -329,11 +334,11 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                             "Called when the user starts and stops scrolling. Required ("<Code inline=true>"None"</Code>
                             " to ignore them)."
                         </ApiRow>
-                        <ApiRow name="scroll_direction" ty="ScrollDirection" default="Both">
+                        <ApiRow name="scroll_direction" ty="Signal<ScrollDirection>">
                             "The axes the element scrolls along: "<Code inline=true>"Horizontal"</Code>", "
-                            <Code inline=true>"Vertical"</Code>" or "<Code inline=true>"Both"</Code>"."
+                            <Code inline=true>"Vertical"</Code>" or "<Code inline=true>"Both"</Code>". Required."
                         </ApiRow>
-                        <ApiRow name="allows_window_scrolling" ty="bool">
+                        <ApiRow name="allows_window_scrolling" ty="Signal<bool>">
                             "The visible area is also bounded by the window, for an element that grows with its content and "
                             "scrolls with the page. Required."
                         </ApiRow>
@@ -366,15 +371,17 @@ pub fn PageUseVirtualizerState() -> impl IntoView {
                 <ReactAriaSource path="virtualizer/useVirtualizerItem.ts"/>
                 <Section title="Input" id="use-virtualizer-item-input">
                     <ApiTable kind=ApiKind::Input of="UseVirtualizerItemInput">
+                        <ApiRow name="element" ty="CapturedElement">"The item\u{2019}s wrapper, which is measured. Required."</ApiRow>
                         <ApiRow name="layout_info" ty="Signal<LayoutInfo>">
-                            "The item\u{2019}s current layout info, from the state\u{2019}s "<Code inline=true>"visible"</Code>". Required."
+                            "The item\u{2019}s current layout info, from the state\u{2019}s "<Code inline=true>"visible()"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="parent" ty="Signal<Option<LayoutInfo>>">
                             "The layout info of the element the wrapper is placed in (e.g. a section), for positions relative "
                             "to it. Required ("<Code inline=true>"None"</Code>": the content box)."
                         </ApiRow>
-                        <ApiRow name="update_item_size" ty="Callback<(Key, Size)>">
-                            "Receives the measured size: call the state\u{2019}s "<Code inline=true>"update_item_size"</Code>". Required."
+                        <ApiRow name="update_item_size" ty="Callback<ItemSizeChange>">
+                            "Receives the measured size ("<Code inline=true>"key"</Code>" and "<Code inline=true>"size"</Code>
+                            "): call the state\u{2019}s "<Code inline=true>"update_item_size"</Code>". Required."
                         </ApiRow>
                         <ApiRow name="should_observe_item_size" ty="bool">
                             "Measure again whenever the item\u{2019}s content resizes. Required."

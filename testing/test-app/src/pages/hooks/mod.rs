@@ -1,6 +1,7 @@
 pub mod aria_hide_outside;
 pub mod button;
 pub mod clipboard;
+pub mod clipboard_write;
 pub mod context_menu;
 pub mod dnd;
 pub mod dnd_collection;

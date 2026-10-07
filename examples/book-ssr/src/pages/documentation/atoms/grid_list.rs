@@ -83,7 +83,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                         <ApiRow name="selection_mode" ty="Signal<SelectionMode>" default="None">
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>" rows."
                         </ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">
                             <Code inline=true>"Toggle"</Code>": a click toggles the row. "<Code inline=true>"Replace"</Code>
                             ": a click replaces the selection, and keyboard focus selects."
                         </ApiRow>
@@ -124,7 +124,7 @@ pub fn PageAtomGridList() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="on_action" ty="Option<Callback<Key>>" default="None">"Called with the key of an activated row."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the grid element."</ApiRow>
-                        <ApiRow name="children" ty="Children">"The rows: a "<Code inline=true>"GridListItem"</Code>" per row."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The rows (a "<Code inline=true>"GridListItem"</Code>" per row) and sections."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>
@@ -137,8 +137,64 @@ pub fn PageAtomGridList() -> impl IntoView {
                 <Section title="Props" id="gridlistitem-props">
                     <ApiTable kind=ApiKind::Props of="GridListItem">
                         <ApiRow name="key" ty="Key">"The row\u{2019}s key in the grid list\u{2019}s collection. Required."</ApiRow>
+                        <ApiRow name="focus_mode" ty="FocusMode" default="Row">
+                            "What gets focus when the row is focused: the row ("<Code inline=true>"Row"</Code>"), or its first "
+                            "focusable child ("<Code inline=true>"Child"</Code>")."
+                        </ApiRow>
+                        <ApiRow name="allows_arrow_navigation" ty="bool" default="false">
+                            "Lets "<Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" move between rows while a child has "
+                            "focus, also with "<Code inline=true>"KeyboardNavigationBehavior::Tab"</Code>"."
+                        </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the row."</ApiRow>
                         <ApiRow name="children" ty="Children">"The row\u{2019}s content."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="GridListItemDescription">
+                <p>
+                    "Secondary text of a "<Code inline=true>"GridListItem"</Code>", as a "<Code inline=true>"<span>"</Code>
+                    ": the row is labelled by its text and described by this. Use at most one per row."
+                </p>
+                <Section title="Props" id="gridlistitemdescription-props">
+                    <ApiTable kind=ApiKind::Props of="GridListItemDescription">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<span>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The description."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="GridListSection and GridListHeader">
+                <p>
+                    "A group of rows, for a section of the collection: "<Code inline=true>"GridListSection"</Code>" renders one "
+                    <Code inline=true>"role=\"rowgroup\""</Code>" element holding its children. Render a "
+                    <Code inline=true>"GridListHeader"</Code>" in it when the collection section has a header: a "
+                    <Code inline=true>"role=\"row\""</Code>" element with a "<Code inline=true>"role=\"rowheader\""</Code>
+                    " cell, labelling the group. It shows its children, or else the section\u{2019}s header text."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <GridList collection=files aria_label="Files">
+                            <GridListSection key="recent">
+                                <GridListHeader classes="my-grid-list-header"/>
+                                <GridListItem key="report">"Report.pdf"</GridListItem>
+                            </GridListSection>
+                        </GridList>
+                    "#)}
+                </Code>
+                <Section title="GridListSection Props" id="gridlistsection-props">
+                    <ApiTable kind=ApiKind::Props of="GridListSection">
+                        <ApiRow name="key" ty="Key">"The section\u{2019}s key in the grid list\u{2019}s collection. Required."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the row group."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The section\u{2019}s "<Code inline=true>"GridListHeader"</Code>" and rows, in collection order."</ApiRow>
+                    </ApiTable>
+                </Section>
+                <Section title="GridListHeader Props" id="gridlistheader-props">
+                    <ApiTable kind=ApiKind::Props of="GridListHeader">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the header row."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">
+                            "The header\u{2019}s content. "<Code inline=true>"None"</Code>": the collection\u{2019}s header text."
+                        </ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

@@ -51,7 +51,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="on_change" ty="Option<Callback<Option<V>>>" default="None">
                             "Called with each new value: complete, or "<Code inline=true>"None"</Code>" once all segments are cleared."
                         </ApiRow>
-                        <ApiRow name="placeholder_value" ty="Option<V>" default="None">
+                        <ApiRow name="placeholder_value" ty="Signal<Option<V>>" default="None">
                             "Where empty segments start when stepped, and the time of a value whose time has no segments. "
                             "Default: today, midnight."
                         </ApiRow>
@@ -61,13 +61,13 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="is_date_unavailable" ty="Option<Callback<V, bool>>" default="None">
                             "Whether a date can\u{2019}t be chosen (\u{201c}Selected date unavailable.\u{201d})."
                         </ApiRow>
-                        <ApiRow name="granularity" ty="Option<Granularity>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
-                        <ApiRow name="max_granularity" ty="MaxGranularity" default="Year">
+                        <ApiRow name="granularity" ty="Signal<Option<Granularity>>" default="None">"The finest segment. Default: the minute for values with a time, else the day."</ApiRow>
+                        <ApiRow name="max_granularity" ty="Signal<MaxGranularity>" default="Year">
                             "The coarsest segment, e.g. "<Code inline=true>"Month"</Code>" for a month and a day."
                         </ApiRow>
-                        <ApiRow name="hour_cycle" ty="Option<HourCycle>" default="None">"A 12- or 24-hour clock. Default: the locale\u{2019}s."</ApiRow>
-                        <ApiRow name="hide_time_zone" ty="bool" default="false">"Hides the time zone of zoned values."</ApiRow>
-                        <ApiRow name="should_force_leading_zeros" ty="bool" default="false">"Pads months, days and hours to two digits."</ApiRow>
+                        <ApiRow name="hour_cycle" ty="Signal<Option<HourCycle>>" default="None">"A 12- or 24-hour clock. Default: the locale\u{2019}s."</ApiRow>
+                        <ApiRow name="hide_time_zone" ty="Signal<bool>" default="false">"Hides the time zone of zoned values."</ApiRow>
+                        <ApiRow name="should_force_leading_zeros" ty="Signal<bool>" default="false">"Pads months, days and hours to two digits."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only, is_required, is_invalid" ty="Signal<bool>" default="false">
                             "Disables or locks the editing, marks the field required, or marks the value invalid."
                         </ApiRow>
@@ -78,7 +78,7 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                             <Code inline=true>"Aria"</Code>" shows errors while you edit, "<Code inline=true>"Native"</Code>" when the form is submitted."
                         </ApiRow>
                         <ApiRow name="name" ty="Option<String>" default="None">"The field\u{2019}s name in forms (and for server errors)."</ApiRow>
-                        <ApiRow name="validation" ty="Option<UseFormValidationStateReturn>" default="None">
+                        <ApiRow name="validation" ty="Option<FormValidationState>" default="None">
                             "The validation of a "<Link href=routes::doc::date_picker::Hook.materialize()>"date picker"</Link>
                             " the field belongs to, used instead of its own."
                         </ApiRow>
@@ -94,10 +94,10 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="segments" ty="Signal<Vec<DateSegment>>">"The segments, in the locale\u{2019}s order."</ApiRow>
                         <ApiRow name="date_value" ty="Signal<V>">"The shown value completed by the placeholder."</ApiRow>
                         <ApiRow name="granularity" ty="Signal<Granularity>">"The finest segment."</ApiRow>
-                        <ApiRow name="max_granularity" ty="MaxGranularity">"The coarsest segment."</ApiRow>
+                        <ApiRow name="max_granularity" ty="Signal<MaxGranularity>">"The coarsest segment."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only, is_required" ty="Signal<bool>">"The input\u{2019}s flags."</ApiRow>
                         <ApiRow name="is_invalid" ty="Signal<bool>">"Whether the shown validation fails."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation, e.g. "<Code inline=true>"validation_errors"</Code>" for the error message."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation, e.g. "<Code inline=true>"validation_errors"</Code>" for the error message."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"When errors show."</ApiRow>
                     </ApiTable>
 
@@ -147,13 +147,21 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     "keys between segments. Leaving the field confirms the shown date and commits the validation. A hidden "
                     "input carries the value (ISO 8601) in forms and resets the field with its form."
                 </p>
-                <p>
-                    "Its arguments: the input, the state, a "<Code inline=true>"CapturedElement"</Code>" for the group and one "
-                    "for the hidden input (both captured by the props)."
-                </p>
-
                 <Section title="Input" id="use-date-field-input">
+                    <p>"Pass a "<Code inline=true>"UseDateFieldInput"</Code>" with every field named:"</p>
                     <ApiTable kind=ApiKind::Input of="datepicker::use_date_field::UseDateFieldInput">
+                        <ApiRow name="state" ty="DateFieldState<V>">"From "<Code inline=true>"use_date_field_state"</Code>". Required."</ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The group of segments, captured by "<Code inline=true>"field_props"</Code>". Required."</ApiRow>
+                        <ApiRow name="input_element" ty="CapturedElement">
+                            "The hidden input (form reset and native validation), captured by "<Code inline=true>"input_props"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="options" ty="DateFieldOptions" default="DateFieldOptions::default()">"The other settings, below."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="DateFieldOptions">
+                    <p><Code inline=true>"DateFieldOptions"</Code>" implements "<Code inline=true>"Default"</Code>"."</p>
+                    <ApiTable kind=ApiKind::Fields of="DateFieldOptions">
                         <ApiRow name="id" ty="Option<String>" default="None">"The group\u{2019}s id. Generated when not given."</ApiRow>
                         <ApiRow name="has_label" ty="Signal<bool>" default="false">"Whether you render a label with "<Code inline=true>"label_props"</Code>"."</ApiRow>
                         <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"Names the field without a label."</ApiRow>
@@ -162,11 +170,11 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                         <ApiRow name="form" ty="Option<String>" default="None">"The id of the form the hidden input belongs to, when outside it."</ApiRow>
                         <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the focus enters or leaves the field."</ApiRow>
                         <ApiRow name="on_key_down, on_key_up" ty="Option<Callback<KeyboardEvent>>" default="None">"Called with the keys in the field."</ApiRow>
-                        <ApiRow name="is_in_picker" ty="bool" default="false">
-                            "Inside a date picker: the field gets no group role, as the picker\u{2019}s group is labelled and described."
+                        <ApiRow name="picker" ty="Option<DateFieldPicker>" default="None">
+                            "The date picker the field belongs to: its popover state ("<Keys keys="Alt + ArrowDown"/>" opens it) and, "
+                            "for a range picker, its focus manager. The field then gets no group role, as the picker\u{2019}s group "
+                            "is labelled and described."
                         </ApiRow>
-                        <ApiRow name="focus_manager" ty="Option<FocusManager>" default="None">"The picker\u{2019}s focus manager, for a field of a range picker."</ApiRow>
-                        <ApiRow name="open" ty="Option<Callback<()>>" default="None">"Opens the picker ("<Keys keys="Alt + ArrowDown"/>")."</ApiRow>
                     </ApiTable>
                 </Section>
 
@@ -208,12 +216,12 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                             use leptos::prelude::*;
 
                             let state = use_date_field_state(UseDateFieldStateInput::<Date>::default());
-                            let field = use_date_field(
-                                UseDateFieldInput { has_label: true.into(), ..UseDateFieldInput::default() },
+                            let field = use_date_field(UseDateFieldInput {
                                 state,
-                                CapturedElement::new(),
-                                CapturedElement::new(),
-                            );
+                                element: CapturedElement::new(),
+                                input_element: CapturedElement::new(),
+                                options: DateFieldOptions { has_label: true.into(), ..DateFieldOptions::default() },
+                            });
                             let (field_attrs, field_styles) = field.field_props.into_parts();
 
                             view! {
@@ -237,11 +245,20 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                     "collapsed. Literal segments need no hook: render them hidden from assistive technology."
                 </p>
                 <p>
-                    "Its arguments: the segment as a "<Code inline=true>"Signal<DateSegment>"</Code>" (its kind must stay), "
-                    "the field\u{2019}s "<AnchorLink href="#datefielddata"><Code inline=true>"DateFieldData"</Code></AnchorLink>
-                    ", and a "<Code inline=true>"CapturedElement"</Code>" for the segment (captured by the props). Render the "
-                    "segments keyed by position and kind, so that an element and its focus stay while its text changes."
+                    "Render the segments keyed by position and kind, so that an element and its focus stay while its text "
+                    "changes."
                 </p>
+
+                <Section title="Input" id="use-date-segment-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="datepicker::use_date_segment::UseDateSegmentInput">
+                        <ApiRow name="segment" ty="Signal<DateSegment>">"The segment, from the state\u{2019}s "<Code inline=true>"segments"</Code>"; its kind must stay. Required."</ApiRow>
+                        <ApiRow name="data" ty="DateFieldData<V>">
+                            "The field\u{2019}s "<AnchorLink href="#datefielddata"><Code inline=true>"DateFieldData"</Code></AnchorLink>". Required."
+                        </ApiRow>
+                        <ApiRow name="element" ty="CapturedElement">"The segment element, captured by the props. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
 
                 <Section title="Return" id="use-date-segment-return">
                     <ApiTable kind=ApiKind::Return of="datepicker::use_date_segment::UseDateSegmentReturn">
@@ -266,7 +283,11 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                                 if kind == DateSegmentType::Literal {
                                     return view! { <span aria-hidden="true">{text}</span> }.into_any();
                                 }
-                                let segment = use_date_segment(segment, data, CapturedElement::new());
+                                let segment = use_date_segment(UseDateSegmentInput {
+                                    segment,
+                                    data,
+                                    element: CapturedElement::new(),
+                                });
                                 let (attrs, styles) = segment.segment_props.into_parts();
                                 view! { <span {..attrs} style=styles data-type=kind.as_str()>{text}</span> }.into_any()
                             }
@@ -279,11 +300,90 @@ pub fn PageDateFieldHooks() -> impl IntoView {
                 <p>
                     "The keys and presses of the element holding a field\u{2019}s segments, which "<Code inline=true>"use_date_field"</Code>
                     " and the date picker hooks include: "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" move between "
-                    "the segments (by position in right-to-left languages), "<Keys keys="Alt + ArrowDown"/>" calls "
-                    <Code inline=true>"open"</Code>", and pressing the element outside the segments focuses the segment before "
-                    "the pointer. It takes the element, whether to turn the arrow keys off, and "<Code inline=true>"open"</Code>
-                    ", and returns "<Code inline=true>"PropsWithStyles<UseDatePickerGroupProps>"</Code>"."
+                    "the segments (by position in right-to-left languages), "<Keys keys="Alt + ArrowDown"/>" opens the "
+                    "picker\u{2019}s popover, and pressing the element outside the segments focuses the segment before "
+                    "the pointer. It returns "<Code inline=true>"PropsWithStyles<UseDatePickerGroupProps>"</Code>"."
                 </p>
+                <ApiTable kind=ApiKind::Input of="UseDatePickerGroupInput">
+                    <ApiRow name="element" ty="CapturedElement">"The element holding the segments. Required."</ApiRow>
+                    <ApiRow name="arrow_keys" ty="GroupArrowKeys">
+                        <Code inline=true>"MoveBetweenSegments"</Code>", or "<Code inline=true>"Ignore"</Code>" for a field inside "
+                        "a date picker, whose group moves across its fields. Required."
+                    </ApiRow>
+                    <ApiRow name="overlay" ty="Option<OverlayTriggerState>">
+                        "The popover "<Keys keys="Alt + ArrowDown"/>" opens, inside a date picker. Required ("<Code inline=true>"None"</Code>" outside one)."
+                    </ApiRow>
+                </ApiTable>
+            </Section>
+
+            <Section title="use_hidden_date_input">
+                <p>
+                    "A visually hidden "<Code inline=true>"<input type=\"date\">"</Code>" (or "
+                    <Code inline=true>"datetime-local"</Code>") beside a date field, so that browsers can autofill the "
+                    "field, e.g. with a birthday. It shows the field\u{2019}s value and sets what the browser fills in. "
+                    "It isn\u{2019}t submitted with a form (the field\u{2019}s own hidden input is) and can\u{2019}t be focused."
+                </p>
+
+                <Section title="Input" id="use-hidden-date-input-input">
+                    <p>"The input has no defaults: set every field."</p>
+                    <ApiTable kind=ApiKind::Input of="UseHiddenDateInputInput">
+                        <ApiRow name="value" ty="Signal<Option<V>>">"The field\u{2019}s value: the state\u{2019}s "<Code inline=true>"value"</Code>". Required."</ApiRow>
+                        <ApiRow name="base" ty="Signal<V>">
+                            "The value an autofilled date is put on (its time zone, and its time for dates): the state\u{2019}s "
+                            <Code inline=true>"date_value"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="granularity" ty="Signal<Granularity>">
+                            "The field\u{2019}s granularity: a "<Code inline=true>"date"</Code>" input for days, else "
+                            <Code inline=true>"datetime-local"</Code>". Required."
+                        </ApiRow>
+                        <ApiRow name="set_value" ty="Callback<Option<V>>">"Sets the autofilled value, e.g. with the state\u{2019}s "<Code inline=true>"set_value"</Code>". Required."</ApiRow>
+                        <ApiRow name="auto_complete" ty="Option<String>">
+                            "What the browser may fill in, the "<Code inline=true>"autocomplete"</Code>" attribute (e.g. "
+                            <Code inline=true>"\"bday\""</Code>"). Required."
+                        </ApiRow>
+                        <ApiRow name="name" ty="Option<String>">"The field\u{2019}s name, which tells autofill what it is. Required."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>">"Disables the input. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Return" id="use-hidden-date-input-return">
+                    <ApiTable kind=ApiKind::Return of="UseHiddenDateInputReturn">
+                        <ApiRow name="container_props" ty="UseHiddenDateContainerProps">
+                            "For a "<Code inline=true>"<div>"</Code>" around the input: "<Code inline=true>"aria-hidden"</Code>", "
+                            "kept out of focus walks, and visually hidden "<Code inline=true>"styles"</Code>" (fixed at the "
+                            "top left, so that the browser\u{2019}s focusing it doesn\u{2019}t scroll the page)."
+                        </ApiRow>
+                        <ApiRow name="input_props" ty="UseHiddenDateInputProps">
+                            "For the "<Code inline=true>"<input>"</Code>": its type, "<Code inline=true>"tabindex=-1"</Code>", "
+                            <Code inline=true>"autocomplete"</Code>", "<Code inline=true>"name"</Code>", "<Code inline=true>"step"</Code>
+                            ", the value and the input handler."
+                        </ApiRow>
+                    </ApiTable>
+                </Section>
+
+                <Section title="Example" id="use-hidden-date-input-example">
+                    <Code language=Language::Rust>
+                        {indoc!(r#"
+                            let autofill = use_hidden_date_input(UseHiddenDateInputInput {
+                                value: state.value,
+                                base: state.date_value,
+                                granularity: state.granularity,
+                                set_value: Callback::new(move |value| state.set_value(value)),
+                                auto_complete: Some("bday".to_owned()),
+                                name: Some("birthday".to_owned()),
+                                is_disabled: state.is_disabled,
+                            });
+                            let UseHiddenDateInputReturn { container_props, input_props } = autofill;
+                            let styles = container_props.styles.clone();
+
+                            view! {
+                                <div {..container_props.into_attrs()} style=styles>
+                                    <input {..input_props.into_attrs()}/>
+                                </div>
+                            }
+                        "#)}
+                    </Code>
+                </Section>
             </Section>
 
             <Section title="DateValue">

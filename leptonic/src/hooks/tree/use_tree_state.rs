@@ -187,15 +187,18 @@ mod tests {
             });
             assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
             state.expansion.toggle_key(Key::from("a"));
-            assert_that!(visible(&state))
-                .is_equal_to(vec!["a".to_owned(), "a1".to_owned(), "a2".to_owned(), "b".to_owned()]);
+            assert_that!(visible(&state)).is_equal_to(vec![
+                "a".to_owned(),
+                "a1".to_owned(),
+                "a2".to_owned(),
+                "b".to_owned(),
+            ]);
             assert_that!(state.expansion.is_expanded(&Key::from("a"))).is_true();
             // Collapsing hides the children again; setting the same keys reports nothing.
             state.expansion.toggle_key(Key::from("a"));
             state.set_expanded_keys(HashSet::new());
             assert_that!(visible(&state)).is_equal_to(vec!["a".to_owned(), "b".to_owned()]);
-            assert_that!(changes.get_untracked())
-                .is_equal_to(vec![keys(&["a"]), HashSet::new()]);
+            assert_that!(changes.get_untracked()).is_equal_to(vec![keys(&["a"]), HashSet::new()]);
         });
     }
 
@@ -232,8 +235,12 @@ mod tests {
                 expanded_keys: Some(expanded.into()),
                 on_expanded_change: None,
             });
-            assert_that!(visible(&state))
-                .is_equal_to(vec!["a".to_owned(), "a1".to_owned(), "a2".to_owned(), "b".to_owned()]);
+            assert_that!(visible(&state)).is_equal_to(vec![
+                "a".to_owned(),
+                "a1".to_owned(),
+                "a2".to_owned(),
+                "b".to_owned(),
+            ]);
             state.expansion.toggle_key(Key::from("b"));
             assert_that!(expanded.get_untracked()).is_equal_to(keys(&["a", "b"]));
             // The app changes it: the tree follows.

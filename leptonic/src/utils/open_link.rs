@@ -6,10 +6,10 @@
 // =============================================================================
 //
 // ## API DIFFERENCES
-// - `openLink(target, modifiers, setOpening)` is two functions: [`open_link`] (marks the dispatch as
-//   opening a link) and [`open_link_unmarked`] (react-aria's `setOpening = false`), instead of a
-//   bool parameter. The "opening" mark is read through [`is_opening_link`] (react-aria: the
-//   `openLink.isOpening` property).
+// - `open_link` always marks its dispatch as opening a link (react-aria's `setOpening`, which
+//   `usePress` sets to `false` for links pressed with Space): `use_press` ignores that click
+//   instead, as its press already happened on the key up. The mark is read through
+//   [`is_opening_link`] (react-aria: the `openLink.isOpening` property).
 //
 // ## OMITTED FEATURES
 // - `RouterProvider`, `useRouter`, `shouldClientNavigate`, `useLinkProps`, `useSyntheticLinkProps`:
@@ -48,24 +48,12 @@ pub(crate) fn is_opening_link() -> bool {
 /// doesn't follow clicks with modifiers at all, but follows a `keydown` with the non-standard
 /// `keyIdentifier: "Enter"`; that is dispatched there instead.
 pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers) {
-    dispatch(element, modifiers, true);
-}
-
-/// Like [`open_link`], without marking the dispatch as opening a link (react-aria's
-/// `openLink(target, modifiers, false)`): `use_press` opens a link pressed with a key other than
-/// Enter this way, and its own click handling then sees the click as usual.
-#[allow(dead_code)] // For `use_press` (react-aria's usePress passes `setOpening = false`).
-pub(crate) fn open_link_unmarked(element: &web_sys::Element, modifiers: Modifiers) {
-    dispatch(element, modifiers, false);
-}
-
-fn dispatch(element: &web_sys::Element, modifiers: Modifiers, mark_opening: bool) {
     let event = if browser::is_webkit() && device::is_mac() && !device::is_ipad() {
         create_webkit_keyboard_event(modifiers)
     } else {
         create_click_event(modifiers)
     };
-    IS_OPENING_LINK.with(|opening| opening.set(mark_opening));
+    IS_OPENING_LINK.with(|opening| opening.set(true));
     focus_element(element, true);
     let _ = element.dispatch_event(&event);
     IS_OPENING_LINK.with(|opening| opening.set(false));

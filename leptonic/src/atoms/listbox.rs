@@ -39,6 +39,7 @@ pub struct ListBoxItemCtx {
     pub is_focus_visible: Signal<bool>,
     pub is_disabled: Signal<bool>,
     pub is_pressed: Signal<bool>,
+    pub is_hovered: Signal<bool>,
 }
 
 /// A headless listbox: a list of options to select one or more from.
@@ -243,8 +244,9 @@ pub fn ListBox(
 
 /// An option of a [`ListBox`], for the collection item `key`.
 ///
-/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled` and
-/// `data-pressed` for styling.
+/// Exposes `data-selected`, `data-focused`, `data-focus-visible`, `data-disabled`,
+/// `data-pressed` and `data-hovered` (options that can be selected or have an action) for
+/// styling.
 ///
 /// Default class: `leptonic-ListBoxItem`.
 #[component]
@@ -267,6 +269,7 @@ pub fn ListBoxItem(
         is_focus_visible,
         is_disabled,
         is_pressed,
+        is_hovered,
         ..
     } = use_option(UseOptionInput {
         // Inside a `ContextMenuTrigger`: its menu opens on this option.
@@ -283,6 +286,7 @@ pub fn ListBoxItem(
         is_focus_visible,
         is_disabled,
         is_pressed,
+        is_hovered,
     };
     let (attrs, option_styles) = props.into_parts();
     let styles = option_styles.merge(styles);
@@ -298,6 +302,7 @@ pub fn ListBoxItem(
                 data-focus-visible=flag(is_focus_visible)
                 data-disabled=flag(is_disabled)
                 data-pressed=flag(is_pressed)
+                data-hovered=flag(is_hovered)
             >
                 {children()}
             </div>

@@ -5,7 +5,7 @@
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 use send_wrapper::SendWrapper;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, closure::Closure};
 
 use super::use_form_validation_state::{
     FormValidationState, ValidationBehavior, ValidationResult, ValidityStateSnapshot,
@@ -24,9 +24,10 @@ use crate::{
 //   React-specific; Leptos doesn't reset forms on its own.
 //
 // ## BEHAVIORAL DIFFERENCES
-// - The custom validity is synced when the realtime validation changes and before each commit
-//   (react-aria: in a layout effect after every render). Reason: a render isn't an event in
-//   Leptos; the commit re-reads the native validity through `native_validity_readers`.
+// - The custom validity is synced (and the native validity read back) when the realtime
+//   validation changes, before each commit, on `change` and when a constraint attribute
+//   (`required`, `min`, ...) changes (react-aria: in a layout effect after every render).
+//   Reason: a render isn't an event in Leptos.
 //
 // =============================================================================
 
@@ -57,39 +58,43 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         focus,
     } = input;
 
-    if validation_behavior == ValidationBehavior::Native {
-        let sync = move |realtime: ValidationResult| {
-            let Some(el) = element.get_untracked() else {
-                return;
-            };
-            let Some(field) = Validatable::of(&el) else {
-                return;
-            };
-            if field.disabled() {
-                return;
-            }
-            let error_message = if realtime.is_invalid {
-                let message = realtime.validation_errors.join(" ");
-                if message.is_empty() {
-                    "Invalid value.".to_owned()
-                } else {
-                    message
-                }
-            } else {
-                String::new()
-            };
-            field.set_custom_validity(&error_message);
-
-            // Prevent the browser's tooltip for the validation message.
-            // https://bugzilla.mozilla.org/show_bug.cgi?id=605277
-            if !el.has_attribute("title") {
-                let _ = el.set_attribute("title", "");
-            }
-
-            if !realtime.is_invalid {
-                state.update_validation(field.native_validity());
-            }
+    let is_native = validation_behavior == ValidationBehavior::Native;
+    // Native mode: sets the custom validity from the realtime validation and reads the native
+    // validity back.
+    let sync = move |realtime: ValidationResult| {
+        let Some(el) = element.get_untracked() else {
+            return;
         };
+        let Some(field) = Validatable::of(&el) else {
+            return;
+        };
+        if field.disabled() {
+            return;
+        }
+        let error_message = if realtime.is_invalid {
+            let message = realtime.validation_errors.join(" ");
+            if message.is_empty() {
+                "Invalid value.".to_owned()
+            } else {
+                message
+            }
+        } else {
+            String::new()
+        };
+        field.set_custom_validity(&error_message);
+
+        // Prevent the browser's tooltip for the validation message.
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=605277
+        if !el.has_attribute("title") {
+            let _ = el.set_attribute("title", "");
+        }
+
+        if !realtime.is_invalid {
+            state.update_validation(field.native_validity());
+        }
+    };
+
+    if is_native {
         Effect::new(move |_| {
             // Re-run once the element is captured.
             if element.get().is_none() {
@@ -104,6 +109,17 @@ pub fn use_form_validation(input: UseFormValidationInput) {
             .register(Callback::new(move |()| {
                 sync(state.realtime_validation.get_untracked());
             }));
+        // And whenever a constraint attribute changes (e.g. a checkbox group's `required`, gone
+        // once it has a value): react-aria re-reads the native validity after every render, and
+        // a checkbox group shows its items' native validity in realtime.
+        Effect::new(move |_| {
+            let Some(el) = element.get() else { return };
+            let observer = ConstraintObserver::observe(&el, move || {
+                sync(state.realtime_validation.get_untracked());
+            });
+            let observer = SendWrapper::new(observer);
+            on_cleanup(move || drop(observer));
+        });
     }
 
     Effect::new(move |_| {
@@ -142,6 +158,10 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         let listeners = (
             listen(&el, "invalid", false, on_invalid),
             listen(&el, "change", false, move |_| {
+                // The new value's native validity (e.g. a checked required checkbox).
+                if is_native {
+                    sync(state.realtime_validation.get_untracked());
+                }
                 state.commit_validation();
             }),
             form.map(|form| {
@@ -153,6 +173,56 @@ pub fn use_form_validation(input: UseFormValidationInput) {
         let listeners = SendWrapper::new(listeners);
         on_cleanup(move || drop(listeners));
     });
+}
+
+/// The attributes constraining an input's value.
+const CONSTRAINT_ATTRIBUTES: [&str; 11] = [
+    "required",
+    "disabled",
+    "min",
+    "max",
+    "minlength",
+    "maxlength",
+    "pattern",
+    "step",
+    "type",
+    "multiple",
+    "value",
+];
+
+/// Calls a function whenever one of the element's [`CONSTRAINT_ATTRIBUTES`] changes, until
+/// dropped.
+struct ConstraintObserver {
+    observer: web_sys::MutationObserver,
+    _on_mutation: Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)>,
+}
+
+impl ConstraintObserver {
+    fn observe(el: &web_sys::Element, on_change: impl Fn() + 'static) -> Option<Self> {
+        let on_mutation = Closure::<dyn FnMut(js_sys::Array, web_sys::MutationObserver)>::new(
+            move |_: js_sys::Array, _: web_sys::MutationObserver| on_change(),
+        );
+        let observer = web_sys::MutationObserver::new(on_mutation.as_ref().unchecked_ref()).ok()?;
+        let init = web_sys::MutationObserverInit::new();
+        init.set_attributes(true);
+        init.set_attribute_filter(
+            &CONSTRAINT_ATTRIBUTES
+                .iter()
+                .map(|name| wasm_bindgen::JsValue::from_str(name))
+                .collect::<js_sys::Array>(),
+        );
+        observer.observe_with_options(el, &init).ok()?;
+        Some(Self {
+            observer,
+            _on_mutation: on_mutation,
+        })
+    }
+}
+
+impl Drop for ConstraintObserver {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
 }
 
 /// The elements taking part in constraint validation.

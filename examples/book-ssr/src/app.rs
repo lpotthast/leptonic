@@ -6,7 +6,6 @@ use leptonic::{
         Theme, ThemeProvider, Toast, ToastCloseButton, ToastContent, ToastDescription, ToastRegion,
         ToastTitle, VisuallyHidden, use_theme,
     },
-    components::prelude::{Leptonic, ToastRoot},
     hooks::{
         IntoAttrs, LandmarkController, LandmarkRole, LinkTarget, ToastOptions, ToastQueue,
         UseLandmarkInput, use_landmark,
@@ -21,7 +20,7 @@ use leptonic::{
 use leptos::prelude::*;
 use leptos_meta::{Link as MetaLink, Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{components::Router, hooks::use_location};
-use leptos_use::{use_document, use_media_query, use_window};
+use leptos_use::{use_document, use_media_query};
 
 use crate::{kit::Icon, pages::documentation::doc_search::DocSearch, routes};
 
@@ -33,7 +32,7 @@ const VERSION_LABEL: &str = "v0.6.0 (main)";
 const GITHUB_URL: &str = "https://github.com/lpotthast/leptonic";
 
 /// Describes the book where a page has no description of its own (search engines, link previews).
-pub const SITE_DESCRIPTION: &str = "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks, atoms and themed components.";
+pub const SITE_DESCRIPTION: &str = "Leptonic: accessible UI building blocks for Leptos \u{2014} hooks and unstyled atoms.";
 
 /// Id of every page's `<main>`, the target of the skip link.
 pub const MAIN_ID: &str = "book-main";
@@ -103,36 +102,14 @@ pub fn App() -> impl IntoView {
         <Title text="Leptonic"/>
 
         <ThemeProvider theme set_theme>
-            <ComponentDemoContexts>
-                <Router>
-                    <Layout>
-                        { routes::route_tree() }
-                    </Layout>
-                </Router>
-            </ComponentDemoContexts>
+            <Router>
+                <Layout>
+                    { routes::route_tree() }
+                </Layout>
+            </Router>
             <BookToastRegion toasts/>
         </ThemeProvider>
     }
-}
-
-/// What the demos of leptonic's themed components (shown until the book moves them onto atoms) read from the
-/// components' `Root`: the `Toasts` of a `ToastRoot`, and the `Leptonic` context (`Select` asks whether the device is
-/// a desktop). The book itself doesn't use them.
-#[component]
-fn ComponentDemoContexts(children: Children) -> impl IntoView {
-    let is_mobile_device = Signal::derive(|| {
-        use_window().as_ref().is_some_and(|window| {
-            window
-                .navigator()
-                .user_agent()
-                .is_ok_and(|agent| agent.to_lowercase().contains("mobi"))
-        })
-    });
-    provide_context(Leptonic {
-        is_mobile_device,
-        is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
-    });
-    view! { <ToastRoot>{children()}</ToastRoot> }
 }
 
 /// A toast of the book: a title and a sentence.

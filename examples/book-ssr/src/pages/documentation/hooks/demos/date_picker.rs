@@ -13,9 +13,9 @@ use leptonic::{
         datepicker::{
             DateFieldData, DateFieldOptions, DateFieldPicker, DatePickerOptions, DateSegment,
             DateSegmentType, UseDateFieldInput, UseDateFieldReturn, UseDateFieldStateInput,
-            UseDatePickerInput, UseDatePickerReturn,
-            UseDatePickerStateInput, UseDateSegmentInput, UseDateSegmentReturn, use_date_field, use_date_field_state,
-            use_date_picker, use_date_picker_state, use_date_segment,
+            UseDatePickerInput, UseDatePickerReturn, UseDatePickerStateInput, UseDateSegmentInput,
+            UseDateSegmentReturn, use_date_field, use_date_field_state, use_date_picker,
+            use_date_picker_state, use_date_segment,
         },
         use_button,
     },
@@ -199,12 +199,11 @@ fn Segment(segment: Signal<DateSegment>, data: DateFieldData<Date>) -> impl Into
         }
         .into_any();
     }
-    let UseDateSegmentReturn { segment_props } =
-        use_date_segment(UseDateSegmentInput {
-            segment,
-            data,
-            element: CapturedElement::new(),
-        });
+    let UseDateSegmentReturn { segment_props } = use_date_segment(UseDateSegmentInput {
+        segment,
+        data,
+        element: CapturedElement::new(),
+    });
     let (attrs, styles) = segment_props.into_parts();
     view! {
         <span {..attrs} style=styles class="demo-date-segment" data-type=kind.as_str()>{text}</span>

@@ -163,9 +163,9 @@ pub fn use_calendar_month_picker(input: UseCalendarMonthPickerInput) -> UseCalen
         value: Signal::derive(move || i16::from(calendar.focused_date.get().month())),
         items: items.into(),
         on_change: Callback::new(move |month: i16| {
-            if let Some(item) = items.with_untracked(|items| {
-                items.iter().find(|item| item.id == month).cloned()
-            }) {
+            if let Some(item) =
+                items.with_untracked(|items| items.iter().find(|item| item.id == month).cloned())
+            {
                 calendar.set_focused_date(item.date);
             }
         }),
@@ -327,13 +327,19 @@ mod tests {
                     .map(|item| item.formatted)
                     .collect()
             };
-            assert_that!(names(&years))
-                .is_equal_to((2016..2036).map(|year| year.to_string()).collect::<Vec<_>>());
+            assert_that!(names(&years)).is_equal_to(
+                (2016..2036)
+                    .map(|year| year.to_string())
+                    .collect::<Vec<_>>(),
+            );
             years.on_change.run(2030);
             assert_that!(state.calendar().focused_date.get_untracked())
                 .is_equal_to(date(2030, 6, 1));
-            assert_that!(names(&years))
-                .is_equal_to((2020..2040).map(|year| year.to_string()).collect::<Vec<_>>());
+            assert_that!(names(&years)).is_equal_to(
+                (2020..2040)
+                    .map(|year| year.to_string())
+                    .collect::<Vec<_>>(),
+            );
         });
     }
 

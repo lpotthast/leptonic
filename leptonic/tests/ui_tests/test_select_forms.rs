@@ -28,12 +28,31 @@ impl BrowserTest<str> for SelectMultipleTests {
         page.goto_path("/atoms/select-forms").await?;
 
         let trigger = trigger_in(&page, "#sf-multiple").await?;
+        // "should support hover" on the trigger.
+        page.driver
+            .action_chain()
+            .move_to_element_center(&trigger)
+            .perform()
+            .await?;
+        page.wait_for_attr(&trigger, "data-hovered", Some("true"))
+            .await?;
+        page.driver
+            .action_chain()
+            .move_to_element_center(&page.css("h1").await?)
+            .perform()
+            .await?;
+        page.wait_for_attr(&trigger, "data-hovered", None).await?;
         // The default placeholder.
         assert_that!(trigger.text().await?).is_equal_to("Select an item".to_owned());
         trigger.click().await?;
         page.wait_for_selector(LISTBOX).await?;
-        assert_that!(page.css(LISTBOX).await?.attr("aria-multiselectable").await?)
-            .is_equal_to(Some("true".to_owned()));
+        assert_that!(
+            page.css(LISTBOX)
+                .await?
+                .attr("aria-multiselectable")
+                .await?
+        )
+        .is_equal_to(Some("true".to_owned()));
         assert_that!(page.count_matching("[role=listbox] [role=option]").await?).is_equal_to(3);
         page.by_role_and_text("option", "Cat")
             .await?
@@ -47,7 +66,11 @@ impl BrowserTest<str> for SelectMultipleTests {
             .await?;
         // Multiple selection keeps the popover open.
         assert_that!(page.count_matching(LISTBOX).await?).is_equal_to(1);
-        wait_for!("the trigger text", "Cat and Dog".to_owned(), trigger.text().await?);
+        wait_for!(
+            "the trigger text",
+            "Cat and Dog".to_owned(),
+            trigger.text().await?
+        );
         assert_that!(form_data(&page, "sf-multiple", "select").await?)
             .is_equal_to(vec!["cat".to_owned(), "dog".to_owned()]);
         // Deselecting.
@@ -144,16 +167,19 @@ impl BrowserTest<str> for SelectValidationTests {
         page.click_element_with_id("sf-submit-button").await?;
         page.wait_for_text("sf-submits", "1").await?;
         page.click_element_with_id("sf-submit-clear").await?;
-        wait_for!("the trigger text", "Select an item".to_owned(), trigger.text().await?);
+        wait_for!(
+            "the trigger text",
+            "Select an item".to_owned(),
+            trigger.text().await?
+        );
         page.click_element_with_id("sf-submit-button").await?;
-        stays!("the submissions", "1".to_owned(), page.read_text_of("sf-submits").await?);
-        assert_that!(
-            page.css("#sf-submit select")
-                .await?
-                .prop("value")
-                .await?
-        )
-        .is_equal_to(Some(String::new()));
+        stays!(
+            "the submissions",
+            "1".to_owned(),
+            page.read_text_of("sf-submits").await?
+        );
+        assert_that!(page.css("#sf-submit select").await?.prop("value").await?)
+            .is_equal_to(Some(String::new()));
 
         // Disabled: the hidden select too, and the trigger doesn't open.
         let select = page.css("#sf-disabled select").await?;
@@ -175,7 +201,11 @@ impl BrowserTest<str> for SelectValidationTests {
                 vec![],
             )
             .await?;
-        wait_for!("the trigger text", "Kangaroo".to_owned(), trigger.text().await?);
+        wait_for!(
+            "the trigger text",
+            "Kangaroo".to_owned(),
+            trigger.text().await?
+        );
         page.expect_no_page_errors().await
     }
 }
@@ -198,12 +228,20 @@ impl BrowserTest<str> for SelectEmptyAndManyTests {
         trigger_in(&page, "#sf-empty").await?.click().await?;
         stays!("the open listboxes", 0, page.count_matching(LISTBOX).await?);
 
-        trigger_in(&page, "#sf-empty-allowed").await?.click().await?;
+        trigger_in(&page, "#sf-empty-allowed")
+            .await?
+            .click()
+            .await?;
         page.wait_for_selector(LISTBOX).await?;
         let listbox = page.css(LISTBOX).await?;
         assert_that!(listbox.attr("data-empty").await?).is_equal_to(Some("true".to_owned()));
-        assert_that!(page.css("[role=listbox] [role=option]").await?.text().await?)
-            .is_equal_to("No results".to_owned());
+        assert_that!(
+            page.css("[role=listbox] [role=option]")
+                .await?
+                .text()
+                .await?
+        )
+        .is_equal_to("No results".to_owned());
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector(LISTBOX).await?;
 
@@ -214,12 +252,18 @@ impl BrowserTest<str> for SelectEmptyAndManyTests {
         assert_that!(error.text().await?).is_not_empty();
         assert_that!(page.read_text_of("sf-many-submits").await?).is_equal_to("0".to_owned());
         let trigger = trigger_in(&page, "#sf-many").await?;
-        trigger.click().await?;
-        page.wait_for_selector(LISTBOX).await?;
-        // The keyboard: Space toggles the focused option (clicks may hit a scrolled option).
-        // Without a selection, the listbox itself has focus; ArrowDown focuses the first option.
-        page.wait_for_focus("listbox", None).await?;
+        // Open with the keyboard, which focuses the first option (a pointer resting over the
+        // popover would focus the option under it: `should_focus_on_hover`).
+        page.driver
+            .action_chain()
+            .move_to_element_center(&page.css("h1").await?)
+            .perform()
+            .await?;
+        page.driver
+            .execute("arguments[0].focus();", vec![trigger.to_json()?])
+            .await?;
         page.send_keys_to_active(Key::Down).await?;
+        page.wait_for_selector(LISTBOX).await?;
         page.wait_for_active_text("item0").await?;
         page.send_keys_to_active(" ").await?;
         page.send_keys_to_active(Key::Down).await?;
@@ -227,7 +271,11 @@ impl BrowserTest<str> for SelectEmptyAndManyTests {
         page.send_keys_to_active(" ").await?;
         page.send_keys_to_active(Key::Escape).await?;
         page.wait_for_no_selector(LISTBOX).await?;
-        wait_for!("the trigger text", "item0 and item1".to_owned(), trigger.text().await?);
+        wait_for!(
+            "the trigger text",
+            "item0 and item1".to_owned(),
+            trigger.text().await?
+        );
         assert_that!(form_data(&page, "sf-many", "many").await?)
             .is_equal_to(vec!["0".to_owned(), "1".to_owned()]);
         page.click_element_with_id("sf-many-submit").await?;
@@ -236,8 +284,16 @@ impl BrowserTest<str> for SelectEmptyAndManyTests {
             .await?;
         // Form reset works on the hidden inputs too.
         page.click_element_with_id("sf-many-reset").await?;
-        wait_for!("the submitted values", vec![String::new()], form_data(&page, "sf-many", "many").await?);
-        wait_for!("the trigger text", "Select an item".to_owned(), trigger.text().await?);
+        wait_for!(
+            "the submitted values",
+            vec![String::new()],
+            form_data(&page, "sf-many", "many").await?
+        );
+        wait_for!(
+            "the trigger text",
+            "Select an item".to_owned(),
+            trigger.text().await?
+        );
         page.expect_no_page_errors().await
     }
 }

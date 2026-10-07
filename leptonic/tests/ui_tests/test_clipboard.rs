@@ -111,7 +111,10 @@ fn pairs(expected: &[(&str, &str)]) -> Vec<(String, String)> {
 async fn open(page: &Page<'_>, query: &str, focus: bool) -> Result<(), Report> {
     page.goto_path(&format!("/hooks/clipboard{query}")).await?;
     if focus {
-        page.by_role_and_text("button", "Before").await?.click().await?;
+        page.by_role_and_text("button", "Before")
+            .await?
+            .click()
+            .await?;
         page.press_tab().await?;
         page.wait_for_active_text("Copy").await?;
     }

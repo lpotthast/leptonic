@@ -60,7 +60,7 @@ pub(super) fn heading(level: u8, id: Oco<'static, str>, title: &'static str) -> 
 
 /// Anchor id for a heading: lowercase ASCII alphanumerics, everything else collapsed into single dashes.
 ///
-/// `"use_button"` becomes `use-button`, `"Hooks, Atoms & Components"` becomes `hooks-atoms-components`.
+/// `"use_button"` becomes `use-button`, `"Hooks & Atoms"` becomes `hooks-atoms`.
 pub(super) fn slug(title: &str) -> String {
     let mut slug = String::with_capacity(title.len());
     for c in title.chars() {
@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn slug_replaces_separators_with_single_dashes() {
         assert_that!(slug("use_button")).is_equal_to("use-button");
-        assert_that!(slug("Hooks, Atoms & Components")).is_equal_to("hooks-atoms-components");
+        assert_that!(slug("Hooks & Atoms")).is_equal_to("hooks-atoms");
         assert_that!(slug("  When to Use?")).is_equal_to("when-to-use");
         assert_that!(slug("Choose Your Layer")).is_equal_to("choose-your-layer");
     }

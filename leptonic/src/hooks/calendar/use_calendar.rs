@@ -16,9 +16,8 @@ use super::{
     use_calendar_state::CalendarState,
     use_range_calendar_state::RangeCalendarState,
 };
-use crate::hooks::form::use_label::labels;
 use crate::{
-    hooks::{IntoAttrs, UseButtonInput},
+    hooks::{IntoAttrs, UseButtonInput, form::use_label::labels},
     utils::{
         CapturedElement, EventHandler,
         aria::AriaRole,
@@ -172,9 +171,8 @@ fn use_calendar_base(
     let locale = use_locale();
     let id = id.unwrap_or_else(|| use_id("calendar"));
 
-    let title = Memo::new(move |_| {
-        visible_range_description(calendar.visible_range.get(), &locale.get())
-    });
+    let title =
+        Memo::new(move |_| visible_range_description(calendar.visible_range.get(), &locale.get()));
     // The visible range is announced when it changes by the previous or next button (not while
     // the grid has focus), the selection when it changes.
     Effect::new(move |previous: Option<String>| {

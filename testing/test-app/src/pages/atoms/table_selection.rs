@@ -75,7 +75,11 @@ fn selection_log(id: &'static str) -> (Callback<Selection>, impl IntoView) {
 /// The files table with `selection_behavior` replace (react-aria-components'
 /// `selectionBehavior="replace"` tests).
 #[component]
-fn ReplaceTable(label: &'static str, id: &'static str, selection_mode: SelectionMode) -> impl IntoView {
+fn ReplaceTable(
+    label: &'static str,
+    id: &'static str,
+    selection_mode: SelectionMode,
+) -> impl IntoView {
     let (on_change, log) = selection_log(id);
     view! {
         <Table
@@ -113,7 +117,11 @@ fn EscapeTable() -> impl IntoView {
 
 /// The files table selecting on press up (or down) in single selection mode.
 #[component]
-fn PressTable(label: &'static str, id: &'static str, should_select_on_press_up: bool) -> impl IntoView {
+fn PressTable(
+    label: &'static str,
+    id: &'static str,
+    should_select_on_press_up: bool,
+) -> impl IntoView {
     let (on_change, log) = selection_log(id);
     view! {
         <Table
@@ -177,11 +185,13 @@ fn ColumnsTable() -> impl IntoView {
         }
         columns
     });
-    let field = |file: (&'static str, &'static str, &'static str, &'static str), column: &str| match column {
-        "name" => file.1,
-        "type" => file.2,
-        _ => file.3,
-    };
+    let field =
+        |file: (&'static str, &'static str, &'static str, &'static str), column: &str| match column
+        {
+            "name" => file.1,
+            "type" => file.2,
+            _ => file.3,
+        };
     let table = Memo::new(move |_| {
         let columns = columns.get();
         let sortable = sort_date.get();

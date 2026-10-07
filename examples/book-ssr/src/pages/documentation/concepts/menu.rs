@@ -30,7 +30,7 @@ pub fn PageMenuOverview() -> impl IntoView {
             <Section title="Choose Your Layer">
                 <p>
                     "Menus exist as hooks and atoms. See "
-                    <Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
+                    <Link href=routes::doc::Architecture.materialize()>"Hooks & Atoms"</Link>
                     " for a detailed explanation of each layer."
                 </p>
 

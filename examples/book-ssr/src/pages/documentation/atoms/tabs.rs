@@ -156,7 +156,7 @@ pub fn PageAtomTabs() -> impl IntoView {
                             "Tabs that can\u{2019}t be selected, besides those disabled in the collection. The arrow keys skip them."
                         </ApiRow>
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables all tabs."</ApiRow>
-                        <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                        <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                             "Which arrow keys move between the tabs. Exposed as "<Code inline=true>"data-orientation"</Code>"."
                         </ApiRow>
                         <ApiRow name="keyboard_activation" ty="KeyboardActivation" default="Automatic">
@@ -191,9 +191,10 @@ pub fn PageAtomTabs() -> impl IntoView {
 
             <Section title="Tab">
                 <p>
-                    "A tab, as a "<Code inline=true>"<div role=\"tab\">"</Code>". It has no "<Code inline=true>"is_disabled"</Code>
-                    " prop on purpose: the keyboard navigation only skips tabs disabled in the collection ("
-                    <Code inline=true>"ItemBuilder::disabled"</Code>") or through "<Code inline=true>"disabled_keys"</Code>"."
+                    "A tab, as a "<Code inline=true>"<div role=\"tab\">"</Code>". Disable it with "<Code inline=true>"is_disabled"</Code>
+                    ", in the collection ("<Code inline=true>"ItemBuilder::disabled"</Code>") or with the "
+                    <Code inline=true>"disabled_keys"</Code>" of "<Code inline=true>"Tabs"</Code>"; the keyboard navigation skips it "
+                    "either way."
                 </p>
                 <Section title="Props" id="tab-props">
                     <ApiTable kind=ApiKind::Props of="atoms::tabs::Tab">

@@ -36,8 +36,6 @@ use crate::{
 //
 // ## API DIFFERENCES
 // - The group hands its items a `CheckboxGroupData` (react-aria: a `WeakMap` keyed by the state).
-// - Items take the group's validation behavior (react-aria: an item may override it), so that
-//   the group decides when errors show.
 // - An item is required when it or its group is (react-aria: the item's `isRequired` replaces
 //   the group's when given).
 //
@@ -205,9 +203,9 @@ pub struct UseCheckboxGroupItemInput {
     pub is_indeterminate: Signal<bool>,
     /// Called when the checkbox is checked or unchecked.
     pub on_change: Option<Callback<bool>>,
-    /// Further settings. `name` and `form` default to the group's; the input's `value` is
-    /// `value`; the group's validation behavior applies. `validate` and `is_invalid` validate
-    /// the checkbox on its own: its errors join the group's.
+    /// Further settings. `name`, `form` and `validation_behavior` default to the group's; the
+    /// input's `value` is `value`. `validate` and `is_invalid` validate the checkbox on its own:
+    /// its errors join the group's.
     pub options: ToggleOptions,
 }
 
@@ -241,7 +239,12 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
     options.form = options.form.or_else(|| group.form.clone());
     // Submitted with the form as the group's value.
     options.value = Some(value.to_string());
-    options.validation_behavior = state.validation_behavior;
+    // The item's own behavior, else the group's: a native item reports its native validity
+    // (e.g. a missing required value) to a group that shows it in realtime.
+    let validation_behavior = options
+        .validation_behavior
+        .unwrap_or(state.validation_behavior);
+    options.validation_behavior = Some(validation_behavior);
 
     let selected_value = value.clone();
     let toggled_value = value.clone();
@@ -304,7 +307,7 @@ pub fn use_checkbox_group_item(input: UseCheckboxGroupItemInput) -> UseCheckboxR
             realtime_validation.get()
         }
     });
-    let display_validation = if state.validation_behavior == ValidationBehavior::Native {
+    let display_validation = if validation_behavior == ValidationBehavior::Native {
         group_validation.display_validation
     } else {
         combined_realtime

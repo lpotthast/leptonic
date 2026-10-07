@@ -194,6 +194,9 @@ async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_focus_on(&trigger, "the trigger").await?;
     page.wait_for_attr(&disclosure, "data-focus-visible-within", Some("true"))
         .await?;
+    // Past the menu button next to the heading, out of the disclosure.
+    page.press_tab().await?;
+    page.wait_for_active_id("test-disc-menu-trigger").await?;
     page.press_tab().await?;
     page.wait_for_attr(&disclosure, "data-focus-visible-within", None)
         .await

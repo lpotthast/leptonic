@@ -181,6 +181,11 @@ impl IntoAttrs for UseDateSegmentProps {
     }
 }
 
+/// A `true` ARIA value while `signal` is (none otherwise).
+fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
+    Signal::derive(move || signal.get().then(|| T::from(true)))
+}
+
 /// The day period names (AM, PM) of a locale: as typed by the first letter.
 fn day_periods(locale: &crate::utils::i18n::Locale) -> [String; 2] {
     let formatter = DateFormatter::new(
@@ -688,9 +693,6 @@ pub fn use_date_segment<V: DateValue>(input: UseDateSegmentInput<V>) -> UseDateS
     });
     let editable_flag =
         move |value: &'static str| Signal::derive(move || is_editable.get().then_some(value));
-    fn flag<T: From<bool> + Send + Sync + 'static>(signal: Signal<bool>) -> Signal<Option<T>> {
-        Signal::derive(move || signal.get().then(|| T::from(true)))
-    }
 
     // Placeholders and values in left-to-right order in right-to-left locales (a left-to-right
     // embedding), following the locale.

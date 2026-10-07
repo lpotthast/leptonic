@@ -20,7 +20,7 @@ pub fn PageUseToolbar() -> impl IntoView {
 
             <Section title="Input">
                 <ApiTable kind=ApiKind::Input of="UseToolbarInput">
-                    <ApiRow name="orientation" ty="Orientation" default="Horizontal">
+                    <ApiRow name="orientation" ty="Signal<Orientation>" default="Horizontal">
                         "The axis of the arrow keys: "<Keys keys="ArrowLeft"/>" and "<Keys keys="ArrowRight"/>" for "
                         <Code inline=true>"Horizontal"</Code>", "<Keys keys="ArrowUp"/>" and "<Keys keys="ArrowDown"/>" for "
                         <Code inline=true>"Vertical"</Code>". Also sets "<Code inline=true>"aria-orientation"</Code>"."

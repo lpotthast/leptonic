@@ -136,8 +136,7 @@ pub fn use_droppable_item(input: UseDroppableItemInput) -> UseDroppableItemRetur
             })
         })
     });
-    let is_drop_target =
-        Signal::derive(move || target.with(|t| state.is_drop_target(Some(t))));
+    let is_drop_target = Signal::derive(move || target.with(|t| state.is_drop_target(Some(t))));
 
     // During keyboard drags, the drop target has focus.
     Effect::new(move || {

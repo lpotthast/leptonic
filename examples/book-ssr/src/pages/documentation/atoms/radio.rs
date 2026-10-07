@@ -143,6 +143,57 @@ pub fn PageAtomRadio() -> impl IntoView {
                 </Section>
             </Section>
 
+            <Section title="RadioField">
+                <p>
+                    "For a radio with a description or an error message of its own, use a "<Code inline=true>"RadioField"</Code>
+                    ": a "<Code inline=true>"<div>"</Code>" around a "<Code inline=true>"RadioButton"</Code>" (the clickable "
+                    <Code inline=true>"<label>"</Code>" around a visually hidden "<Code inline=true>"<input type=\"radio\">"</Code>
+                    " and your children), a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>
+                    ". It takes the props of "<Code inline=true>"Radio"</Code>" (its "<Code inline=true>"classes"</Code>" and "<Code inline=true>"styles"</Code>" go to the "<Code inline=true>"<div>"</Code>"); a "<Code inline=true>"FieldError"</Code>" in it shows the group\u{2019}s errors. Both render the data attributes below."
+                </p>
+                <Code language=Language::Rust>
+                    {indoc!(r#"
+                        <RadioGroup value=plan set_value=plan>
+                            <Label>"Plan"</Label>
+                            <RadioField value="pro" classes="my-radio-field">
+                                <RadioButton classes="my-radio">
+                                    <span class="my-radio-circle" aria-hidden="true"></span>
+                                    "Pro"
+                                </RadioButton>
+                                <Description>"Unlimited projects, billed monthly."</Description>
+                            </RadioField>
+                        </RadioGroup>
+                    "#)}
+                </Code>
+                <Section title="Props" id="radiofield-props">
+                    <ApiTable kind=ApiKind::Props of="RadioField">
+                        <ApiRow name="value" ty="Key">"The value the radio selects, e.g. "<Code inline=true>"value=\"pro\""</Code>". Required."</ApiRow>
+                        <ApiRow name="is_disabled" ty="Signal<bool>" default="false">"Disables this radio. It is also disabled while the group is."</ApiRow>
+                        <ApiRow name="id" ty="Option<String>" default="None">"The input\u{2019}s id."</ApiRow>
+                        <ApiRow name="aria_label" ty="MaybeProp<String>" default="None">"The accessible name, for a radio without label text."</ApiRow>
+                        <ApiRow name="aria_labelledby, aria_describedby" ty="Option<String>" default="None">"Further labelling or describing elements."</ApiRow>
+                        <ApiRow name="auto_focus" ty="bool" default="false">"Focuses the radio when it mounts."</ApiRow>
+                        <ApiRow name="on_focus_change" ty="Option<Callback<bool>>" default="None">"Called when the radio gains or loses focus."</ApiRow>
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<div>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Children">"The "<Code inline=true>"RadioButton"</Code>", and a "<Code inline=true>"Description"</Code>" and a "<Code inline=true>"FieldError"</Code>" as needed. Required."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
+            <Section title="RadioButton">
+                <p>
+                    "The clickable "<Code inline=true>"<label>"</Code>" of a "<AnchorLink href="#radiofield">"RadioField"</AnchorLink>
+                    ", around a visually hidden "<Code inline=true>"<input type=\"radio\">"</Code>" and your children (the circle and the label text). "
+                    "It takes the field\u{2019}s state and renders the data attributes below."
+                </p>
+                <Section title="Props" id="radiobutton-props">
+                    <ApiTable kind=ApiKind::Props of="RadioButton">
+                        <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<label>"</Code>"."</ApiRow>
+                        <ApiRow name="children" ty="Option<Children>" default="None">"The circle and the label text."</ApiRow>
+                    </ApiTable>
+                </Section>
+            </Section>
+
             <Section title="Data Attributes">
                 <p>
                     "Each attribute is "<Code inline=true>"true"</Code>" while its state applies, and absent otherwise. "

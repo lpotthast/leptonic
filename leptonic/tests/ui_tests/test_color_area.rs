@@ -234,10 +234,9 @@ impl BrowserTest<str> for ColorAreaSpacesTests {
             .click()
             .perform()
             .await?;
-        let mut channels = (0.0, 0.0);
         for _ in 0..50 {
-            channels = (number(&page, &rtl_x).await?, number(&page, &rtl_y).await?);
-            if (channels.0 - 191.0).abs() <= 1.0 && (channels.1 - 64.0).abs() <= 1.0 {
+            let (x, y) = (number(&page, &rtl_x).await?, number(&page, &rtl_y).await?);
+            if (x - 191.0).abs() <= 1.0 && (y - 64.0).abs() <= 1.0 {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;

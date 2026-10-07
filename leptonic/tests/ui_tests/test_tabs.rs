@@ -390,15 +390,18 @@ async fn dynamic_tabs(page: &Page<'_>) -> Result<Vec<WebElement>, Report> {
 }
 
 /// "can add tabs and keep the current selected key": tabs added and removed by the app, which
-/// selects the new or the new last tab; the app's changes aren't reported as selections.
+/// selects the new or the new last tab; the app's changes aren't reported as selections. Pressing
+/// the selected tab reports it again (`useSingleSelectListState`: "Always fire
+/// onSelectionChange, even if the key is the same").
 async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
     let list = dynamic_tabs(page).await?;
     assert_that!(list.len()).is_equal_to(3);
     list[0].click().await?;
+    page.wait_for_text("test-tabs-dynamic-changes", "1").await?;
     page.send_keys_to_active(Key::Right).await?;
     page.wait_for_attr(&list[1], "aria-selected", Some("true"))
         .await?;
-    page.wait_for_text("test-tabs-dynamic-changes", "1").await?;
+    page.wait_for_text("test-tabs-dynamic-changes", "2").await?;
 
     page.press_tab().await?;
     page.wait_for_active_id("test-tabs-dynamic-add").await?;
@@ -420,7 +423,7 @@ async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
     page.wait_for_attr(&list[2], "aria-selected", Some("true"))
         .await?;
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-    assert_that!(page.read_text_of("test-tabs-dynamic-changes").await?).is_equal_to("1".to_owned());
+    assert_that!(page.read_text_of("test-tabs-dynamic-changes").await?).is_equal_to("2".to_owned());
     Ok(())
 }
 

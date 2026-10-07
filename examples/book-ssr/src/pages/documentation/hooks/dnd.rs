@@ -163,14 +163,16 @@ fn UseDragSection() -> impl IntoView {
             <Section title="Input" id="use-drag-input">
                 <p>"Pass a "<Code inline=true>"UseDragInput"</Code>" with every field named; the Default column gives the value for fields you don\u{2019}t need."</p>
                 <ApiTable kind=ApiKind::Input of="UseDragInput">
-                    <ApiRow name="get_items" ty="Callback<(), Vec<DragItem>>">"The dragged data, read when a drag starts. Required."</ApiRow>
-                    <ApiRow name="get_allowed_drop_operations" ty="Option<Callback<(), Vec<DropOperation>>>" default="None">
+                    <ApiRow name="items" ty="Signal<Vec<DragItem>>">
+                        "The dragged data, read when a drag starts (e.g. a "<Code inline=true>"Signal::derive"</Code>", computed only then). Required."
+                    </ApiRow>
+                    <ApiRow name="allowed_drop_operations" ty="Option<Signal<Vec<DropOperation>>>" default="None">
                         "The operations the drag allows, in order of preference. "<Code inline=true>"None"</Code>
                         " allows move, copy and link."
                     </ApiRow>
                     <ApiRow name="preview" ty="Option<Callback<Vec<DragItem>, Option<DragPreview>>>" default="None">
                         "An element the browser shows under the pointer instead of a snapshot of the dragged element, and "
-                        "the pointer\u{2019}s offset in it. Pointer drags only."
+                        "the pointer\u{2019}s position in it ("<Code inline=true>"offset"</Code>"; "<Code inline=true>"None"</Code>": where the pointer is in the dragged element). Pointer drags only."
                     </ApiRow>
                     <ApiRow name="on_drag_start" ty="Option<Callback<DragStartEvent>>" default="None">
                         "A drag starts. Viewport coordinates of the pointer (the element\u{2019}s center for keyboard drags)."
@@ -209,8 +211,8 @@ fn UseDragSection() -> impl IntoView {
                         use leptonic::hooks::*;
 
                         let UseDragReturn { drag_props, is_dragging, .. } = use_drag(UseDragInput {
-                            get_items: Callback::new(|()| vec![DragItem::text("Hello")]),
-                            get_allowed_drop_operations: None,
+                            items: Signal::derive(|| vec![DragItem::text("Hello")]),
+                            allowed_drop_operations: None,
                             preview: None,
                             on_drag_start: None,
                             on_drag_move: None,
@@ -444,13 +446,13 @@ fn CollectionsExample() -> impl IntoView {
                         list,
                         get_items: Callback::new(|keys: HashSet<Key>| keys.iter().map(|k| DragItem::text(k.to_string())).collect()),
                         preview: None,
-                        get_allowed_drop_operations: None,
+                        allowed_drop_operations: None,
                         on_drag_start: None,
                         on_drag_move: None,
                         on_drag_end: None,
                         is_disabled: Signal::stored(false),
                     });
-                    use_draggable_collection(drag_state, element);
+                    use_draggable_collection(UseDraggableCollectionInput { state: drag_state, element });
                     let drop_state = use_droppable_collection_state(UseDroppableCollectionStateInput {
                         list,
                         options: DroppableCollectionOptions { on_reorder: Some(on_reorder), ..Default::default() },
@@ -461,7 +463,13 @@ fn CollectionsExample() -> impl IntoView {
                             state: drop_state,
                             element,
                             collection_id: props.id.clone(),
-                            keyboard_delegate: use_list_keyboard_delegate(list, element, Orientation::Vertical, ListLayout::Stack),
+                            keyboard_delegate: use_list_keyboard_delegate(UseListKeyboardDelegateInput {
+                                state: list,
+                                element,
+                                orientation: Orientation::Vertical,
+                                layout: ListLayout::Stack,
+                                layout_delegate: None,
+                            }),
                             drop_target_delegate: Arc::new(ListDropTargetDelegate::new(list.collection, list.item_elements, element)),
                             on_key_down: None,
                         });
@@ -472,7 +480,7 @@ fn CollectionsExample() -> impl IntoView {
                     let row_element = CapturedElement::new();
                     let drop_item = use_droppable_item(UseDroppableItemInput {
                         collection: drop.clone(),
-                        target: DropTarget::item(key.clone(), DropPosition::On),
+                        target: Signal::stored(DropTarget::item(key.clone(), DropPosition::On)),
                         element: row_element,
                         activate_button: None,
                     });
@@ -480,7 +488,7 @@ fn CollectionsExample() -> impl IntoView {
                     // Per position between items:
                     let indicator = use_drop_indicator(UseDropIndicatorInput {
                         collection: drop.clone(),
-                        target: DropTarget::item(key, DropPosition::Before),
+                        target: Signal::stored(DropTarget::item(key, DropPosition::Before)),
                         activate_button: None,
                     });
                     // <div role="row"><div role="gridcell" {..indicator.drop_indicator_props.into_attrs()}></div></div>
@@ -508,7 +516,7 @@ fn DraggableCollectionHooks() -> impl IntoView {
                 <ApiTable kind=ApiKind::Input of="UseDraggableCollectionStateInput">
                     <ApiRow name="list" ty="ListState">"The collection and its selection. Required."</ApiRow>
                     <ApiRow name="get_items" ty="Callback<HashSet<Key>, Vec<DragItem>>">"The data of the dragged items. Required."</ApiRow>
-                    <ApiRow name="get_allowed_drop_operations" ty="Option<Callback<(), Vec<DropOperation>>>" default="None">
+                    <ApiRow name="allowed_drop_operations" ty="Option<Signal<Vec<DropOperation>>>" default="None">
                         "As for "<AnchorLink href="#use-drag-input">"use_drag"</AnchorLink>"."
                     </ApiRow>
                     <ApiRow name="preview" ty="Option<Callback<Vec<DragItem>, Option<DragPreview>>>" default="None">
@@ -556,7 +564,7 @@ fn DraggableCollectionHooks() -> impl IntoView {
 
         <Section title="use_draggable_collection">
             <p>
-                <Code inline=true>"use_draggable_collection(state, element)"</Code>" returns nothing. While the "
+                <Code inline=true>"use_draggable_collection(UseDraggableCollectionInput { state, element })"</Code>" returns nothing. While the "
                 "collection\u{2019}s items are dragged, it records the collection element as the drag source, so that "
                 "droppable collections tell reorders and moves (internal drops) from inserts."
             </p>
@@ -697,12 +705,14 @@ fn DroppableCollectionHooks() -> impl IntoView {
                     </ApiRow>
                     <ApiRow name="drop_target_delegate" ty="Arc<dyn DropTargetDelegate>">
                         "The drop target under the pointer. "<Code inline=true>"ListDropTargetDelegate::new(collection, item_elements, element)"</Code>
-                        " covers lists and grids ("<Code inline=true>"with_layout"</Code>", "<Code inline=true>"with_orientation"</Code>", "
-                        <Code inline=true>"with_direction"</Code>"): before or after an item by the pointer\u{2019}s half, or on "
+                        " covers lists and grids ("<Code inline=true>"with_layout"</Code>", "<Code inline=true>"with_orientation"</Code>
+                        "; the writing direction comes from the locale): before or after an item by the pointer\u{2019}s half, or on "
                         "it when the item accepts drops, with its edges still before and after. Required."
                     </ApiRow>
-                    <ApiRow name="on_key_down" ty="Option<Callback<SendWrapper<KeyboardEvent>>>">
-                        "Key presses during keyboard drags, after the collection handled them. Required ("<Code inline=true>"None"</Code>" for none)."
+                    <ApiRow name="on_key_down" ty="Option<Callback<DropTargetKeyDownEvent>>">
+                        "Key presses during keyboard drags, after the collection moved its drop target: the "
+                        <Code inline=true>"key"</Code>", and "<Code inline=true>"event()"</Code>" for the modifiers. The drag "
+                        "already prevented the default and stopped the propagation. Required ("<Code inline=true>"None"</Code>" for none)."
                     </ApiRow>
                 </ApiTable>
             </Section>
@@ -728,7 +738,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
                 <p>"The input has no defaults: set every field."</p>
                 <ApiTable kind=ApiKind::Input of="UseDroppableItemInput">
                     <ApiRow name="collection" ty="DroppableCollectionData">"From "<Code inline=true>"use_droppable_collection"</Code>". Required."</ApiRow>
-                    <ApiRow name="target" ty="DropTarget">"Usually "<Code inline=true>"DropTarget::item(key, DropPosition::On)"</Code>". Required."</ApiRow>
+                    <ApiRow name="target" ty="Signal<DropTarget>">"Usually "<Code inline=true>"DropTarget::item(key, DropPosition::On)"</Code>" (with "<Code inline=true>".into()"</Code>"). Required."</ApiRow>
                     <ApiRow name="element" ty="CapturedElement">"The item element; capture it with "<Code inline=true>"element.attr()"</Code>". Required."</ApiRow>
                     <ApiRow name="activate_button" ty="Option<CapturedElement>">
                         "A button activating the item (e.g. opening a folder) during keyboard drags. Required ("<Code inline=true>"None"</Code>" for none)."
@@ -752,7 +762,7 @@ fn DroppableCollectionHooks() -> impl IntoView {
                 <p>"The input has no defaults: set every field."</p>
                 <ApiTable kind=ApiKind::Input of="UseDropIndicatorInput">
                     <ApiRow name="collection" ty="DroppableCollectionData">"From "<Code inline=true>"use_droppable_collection"</Code>". Required."</ApiRow>
-                    <ApiRow name="target" ty="DropTarget">
+                    <ApiRow name="target" ty="Signal<DropTarget>">
                         "The position: "<Code inline=true>"DropTarget::item(key, DropPosition::Before)"</Code>" (or "
                         <Code inline=true>"After"</Code>" for the last item), or "<Code inline=true>"DropTarget::Root"</Code>". Required."
                     </ApiRow>

@@ -15,16 +15,18 @@ const RELEASES: &[Release] = &[
     Release {
         title: "Unreleased",
         intro: &[
-            "Leptonic was rebuilt in three layers: hooks, atoms and components. The hooks are ports of react-aria\u{2019}s \
-             hooks and carry the accessibility and interaction logic of everything built on top of them. Most of the API \
-             changed; the notes below list what to change when upgrading from 0.5.0.",
+            "Leptonic was rebuilt in two layers: hooks, ported from react-aria\u{2019}s hooks, which carry the \
+             accessibility and interaction logic, and atoms, unstyled Leptos components built on them. The styled \
+             components of 0.5.0 and their themes are gone: apps style the atoms with their own CSS, or start from the \
+             optional atom theme. Most of the API changed; the notes below list what to change when upgrading from 0.5.0.",
         ],
         groups: &[
             (
                 "Requirements",
                 &[
                     "Leptos 0.8 (was 0.6), Rust edition 2024 and Rust 1.89 or newer.",
-                    "`icondata` 0.7 (was 0.3), still re-exported as `leptonic::prelude::icondata`.",
+                    "`icondata` is no longer re-exported. Depend on `icondata` and `leptos_icons` yourself where you show \
+                 icons.",
                     "Every build needs the `--cfg=web_sys_unstable_apis` rustflag, not only builds with clipboard support. \
                  See Installation.",
                 ],
@@ -32,25 +34,24 @@ const RELEASES: &[Release] = &[
             (
                 "Imports and features",
                 &[
-                    "The flat `leptonic::prelude` was split by layer: `leptonic::components::prelude` (the themed \
-                 components, `Root` and the themes), `leptonic::atoms::prelude` (the atoms; import it `as atoms`, as \
-                 their names overlap with the components\u{2019}), `leptonic::hooks` (the hooks) and `leptonic::prelude` \
-                 (shared types such as `Out`, `ValueBinding`, `Mount`, `Width`, `Margin`, `signal_ls` and `icondata`). \
-                 Utilities live in `leptonic::utils`.",
-                    "Features choose the layers: `hooks` (the only default), `atoms` and `components`, each including the \
-                 layers below. Apps upgrading from 0.5.0 need `components`. `syntax-highlight` and `sanitize` are new \
-                 extras; `tiptap` includes `components`, `clipboard` needs only `hooks`; `full` enables all layers and extras.",
-                    "The `csr` feature was removed: client-side rendered apps enable neither `ssr` nor `hydrate`.",
+                    "The flat `leptonic::prelude` was split by layer: `leptonic::atoms::prelude` (the atoms, \
+                 `ThemeProvider` and the themes), `leptonic::hooks` (the hooks) and `leptonic::prelude` (shared types \
+                 such as `Out`, `ValueBinding`, `Mount`, `Width`, `Margin` and `signal_ls`). Utilities live in \
+                 `leptonic::utils`.",
+                    "Features choose the layers: `hooks` (the only default) and `atoms`, which includes `hooks`. The extras \
+                 `clipboard` and `syntax-highlight` need only `hooks`; `full` enables both layers and both extras.",
+                    "The `tiptap` and `csr` features were removed: use the `leptos-tiptap` crate directly, and enable \
+                 neither `ssr` nor `hydrate` for client-side rendered apps.",
                 ],
             ),
             (
                 "State, events, classes and styles",
                 &[
-                    "Atoms and components take their state as a value and a setter: `x` (a value or any signal) and \
-                 `set_x` (an `Out`: a signal, a closure or a `Callback`); the setter of an `is_x` prop is `set_x` \
-                 (`is_selected` and `set_selected`, `is_open` and `set_open`). Without `x`, they keep the state \
-                 themselves, starting at `default_x`. `on_change` (for named states `on_x_change`, e.g. \
-                 `on_open_change`) reports every change. See Hooks, Atoms & Components.",
+                    "Atoms take their state as a value and a setter: `x` (a value or any signal) and `set_x` (an `Out`: a \
+                 signal, a closure or a `Callback`); the setter of an `is_x` prop is `set_x` (`is_selected` and \
+                 `set_selected`, `is_open` and `set_open`). Without `x`, they keep the state themselves, starting at \
+                 `default_x`. `on_change` (for named states `on_x_change`, e.g. `on_open_change`) reports every change. \
+                 See Hooks & Atoms.",
                     "Hooks own their state: you pass an initial value, read signals and change the state through the \
                  methods a hook returns. To keep the state in your app, bind it with a `ValueBinding`, made from an \
                  `RwSignal` or a signal pair. See Callbacks.",
@@ -58,19 +59,73 @@ const RELEASES: &[Release] = &[
                  pen, keyboard and screen readers alike) instead of `on_click` with a `MouseEvent`.",
                     "Events handled by leptonic stop propagating unless the handler calls `continue_propagation()`. See \
                  Event Propagation.",
-                    "Atoms and components take `classes` and `styles` (`Classes` and `Styles`, from `leptos-classes` and \
-                 `leptos-styles`, with typed CSS declarations) instead of `id`, `class` and `style`. Set other \
-                 attributes with Leptos\u{2019} `attr:` syntax, e.g. `attr:id=\"save\"`. See Classes & Styles.",
+                    "Atoms take `classes` and `styles` (`Classes` and `Styles`, from `leptos-classes` and `leptos-styles`, \
+                 with typed CSS declarations) instead of `id`, `class` and `style`. Set other attributes with \
+                 Leptos\u{2019} `attr:` syntax, e.g. `attr:id=\"save\"`. See Classes & Styles.",
                     "Props take `Signal`, `MaybeProp` and `Option<Callback<..>>` instead of `MaybeSignal`, \
                  `OptionalMaybeSignal` and leptonic\u{2019}s `Consumer` and `Producer`.",
                 ],
             ),
             (
+                "Removed: the components layer",
+                &[
+                    "The styled components (`leptonic::components`) and their themes (`leptonic-themes`, with the CSS \
+                 variables of each component) were removed. Every one of them has an atom or a recipe instead, listed \
+                 below. Atoms bring no styles: select their default class (`leptonic-<AtomName>`, e.g. \
+                 `.leptonic-Button`) and the data attributes of their state (`[data-pressed]`, `[data-selected]`, ...) \
+                 in your CSS, or include the optional atom theme (`@use \"leptonic/leptonic-atoms\";`). See Themes and \
+                 the \u{201c}Styling\u{201d} section of every atom page.",
+                    "`Root` \u{2192} a `ThemeProvider` around your app (controlled with `signal_ls` to remember the \
+                 user\u{2019}s theme) and, if your app shows toasts, a `ToastRegion` on a `ToastQueue`. Modals need no \
+                 root. The `Leptonic` context is gone (use `leptonic::utils::platform` for platform checks), and so is the \
+                 `--leptonic-vh` variable: use the `dvh` unit (`min-height: 100dvh`). See Installation.",
+                    "`ThemeToggle` and `ThemeIcon` \u{2192} a `Switch` atom on the context of `use_theme`. See Themes.",
+                    "Buttons and links: `Button` \u{2192} the `Button` atom; `Link` \u{2192} the `Link` atom (`AnchorLink` \
+                 for in-page links); `LinkButton` \u{2192} a `Link` with your button styles. The `variations` and `active` \
+                 props of buttons are gone (variations resulted in non-compliant HTML); a variant is a data attribute you \
+                 style, e.g. `attr:data-variant=\"secondary\"`.",
+                    "Fields: `TextInput`, `PasswordInput` and `NumberInput` (with `Field` and `FieldLabel`) \u{2192} the \
+                 `TextField` (`input_type=InputType::Password` for passwords) and `NumberField` atoms, with `Label`, \
+                 `Input`, `Description` and `FieldError` inside; `Checkbox`, `Radio` and `Toggle` \u{2192} the \
+                 `Checkbox`, `RadioGroup` with `Radio`, and `Switch` atoms; `Slider` and `RangeSlider` \u{2192} the \
+                 `Slider` atom (a range has two thumbs); `Select`, `OptionalSelect` and `Multiselect` \u{2192} the `Select` \
+                 atom (`SelectMode` for multiple selection), or a `ComboBox` to search the options.",
+                    "Overlays: `Modal` (with `ModalHeader`, `ModalTitle`, `ModalBody` and `ModalFooter`) and `ModalRoot` \
+                 \u{2192} `ModalBackdrop`, `ModalContent` and `Dialog` (with `DialogTitle`), opened by a `DialogTrigger` \
+                 or a signal; `Drawer` \u{2192} a modal whose panel slides in from the edge of the screen (see the Modal \
+                 atom); `Popover` (with `PopoverTrigger`) \u{2192} the `Popover` atom in a `DialogTrigger`.",
+                    "Navigation and disclosure: `Tabs` (with `Tab`) \u{2192} `Tabs`, `TabList`, `Tab` and `TabPanel`; \
+                 `Collapsible` (with `Collapsibles`) \u{2192} `Disclosure` (with `DisclosureTrigger` and \
+                 `DisclosurePanel`) and `DisclosureGroup`.",
+                    "Collections and status: the `Table` component (with `TableHeaderCell`) \u{2192} the table atoms; \
+                 `Chip` \u{2192} `TagGroup` with `TagList` and `Tag`; `ProgressBar` and `Meter` \u{2192} their atoms; the \
+                 toasts (`ToastRoot`, `Toasts` and `Toast`) \u{2192} `ToastRegion` on a `ToastQueue`, with `Toast`, \
+                 `ToastContent`, `ToastTitle`, `ToastDescription` and `ToastCloseButton`; `Alert` \u{2192} an element \
+                 with `role=\"alert\"` (see Status).",
+                    "Dates and colors: `DateSelector`, `DatePicker` and `DateTimeInput` (with its `GuideMode`) \u{2192} the \
+                 `Calendar`, `DateField` and `DatePicker` atoms, which can be typed into and pick `jiff` dates (with \
+                 times, if you like) instead of `time::OffsetDateTime`; `ColorPicker` (with `ColorPreview`, \
+                 `ColorPalette` and `HueSlider`) \u{2192} the `ColorPicker` atom around `ColorArea`, `ColorSlider`, \
+                 `ColorField`, `ColorSwatchPicker`, ...",
+                    "Keys: `Kbd`, `KbdKey` and `KbdShortcut` \u{2192} `ShortcutKeys` (a `Shortcut` in the form of the \
+                 user\u{2019}s platform) and `Keys` (keys as given).",
+                    "Layout and decoration, which have no behavior: `AppBar`, `Card`, `Tile`, `Stack`, `Grid` (with `Row` \
+                 and `Col`), `Skeleton`, `Box` and the typography components (`H1` to `H6`, `P`) \u{2192} HTML elements \
+                 and your CSS (recipes in Content & Layout); `Separator` \u{2192} the `Separator` atom; `Icon` \u{2192} \
+                 `leptos_icons` with `icondata`; the transitions (`Collapse`, `Fade`, `Grow`, `Slide` and `Zoom`) \u{2192} \
+                 CSS animations on the atoms\u{2019} `data-entering` and `data-exiting` attributes.",
+                    "Content: `Code` \u{2192} `leptonic::utils::syntax_highlight` (feature `syntax-highlight`) for the \
+                 highlighting and `leptonic::utils::clipboard::write_text` (feature `clipboard`) for a copy button; \
+                 `TiptapEditor` \u{2192} the `leptos-tiptap` crate; `SanitizedHtml` \u{2192} the `ammonia` crate; \
+                 `Quicksearch` (with `QuicksearchTrigger` and `QuicksearchOption`) \u{2192} a `SearchField`, a \
+                 `ComboBox` or a modal.",
+                ],
+            ),
+            (
                 "Renamed",
                 &[
-                    "`Toggle` \u{2192} `Switch`, and `ToggleIcons`, `ToggleSize` and `ToggleVariant` \u{2192} \
-                 `SwitchIcons`, `SwitchSize` and `SwitchVariant`. Its `state` and `set_state` \u{2192} `is_selected` and \
-                 `set_selected`.",
+                    "`Toggle` \u{2192} the `Switch` atom. Its `state` and `set_state` \u{2192} `is_selected` and \
+                 `set_selected`; its looks (`ToggleIcons`, `ToggleSize` and `ToggleVariant`) are your CSS.",
                     "`Anchor` \u{2192} `AnchorLink`.",
                     "`LinkExt` \u{2192} `Link`, which takes a `target`; `LinkExtTarget` \u{2192} `LinkTarget`.",
                     "`create_signal_ls` \u{2192} `signal_ls`.",
@@ -86,52 +141,24 @@ const RELEASES: &[Release] = &[
             (
                 "Changed",
                 &[
-                    "`Button` and `LinkButton`: `on_click` \u{2192} `on_press`, `disabled` \u{2192} `is_disabled`. \
-                 `button_type` makes a button submit or reset its form; without it, buttons have `type=\"button\"`.",
+                    "`Button`: `on_click` \u{2192} `on_press`, `disabled` \u{2192} `is_disabled`. `button_type` makes a \
+                 button submit or reset its form; without it, buttons have `type=\"button\"`.",
                     "`Checkbox`: `checked` and `set_checked` \u{2192} `is_selected` and `set_selected`. Its children are its \
                  label. New: `is_indeterminate`, `is_required`, `is_invalid`, `name` and `form_value`. Removed: \
-                 `variant`, `size` and `id`.",
-                    "`Slider` and `RangeSlider` are generic over their number type. `min` and `max` \u{2192} `min_value` \
-                 and `max_value`, `value_display` \u{2192} `format_options`, `disabled` \u{2192} `is_disabled`; name them \
-                 with `aria_label`.",
-                    "`Select`, `OptionalSelect` and `Multiselect` take `label` (or `aria_label`), `is_disabled` and `name`.",
+                 `variant` and `size`.",
+                    "`Slider` is generic over its number type and takes one value per thumb (`values` and `set_values`). \
+                 `min` and `max` \u{2192} `min_value` and `max_value`, `value_display` \u{2192} `format_options`, \
+                 `disabled` \u{2192} `is_disabled`; name it with a `Label` or `aria_label`.",
                 ],
             ),
             (
                 "Removed",
                 &[
-                    "`TextInput`, `PasswordInput` and `NumberInput`, with their `Field` and `FieldLabel` helpers. Use \
-                 `TextField` (`input_type=InputType::Password` for passwords) and `NumberField`, which bring their label, \
-                 description and validation.",
-                    "`Quicksearch`, `QuicksearchTrigger` and `QuicksearchOption`. Build a search from a `SearchField`, a \
-                 `ComboBox` or a `Modal`.",
-                    "`Box`. Use a `<div>` with your own classes.",
-                    "The typography components `H1` to `H6` and `P`. Write the HTML elements; the theme styles them.",
-                    "`ModalRoot`. Modals need no root anymore.",
-                    "`DateTimeInput` and its `GuideMode`. Use the `DatePicker` atoms, which can be typed into and pick \
-                 `jiff` dates (with times, if you like) instead of `time::OffsetDateTime`.",
-                    "The styled `Table` (with `TableHeaderCell`), `DateSelector`, `DatePicker` and `ColorPicker` (with \
-                 `ColorPreview`, `ColorPalette` and `HueSlider`) components. Use the table, calendar, date picker and \
-                 color atoms (`ColorPicker` around `ColorArea`, `ColorSlider`, `ColorField`, ...) with your own CSS.",
-                    "The `Modal` (with `ModalHeader`, `ModalTitle`, `ModalBody` and `ModalFooter`), `Popover` (with \
-                 `PopoverTrigger`) and `Drawer` components. Use the modal, dialog and popover atoms with your own CSS; a \
-                 drawer is a modal whose panel slides in from the edge of the screen.",
-                    "The styled `Link`, `LinkButton`, `Tabs` (with `Tab`) and `Collapsible` (with `Collapsibles`) \
-                 components. Use the link, tabs and disclosure atoms with your own CSS; a link that looks like a button is a \
-                 `Link` with your button styles.",
-                    "The `Alert`, `Meter`, `ProgressBar` and toast (`ToastRoot`, `Toasts`, `Toast`) components. Use the \
-                 meter and progress bar atoms and the toast atoms (`ToastRegion` on a `ToastQueue`); an alert is an \
-                 element with `role=\"alert\"` (see Status).",
-                    "The `AppBar`, `Card`, `Tile`, `Chip`, `Grid` (with `Row` and `Col`), `Icon`, `KbdKey`, `KbdShortcut`, \
-                 `SanitizedHtml`, `Separator`, `Skeleton`, `Stack`, `Code`, `TiptapEditor` and transition (`Collapse`, \
-                 `Fade`, `Grow`, `Slide` and `Zoom`) components. Use the `TagGroup`, `Keys` and `Separator` atoms, \
-                 `leptos_icons`, `ammonia`, `leptos-tiptap` and CSS (see Content & Layout).",
                     "`Consumer` and `Producer` (and `consumer` and `producer`). Use Leptos\u{2019} `Callback`.",
                     "The global event contexts `GlobalClickEvent` and `GlobalKeyboardEvent`. Listen to document events \
                  with leptos-use\u{2019}s `use_event_listener`, or detect outside interactions with \
                  `use_interact_outside`.",
                     "`OptionalSignal` and `OptionalMaybeSignal`.",
-                    "The `variations` and `active` props of buttons. Variations resulted in non-compliant HTML.",
                 ],
             ),
             (
@@ -145,7 +172,7 @@ const RELEASES: &[Release] = &[
                  groups, calendars, date fields, date pickers, color controls and toasts.",
                     "Document-wide keyboard shortcuts: `use_global_shortcuts` binds shortcuts that work anywhere (e.g. \
                  Ctrl+K, also while typing) and shortcuts that work only outside text fields (e.g. /), seeing every key \
-                 press before leptonic\u{2019}s components stop it.",
+                 press before leptonic\u{2019}s atoms stop it.",
                     "Landmarks: `use_landmark` makes a region of the page a landmark, and F6 and Shift+F6 move the focus \
                  between landmarks (Alt+F6 to the main one).",
                     "Atoms, unstyled Leptos components rendering one element each: `Breadcrumbs`, `Button`, `Calendar` \
@@ -164,8 +191,14 @@ const RELEASES: &[Release] = &[
                  `TagList`, `Tag` and `TagRemoveButton`, `TextField`, `ToastRegion` and `Toast` with \
                  `ToastContent`, `ToastTitle`, `ToastDescription` and `ToastCloseButton`, `ToggleButton` and \
                  `ToggleButtonGroup`, `Toolbar`, `Tooltip` and `VisuallyHidden`.",
-                    "Components: `TextField` and `SearchField` with label, description and validation, `NumberField` \
-                 (generic over its number type), `CheckboxGroup`, `Radio` and `RadioGroup`.",
+                    "Default classes: every atom rendering an element of its own carries the class \
+                 `leptonic-<AtomName>` (e.g. `leptonic-Button`) in front of the `classes` you pass, and data attributes \
+                 for its state, for your CSS to select.",
+                    "The atom theme, an optional stylesheet for the atoms ported from react-aria-components\u{2019} starter \
+                 styles: `@use \"leptonic/leptonic-atoms\";` after setting `style-dir` (see Installation). Its light and \
+                 dark mode follow the nearest `ThemeProvider`; `--tint` recolors it.",
+                    "`ThemeProvider` as an atom, with `theme` and `set_theme` (or `default_theme`) and `use_theme`, to \
+                 read and change the theme of the closest provider.",
                     "Virtualization of long lists: the `Virtualizer` atom renders only the visible options of a \
                  `ListBox` (with `ListBoxItems`), positioned by a `ListLayout` of fixed or measured row sizes; \
                  `VirtualList` renders only the visible rows of a plain list such as a log, optionally following its \
@@ -174,7 +207,6 @@ const RELEASES: &[Release] = &[
                     "`Color` (`leptonic::utils::color`): a color in any of the spaces HSV, HSL and RGB, parsed from \
                  CSS-like text (`#rgb`, `#rrggbb`, `rgb()`, `hsb()`, `hsl()`), with `color_name()` and `hue_name()` \
                  describing colors in words (\u{201c}dark vibrant blue\u{201d}).",
-                    "`use_theme`, to read and change the theme of the closest `ThemeProvider`.",
                     "`leptonic::jiff`, the re-exported date crate: calendars pick `jiff::civil::Date` values; date fields and \
                  pickers are generic over `civil::Date`, `civil::DateTime` and `Zoned`, time fields over `civil::Time`, \
                  `civil::DateTime` and `Zoned`, with segments in the order and format of the locale.",
@@ -200,6 +232,10 @@ const RELEASES: &[Release] = &[
             (
                 "Changed during development",
                 &[
+                    "For apps that followed the development branch: the `components` feature and `leptonic::components` \
+                 were removed with the components layer (see \u{201c}Removed: the components layer\u{201d}), and with \
+                 them the `sanitize` feature and the `TextField`, `SearchField`, `NumberField`, `CheckboxGroup` and \
+                 `RadioGroup` components; use the atoms of the same names.",
                     "For apps that followed the development branch: the `FocusManager` atom \u{2192} \
                  `FocusManagerProvider`; `FieldLabelProps` \u{2192} `LabelContext`; `use_long_press` was merged into \
                  `use_press` (`on_long_press`); `PlacementX` and `PlacementY` \u{2192} `Placement`.",

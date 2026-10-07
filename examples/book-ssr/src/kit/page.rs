@@ -1,6 +1,6 @@
 use leptonic::{
     atoms::prelude::{AnchorLink, Button},
-    utils::{clipboard::write_text, live_announcer::announce_polite},
+    utils::{clipboard::write_text_deferred, live_announcer::announce_polite},
 };
 use leptos::{context::Provider, prelude::*};
 use leptos_meta::{Meta, Title};
@@ -171,19 +171,18 @@ fn CopyAsMarkdownButton() -> impl IntoView {
 
     let copy = move |_| {
         let url = md_url.get_value();
-        leptos::task::spawn_local(async move {
-            let mut text = cached_markdown(&url);
-            if text.is_none() {
-                text = fetch_text(&url).await;
-                if let Some(text) = &text {
-                    cache_markdown(&url, text.clone());
-                }
+        // The clipboard write starts during the press (Safari only allows it there); the text follows once it is
+        // downloaded, or comes from the cache.
+        let written = write_text_deferred(async move {
+            if let Some(text) = cached_markdown(&url) {
+                return Some(text);
             }
-            let copied = if let Some(text) = text {
-                write_text(&text).await.is_ok()
-            } else {
-                false
-            };
+            let text = fetch_text(&url).await?;
+            cache_markdown(&url, text.clone());
+            Some(text)
+        });
+        leptos::task::spawn_local(async move {
+            let copied = written.await.is_ok();
             state.set(if copied {
                 CopyState::Copied
             } else {

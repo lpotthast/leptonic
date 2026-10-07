@@ -178,7 +178,6 @@ impl PageKind {
             Self::Concept => "concept",
             Self::Hook => "hook",
             Self::Atom => "atom",
-            Self::Component => "component",
             Self::Utility => "utility",
         }
     }

@@ -189,11 +189,19 @@ pub fn PageAtomSelect() -> impl IntoView {
                         <ApiRow name="is_disabled" ty="Signal<bool>" default="false">
                             "Disables the trigger and the hidden form element."
                         </ApiRow>
-                        <ApiRow name="is_required" ty="bool" default="false">
+                        <ApiRow name="is_required" ty="Signal<bool>" default="false">
                             "Sets "<Code inline=true>"required"</Code>" on the hidden form element, with "
                             <Code inline=true>"ValidationBehavior::Native"</Code>" only."
                         </ApiRow>
-                        <ApiRow name="default_open" ty="bool" default="false">"Start with the popover open."</ApiRow>
+                        <ApiRow name="default_open" ty="bool" default="false">
+                            "Start with the popover open. Ignored with "<Code inline=true>"is_open"</Code>"."
+                        </ApiRow>
+                        <ApiRow name="is_open" ty="Option<Signal<bool>>" default="None">
+                            "Whether the popover is open (controlled): a value or any signal."
+                        </ApiRow>
+                        <ApiRow name="set_open" ty="Option<Out<bool>>" default="None">
+                            "Receives the open state: an "<Code inline=true>"RwSignal"</Code>", a closure, a "<Code inline=true>"Callback"</Code>", \u{2026}"
+                        </ApiRow>
                         <ApiRow name="on_open_change" ty="Option<Callback<bool>>" default="None">
                             "Called when the popover opens or closes."
                         </ApiRow>
@@ -262,14 +270,14 @@ pub fn PageAtomSelect() -> impl IntoView {
 
             <Section title="SelectValue">
                 <p>
-                    "The text of the selected option (in "<Code inline=true>"Multiple"</Code>" mode: the options\u{2019} texts, "
-                    "separated by commas), or the placeholder, as a "<Code inline=true>"<span>"</Code>". The text comes from "
+                    "The text of the selected option (in "<Code inline=true>"Multiple"</Code>" mode: the options\u{2019} texts as a "
+                    "list in the locale\u{2019}s language, \u{201c}Apple, Banana, and Cherry\u{201d}), or the placeholder, as a "<Code inline=true>"<span>"</Code>". The text comes from "
                     "the collection\u{2019}s text values. To show something richer, read the selection from the "
                     <AnchorLink href="#composition">"context"</AnchorLink>" instead."
                 </p>
                 <Section title="Props" id="select-value-props">
                     <ApiTable kind=ApiKind::Props of="SelectValue">
-                        <ApiRow name="placeholder" ty="Option<String>" default="None">"Shown while nothing is selected."</ApiRow>
+                        <ApiRow name="placeholder" ty="MaybeProp<String>" default="\"Select an item\"">"Shown while nothing is selected."</ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">
                             "Classes and styles of the "<Code inline=true>"<span>"</Code>"."
                         </ApiRow>
@@ -312,6 +320,10 @@ pub fn PageAtomSelect() -> impl IntoView {
                         <ApiRow name="auto_complete" ty="Option<String>" default="None">
                             "The "<Code inline=true>"autocomplete"</Code>" attribute, a hint for browser autofill (e.g. "
                             <Code inline=true>"\"country\""</Code>")."
+                        </ApiRow>
+                        <ApiRow name="label" ty="MaybeProp<String>" default="None">
+                            "The text of the hidden "<Code inline=true>"<label>"</Code>" (browsers identify fields for autofill by "
+                            "their labels). "<Code inline=true>"None"</Code>": the select\u{2019}s "<Code inline=true>"aria_label"</Code>"."
                         </ApiRow>
                     </ApiTable>
                 </Section>

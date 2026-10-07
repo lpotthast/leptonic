@@ -1,0 +1,31 @@
+// The book's base: what every element starts from. Leptonic's atoms bring no styles, so the book sets the box model,
+// its font and the form controls' defaults itself.
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+}
+
+// Form controls don't inherit the page's font by default.
+button,
+input,
+optgroup,
+select,
+textarea {
+  margin: 0;
+  font: inherit;
+  line-height: inherit;
+}
+
+table {
+  line-height: inherit;
+}
+
+p {
+  hyphens: auto;
+}

@@ -89,7 +89,7 @@ pub fn PageAtomTagGroup() -> impl IntoView {
                             <Code inline=true>"None"</Code>", "<Code inline=true>"Single"</Code>" or "<Code inline=true>"Multiple"</Code>
                             " tags can be selected."
                         </ApiRow>
-                        <ApiRow name="selection_behavior" ty="SelectionBehavior" default="Toggle">
+                        <ApiRow name="selection_behavior" ty="Signal<SelectionBehavior>" default="Toggle">
                             "How pointer presses change the selection: "<Code inline=true>"Toggle"</Code>" the tag, or "
                             <Code inline=true>"Replace"</Code>" the selection with it."
                         </ApiRow>

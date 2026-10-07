@@ -192,6 +192,10 @@ pub fn PageAtomMenu() -> impl IntoView {
                         "Called when an item closes the menu after its action. Inside a "<Code inline=true>"MenuTrigger"</Code>
                         " the menu closes as well."
                     </ApiRow>
+                    <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
+                        "Whether activating an item closes the menu. "<Code inline=true>"Auto"</Code>": unless the menu allows multiple "
+                        "selection, or the item was checked with "<Keys keys="Space"/>". Sections and items can override it."
+                    </ApiRow>
                     <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the menu element."</ApiRow>
                     <ApiRow name="children" ty="Children">"The items and sections."</ApiRow>
                 </ApiTable>
@@ -213,8 +217,9 @@ pub fn PageAtomMenu() -> impl IntoView {
                         <ApiRow name="key" ty="Key">"The item\u{2019}s key in the menu\u{2019}s collection. Required."</ApiRow>
                         <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
                             "Whether activating the item closes the menu: "<Code inline=true>"Always"</Code>", "
-                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (unless the menu allows multiple selection, or "
-                            "the item was checked with "<Keys keys="Space"/>"). A "<Code inline=true>"bool"</Code>" converts into it."
+                            <Code inline=true>"Never"</Code>", or "<Code inline=true>"Auto"</Code>" (as its "<Code inline=true>"MenuSection"</Code>" or "
+                            <Code inline=true>"Menu"</Code>" says, else unless the menu allows multiple selection, or the item was checked with "
+                            <Keys keys="Space"/>"). A "<Code inline=true>"bool"</Code>" converts into it."
                         </ApiRow>
                         <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the item element."</ApiRow>
                         <ApiRow name="children" ty="Children">"The item\u{2019}s content."</ApiRow>
@@ -277,15 +282,45 @@ pub fn PageAtomMenu() -> impl IntoView {
 
             <Section title="MenuSection">
                 <p>
-                    "A group of items, for the collection section "<Code inline=true>"key"</Code>": renders the section\u{2019}s "
-                    "header (if the collection has one, styled with "<Code inline=true>"heading_classes"</Code>") and its children."
+                    "A group of items, for the collection section "<Code inline=true>"key"</Code>": a "
+                    <Code inline=true>"<section role=\"group\">"</Code>" starting with the section\u{2019}s header (if the collection "
+                    "has one), a "<Code inline=true>"<header>"</Code>" naming the group and styled with "<Code inline=true>"heading_classes"</Code>
+                    ", followed by its children."
+                </p>
+                <p>
+                    "With a "<Code inline=true>"selection_mode"</Code>" of its own, the section\u{2019}s items have a selection of "
+                    "their own: e.g. a single choice next to a multiple choice in one menu."
                 </p>
 
                 <Section title="Props" id="menusection-props">
                 <ApiTable kind=ApiKind::Props of="MenuSection">
                     <ApiRow name="key" ty="Key">"The section\u{2019}s key in the menu\u{2019}s collection. Required."</ApiRow>
-                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the group element."</ApiRow>
-                    <ApiRow name="heading_classes" ty="Classes" default="empty">"Classes of the heading element."</ApiRow>
+                    <ApiRow name="selection_mode" ty="Option<SelectionMode>" default="None">
+                        "A selection mode of the section\u{2019}s own; its items then have their own selection. "
+                        <Code inline=true>"None"</Code>": the menu\u{2019}s selection."
+                    </ApiRow>
+                    <ApiRow name="default_selected_keys" ty="Vec<Key>" default="vec![]">
+                        "The initially selected keys of the section\u{2019}s own selection."
+                    </ApiRow>
+                    <ApiRow name="selection" ty="Option<Signal<Selection>>" default="None">
+                        "The section\u{2019}s own selection (controlled), replacing "<Code inline=true>"default_selected_keys"</Code>
+                        ": a value or any signal."
+                    </ApiRow>
+                    <ApiRow name="set_selection" ty="Option<Out<Selection>>" default="None">
+                        "Receives the section\u{2019}s new selection: an "<Code inline=true>"RwSignal"</Code>", a closure, a "
+                        <Code inline=true>"Callback"</Code>", \u{2026}"
+                    </ApiRow>
+                    <ApiRow name="on_selection_change" ty="Option<Callback<Selection>>" default="None">
+                        "Called with the section\u{2019}s new selection."
+                    </ApiRow>
+                    <ApiRow name="disallow_empty_selection" ty="Signal<bool>" default="false">
+                        "Whether the section\u{2019}s own selection can\u{2019}t become empty."
+                    </ApiRow>
+                    <ApiRow name="should_close_on_select" ty="CloseOnSelect" default="Auto">
+                        "Whether activating one of the section\u{2019}s items closes the menu. "<Code inline=true>"Auto"</Code>": as the menu says."
+                    </ApiRow>
+                    <ApiRow name="classes, styles" ty="Classes, Styles" default="empty">"Classes and styles of the "<Code inline=true>"<section>"</Code>"."</ApiRow>
+                    <ApiRow name="heading_classes" ty="Classes" default="empty">"Classes of the "<Code inline=true>"<header>"</Code>"."</ApiRow>
                     <ApiRow name="children" ty="Children">"The section\u{2019}s items."</ApiRow>
                 </ApiTable>
                 </Section>

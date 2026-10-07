@@ -169,16 +169,12 @@
     background-color: var(--book-badge-atom-color);
   }
 
-  &[data-kind="comp"] {
-    background-color: var(--book-badge-comp-color);
-  }
-
   &[data-kind="util"] {
     background-color: var(--book-badge-util-color);
   }
 }
 
-// The layers a concept is documented at: H, A, C. Present layers are filled with their badge color, missing ones
+// The layers a concept is documented at: H, A. Present layers are filled with their badge color, missing ones
 // plain.
 .book-layer-marks {
   display: inline-flex;
@@ -211,10 +207,6 @@
 
   [data-layer="atom"][data-present="true"] {
     background-color: var(--book-badge-atom-color);
-  }
-
-  [data-layer="component"][data-present="true"] {
-    background-color: var(--book-badge-comp-color);
   }
 }
 

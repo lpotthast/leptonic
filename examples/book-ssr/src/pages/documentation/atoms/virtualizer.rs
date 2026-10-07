@@ -169,9 +169,6 @@ pub fn PageAtomVirtualizer() -> impl IntoView {
                             "The size of a loader node (\u{201c}load more\u{201d}). "<Code inline=true>"None"</Code>
                             ": the row size, else 48."
                         </ApiRow>
-                        <ApiRow name="drop_indicator_thickness" ty="f64" default="2.0">
-                            "The thickness of drop indicators, for drag and drop."
-                        </ApiRow>
                         <ApiRow name="gap" ty="f64" default="0.0">"The space between rows."</ApiRow>
                         <ApiRow name="padding" ty="f64" default="0.0">
                             "The space around the list. Use it instead of CSS padding on the scrolling element, which "

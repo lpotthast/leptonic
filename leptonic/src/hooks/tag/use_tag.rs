@@ -7,10 +7,9 @@ use leptos::{
 };
 
 use super::TagGroupData;
-use crate::hooks::FocusMode;
 use crate::{
     hooks::{
-        IntoAttrs, PropsWithStyles,
+        FocusMode, IntoAttrs, PropsWithStyles,
         button::use_button::UseButtonInput,
         collections::Key,
         focus::use_focus_visible::{Modality, UseFocusVisibleInput, use_focus_visible},

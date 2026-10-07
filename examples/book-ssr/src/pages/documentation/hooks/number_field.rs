@@ -113,7 +113,7 @@ pub fn PageUseNumberField() -> impl IntoView {
                         <ApiRow name="format_options" ty="Signal<NumberFormatOptions>">"The format options."</ApiRow>
                         <ApiRow name="commit_behavior" ty="CommitBehavior">"How typed values are committed."</ApiRow>
                         <ApiRow name="is_disabled, is_read_only" ty="Signal<bool>">"Disabled and read-only state."</ApiRow>
-                        <ApiRow name="validation" ty="UseFormValidationStateReturn">"The validation state."</ApiRow>
+                        <ApiRow name="validation" ty="FormValidationState">"The validation state."</ApiRow>
                         <ApiRow name="validation_behavior" ty="ValidationBehavior">"The validation behavior."</ApiRow>
                         <ApiRow name="default_number_value" ty="Option<T>">"The value a form reset restores."</ApiRow>
                     </ApiTable>

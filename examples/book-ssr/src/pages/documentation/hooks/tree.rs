@@ -41,7 +41,13 @@ pub fn PageUseTree() -> impl IntoView {
                         <ApiRow name="selection" ty="SelectionOptions" default="SelectionOptions::default()">
                             "Selection, see "<Link href=format!("{}#selectionoptions", routes::doc::CollectionState.materialize())>"SelectionOptions"</Link>"."
                         </ApiRow>
-                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">"The initially expanded items."</ApiRow>
+                        <ApiRow name="default_expanded_keys" ty="HashSet<Key>" default="empty">
+                            "The initially expanded items. Ignored when "<Code inline=true>"expanded_keys"</Code>" is bound."
+                        </ApiRow>
+                        <ApiRow name="expanded_keys" ty="Option<ValueBinding<HashSet<Key>>>" default="None">
+                            "The expanded items as app state, replacing "<Code inline=true>"default_expanded_keys"</Code>
+                            ": the tree shows them, and expanding or collapsing items writes them."
+                        </ApiRow>
                         <ApiRow name="on_expanded_change" ty="Option<Callback<HashSet<Key>>>" default="None">"Called with the expanded keys whenever they change."</ApiRow>
                     </ApiTable>
                 </Section>
@@ -79,6 +85,7 @@ pub fn PageUseTree() -> impl IntoView {
                                 collection,
                                 selection: SelectionOptions::default(),
                                 default_expanded_keys: HashSet::from([Key::from("documents")]),
+                                expanded_keys: None,
                                 on_expanded_change: None,
                             });
 
@@ -134,11 +141,15 @@ pub fn PageUseTree() -> impl IntoView {
                         </ApiRow>
                         <ApiRow name="expand_button" ty="UseButtonInput">
                             "Configuration of a button expanding and collapsing the item, for "
-                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>"."
+                            <Link href=routes::doc::button::Hook.materialize()>"use_button"</Link>": labelled "
+                            "\u{201c}Expand\u{201d} or \u{201c}Collapse\u{201d}, plus the item."
                         </ApiRow>
-                        <ApiRow name="expand_button_label" ty="Signal<&'static str>">"\u{201c}Expand\u{201d} or \u{201c}Collapse\u{201d}."</ApiRow>
+                        <ApiRow name="expand_button_attrs" ty="PreventFocusAttr">
+                            "Spread onto the expand button besides "<Code inline=true>"use_button"</Code>"\u{2019}s attributes: it "
+                            "keeps focus walks ("<Keys keys="ArrowRight"/>" on an expanded row) off the button."
+                        </ApiRow>
                         <ApiRow name="is_expanded" ty="Signal<bool>">"Whether the item is expanded."</ApiRow>
-                        <ApiRow name="has_child_items" ty="bool">"Whether the item has children (render the expand button only then)."</ApiRow>
+                        <ApiRow name="has_child_items" ty="Signal<bool>">"Whether the item has children (render the expand button only then)."</ApiRow>
                     </ApiTable>
                 </Section>
             </Section>

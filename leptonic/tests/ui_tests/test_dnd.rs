@@ -146,9 +146,13 @@ async fn draggable(page: &DndPage<'_>) -> Result<WebElement, Report> {
 /// Opens `/hooks/dnd-targets` with the query and starts a keyboard drag of "Drag me" (focus moves
 /// to the first drop target).
 async fn start_keyboard_drag(page: &DndPage<'_>, query: &str) -> Result<WebElement, Report> {
-    page.goto_path(&format!("/hooks/dnd-targets{query}")).await?;
+    page.goto_path(&format!("/hooks/dnd-targets{query}"))
+        .await?;
     let source = draggable(page).await?;
-    page.by_role_and_text("button", "Before").await?.click().await?;
+    page.by_role_and_text("button", "Before")
+        .await?
+        .click()
+        .await?;
     page.press_tab().await?;
     if query.contains("ancestor") {
         // The ancestor drop target comes first.
@@ -192,8 +196,11 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
         .await?;
     assert_that!(attr(&target_1, "data-droptarget").await?).is_equal_to(Some("false".to_owned()));
     assert_that!(attr(&target_2, "data-droptarget").await?).is_equal_to(Some("true".to_owned()));
-    page.expect_log(LOG, &["dragstart", "dropenter 1", "dropexit 1", "dropenter 2"])
-        .await?;
+    page.expect_log(
+        LOG,
+        &["dragstart", "dropenter 1", "dropexit 1", "dropenter 2"],
+    )
+    .await?;
 
     page.send_keys_to_active(Key::Enter).await?;
     page.expect_log(
@@ -248,11 +255,15 @@ async fn row(page: &DndPage<'_>, letter: &str) -> Result<WebElement, Report> {
 }
 
 async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
-    page.wait_until(&format!("the drop indicator {label:?} to have focus"), || async {
-        let active = page.driver.active_element().await?;
-        Ok(attr(&active, "aria-label").await?.as_deref() == Some(label)
-            && attr(&active, "aria-roledescription").await?.as_deref() == Some("drop indicator"))
-    })
+    page.wait_until(
+        &format!("the drop indicator {label:?} to have focus"),
+        || async {
+            let active = page.driver.active_element().await?;
+            Ok(attr(&active, "aria-label").await?.as_deref() == Some(label)
+                && attr(&active, "aria-roledescription").await?.as_deref()
+                    == Some("drop indicator"))
+        },
+    )
     .await
 }
 
@@ -300,8 +311,7 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
     page.expect_log(LOG, &["dragstart"]).await?;
     assert_that!(page.transfer("getData('text/plain')").await?)
         .is_equal_to(serde_json::Value::from("hello world"));
-    assert_that!(page.transfer("effectAllowed").await?)
-        .is_equal_to(serde_json::Value::from("all"));
+    assert_that!(page.transfer("effectAllowed").await?).is_equal_to(serde_json::Value::from("all"));
     page.wait_for_attr(&draggable, "data-dragging", Some("true"))
         .await?;
 
@@ -568,7 +578,10 @@ async fn disabled_drag(page: &DndPage<'_>) -> Result<(), Report> {
     let source = draggable(page).await?;
     assert_that!(attr(&source, "draggable").await?).is_equal_to(Some("false".to_owned()));
     assert_that!(attr(&source, "data-dragging").await?).is_equal_to(Some("false".to_owned()));
-    page.by_role_and_text("button", "Before").await?.click().await?;
+    page.by_role_and_text("button", "Before")
+        .await?
+        .click()
+        .await?;
     page.press_tab().await?;
     page.wait_for_focus_on(&source, "the draggable").await?;
     assert_that!(attr(&source, "aria-describedby").await?).is_none();
@@ -703,12 +716,19 @@ async fn native_disabled(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// Starts a screen reader drag: focus and a virtual click on the drag source.
 async fn start_virtual_drag(page: &DndPage<'_>, query: &str) -> Result<WebElement, Report> {
-    page.goto_path(&format!("/hooks/dnd-targets{query}")).await?;
+    page.goto_path(&format!("/hooks/dnd-targets{query}"))
+        .await?;
     let source = draggable(page).await?;
     page.focus_by_script(&source).await?;
-    assert_that!(page.description(&source).await?).is_equal_to("Click to start dragging.".to_owned());
+    assert_that!(page.description(&source).await?)
+        .is_equal_to("Click to start dragging.".to_owned());
     page.virtual_click(&source).await?;
     page.wait_for_attr(&source, "data-dragging", Some("true"))
+        .await?;
+    // The drag manager sets the session up one frame later (then the page becomes inert); clicks
+    // before that would go to the drag source itself.
+    let input = page.css("input[aria-label='Text field']").await?;
+    page.wait_until("the drag session to start", || page.is_inert(&input))
         .await?;
     Ok(source)
 }

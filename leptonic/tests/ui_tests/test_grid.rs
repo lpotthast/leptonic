@@ -285,8 +285,14 @@ async fn focusing_a_child_from_outside_keeps_it(page: &Page<'_>) -> Result<(), R
 }
 
 /// Focusing a cell (in child focus mode) restores focus to the child that was focused last,
-/// not the first child: when tabbing back into the grid, and when the cell itself is focused.
-/// The previous check left focus on the second switch.
+/// not the first child: when tabbing back into the grid, and when the cell itself is focused
+/// from outside the grid. The previous check left focus on the second switch.
+///
+/// react-aria's version ("should restore focus to the child that was last focused within a
+/// cell") focuses the cell from its own child. In a browser, that keeps focus on the cell
+/// (`useGridCell`'s `onFocus` ignores focus coming from the cell's children, and setting the
+/// already focused key again changes nothing); the jsdom test only passes because its fake
+/// timers still hold the frame callback queued when tabbing in.
 async fn restores_the_last_focused_child(page: &Page<'_>) -> Result<(), Report> {
     let g = switch_grid(page, "Cell-Child").await?;
     page.click_element_with_id("test-grid-before-cell-child")
@@ -295,6 +301,8 @@ async fn restores_the_last_focused_child(page: &Page<'_>) -> Result<(), Report> 
     page.wait_for_focus_on(&g.switches[1], "restore Cell-Child: switch 2 (tabbing in)")
         .await?;
 
+    page.click_element_with_id("test-grid-before-cell-child")
+        .await?;
     focus(page, &g.cells[0]).await?;
     page.wait_for_focus_on(
         &g.switches[1],
@@ -341,6 +349,15 @@ async fn row_selection(page: &Page<'_>) -> Result<(), Report> {
     let alice = row(page, "Alice").await?;
     assert_that!(attr(&alice, "aria-selected").await?).is_equal_to(Some("true".to_owned()));
 
+    // Selectable rows show hover.
+    let dave = row(page, "Dave").await?;
+    page.driver
+        .action_chain()
+        .move_to_element_center(&cell(page, "Dave", "40").await?)
+        .perform()
+        .await?;
+    page.wait_for_attr(&dave, "data-hovered", Some("true"))
+        .await?;
     cell(page, "Dave", "40").await?.click().await?;
     page.wait_for_text("test-grid-selection", "Alice,Dave")
         .await?;

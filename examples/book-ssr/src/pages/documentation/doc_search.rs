@@ -113,6 +113,8 @@ fn SearchPanel(query: RwSignal<String>) -> impl IntoView {
                 on_submit=open_first
                 aria_label="Search documentation"
                 placeholder="Search documentation\u{2026}"
+                // The field mounts with the dialog: opening the search puts the focus into it.
+                auto_focus=true
                 classes="doc-search-field"
             >
                 <Icon icon=icondata::BsSearch classes="doc-search-field-icon"/>
