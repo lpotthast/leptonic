@@ -18,9 +18,12 @@ use crate::{
         },
         use_overlay_trigger_state,
     },
-    utils::{ValueBinding, i18n::use_locale},
+    utils::{
+        ValueBinding,
+        i18n::use_locale,
+        intl_strings::{DateValidationStrings, use_localized_strings},
+    },
 };
-use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

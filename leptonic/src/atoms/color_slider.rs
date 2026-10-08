@@ -21,11 +21,11 @@ use crate::{
         color::{ColorChannel, ColorValue},
         data_attributes::flag,
         default_class::with_default_class,
+        i18n::use_locale,
         orientation::Orientation,
         styles::Styles,
     },
 };
-use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

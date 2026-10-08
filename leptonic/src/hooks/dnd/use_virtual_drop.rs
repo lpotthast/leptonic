@@ -2,8 +2,10 @@
 use leptos::prelude::*;
 
 use super::{drag_manager::use_drag_session, messages, utils::use_drag_modality};
-use crate::utils::use_description::use_description;
-use crate::utils::intl_strings::{DndStrings, use_localized_strings};
+use crate::utils::{
+    intl_strings::{DndStrings, use_localized_strings},
+    use_description::use_description,
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

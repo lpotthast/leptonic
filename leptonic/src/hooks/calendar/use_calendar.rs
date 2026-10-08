@@ -23,11 +23,11 @@ use crate::{
         aria::AriaRole,
         i18n::use_locale,
         id::use_id,
+        intl_strings::{CalendarStrings, use_localized_strings},
         live_announcer::{Assertiveness, announce, announce_with_timeout},
         slot_id::{SlotProps, use_slot},
     },
 };
-use crate::utils::intl_strings::{CalendarStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

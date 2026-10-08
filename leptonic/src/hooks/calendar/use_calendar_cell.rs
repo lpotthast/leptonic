@@ -10,7 +10,6 @@ use leptos::{
 use web_sys::{FocusEvent, MouseEvent, PointerEvent};
 
 use super::states::CalendarData;
-use crate::utils::intl_strings::{CalendarStrings, use_localized_strings};
 use crate::{
     hooks::{
         IntoAttrs, PressEvent, PropsWithStyles, UsePressAttrs, UsePressInput, UsePressProps,
@@ -20,6 +19,7 @@ use crate::{
         CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaInvalid, AriaRole, AriaSelected},
         date::use_today,
+        intl_strings::{CalendarStrings, use_localized_strings},
         pointer_type::PointerType,
         use_description::use_description,
     },

@@ -24,12 +24,12 @@ use crate::utils::{
     CapturedElement, EventAccessors,
     aria_hide_outside::{AriaHideOutsideOptions, HideMode, aria_hide_outside},
     event_listeners::{Listener, listen},
+    intl_strings::DndStrings,
     key::{KeyboardEventKey, KeyboardKey},
     live_announcer::{Assertiveness, announce},
     node_contains,
     virtual_click::{is_virtual_click, is_virtual_pointer_event},
 };
-use crate::utils::intl_strings::DndStrings;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -21,12 +21,12 @@ use crate::{
         EventHandler,
         aria::{AriaDisabled, AriaReadonly, AriaRequired, AriaRole},
         event_listeners::{Listener, listen_to},
+        intl_strings::{SpinButtonStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         live_announcer::{Assertiveness, announce, clear_announcer},
         pointer_type::PointerType,
     },
 };
-use crate::utils::intl_strings::{SpinButtonStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

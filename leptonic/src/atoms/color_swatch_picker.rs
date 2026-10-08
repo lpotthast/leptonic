@@ -18,11 +18,11 @@ use crate::{
         classes::Classes,
         color::{Color, ColorValue, RGB8},
         default_class::with_default_class,
+        i18n::use_locale,
+        intl_strings::{AtomStrings, use_localized_strings},
         styles::Styles,
     },
 };
-use crate::utils::i18n::use_locale;
-use crate::utils::intl_strings::{AtomStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

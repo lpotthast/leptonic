@@ -24,11 +24,11 @@ use crate::{
     },
     utils::{
         id::use_id,
+        intl_strings::{TagStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         use_description::use_description,
     },
 };
-use crate::utils::intl_strings::{TagStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -19,6 +19,10 @@ use crate::{
             UseHasTabbableChildAttrs, UseHasTabbableChildInput, UseHasTabbableChildProps,
             use_has_tabbable_child,
         },
+        grid::{
+            UseGridSelectionAnnouncementInput, UseHighlightSelectionDescriptionInput,
+            use_grid_selection_announcement, use_highlight_selection_description,
+        },
         tree::TreeExpansion,
     },
     utils::{
@@ -26,10 +30,6 @@ use crate::{
         aria::{AriaMultiselectable, AriaRole},
         id::use_id,
     },
-};
-use crate::hooks::grid::{
-    UseGridSelectionAnnouncementInput, UseHighlightSelectionDescriptionInput,
-    use_grid_selection_announcement, use_highlight_selection_description,
 };
 
 // =============================================================================

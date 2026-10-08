@@ -13,13 +13,14 @@ use crate::{
         CheckboxGroupData, IntoAttrs, ToggleOptions, UseCheckboxGroupInput,
         UseCheckboxGroupItemInput, UseCheckboxGroupReturn, UseCheckboxGroupStateInput,
         UseCheckboxInput, UseCheckboxReturn, UseHoverInput, UseToggleStateInput, ValidateFn,
-        ValidationBehavior, collections::{Key, SelectionValue}, use_checkbox, use_checkbox_group,
-        use_checkbox_group_item, use_checkbox_group_state, use_hover, use_toggle_state,
+        ValidationBehavior,
+        collections::{Key, SelectionValue},
+        use_checkbox, use_checkbox_group, use_checkbox_group_item, use_checkbox_group_state,
+        use_hover, use_toggle_state,
     },
     utils::{
-        dev_warn,
         ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        styles::Styles, visually_hidden::visually_hidden_styles,
+        dev_warn, styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 

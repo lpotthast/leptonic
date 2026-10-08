@@ -26,6 +26,7 @@ use crate::{
         filter::{CollatorOptions, use_filter},
         i18n::{use_direction, use_locale},
         id::use_id,
+        intl_strings::{DatePickerStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
         number_formatter::NumberFormatOptions,
@@ -34,7 +35,6 @@ use crate::{
         styles::Styles,
     },
 };
-use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

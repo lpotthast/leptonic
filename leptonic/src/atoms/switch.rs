@@ -10,9 +10,8 @@ use crate::{
         use_toggle_state,
     },
     utils::{
-        dev_warn,
         ValueBinding, classes::Classes, data_attributes::flag, default_class::with_default_class,
-        styles::Styles, visually_hidden::visually_hidden_styles,
+        dev_warn, styles::Styles, visually_hidden::visually_hidden_styles,
     },
 };
 

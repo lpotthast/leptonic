@@ -2,8 +2,10 @@
 use leptos::prelude::*;
 
 use super::visually_hidden::VisuallyHidden;
-use crate::utils::id::use_id;
-use crate::utils::intl_strings::{OverlayStrings, use_localized_strings};
+use crate::utils::{
+    id::use_id,
+    intl_strings::{OverlayStrings, use_localized_strings},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

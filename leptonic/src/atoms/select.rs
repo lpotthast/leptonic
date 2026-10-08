@@ -3,6 +3,21 @@ use std::collections::HashSet;
 
 use leptos::{context::Provider, ev, prelude::*};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
+//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
+//   `Key[]`); the collection's keys are the values'.
+// - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the popover's
+//   `default_open`, or `is_open` + `set_open`.
+// - The parts are atoms reading `SelectCtx` (`SelectTrigger`, `SelectValue`, `SelectPopover`,
+//   `HiddenSelect`; react-aria-components: contexts consumed by `Button`, `Popover`, ...).
+//
+// =============================================================================
+pub use super::typed_values::SelectedValues;
 use super::{
     field::{FieldContext, LabelContext},
     form::use_validation_behavior,
@@ -21,28 +36,14 @@ use crate::{
         use_button, use_focus_ring, use_hidden_select, use_popover, use_select, use_select_state,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, styles::Styles,
+        CapturedElement, ValueBinding,
+        classes::Classes,
+        data_attributes::flag,
+        default_class::with_default_class,
+        intl_strings::{AtomStrings, use_localized_strings},
+        styles::Styles,
     },
 };
-use crate::utils::intl_strings::{AtomStrings, use_localized_strings};
-
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
-// ## API DIFFERENCES
-// - The value is typed and its type is the selection mode (`S: SelectedValues`: `Option<V>`
-//   selects one value, `Vec<V>` several; react-aria: `selectionMode` with `Key | null` or
-//   `Key[]`); the collection's keys are the values'.
-// - State (C4): `default_value` + `on_change`, or `value` + `set_value`; the popover's
-//   `default_open`, or `is_open` + `set_open`.
-// - The parts are atoms reading `SelectCtx` (`SelectTrigger`, `SelectValue`, `SelectPopover`,
-//   `HiddenSelect`; react-aria-components: contexts consumed by `Button`, `Popover`, ...).
-//
-// =============================================================================
-
-pub use super::typed_values::SelectedValues;
 
 /// Context from [`Select`] to its parts.
 #[derive(Clone)]

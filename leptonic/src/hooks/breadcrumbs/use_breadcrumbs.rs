@@ -1,8 +1,10 @@
 // Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 99e6102368
 use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::hooks::IntoAttrs;
-use crate::utils::intl_strings::{BreadcrumbsStrings, use_localized_strings};
+use crate::{
+    hooks::IntoAttrs,
+    utils::intl_strings::{BreadcrumbsStrings, use_localized_strings},
+};
 
 // No deviations from react-aria beyond the project-wide API conventions.
 
@@ -48,7 +50,9 @@ pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
     UseBreadcrumbsReturn {
         props: UseBreadcrumbsProps {
             aria_label: Signal::derive(move || {
-                aria_label.get().unwrap_or_else(|| strings.read().breadcrumbs())
+                aria_label
+                    .get()
+                    .unwrap_or_else(|| strings.read().breadcrumbs())
             }),
         },
     }

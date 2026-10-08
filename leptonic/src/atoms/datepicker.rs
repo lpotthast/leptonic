@@ -32,11 +32,15 @@ use crate::{
         use_button, use_focus_ring, use_hover,
     },
     utils::{
-        CapturedElement, ValueBinding, classes::Classes, data_attributes::flag,
-        default_class::with_default_class, scoped_context::scoped_view, styles::Styles,
+        CapturedElement, ValueBinding,
+        classes::Classes,
+        data_attributes::flag,
+        default_class::with_default_class,
+        intl_strings::{DatePickerStrings, use_localized_strings},
+        scoped_context::scoped_view,
+        styles::Styles,
     },
 };
-use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

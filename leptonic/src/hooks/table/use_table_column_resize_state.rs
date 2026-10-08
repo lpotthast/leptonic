@@ -165,14 +165,14 @@ pub fn use_table_column_resize_state(
 
 #[cfg(test)]
 mod tests {
-    use crate::hooks::{
-        GridFocusMode,
-        collections::{DisabledBehavior, SelectionOptions},
-    };
     use assertr::prelude::*;
 
     use super::*;
-    use crate::hooks::{TableCollection, UseTableStateInput, use_table_state};
+    use crate::hooks::{
+        GridFocusMode, TableCollection, UseTableStateInput,
+        collections::{DisabledBehavior, SelectionOptions},
+        use_table_state,
+    };
 
     fn widths(state: &TableColumnResizeState, keys: &[&str]) -> Vec<f64> {
         keys.iter()

@@ -383,7 +383,11 @@ struct Formatter<'a> {
 
 impl Formatter<'_> {
     fn arg(&self, name: &str) -> Option<Arg<'_>> {
-        let arg = self.args.iter().find(|(arg, _)| *arg == name).map(|(_, arg)| *arg);
+        let arg = self
+            .args
+            .iter()
+            .find(|(arg, _)| *arg == name)
+            .map(|(_, arg)| *arg);
         if arg.is_none() {
             crate::utils::dev_warn!("intl_strings: no argument {name:?}");
         }
@@ -515,7 +519,10 @@ mod tests {
         for bundle in bundles::all() {
             for (index, key) in bundle.keys.iter().enumerate() {
                 let mut expected = BTreeSet::new();
-                arg_names(&parse(bundle.en_us[index]).expect("en-US parses"), &mut expected);
+                arg_names(
+                    &parse(bundle.en_us[index]).expect("en-US parses"),
+                    &mut expected,
+                );
                 for (locale, messages) in bundle.other {
                     let message = messages[index];
                     let parts = parse(message)
@@ -582,8 +589,12 @@ mod tests {
     fn apostrophes_follow_icu() {
         assert_that!(format("l'élément", "fr-FR", &[])).is_equal_to("l'élément".to_owned());
         assert_that!(format("it''s", "en-US", &[])).is_equal_to("it's".to_owned());
-        assert_that!(format("'{literal}' {x}", "en-US", &[("x", Arg::Str("arg"))]))
-            .is_equal_to("{literal} arg".to_owned());
+        assert_that!(format(
+            "'{literal}' {x}",
+            "en-US",
+            &[("x", Arg::Str("arg"))]
+        ))
+        .is_equal_to("{literal} arg".to_owned());
     }
 
     #[cfg(feature = "intl-strings")]

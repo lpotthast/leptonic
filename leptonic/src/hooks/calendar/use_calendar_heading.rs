@@ -5,13 +5,13 @@ use jiff::civil::Date;
 use leptos::prelude::*;
 
 use super::states::{CalendarStates, era_format};
-use crate::utils::intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings};
 use crate::utils::{
     date::{DateDuration, DateExt},
     date_time_formatter::{
         DateTimeFormat, DateTimeFormatOptions, DateTimeFormatter, MonthFormat, NumericFormat,
     },
     i18n::use_locale,
+    intl_strings::{CalendarStrings, DateRangeArgs, LocalizedStrings},
 };
 
 // =============================================================================

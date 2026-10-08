@@ -13,9 +13,12 @@ use super::{
 };
 use crate::{
     hooks::{SelectionMode, UseButtonInput, collections::Key},
-    utils::{EventHandler, use_description::use_description},
+    utils::{
+        EventHandler,
+        intl_strings::{DndStrings, use_localized_strings},
+        use_description::use_description,
+    },
 };
-use crate::utils::intl_strings::{DndStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

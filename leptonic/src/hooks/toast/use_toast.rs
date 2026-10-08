@@ -10,10 +10,10 @@ use crate::{
     utils::{
         aria::{AriaHidden, AriaModal, AriaRole},
         id::use_id,
+        intl_strings::{ToastStrings, use_localized_strings},
         slot_id::{SlotProps, use_slot},
     },
 };
-use crate::utils::intl_strings::{ToastStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

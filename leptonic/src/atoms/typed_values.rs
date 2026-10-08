@@ -9,11 +9,11 @@ use leptos::prelude::*;
 
 use crate::{
     Out,
-    utils::dev_warn,
     hooks::{
         SelectMode, ValidateFn,
         collections::{Key, SelectionValue},
     },
+    utils::dev_warn,
 };
 
 /// A typed selection (one value, a list or a set) and its key-based form.
@@ -237,7 +237,11 @@ mod tests {
         assert_that!(<Option<u32>>::from_key_list(&keys)).is_equal_to(Some(25));
         assert_that!(<Option<u32>>::from_key_list(&[])).is_none();
         // In the order selected; keys of no `u32` are dropped.
-        assert_that!(<Vec<u32>>::from_key_list(&[Key::from("x"), keys[0].clone(), keys[1].clone()]))
-            .is_equal_to(vec![25, 10]);
+        assert_that!(<Vec<u32>>::from_key_list(&[
+            Key::from("x"),
+            keys[0].clone(),
+            keys[1].clone()
+        ]))
+        .is_equal_to(vec![25, 10]);
     }
 }

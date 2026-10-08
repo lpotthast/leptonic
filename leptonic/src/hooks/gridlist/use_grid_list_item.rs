@@ -230,7 +230,8 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
         let key = key.clone();
         Callback::new(move |()| on_action.run(key.clone()))
     });
-    let toggle_action = tree.map(|tree| Callback::new(move |()| tree.toggle_key(tree_key.get_value())));
+    let toggle_action =
+        tree.map(|tree| Callback::new(move |()| tree.toggle_key(tree_key.get_value())));
     let on_action = Signal::derive(move || {
         app_action.or_else(|| {
             let toggles = has_child_rows.get()
@@ -570,7 +571,9 @@ pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn 
                 aria_label: label.into(),
                 aria_labelledby: Signal::derive(move || {
                     let description = description_id.get()?;
-                    label.with(Option::is_some).then(|| format!("{row_id} {description}"))
+                    label
+                        .with(Option::is_some)
+                        .then(|| format!("{row_id} {description}"))
                 }),
                 aria_selected: Signal::derive(move || {
                     key.with_value(|k| selection.can_select_item(k))

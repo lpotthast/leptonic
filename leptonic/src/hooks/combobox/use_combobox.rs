@@ -12,7 +12,6 @@ use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, TouchEvent};
 
 use super::{ComboBoxState, MenuTriggerAction};
-use crate::utils::intl_strings::{ComboBoxStrings, FocusAnnouncementArgs, use_localized_strings};
 use crate::{
     hooks::{
         InputType, IntoAttrs, TextFieldElement,
@@ -38,6 +37,7 @@ use crate::{
         aria::{AriaAutocomplete, AriaExpanded, AriaRole},
         focus::focus_element,
         id::use_id,
+        intl_strings::{ComboBoxStrings, FocusAnnouncementArgs, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         orientation::Orientation,
         pointer_type::PointerType,

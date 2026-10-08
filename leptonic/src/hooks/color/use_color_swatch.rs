@@ -4,13 +4,15 @@ use leptos::{attr, attr::Attr, prelude::*};
 use crate::{
     hooks::{IntoAttrs, PropsWithStyles},
     utils::{
-        aria::AriaRole, color::Color, css::ForcedColorAdjust, id::use_id,
-        style::ForcedColorAdjustProperty, styles::Styles,
+        aria::AriaRole,
+        color::Color,
+        css::ForcedColorAdjust,
+        i18n::use_locale,
+        id::use_id,
+        intl_strings::{ColorStrings, use_localized_strings},
+        style::ForcedColorAdjustProperty,
+        styles::Styles,
     },
-};
-use crate::utils::{
-    i18n::use_locale,
-    intl_strings::{ColorStrings, use_localized_strings},
 };
 
 // =============================================================================

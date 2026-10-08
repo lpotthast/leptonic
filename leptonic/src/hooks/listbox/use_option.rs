@@ -10,7 +10,8 @@ use crate::{
         IntoAttrs, PropsWithStyles,
         collections::{
             ItemLink, Key, SelectionMode, UseSelectableItemAttrs, UseSelectableItemInput,
-            UseSelectableItemProps, UseSelectableItemReturn, use_node_aria_label, use_selectable_item,
+            UseSelectableItemProps, UseSelectableItemReturn, use_node_aria_label,
+            use_selectable_item,
         },
         focus::use_focus_visible::{
             Modality, UseFocusVisibleInput, get_modality, use_focus_visible,

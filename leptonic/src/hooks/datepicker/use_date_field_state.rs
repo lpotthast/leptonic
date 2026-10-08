@@ -21,9 +21,9 @@ use crate::{
     utils::{
         ValueBinding,
         i18n::{Locale, use_locale},
+        intl_strings::{DateValidationStrings, use_localized_strings},
     },
 };
-use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -16,9 +16,11 @@ use crate::{
         landmark::{LandmarkRole, UseLandmarkInput, UseLandmarkProps, use_landmark},
         use_hover,
     },
-    utils::{CapturedElement, EventHandler},
+    utils::{
+        CapturedElement, EventHandler,
+        intl_strings::{ToastStrings, use_localized_strings},
+    },
 };
-use crate::utils::intl_strings::{ToastStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

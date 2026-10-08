@@ -6,9 +6,7 @@ use super::{
     AreaGradient, BlendMode, ColorChannelRange, ColorSpaceAxes, ColorValue, ParseColorError,
     axes_of, line_end,
 };
-use crate::utils::{
-    i18n::Locale, locale::WritingDirection, number_formatter::NumberFormatOptions,
-};
+use crate::utils::{i18n::Locale, locale::WritingDirection, number_formatter::NumberFormatOptions};
 
 /// A channel of the RGB color space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

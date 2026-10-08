@@ -29,6 +29,7 @@ use crate::{
         CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaRole},
         i18n::use_direction,
+        intl_strings::{DatePickerStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         locale::WritingDirection,
         pointer_type::PointerType,
@@ -36,7 +37,6 @@ use crate::{
         use_description::use_description,
     },
 };
-use crate::utils::intl_strings::{DatePickerStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

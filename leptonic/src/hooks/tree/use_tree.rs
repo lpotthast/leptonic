@@ -2,11 +2,10 @@
 use leptos::prelude::*;
 
 use super::TreeState;
-use crate::hooks::KeyboardNavigationBehavior;
-use crate::hooks::collections::ListLayout;
 use crate::{
     hooks::{
-        collections::{CollectionOptions, Key},
+        KeyboardNavigationBehavior,
+        collections::{CollectionOptions, Key, ListLayout},
         gridlist::{UseGridListInput, UseGridListReturn, use_grid_list},
     },
     utils::{CapturedElement, aria::AriaRole},

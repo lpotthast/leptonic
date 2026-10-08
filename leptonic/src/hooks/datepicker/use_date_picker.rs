@@ -12,9 +12,6 @@ use super::{
     use_date_picker_state::DatePickerState,
     use_date_range_picker_state::DateRangePickerState,
 };
-use crate::utils::intl_strings::{
-    DatePickerStrings, SelectedRangeDescriptionArgs, use_localized_strings,
-};
 use crate::{
     hooks::{
         OverlayTriggerState, PropsWithStyles, UseButtonInput,
@@ -28,6 +25,7 @@ use crate::{
         CapturedElement, EventHandler,
         aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
         id::use_id,
+        intl_strings::{DatePickerStrings, SelectedRangeDescriptionArgs, use_localized_strings},
         slot_id::SlotProps,
         use_description::use_description,
     },

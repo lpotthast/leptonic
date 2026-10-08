@@ -579,7 +579,8 @@ mod tests {
         );
         let rows = |c: &Collection| c.items().map(|n| n.key.to_string()).collect::<Vec<_>>();
         // Without a tree view (no tree column), child rows aren't part of the table.
-        assert_that!(rows(table.collection())).is_equal_to(vec!["docs".to_owned(), "photos".to_owned()]);
+        assert_that!(rows(table.collection()))
+            .is_equal_to(vec!["docs".to_owned(), "photos".to_owned()]);
         let c = table.collection();
         assert_that!(c.children(&k("cv")).count()).is_equal_to(2);
         assert_that!(c.get(&k("cv")).map(|n| n.level)).is_equal_to(Some(1));

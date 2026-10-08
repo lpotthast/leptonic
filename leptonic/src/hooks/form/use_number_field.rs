@@ -38,6 +38,7 @@ use crate::{
         aria::{AriaDisabled, AriaInvalid, AriaRole},
         focus::focus_event_target,
         id::use_id,
+        intl_strings::{NumberFieldStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
         live_announcer::announce_assertive,
         number_formatter::NumberStyle,
@@ -45,7 +46,6 @@ use crate::{
         pointer_type::PointerType,
     },
 };
-use crate::utils::intl_strings::{NumberFieldStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

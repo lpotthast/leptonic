@@ -18,12 +18,12 @@ use crate::{
     utils::{
         focus::focus_event_target,
         id::use_id,
+        intl_strings::{MenuStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         point::Point,
         pointer_type::PointerType,
     },
 };
-use crate::utils::intl_strings::{MenuStrings, use_localized_strings};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuTrigger.ts
 

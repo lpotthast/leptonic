@@ -4,7 +4,6 @@
 //! [`use_table_column_header`], body rows with [`use_table_row`] and cells with
 //! [`use_table_cell`]. Group rows (`<thead>`, `<tbody>`) with `use_grid_row_group`.
 
-
 /// The rows and columns of a table.
 pub mod table_collection;
 

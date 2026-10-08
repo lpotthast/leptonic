@@ -414,9 +414,9 @@ pub fn use_color_wheel<C: ColorValue>(input: UseColorWheelInput<C>) -> UseColorW
     let has_labelledby = aria_labelledby.is_some();
     let locale = use_locale();
     let input_label = Signal::derive(move || {
-        aria_label
-            .get()
-            .or_else(|| (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue, &locale.get())))
+        aria_label.get().or_else(|| {
+            (!has_labelledby).then(|| HSL::channel_name(HslChannel::Hue, &locale.get()))
+        })
     });
     let input_id = use_id("color-wheel");
     // With other labels next to its `aria-label`, the input names itself too (`use_label`).

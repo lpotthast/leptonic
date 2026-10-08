@@ -31,6 +31,7 @@ use crate::{
     utils::{
         EventHandler,
         event_listeners::{Listener, listen},
+        intl_strings::{DndStrings, use_localized_strings},
         key::{KeyboardEventKey, KeyboardKey},
         platform::{browser::is_webkit, device::is_ios},
         pointer_type::PointerType,
@@ -38,7 +39,6 @@ use crate::{
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
-use crate::utils::intl_strings::{DndStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

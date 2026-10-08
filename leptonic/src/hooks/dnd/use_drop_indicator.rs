@@ -10,13 +10,17 @@ use super::{
     use_droppable_collection::DroppableCollectionData,
     use_droppable_item::{UseDroppableItemInput, UseDroppableItemReturn, use_droppable_item},
 };
-use crate::utils::intl_strings::{DndStrings, InsertBetweenArgs, use_localized_strings};
 use crate::{
     hooks::{
         IntoAttrs,
         collections::{Collection, Key, NodeKind},
     },
-    utils::{CapturedElement, ElementCaptureAttr, aria::AriaHidden, id::use_id},
+    utils::{
+        CapturedElement, ElementCaptureAttr,
+        aria::AriaHidden,
+        id::use_id,
+        intl_strings::{DndStrings, InsertBetweenArgs, use_localized_strings},
+    },
 };
 
 // =============================================================================

@@ -142,7 +142,8 @@ impl Collection {
 
     /// The cells of a grid row (a tree table's row also has child rows: not these).
     pub fn cells(&self, row: &Key) -> impl Iterator<Item = &Node> {
-        self.children(row).filter(|node| node.kind == NodeKind::Cell)
+        self.children(row)
+            .filter(|node| node.kind == NodeKind::Cell)
     }
 
     /// All nodes in document order, as visited by [`key_after`](Self::key_after).
@@ -163,7 +164,12 @@ impl Collection {
     /// Compares the document order of two nodes (including nested tree items). `None` if either
     /// key is not part of the collection.
     pub fn compare_order(&self, a: &Key, b: &Key) -> Option<Ordering> {
-        Some(self.nodes.get(a)?.position.cmp(&self.nodes.get(b)?.position))
+        Some(
+            self.nodes
+                .get(a)?
+                .position
+                .cmp(&self.nodes.get(b)?.position),
+        )
     }
 
     /// `keys` in collection order; keys missing from the collection come last (sorted by key).

@@ -195,10 +195,10 @@ pub fn use_table_state(input: UseTableStateInput) -> TableState {
 
 #[cfg(test)]
 mod tests {
-    use crate::hooks::collections::DisabledBehavior;
     use assertr::prelude::*;
 
     use super::*;
+    use crate::hooks::collections::DisabledBehavior;
 
     #[test]
     fn sorting_a_column_again_reverses_the_direction() {

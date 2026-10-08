@@ -13,9 +13,6 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent};
 
 use super::use_color_area_state::ColorAreaState;
-use crate::utils::intl_strings::{
-    ColorInputLabelArgs, ColorNameAndValueArgs, ColorStrings, use_localized_strings,
-};
 use crate::{
     hooks::{
         FocusWithinEvent, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles,
@@ -31,6 +28,9 @@ use crate::{
         focus::focus_element,
         i18n::{use_direction, use_locale},
         id::use_id,
+        intl_strings::{
+            ColorInputLabelArgs, ColorNameAndValueArgs, ColorStrings, use_localized_strings,
+        },
         keyboard_shortcut::{KeyboardShortcuts, Shortcut},
         locale::WritingDirection,
         platform::device::{is_android, is_ios},

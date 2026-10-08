@@ -12,9 +12,11 @@ use crate::{
         },
         interactions::use_press::PressEvent,
     },
-    utils::focusability::{PreventFocusAttr, prevent_focus_attr},
+    utils::{
+        focusability::{PreventFocusAttr, prevent_focus_attr},
+        intl_strings::{TreeStrings, use_localized_strings},
+    },
 };
-use crate::utils::intl_strings::{TreeStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

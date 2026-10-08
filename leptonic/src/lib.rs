@@ -23,9 +23,10 @@ pub(crate) mod testing;
 pub mod utils;
 
 // Let's make some types of our public API more easily accessible.
-pub use crate::utils::scroll_behavior::ScrollBehavior;
 /// The date crate of leptonic's date APIs (calendars, date fields).
 pub use jiff;
+
+pub use crate::utils::scroll_behavior::ScrollBehavior;
 
 pub mod prelude {
     pub use super::{
@@ -35,8 +36,7 @@ pub mod prelude {
             callback::{ViewCallback, ViewProducer},
         },
     };
-    pub use crate::hooks::IntoAttrs;
-    pub use crate::{signal_ls, utils::ValueBinding};
+    pub use crate::{hooks::IntoAttrs, signal_ls, utils::ValueBinding};
 }
 
 #[derive(Debug, Clone, Copy)]

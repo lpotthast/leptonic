@@ -8,12 +8,16 @@ use crate::{
         use_slider_thumb,
     },
     utils::{
-        color::ColorValue, css::ForcedColorAdjust, i18n::use_direction, locale::WritingDirection,
-        orientation::Orientation, style::ForcedColorAdjustProperty, styles::Styles,
+        color::ColorValue,
+        css::ForcedColorAdjust,
+        i18n::{use_direction, use_locale},
+        locale::WritingDirection,
+        orientation::Orientation,
+        style::ForcedColorAdjustProperty,
+        styles::Styles,
         visually_hidden::visually_hidden_full_size_styles,
     },
 };
-use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -76,8 +80,7 @@ pub fn use_color_slider<C: ColorValue>(input: UseColorSliderInput<C>) -> UseColo
     let locale = use_locale();
     let aria_label = MaybeProp::derive(move || {
         aria_label.get().or_else(|| {
-            (!has_label.get() && !has_other_label)
-                .then(|| C::channel_name(channel, &locale.get()))
+            (!has_label.get() && !has_other_label).then(|| C::channel_name(channel, &locale.get()))
         })
     });
 

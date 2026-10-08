@@ -23,9 +23,9 @@ use crate::{
         ValueBinding,
         date::DateRange,
         i18n::{Locale, use_locale},
+        intl_strings::{DateValidationStrings, use_localized_strings},
     },
 };
-use crate::utils::intl_strings::{DateValidationStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -259,8 +259,7 @@ fn range_validation<V: DateValue>(
     formatter: &DateFormatter,
     strings: &DateValidationStrings,
 ) -> ValidationResult {
-    let start_result =
-        validation_result(start, min, max, is_date_unavailable, formatter, strings);
+    let start_result = validation_result(start, min, max, is_date_unavailable, formatter, strings);
     let end_result = validation_result(end, min, max, is_date_unavailable, formatter, strings);
     let mut result = merge_validation(&[start_result, end_result]);
     if let (Some(start), Some(end)) = (start, end)

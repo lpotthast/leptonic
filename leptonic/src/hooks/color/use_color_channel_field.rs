@@ -4,9 +4,8 @@ use leptos::prelude::*;
 use super::use_color_channel_field_state::ColorChannelFieldState;
 use crate::{
     hooks::form::use_number_field::{UseNumberFieldInput, UseNumberFieldReturn, use_number_field},
-    utils::color::ColorValue,
+    utils::{color::ColorValue, i18n::use_locale},
 };
-use crate::utils::i18n::use_locale;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

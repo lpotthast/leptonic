@@ -8,10 +8,10 @@ use crate::{
     hooks::button::use_button::UseButtonInput,
     utils::{
         EventAccessors,
+        intl_strings::{SearchFieldStrings, use_localized_strings},
         keyboard_shortcut::{KeyboardShortcuts, Shortcut, ShortcutOutcome},
     },
 };
-use crate::utils::intl_strings::{SearchFieldStrings, use_localized_strings};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
