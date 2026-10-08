@@ -1,38 +1,14 @@
 // Upstream: react-aria/test/spinbutton/useSpinButton.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_spin_button`: the spin button role and ARIA props, disabled and read-only spin buttons,
+//! the keys calling their callbacks (PageUp/PageDown falling back to a single step), and
+//! announcements of value changes while focused, with a real minus sign.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// `use_spin_button`: the spin button role and ARIA props, disabled and read-only spin buttons,
-/// the keys calling their callbacks (PageUp/PageDown falling back to a single step), and
-/// announcements of value changes while focused, with a real minus sign.
-pub struct SpinButtonTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SpinButtonTests {
-    fn name(&self) -> Cow<'_, str> {
-        "spin_button_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/spin-button").await?;
-
-        cases!(
-            aria_props(&page),
-            disabled_and_read_only(&page),
-            keys_call_their_callbacks(&page),
-            read_only_and_disabled_ignore_keys(&page),
-            announces_value_changes(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/spin-button";
 
 /// The spin button named `label`.
 async fn spin_button(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
@@ -52,7 +28,8 @@ async fn press(page: &Page<'_>, label: &str, key: Key) -> Result<(), Report> {
 }
 
 /// "should have role="spinbutton" and aria props".
-async fn aria_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let pages = spin_button(page, "Pages").await?;
     assert_that!(pages.attr("role").await?)
         .get_some()
@@ -80,7 +57,8 @@ async fn aria_props(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should have aria-disabled if isDisabled is set" / "aria-readonly if isReadOnly".
-async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let disabled = spin_button(page, "Disabled").await?;
     assert_that!(disabled.attr("aria-disabled").await?)
         .get_some()
@@ -100,7 +78,8 @@ async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The keys call their callbacks; "should fall back to onIncrement/onDecrement on page up/down".
-async fn keys_call_their_callbacks(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keys_call_their_callbacks(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     for (label, key, expected) in [
         ("Pages", Key::Up, "increment"),
         ("Pages", Key::Down, "decrement"),
@@ -122,7 +101,8 @@ async fn keys_call_their_callbacks(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Read-only and disabled spin buttons ignore the keys.
-async fn read_only_and_disabled_ignore_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_and_disabled_ignore_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     press(page, "Pages", Key::Up).await?;
     log(page).await?.wait_for_inner_text("increment").await?;
     press(page, "Read only", Key::Down).await?;
@@ -133,7 +113,8 @@ async fn read_only_and_disabled_ignore_keys(page: &Page<'_>) -> Result<(), Repor
 
 /// "should announce on value change while focused", with "should substitute a minus sign for
 /// hyphen in the textValue for negative values".
-async fn announces_value_changes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn announces_value_changes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let temperature = spin_button(page, "Temperature").await?;
     assert_that!(temperature.attr("aria-valuetext").await?)
         .get_some()

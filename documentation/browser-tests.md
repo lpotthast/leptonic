@@ -3,7 +3,7 @@
 How the browser tests in `leptonic/tests/` are written. Running them, fixtures and registration: CLAUDE.md, "Browser
 Tests". Reference file: `ui_tests/test_checkbox.rs`. The helpers (`tests/pages/`): `PageActions` on a page,
 `ElementActions` on an element, `Locator`s (`css`, `role`, `xpath`), `SyntheticEvent`s; `wait_for`/`expect` in
-`tests/polling/mod.rs`; `cases!` in `tests/cases.rs`.
+`tests/polling/mod.rs`; `Case` in `tests/cases/mod.rs`.
 
 Three rules behind everything below:
 
@@ -184,42 +184,42 @@ assert_that!(rect.width).is_close_to(200.0, 0.5);
 
 ```rust
 // Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! What the cases cover. Spec: react-aria-components `Checkbox.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, css};
 
-/// What the test covers. Spec: react-aria-components `Checkbox.test.js`.
-pub struct CheckboxTests {}
+const PATH: &str = "/atoms/checkbox";
 
-#[async_trait]
-impl BrowserTest<str> for CheckboxTests {
-    fn name(&self) -> Cow<'_, str> {
-        "checkbox_tests".into()
-    }
+// File-local lookups, then one documented `pub async fn` per case.
 
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/checkbox").await?;
-        cases!(selected_state(&page), disabled_state(&page));
-        Ok(())
-    }
+/// Pressing the label toggles the checkbox.
+pub async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    // ...
+    Ok(())
 }
-
-// File-local lookups, then one documented `async fn` per case, in `run`'s order.
 ```
 
-- `run` only navigates and lists its cases with `cases!`, which runs each as a named step.
-- Every case is `async fn case(page: &Page<'_>) -> Result<(), Report>`, ends with `Ok(())`, and has a doc comment naming
+- Every case is a test of its own, registered in `ui_tests::all()` (`.case(test_checkbox::selected_state)`) and named
+  after its function (`checkbox::selected_state`). Its first line loads its page (`page.goto_path(PATH)`, or a local
+  `async fn open(page)` when the page needs more, e.g. a permission or a window size), so what it runs on is visible
+  in the case itself. A case taking parameters gets a named case per variant (`provides_slots_input`).
+- **Cases are independent.** Each one runs in a tab of its own browser context (browser-test's session reuse: a fresh
+  user context per test, so no cookies, storage, cache, permissions or held keys of other tests) and never relies on what another case did: it sets up the state it
+  needs itself, or expects the fixture's initial state. `BROWSER_TEST_FILTER=checkbox::hover` runs a single case. A
+  flow whose steps belong together is one case.
+- Every case is `pub async fn case(page: &Page<'_>) -> Result<(), Report>`, ends with `Ok(())`, and has a doc comment naming
   the behavior and the upstream test it mirrors (`"should ..."`) where there is one.
 - Name what a case uses more than once with `let` (`let value = page.element("#..-value").await?;`).
-- File-local helpers only where they add a lookup or a fixture convention (`label(page, text)`, a `reset(page)` that
-  clears a fixture's log), never to rename a shared method. A helper two files need goes into `tests/pages/`.
-- Page objects (`tests/pages/<name>.rs`) only for a fixture with an id convention several cases share
-  (`focus_manager.rs`, `dnd.rs`).
+- File-local helpers only where they add a lookup, a fixture convention or a setup several cases share (`label(page,
+  text)`, a `reset(page)` that clears a fixture's log), never to rename a shared method. A helper two files need goes
+  into `tests/pages/`.
+- Fixture-specific actions (`tests/pages/<name>.rs`) only for a fixture with an id convention several cases share:
+  a trait on `Page` (`FocusManagerActions`, `DndActions`).
+- A check that isn't a case of one fixture (`test_hydration_ids.rs`, `test_server_panics.rs`) implements `BrowserTest`
+  itself.
 
 ## Failure reports
 
@@ -228,7 +228,7 @@ test code:
 
 - **where**: the test code's frames, from the helper that failed up to the case and line that called it (for a panic,
   e.g. a failed assertion: its location);
-- **when**: the test's last steps (navigations, lookups, waits, `cases!` cases) with their timing;
+- **when**: the test's last steps (page loads, lookups, waits) with their timing;
 - **what**: the error, e.g. "the inner text of `<span id="test-cb-basic-value">` did not become "checked" within 10s;
   it is "false"".
 

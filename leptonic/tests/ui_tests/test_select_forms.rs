@@ -1,9 +1,17 @@
 // Upstream: react-aria-components/test/Select.test.js @ 99e6102368
 // Upstream: react-aria/test/select/HiddenSelect.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! "should support multiple selection", "should support deselection if multiple selection is
+//! enabled", "supports placeholder", and the open state bound to app state.
+//!
+//! "supports validation errors", "should not submit if required and selectedKey is null", "should
+//! send disabled prop to the hidden field", the root's data attributes, and autofill (a `change`
+//! of the hidden `<select>`).
+//!
+//! "shouldn't allow the user to open the select if there are no items", "should support empty
+//! state", "should support multiple selection form integration with many items" (hidden inputs
+//! instead of a `<select>`, with validation and form reset).
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -13,76 +21,6 @@ use crate::{
 
 const LISTBOX: &str = "[role=listbox]";
 
-/// "should support multiple selection", "should support deselection if multiple selection is
-/// enabled", "supports placeholder", and the open state bound to app state.
-pub struct SelectMultipleTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SelectMultipleTests {
-    fn name(&self) -> Cow<'_, str> {
-        "select_multiple_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/select-forms").await?;
-        cases!(
-            trigger_hover_and_placeholder(&page),
-            multiple_selection(&page),
-            open_state_bound_to_app_state(&page),
-        );
-        Ok(())
-    }
-}
-
-/// "supports validation errors", "should not submit if required and selectedKey is null", "should
-/// send disabled prop to the hidden field", the root's data attributes, and autofill (a `change`
-/// of the hidden `<select>`).
-pub struct SelectValidationTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SelectValidationTests {
-    fn name(&self) -> Cow<'_, str> {
-        "select_validation_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/select-forms").await?;
-        cases!(
-            native_validation(&page),
-            required_blocks_submission(&page),
-            disabled(&page),
-            autofill(&page),
-        );
-        Ok(())
-    }
-}
-
-/// "shouldn't allow the user to open the select if there are no items", "should support empty
-/// state", "should support multiple selection form integration with many items" (hidden inputs
-/// instead of a `<select>`, with validation and form reset).
-pub struct SelectEmptyAndManyTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SelectEmptyAndManyTests {
-    fn name(&self) -> Cow<'_, str> {
-        "select_empty_and_many_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/select-forms").await?;
-        cases!(
-            no_items(&page),
-            empty_state(&page),
-            many_items_validation(&page),
-            many_items_selection_and_reset(&page),
-        );
-        Ok(())
-    }
-}
-
 /// The select trigger inside `container`.
 async fn trigger_in(page: &Page<'_>, container: &str) -> Result<WebElement, Report> {
     page.element(format!("{container} [aria-haspopup=listbox]"))
@@ -90,7 +28,8 @@ async fn trigger_in(page: &Page<'_>, container: &str) -> Result<WebElement, Repo
 }
 
 /// "should support hover" on the trigger; the default placeholder.
-async fn trigger_hover_and_placeholder(page: &Page<'_>) -> Result<(), Report> {
+pub async fn trigger_hover_and_placeholder(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let trigger = trigger_in(page, "#sf-multiple").await?;
     trigger.hover().await?;
     trigger.wait_for_attr("data-hovered", Some("true")).await?;
@@ -102,7 +41,8 @@ async fn trigger_hover_and_placeholder(page: &Page<'_>) -> Result<(), Report> {
 
 /// Options toggle while the popover stays open; the trigger lists the selection, the form
 /// submits every value; pressing a selected option deselects it.
-async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let trigger = trigger_in(page, "#sf-multiple").await?;
     let changes = page.element("#sf-multiple-changes").await?;
     trigger.click().await?;
@@ -138,7 +78,8 @@ async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The open state bound to app state: opening from outside, Escape writes it back.
-async fn open_state_bound_to_app_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn open_state_bound_to_app_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let open_state = page.element("#sf-open-state").await?;
     page.element("#sf-open-toggle").await?.click().await?;
     page.element(LISTBOX).await?;
@@ -156,7 +97,8 @@ async fn open_state_bound_to_app_state(page: &Page<'_>) -> Result<(), Report> {
 /// Native validation: the hidden select is required and labelled for autofill; validating the
 /// form marks the select invalid, describes the trigger with the error and focuses it; picking
 /// a value clears the error.
-async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let root = page.element("#sf-required .leptonic-Select").await?;
     let trigger = trigger_in(page, "#sf-required").await?;
     let select = page.element("#sf-required select").await?;
@@ -192,7 +134,8 @@ async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A required select without a value blocks submission; with one, the form submits.
-async fn required_blocks_submission(page: &Page<'_>) -> Result<(), Report> {
+pub async fn required_blocks_submission(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let trigger = trigger_in(page, "#sf-submit").await?;
     let submit = page.element("#sf-submit-button").await?;
     let submits = page.element("#sf-submits").await?;
@@ -216,7 +159,8 @@ async fn required_blocks_submission(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Disabled: the hidden select too, and the trigger doesn't open.
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let select = page.element("#sf-disabled select").await?;
     assert_that!(select.is_enabled().await?).is_false();
     let trigger = trigger_in(page, "#sf-disabled").await?;
@@ -227,7 +171,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Autofill picks an option of the hidden select (a `change` event).
-async fn autofill(page: &Page<'_>) -> Result<(), Report> {
+pub async fn autofill(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let trigger = trigger_in(page, "#sf-required").await?;
     let select = page.element("#sf-required select").await?;
     page.eval::<()>(
@@ -241,14 +186,16 @@ async fn autofill(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "shouldn't allow the user to open the select if there are no items".
-async fn no_items(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_items(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     trigger_in(page, "#sf-empty").await?.click().await?;
     page.count_stays(LISTBOX, 0).await?;
     Ok(())
 }
 
 /// "should support empty state": with empty content allowed, it opens and shows it.
-async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     trigger_in(page, "#sf-empty-allowed").await?.click().await?;
     let listbox = page.element(LISTBOX).await?;
     assert_that!(listbox.attr("data-empty").await?)
@@ -263,7 +210,8 @@ async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
 
 /// More than 300 options: hidden inputs instead of a `<select>`; the first one is required
 /// (native validation blocks the submission and shows the error).
-async fn many_items_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn many_items_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     assert_that!(page.count("#sf-many select").await?).is_equal_to(0);
     page.element("#sf-many-submit").await?.click().await?;
     let error = page.element("#sf-many .leptonic-FieldError").await?;
@@ -277,7 +225,8 @@ async fn many_items_validation(page: &Page<'_>) -> Result<(), Report> {
 
 /// Selecting with the keyboard fills the hidden inputs, the form submits and its reset clears
 /// them.
-async fn many_items_selection_and_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn many_items_selection_and_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/select-forms").await?;
     let trigger = trigger_in(page, "#sf-many").await?;
     let form = page.element("#sf-many").await?;
     // Open with the keyboard, which focuses the first option (a pointer resting over the

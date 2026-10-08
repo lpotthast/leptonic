@@ -1,8 +1,10 @@
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the table hooks (through the `Table` atoms): ARIA structure (column headers,
+//! row headers labelling rows, `aria-sort`, column groups), navigation between body and column
+//! headers, sorting, select all, disabled rows, type-ahead and refocusing after removing the
+//! focused row. Spec: react-aria-components `Table.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::{
@@ -10,37 +12,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Behavior of the table hooks (through the `Table` atoms): ARIA structure (column headers,
-/// row headers labelling rows, `aria-sort`, column groups), navigation between body and column
-/// headers, sorting, select all, disabled rows, type-ahead and refocusing after removing the
-/// focused row. Spec: react-aria-components `Table.test.js`.
-pub struct TableTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TableTests {
-    fn name(&self) -> Cow<'_, str> {
-        "table_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/table").await?;
-
-        cases!(
-            aria_structure(&page),
-            column_groups(&page),
-            navigation_into_the_column_headers(&page),
-            sorting(&page),
-            select_all(&page),
-            disabled_rows(&page),
-            type_ahead(&page),
-            removing_the_focused_row(&page),
-            localized(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/table";
 
 async fn grid(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=grid][aria-label='{label}']"))
@@ -128,7 +100,8 @@ async fn expect_focus_on_select_all(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let files = grid(page, "Files").await?;
     assert_that!(files.attr("aria-multiselectable").await?)
         .get_some()
@@ -173,7 +146,8 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
 
 /// A column group spans its columns in a header row above them; the rest of that row is filled
 /// with placeholders.
-async fn column_groups(page: &Page<'_>) -> Result<(), Report> {
+pub async fn column_groups(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let contacts = grid(page, "Contacts").await?;
     let header_rows = contacts.elements("thead [role=row]").await?;
     assert_that!(header_rows.as_slice()).has_length(2);
@@ -214,7 +188,8 @@ async fn column_groups(page: &Page<'_>) -> Result<(), Report> {
 
 /// ArrowUp from the first row moves into the column headers; ArrowLeft/Right move between them
 /// (wrapping), ArrowDown back into the body.
-async fn navigation_into_the_column_headers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn navigation_into_the_column_headers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-table-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     expect_focus_on_row(page, "bootmgr").await?;
@@ -238,7 +213,8 @@ async fn navigation_into_the_column_headers(page: &Page<'_>) -> Result<(), Repor
 
 /// Pressing a sortable column header sorts by it, pressing it again reverses the direction.
 /// Focus stays on the header.
-async fn sorting(page: &Page<'_>) -> Result<(), Report> {
+pub async fn sorting(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let sort = page.element("#test-table-sort").await?;
     let kind = column_header(page, "Files", "Type").await?;
     let name = column_header(page, "Files", "Name").await?;
@@ -283,7 +259,8 @@ async fn sorting(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Ctrl+A selects all rows; the "select all" checkbox selects all and clears.
-async fn select_all(page: &Page<'_>) -> Result<(), Report> {
+pub async fn select_all(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let selection = page.element("#test-table-selection").await?;
     focus_row(page, "bootmgr").await?;
     page.send_keys(Key::Control + "a").await?;
@@ -326,7 +303,8 @@ async fn select_all(page: &Page<'_>) -> Result<(), Report> {
 
 /// Disabled rows (with the table default `DisabledBehavior::Selection`) can be focused, but not
 /// selected.
-async fn disabled_rows(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_rows(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = row(page, "log.txt").await?;
     assert_that!(log.attr("aria-disabled").await?).is_none();
     let checkbox = log.element("input[type=checkbox]").await?;
@@ -348,7 +326,8 @@ async fn disabled_rows(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Typing finds rows by their row header.
-async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+pub async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     focus_row(page, "bootmgr").await?;
     page.send_keys("ga").await?;
     expect_focus_on_row(page, "Games").await?;
@@ -357,7 +336,8 @@ async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
 
 /// When the focused row is removed, focus moves to the row that took its place, in the same
 /// column.
-async fn removing_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn removing_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     focus_row(page, "Games").await?;
     page.send_keys(Key::Right).await?;
     page.send_keys(Key::Right).await?;
@@ -372,7 +352,8 @@ async fn removing_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
 
 /// The table's labels and descriptions follow the locale ("Alles auswählen" in de-DE), also when
 /// it changes (fr-FR).
-async fn localized(page: &Page<'_>) -> Result<(), Report> {
+pub async fn localized(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let table = grid(page, "Localized").await?;
     let select_all = table.element("[role=columnheader] input").await?;
     let select_row = table.element("[role=row] [role=gridcell] input").await?;

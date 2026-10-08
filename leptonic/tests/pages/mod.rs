@@ -70,31 +70,39 @@ pub trait PageActions {
 
     /// Navigate to `path` and wait until the test-app finished hydrating, so that event handlers
     /// are attached before the test starts interacting with the page.
+    ///
+    /// Runs as a `page_load` step (navigation and hydration), so the run summary shows what
+    /// loading pages costs.
     async fn goto_path(&self, path: &str) -> Result<(), Report> {
         // The page we leave must not have reported errors.
         self.expect_no_page_errors().await?;
         let url = format!("{}{path}", self.base_url());
-        self.driver()
-            .goto(&url)
-            .step("navigate")
-            .detail(path)
-            .await
-            .context_with(|| format!("failed to go to {url}"))?;
-        if let Err(error) = self
-            .element("body[data-hydrated]")
-            .step("wait_for_hydration")
-            .detail(path)
-            .await
-        {
-            // Usually a panic while hydrating: report what the page caught.
-            let diagnostics = self.diagnostics().await.unwrap_or_default();
-            return Err(error
-                .context(format!(
-                    "{url} did not finish hydrating; the page reported {diagnostics:#?}"
-                ))
-                .into_dynamic());
+        async {
+            self.driver()
+                .goto(&url)
+                .step("navigate")
+                .detail(path)
+                .await
+                .context_with(|| format!("failed to go to {url}"))?;
+            if let Err(error) = self
+                .element("body[data-hydrated]")
+                .step("wait_for_hydration")
+                .detail(path)
+                .await
+            {
+                // Usually a panic while hydrating: report what the page caught.
+                let diagnostics = self.diagnostics().await.unwrap_or_default();
+                return Err(error
+                    .context(format!(
+                        "{url} did not finish hydrating; the page reported {diagnostics:#?}"
+                    ))
+                    .into_dynamic());
+            }
+            Ok(())
         }
-        Ok(())
+        .step("page_load")
+        .detail(path)
+        .await
     }
 
     /// What the page reported since it loaded.

@@ -1,12 +1,23 @@
 // Upstream: react-aria/test/dnd/dnd.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_drag` / `use_drop` between single elements, and reordering a collection: keyboard drags
+//! (through the drag manager) and native drags (synthesized `DragEvent`s with a `DataTransfer`;
+//! WebDriver's own pointer actions can't start an HTML5 drag). Spec: react-aria's `dnd.test.js`
+//! ("keyboard", "screen reader", "native drag and drop").
+//!
+//! Keyboard navigation between drop targets during a keyboard drag ("keyboard navigation").
+//!
+//! Drop targets added, removed or hidden during a keyboard drag, and a hidden drag source.
+//!
+//! Disabled drag sources and drop targets, drop operations, and activating a drop target.
+//!
+//! Screen reader drags: started and dropped by (virtual) clicks, navigated by focus alone, the
+//! rest of the page inert ("screen reader").
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
-    pages::{ElementActions, PageActions, dnd::DndPage, role, xpath},
+    pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath},
     polling::wait_for,
 };
 
@@ -15,123 +26,8 @@ const TARGETS_LOG: &str = "test-dnd-targets-log";
 const TARGETS_PAGE: &str = "test-page-hook-dnd-targets";
 const ACTION: &str = "dnd-action";
 
-/// `use_drag` / `use_drop` between single elements, and reordering a collection: keyboard drags
-/// (through the drag manager) and native drags (synthesized `DragEvent`s with a `DataTransfer`;
-/// WebDriver's own pointer actions can't start an HTML5 drag). Spec: react-aria's `dnd.test.js`
-/// ("keyboard", "screen reader", "native drag and drop").
-pub struct DndTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            basic_drag_and_drop(&page),
-            escape_cancels(&page),
-            reorder_a_list(&page),
-            native_basic_drag_and_drop(&page),
-        );
-        Ok(())
-    }
-}
-
-/// Keyboard navigation between drop targets during a keyboard drag ("keyboard navigation").
-pub struct DndKeyboardNavigationTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndKeyboardNavigationTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_keyboard_navigation_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            tab_forward_skips_non_drop_targets(&page),
-            tab_backward_skips_non_drop_targets(&page),
-            prefers_an_ancestor_drop_target(&page),
-            enter_on_the_drag_source_cancels(&page),
-            ignores_drop_targets_in_hidden_trees(&page),
-        );
-        Ok(())
-    }
-}
-
-/// Drop targets added, removed or hidden during a keyboard drag, and a hidden drag source.
-pub struct DndChangingTargetsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndChangingTargetsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_changing_targets_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            a_removed_drop_target(&page),
-            a_drop_target_hidden_during_the_drag(&page),
-            an_added_drop_target_keeps_the_current_target(&page),
-            a_hidden_drag_source_is_skipped(&page),
-            escape_with_a_hidden_drag_source(&page),
-        );
-        Ok(())
-    }
-}
-
-/// Disabled drag sources and drop targets, drop operations, and activating a drop target.
-pub struct DndOperationsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndOperationsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_operations_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            disabled_drag(&page),
-            disabled_drop(&page),
-            drop_operation_override(&page),
-            allowed_drop_operations(&page),
-            canceled_targets_are_hidden(&page),
-            alt_enter_activates(&page),
-            native_disabled(&page),
-        );
-        Ok(())
-    }
-}
-
-/// Screen reader drags: started and dropped by (virtual) clicks, navigated by focus alone, the
-/// rest of the page inert ("screen reader").
-pub struct DndScreenReaderTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndScreenReaderTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_screen_reader_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            navigating_with_focus_events_only(&page),
-            hides_everything_but_drop_targets(&page),
-            clicking_the_drag_source_cancels(&page),
-            restores_focus_from_non_drop_targets(&page),
-            ignores_clicks_not_from_screen_readers(&page),
-        );
-        Ok(())
-    }
-}
-
 /// A real mouse click, a few pixels off the element's center.
-async fn click_off_center(page: &DndPage<'_>, element: &WebElement) -> Result<(), Report> {
+async fn click_off_center(page: &Page<'_>, element: &WebElement) -> Result<(), Report> {
     page.driver
         .action_chain()
         .move_to_element_with_offset(element, 7, 3)
@@ -142,18 +38,18 @@ async fn click_off_center(page: &DndPage<'_>, element: &WebElement) -> Result<()
 }
 
 /// The drop target button `label`.
-async fn droppable(page: &DndPage<'_>, label: &str) -> Result<WebElement, Report> {
+async fn droppable(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
     page.element(role("button").text(label)).await
 }
 
 /// The drag source ("Drag me").
-async fn draggable(page: &DndPage<'_>) -> Result<WebElement, Report> {
+async fn draggable(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element(role("button").text("Drag me")).await
 }
 
 /// Opens `/hooks/dnd-targets` with the query and starts a keyboard drag of "Drag me" (focus moves
 /// to the first drop target).
-async fn start_keyboard_drag(page: &DndPage<'_>, query: &str) -> Result<WebElement, Report> {
+async fn start_keyboard_drag(page: &Page<'_>, query: &str) -> Result<WebElement, Report> {
     page.goto_path(&format!("/hooks/dnd-targets{query}"))
         .await?;
     let source = draggable(page).await?;
@@ -177,7 +73,7 @@ async fn start_keyboard_drag(page: &DndPage<'_>, query: &str) -> Result<WebEleme
 /// "should perform basic drag and drop" (keyboard): Enter starts the drag and focuses the nearest
 /// drop target, Tab moves between targets, Enter drops; sources and targets are described only
 /// while it matters.
-async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
     let draggable = page.element("#test-dnd-draggable").await?;
     let target_1 = droppable(page, "Drop here").await?;
@@ -250,7 +146,7 @@ async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should cancel the drag when pressing the escape key": focus returns to the drag source.
-async fn escape_cancels(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn escape_cancels(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
     let draggable = page.element("#test-dnd-draggable").await?;
     page.element("#test-dnd-before").await?.click().await?;
@@ -269,7 +165,7 @@ async fn escape_cancels(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// The row of the letter `letter` in the reorderable list.
-async fn row(page: &DndPage<'_>, letter: &str) -> Result<WebElement, Report> {
+async fn row(page: &Page<'_>, letter: &str) -> Result<WebElement, Report> {
     page.element("[role=grid][aria-label='Letters']")
         .await?
         .element(xpath(format!(
@@ -279,7 +175,7 @@ async fn row(page: &DndPage<'_>, letter: &str) -> Result<WebElement, Report> {
 }
 
 /// Waits until the drop indicator labelled `label` has focus.
-async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
+async fn expect_focused_indicator(page: &Page<'_>, label: &str) -> Result<(), Report> {
     let indicator = page
         .element(format!(
             "[aria-roledescription='drop indicator'][aria-label='{label}']"
@@ -291,7 +187,7 @@ async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(),
 
 /// Reordering with the keyboard: the drop target starts after the dragged row, arrow keys move
 /// between the valid positions (rows can't be dropped on), Enter drops.
-async fn reorder_a_list(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn reorder_a_list(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
     page.element("#test-dnd-before-list").await?.click().await?;
     page.send_keys(Key::Tab).await?;
@@ -326,7 +222,7 @@ async fn reorder_a_list(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "native drag and drop: should perform basic drag and drop".
-async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn native_basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd").await?;
     let draggable = page.element("#test-dnd-draggable").await?;
     let target_1 = droppable(page, "Drop here").await?;
@@ -388,7 +284,7 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// "should Tab forward and skip non drop target elements": past the last drop target, back to the
 /// drag source.
-async fn tab_forward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn tab_forward_skips_non_drop_targets(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -418,7 +314,7 @@ async fn tab_forward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Re
 }
 
 /// "should Tab backward and skip non drop target elements".
-async fn tab_backward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn tab_backward_skips_non_drop_targets(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -435,7 +331,7 @@ async fn tab_backward_skips_non_drop_targets(page: &DndPage<'_>) -> Result<(), R
 }
 
 /// "should prefer an ancestor drop target over the nearest drop target": it is entered first.
-async fn prefers_an_ancestor_drop_target(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn prefers_an_ancestor_drop_target(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?ancestor").await?;
     let ancestor = page
         .element("[role=button][data-droptarget]:has([role=button])")
@@ -453,7 +349,7 @@ async fn prefers_an_ancestor_drop_target(page: &DndPage<'_>) -> Result<(), Repor
 
 /// "should cancel the drag when pressing Enter on the original drag target": one drag only, Enter
 /// doesn't start another one.
-async fn enter_on_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn enter_on_the_drag_source_cancels(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     page.wait_for_focus(&target_1).await?;
@@ -472,7 +368,7 @@ async fn enter_on_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Repo
 }
 
 /// "should ignore drop targets in aria-hidden trees" (target 9).
-async fn ignores_drop_targets_in_hidden_trees(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn ignores_drop_targets_in_hidden_trees(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?hidden-tree").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -501,7 +397,7 @@ async fn ignores_drop_targets_in_hidden_trees(page: &DndPage<'_>) -> Result<(), 
 // ---- /hooks/dnd-targets: changing targets ----
 
 /// "should handle when a drop target is removed": the first one takes over.
-async fn a_removed_drop_target(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn a_removed_drop_target(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -520,7 +416,7 @@ async fn a_removed_drop_target(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should handle when a drop target is hidden with aria-hidden": the first one takes over.
-async fn a_drop_target_hidden_during_the_drag(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn a_drop_target_hidden_during_the_drag(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -540,7 +436,7 @@ async fn a_drop_target_hidden_during_the_drag(page: &DndPage<'_>) -> Result<(), 
 /// A drop target registered during a drag runs the targets' `get_drop_operation` (which read a
 /// signal, the log): the registration must not subscribe to it, or entering the new target (which
 /// logs) re-registers it and loses it as the current drop target.
-async fn an_added_drop_target_keeps_the_current_target(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn an_added_drop_target_keeps_the_current_target(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     page.wait_for_focus(&target_1).await?;
@@ -585,7 +481,7 @@ async fn an_added_drop_target_keeps_the_current_target(page: &DndPage<'_>) -> Re
 
 /// "should not tab to the original draggable element if it is in an aria-hidden tree": Tab cycles
 /// through the drop targets only.
-async fn a_hidden_drag_source_is_skipped(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn a_hidden_drag_source_is_skipped(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -607,7 +503,7 @@ async fn a_hidden_drag_source_is_skipped(page: &DndPage<'_>) -> Result<(), Repor
 
 /// "should not restore focus to the original draggable element on Escape if it is in an aria-hidden
 /// tree".
-async fn escape_with_a_hidden_drag_source(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn escape_with_a_hidden_drag_source(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     page.wait_for_focus(&target_1).await?;
@@ -630,7 +526,7 @@ async fn escape_with_a_hidden_drag_source(page: &DndPage<'_>) -> Result<(), Repo
 
 /// "useDrag should support isDisabled" (keyboard): no description, Enter starts nothing and isn't
 /// swallowed.
-async fn disabled_drag(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn disabled_drag(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-targets?disabled-drag").await?;
     let source = draggable(page).await?;
     assert_that!(source.attr("draggable").await?)
@@ -655,7 +551,7 @@ async fn disabled_drag(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "useDrop should support isDisabled" (keyboard): the disabled target isn't one.
-async fn disabled_drop(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn disabled_drop(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?disabled-drop").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -674,7 +570,7 @@ async fn disabled_drop(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should support getDropOperation to override the default operation".
-async fn drop_operation_override(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn drop_operation_override(page: &Page<'_>) -> Result<(), Report> {
     start_keyboard_drag(page, "?op=copy").await?;
     page.wait_for_focus(&droppable(page, "Drop here").await?)
         .await?;
@@ -694,7 +590,7 @@ async fn drop_operation_override(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should support getAllowedDropOperations to limit allowed operations".
-async fn allowed_drop_operations(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn allowed_drop_operations(page: &Page<'_>) -> Result<(), Report> {
     start_keyboard_drag(page, "?allowed=link&op=copy").await?;
     page.wait_for_focus(&droppable(page, "Drop here").await?)
         .await?;
@@ -714,7 +610,7 @@ async fn allowed_drop_operations(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should hide drop targets where getDropOperation returns cancel".
-async fn canceled_targets_are_hidden(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn canceled_targets_are_hidden(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "?cancel-2").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -732,7 +628,7 @@ async fn canceled_targets_are_hidden(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// Alt + Enter activates the drop target (e.g. opens a folder) without dropping.
-async fn alt_enter_activates(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn alt_enter_activates(page: &Page<'_>) -> Result<(), Report> {
     let source = start_keyboard_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     page.wait_for_focus(&target_1).await?;
@@ -759,7 +655,7 @@ async fn alt_enter_activates(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// "useDrag/useDrop should support isDisabled" (native): a disabled source writes no data, a
 /// disabled target doesn't accept the drag.
-async fn native_disabled(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn native_disabled(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-targets?disabled-drag").await?;
     let source = draggable(page).await?;
     page.fire_drag_event(&source, "dragstart", &[]).await?;
@@ -785,7 +681,7 @@ async fn native_disabled(page: &DndPage<'_>) -> Result<(), Report> {
 // ---- /hooks/dnd-targets: screen readers ----
 
 /// Starts a screen reader drag: focus and a virtual click on the drag source.
-async fn start_virtual_drag(page: &DndPage<'_>, query: &str) -> Result<WebElement, Report> {
+async fn start_virtual_drag(page: &Page<'_>, query: &str) -> Result<WebElement, Report> {
     page.goto_path(&format!("/hooks/dnd-targets{query}"))
         .await?;
     let source = draggable(page).await?;
@@ -805,7 +701,7 @@ async fn start_virtual_drag(page: &DndPage<'_>, query: &str) -> Result<WebElemen
 }
 
 /// "should allow navigating with only focus events".
-async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn navigating_with_focus_events_only(page: &Page<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     let target_1 = droppable(page, "Drop here").await?;
     let target_2 = droppable(page, "Drop here 2").await?;
@@ -852,7 +748,7 @@ async fn navigating_with_focus_events_only(page: &DndPage<'_>) -> Result<(), Rep
 
 /// "should hide all non drop target elements from screen readers while dragging" (with `inert`,
 /// as react-aria's `shouldUseInert`).
-async fn hides_everything_but_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn hides_everything_but_drop_targets(page: &Page<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     let input = page.element("input[aria-label='Text field']").await?;
     wait_for("the text field outside the drag session")
@@ -888,7 +784,7 @@ async fn hides_everything_but_drop_targets(page: &DndPage<'_>) -> Result<(), Rep
 }
 
 /// "should support clicking the original drag target to cancel drag".
-async fn clicking_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn clicking_the_drag_source_cancels(page: &Page<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     source.virtual_click().await?;
     source.wait_for_attr("data-dragging", Some("false")).await?;
@@ -903,7 +799,7 @@ async fn clicking_the_drag_source_cancels(page: &DndPage<'_>) -> Result<(), Repo
 
 /// "should restore focus to the current drop target (or the drag target) when focusing a non
 /// drop target element" and "... when blurring all elements".
-async fn restores_focus_from_non_drop_targets(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn restores_focus_from_non_drop_targets(page: &Page<'_>) -> Result<(), Report> {
     let source = start_virtual_drag(page, "").await?;
     let input = page.element("input[aria-label='Text field']").await?;
     // No current drop target: back to the drag source.
@@ -927,7 +823,7 @@ async fn restores_focus_from_non_drop_targets(page: &DndPage<'_>) -> Result<(), 
 }
 
 /// "should ignore clicks not from screen readers to start dragging" and "... during dragging".
-async fn ignores_clicks_not_from_screen_readers(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn ignores_clicks_not_from_screen_readers(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-targets").await?;
     let source = draggable(page).await?;
     // Off center: a pointer at the very center counts as a screen reader's (TalkBack).

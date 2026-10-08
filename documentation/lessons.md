@@ -4,6 +4,15 @@ Pitfalls of Leptos, the browsers and the tooling that cost time once (moved out 
 derived from them live in `documentation/hooks-implementation.md` ("Effect Read Order", "Blur After Disposal", "No
 Nested Dispatch of the Same Event Type", "Props are Single-Use", "Global State and SSR").
 
+- Chrome keeps renderer processes (2026-10-08): in headless Chrome for Testing 155 under chromedriver, closing a tab
+  leaves its renderer process running, and leaving a page for another site keeps its process for the back/forward
+  cache. A browser reused across tests grew by one renderer (100-250 MB) per test. Removing a BiDi user context does
+  end its processes, so browser-test runs every test of a reused session in a user context of its own. Count with
+  `ps -eo args | grep -c 'chrome-linux64/chrome --type=renderer'` while tests run.
+- `cargo fmt --all` formats path dependencies (2026-10-08): with leptonic's manifest, it also reformats the
+  `../../browser-test` checkout (a path dependency of the browser tests), and `just fmt`'s nightly pass applies
+  leptonic's import grouping to it. Format leptonic's own files only (`rustfmt --edition 2024 <files>`), or check
+  `git -C ../browser-test status` afterwards, until browser-test is a crates.io dependency again.
 - Leptos `erase_components` and spread attributes (2026-10-06): in erased builds (our `.cargo/config.toml`, and
   cargo-leptos' dev builds), attributes spread onto a component (`attr:id`, ...) are applied once, to the elements
   the component first renders (`AnyViewWithAttrs`); when the component's root element is replaced (a reactive

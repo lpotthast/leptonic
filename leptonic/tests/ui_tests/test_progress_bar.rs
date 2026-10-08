@@ -1,9 +1,9 @@
 // Upstream: react-aria-components/test/ProgressBar.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Meter.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The progress bar and meter atoms: role and value attributes, the label, the value text and
+//! the fill width; custom and empty ranges, indeterminate progress, a value label, a meter.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,34 +11,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// The progress bar and meter atoms: role and value attributes, the label, the value text and
-/// the fill width; custom and empty ranges, indeterminate progress, a value label, a meter.
-pub struct ProgressBarTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ProgressBarTests {
-    fn name(&self) -> Cow<'_, str> {
-        "progress_bar_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/progress-bar").await?;
-
-        cases!(
-            renders(&page),
-            follows_its_value(&page),
-            custom_range(&page),
-            empty_range(&page),
-            indeterminate(&page),
-            custom_text_value(&page),
-            label_follows_the_rendered_label(&page),
-            meter(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/progress-bar";
 
 /// The visible value text of the progress bar or meter `element`.
 async fn value_text(element: &WebElement) -> Result<String, Report> {
@@ -51,7 +24,8 @@ async fn fill(element: &WebElement) -> Result<WebElement, Report> {
 }
 
 /// "renders": named by its label, 25 of 100, the fill a quarter of the 200px track.
-async fn renders(page: &Page<'_>) -> Result<(), Report> {
+pub async fn renders(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let basic = page.element("#test-pb-basic").await?;
     assert_that!(basic.attr("role").await?)
         .get_some()
@@ -66,7 +40,8 @@ async fn renders(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The value follows its signal.
-async fn follows_its_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn follows_its_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let basic = page.element("#test-pb-basic").await?;
     page.element("#test-pb-more").await?.click().await?;
     basic.wait_for_attr("aria-valuenow", Some("50")).await?;
@@ -82,7 +57,8 @@ async fn follows_its_value(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports a custom range".
-async fn custom_range(page: &Page<'_>) -> Result<(), Report> {
+pub async fn custom_range(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let custom = page.element("[aria-label='Custom range']").await?;
     assert_that!(custom.attr("aria-valuenow").await?)
         .get_some()
@@ -101,7 +77,8 @@ async fn custom_range(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "renders 0 percent for an empty range with a non-zero bound".
-async fn empty_range(page: &Page<'_>) -> Result<(), Report> {
+pub async fn empty_range(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let empty = page.element("[aria-label='Empty range']").await?;
     assert_that!(empty.attr("aria-valuenow").await?)
         .get_some()
@@ -113,7 +90,8 @@ async fn empty_range(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports indeterminate state": no value, no width of its own.
-async fn indeterminate(page: &Page<'_>) -> Result<(), Report> {
+pub async fn indeterminate(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let indeterminate = page.element("[aria-label=Indeterminate]").await?;
     assert_that!(indeterminate.attr("data-indeterminate").await?).is_some();
     assert_that!(indeterminate.attr("aria-valuenow").await?).is_none();
@@ -131,7 +109,8 @@ async fn indeterminate(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// useProgressBar.test.js "with custom text value".
-async fn custom_text_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn custom_text_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let files = page.element("[aria-label=Files]").await?;
     assert_that!(files.attr("aria-valuetext").await?)
         .get_some()
@@ -140,7 +119,8 @@ async fn custom_text_value(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The label reference follows the rendered `Label` (RAC's `useSlot`).
-async fn label_follows_the_rendered_label(page: &Page<'_>) -> Result<(), Report> {
+pub async fn label_follows_the_rendered_label(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let unlabelled = page.element("#test-pb-unlabelled").await?;
     unlabelled.wait_for_attr("aria-labelledby", None).await?;
     let both = page.element("#test-pb-both").await?;
@@ -158,7 +138,8 @@ async fn label_follows_the_rendered_label(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// Meter.test.js "renders".
-async fn meter(page: &Page<'_>) -> Result<(), Report> {
+pub async fn meter(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let meter = page.element("[role=meter]").await?;
     assert_that!(meter.attr("aria-valuenow").await?)
         .get_some()

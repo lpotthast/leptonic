@@ -1,8 +1,8 @@
 // Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of `use_text_field`: labelling, description and validation wiring, the value
+//! staying in sync with the hook-owned state in both directions, and form reset.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,31 +10,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Behavior of `use_text_field`: labelling, description and validation wiring, the value
-/// staying in sync with the hook-owned state in both directions, and form reset.
-pub struct TextFieldTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TextFieldTests {
-    fn name(&self) -> Cow<'_, str> {
-        "text_field_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/text-field").await?;
-
-        cases!(
-            labelling(&page),
-            typing_updates_the_state(&page),
-            validation(&page),
-            programmatic_changes_update_the_input(&page),
-            form_reset_restores_the_default(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/text-field";
 
 /// The text field's input.
 async fn input(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -48,7 +24,8 @@ async fn state_value(page: &Page<'_>) -> Result<WebElement, Report> {
 
 /// The label's `for` points to the input, which is labelled by the label and described by the
 /// description.
-async fn labelling(page: &Page<'_>) -> Result<(), Report> {
+pub async fn labelling(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page).await?;
     let label = page.element("#test-tf-form label").await?;
     let input_id = input.id().await?;
@@ -61,7 +38,8 @@ async fn labelling(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn typing_updates_the_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typing_updates_the_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page).await?;
     input.click().await?;
     input.send_keys(Key::End + "line").await?;
@@ -74,11 +52,11 @@ async fn typing_updates_the_state(page: &Page<'_>) -> Result<(), Report> {
 
 /// An invalid value marks the input `aria-invalid` and describes it with the error message
 /// (aria validation behavior: errors show while typing).
-async fn validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page).await?;
-    for _ in 0..5 {
-        input.send_keys(Key::Backspace).await?;
-    }
+    input.click().await?;
+    input.send_keys(Key::End + Key::Backspace).await?;
     state_value(page).await?.wait_for_inner_text("Ad").await?;
     input.wait_for_attr("aria-invalid", Some("true")).await?;
     wait_for("the description of the input")
@@ -98,19 +76,22 @@ async fn validation(page: &Page<'_>) -> Result<(), Report> {
 
 /// Changing the state from outside updates what the input shows (the DOM property, not just
 /// the attribute).
-async fn programmatic_changes_update_the_input(page: &Page<'_>) -> Result<(), Report> {
+pub async fn programmatic_changes_update_the_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-tf-clear").await?.click().await?;
     state_value(page).await?.wait_for_inner_text("").await?;
     input(page).await?.wait_for_prop("value", "").await?;
     Ok(())
 }
 
-async fn form_reset_restores_the_default(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_reset_restores_the_default(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page).await?;
-    input.send_keys("Grace").await?;
+    input.click().await?;
+    input.send_keys(Key::End + "Grace").await?;
     state_value(page)
         .await?
-        .wait_for_inner_text("Grace")
+        .wait_for_inner_text("AdaGrace")
         .await?;
     page.element("#test-tf-reset").await?.click().await?;
     state_value(page).await?.wait_for_inner_text("Ada").await?;

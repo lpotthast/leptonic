@@ -1,9 +1,13 @@
 // Upstream: react-aria/test/table/tableResizingTests.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/table/TableSizing.test.tsx @ 99e6102368
-use std::borrow::Cow;
+//! Table column resizing (`ResizableTableContainer` and resizable columns of the `Table`
+//! atoms): the initial column widths, resizing with the mouse (react-aria's
+//! `tableResizingTests`, in 900 pixel wide tables) and with the keyboard (react-spectrum's
+//! `TableSizing` keyboard tests, reaching the resizer the react-aria-components way: arrowing onto
+//! the column header focuses its resizer).
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -13,38 +17,12 @@ use crate::{
 
 const PATH: &str = "/atoms/table-resizing";
 
-/// Table column resizing (`ResizableTableContainer` and resizable columns of the `Table`
-/// atoms): the initial column widths, resizing with the mouse (react-aria's
-/// `tableResizingTests`, in 900 pixel wide tables) and with the keyboard (react-spectrum's
-/// `TableSizing` keyboard tests, reaching the resizer the react-aria-components way: arrowing onto
-/// the column header focuses its resizer).
-pub struct TableResizingTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TableResizingTests {
-    fn name(&self) -> Cow<'_, str> {
-        "table_resizing_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        // Room for the 900 pixel wide tables and the drags across them.
-        driver.set_window_rect(0, 0, 1400, 1000).await?;
-        page.goto_path(PATH).await?;
-
-        cases!(
-            initial_widths(&page),
-            resizing_each_column(&page),
-            cannot_resize_below_the_min_width(&page),
-            resizing_the_first_column_preserves_fr_ratios(&page),
-            resizing_the_last_column_locks_the_columns_before_it(&page),
-            on_resize_start_and_end_without_moving(&page),
-            keyboard_resizing(&page),
-            exiting_keyboard_resizing(&page),
-        );
-
-        Ok(())
-    }
+/// Opens the fixture in a window with room for the 900 pixel wide tables and the drags across
+/// them.
+async fn open(page: &Page<'_>) -> Result<(), Report> {
+    page.driver.set_window_rect(0, 0, 1400, 1000).await?;
+    page.goto_path(PATH).await?;
+    Ok(())
 }
 
 /// The `style.width` of the column headers of the table `label`.
@@ -102,7 +80,8 @@ async fn resize_col(page: &Page<'_>, label: &str, column: &str, delta: i64) -> R
     Ok(())
 }
 
-async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
+pub async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     expect_widths(page, "Pokemon", &[100.0, 100.0, 100.0, 100.0, 500.0]).await?;
     expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
     expect_widths(page, "Minimums", &[113.0, 112.0, 113.0, 112.0, 450.0]).await?;
@@ -139,7 +118,8 @@ async fn initial_widths(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// react-aria: "can resize $col to be $delta px different".
-async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
+pub async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     let cases: [(&str, i64, [f64; 5], &str); 10] = [
         (
             "Name",
@@ -238,8 +218,8 @@ async fn resizing_each_column(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// react-aria: "cannot resize to be less than a minWidth, from start to end".
-async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path(PATH).await?;
+pub async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     let steps: [(&str, i64, [f64; 5], &str); 5] = [
         (
             "Name",
@@ -303,8 +283,8 @@ async fn cannot_resize_below_the_min_width(page: &Page<'_>) -> Result<(), Report
 }
 
 /// react-aria: "resizing the starter column will preserve fr column ratios to the right".
-async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path(PATH).await?;
+pub async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     resize_col(page, "Ratios", "Name", -50).await?;
     expect_widths(page, "Ratios", &[75.0, 118.0, 118.0, 118.0, 471.0]).await?;
     resize_col(page, "Ratios", "Name", 38).await?;
@@ -313,10 +293,10 @@ async fn resizing_the_first_column_preserves_fr_ratios(page: &Page<'_>) -> Resul
 }
 
 /// react-aria: "resizing the last column will lock columns to pixels to the left".
-async fn resizing_the_last_column_locks_the_columns_before_it(
+pub async fn resizing_the_last_column_locks_the_columns_before_it(
     page: &Page<'_>,
 ) -> Result<(), Report> {
-    page.goto_path(PATH).await?;
+    open(page).await?;
     resize_col(page, "Ratios", "Level", -50).await?;
     expect_widths(page, "Ratios", &[113.0, 112.0, 113.0, 112.0, 400.0]).await?;
     resize_col(page, "Ratios", "Level", 50).await?;
@@ -326,8 +306,8 @@ async fn resizing_the_last_column_locks_the_columns_before_it(
 
 /// react-aria: "onResizeStart called with expected values" and "onResize end called with values
 /// even if no resizing took place".
-async fn on_resize_start_and_end_without_moving(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path(PATH).await?;
+pub async fn on_resize_start_and_end_without_moving(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     resize_col(page, "Ratios", "Height", -50).await?;
     page.element("#test-ratios-resize-start")
         .await?
@@ -371,7 +351,8 @@ async fn press(page: &Page<'_>, key: Key, times: usize) -> Result<(), Report> {
 }
 
 /// react-spectrum: "arrow keys the resizer works - desktop".
-async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     let input = focus_first_resizer(page).await?;
     // Arrow keys navigate until resizing starts.
     page.send_keys(Key::Enter).await?;
@@ -409,7 +390,8 @@ async fn keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// react-spectrum: "can exit resize via Enter / Tab / shift Tab", and blurring the resizer.
-async fn exiting_keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn exiting_keyboard_resizing(page: &Page<'_>) -> Result<(), Report> {
+    open(page).await?;
     for exit in [Key::Enter, Key::Tab] {
         let input = focus_first_resizer(page).await?;
         page.send_keys(Key::Enter).await?;

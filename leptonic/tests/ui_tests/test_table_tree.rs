@@ -1,48 +1,14 @@
 // Upstream: react-aria-components/test/Treeble.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Tree tables (react-aria-components' `Treeble.test.js`): the treegrid structure, expanding and
+//! collapsing rows by mouse and keyboard (also right to left), default and controlled expanded
+//! keys, keyboard navigation of the flattened rows and into cells, and selection.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// Tree tables (react-aria-components' `Treeble.test.js`): the treegrid structure, expanding and
-/// collapsing rows by mouse and keyboard (also right to left), default and controlled expanded
-/// keys, keyboard navigation of the flattened rows and into cells, and selection.
-pub struct TableTreeTests {}
-
 const PATH: &str = "/atoms/table-tree";
-
-#[async_trait]
-impl BrowserTest<str> for TableTreeTests {
-    fn name(&self) -> Cow<'_, str> {
-        "table_tree_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(PATH).await?;
-
-        cases!(
-            renders_a_treegrid(&page),
-            expands_a_row_with_the_mouse(&page),
-            expands_a_row_with_the_keyboard(&page, "files", Key::Right, Key::Left),
-            expands_a_row_with_the_keyboard(&page, "rtl", Key::Left, Key::Right),
-            default_expanded_keys(&page),
-            controlled_expanded_keys(&page),
-            keyboard_navigation_of_flattened_rows(&page),
-            keyboard_navigation_of_cells(&page),
-            selection(&page),
-            type_ahead_searches_the_rows_shown(&page),
-            arrow_left_moves_from_a_child_row_to_its_parent(&page),
-            collapsing_from_outside_moves_focus_to_the_parent(&page),
-            leaf_rows_are_never_expanded(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// The visible body rows of the table `id` (at least one).
 async fn rows(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
@@ -116,7 +82,8 @@ async fn wait_for_rows(page: &Page<'_>, id: &str, count: usize) -> Result<(), Re
 }
 
 /// "renders a treegrid".
-async fn renders_a_treegrid(page: &Page<'_>) -> Result<(), Report> {
+pub async fn renders_a_treegrid(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let table = page.element("#test-tt-files table").await?;
     assert_that!(table.attr("role").await?)
         .get_some()
@@ -190,7 +157,7 @@ async fn expect_games_expanded(page: &Page<'_>, id: &str) -> Result<(), Report> 
 }
 
 /// "should expand a row with mouse": the expand button toggles the row.
-async fn expands_a_row_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
+pub async fn expands_a_row_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let button = rows(page, "files").await?[0].element("button").await?;
     button.click().await?;
@@ -203,9 +170,19 @@ async fn expands_a_row_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should expand a row with keyboard" (`ltr`, `rtl`): the expand key on the focused row
-/// expands it, the collapse key collapses it.
-async fn expands_a_row_with_the_keyboard(
+/// "should expand a row with keyboard" (`ltr`): Right expands the focused row, Left collapses it.
+pub async fn expands_a_row_with_the_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    expand_and_collapse_with_the_keyboard(page, "files", Key::Right, Key::Left).await
+}
+
+/// "should expand a row with keyboard" (`rtl`): Left expands the focused row, Right collapses it.
+pub async fn expands_a_row_with_the_keyboard_rtl(page: &Page<'_>) -> Result<(), Report> {
+    expand_and_collapse_with_the_keyboard(page, "rtl", Key::Left, Key::Right).await
+}
+
+/// The expand key on the focused row of the table `id` expands it, the collapse key collapses
+/// it.
+async fn expand_and_collapse_with_the_keyboard(
     page: &Page<'_>,
     id: &str,
     expand: Key,
@@ -229,7 +206,7 @@ async fn expands_a_row_with_the_keyboard(
 
 /// "should support defaultExpandedKeys": Games starts expanded; expanding and collapsing
 /// Applications reports the expanded keys.
-async fn default_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn default_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     expect_games_expanded(page, "default").await?;
     let apps = rows(page, "default").await?[4].clone();
@@ -250,7 +227,7 @@ async fn default_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support expandedKeys": controlled without a setter, a press reports the change but
 /// the rows stay.
-async fn controlled_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     expect_games_expanded(page, "controlled").await?;
     rows(page, "controlled").await?[4]
@@ -269,7 +246,7 @@ async fn controlled_expanded_keys(page: &Page<'_>) -> Result<(), Report> {
 
 /// "supports keyboard navigation of flattened rows": ArrowDown walks every visible row, Home
 /// and End reach the first and the last.
-async fn keyboard_navigation_of_flattened_rows(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation_of_flattened_rows(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-tt-before-default")
         .await?
@@ -290,7 +267,7 @@ async fn keyboard_navigation_of_flattened_rows(page: &Page<'_>) -> Result<(), Re
 
 /// "supports keyboard navigation of cells": ArrowRight first expands the row, then walks its
 /// cells and back to the row; ArrowLeft first collapses it, then walks the cells backwards.
-async fn keyboard_navigation_of_cells(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation_of_cells(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-tt-before-files").await?.click().await?;
     page.send_keys(Key::Tab).await?;
@@ -320,7 +297,7 @@ async fn keyboard_navigation_of_cells(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports selection": a row and a range across levels.
-async fn selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let visible = rows(page, "default").await?;
     visible[0].element("[role=gridcell]").await?.click().await?;
@@ -353,7 +330,8 @@ async fn enter(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
 
 /// Type-ahead (react-aria's `TableKeyboardDelegate.getKeyForSearch`, which steps with
 /// `getKeyBelow`) walks the rows shown: child rows of expanded rows, not those of collapsed ones.
-async fn type_ahead_searches_the_rows_shown(page: &Page<'_>) -> Result<(), Report> {
+pub async fn type_ahead_searches_the_rows_shown(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let visible = enter(page, "default").await?;
     page.send_keys("te").await?;
     page.wait_for_focus(&visible[2]).await?;
@@ -373,7 +351,10 @@ async fn type_ahead_searches_the_rows_shown(page: &Page<'_>) -> Result<(), Repor
 }
 
 /// ArrowLeft on a child row (a leaf) moves focus to its parent row, which stays expanded.
-async fn arrow_left_moves_from_a_child_row_to_its_parent(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_left_moves_from_a_child_row_to_its_parent(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let visible = enter(page, "default").await?;
     page.send_keys(Key::Down).await?;
     page.send_keys(Key::Down).await?;
@@ -389,7 +370,10 @@ async fn arrow_left_moves_from_a_child_row_to_its_parent(page: &Page<'_>) -> Res
 /// Collapsing a row from outside the table (the app's bound expanded keys) while one of its
 /// child rows has focus moves focus to the row: Tab back into the table lands on Games, not on
 /// whichever row took the hidden one's place.
-async fn collapsing_from_outside_moves_focus_to_the_parent(page: &Page<'_>) -> Result<(), Report> {
+pub async fn collapsing_from_outside_moves_focus_to_the_parent(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let visible = enter(page, "bound").await?;
     for _ in 0..3 {
         page.send_keys(Key::Down).await?;
@@ -405,7 +389,7 @@ async fn collapsing_from_outside_moves_focus_to_the_parent(page: &Page<'_>) -> R
 
 /// A leaf row whose key is among the expanded keys is not expanded (react-aria-components:
 /// `hasChildItems && expandedKeys.has(key)`).
-async fn leaf_rows_are_never_expanded(page: &Page<'_>) -> Result<(), Report> {
+pub async fn leaf_rows_are_never_expanded(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     wait_for_rows(page, "bound", 7).await?;
     let report = rows(page, "bound").await?[5].clone();

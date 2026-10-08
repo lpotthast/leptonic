@@ -1,8 +1,10 @@
 // Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the radio hooks (through the `RadioGroup` and `Radio` atoms): ARIA structure,
+//! selection by press, the group as one tab stop (roving tabindex), arrow keys moving the
+//! selection (wrapping, skipping disabled radios, both orientations), disabled and read-only
+//! groups, and native required validation. Spec: react-aria-components `RadioGroup.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,42 +12,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Behavior of the radio hooks (through the `RadioGroup` and `Radio` atoms): ARIA structure,
-/// selection by press, the group as one tab stop (roving tabindex), arrow keys moving the
-/// selection (wrapping, skipping disabled radios, both orientations), disabled and read-only
-/// groups, and native required validation. Spec: react-aria-components `RadioGroup.test.js`.
-pub struct RadioGroupTests {}
-
-#[async_trait]
-impl BrowserTest<str> for RadioGroupTests {
-    fn name(&self) -> Cow<'_, str> {
-        "radio_group_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/radio-group").await?;
-
-        cases!(
-            structure(&page),
-            tab_enters_and_leaves_the_group(&page),
-            selection_by_press(&page),
-            virtual_label_click(&page),
-            arrow_keys(&page),
-            selected_radio_is_the_tab_stop(&page),
-            skips_disabled_radios(&page),
-            horizontal(&page),
-            disabled_group(&page),
-            read_only_group(&page),
-            validation(&page),
-            controlled(&page),
-            label_context_stays_inside(&page),
-            typed_values(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/radio-group";
 
 /// The `<label>` of the radio with the visible text `text`.
 async fn label(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
@@ -62,7 +29,8 @@ async fn radio(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     label(page, text).await?.element("input").await
 }
 
-async fn structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[role=radiogroup]").await?;
     assert_that!(group.referenced_text("aria-labelledby").await?).is_equal_to("Favorite pet");
     assert_that!(group.attr("aria-orientation").await?)
@@ -90,7 +58,8 @@ async fn structure(page: &Page<'_>) -> Result<(), Report> {
 
 /// Tab enters the group at a radio and leaves it with the next Tab (react-aria: "should not
 /// navigate within the group using Tab").
-async fn tab_enters_and_leaves_the_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_enters_and_leaves_the_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-rg-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     let dogs = radio(page, "Dogs").await?;
@@ -109,7 +78,8 @@ async fn tab_enters_and_leaves_the_group(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let cats = label(page, "Cats").await?;
     cats.click().await?;
     value(page).await?.wait_for_inner_text("cats").await?;
@@ -123,17 +93,19 @@ async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A virtual click on a radio's label selects it.
-async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     label(page, "Dragons").await?.virtual_click().await?;
     value(page).await?.wait_for_inner_text("dragons").await?;
-    // Back to Dogs, which the next steps expect selected.
+    // Another virtual click replaces the selection.
     label(page, "Dogs").await?.virtual_click().await?;
     value(page).await?.wait_for_inner_text("dogs").await?;
     Ok(())
 }
 
 /// Arrow keys select the next/previous radio, wrapping around.
-async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let dogs = radio(page, "Dogs").await?;
     let cats = radio(page, "Cats").await?;
     let dragons = radio(page, "Dragons").await?;
@@ -158,8 +130,10 @@ async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// With a selection, only the selected radio is a tab stop.
-async fn selected_radio_is_the_tab_stop(page: &Page<'_>) -> Result<(), Report> {
-    // Cats is selected (previous step).
+pub async fn selected_radio_is_the_tab_stop(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    label(page, "Cats").await?.click().await?;
+    value(page).await?.wait_for_inner_text("cats").await?;
     let cats = radio(page, "Cats").await?;
     assert_that!(cats.attr("tabindex").await?)
         .get_some()
@@ -173,7 +147,8 @@ async fn selected_radio_is_the_tab_stop(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn skips_disabled_radios(page: &Page<'_>) -> Result<(), Report> {
+pub async fn skips_disabled_radios(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     label(page, "Skip A").await?.click().await?;
     page.wait_for_focus(&radio(page, "Skip A").await?).await?;
     assert_that!(radio(page, "Skip B").await?.is_enabled().await?).is_false();
@@ -186,7 +161,8 @@ async fn skips_disabled_radios(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn horizontal(page: &Page<'_>) -> Result<(), Report> {
+pub async fn horizontal(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page
         .element("[role=radiogroup][aria-label='Horizontal']")
         .await?;
@@ -208,7 +184,8 @@ async fn horizontal(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page
         .element("[role=radiogroup][aria-label='Disabled group']")
         .await?;
@@ -228,7 +205,8 @@ async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn read_only_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page
         .element("[role=radiogroup][aria-label='Read-only group']")
         .await?;
@@ -260,7 +238,8 @@ async fn read_only_group(page: &Page<'_>) -> Result<(), Report> {
 
 /// Native required validation, also with the last radio disabled (react-aria: "supports
 /// validation errors when last radio is disabled").
-async fn validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let form = page.element("#test-rg-form").await?;
     let group = form.element("[role=radiogroup]").await?;
     let a = radio(page, "Required A").await?;
@@ -298,7 +277,8 @@ async fn validation(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support controlled value": the group shows its bound value, reports changes to it and
 /// follows it; without a setter, selecting changes nothing.
-async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(radio(page, "Bound B").await?.is_selected().await?).is_true();
     label(page, "Bound A").await?.click().await?;
     page.element("#test-rg-bound-value")
@@ -327,7 +307,8 @@ async fn controlled(page: &Page<'_>) -> Result<(), Report> {
 
 /// A `Label` after a group (outside it) is a plain label: the group's label context doesn't leak
 /// to its siblings.
-async fn label_context_stays_inside(page: &Page<'_>) -> Result<(), Report> {
+pub async fn label_context_stays_inside(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let standalone = label(page, "Standalone label").await?;
     assert_that!(standalone.id().await?).is_none();
     Ok(())
@@ -335,7 +316,8 @@ async fn label_context_stays_inside(page: &Page<'_>) -> Result<(), Report> {
 
 /// A group with enum values (`selection_value!`): the app's signal holds the enum, the form
 /// submits the variant's key.
-async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let value = page.element("#test-rg-typed-value").await?;
     value.wait_for_inner_text("Some(Small)").await?;
     label(page, "Typed large").await?.click().await?;

@@ -1,41 +1,18 @@
 // Upstream: react-aria/test/interactions/Focusable.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_focusable`: tab index for disabled and excluded elements, auto focus, keyboard events and
+//! the focus handle ("supports isDisabled", "supports excludeFromTabOrder", "supports autoFocus").
+//! Every case starts on a fresh page.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
-
-/// `use_focusable`: tab index for disabled and excluded elements, auto focus, keyboard events and
-/// the focus handle ("supports isDisabled", "supports excludeFromTabOrder", "supports autoFocus").
-/// Every case starts on a fresh page.
-pub struct FocusableTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusableTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focusable_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            tabindex_attributes(&page),
-            keyboard_events(&page),
-            tab_skip(&page),
-            focus_handle(&page),
-            dynamic_disabled_transition(&page),
-        );
-        Ok(())
-    }
-}
 
 const PATH: &str = "/hooks/focusable";
 const NORMAL: &str = "#test-fcbl-normal";
 
 /// Tab index: normal 0, disabled none, excluded -1. The auto focus element is focused on load.
-async fn tabindex_attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tabindex_attributes(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let normal = page.element(NORMAL).await?;
     let disabled = page.element("#test-fcbl-disabled").await?;
@@ -54,7 +31,7 @@ async fn tabindex_attributes(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Keyboard events reach the element's handlers.
-async fn keyboard_events(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_events(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let normal = page.element(NORMAL).await?;
     let keydown_count = page.element("#test-fcbl-keydown-count").await?;
@@ -73,7 +50,7 @@ async fn keyboard_events(page: &Page<'_>) -> Result<(), Report> {
 
 /// Tab from the normal element skips the disabled (no tabindex) and the excluded (tabindex -1)
 /// one.
-async fn tab_skip(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_skip(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let normal = page.element(NORMAL).await?;
     normal.click().await?;
@@ -86,7 +63,7 @@ async fn tab_skip(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Programmatic focus through the `FocusHandle`.
-async fn focus_handle(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_handle(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-fcbl-focus-btn").await?.click().await?;
     page.wait_for_focus(&page.element(NORMAL).await?).await?;
@@ -94,7 +71,7 @@ async fn focus_handle(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Toggling `disabled` updates the tab index.
-async fn dynamic_disabled_transition(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dynamic_disabled_transition(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let dynamic = page.element("#test-fcbl-dynamic").await?;
     let toggle = page.element("#test-fcbl-dynamic-toggle").await?;

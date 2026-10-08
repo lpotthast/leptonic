@@ -1,41 +1,20 @@
 // Upstream: react-aria-components/test/Tree.test.tsx @ 99e6102368
 // Upstream: react-aria-components/test/AriaTree.test-util.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the tree hooks: `treegrid` structure with levels and positions, expanding and
+//! collapsing with the keyboard, the expand button and by pressing a parent row.
+//!
+//! Trees with a disabled item, right to left, and app-bound expansion (`/hooks/tree-cases`):
+//! react-aria-components' `AriaTreeTests` ("can select items", "should not be able to interact
+//! with the tree"), RTL expansion keys, a focused row hidden by collapsing its parent, and an
+//! item getting children.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
     pages::{ElementActions, Page, PageActions, xpath},
     polling::wait_for,
 };
-
-/// Behavior of the tree hooks: `treegrid` structure with levels and positions, expanding and
-/// collapsing with the keyboard, the expand button and by pressing a parent row.
-pub struct TreeTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TreeTests {
-    fn name(&self) -> Cow<'_, str> {
-        "tree_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/tree").await?;
-
-        cases!(
-            aria_structure(&page),
-            keyboard_expansion(&page),
-            arrow_right_on_an_expanded_row_keeps_the_focus(&page),
-            expand_button(&page),
-            pressing_a_parent_toggles_it(&page),
-        );
-
-        Ok(())
-    }
-}
 
 async fn row(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     page.element(xpath(format!(
@@ -67,7 +46,15 @@ async fn expect_focus(page: &Page<'_>, text: &str) -> Result<(), Report> {
     Ok(())
 }
 
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+/// Tabs into the tree from the button before it: focus lands on its first row, Documents.
+async fn tab_into_the_tree(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-tree-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    expect_focus(page, "Documents").await
+}
+
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/tree").await?;
     let tree = page.element("[role=treegrid]").await?;
     assert_that!(tree.attr("aria-label").await?)
         .get_some()
@@ -91,10 +78,9 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn keyboard_expansion(page: &Page<'_>) -> Result<(), Report> {
-    page.element("#test-tree-before").await?.click().await?;
-    page.send_keys(Key::Tab).await?;
-    expect_focus(page, "Documents").await?;
+pub async fn keyboard_expansion(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/tree").await?;
+    tab_into_the_tree(page).await?;
 
     page.send_keys(Key::Right).await?;
     expect_rows(page, &["Documents", "Project", "CV", "Photos", "Notes"]).await?;
@@ -123,21 +109,27 @@ async fn keyboard_expansion(page: &Page<'_>) -> Result<(), Report> {
 
 /// ArrowRight on an expanded row walks into the row's focusable children, but the expand button
 /// isn't one of them (react-aria's `data-react-aria-prevent-focus` on it): focus stays on the row.
-async fn arrow_right_on_an_expanded_row_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_right_on_an_expanded_row_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/tree").await?;
+    tab_into_the_tree(page).await?;
     page.send_keys(Key::Right).await?;
     expect_rows(page, &["Documents", "Project", "CV", "Photos", "Notes"]).await?;
     expect_focus(page, "Documents").await?;
     page.send_keys(Key::Right).await?;
     let documents = row(page, "Documents").await?;
     page.focus_stays(&documents).await?;
-    // Back to the state the next steps start from.
+    // ArrowLeft collapses it again, the focus staying on it.
     page.send_keys(Key::Left).await?;
     expect_rows(page, &["Documents", "Photos", "Notes"]).await?;
     expect_focus(page, "Documents").await?;
     Ok(())
 }
 
-async fn expand_button(page: &Page<'_>) -> Result<(), Report> {
+/// Pressing a row's expand button toggles the row and focuses it; the button never takes focus
+/// (upstream's `preventFocusOnPress`). Known issue: on a page where the tree never had focus, the
+/// focus stays on the button (registered with the known issues in `ui_tests::all()`).
+pub async fn expand_button(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/tree").await?;
     let button = row(page, "Photos").await?.element("button").await?;
     assert_that!(button.attr("aria-label").await?)
         .get_some()
@@ -155,42 +147,14 @@ async fn expand_button(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Without selection or an action, pressing a parent row toggles it.
-async fn pressing_a_parent_toggles_it(page: &Page<'_>) -> Result<(), Report> {
-    page.send_keys(Key::Up).await?;
-    expect_focus(page, "Documents").await?;
+pub async fn pressing_a_parent_toggles_it(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/tree").await?;
+    tab_into_the_tree(page).await?;
     page.send_keys(Key::Enter).await?;
     expect_rows(page, &["Documents", "Project", "CV", "Photos", "Notes"]).await?;
     row(page, "Documents").await?.click().await?;
     expect_rows(page, &["Documents", "Photos", "Notes"]).await?;
     Ok(())
-}
-
-/// Trees with a disabled item, right to left, and app-bound expansion (`/hooks/tree-cases`):
-/// react-aria-components' `AriaTreeTests` ("can select items", "should not be able to interact
-/// with the tree"), RTL expansion keys, a focused row hidden by collapsing its parent, and an
-/// item getting children.
-pub struct TreeCasesTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TreeCasesTests {
-    fn name(&self) -> Cow<'_, str> {
-        "tree_cases_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/tree-cases").await?;
-
-        cases!(
-            disabled_items_can_be_expanded_but_not_selected(&page),
-            disabled_items_cannot_be_used(&page),
-            right_to_left_expansion_keys(&page),
-            collapsing_the_parent_of_the_focused_row(&page),
-            an_item_getting_children(&page),
-        );
-
-        Ok(())
-    }
 }
 
 async fn tree_row(page: &Page<'_>, tree: &str, text: &str) -> Result<WebElement, Report> {
@@ -225,8 +189,11 @@ async fn expect_tree_focus(page: &Page<'_>, tree: &str, text: &str) -> Result<()
 
 /// "can select items" (`DisabledBehavior::Selection`): a disabled item can't be selected, but
 /// focused and expanded, and its children can be selected.
-async fn disabled_items_can_be_expanded_but_not_selected(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_items_can_be_expanded_but_not_selected(
+    page: &Page<'_>,
+) -> Result<(), Report> {
     const TREE: &str = "Selection tree";
+    page.goto_path("/hooks/tree-cases").await?;
     let selection = page.element("#test-tc-selection-selection").await?;
     tree_row(page, TREE, "Photos").await?.click().await?;
     selection.wait_for_inner_text("photos").await?;
@@ -275,8 +242,9 @@ async fn disabled_items_can_be_expanded_but_not_selected(page: &Page<'_>) -> Res
 
 /// "should not be able to interact with the tree" (`DisabledBehavior::All`): the disabled item
 /// can't be expanded or selected, and keyboard navigation skips it.
-async fn disabled_items_cannot_be_used(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_items_cannot_be_used(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "Disabled tree";
+    page.goto_path("/hooks/tree-cases").await?;
     let school = tree_row(page, TREE, "School").await?;
     assert_that!(school.attr("aria-expanded").await?)
         .get_some()
@@ -306,8 +274,9 @@ async fn disabled_items_cannot_be_used(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Right to left, ArrowLeft expands and ArrowRight collapses (or moves to the parent).
-async fn right_to_left_expansion_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left_expansion_keys(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "RTL tree";
+    page.goto_path("/hooks/tree-cases").await?;
     page.element("#test-tc-before-rtl").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     expect_tree_focus(page, TREE, "Photos").await?;
@@ -329,8 +298,9 @@ async fn right_to_left_expansion_keys(page: &Page<'_>) -> Result<(), Report> {
 /// A focused row hidden by collapsing its parent (here: the app clears the bound expanded keys)
 /// is no longer the focused key: tabbing back in focuses a visible row (the last, coming from
 /// after the tree).
-async fn collapsing_the_parent_of_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn collapsing_the_parent_of_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "Selection tree";
+    page.goto_path("/hooks/tree-cases").await?;
     page.goto_path("/hooks/tree-cases").await?;
     page.element("#test-tc-before-selection")
         .await?
@@ -358,8 +328,9 @@ async fn collapsing_the_parent_of_the_focused_row(page: &Page<'_>) -> Result<(),
 }
 
 /// An item that gets children becomes expandable: it gets an expand button and `aria-expanded`.
-async fn an_item_getting_children(page: &Page<'_>) -> Result<(), Report> {
+pub async fn an_item_getting_children(page: &Page<'_>) -> Result<(), Report> {
     const TREE: &str = "Selection tree";
+    page.goto_path("/hooks/tree-cases").await?;
     let notes = tree_row(page, TREE, "Notes").await?;
     assert_that!(notes.attr("aria-expanded").await?).is_none();
     assert_that!(notes.elements("button").await?).is_empty();

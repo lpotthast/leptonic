@@ -1,42 +1,15 @@
 // Upstream: @adobe/react-spectrum/test/color/ColorField.test.js @ 99e6102368
 // Upstream: react-aria/test/color/useColorField.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `ColorField`/`ColorChannelField` atoms: hex text committed on blur (cleared, typed, invalid
+//! characters rejected, incomplete text reverted), stepping by keys and the wheel within
+//! #000000–#FFFFFF, flags, forms, and channel fields as number fields.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
-/// The `ColorField`/`ColorChannelField` atoms: hex text committed on blur (cleared, typed, invalid
-/// characters rejected, incomplete text reverted), stepping by keys and the wheel within
-/// #000000–#FFFFFF, flags, forms, and channel fields as number fields.
-pub struct ColorFieldTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorFieldTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_field_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-field").await?;
-
-        cases!(
-            defaults(&page),
-            uncontrolled_state(&page),
-            invalid_characters(&page),
-            stepping(&page),
-            mouse_wheel(&page),
-            flags(&page),
-            form_reset(&page),
-            channel(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/color-field";
 
 /// The text input of the field `#id`.
 async fn input(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -55,18 +28,9 @@ async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#test-cf-log").await
 }
 
-/// Empties the log (a script click, which leaves focus where it is).
-async fn clear(page: &Page<'_>) -> Result<(), Report> {
-    page.element("#test-cf-clear")
-        .await?
-        .virtual_click()
-        .await?;
-    log(page).await?.wait_for_inner_text("").await?;
-    Ok(())
-}
-
 /// "handles defaults": a text box without spin button values, labelled by its `Label`.
-async fn defaults(page: &Page<'_>) -> Result<(), Report> {
+pub async fn defaults(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let primary = input(page, "test-cf-primary").await?;
     assert_that!(primary.attr("type").await?)
         .get_some()
@@ -88,7 +52,8 @@ async fn defaults(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should handle uncontrolled state".
-async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let primary = input(page, "test-cf-primary").await?;
     primary.focus().await?;
     page.send_keys(Key::Control + "a").await?;
@@ -106,12 +71,12 @@ async fn uncontrolled_state(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(primary.value().await?)
         .get_some()
         .is_equal_to("#CBACBA");
-    clear(page).await?;
     Ok(())
 }
 
 /// "should disallow invalid characters and revert back to last valid value if left incomplete".
-async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
+pub async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let empty = input(page, "test-cf-empty").await?;
     empty.focus().await?;
     page.send_keys("abc").await?;
@@ -128,13 +93,13 @@ async fn invalid_characters(page: &Page<'_>) -> Result<(), Report> {
     blur(page).await?;
     empty.wait_for_prop("value", "#AABBCC").await?;
     log(page).await?.inner_text_stays("empty:AABBCC").await?;
-    clear(page).await?;
     Ok(())
 }
 
 /// "increment with arrow up key", "decrement with arrow down key", "not increment beyond max
 /// value", "decrement to min value".
-async fn stepping(page: &Page<'_>) -> Result<(), Report> {
+pub async fn stepping(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let max = input(page, "test-cf-max").await?;
     max.focus().await?;
     page.send_keys(Key::Up).await?;
@@ -153,22 +118,24 @@ async fn stepping(page: &Page<'_>) -> Result<(), Report> {
     assert_that!(max.value().await?)
         .get_some()
         .is_equal_to("#000000");
-    clear(page).await?;
     Ok(())
 }
 
 /// "increment with mouse wheel" (while focused).
-async fn mouse_wheel(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mouse_wheel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let max = input(page, "test-cf-max").await?;
+    max.focus().await?;
     max.dispatch(SyntheticEvent::wheel().with("deltaY", 10))
         .await?;
-    log(page).await?.wait_for_inner_text("max:000001").await?;
-    clear(page).await?;
+    log(page).await?.wait_for_inner_text("max:FFFFFF").await?;
+    max.wait_for_prop("value", "#FFFFFF").await?;
     Ok(())
 }
 
 /// "should be readonly", "should be required".
-async fn flags(page: &Page<'_>) -> Result<(), Report> {
+pub async fn flags(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let flags = input(page, "test-cf-flags").await?;
     assert_that!(flags.attr("readonly").await?).is_some();
     // Native validation (the default): `required`, not `aria-required` (react-aria).
@@ -178,7 +145,8 @@ async fn flags(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports form reset", with the name on a hidden input.
-async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let form = input(page, "test-cf-form").await?;
     let hidden = page.element("#test-cf-form input[type=hidden]").await?;
     assert_that!(hidden.attr("name").await?)
@@ -193,7 +161,8 @@ async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support the channel prop": a number field of the channel, named after it.
-async fn channel(page: &Page<'_>) -> Result<(), Report> {
+pub async fn channel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let hue = input(page, "test-cf-hue").await?;
     assert_that!(hue.value().await?)
         .get_some()

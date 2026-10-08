@@ -1,8 +1,9 @@
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the `GridList` atoms, asserted on the DOM/ARIA level so that these tests keep
+//! passing while the collection hooks underneath are rewritten. Elements are found by role and
+//! text, as users perceive them. Spec: react-aria-components `GridList.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::{
@@ -10,40 +11,9 @@ use crate::{
     polling::wait_for,
 };
 
+const PATH: &str = "/atoms/grid-list";
+
 const FOLDERS: [&str; 5] = ["Inbox", "Drafts", "Spam", "Sent", "Trash"];
-
-/// Behavior of the `GridList` atoms, asserted on the DOM/ARIA level so that these tests keep
-/// passing while the collection hooks underneath are rewritten. Elements are found by role and
-/// text, as users perceive them. Spec: react-aria-components `GridList.test.js`.
-pub struct GridListTests {}
-
-#[async_trait]
-impl BrowserTest<str> for GridListTests {
-    fn name(&self) -> Cow<'_, str> {
-        "grid_list_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/grid-list").await?;
-
-        cases!(
-            aria_structure(&page),
-            tab_into_the_list_focuses_the_first_row(&page),
-            keyboard_navigation_skips_disabled_rows(&page),
-            tab_out_and_back_restores_the_focused_row(&page),
-            select_all_and_clear(&page),
-            space_toggles_selection(&page),
-            click_selection(&page),
-            disabled_row_is_marked(&page),
-            select_all_skips_disabled_row(&page),
-            shift_arrow_extends_selection(&page),
-            selection_announcements(&page),
-        );
-
-        Ok(())
-    }
-}
 
 async fn row(page: &Page<'_>, folder: &str) -> Result<WebElement, Report> {
     page.element(role("row").text(folder)).await
@@ -62,7 +32,8 @@ async fn expect_selection(page: &Page<'_>, expected: &str) -> Result<(), Report>
     Ok(())
 }
 
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let grid = page.element("[role=grid]").await?;
     assert_that!(grid.attr("aria-label").await?)
         .get_some()
@@ -93,15 +64,33 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// The grid list is a single tab stop. Without a previously focused row, Tab lands on the first.
-async fn tab_into_the_list_focuses_the_first_row(page: &Page<'_>) -> Result<(), Report> {
+/// Tab from the button before the list into it: focus lands on the first row, as nothing in the
+/// list was focused before.
+async fn tab_into_list(page: &Page<'_>) -> Result<(), Report> {
     page.element("#test-gl-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     expect_focus(page, "Inbox").await?;
     Ok(())
 }
 
-async fn keyboard_navigation_skips_disabled_rows(page: &Page<'_>) -> Result<(), Report> {
+/// Tab into the list, then Down onto "Drafts".
+async fn focus_drafts(page: &Page<'_>) -> Result<(), Report> {
+    tab_into_list(page).await?;
+    page.send_keys(Key::Down).await?;
+    expect_focus(page, "Drafts").await?;
+    Ok(())
+}
+
+/// The grid list is a single tab stop. Without a previously focused row, Tab lands on the first.
+pub async fn tab_into_the_list_focuses_the_first_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_into_list(page).await?;
+    Ok(())
+}
+
+pub async fn keyboard_navigation_skips_disabled_rows(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_into_list(page).await?;
     for (key, expected) in [
         (Key::Down, "Drafts"),
         (Key::Down, "Sent"),
@@ -127,8 +116,9 @@ async fn keyboard_navigation_skips_disabled_rows(page: &Page<'_>) -> Result<(), 
 }
 
 /// Focus leaves the list with Tab and returns to the last focused row with Shift+Tab.
-async fn tab_out_and_back_restores_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
-    expect_focus(page, "Drafts").await?;
+pub async fn tab_out_and_back_restores_the_focused_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    focus_drafts(page).await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&page.element("#test-gl-after").await?)
         .await?;
@@ -168,8 +158,9 @@ async fn expect_selected(page: &Page<'_>, folder: &str, selected: bool) -> Resul
 }
 
 /// Ctrl+A selects all rows; Escape clears the selection (default escape key behavior).
-async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
-    expect_focus(page, "Drafts").await?;
+pub async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    focus_drafts(page).await?;
     page.send_keys(Key::Control + "a").await?;
     expect_selection(page, "all")
         .await
@@ -185,11 +176,9 @@ async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Space toggles the focused row (multiple selection, toggle behavior).
-async fn space_toggles_selection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
-    page.element("#test-gl-before").await?.click().await?;
-    page.send_keys(Key::Tab).await?;
-    expect_focus(page, "Inbox").await?;
+pub async fn space_toggles_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_into_list(page).await?;
     press(page, Key::Space, "Inbox", "Inbox").await?;
     expect_selected(page, "Inbox", true).await?;
     press(page, Key::Down, "Drafts", "Inbox").await?;
@@ -201,8 +190,8 @@ async fn space_toggles_selection(page: &Page<'_>) -> Result<(), Report> {
 
 /// Clicking toggles rows (multiple selection, toggle behavior) and focuses them. Clicking a
 /// disabled row does nothing.
-async fn click_selection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
+pub async fn click_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     row(page, "Inbox").await?.click().await?;
     expect_selection(page, "Inbox").await?;
     expect_focus(page, "Inbox").await?;
@@ -221,8 +210,8 @@ async fn click_selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A row disabled through the list's `disabled_keys` is marked `aria-disabled`.
-async fn disabled_row_is_marked(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
+pub async fn disabled_row_is_marked(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(row(page, "Spam").await?.attr("aria-disabled").await?)
         .get_some()
         .is_equal_to("true");
@@ -231,11 +220,9 @@ async fn disabled_row_is_marked(page: &Page<'_>) -> Result<(), Report> {
 
 /// Ctrl+A selects all rows, but a disabled row is not reported as selected: it has no
 /// `aria-selected` (react-aria `useGridListItem` sets it only if `canSelectItem`).
-async fn select_all_skips_disabled_row(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
-    page.element("#test-gl-before").await?.click().await?;
-    page.send_keys(Key::Tab).await?;
-    expect_focus(page, "Inbox").await?;
+pub async fn select_all_skips_disabled_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_into_list(page).await?;
     page.send_keys(Key::Control + "a").await?;
     expect_selection(page, "all").await?;
     row(page, "Spam")
@@ -247,11 +234,9 @@ async fn select_all_skips_disabled_row(page: &Page<'_>) -> Result<(), Report> {
 
 /// Shift+Arrow extends the selection, skipping disabled rows. Without a previous selection,
 /// the anchor is the newly focused row (react-aria `SelectionManager.extendSelection`).
-async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
-    page.element("#test-gl-before").await?.click().await?;
-    page.send_keys(Key::Tab).await?;
-    expect_focus(page, "Inbox").await?;
+pub async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_into_list(page).await?;
     press(page, Key::Shift + Key::Down, "Drafts", "Drafts").await?;
     press(page, Key::Shift + Key::Down, "Sent", "Drafts,Sent").await?;
     press(page, Key::Shift + Key::Up, "Drafts", "Drafts").await?;
@@ -271,8 +256,8 @@ async fn last_announcement(page: &Page<'_>) -> Result<String, Report> {
 
 /// Selection changes are announced ("should allow multiple items to be selected in multiple
 /// selection" and "should support select all and clear all via keyboard" in `ListView.test.js`).
-async fn selection_announcements(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/atoms/grid-list").await?;
+pub async fn selection_announcements(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     row(page, "Inbox").await?.click().await?;
     wait_for("the announcement")
         .observing(|| last_announcement(page))

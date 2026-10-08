@@ -1,69 +1,24 @@
 // Upstream: react-aria/test/dnd/useDroppableCollection.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Dropping into a collection (`use_droppable_collection`, `use_drop_indicator`): keyboard drags
+//! between, on and around its rows (arrow keys, Home/End, PageUp/PageDown, the initial target
+//! next to the focused or selected rows), native drags (synthesized `DragEvent`s), and focus and
+//! selection after a drop. Fixture: `/hooks/dnd-collection` (react-aria's `DroppableGridExample`).
+//!
+//! Where a keyboard drag starts in the collection (next to the focused or selected rows), and
+//! native drags.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
-    pages::{ElementActions, PageActions, dnd::DndPage, role, xpath},
+    pages::{ElementActions, Page, PageActions, dnd::DndActions, role, xpath},
     polling::wait_for,
 };
 
 const LOG: &str = "test-dnd-collection-log";
 
-/// Dropping into a collection (`use_droppable_collection`, `use_drop_indicator`): keyboard drags
-/// between, on and around its rows (arrow keys, Home/End, PageUp/PageDown, the initial target
-/// next to the focused or selected rows), native drags (synthesized `DragEvent`s), and focus and
-/// selection after a drop. Fixture: `/hooks/dnd-collection` (react-aria's `DroppableGridExample`).
-pub struct DndCollectionTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndCollectionTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_collection_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            basic_drag_and_drop(&page),
-            arrow_key_navigation(&page),
-            home_and_end(&page),
-            page_up_and_page_down(&page),
-            page_up_and_page_down_skip_invalid_targets(&page),
-        );
-        Ok(())
-    }
-}
-
-/// Where a keyboard drag starts in the collection (next to the focused or selected rows), and
-/// native drags.
-pub struct DndCollectionTargetTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DndCollectionTargetTests {
-    fn name(&self) -> Cow<'_, str> {
-        "dnd_collection_target_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = DndPage { driver, base_url };
-        cases!(
-            after_the_last_focused_item(&page),
-            after_the_selected_items(&page),
-            before_the_selected_items(&page),
-            on_the_first_selected_item(&page),
-            on_the_last_selected_item(&page),
-            native_basic_drag_and_drop(&page),
-            native_drop_on_an_item(&page),
-        );
-        Ok(())
-    }
-}
-
 /// The row `text` of the list.
-async fn row(page: &DndPage<'_>, text: &str) -> Result<WebElement, Report> {
+async fn row(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     page.element("[role=grid][aria-label='List']")
         .await?
         .element(xpath(format!(
@@ -73,7 +28,7 @@ async fn row(page: &DndPage<'_>, text: &str) -> Result<WebElement, Report> {
 }
 
 /// Waits until the drop indicator labelled `label` has focus.
-async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(), Report> {
+async fn expect_focused_indicator(page: &Page<'_>, label: &str) -> Result<(), Report> {
     let indicator = page
         .element(format!(
             "[aria-roledescription='drop indicator'][aria-label='{label}']"
@@ -84,7 +39,7 @@ async fn expect_focused_indicator(page: &DndPage<'_>, label: &str) -> Result<(),
 }
 
 /// Opens the fixture with `query`, focuses the draggable and starts a keyboard drag.
-async fn start_drag(page: &DndPage<'_>, query: &str) -> Result<(), Report> {
+async fn start_drag(page: &Page<'_>, query: &str) -> Result<(), Report> {
     page.goto_path(&format!("/hooks/dnd-collection{query}"))
         .await?;
     focus_draggable(page).await?;
@@ -93,7 +48,7 @@ async fn start_drag(page: &DndPage<'_>, query: &str) -> Result<(), Report> {
 }
 
 /// Focuses the drag source ("Drag me") with the keyboard.
-async fn focus_draggable(page: &DndPage<'_>) -> Result<(), Report> {
+async fn focus_draggable(page: &Page<'_>) -> Result<(), Report> {
     page.element(role("button").text("Before"))
         .await?
         .click()
@@ -106,7 +61,7 @@ async fn focus_draggable(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// "keyboard: should perform basic drag and drop": the drop inserts the item, which is then
 /// focused and selected.
-async fn basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     start_drag(page, "").await?;
     expect_focused_indicator(page, "Drop on").await?;
     page.send_keys(Key::Down).await?;
@@ -156,7 +111,7 @@ const TARGETS: [&str; 7] = [
 
 /// "should support arrow key navigation": down through every valid target ("on Two" isn't one),
 /// wrapping, and back up.
-async fn arrow_key_navigation(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn arrow_key_navigation(page: &Page<'_>) -> Result<(), Report> {
     start_drag(page, "").await?;
     for (i, target) in TARGETS.iter().enumerate() {
         if i > 0 {
@@ -175,7 +130,7 @@ async fn arrow_key_navigation(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "supports Home and End".
-async fn home_and_end(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn home_and_end(page: &Page<'_>) -> Result<(), Report> {
     start_drag(page, "").await?;
     expect_focused_indicator(page, "Drop on").await?;
     page.send_keys(Key::End).await?;
@@ -198,7 +153,7 @@ async fn home_and_end(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "supports PageUp and PageDown" (rows 50px, the list 150px high).
-async fn page_up_and_page_down(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn page_up_and_page_down(page: &Page<'_>) -> Result<(), Report> {
     start_drag(page, "?items=6").await?;
     expect_focused_indicator(page, "Drop on").await?;
     for target in [
@@ -223,7 +178,7 @@ async fn page_up_and_page_down(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should skip invalid targets with PageUp and PageDown" (only drops on items 0, 2, 3, 5).
-async fn page_up_and_page_down_skip_invalid_targets(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn page_up_and_page_down_skip_invalid_targets(page: &Page<'_>) -> Result<(), Report> {
     start_drag(page, "?items=6&only-on&cancel=1,4").await?;
     expect_focused_indicator(page, "Drop on Item 0").await?;
     for target in ["Drop on Item 2", "Drop on Item 5"] {
@@ -239,7 +194,7 @@ async fn page_up_and_page_down_skip_invalid_targets(page: &DndPage<'_>) -> Resul
 }
 
 /// Focuses the first row (Tab from the draggable).
-async fn focus_first_row(page: &DndPage<'_>, query: &str) -> Result<(), Report> {
+async fn focus_first_row(page: &Page<'_>, query: &str) -> Result<(), Report> {
     page.goto_path(&format!("/hooks/dnd-collection{query}"))
         .await?;
     focus_draggable(page).await?;
@@ -249,7 +204,7 @@ async fn focus_first_row(page: &DndPage<'_>, query: &str) -> Result<(), Report> 
 }
 
 /// Shift + Tab back to the draggable and starts a keyboard drag.
-async fn drag_from_the_draggable(page: &DndPage<'_>) -> Result<(), Report> {
+async fn drag_from_the_draggable(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Shift + Key::Tab).await?;
     page.wait_for_focus(&page.element(role("button").text("Drag me")).await?)
         .await?;
@@ -258,7 +213,7 @@ async fn drag_from_the_draggable(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// Selects One, Three and Two (in that order), ending focused on Two.
-async fn select_one_three_two(page: &DndPage<'_>) -> Result<(), Report> {
+async fn select_one_three_two(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Space).await?;
     row(page, "One")
         .await?
@@ -281,7 +236,7 @@ async fn select_one_three_two(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// Selects Three and Two (in that order), ending focused on Two.
-async fn select_three_two(page: &DndPage<'_>) -> Result<(), Report> {
+async fn select_three_two(page: &Page<'_>) -> Result<(), Report> {
     for _ in 0..3 {
         page.send_keys(Key::Down).await?;
     }
@@ -300,7 +255,7 @@ async fn select_three_two(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should default to dropping after the last focused item if any".
-async fn after_the_last_focused_item(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn after_the_last_focused_item(page: &Page<'_>) -> Result<(), Report> {
     focus_first_row(page, "").await?;
     page.send_keys(Key::Down).await?;
     page.wait_for_focus(&row(page, "Two").await?).await?;
@@ -311,7 +266,7 @@ async fn after_the_last_focused_item(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should default to dropping after the selected items if any".
-async fn after_the_selected_items(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn after_the_selected_items(page: &Page<'_>) -> Result<(), Report> {
     focus_first_row(page, "").await?;
     select_one_three_two(page).await?;
     drag_from_the_draggable(page).await?;
@@ -322,7 +277,7 @@ async fn after_the_selected_items(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// "should default to before the selected items if the last focused item is the first selected
 /// item".
-async fn before_the_selected_items(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn before_the_selected_items(page: &Page<'_>) -> Result<(), Report> {
     focus_first_row(page, "").await?;
     select_three_two(page).await?;
     drag_from_the_draggable(page).await?;
@@ -333,7 +288,7 @@ async fn before_the_selected_items(page: &DndPage<'_>) -> Result<(), Report> {
 
 /// "should default to on the first selected item if the last focused item is the first selected
 /// item and only dropping on items is allowed".
-async fn on_the_first_selected_item(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn on_the_first_selected_item(page: &Page<'_>) -> Result<(), Report> {
     focus_first_row(page, "?only-on&cancel=").await?;
     select_three_two(page).await?;
     drag_from_the_draggable(page).await?;
@@ -343,7 +298,7 @@ async fn on_the_first_selected_item(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "should default to on the last selected item when only dropping on items is allowed".
-async fn on_the_last_selected_item(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn on_the_last_selected_item(page: &Page<'_>) -> Result<(), Report> {
     focus_first_row(page, "?only-on&cancel=").await?;
     select_one_three_two(page).await?;
     drag_from_the_draggable(page).await?;
@@ -353,14 +308,14 @@ async fn on_the_last_selected_item(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// The cell of the row `text`.
-async fn cell(page: &DndPage<'_>, text: &str) -> Result<WebElement, Report> {
+async fn cell(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     row(page, text).await?.element("[role=gridcell]").await
 }
 
 /// "native drag and drop: should perform basic drag and drop": the drop target follows the
 /// pointer (before, on and after rows; "on Two" isn't valid), the drop inserts the item, which is
 /// then focused and selected.
-async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn native_basic_drag_and_drop(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-collection").await?;
     let draggable = page.element(role("button").text("Drag me")).await?;
     page.fire_drag_event(&draggable, "dragstart", &[]).await?;
@@ -425,7 +380,7 @@ async fn native_basic_drag_and_drop(page: &DndPage<'_>) -> Result<(), Report> {
 }
 
 /// "supports dropping on an item": the item gets focus, not selection.
-async fn native_drop_on_an_item(page: &DndPage<'_>) -> Result<(), Report> {
+pub async fn native_drop_on_an_item(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/dnd-collection").await?;
     let draggable = page.element(role("button").text("Drag me")).await?;
     page.fire_drag_event(&draggable, "dragstart", &[]).await?;

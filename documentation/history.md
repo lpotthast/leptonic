@@ -3,6 +3,25 @@
 Finished work, moved out of `PLAN.md` (which holds open work only). Most recent first within each part; git
 history has the details.
 
+## Library: every browser test case a test of its own (2026-10-08, evening)
+
+- Every case is a test of its own: a `pub async fn` that loads its page itself, registered in `ui_tests::all()`
+  (`.case(test_checkbox::hover)`, named `checkbox::hover`; `tests/cases/mod.rs`). `cases!`, the per-fixture
+  `BrowserTest` structs and the short-lived `page_tests!` macro are gone; `DndPage`/`FocusManagerPage` became traits on
+  `Page`. 818 cases (was 139 tests). 68 cases had silently depended on earlier ones (selections, focus, logs, window
+  size); all are self-contained now, several that had stopped checking anything set up their state again, and one
+  hidden library bug surfaced (tree expand button, `PLAN.md`).
+- browser-test: session reuse (`SessionReuse`): sessions return to the pool after their test and run further tests;
+  every test runs in its own WebDriver BiDi user context, which the reset removes (tabs, cookies, storage, cache,
+  permissions, renderer processes). The pool keeps parallel tests + spares (default with reuse: one per four parallel
+  tests) and quits the rest; `fresh_session()` tests get a session no test ran in. The report counts created and reset
+  sessions and shows step averages; `goto_path` runs as a `page_load` step. The clipboard test grants its permission
+  for its tab's browser context.
+- Measured (821 tests, 32 threads): parallelism 4: 2m 40s (old structure: 1m 41s for 139 tests); 8: 1m 44s; 16:
+  1m 43s (CPU-bound: page loads avg 820ms instead of 330ms). At parallelism 8 with 2 spares: 10 sessions for 821
+  tests, ~127 Chrome processes and 5.5 GB PSS on average. The first reset (new tab per test) let every browser grow by
+  one renderer (100-250 MB) per test (21 GB with 16 sessions).
+
 ## Library: observations read as sentences (2026-10-08, evening)
 
 - The polling macros (`wait_for!`, `wait_until!`, `stays!`, `stays_for!`) are replaced by a builder in

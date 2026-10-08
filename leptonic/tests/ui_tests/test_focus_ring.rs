@@ -1,38 +1,12 @@
 // Upstream: react-aria/test/interactions/useFocusVisible.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_focus_ring` and the `FocusRing` atom: focus is visible after keyboard focus, not after
+//! pointer focus; `within`, modality switches, disabled, text inputs. Every case starts on a fresh
+//! page.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
-
-/// `use_focus_ring` and the `FocusRing` atom: focus is visible after keyboard focus, not after
-/// pointer focus; `within`, modality switches, disabled, text inputs. Every case starts on a fresh
-/// page.
-pub struct FocusRingTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusRingTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_ring_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            basic_click_focus(&page),
-            basic_tab_focus(&page),
-            within_click_focus(&page),
-            within_tab_focus(&page),
-            modality_switch(&page),
-            arrow_key_keyboard_modality(&page),
-            disabled_focus_ring(&page),
-            atom_text_input(&page),
-        );
-        Ok(())
-    }
-}
 
 const PATH: &str = "/hooks/focus-ring";
 
@@ -43,7 +17,7 @@ async fn tab_after(page: &Page<'_>, before: &str) -> Result<(), Report> {
 }
 
 /// Click focus: focused, but focus is not visible (pointer modality).
-async fn basic_click_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn basic_click_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-fr-target").await?;
     let is_focused = page.element("#test-fr-is-focused").await?;
@@ -62,7 +36,7 @@ async fn basic_click_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab focus: focused, and focus is visible (keyboard modality).
-async fn basic_tab_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn basic_tab_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-fr-target").await?;
     let is_focused = page.element("#test-fr-is-focused").await?;
@@ -83,7 +57,7 @@ async fn basic_tab_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `within: true`, click focus: the container is focused, its focus not visible.
-async fn within_click_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn within_click_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let is_focused = page.element("#test-fr-within-is-focused").await?;
     let is_focus_visible = page.element("#test-fr-within-is-focus-visible").await?;
@@ -106,7 +80,7 @@ async fn within_click_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `within: true`, Tab focus: the container is focused and its focus visible.
-async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let is_focused = page.element("#test-fr-within-is-focused").await?;
     let is_focus_visible = page.element("#test-fr-within-is-focus-visible").await?;
@@ -126,7 +100,7 @@ async fn within_tab_focus(page: &Page<'_>) -> Result<(), Report> {
 
 /// Tab focus shows the focus ring; clicking the same element switches to pointer modality and
 /// hides it.
-async fn modality_switch(page: &Page<'_>) -> Result<(), Report> {
+pub async fn modality_switch(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-fr-target").await?;
     let is_focused = page.element("#test-fr-is-focused").await?;
@@ -143,7 +117,7 @@ async fn modality_switch(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// An arrow key after a click switches to keyboard modality: the focus ring appears.
-async fn arrow_key_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_key_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-fr-target").await?;
     let is_focused = page.element("#test-fr-is-focused").await?;
@@ -162,7 +136,7 @@ async fn arrow_key_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Disabled: neither a click nor Tab makes the element focused or its focus visible.
-async fn disabled_focus_ring(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_focus_ring(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let is_focused = page.element("#test-fr-disabled-is-focused").await?;
     let is_focus_visible = page.element("#test-fr-disabled-is-focus-visible").await?;
@@ -183,7 +157,7 @@ async fn disabled_focus_ring(page: &Page<'_>) -> Result<(), Report> {
 /// The `FocusRing` atom: `data-focused` follows focus. Typing after a click makes focus visible,
 /// but not on a text input (only Tab and Escape do there; upstream's "emits on modality change
 /// (text input)").
-async fn atom_text_input(page: &Page<'_>) -> Result<(), Report> {
+pub async fn atom_text_input(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     for (selector, is_text_input) in [("#test-fr-atom", false), ("#test-fr-atom-text", true)] {
         let element = page.element(selector).await?;

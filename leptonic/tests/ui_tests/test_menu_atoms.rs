@@ -1,45 +1,22 @@
 // Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/menu/MenuTrigger.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The menu atoms (`MenuTrigger`, `Popover`, `Menu`, `MenuItem`, `MenuSection`, item slots): the
+//! trigger opens and controls the menu, which is labelled by it; keyboard opening focuses the first
+//! or last item; actions close the menu and return focus; a selection menu has checkbox items and
+//! stays open; sections and item slots are wired up.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, role};
+
+const PATH: &str = "/atoms/menu";
 
 const ACTIONS_TRIGGER: &str = "#test-menu-atoms-actions-trigger";
 const VIEW_TRIGGER: &str = "#test-menu-atoms-view-trigger";
 const LONG_TRIGGER: &str = "#test-menu-atoms-long-trigger";
 const SANDWICH_TRIGGER: &str = "#test-menu-atoms-sandwich-trigger";
 const MENU: &str = "[role=menu]";
-
-/// The menu atoms (`MenuTrigger`, `Popover`, `Menu`, `MenuItem`, `MenuSection`, item slots): the
-/// trigger opens and controls the menu, which is labelled by it; keyboard opening focuses the first
-/// or last item; actions close the menu and return focus; a selection menu has checkbox items and
-/// stays open; sections and item slots are wired up.
-pub struct MenuAtomTests {}
-
-#[async_trait]
-impl BrowserTest<str> for MenuAtomTests {
-    fn name(&self) -> Cow<'_, str> {
-        "menu_atom_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/menu").await?;
-        cases!(
-            menu_trigger(&page),
-            keyboard_opening(&page),
-            selection_menu(&page),
-            long_press_trigger(&page),
-            section_selection(&page),
-            close_on_select(&page),
-        );
-        Ok(())
-    }
-}
 
 /// The fixture's log of performed actions, comma-separated.
 async fn actions_log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -74,7 +51,8 @@ async fn aria_checked(
 
 /// "should support menu trigger": the trigger opens the menu, which it controls and which it labels;
 /// pressing an item performs its action, closes the menu and returns focus to the trigger.
-async fn menu_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn menu_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(ACTIONS_TRIGGER).await?;
     assert_that!(trigger.attr("aria-haspopup").await?)
         .get_some()
@@ -115,7 +93,8 @@ async fn menu_trigger(page: &Page<'_>) -> Result<(), Report> {
 
 /// Keyboard opening: ArrowDown focuses the first item, ArrowUp the last; Enter performs the focused
 /// item's action; Escape closes the menu; focus returns to the trigger.
-async fn keyboard_opening(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_opening(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-menu-atoms-before")
         .await?
         .click()
@@ -135,10 +114,7 @@ async fn keyboard_opening(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Up).await?;
     expect_focus(page, "menuitem", "Cut").await?;
     page.send_keys(Key::Enter).await?;
-    actions_log(page)
-        .await?
-        .wait_for_inner_text("Cut,Cut")
-        .await?;
+    actions_log(page).await?.wait_for_inner_text("Cut").await?;
     expect_closed_with_focus_on(page, ACTIONS_TRIGGER).await?;
     // Enter activates the item through a click, which counts as virtual: the modality is the
     // keyboard's again afterwards (upstream sets it after the click), so the trigger shows its
@@ -154,7 +130,8 @@ async fn keyboard_opening(page: &Page<'_>) -> Result<(), Report> {
 /// has `menuitemcheckbox` items in labelled groups (one `<section role="group">` each, named by
 /// its `<header>`), toggles them on press and stays open; an item's label, description and
 /// shortcut are wired up; a separator is a `<div role="separator">`.
-async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element(VIEW_TRIGGER).await?.click().await?;
     let menu = page.element(MENU).await?;
     assert_that!(menu.inner_texts("[role=menuitemcheckbox]").await?).has_length(3);
@@ -203,7 +180,8 @@ async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
 /// `trigger="longPress"` (React Spectrum `MenuTrigger.test.js`): the button describes the long press;
 /// a press performs the button's own action and doesn't open the menu; a long press opens it, as does
 /// Alt+ArrowDown (with the first item focused).
-async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(LONG_TRIGGER).await?;
     assert_that!(trigger.referenced_text("aria-describedby").await?)
         .is_equal_to("Long press or press Alt + ArrowDown to open menu");
@@ -212,7 +190,7 @@ async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
     trigger.click().await?;
     actions_log(page)
         .await?
-        .wait_for_inner_text("Cut,Cut,More pressed")
+        .wait_for_inner_text("More pressed")
         .await?;
     page.count_stays(MENU, 0).await?;
 
@@ -243,7 +221,8 @@ async fn long_press_trigger(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support section-level selection": sections with selections of their own (multiple,
 /// single) in one menu; focus moves through both sections as one menu.
-async fn section_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn section_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let veggies = page.element("#test-menu-atoms-veggies").await?;
     let protein = page.element("#test-menu-atoms-protein").await?;
     page.element(SANDWICH_TRIGGER).await?.click().await?;
@@ -302,7 +281,8 @@ async fn section_selection(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should not close menu items within a section when shouldCloseOnSelect=false", "should not
 /// close the menu when shouldCloseOnSelect is false".
-async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
+pub async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let actions = actions_log(page).await?;
     page.element("#test-menu-atoms-file-trigger")
         .await?
@@ -313,9 +293,7 @@ async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .click()
         .await?;
-    actions
-        .wait_for_inner_text("Cut,Cut,More pressed,Open")
-        .await?;
+    actions.wait_for_inner_text("Open").await?;
     page.count_stays(MENU, 1).await?;
     page.element(role("menuitem").text("Share"))
         .await?
@@ -332,9 +310,7 @@ async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
         .await?
         .click()
         .await?;
-    actions
-        .wait_for_inner_text("Cut,Cut,More pressed,Open,Share,Undo")
-        .await?;
+    actions.wait_for_inner_text("Open,Share,Undo").await?;
     page.count_stays(MENU, 1).await?;
     page.send_keys(Key::Escape).await?;
     page.wait_for_count(MENU, 0).await?;

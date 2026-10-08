@@ -1,38 +1,14 @@
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the `ListBox` atom, asserted on the DOM/ARIA level so that these tests keep
+//! passing while the collection hooks underneath are rewritten. Elements are found by role and
+//! text, as users perceive them.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Page, PageActions, role};
 
-/// Behavior of the `ListBox` atom, asserted on the DOM/ARIA level so that these tests keep
-/// passing while the collection hooks underneath are rewritten. Elements are found by role and
-/// text, as users perceive them.
-pub struct ListBoxTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ListBoxTests {
-    fn name(&self) -> Cow<'_, str> {
-        "listbox_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/listbox").await?;
-        cases!(
-            aria_structure(&page),
-            keyboard_navigation_skips_disabled_items(&page),
-            selection(&page),
-            tab_in_and_out(&page),
-            type_ahead(&page),
-            select_all_and_clear(&page),
-            shift_arrow_extends_selection(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/listbox";
 
 /// The option with the text `fruit`.
 async fn option(page: &Page<'_>, fruit: &str) -> Result<WebElement, Report> {
@@ -44,8 +20,18 @@ async fn selection_output(page: &Page<'_>) -> Result<WebElement, Report> {
     page.element("#test-lb-selection").await
 }
 
+/// Tab from the button before the listbox into it: focus lands on the first option, nothing gets
+/// selected.
+async fn tab_in(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-lb-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&option(page, "Apple").await?).await?;
+    Ok(())
+}
+
 /// The listbox is labelled and multi-selectable; nothing is selected; Cherry is disabled.
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let listbox = page.element("[role=listbox]").await?;
     assert_that!(listbox.attr("aria-label").await?)
         .get_some()
@@ -70,7 +56,8 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Arrow keys, Home and End move focus, skipping the disabled option, without wrapping.
-async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let apple = option(page, "Apple").await?;
     apple.click().await?;
     page.wait_for_focus(&apple).await?;
@@ -94,9 +81,10 @@ async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(),
 
 /// Clicking toggles an option (multiple selection, toggle behavior), Space toggles the focused
 /// one, a disabled option can't be selected.
-async fn selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let selection = selection_output(page).await?;
-    // Clicking the first option above selected it.
+    option(page, "Apple").await?.click().await?;
     selection.wait_for_inner_text("Apple").await?;
     assert_that!(option(page, "Apple").await?.attr("aria-selected").await?)
         .get_some()
@@ -114,7 +102,8 @@ async fn selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The listbox is a single tab stop; focus returns to the last focused option.
-async fn tab_in_and_out(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_in_and_out(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let banana = option(page, "Banana").await?;
     banana.click().await?;
     page.wait_for_focus(&banana).await?;
@@ -127,7 +116,10 @@ async fn tab_in_and_out(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Typing moves focus to the next option starting with the typed text, skipping disabled ones.
-async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+pub async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_in(page).await?;
+    page.send_keys(Key::Down).await?;
     page.wait_for_focus(&option(page, "Banana").await?).await?;
     page.send_keys("d").await?;
     let durian = option(page, "Durian").await?;
@@ -147,9 +139,11 @@ async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Ctrl+A selects everything, Escape clears the selection.
-async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
+pub async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let selection = selection_output(page).await?;
     let durian = option(page, "Durian").await?;
+    tab_in(page).await?;
     page.send_keys(Key::Control + "a").await?;
     selection.wait_for_inner_text("all").await?;
     assert_that!(durian.attr("aria-selected").await?)
@@ -164,7 +158,8 @@ async fn select_all_and_clear(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Shift+Arrow extends the selection from the anchor (skipping the disabled option).
-async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn shift_arrow_extends_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let selection = selection_output(page).await?;
     option(page, "Banana").await?.click().await?;
     selection.wait_for_inner_text("Banana").await?;

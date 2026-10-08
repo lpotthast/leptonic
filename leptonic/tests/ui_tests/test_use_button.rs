@@ -1,42 +1,19 @@
 // Upstream: react-aria/test/button/useButton.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_button` on native buttons, inputs, anchors and custom elements: ARIA and native
+//! attributes by element type, press by pointer and keyboard, tab order, disabled state, form
+//! submission, hover and focus visibility.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// `use_button` on native buttons, inputs, anchors and custom elements: ARIA and native
-/// attributes by element type, press by pointer and keyboard, tab order, disabled state, form
-/// submission, hover and focus visibility.
-pub struct UseButtonTests {}
-
-#[async_trait]
-impl BrowserTest<str> for UseButtonTests {
-    fn name(&self) -> Cow<'_, str> {
-        "use_button_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/button").await?;
-
-        cases!(
-            attributes_depend_on_element_type(&page),
-            native_and_custom_elements_press(&page),
-            tab_order(&page),
-            disabled_buttons(&page),
-            form_submission(&page),
-            hover_and_focus_visible(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/button";
 
 /// Native buttons need no role and default to `type="button"`; other elements are announced as
 /// buttons and are focusable.
-async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report> {
+pub async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let native = page.element("#test-btn-native").await?;
     assert_that!(native.attr("role").await?).is_none();
     assert_that!(native.attr("type").await?)
@@ -88,7 +65,8 @@ async fn attributes_depend_on_element_type(page: &Page<'_>) -> Result<(), Report
 }
 
 /// Pointer presses on a native and a custom button, then Enter and Space on the focused custom one.
-async fn native_and_custom_elements_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn native_and_custom_elements_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let presses = page.element("#test-btn-presses").await?;
     page.element("#test-btn-native").await?.click().await?;
     presses.wait_for_inner_text("1").await?;
@@ -103,7 +81,8 @@ async fn native_and_custom_elements_press(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// Tab visits every button but the one with `exclude_from_tab_order`.
-async fn tab_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-btn-before").await?.click().await?;
     for id in [
         "#test-btn-native",
@@ -120,7 +99,8 @@ async fn tab_order(page: &Page<'_>) -> Result<(), Report> {
 /// Native buttons and inputs use the `disabled` attribute, everything else `aria-disabled`;
 /// disabled anchors lose their link and every disabled button its place in the tab order; a
 /// disabled button doesn't press.
-async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let toggle = page.element("#test-btn-toggle-disabled").await?;
     toggle.click().await?;
     let native = page.element("#test-btn-native").await?;
@@ -149,7 +129,8 @@ async fn disabled_buttons(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A button defaults to `type="button"` and does not submit its form; a submit button does.
-async fn form_submission(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_submission(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let submits = page.element("#test-btn-submits").await?;
     page.element("#test-btn-in-form").await?.click().await?;
     submits.inner_text_stays("0").await?;
@@ -160,7 +141,8 @@ async fn form_submission(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Hovering sets `is_hovered`; pointer focus does not show a focus ring, keyboard focus does.
-async fn hover_and_focus_visible(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_and_focus_visible(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let state = page.element("#test-btn-state").await?;
     let focus_visible = page.element("#test-btn-is-focus-visible").await?;
     state.hover().await?;

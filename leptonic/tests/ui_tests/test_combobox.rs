@@ -1,8 +1,10 @@
 // Upstream: react-aria-components/test/ComboBox.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the `ComboBox` atoms: filtering while typing, virtual focus (DOM focus stays in
+//! the input, `aria-activedescendant` points at the focused option), keyboard and pointer
+//! selection, reverting with Escape, a controlled value changed from outside, and a combo box
+//! in a modal dialog.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,37 +12,10 @@ use crate::{
     polling::wait_for,
 };
 
+const PATH: &str = "/atoms/combobox";
+
 const INPUT: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
-
-/// Behavior of the `ComboBox` atoms: filtering while typing, virtual focus (DOM focus stays in
-/// the input, `aria-activedescendant` points at the focused option), keyboard and pointer
-/// selection, reverting with Escape, a controlled value changed from outside, and a combo box
-/// in a modal dialog.
-pub struct ComboBoxTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox").await?;
-        cases!(
-            aria_structure(&page),
-            typing_filters_and_keyboard_selects(&page),
-            escape_reverts_the_input(&page),
-            button_shows_all_options_and_click_selects(&page),
-            arrow_down_opens_with_the_selected_option_focused(&page),
-            clearing_the_input_clears_the_value(&page),
-            externally_changed_value_shows_in_the_input(&page),
-            popover_in_a_modal_stays_interactive(&page),
-        );
-        Ok(())
-    }
-}
 
 /// Waits until the listbox shows exactly `expected`.
 async fn expect_options(page: &Page<'_>, expected: &[&str]) -> Result<(), Report> {
@@ -93,8 +68,28 @@ async fn button_of(input: &WebElement) -> Result<WebElement, Report> {
     input.element(xpath("following-sibling::button")).await
 }
 
+/// Selects `option` of the first combo box with its button and a click on the option: the
+/// options close, focus stays in the input.
+async fn select(page: &Page<'_>, option: &str) -> Result<(), Report> {
+    let input = page.element(INPUT).await?;
+    page.element("button[aria-haspopup]").await?.click().await?;
+    page.element(role("option").text(option))
+        .await?
+        .click()
+        .await?;
+    page.element("#test-cb-value")
+        .await?
+        .wait_for_inner_text(option)
+        .await?;
+    page.wait_for_count(LISTBOX, 0).await?;
+    input.wait_for_prop("value", option).await?;
+    page.wait_for_focus(&input).await?;
+    Ok(())
+}
+
 /// Closed: a list autocomplete labelled by its label, the button out of the tab order.
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element(INPUT).await?;
     assert_that!(input.attr("aria-expanded").await?)
         .get_some()
@@ -115,7 +110,8 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
 
 /// Typing opens the filtered options (the rest of the page hidden from screen readers, nothing
 /// inert); arrow keys move virtual focus; Enter selects.
-async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element(INPUT).await?;
     input.click().await?;
     input.send_keys("an").await?;
@@ -150,7 +146,9 @@ async fn typing_filters_and_keyboard_selects(page: &Page<'_>) -> Result<(), Repo
 }
 
 /// Escape reverts the typed text to the selection's.
-async fn escape_reverts_the_input(page: &Page<'_>) -> Result<(), Report> {
+pub async fn escape_reverts_the_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    select(page, "Banana").await?;
     let input = page.element(INPUT).await?;
     input.send_keys("x").await?;
     input.wait_for_prop("value", "Bananax").await?;
@@ -165,7 +163,8 @@ async fn escape_reverts_the_input(page: &Page<'_>) -> Result<(), Report> {
 
 /// The button shows all options (not just the matching ones); clicking an option selects it and
 /// keeps focus in the input.
-async fn button_shows_all_options_and_click_selects(page: &Page<'_>) -> Result<(), Report> {
+pub async fn button_shows_all_options_and_click_selects(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element(INPUT).await?;
     page.element("button[aria-haspopup]").await?.click().await?;
     expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
@@ -189,7 +188,11 @@ async fn button_shows_all_options_and_click_selects(page: &Page<'_>) -> Result<(
 /// "first" focus strategy (react-aria `useSelectableCollection` auto focus). Closing fires one
 /// virtual focus event on the input, so that its focus ring shows again (react-aria's "re-show
 /// focus ring" effect).
-async fn arrow_down_opens_with_the_selected_option_focused(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_down_opens_with_the_selected_option_focused(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    select(page, "Durian").await?;
     let input = page.element(INPUT).await?;
     input.send_keys(Key::Down).await?;
     expect_options(page, &["Apple", "Banana", "Cherry", "Durian", "Elderberry"]).await?;
@@ -215,7 +218,9 @@ async fn arrow_down_opens_with_the_selected_option_focused(page: &Page<'_>) -> R
 /// Single selection: emptying the input clears the value. The changed input opens the options
 /// (react-stately opens on every input change while focused); closing them keeps the cleared
 /// value.
-async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    select(page, "Durian").await?;
     let input = page.element(INPUT).await?;
     let value = page.element("#test-cb-value").await?;
     input.send_keys(Key::Control + "a").await?;
@@ -231,7 +236,8 @@ async fn clearing_the_input_clears_the_value(page: &Page<'_>) -> Result<(), Repo
 /// A controlled value changed from outside resets the input to the selected item's text
 /// (upstream resets it whenever the selected key changes), also for an item added to the
 /// collection in the same update.
-async fn externally_changed_value_shows_in_the_input(page: &Page<'_>) -> Result<(), Report> {
+pub async fn externally_changed_value_shows_in_the_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input_labelled(page, "Controlled fruit").await?;
     input.wait_for_prop("value", "Apple").await?;
     page.element("#test-cb-controlled-set")
@@ -285,7 +291,8 @@ async fn externally_changed_value_shows_in_the_input(page: &Page<'_>) -> Result<
 
 /// A combo box in a modal: its popover is portaled next to the modal, which hides everything
 /// outside it, but the popover opened from inside stays interactive (agnite dev-ui's report).
-async fn popover_in_a_modal_stays_interactive(page: &Page<'_>) -> Result<(), Report> {
+pub async fn popover_in_a_modal_stays_interactive(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-cb-modal-open").await?.click().await?;
     page.element("[role=dialog] [role=combobox]").await?;
     page.element("[role=dialog] button").await?.click().await?;

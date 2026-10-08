@@ -1,8 +1,11 @@
 // Upstream: react-aria-components/test/ListBox.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! A virtualized `ListBox` ("should support virtualizer"): only the visible options (plus
+//! overscan) render, each telling its position and the set size; scrolling renders others; End
+//! reaches and renders the last option. A log anchored to the end stays at the end when lines are
+//! appended, with measured variable heights (rows don't overlap once measured). A list box next to
+//! a `Virtualizer` isn't virtualized.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,33 +13,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// A virtualized `ListBox` ("should support virtualizer"): only the visible options (plus
-/// overscan) render, each telling its position and the set size; scrolling renders others; End
-/// reaches and renders the last option. A log anchored to the end stays at the end when lines are
-/// appended, with measured variable heights (rows don't overlap once measured). A list box next to
-/// a `Virtualizer` isn't virtualized.
-pub struct VirtualizerTests {}
-
-#[async_trait]
-impl BrowserTest<str> for VirtualizerTests {
-    fn name(&self) -> Cow<'_, str> {
-        "virtualizer_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/virtualizer").await?;
-
-        cases!(
-            renders_the_visible_options(&page),
-            scrolling_renders_other_options(&page),
-            focused_option_scrolls_into_view(&page),
-            log_stays_at_its_end(&page),
-            plain_list_box_is_not_virtualized(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/virtualizer";
 
 /// "Item {i}" for each `i`.
 fn items(range: std::ops::Range<u32>) -> Vec<String> {
@@ -129,7 +106,8 @@ async fn wait_for_stacked_rows(page: &Page<'_>, log: &WebElement) -> Result<(), 
 
 /// 100px of 25px rows, a third of overscan, snapped to rows: Items 0 to 6, each with its position
 /// in the set of 50.
-async fn renders_the_visible_options(page: &Page<'_>) -> Result<(), Report> {
+pub async fn renders_the_visible_options(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     wait_for("the rendered options")
         .observing(|| option_texts(page))
         .to_be_equal_to(items(0..7))
@@ -145,7 +123,8 @@ async fn renders_the_visible_options(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Scrolled to 200px: Items 7 to 14 (the scroll moves on, so overscan goes down).
-async fn scrolling_renders_other_options(page: &Page<'_>) -> Result<(), Report> {
+pub async fn scrolling_renders_other_options(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-virt-list [role=listbox]")
         .await?
         .scroll_to_top(200.0)
@@ -159,7 +138,8 @@ async fn scrolling_renders_other_options(page: &Page<'_>) -> Result<(), Report> 
 
 /// The focused option scrolls into view, also one that wasn't rendered when it got focus; End
 /// reaches and renders the last option (persisted as the focused key).
-async fn focused_option_scrolls_into_view(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focused_option_scrolls_into_view(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let list = page.element("#test-virt-list [role=listbox]").await?;
     page.element("#test-virt-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
@@ -187,7 +167,8 @@ async fn focused_option_scrolls_into_view(page: &Page<'_>) -> Result<(), Report>
 
 /// The log starts at its end and stays there when lines are appended; its rows of variable height
 /// don't overlap once measured, at the end and in the middle.
-async fn log_stays_at_its_end(page: &Page<'_>) -> Result<(), Report> {
+pub async fn log_stays_at_its_end(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = page.element("#test-virt-log [role=listbox]").await?;
     wait_for_the_end(page, &log).await?;
     page.element("#test-virt-append").await?.click().await?;
@@ -206,7 +187,8 @@ async fn log_stays_at_its_end(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The `Virtualizer`s' context doesn't reach the list box after them: all its options render.
-async fn plain_list_box_is_not_virtualized(page: &Page<'_>) -> Result<(), Report> {
+pub async fn plain_list_box_is_not_virtualized(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.wait_for_count("#test-virt-plain [role=option]", 30)
         .await?;
     Ok(())

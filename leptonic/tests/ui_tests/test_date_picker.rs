@@ -4,10 +4,17 @@
 // Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
 // Upstream: react-aria/test/datepicker/useDatePicker.test.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/datepicker/DatePickerBase.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Date pickers, date fields and time fields beyond `date_field_tests`: closing on select or
+//! not, the pressed button and open state while open, a disabled picker, a programmatic value
+//! in an empty picker, required pickers and time fields with their errors, a range picker's
+//! placeholder time, Enter, held keys, deleting a partial field, the selection while another
+//! element has the focus, and fields outside en-US (German order, right-to-left segments and
+//! the isolated time, the segment styles following the locale).
+//! Spec: react-aria-components `DatePicker.test.js`, `DateRangePicker.test.js`,
+//! `DateField.test.js`, `TimeField.test.js`; react-aria `useDatePicker.test.tsx`;
+//! react-spectrum `DatePickerBase.test.js` (RTL arrows).
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
 use crate::{
@@ -15,48 +22,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Date pickers, date fields and time fields beyond `date_field_tests`: closing on select or
-/// not, the pressed button and open state while open, a disabled picker, a programmatic value
-/// in an empty picker, required pickers and time fields with their errors, a range picker's
-/// placeholder time, Enter, held keys, deleting a partial field, the selection while another
-/// element has the focus, and fields outside en-US (German order, right-to-left segments and
-/// the isolated time, the segment styles following the locale).
-/// Spec: react-aria-components `DatePicker.test.js`, `DateRangePicker.test.js`,
-/// `DateField.test.js`, `TimeField.test.js`; react-aria `useDatePicker.test.tsx`;
-/// react-spectrum `DatePickerBase.test.js` (RTL arrows).
-pub struct DatePickerTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DatePickerTests {
-    fn name(&self) -> Cow<'_, str> {
-        "date_picker_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/date-picker").await?;
-
-        cases!(
-            close_on_select(&page),
-            disabled_picker(&page),
-            programmatic_value(&page),
-            required_picker(&page),
-            required_time_field(&page),
-            range_placeholder_times(&page),
-            enter_does_nothing(&page),
-            held_keys(&page),
-            deleting_a_partial_field(&page),
-            autofill(&page),
-            selection_while_elsewhere(&page),
-            german_order(&page),
-            twelve_hour_clocks(&page),
-            right_to_left(&page),
-            switching_to_right_to_left(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/date-picker";
 
 /// The segment of `kind` (`month`, `day`, `hour`, ...) of the field in `#test-dp-<section>`.
 async fn segment(page: &Page<'_>, section: &str, kind: &str) -> Result<WebElement, Report> {
@@ -109,7 +75,8 @@ async fn input_text(page: &Page<'_>, section: &str) -> Result<String, Report> {
 
 /// "should support close on select = true/false", "should apply isPressed state to button when
 /// expanded", "should support data-open state".
-async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
+pub async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let picker = page
         .element("#test-dp-close-true .leptonic-DatePicker")
         .await?;
@@ -150,7 +117,8 @@ async fn close_on_select(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should disable button and date input when DatePicker is disabled".
-async fn disabled_picker(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_picker(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let open_button = button(page, "disabled").await?;
     assert_that!(open_button.is_enabled().await?).is_false();
     let group = page.element("#test-dp-disabled [role=group]").await?;
@@ -171,7 +139,8 @@ async fn disabled_picker(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `useDatePicker.test.tsx`, "should commit programmatically setValue when field is empty".
-async fn programmatic_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn programmatic_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(input_text(page, "empty").await?).contains("mm");
     page.element("#test-dp-empty-set").await?.click().await?;
     wait_for_value(page, "empty", "2020-02-03").await?;
@@ -205,7 +174,8 @@ async fn wait_for_description(
 /// RAC `DatePicker.test.js`, "supports validation errors": a required picker is invalid on
 /// submission, the first segment gets the focus; the error stays until the field is left with a
 /// value.
-async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
+pub async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#test-dp-required input[name=date]").await?;
     let group = page.element("#test-dp-required [role=group]").await?;
     let picker = page
@@ -251,7 +221,8 @@ async fn required_picker(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// RAC `TimeField.test.js`, "supports validation errors".
-async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
+pub async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page
         .element("#test-dp-time-required input[name=time]")
         .await?;
@@ -294,7 +265,8 @@ async fn required_time_field(page: &Page<'_>) -> Result<(), Report> {
 /// RAC `DateRangePicker.test.js`, "should set a placeholder time when closing" (closing on
 /// select gives a range of dates the placeholder's time), and "should support close on select =
 /// false" with times: the range waits for times, closing commits it with the placeholder's time.
-async fn range_placeholder_times(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_placeholder_times(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     button(page, "range-time").await?.click().await?;
     page.element("[role=dialog] [role=grid]").await?;
     page.element("[role=dialog] [role=button][aria-label*='Friday, January 6, 2023']")
@@ -346,7 +318,8 @@ async fn range_placeholder_times(page: &Page<'_>) -> Result<(), Report> {
 
 /// RAC `DateField.test.js`, "should do nothing when pressing enter": the focus stays and the
 /// form isn't submitted.
-async fn enter_does_nothing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn enter_does_nothing(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let year = segment(page, "keys", "year").await?;
     year.click().await?;
     page.wait_for_focus(&year).await?;
@@ -364,7 +337,8 @@ async fn enter_does_nothing(page: &Page<'_>) -> Result<(), Report> {
 
 /// RAC "should support repeat keydown events when holding an arrow key to navigate segments",
 /// "... when holding backspace across empty segments".
-async fn held_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn held_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let month = segment(page, "keys", "month").await?;
     month.click().await?;
     page.wait_for_focus(&month).await?;
@@ -382,7 +356,8 @@ async fn held_keys(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// RAC "should reset to placeholders when deleting a partially filled DateField".
-async fn deleting_a_partial_field(page: &Page<'_>) -> Result<(), Report> {
+pub async fn deleting_a_partial_field(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let month = segment(page, "empty-field", "month").await?;
     month.click().await?;
     page.wait_for_focus(&month).await?;
@@ -424,7 +399,8 @@ async fn fill_hidden_date_input(page: &Page<'_>, section: &str, value: &str) -> 
 /// RAC `DateField.test.js`/`DatePicker.test.js`, "should support autofill": a hidden date input
 /// (not focusable, hidden from assistive technology, not submitted) takes what the browser fills
 /// in.
-async fn autofill(page: &Page<'_>) -> Result<(), Report> {
+pub async fn autofill(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page
         .element("#test-dp-empty-field input[type=date]")
         .await?;
@@ -451,7 +427,8 @@ async fn autofill(page: &Page<'_>) -> Result<(), Report> {
 
 /// RAC "does not collapse the selection onto a segment while another element is focused": a
 /// selection left inside a segment doesn't take the focus from another element.
-async fn selection_while_elsewhere(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_while_elsewhere(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let before = page.element("#test-dp-keys-before").await?;
     before.click().await?;
     page.wait_for_focus(&before).await?;
@@ -470,7 +447,8 @@ async fn selection_while_elsewhere(page: &Page<'_>) -> Result<(), Report> {
 
 /// A German date field: day, month, year, two-digit day and month, typed in that order; its
 /// segments are named in German ("Tag").
-async fn german_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn german_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(segment_types(page, "de").await?).contains_exactly(["day", "month", "year"]);
     assert_that!(input_text(page, "de").await?).is_equal_to("05.06.2024");
     let day = segment(page, "de", "day").await?;
@@ -491,7 +469,8 @@ async fn german_order(page: &Page<'_>) -> Result<(), Report> {
 /// A 12-hour time field shows the locale's 12-hour clock as `Intl`'s `hour12: true` does
 /// (react-aria's `hourCycle: 'h12'`): German "12:30 AM" and, hour-only, "12 AM" (not the
 /// flexible day period "nachts"), Japanese "午前0:30" (h11).
-async fn twelve_hour_clocks(page: &Page<'_>) -> Result<(), Report> {
+pub async fn twelve_hour_clocks(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     for (section, hour, day_period) in [
         ("de-12h", "12", "AM"),
         ("de-12h-hour", "12", "AM"),
@@ -511,7 +490,8 @@ async fn twelve_hour_clocks(page: &Page<'_>) -> Result<(), Report> {
 
 /// A Hebrew date picker with a time: the time is isolated left to right, the segments are
 /// embedded left to right.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let text = input_text(page, "rtl").await?;
     // The time is isolated (LRI ... PDI), so that it reads hour:minute (the hour with or without
     // a leading zero).
@@ -569,7 +549,8 @@ async fn style_of(element: &WebElement) -> Result<String, Report> {
 
 /// Switching the locale to a right-to-left one embeds the segments left to right (the styles
 /// follow the locale).
-async fn switching_to_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn switching_to_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let day = segment(page, "switch", "day").await?;
     assert_that!(style_of(&day).await?).does_not_contain("unicode-bidi");
     page.element("#test-dp-switch-he").await?.click().await?;

@@ -1,46 +1,12 @@
 // Upstream: react-aria/test/focus/FocusScope.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `FocusScope` atom: auto focus, containment (Tab wrapping, clicks outside), focus
+//! restoration (nested scopes, fallbacks, cancelled restoration), select on Tab. Every case starts
+//! on a fresh page: a containing scope stays active otherwise.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
-
-/// The `FocusScope` atom: auto focus, containment (Tab wrapping, clicks outside), focus
-/// restoration (nested scopes, fallbacks, cancelled restoration), select on Tab. Every case starts
-/// on a fresh page: a containing scope stays active otherwise.
-pub struct FocusScopeTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusScopeTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_scope_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            auto_focus(&page),
-            tab_wrapping(&page),
-            shift_tab_wrapping(&page),
-            focus_restoration(&page),
-            nested_scopes(&page),
-            containment_blocks_escape(&page),
-            outer_to_inner_navigation(&page),
-            nested_restore_focuses_outermost(&page),
-            restore_fallback(&page),
-            dialog_from_menu(&page),
-            restore_on_blur(&page),
-            select_on_tab(&page),
-            tab_outside_the_scope_is_native(&page),
-            runtime_contain(&page),
-            cancelled_restore(&page),
-            tab_out_of_restoring_scope(&page),
-        );
-        Ok(())
-    }
-}
 
 /// Navigate to a fresh page and wait for the auto-focus scope to take focus.
 async fn goto(page: &Page<'_>) -> Result<(), Report> {
@@ -69,13 +35,13 @@ async fn press_to_focus(
 
 /// Auto-focus: on page load, the first button in the `auto_focus` scope has focus (checked by
 /// [`goto`]).
-async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn auto_focus(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     Ok(())
 }
 
 /// Tab cycles through the contained scope and wraps around.
-async fn tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-contain-btn-1").await?;
     press_to_focus(page, Key::Tab, "#test-fs-contain-btn-2").await?;
@@ -86,7 +52,7 @@ async fn tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Shift+Tab cycles backwards and wraps.
-async fn shift_tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
+pub async fn shift_tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-contain-btn-1").await?;
     press_to_focus(page, Key::Shift + Key::Tab, "#test-fs-contain-btn-3").await?;
@@ -95,7 +61,7 @@ async fn shift_tab_wrapping(page: &Page<'_>) -> Result<(), Report> {
 
 /// When a scope with `restore_focus` unmounts, focus returns to the element that had focus before
 /// the scope appeared.
-async fn focus_restoration(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_restoration(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let toggle = page.element("#test-fs-restore-toggle").await?;
 
@@ -110,7 +76,7 @@ async fn focus_restoration(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The inner scope's containment is respected; the outer scope doesn't take focus from it.
-async fn nested_scopes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_scopes(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-nested-inner-btn-1").await?;
     press_to_focus(page, Key::Tab, "#test-fs-nested-inner-btn-2").await?;
@@ -120,7 +86,7 @@ async fn nested_scopes(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Clicking outside a containing scope pulls focus back into the scope.
-async fn containment_blocks_escape(page: &Page<'_>) -> Result<(), Report> {
+pub async fn containment_blocks_escape(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let inside = click_to_focus(page, "#test-fs-contain-btn-1").await?;
     let outside = page.element("#test-fs-outside").await?;
@@ -144,7 +110,7 @@ async fn containment_blocks_escape(page: &Page<'_>) -> Result<(), Report> {
 
 /// When nested scopes (both with `restore_focus`) unmount, focus returns to the element that was
 /// focused before the outermost scope mounted.
-async fn nested_restore_focuses_outermost(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_restore_focuses_outermost(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let trigger = page.element("#test-fs-nested-restore-trigger").await?;
 
@@ -161,7 +127,7 @@ async fn nested_restore_focuses_outermost(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// Tab from the outer scope's button enters the inner scope.
-async fn outer_to_inner_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn outer_to_inner_navigation(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-nested-outer-btn").await?;
     press_to_focus(page, Key::Tab, "#test-fs-nested-inner-btn-1").await?;
@@ -171,7 +137,7 @@ async fn outer_to_inner_navigation(page: &Page<'_>) -> Result<(), Report> {
 /// Without a node to restore in the DOM, focus goes to the first tabbable element of the nearest
 /// ancestor scope; without one there, it stays on the body (upstream: "does not throw when there is
 /// no focusable element to restore focus to").
-async fn restore_fallback(page: &Page<'_>) -> Result<(), Report> {
+pub async fn restore_fallback(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     for (prefix, fallback) in [
         ("#test-fs-fallback", "#test-fs-fallback-other"),
@@ -195,7 +161,7 @@ async fn restore_fallback(page: &Page<'_>) -> Result<(), Report> {
 /// A dialog opened from a menu and rendered outside it restores focus to the menu's trigger (the
 /// item it was opened from is gone). Upstream: "tracks node to restore if the node to restore was
 /// removed in another part of the tree".
-async fn dialog_from_menu(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dialog_from_menu(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let open_menu = page.element("#test-fs-open-menu").await?;
     open_menu.focus().await?;
@@ -210,7 +176,7 @@ async fn dialog_from_menu(page: &Page<'_>) -> Result<(), Report> {
 /// Focus lost to the body (a script blurs the focused element) goes back to that element, not the
 /// first one in the scope. Upstream: "should restore focus to the last focused element in the
 /// scope on focus out".
-async fn restore_on_blur(page: &Page<'_>) -> Result<(), Report> {
+pub async fn restore_on_blur(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-contain-btn-1").await?;
     press_to_focus(page, Key::Tab, "#test-fs-contain-btn-2").await?;
@@ -222,7 +188,7 @@ async fn restore_on_blur(page: &Page<'_>) -> Result<(), Report> {
 
 /// Tabbing in a containing scope selects the text of the input it moves to (as the browser does).
 /// Upstream: "should select all text in input when tabbing".
-async fn select_on_tab(page: &Page<'_>) -> Result<(), Report> {
+pub async fn select_on_tab(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-select-input-1").await?;
     for next in [
@@ -255,7 +221,7 @@ async fn select_on_tab(page: &Page<'_>) -> Result<(), Report> {
 /// Tab with focus outside the active containing scope (here in a top layer, where focus may go)
 /// is left to the browser. Upstream: `useFocusContainment`'s keydown handler returns unless the
 /// focused element is in the scope.
-async fn tab_outside_the_scope_is_native(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_outside_the_scope_is_native(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     click_to_focus(page, "#test-fs-contain-btn-1").await?;
     click_to_focus(page, "#test-fs-top-layer-1").await?;
@@ -264,7 +230,7 @@ async fn tab_outside_the_scope_is_native(page: &Page<'_>) -> Result<(), Report> 
 }
 
 /// `contain` may change while the scope is mounted: Tab wraps only while it contains.
-async fn runtime_contain(page: &Page<'_>) -> Result<(), Report> {
+pub async fn runtime_contain(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let toggle = page.element("#test-fs-runtime-toggle").await?;
 
@@ -290,7 +256,7 @@ async fn runtime_contain(page: &Page<'_>) -> Result<(), Report> {
 /// event doesn't leave a scope around the node to restore. Upstream: "should allow restoration to
 /// be overridden with a custom event", "should not bubble focus scope restoration event out of
 /// nested focus scopes".
-async fn cancelled_restore(page: &Page<'_>) -> Result<(), Report> {
+pub async fn cancelled_restore(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     // Cancelled: focus stays on the body.
     page.element("#test-fs-cancel-show").await?.click().await?;
@@ -318,7 +284,7 @@ async fn cancelled_restore(page: &Page<'_>) -> Result<(), Report> {
 /// restore; Shift+Tab before it. Upstream: "should move focus to the element after the previously
 /// focused node on Tab", "should move focus to the previous element after the previously focused
 /// node on Shift+Tab".
-async fn tab_out_of_restoring_scope(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_out_of_restoring_scope(page: &Page<'_>) -> Result<(), Report> {
     goto(page).await?;
     let trigger = page.element("#test-fs-tab-trigger").await?;
     trigger.click().await?;

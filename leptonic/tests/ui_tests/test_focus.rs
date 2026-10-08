@@ -1,39 +1,16 @@
 // Upstream: react-aria/test/interactions/useFocus.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_focus`: focus and blur of the element itself (not its children), disabled, and a blur
+//! when the focused element becomes disabled. Every case starts on a fresh page.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// `use_focus`: focus and blur of the element itself (not its children), disabled, and a blur
-/// when the focused element becomes disabled. Every case starts on a fresh page.
-pub struct FocusTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            basic_focus(&page),
-            tab_focus(&page),
-            focus_change_count(&page),
-            child_focus_does_not_trigger_parent(&page),
-            blur_when_disabled_while_focused(&page),
-        );
-        Ok(())
-    }
-}
-
 const PATH: &str = "/hooks/focus";
 
 /// "handles focus events on the immediate target", "does not handle focus events if disabled".
-async fn basic_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn basic_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-focus-target").await?;
     let elsewhere = page.element("#test-focus-elsewhere").await?;
@@ -67,7 +44,7 @@ async fn basic_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The Tab key focuses the target.
-async fn tab_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-focus-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
@@ -85,7 +62,7 @@ async fn tab_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "does not handle focus events on children".
-async fn child_focus_does_not_trigger_parent(page: &Page<'_>) -> Result<(), Report> {
+pub async fn child_focus_does_not_trigger_parent(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let child = page.element("#test-focus-child").await?;
     let parent = page.element("#test-focus-parent").await?;
@@ -107,7 +84,7 @@ async fn child_focus_does_not_trigger_parent(page: &Page<'_>) -> Result<(), Repo
 }
 
 /// `on_focus_change` tracks focus/blur transitions.
-async fn focus_change_count(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_change_count(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element("#test-focus-target").await?;
     let elsewhere = page.element("#test-focus-elsewhere").await?;
@@ -127,7 +104,7 @@ async fn focus_change_count(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should fire onBlur when a focused element is disabled" (Firefox fires no blur then; the
 /// synthetic blur observer dispatches one), exactly once.
-async fn blur_when_disabled_while_focused(page: &Page<'_>) -> Result<(), Report> {
+pub async fn blur_when_disabled_while_focused(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let disable_me = page.element("#test-focus-disable-me").await?;
     let blur_count = page.element("#test-focus-disable-me-blur-count").await?;

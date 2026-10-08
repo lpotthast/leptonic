@@ -1,8 +1,11 @@
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Selection and actions of the table atoms: `selectionBehavior="replace"` (mouse and
+//! keyboard), `escapeKeyBehavior="none"`, `shouldSelectOnPressUp`, row actions, and columns that
+//! change while rows stay ("supports removing a column and adding it back", plus renaming,
+//! reordering, sortability and the selection mode). Spec: react-aria-components
+//! `Table.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,38 +14,6 @@ use crate::{
 };
 
 const PATH: &str = "/atoms/table-selection";
-
-/// Selection and actions of the table atoms: `selectionBehavior="replace"` (mouse and
-/// keyboard), `escapeKeyBehavior="none"`, `shouldSelectOnPressUp`, row actions, and columns that
-/// change while rows stay ("supports removing a column and adding it back", plus renaming,
-/// reordering, sortability and the selection mode). Spec: react-aria-components
-/// `Table.test.js`.
-pub struct TableSelectionTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TableSelectionTests {
-    fn name(&self) -> Cow<'_, str> {
-        "table_selection_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(PATH).await?;
-
-        cases!(
-            replace_selection_with_the_mouse(&page),
-            replace_selection_in_single_mode(&page),
-            replace_selection_with_the_keyboard(&page),
-            escape_without_clearing(&page),
-            select_on_press_down_or_up(&page),
-            row_actions(&page),
-            changing_columns(&page),
-            hover_and_focus_states(&page),
-        );
-
-        Ok(())
-    }
-}
 
 async fn table(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=grid][aria-label='{label}']"))
@@ -137,8 +108,9 @@ async fn selection_stays(
 /// "should not render checkboxes for selection with selectionBehavior=replace" and "should
 /// perform replace selection in highlight mode when not using modifier keys" / "should
 /// perform toggle selection in highlight mode when using modifier keys" (mouse).
-async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
+pub async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Report> {
     const REPLACE: &str = "Replace table";
+    page.goto_path(PATH).await?;
     let checkboxes = page
         .count("[role=grid][aria-label='Replace table'] input[type=checkbox]")
         .await?;
@@ -170,8 +142,9 @@ async fn replace_selection_with_the_mouse(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// "should perform selection with single selection" (mouse).
-async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Report> {
+pub async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Report> {
     const SINGLE: &str = "Single replace table";
+    page.goto_path(PATH).await?;
     let bootmgr = row(page, SINGLE, "bootmgr").await?;
     let program_files = row(page, SINGLE, "Program Files").await?;
     click_with_control(page, &bootmgr).await?;
@@ -185,7 +158,7 @@ async fn replace_selection_in_single_mode(page: &Page<'_>) -> Result<(), Report>
 
 /// Replace selection follows keyboard focus, from the first focused row on; Shift extends it
 /// ("keyboard" variants).
-async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     page.element("#test-ts-before-replace")
         .await?
@@ -208,8 +181,9 @@ async fn replace_selection_with_the_keyboard(page: &Page<'_>) -> Result<(), Repo
 }
 
 /// "should prevent Esc from clearing selection if escapeKeyBehavior is "none"".
-async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
     const ESCAPE: &str = "Escape table";
+    page.goto_path(PATH).await?;
     for (name, expected, changes) in [("Games", "1", 1), ("Program Files", "1,2", 2)] {
         row(page, ESCAPE, name)
             .await?
@@ -227,8 +201,9 @@ async fn escape_without_clearing(page: &Page<'_>) -> Result<(), Report> {
 /// "shouldSelectOnPressUp": without it, the press start selects; with it, the press end. With
 /// it, a row the browser would drag doesn't lose focus to the pressed cell: the cell drops its
 /// tabindex during the pointer down (useGridCell).
-async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
+pub async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
     const UP: &str = "Press up table";
+    page.goto_path(PATH).await?;
     let down = row(page, "Press down table", "Games").await?;
     page.driver
         .action_chain()
@@ -277,7 +252,8 @@ async fn select_on_press_down_or_up(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support row actions": the row is pressed while the pointer is down, and the press
 /// runs the action; Enter runs it too.
-async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
+pub async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let games = row(page, "Action table", "Games").await?;
     assert_that!(games.attr("data-pressed").await?).is_none();
     page.driver
@@ -303,8 +279,9 @@ async fn row_actions(page: &Page<'_>) -> Result<(), Report> {
 /// Columns change while the rows stay: hidden and shown again ("supports removing a column and
 /// adding it back"), renamed, moved, made sortable; the selection mode switches. Headers, kept
 /// cells and navigation follow.
-async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
+pub async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
     const COLUMNS: &str = "Columns table";
+    page.goto_path(PATH).await?;
     let expect_headers = |expected: Vec<&'static str>| async move {
         wait_for("the column headers")
             .observing(|| column_headers(page, COLUMNS))
@@ -385,7 +362,7 @@ async fn changing_columns(page: &Page<'_>) -> Result<(), Report> {
 /// `data-hovered` on interactive rows and their cells, and
 /// `data-focus-visible` on cells focused by keyboard (react-aria-components' `Row`, `Cell` and
 /// `Column` render states).
-async fn hover_and_focus_states(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_and_focus_states(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let games = row(page, "Replace table", "Games").await?;
     let name_cell = games.element("[role=rowheader]").await?;

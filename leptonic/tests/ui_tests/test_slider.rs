@@ -1,130 +1,27 @@
 // Upstream: react-aria-components/test/Slider.test.js @ 99e6102368
 // Upstream: react-aria/test/slider/useSliderThumb.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The slider atoms: a labelled group of range inputs (min, max, step, value, value text), the
+//! output, keyboard changes (arrows, Shift+arrows, PageUp/PageDown, Home/End) ending in
+//! `on_change_end`, thumbs bounded by their neighbors, track presses, dragging, vertical and
+//! disabled sliders, the fill, and value tooltips.
+//!
+//! Presses and drags on the track (react-aria's `useSlider.test.js`, "interactions on track using
+//! pointerEvents"): the closest thumb moves to the press and follows the pointer, stacked thumbs,
+//! disabled sliders, vertical and right-to-left tracks.
+//!
+//! The thumbs' keyboard (react-aria's `useSliderThumb.test.js`, "using KeyEvents"; react-aria-
+//! components' `Slider.test.js`), labels and attributes.
+//!
+//! Several thumbs (react-aria-components' `Slider.test.js`): three thumbs with an output, thumbs
+//! bound to app state, bound values out of the range, a thumb without a value.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::{expect, wait_for},
 };
-
-/// The slider atoms: a labelled group of range inputs (min, max, step, value, value text), the
-/// output, keyboard changes (arrows, Shift+arrows, PageUp/PageDown, Home/End) ending in
-/// `on_change_end`, thumbs bounded by their neighbors, track presses, dragging, vertical and
-/// disabled sliders, the fill, and value tooltips.
-pub struct SliderTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SliderTests {
-    fn name(&self) -> Cow<'_, str> {
-        "slider_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/slider").await?;
-
-        cases!(
-            labelled_group(&page),
-            fill(&page),
-            keyboard(&page),
-            track_click(&page),
-            dragging_state(&page),
-            two_thumbs(&page),
-            orientation(&page),
-            disabled_state(&page),
-            tooltips(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// Presses and drags on the track (react-aria's `useSlider.test.js`, "interactions on track using
-/// pointerEvents"): the closest thumb moves to the press and follows the pointer, stacked thumbs,
-/// disabled sliders, vertical and right-to-left tracks.
-pub struct SliderTrackTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SliderTrackTests {
-    fn name(&self) -> Cow<'_, str> {
-        "slider_track_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(INTERACTIONS).await?;
-
-        cases!(
-            closest_thumb_by_click(&page),
-            closest_thumb_by_drag(&page),
-            stacked_thumbs(&page),
-            many_stacked_thumbs(&page),
-            disabled_track(&page),
-            vertical_drag(&page),
-            right_to_left(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// The thumbs' keyboard (react-aria's `useSliderThumb.test.js`, "using KeyEvents"; react-aria-
-/// components' `Slider.test.js`), labels and attributes.
-pub struct SliderThumbTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SliderThumbTests {
-    fn name(&self) -> Cow<'_, str> {
-        "slider_thumb_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(INTERACTIONS).await?;
-
-        cases!(
-            keys(&page),
-            keys_vertical(&page),
-            repeated_page_keys(&page),
-            input_event(&page),
-            disabled_thumb(&page),
-            form_prop(&page),
-            thumb_labels(&page),
-            attributes(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// Several thumbs (react-aria-components' `Slider.test.js`): three thumbs with an output, thumbs
-/// bound to app state, bound values out of the range, a thumb without a value.
-pub struct SliderMultipleThumbsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SliderMultipleThumbsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "slider_multiple_thumbs_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(INTERACTIONS).await?;
-
-        cases!(
-            three_thumbs(&page),
-            controlled_thumbs(&page),
-            restricted_values(&page),
-            missing_value(&page),
-        );
-
-        Ok(())
-    }
-}
 
 // -- Helpers --------------------------------------------------------------------------------------
 
@@ -219,7 +116,8 @@ async fn click_track(page: &Page<'_>, name: &str, x: i64) -> Result<(), Report> 
 // -- SliderTests ----------------------------------------------------------------------------------
 
 /// A labelled group; the thumb's input is named by the label and has the range's attributes.
-async fn labelled_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn labelled_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let group = page.element("#test-slider-volume").await?;
     assert_that!(group.attr("role").await?)
         .get_some()
@@ -253,7 +151,8 @@ async fn labelled_group(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The fill runs from the offset (50) to the thumb (30).
-async fn fill(page: &Page<'_>) -> Result<(), Report> {
+pub async fn fill(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let fill = page.element("#test-slider-volume-fill").await?;
     assert_that!(fill.css_value("width").await?).is_equal_to("40px");
     Ok(())
@@ -261,7 +160,8 @@ async fn fill(page: &Page<'_>) -> Result<(), Report> {
 
 /// Clicking the label focuses the thumb; the keyboard changes the value by the step, Shift by a
 /// page, PageUp/PageDown by a page, Home/End to the ends. Each change ends.
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let group = page.element("#test-slider-volume").await?;
     let label_id = group.attr("aria-labelledby").await?.unwrap_or_default();
     let volume = inputs_in(page, "#test-slider-volume").await?.remove(0);
@@ -291,7 +191,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support clicking on the track to move the thumb".
-async fn track_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn track_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let track = page.element("#test-slider-volume-track").await?;
     page.driver
         .action_chain()
@@ -306,8 +207,10 @@ async fn track_click(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// "should support dragging state": the thumb follows the pointer.
-async fn dragging_state(page: &Page<'_>) -> Result<(), Report> {
+/// "should support dragging state": the thumb follows the pointer (from 30, 50px on the 200px
+/// track are 25).
+pub async fn dragging_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let thumb = page
         .element("#test-slider-volume .test-slider-thumb")
         .await?;
@@ -322,7 +225,7 @@ async fn dragging_state(page: &Page<'_>) -> Result<(), Report> {
     page.driver.action_chain().release().perform().await?;
     page.element("#test-slider-volume-output")
         .await?
-        .wait_for_inner_text("50")
+        .wait_for_inner_text("5")
         .await?;
     page.wait_for_count("#test-slider-volume .test-slider-thumb[data-dragging]", 0)
         .await?;
@@ -330,7 +233,8 @@ async fn dragging_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support two thumbs": each is bounded by the other; the output shows both.
-async fn two_thumbs(page: &Page<'_>) -> Result<(), Report> {
+pub async fn two_thumbs(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let price = page.element("[role=group][aria-label=Price]").await?;
     let thumbs = inputs_in(page, "[aria-label=Price]").await?;
     let (minimum, maximum) = (&thumbs[0], &thumbs[1]);
@@ -356,7 +260,8 @@ async fn two_thumbs(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support orientation": vertical arrows; "can be moved with keys (vertical)", and the
 /// arrows of the other axis.
-async fn orientation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn orientation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let vertical = inputs_in(page, "[aria-label=Vertical]").await?.remove(0);
     assert_that!(vertical.attr("aria-orientation").await?)
         .get_some()
@@ -374,7 +279,8 @@ async fn orientation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support disabled state".
-async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let disabled = page.element("[role=group][aria-label=Disabled]").await?;
     assert_that!(disabled.attr("data-disabled").await?).is_some();
     let disabled_input = inputs_in(page, "[aria-label=Disabled]").await?.remove(0);
@@ -383,7 +289,8 @@ async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tooltips: always visible, or while hovered.
-async fn tooltips(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tooltips(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/slider").await?;
     let always = page.element("[aria-label=Always] .tooltip").await?;
     assert_that!(always.attr("data-visible").await?).is_some();
     assert_that!(always.inner_text().await?).is_equal_to("30");
@@ -400,7 +307,8 @@ async fn tooltips(page: &Page<'_>) -> Result<(), Report> {
 // -- SliderTrackTests -----------------------------------------------------------------------------
 
 /// "should allow you to set value of closest thumb by clicking on track".
-async fn closest_thumb_by_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn closest_thumb_by_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let log = page.element("#track-log").await?;
     click_track(page, "track", 40).await?;
     log.wait_for_inner_text("change:[20, 80];end:[20, 80]")
@@ -412,7 +320,8 @@ async fn closest_thumb_by_click(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "... by dragging on track": changes while dragging, the end on release.
-async fn closest_thumb_by_drag(page: &Page<'_>) -> Result<(), Report> {
+pub async fn closest_thumb_by_drag(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let track = track_of(page, "drag").await?;
     page.driver
         .action_chain()
@@ -447,7 +356,8 @@ async fn closest_thumb_by_drag(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "... before thumbs when thumbs stacked", "... after thumbs when thumbs stacked".
-async fn stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
+pub async fn stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     click_track(page, "stacked-before", 40).await?;
     wait_for_last(page, "stacked-before", "end", "[20, 40]").await?;
     click_track(page, "stacked-after", 120).await?;
@@ -457,7 +367,8 @@ async fn stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
 
 /// "... before thumbs when many thumbs and stacked", "... after thumbs when many thumbs and
 /// stacked".
-async fn many_stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
+pub async fn many_stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     click_track(page, "many-before", 140).await?;
     wait_for_last(page, "many-before", "end", "[25, 25, 50, 70, 75]").await?;
     click_track(page, "many-before", 40).await?;
@@ -470,7 +381,8 @@ async fn many_stacked_thumbs(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not allow you to set value if disabled".
-async fn disabled_track(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_track(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let track = track_of(page, "disabled").await?;
     page.driver
         .action_chain()
@@ -492,7 +404,8 @@ async fn disabled_track(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "... by dragging on track (vertical)": the value grows upwards.
-async fn vertical_drag(page: &Page<'_>) -> Result<(), Report> {
+pub async fn vertical_drag(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let track = track_of(page, "vertical").await?;
     page.driver
         .action_chain()
@@ -520,7 +433,8 @@ async fn vertical_drag(page: &Page<'_>) -> Result<(), Report> {
 
 /// Right to left: the track starts on the right; the arrow keys follow the reading direction
 /// (Left increases).
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     click_track(page, "rtl", 140).await?;
     wait_for_last(page, "rtl", "end", "[30, 80]").await?;
     let thumb = page.element("#rtl-track .thumb").await?;
@@ -543,7 +457,8 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
 
 /// "can be moved with keys": each key changes and ends. All four arrows step a horizontal
 /// slider: Up increases, Down decreases.
-async fn keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let keys = inputs_of(page, "keys").await?;
     let log = page.element("#keys-log").await?;
     keys[0].focus().await?;
@@ -560,7 +475,8 @@ async fn keys(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "can be moved with keys (vertical)": Right and Up increase, Down and Left decrease.
-async fn keys_vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keys_vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let vertical = inputs_of(page, "keys-vertical").await?;
     vertical[0].focus().await?;
     page.send_keys(Key::Right).await?;
@@ -576,7 +492,8 @@ async fn keys_vertical(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support repeat keydown events when holding Page Up/Page Down".
-async fn repeated_page_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn repeated_page_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let paged = inputs_of(page, "page").await?;
     paged[0].focus().await?;
     // A keydown and two repeats: three pages of 10.
@@ -589,7 +506,8 @@ async fn repeated_page_keys(page: &Page<'_>) -> Result<(), Report> {
 
 /// The `input` event (assistive technology sets the value): the state follows, and the property
 /// keeps following the state afterwards.
-async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let keys = inputs_of(page, "keys").await?;
     keys[0].virtual_input("42").await?;
     wait_for_last(page, "keys", "change", "[42]").await?;
@@ -600,7 +518,8 @@ async fn input_event(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A disabled thumb: not changed by track presses near it, its input disabled.
-async fn disabled_thumb(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_thumb(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let thumb_disabled = inputs_of(page, "thumb-disabled").await?;
     assert_that!(thumb_disabled[0].is_enabled().await?).is_true();
     assert_that!(thumb_disabled[1].is_enabled().await?).is_false();
@@ -612,7 +531,8 @@ async fn disabled_thumb(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support form prop".
-async fn form_prop(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_prop(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let form = inputs_of(page, "form").await?;
     assert_that!(form[0].attr("form").await?)
         .get_some()
@@ -625,7 +545,8 @@ async fn form_prop(page: &Page<'_>) -> Result<(), Report> {
 
 /// Labels ("should have the right labels with Slider thumb label", "... thumb aria-label"): a
 /// thumb's own `Label` labels its input (`for`), before the slider's.
-async fn thumb_labels(page: &Page<'_>) -> Result<(), Report> {
+pub async fn thumb_labels(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let group = page.element("#labels").await?;
     let slider_label = group.attr("aria-labelledby").await?.unwrap_or_default();
     let labels = inputs_in(page, "[role=group]#labels").await?;
@@ -654,7 +575,8 @@ async fn thumb_labels(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Attributes: exact decimals (no `f64` noise), required, invalid, error message and details.
-async fn attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let attributes = inputs_of(page, "attributes").await?;
     let input = &attributes[0];
     assert_that!(input.attr("step").await?)
@@ -687,7 +609,8 @@ async fn attributes(page: &Page<'_>) -> Result<(), Report> {
 // -- SliderMultipleThumbsTests --------------------------------------------------------------------
 
 /// "should support three thumbs".
-async fn three_thumbs(page: &Page<'_>) -> Result<(), Report> {
+pub async fn three_thumbs(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let three = inputs_of(page, "three").await?;
     assert_that!(values_of(&three).await?).contains_exactly(["30", "60", "80"]);
     page.element("#three-output")
@@ -698,7 +621,8 @@ async fn three_thumbs(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support multiple thumbs (controlled)".
-async fn controlled_thumbs(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled_thumbs(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let controlled = inputs_of(page, "controlled").await?;
     assert_that!(values_of(&controlled).await?).contains_exactly(["30", "60"]);
     page.element("#controlled-reset").await?.click().await?;
@@ -732,7 +656,8 @@ async fn controlled_thumbs(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Bound values out of the range render within it (react-stately's `restrictValues`).
-async fn restricted_values(page: &Page<'_>) -> Result<(), Report> {
+pub async fn restricted_values(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let restricted = inputs_of(page, "restricted").await?;
     assert_that!(values_of(&restricted).await?).contains_exactly(["0", "100"]);
     page.element("#restricted-output")
@@ -743,7 +668,8 @@ async fn restricted_values(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A thumb without a value renders (at the minimum) instead of panicking.
-async fn missing_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn missing_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(INTERACTIONS).await?;
     let missing = inputs_of(page, "missing").await?;
     assert_that!(missing).has_length(2);
     assert_that!(missing[0].value().await?)

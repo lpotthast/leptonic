@@ -1,9 +1,12 @@
 // Upstream: react-aria/test/overlays/useOverlay.test.js @ 99e6102368
 // Upstream: react-aria/test/overlays/usePreventScroll.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_overlay`: interacting outside closes a dismissable overlay unless
+//! `should_close_on_interact_outside` says no, a non-dismissable one only by Escape; with keyboard
+//! dismissal disabled, Escape reaches the page; only the top-most overlay closes. Nested modals:
+//! only the top one closes, the outer one becomes usable again, and the page stays unscrollable
+//! until the last one closed.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,34 +14,7 @@ use crate::{
     polling::expect,
 };
 
-/// `use_overlay`: interacting outside closes a dismissable overlay unless
-/// `should_close_on_interact_outside` says no, a non-dismissable one only by Escape; with keyboard
-/// dismissal disabled, Escape reaches the page; only the top-most overlay closes. Nested modals:
-/// only the top one closes, the outer one becomes usable again, and the page stays unscrollable
-/// until the last one closed.
-pub struct OverlayTests {}
-
-#[async_trait]
-impl BrowserTest<str> for OverlayTests {
-    fn name(&self) -> Cow<'_, str> {
-        "overlay_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/overlay").await?;
-
-        cases!(
-            dismissable(&page),
-            not_dismissable(&page),
-            keyboard_dismiss_disabled(&page),
-            top_most_only(&page),
-            nested_modals(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/overlay";
 
 /// The overlay `id`, once it is shown.
 async fn shown_overlay(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -75,7 +51,8 @@ async fn click_page_corner(page: &Page<'_>) -> Result<(), Report> {
 /// shouldCloseOnInteractOutside returns true", "should not hide the overlay when clicking outside
 /// if shouldCloseOnInteractOutside returns false", "should hide the overlay when pressing the
 /// escape key".
-async fn dismissable(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dismissable(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let open = page.element("#test-ov-open-a").await?;
     let closes = page.element("#test-ov-a-closes").await?;
     let outside = page.element("#test-ov-outside").await?;
@@ -103,7 +80,8 @@ async fn dismissable(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should not hide the overlay when clicking outside if isDismissable is false", "should still
 /// hide the overlay when pressing the escape key if isDismissable is false".
-async fn not_dismissable(page: &Page<'_>) -> Result<(), Report> {
+pub async fn not_dismissable(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let closes = page.element("#test-ov-b-closes").await?;
     page.element("#test-ov-open-b").await?.click().await?;
     let overlay = shown_overlay(page, "test-ov-b").await?;
@@ -117,7 +95,8 @@ async fn not_dismissable(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `isKeyboardDismissDisabled`: Escape doesn't close the overlay and reaches the page.
-async fn keyboard_dismiss_disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_dismiss_disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let closes = page.element("#test-ov-c-closes").await?;
     let escapes = page.element("#test-ov-escapes").await?;
     page.element("#test-ov-open-c").await?.click().await?;
@@ -137,7 +116,8 @@ async fn keyboard_dismiss_disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should only hide the top-most overlay".
-async fn top_most_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn top_most_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let a_closes = page.element("#test-ov-a-closes").await?;
     let outside = page.element("#test-ov-outside").await?;
     let a_closes_before: u32 = a_closes.inner_text().await?.parse()?;
@@ -161,10 +141,11 @@ async fn top_most_only(page: &Page<'_>) -> Result<(), Report> {
 /// Nested modals: "only hides the top-most overlay" for modals, the outer modal shown and usable
 /// again when the inner one closes, and `use_prevent_scroll` counting nested modals ("should work
 /// with nested modals" in `usePreventScroll.test.js`).
-async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_modals(page: &Page<'_>) -> Result<(), Report> {
     const OUTER: &str = "[role=dialog][aria-label=Outer]";
     const INNER: &str = "[role=dialog][aria-label=Inner]";
     const OUTER_INERT: &str = "[inert] .test-ov-outer-backdrop, .test-ov-outer-backdrop[inert]";
+    page.goto_path(PATH).await?;
     let open = page.element("#test-ov-modal-open").await?;
     open.click().await?;
     page.element(OUTER).await?;

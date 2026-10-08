@@ -1,33 +1,13 @@
 // Upstream: react-aria/test/menu/useMenuTrigger.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `useMenuTrigger`: the trigger's ARIA attributes, opening on mouse down (once), and the focus
+//! strategy of keyboard opening.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// `useMenuTrigger`: the trigger's ARIA attributes, opening on mouse down (once), and the focus
-/// strategy of keyboard opening.
-pub struct MenuTriggerTests {}
-
-#[async_trait]
-impl BrowserTest<str> for MenuTriggerTests {
-    fn name(&self) -> Cow<'_, str> {
-        "menu_trigger_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/menu-trigger").await?;
-        cases!(
-            aria_attributes(&page),
-            mouse_press_opens_once(&page),
-            keyboard_opens_with_focus_strategy(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/menu-trigger";
 
 const TRIGGER: &str = "[data-testid=trigger]";
 
@@ -42,7 +22,8 @@ async fn close(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The trigger announces a collapsed menu and has the id that labels the menu.
-async fn aria_attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     assert_that!(trigger.attr("aria-haspopup").await?)
         .get_some()
@@ -59,7 +40,8 @@ async fn aria_attributes(page: &Page<'_>) -> Result<(), Report> {
 /// The trigger opens on mouse down. With a single press state machine on the element, the
 /// following click does not toggle it closed again. Mouse users get the menu focused, not its
 /// first item.
-async fn mouse_press_opens_once(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mouse_press_opens_once(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     let is_open = page.element("#test-mt-is-open").await?;
     trigger.click().await?;
@@ -80,7 +62,8 @@ async fn mouse_press_opens_once(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// ArrowDown and Enter open with the first item focused, ArrowUp with the last; Space opens.
-async fn keyboard_opens_with_focus_strategy(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_opens_with_focus_strategy(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     let before = page.element("#test-mt-before").await?;
     let is_open = page.element("#test-mt-is-open").await?;

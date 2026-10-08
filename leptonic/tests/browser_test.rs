@@ -1,7 +1,8 @@
 //! Browser integration tests.
 //!
 //! Starts `testing/test-app` through `cargo leptos serve` and drives it with Chrome for Testing.
-//! Every test gets a fresh WebDriver session. A failing test fails `cargo test`.
+//! Every case is a test of its own (`cases`), run in a fresh or reset WebDriver session. A failing
+//! test fails `cargo test`.
 //!
 //! Every test's timing is logged when it finishes, and a summary (slowest tests, slowest steps,
 //! time spent on sessions) is printed at the end. The `PageActions` helpers (navigation, waits,
@@ -14,15 +15,16 @@
 //! - `BROWSER_TEST_DRIVER_OUTPUT=1`: forward chromedriver output.
 //! - `BROWSER_TEST_FILTER=<text>`: only run the tests whose name contains `<text>`.
 //! - `BROWSER_TEST_LOG_STEPS=1`: log every step of every test with its duration.
+//! - `BROWSER_TEST_SESSION_REUSE=0`: give every test a fresh browser instead of resetting the one
+//!   of the test before.
 //! - `BROWSER_TEST_PARALLELISM=<n>`: how many tests run at the same time (default 4, `1`:
 //!   sequential, e.g. with `BROWSER_TEST_VISIBLE=1`).
 #![cfg(not(target_arch = "wasm32"))]
 
-mod polling;
-#[macro_use]
 mod cases;
 mod common;
 mod pages;
+mod polling;
 mod ui_tests;
 
 use std::{
@@ -32,7 +34,7 @@ use std::{
 
 use browser_test::{
     BrowserTestRunner, Cancellation, ChromeProfilesDir, DriverOutput, FailurePolicy, Parallelism,
-    Pause, StderrSummary, Timeouts, Visibility, thirtyfour::ChromiumLikeCapabilities,
+    Pause, SessionReuse, StderrSummary, Timeouts, Visibility, thirtyfour::ChromiumLikeCapabilities,
 };
 use leptos_browser_test::{LeptosTestAppConfig, Report};
 
@@ -72,7 +74,7 @@ async fn browser_tests() -> Result<(), Report> {
 
 /// `BROWSER_TEST_PARALLELISM`, default 4. An invalid value is an error.
 fn parallelism() -> Result<Parallelism, Report> {
-    Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(4)))
+    Ok(Parallelism::from_env()?.unwrap_or(Parallelism::parallel(8)))
 }
 
 /// A runner with the settings of the `BROWSER_TEST_*` variables. An invalid value is an error.
@@ -95,6 +97,10 @@ fn runner() -> Result<BrowserTestRunner, Report> {
             Ok(())
         })
         .with_failure_policy(FailurePolicy::RunAll)
+        // Every case is a test of its own (`cases`): a passed test's browser is reset and runs the
+        // next test instead of starting a new one. `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser
+        // per test.
+        .with_session_reuse(SessionReuse::from_env()?.unwrap_or(SessionReuse::enabled()))
         .with_visibility(Visibility::from_env()?.unwrap_or_default())
         .with_pause(Pause::from_env()?.unwrap_or_default())
         .with_driver_output(DriverOutput::from_env()?.unwrap_or_default())

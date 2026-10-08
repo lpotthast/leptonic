@@ -3,65 +3,36 @@
 // Upstream: react-aria/test/calendar/useCalendar.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/calendar/RangeCalendar.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/calendar/Calendar.ssr.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the calendar hooks (through the calendar atoms): ARIA structure and labels,
+//! selection by press and keyboard, keyboard navigation (month, week and day views, pages and
+//! years), the previous/next buttons, min/max, unavailable dates, disabled, read-only and
+//! invalid calendars, several months, the first day of the week, and range selection by
+//! presses, keyboard and dragging.
+//! Spec: react-aria-components `Calendar.test.js`, `RangeCalendar.test.tsx`; react-aria
+//! `useCalendar.test.js`.
+//!
+//! Range selection by touch (react-spectrum `RangeCalendar.test.js`, "touch"): quick taps start
+//! and finish a range, dragging after the press delay selects one, and a touch that turns into
+//! a scroll doesn't finish a range being selected.
+//!
+//! A calendar without a value or focused date shows today (react-spectrum `Calendar.ssr.test.js`
+//! renders it on the server). The server's today may be another date than the browser's (its
+//! time zone): the page hydrates with the server's date, then the calendar moves to the
+//! browser's today, so the tabbable date is the one marked as today.
+//!
+//! The views and paging of calendars, their pickers and announcements: `pageBehavior: single`
+//! (`useCalendar.test.js`, "pagination"), a two-week view, a fixed number of week rows, held arrow
+//! keys, a changing visible duration, month and year pickers (RAC `Calendar.test.js`,
+//! `RangeCalendar.test.tsx`), the live announcements and the commit behaviors of a range being
+//! selected (react-spectrum `RangeCalendar.test.js`, "announcing", "pointer events").
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
 use crate::{
     pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath},
     polling::{expect, wait_for},
 };
-
-/// Behavior of the calendar hooks (through the calendar atoms): ARIA structure and labels,
-/// selection by press and keyboard, keyboard navigation (month, week and day views, pages and
-/// years), the previous/next buttons, min/max, unavailable dates, disabled, read-only and
-/// invalid calendars, several months, the first day of the week, and range selection by
-/// presses, keyboard and dragging.
-/// Spec: react-aria-components `Calendar.test.js`, `RangeCalendar.test.tsx`; react-aria
-/// `useCalendar.test.js`.
-pub struct CalendarTests {}
-
-#[async_trait]
-impl BrowserTest<str> for CalendarTests {
-    fn name(&self) -> Cow<'_, str> {
-        "calendar_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/calendar").await?;
-
-        cases!(
-            structure(&page),
-            selection_by_press(&page),
-            keyboard_navigation(&page),
-            previous_next_buttons(&page),
-            min_max(&page),
-            unavailable(&page),
-            disabled(&page),
-            read_only(&page),
-            invalid(&page),
-            two_months(&page),
-            week_view(&page),
-            day_view(&page),
-            first_day_of_week(&page),
-            labelled_by_another_element(&page),
-            right_to_left(&page),
-            setting_the_focused_date_keeps_the_focus(&page),
-            range_by_press(&page),
-            range_by_keyboard(&page),
-            range_by_dragging(&page),
-            range_committed_by_an_outside_press(&page),
-            controlled_range_cleared(&page),
-            unavailable_dates_depending_on_the_anchor(&page),
-            range_unavailable(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// The button of the date `label` ("Wednesday, June 5, 2019") in the calendar `name`: its label
 /// is the date, possibly with additions ("Today, ", " selected", ", First available date", a
@@ -166,7 +137,8 @@ async fn press_keys(page: &Page<'_>, keys: &[Key]) -> Result<(), Report> {
 /// The calendar is labelled with its label and month, so is its grid; dates are buttons in grid
 /// cells, labelled with the full date (and "selected"); only the focused date is tabbable; the
 /// weekday header is hidden from assistive technology; dates of other months show, disabled.
-async fn structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let calendar = page
         .element("#test-calendar-basic [role=application]")
         .await?;
@@ -227,7 +199,8 @@ async fn structure(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Pressing a date selects and focuses it.
-async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june17 = date(page, "basic", "Monday, June 17, 2019").await?;
     june17.click().await?;
     wait_for_value(page, "basic", "2019-06-17").await?;
@@ -247,7 +220,8 @@ async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
 
 /// Arrows move by a day and a week, Page Up/Down by a month (with Shift: a year), Home/End to
 /// the month's ends; leaving the month pages; Enter selects.
-async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     enter(page, "basic").await?;
     expect_focus(page, "basic", "Wednesday, June 5, 2019").await?;
 
@@ -299,7 +273,8 @@ async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The buttons page by a month; the focused date moves along.
-async fn previous_next_buttons(page: &Page<'_>) -> Result<(), Report> {
+pub async fn previous_next_buttons(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     // Keyboard focus shows on the buttons.
     page.element("#test-calendar-basic-before")
         .await?
@@ -329,7 +304,8 @@ async fn previous_next_buttons(page: &Page<'_>) -> Result<(), Report> {
 
 /// Dates outside min/max are disabled, the first and last available dates say so, and the
 /// buttons can't page past them.
-async fn min_max(page: &Page<'_>) -> Result<(), Report> {
+pub async fn min_max(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june9 = date(page, "min-max", "Sunday, June 9, 2019").await?;
     assert_that!(june9.attr("aria-disabled").await?)
         .get_some()
@@ -373,7 +349,8 @@ async fn min_max(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Unavailable dates are marked and can't be selected, neither by press nor by keyboard.
-async fn unavailable(page: &Page<'_>) -> Result<(), Report> {
+pub async fn unavailable(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june8 = date(page, "unavailable", "Saturday, June 8, 2019").await?;
     assert_that!(june8.attr("data-unavailable").await?)
         .get_some()
@@ -398,7 +375,8 @@ async fn unavailable(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A disabled calendar: the grid says so, no date is tabbable or selectable.
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let grid = grids(page, "disabled").await?.swap_remove(0);
     assert_that!(grid.attr("aria-disabled").await?)
         .get_some()
@@ -429,7 +407,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 
 /// A read-only calendar: the grid says so; dates can be navigated with the keyboard, but
 /// neither presses nor Enter select.
-async fn read_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let grid = grids(page, "read-only").await?.swap_remove(0);
     assert_that!(grid.attr("aria-readonly").await?)
         .get_some()
@@ -450,7 +429,8 @@ async fn read_only(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// An invalid calendar: its selected date is marked invalid and described by the error message.
-async fn invalid(page: &Page<'_>) -> Result<(), Report> {
+pub async fn invalid(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let calendar = page
         .element("#test-calendar-invalid [role=application]")
         .await?;
@@ -481,7 +461,8 @@ async fn invalid(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Two months: a grid per month, the calendar labelled with both; paging moves both.
-async fn two_months(page: &Page<'_>) -> Result<(), Report> {
+pub async fn two_months(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let calendar = page
         .element("#test-calendar-two-months [role=application]")
         .await?;
@@ -516,7 +497,8 @@ async fn two_months(page: &Page<'_>) -> Result<(), Report> {
 
 /// A week view (`useCalendar.test.js`, "visibleDuration: 1 week"): arrows page by a week when
 /// leaving it, Home/End go to its ends.
-async fn week_view(page: &Page<'_>) -> Result<(), Report> {
+pub async fn week_view(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     assert_that!(grid_label(page, "week").await?)
         .get_some()
         .is_equal_to("week, June 2, 2019 to June 8, 2019");
@@ -540,7 +522,8 @@ async fn week_view(page: &Page<'_>) -> Result<(), Report> {
 
 /// A view of three days (`useCalendar.test.js`, "visibleDuration: 3 days"): centered on the
 /// selected date, paging by three days.
-async fn day_view(page: &Page<'_>) -> Result<(), Report> {
+pub async fn day_view(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     assert_that!(grid_label(page, "days").await?)
         .get_some()
         .is_equal_to("days, June 4, 2019 to June 6, 2019");
@@ -559,7 +542,8 @@ async fn day_view(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The first day of the week (`useCalendar.test.js`, "firstDayOfWeek").
-async fn first_day_of_week(page: &Page<'_>) -> Result<(), Report> {
+pub async fn first_day_of_week(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let header = page.element("#test-calendar-monday th").await?;
     assert_that!(header.inner_text().await?).is_equal_to("M");
     let first = page
@@ -573,7 +557,8 @@ async fn first_day_of_week(page: &Page<'_>) -> Result<(), Report> {
 
 /// A range by two presses: the first starts it (and highlights while hovering), the second
 /// finishes it; the ends are marked; the ends are labelled with the range.
-async fn range_by_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_by_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june5 = date(page, "range", "Wednesday, June 5, 2019").await?;
     assert_that!(june5.attr("data-selection-start").await?)
         .get_some()
@@ -619,37 +604,39 @@ async fn range_by_press(page: &Page<'_>) -> Result<(), Report> {
 
 /// A range with the keyboard: Enter starts it (moving on by a day), Enter finishes it, Escape
 /// cancels a started range.
-async fn range_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     // The pointer away from the dates: while a range is started, hovering a date highlights it
     // (and moves the focus there), also when the layout moves a date under a resting pointer.
     let heading = page.element("h1").await?;
     heading.hover().await?;
-    // The focus returns to the last focused date.
+    // The focus starts on the selected range's start.
     enter(page, "range").await?;
-    expect_focus(page, "range", "Friday, June 14, 2019").await?;
-    press_keys(page, &[Key::Enter]).await?;
-    expect_focus(page, "range", "Saturday, June 15, 2019").await?;
+    expect_focus(page, "range", "Wednesday, June 5, 2019").await?;
+    press_keys(page, &[Key::Left, Key::Enter]).await?;
+    expect_focus(page, "range", "Wednesday, June 5, 2019").await?;
     press_keys(page, &[Key::Right, Key::Enter]).await?;
-    wait_for_value(page, "range", "2019-06-14 - 2019-06-16").await?;
+    wait_for_value(page, "range", "2019-06-04 - 2019-06-06").await?;
 
     press_keys(page, &[Key::Down, Key::Enter, Key::Right]).await?;
-    expect_focus(page, "range", "Tuesday, June 25, 2019").await?;
-    let june25 = date(page, "range", "Tuesday, June 25, 2019").await?;
-    june25.wait_for_attr("data-selected", Some("true")).await?;
+    expect_focus(page, "range", "Saturday, June 15, 2019").await?;
+    let june15 = date(page, "range", "Saturday, June 15, 2019").await?;
+    june15.wait_for_attr("data-selected", Some("true")).await?;
     press_keys(page, &[Key::Escape]).await?;
-    june25.wait_for_attr("data-selected", None).await?;
+    june15.wait_for_attr("data-selected", None).await?;
     value(page, "range")
         .await?
-        .inner_text_stays("2019-06-14 - 2019-06-16")
+        .inner_text_stays("2019-06-04 - 2019-06-06")
         .await?;
 
     press_keys(page, &[Key::Enter, Key::Right, Key::Enter]).await?;
-    wait_for_value(page, "range", "2019-06-25 - 2019-06-27").await?;
+    wait_for_value(page, "range", "2019-06-15 - 2019-06-17").await?;
     Ok(())
 }
 
 /// A range by dragging from one date to another.
-async fn range_by_dragging(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_by_dragging(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june3 = date(page, "range", "Monday, June 3, 2019").await?;
     let june6 = date(page, "range", "Thursday, June 6, 2019").await?;
     page.driver
@@ -678,7 +665,8 @@ async fn range_by_dragging(page: &Page<'_>) -> Result<(), Report> {
 
 /// Without non-contiguous ranges, a range can't span unavailable dates: after starting one, the
 /// dates beyond the next unavailable date are disabled.
-async fn range_unavailable(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_unavailable(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june11 = date(page, "range-unavailable", "Tuesday, June 11, 2019").await?;
     june11.click().await?;
     let june17 = date(page, "range-unavailable", "Monday, June 17, 2019").await?;
@@ -694,7 +682,8 @@ async fn range_unavailable(page: &Page<'_>) -> Result<(), Report> {
 
 /// A calendar labelled by another element as well ("should support aria props on the
 /// Calendar"): calendar and grid list it, every referenced id exists.
-async fn labelled_by_another_element(page: &Page<'_>) -> Result<(), Report> {
+pub async fn labelled_by_another_element(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let calendar = page
         .element("#test-calendar-labelled [role=application]")
         .await?;
@@ -715,7 +704,8 @@ async fn labelled_by_another_element(page: &Page<'_>) -> Result<(), Report> {
 
 /// A started range is committed when the pointer is released outside the dates (the default
 /// commit behavior `Select`).
-async fn range_committed_by_an_outside_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_committed_by_an_outside_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     date(page, "range", "Tuesday, June 11, 2019")
         .await?
         .click()
@@ -732,7 +722,8 @@ async fn range_committed_by_an_outside_press(page: &Page<'_>) -> Result<(), Repo
 }
 
 /// In a right-to-left locale, the left arrow moves to the next day.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     enter(page, "rtl").await?;
     page.wait_for_focus(&day_of_month(page, "rtl", 5).await?)
         .await?;
@@ -757,7 +748,8 @@ async fn day_of_month(page: &Page<'_>, name: &str, day: u8) -> Result<WebElement
 
 /// Moving the focused date from outside ("should not become focused just by setting the focused
 /// date") changes the tabbable date but leaves the browser's focus where it is.
-async fn setting_the_focused_date_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn setting_the_focused_date_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let set = page.element("#test-calendar-focus-set").await?;
     set.click().await?;
     let june20 = date(page, "focus", "Thursday, June 20, 2019").await?;
@@ -767,22 +759,24 @@ async fn setting_the_focused_date_keeps_the_focus(page: &Page<'_>) -> Result<(),
 }
 
 /// A controlled range cleared from outside shows no selection.
-async fn controlled_range_cleared(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled_range_cleared(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     page.element("#test-calendar-range-clear")
         .await?
         .click()
         .await?;
     wait_for_value(page, "range", "none").await?;
-    let june11 = date(page, "range", "Tuesday, June 11, 2019").await?;
-    june11.wait_for_attr("data-selected", None).await?;
-    assert_that!(june11.attr("data-selection-start").await?).is_none();
+    let june5 = date(page, "range", "Wednesday, June 5, 2019").await?;
+    june5.wait_for_attr("data-selected", None).await?;
+    assert_that!(june5.attr("data-selection-start").await?).is_none();
     assert_that!(page.count("#test-calendar-range [data-selected]").await?).is_equal_to(0);
     Ok(())
 }
 
 /// Unavailable dates may depend on the anchor of a range being selected ("should allow changing
 /// the unavailable dates based on the anchor date"): here, dates more than a week away.
-async fn unavailable_dates_depending_on_the_anchor(page: &Page<'_>) -> Result<(), Report> {
+pub async fn unavailable_dates_depending_on_the_anchor(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june18 = date(page, "range-week", "Tuesday, June 18, 2019").await?;
     assert_that!(june18.attr("data-unavailable").await?).is_none();
     date(page, "range-week", "Monday, June 10, 2019")
@@ -798,31 +792,6 @@ async fn unavailable_dates_depending_on_the_anchor(page: &Page<'_>) -> Result<()
     wait_for_value(page, "range-week", "2019-06-10 - 2019-06-17").await?;
     june18.wait_for_attr("data-unavailable", None).await?;
     Ok(())
-}
-
-/// Range selection by touch (react-spectrum `RangeCalendar.test.js`, "touch"): quick taps start
-/// and finish a range, dragging after the press delay selects one, and a touch that turns into
-/// a scroll doesn't finish a range being selected.
-pub struct RangeCalendarTouchTests {}
-
-#[async_trait]
-impl BrowserTest<str> for RangeCalendarTouchTests {
-    fn name(&self) -> Cow<'_, str> {
-        "calendar_range_touch_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/calendar").await?;
-
-        cases!(
-            range_by_touch_taps(&page),
-            range_by_touch_dragging(&page),
-            range_kept_when_a_touch_scrolls(&page),
-        );
-
-        Ok(())
-    }
 }
 
 /// Dispatches a touch pointer event (`pointerdown`, `pointerup`, `pointerenter`,
@@ -877,7 +846,8 @@ async fn wait_for_selected_days(
 
 /// Two quick taps select a range: the first starts it (a tap is released before the touch drag
 /// delay, so it selects on release), the second finishes it.
-async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june11 = date(page, "range-touch", "Tuesday, June 11, 2019").await?;
     touch_tap(&june11).await?;
     wait_for_selected_days(page, "range-touch", &["11"]).await?;
@@ -899,11 +869,13 @@ async fn range_by_touch_taps(page: &Page<'_>) -> Result<(), Report> {
 
 /// "selects by dragging with touch": after the delay the pressed date starts the range, dates
 /// the finger enters extend it, releasing finishes it.
-async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let june17 = date(page, "range-touch", "Monday, June 17, 2019").await?;
     touch(&june17, "pointerdown").await?;
     // The delay tells dragging from scrolling: nothing changes at first.
-    assert_that!(selected_days(page, "range-touch").await?).contains_exactly(["11", "12", "13"]);
+    assert_that!(selected_days(page, "range-touch").await?)
+        .contains_exactly(["5", "6", "7", "8", "9", "10"]);
     wait_for_selected_days(page, "range-touch", &["17"]).await?;
     let june18 = date(page, "range-touch", "Tuesday, June 18, 2019").await?;
     touch(&june18, "pointerenter").await?;
@@ -918,7 +890,7 @@ async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
     .await?;
     value(page, "range-touch")
         .await?
-        .inner_text_stays("2019-06-11 - 2019-06-13")
+        .inner_text_stays("2019-06-05 - 2019-06-10")
         .await?;
     touch(&june23, "pointerup").await?;
     wait_for_value(page, "range-touch", "2019-06-17 - 2019-06-23").await?;
@@ -927,7 +899,8 @@ async fn range_by_touch_dragging(page: &Page<'_>) -> Result<(), Report> {
 
 /// "selection isn't prematurely finalized when touching a day cell to scroll through the
 /// calendar": a touch cancelled by scrolling doesn't finish the range being selected.
-async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> {
+pub async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     date(page, "range-touch", "Sunday, June 23, 2019")
         .await?
         .click()
@@ -938,7 +911,7 @@ async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> 
     touch(&june10, "pointercancel").await?;
     value(page, "range-touch")
         .await?
-        .inner_text_stays("2019-06-17 - 2019-06-23")
+        .inner_text_stays("2019-06-05 - 2019-06-10")
         .await?;
     date(page, "range-touch", "Tuesday, June 25, 2019")
         .await?
@@ -948,28 +921,9 @@ async fn range_kept_when_a_touch_scrolls(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-/// A calendar without a value or focused date shows today (react-spectrum `Calendar.ssr.test.js`
-/// renders it on the server). The server's today may be another date than the browser's (its
-/// time zone): the page hydrates with the server's date, then the calendar moves to the
-/// browser's today, so the tabbable date is the one marked as today.
-pub struct CalendarTodayTests {}
-
-#[async_trait]
-impl BrowserTest<str> for CalendarTodayTests {
-    fn name(&self) -> Cow<'_, str> {
-        "calendar_today_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(today_in_the_browsers_time_zone(&page));
-        Ok(())
-    }
-}
-
 /// The browser's today is another date than the server's: the tabbable date is the one marked as
 /// today, and keyboard focus goes there.
-async fn today_in_the_browsers_time_zone(page: &Page<'_>) -> Result<(), Report> {
+pub async fn today_in_the_browsers_time_zone(page: &Page<'_>) -> Result<(), Report> {
     {
         // A browser time zone in which today is another date than on the server (this
         // machine): 14 hours ahead or 12 behind UTC; one of them always differs.
@@ -1007,38 +961,6 @@ async fn today_in_the_browsers_time_zone(page: &Page<'_>) -> Result<(), Report> 
     Ok(())
 }
 
-/// The views and paging of calendars, their pickers and announcements: `pageBehavior: single`
-/// (`useCalendar.test.js`, "pagination"), a two-week view, a fixed number of week rows, held arrow
-/// keys, a changing visible duration, month and year pickers (RAC `Calendar.test.js`,
-/// `RangeCalendar.test.tsx`), the live announcements and the commit behaviors of a range being
-/// selected (react-spectrum `RangeCalendar.test.js`, "announcing", "pointer events").
-pub struct CalendarViewTests {}
-
-#[async_trait]
-impl BrowserTest<str> for CalendarViewTests {
-    fn name(&self) -> Cow<'_, str> {
-        "calendar_view_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/calendar").await?;
-
-        cases!(
-            page_behavior_single(&page),
-            two_weeks(&page),
-            weeks_in_month(&page),
-            held_arrow_keys(&page),
-            changing_the_visible_duration(&page),
-            month_and_year_pickers(&page),
-            announcements(&page),
-            commit_behaviors(&page),
-        );
-
-        Ok(())
-    }
-}
-
 /// The labels of the grids of the calendar `name`.
 async fn grid_labels(page: &Page<'_>, name: &str) -> Result<Vec<String>, Report> {
     let mut labels = Vec::new();
@@ -1062,7 +984,8 @@ async fn wait_for_grid_labels(
 }
 
 /// `pageBehavior: single` pages by one month, week or day of the visible duration.
-async fn page_behavior_single(page: &Page<'_>) -> Result<(), Report> {
+pub async fn page_behavior_single(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     wait_for_grid_labels(
         page,
         "single-page",
@@ -1127,7 +1050,8 @@ async fn page_behavior_single(page: &Page<'_>) -> Result<(), Report> {
 
 /// A two-week view (`useCalendar.test.js`, "visibleDuration: 2 weeks"): two rows, labelled with
 /// its dates.
-async fn two_weeks(page: &Page<'_>) -> Result<(), Report> {
+pub async fn two_weeks(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     assert_that!(grid_label(page, "two-weeks").await?)
         .get_some()
         .is_equal_to("two-weeks, June 2, 2019 to June 15, 2019");
@@ -1146,13 +1070,15 @@ async fn two_weeks(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// RAC "should support weeksInMonth prop": April 2026 has five week rows, six are shown.
-async fn weeks_in_month(page: &Page<'_>) -> Result<(), Report> {
+pub async fn weeks_in_month(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     assert_that!(page.count("#test-calendar-six-weeks tbody tr").await?).is_equal_to(6);
     Ok(())
 }
 
 /// RAC "should support repeat keydown events when holding an arrow key".
-async fn held_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn held_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let march3 = date(page, "held", "Tuesday, March 3, 2020").await?;
     march3.click().await?;
     page.wait_for_focus(&march3).await?;
@@ -1163,7 +1089,8 @@ async fn held_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
 
 /// RAC "should handle changing the visible duration": a week view becomes a month view around
 /// the focused date.
-async fn changing_the_visible_duration(page: &Page<'_>) -> Result<(), Report> {
+pub async fn changing_the_visible_duration(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let heading = heading(page, "duration").await?;
     assert_that!(heading.inner_text().await?).is_equal_to("April 5, 2026 to April 11, 2026");
     page.element("#test-calendar-duration-month")
@@ -1185,7 +1112,8 @@ async fn option(select: &WebElement, text: &str) -> Result<WebElement, Report> {
 
 /// RAC "should support month and year dropdowns": the pickers list the months and 20 years
 /// around the focused date's and move it; the year picker follows.
-async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn month_and_year_pickers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     let month = page
         .element("#test-calendar-pickers select[aria-label=month]")
         .await?;
@@ -1237,7 +1165,8 @@ async fn announcements_now(page: &Page<'_>) -> Result<Vec<String>, Report> {
 
 /// "announces when the current month changes", "announces when the selected date range
 /// changes".
-async fn announcements(page: &Page<'_>) -> Result<(), Report> {
+pub async fn announcements(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     button(page, "range-touch", "Next").await?.click().await?;
     wait_for_announcement(page, "July 2019").await?;
     button(page, "range-touch", "Previous")
@@ -1282,7 +1211,8 @@ async fn click_heading(page: &Page<'_>, name: &str) -> Result<(), Report> {
 /// The commit behaviors of a range being selected, when the pointer is released on the calendar
 /// outside its dates (its heading) and when the focus leaves it (Tab): `Select` finishes it at the
 /// hovered date, `Clear` clears the value, `Reset` keeps the value.
-async fn commit_behaviors(page: &Page<'_>) -> Result<(), Report> {
+pub async fn commit_behaviors(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/calendar").await?;
     start_range(
         page,
         "commit-select",

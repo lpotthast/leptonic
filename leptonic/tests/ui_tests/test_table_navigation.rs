@@ -1,8 +1,10 @@
 // Upstream: react-aria-components/test/Table.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Keyboard navigation of the table atoms: `KeyboardNavigationBehavior::Tab` with text inputs
+//! in cells ("keyboardNavigationBehavior='tab' and textfields in row"), arrow navigation into
+//! cells with focusable children, right-to-left, PageUp/PageDown into the column headers,
+//! column spans ("colSpan") and an empty table. Spec: react-aria-components `Table.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,42 +13,6 @@ use crate::{
 };
 
 const PATH: &str = "/atoms/table-navigation";
-
-/// Keyboard navigation of the table atoms: `KeyboardNavigationBehavior::Tab` with text inputs
-/// in cells ("keyboardNavigationBehavior='tab' and textfields in row"), arrow navigation into
-/// cells with focusable children, right-to-left, PageUp/PageDown into the column headers,
-/// column spans ("colSpan") and an empty table. Spec: react-aria-components `Table.test.js`.
-pub struct TableNavigationTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TableNavigationTests {
-    fn name(&self) -> Cow<'_, str> {
-        "table_navigation_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path(PATH).await?;
-
-        cases!(
-            tab_from_a_cell_focuses_its_first_tabbable_child(&page),
-            tab_from_a_cell_without_children_exits_the_table(&page),
-            shift_tab_from_a_child_returns_to_the_cell(&page),
-            keys_in_a_text_input_stay_there(&page),
-            clicking_a_child_or_a_row(&page),
-            child_focus_mode_in_tab_navigation(&page),
-            arrow_navigation_through_cell_children(&page),
-            arrow_navigation_with_cell_focus_mode(&page),
-            right_to_left(&page),
-            page_up_reaches_the_column_headers(&page),
-            column_spans(&page),
-            an_empty_table(&page),
-            enter_on_a_button_that_is_not_the_first_child(&page),
-        );
-
-        Ok(())
-    }
-}
 
 async fn table(page: &Page<'_>, label: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=grid][aria-label='{label}']"))
@@ -103,7 +69,10 @@ async fn enter(page: &Page<'_>, before: &str, label: &str, first_row: &str) -> R
 const TAB: &str = "Tab mode table";
 
 /// "Tab from a focused cell moves focus to the first tabbable child".
-async fn tab_from_a_cell_focuses_its_first_tabbable_child(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_from_a_cell_focuses_its_first_tabbable_child(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-tab", TAB, "Games").await?;
     page.send_keys(Key::Left).await?;
     page.wait_for_focus(&last_cell(page, TAB, "Games").await?)
@@ -116,7 +85,10 @@ async fn tab_from_a_cell_focuses_its_first_tabbable_child(page: &Page<'_>) -> Re
 
 /// "Tab from a cell with no tabbable children or from the last child in a cell exits the
 /// table".
-async fn tab_from_a_cell_without_children_exits_the_table(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_from_a_cell_without_children_exits_the_table(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-tab", TAB, "Games").await?;
     page.send_keys(Key::Right).await?;
     page.wait_for_focus(&cell(page, TAB, "Games").await?)
@@ -151,7 +123,8 @@ async fn tab_from_a_cell_without_children_exits_the_table(page: &Page<'_>) -> Re
 }
 
 /// "Shift+Tab from a child returns focus to the cell".
-async fn shift_tab_from_a_child_returns_to_the_cell(page: &Page<'_>) -> Result<(), Report> {
+pub async fn shift_tab_from_a_child_returns_to_the_cell(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-tab", TAB, "Games").await?;
     page.send_keys(Key::Left).await?;
     let notes = last_cell(page, TAB, "Games").await?;
@@ -167,7 +140,8 @@ async fn shift_tab_from_a_child_returns_to_the_cell(page: &Page<'_>) -> Result<(
 /// "should not navigate to next cell when arrow keys are pressed while a text input child has
 /// focus", "should not trigger typeahead when typing in a text input child" and "should not
 /// trigger selection when pressing Space or Enter in a text input child".
-async fn keys_in_a_text_input_stay_there(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keys_in_a_text_input_stay_there(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-tab", TAB, "Games").await?;
     page.send_keys(Key::Left).await?;
     page.send_keys(Key::Tab).await?;
@@ -192,7 +166,8 @@ async fn keys_in_a_text_input_stay_there(page: &Page<'_>) -> Result<(), Report> 
 
 /// "should not trigger selection when clicking on a tabbable child element" and "should still
 /// trigger selection when clicking on a row with no tabbable children".
-async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = labelled(page, TAB, "Program Files notes").await?;
     input.click().await?;
     page.wait_for_focus(&input).await?;
@@ -212,9 +187,10 @@ async fn clicking_a_child_or_a_row(page: &Page<'_>) -> Result<(), Report> {
 /// `focusMode="child"` in tab navigation: arrowing onto the cell focuses its last child (the
 /// strategy of ArrowLeft); with `allowsArrowNavigation`, ArrowDown moves from the child to the
 /// next row; Shift+Tab from the child skips the cell.
-async fn child_focus_mode_in_tab_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn child_focus_mode_in_tab_navigation(page: &Page<'_>) -> Result<(), Report> {
     const ARROWS: &str = "Tab mode arrows table";
     const CHILD: &str = "Tab mode child table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-child", CHILD, "Games").await?;
     page.send_keys(Key::Left).await?;
     let button = labelled_button(page, CHILD).await?;
@@ -247,8 +223,9 @@ async fn labelled_button(page: &Page<'_>, label: &str) -> Result<WebElement, Rep
 
 /// "default focusMode: ArrowRight crosses from last child to first child of next cell,
 /// ArrowLeft reverses".
-async fn arrow_navigation_through_cell_children(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_navigation_through_cell_children(page: &Page<'_>) -> Result<(), Report> {
     const ARROW: &str = "Arrow mode table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-arrow-mode", ARROW, "Row 1").await?;
     // Without selection or actions, rows show no hover; cells do (react-aria-components).
     let first_row = row(page, ARROW, "Row 1").await?;
@@ -276,8 +253,9 @@ async fn arrow_navigation_through_cell_children(page: &Page<'_>) -> Result<(), R
 
 /// "arrow navigation with focusMode="cell": cell element stays focused on navigate, arrows
 /// enter/exit children within cell".
-async fn arrow_navigation_with_cell_focus_mode(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_navigation_with_cell_focus_mode(page: &Page<'_>) -> Result<(), Report> {
     const ARROW: &str = "Arrow cell table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-arrow-cell", ARROW, "Row 1").await?;
     let cells = row(page, ARROW, "Row 1")
         .await?
@@ -315,8 +293,9 @@ async fn arrow_navigation_with_cell_focus_mode(page: &Page<'_>) -> Result<(), Re
 
 /// In a right-to-left table, ArrowLeft moves forward: from the row into its first cell, on to
 /// the next cell, and between column headers.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
     const RTL: &str = "RTL table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-rtl", RTL, "Games").await?;
     page.send_keys(Key::Left).await?;
     page.wait_for_focus(&cell(page, RTL, "Games").await?)
@@ -336,8 +315,9 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
 
 /// PageDown moves a page down; PageUp moves up through the rows into the column headers
 /// (react-aria's paging steps with the table's `getKeyAbove`).
-async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn page_up_reaches_the_column_headers(page: &Page<'_>) -> Result<(), Report> {
     const PAGED: &str = "Paged table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-paged", PAGED, "Row 1").await?;
     page.send_keys(Key::PageDown).await?;
     wait_for("the focused row's number")
@@ -380,8 +360,9 @@ async fn focused_row_number(page: &Page<'_>) -> Result<u32, Report> {
 
 /// "should render table with colSpans" and "should focus to the same colIndex when moving
 /// focus up or down".
-async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
+pub async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
     const SPANS: &str = "Table with various colspans";
+    page.goto_path(PATH).await?;
     let span2 = cell(page, SPANS, "R1 span 2").await?;
     assert_that!(span2.attr("colspan").await?)
         .get_some()
@@ -440,8 +421,9 @@ async fn column_spans(page: &Page<'_>) -> Result<(), Report> {
 /// An empty table is a tab stop itself; its column headers aren't, and arrow keys don't move
 /// focus into them (react-stately disables keyboard navigation while `collection.size === 0`).
 /// Select all is disabled.
-async fn an_empty_table(page: &Page<'_>) -> Result<(), Report> {
+pub async fn an_empty_table(page: &Page<'_>) -> Result<(), Report> {
     const EMPTY: &str = "Empty table";
+    page.goto_path(PATH).await?;
     let empty = table(page, EMPTY).await?;
     page.element("#test-tn-before-empty").await?.click().await?;
     page.send_keys(Key::Tab).await?;
@@ -460,8 +442,9 @@ async fn an_empty_table(page: &Page<'_>) -> Result<(), Report> {
 
 /// Enter and clicks on a `Button` atom that isn't its cell's first child (`CellFocusMode::Child`)
 /// press that button, and focus stays on it (crudkit: Enter first moved focus to the first child).
-async fn enter_on_a_button_that_is_not_the_first_child(page: &Page<'_>) -> Result<(), Report> {
+pub async fn enter_on_a_button_that_is_not_the_first_child(page: &Page<'_>) -> Result<(), Report> {
     const ACTIONS: &str = "Actions table";
+    page.goto_path(PATH).await?;
     enter(page, "#test-tn-before-actions", ACTIONS, "Alice").await?;
     page.send_keys(Key::Right).await?;
     page.send_keys(Key::Right).await?;

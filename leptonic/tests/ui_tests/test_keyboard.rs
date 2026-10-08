@@ -1,34 +1,13 @@
 // Upstream: react-aria/test/interactions/useKeyboard.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `use_keyboard`: handlers, disabled, propagation (stopped by default, continued on request or
+//! by unhandled shortcuts), shortcuts ignoring repeats/composing/keyup unless allowed, and two
+//! hooks on one element stopping propagation if any of them does.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
-/// `use_keyboard`: handlers, disabled, propagation (stopped by default, continued on request or
-/// by unhandled shortcuts), shortcuts ignoring repeats/composing/keyup unless allowed, and two
-/// hooks on one element stopping propagation if any of them does.
-pub struct KeyboardTests {}
-
-#[async_trait]
-impl BrowserTest<str> for KeyboardTests {
-    fn name(&self) -> Cow<'_, str> {
-        "keyboard_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/keyboard").await?;
-
-        cases!(
-            handlers_and_propagation(&page),
-            repeats_and_composing(&page),
-            no_shortcuts_on_keyup(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/keyboard";
 
 /// The log of key events and shortcut actions.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -51,7 +30,8 @@ async fn reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A key pressed on each fixture element logs its handlers and how far the events propagated.
-async fn handlers_and_propagation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn handlers_and_propagation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let presses: [(&str, TypingData, &str); 11] = [
         // "should handle keyboard events", "events do not bubble by default".
         ("basic", "a".into(), "basic:keydown:a,basic:keyup:a"),
@@ -135,7 +115,8 @@ async fn handlers_and_propagation(page: &Page<'_>) -> Result<(), Report> {
 
 /// "ignores repeated keydown events by default", "handles repeated keydown events when
 /// allowRepeats is true", the same for composing.
-async fn repeats_and_composing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn repeats_and_composing(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     for (name, init, value, expected) in [
         ("shortcut", "repeat", true, "shortcut:keydown:a"),
@@ -156,7 +137,8 @@ async fn repeats_and_composing(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "does not run shortcuts on keyup", also not for repeated or composing ones.
-async fn no_shortcuts_on_keyup(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_shortcuts_on_keyup(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let repeats = target(page, "repeats").await?;
     for (init, value) in [("repeat", false), ("repeat", true), ("isComposing", true)] {
         repeats

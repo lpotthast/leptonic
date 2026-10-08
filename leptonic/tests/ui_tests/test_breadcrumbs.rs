@@ -1,10 +1,11 @@
 // Upstream: react-aria-components/test/Breadcrumbs.test.js @ 99e6102368
 // Upstream: react-aria/test/breadcrumbs/useBreadcrumbs.test.js @ 99e6102368
 // Upstream: react-aria/test/breadcrumbs/useBreadcrumbItem.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The breadcrumbs atoms: a labelled list whose current item is a disabled link with
+//! `aria-current="page"` and no `href`, also while the trail grows and shrinks; pressed items
+//! report their id; the whole trail can be disabled. The hooks: the navigation's default label,
+//! items as anchors and spans, disabled and current.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
 use crate::{
@@ -12,32 +13,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// The breadcrumbs atoms: a labelled list whose current item is a disabled link with
-/// `aria-current="page"` and no `href`, also while the trail grows and shrinks; pressed items
-/// report their id; the whole trail can be disabled. The hooks: the navigation's default label,
-/// items as anchors and spans, disabled and current.
-pub struct BreadcrumbsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for BreadcrumbsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "breadcrumbs_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/breadcrumbs").await?;
-        cases!(
-            current_item(&page),
-            dynamic_collections(&page),
-            disabled(&page),
-            hooks(&page),
-            // Last: following the in-page link navigates.
-            press(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/breadcrumbs";
 
 /// The texts of the current items of the trail named "Breadcrumbs".
 async fn current_items(page: &Page<'_>) -> Result<Vec<String>, Report> {
@@ -46,7 +22,8 @@ async fn current_items(page: &Page<'_>) -> Result<Vec<String>, Report> {
 }
 
 /// The last item is the current one: a disabled link to the page without `href`.
-async fn current_item(page: &Page<'_>) -> Result<(), Report> {
+pub async fn current_item(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("ol[aria-label=Breadcrumbs]").await?;
     assert_that!(current_items(page).await?).contains_exactly(["Item 3"]);
     let current = page.element(role("link").text("Item 3")).await?;
@@ -66,7 +43,8 @@ async fn current_item(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support dynamic collections": the marked item is the current one.
-async fn dynamic_collections(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dynamic_collections(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-bc-add").await?.click().await?;
     page.element("#test-bc-count")
         .await?
@@ -91,7 +69,8 @@ async fn dynamic_collections(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Disabled breadcrumbs: no item can be followed.
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-bc-disable").await?.click().await?;
     page.element("ol[aria-label=Breadcrumbs][data-disabled]")
         .await?;
@@ -102,7 +81,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 
 /// useBreadcrumbs.test.js "handles defaults"; useBreadcrumbItem.test.js "handles span elements",
 /// "handles isCurrent", "handles isDisabled".
-async fn hooks(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hooks(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let nav = page.element("#test-bc-hook").await?;
     assert_that!(nav.attr("aria-label").await?)
         .get_some()
@@ -136,7 +116,8 @@ async fn hooks(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Pressing an item reports its id.
-async fn press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element(role("link").text("Action 1"))
         .await?
         .click()

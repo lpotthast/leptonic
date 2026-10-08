@@ -1,50 +1,32 @@
 // Upstream: react-aria-components/test/Toolbar.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! The toolbar atom ("supports keyboard navigation"): one tab stop, arrow keys along its
+//! orientation across nested toolbars and dividers without wrapping, Tab leaving and re-entering
+//! at the control focused last; nested toolbars are groups; vertical and right-to-left toolbars;
+//! toolbars of toggle buttons, checkboxes and links.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{Page, PageActions, role, xpath};
 
-/// The toolbar atom ("supports keyboard navigation"): one tab stop, arrow keys along its
-/// orientation across nested toolbars and dividers without wrapping, Tab leaving and re-entering
-/// at the control focused last; nested toolbars are groups; vertical and right-to-left toolbars;
-/// toolbars of toggle buttons, checkboxes and links.
-pub struct ToolbarTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ToolbarTests {
-    fn name(&self) -> Cow<'_, str> {
-        "toolbar_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/toolbar").await?;
-
-        cases!(
-            structure(&page),
-            keyboard_navigation(&page),
-            tab_leaves_and_reenters(&page),
-            no_wrapping(&page),
-            vertical(&page),
-            right_to_left(&page),
-            right_to_left_vertical(&page),
-            aria_example_children(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/toolbar";
 
 /// The button with the text `text`.
 async fn button(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
     page.element(role("button").text(text)).await
 }
 
+/// Clicks the button with the text `text` and waits until it has the focus.
+async fn focus_button(page: &Page<'_>, text: &str) -> Result<(), Report> {
+    let button = button(page, text).await?;
+    button.click().await?;
+    page.wait_for_focus(&button).await?;
+    Ok(())
+}
+
 /// A horizontal toolbar; nested toolbars are groups.
-async fn structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let tools = page.element("[aria-label=Tools]").await?;
     assert_that!(tools.attr("role").await?)
         .get_some()
@@ -60,7 +42,8 @@ async fn structure(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// One tab stop; the arrow keys along the orientation move across nested toolbars and dividers.
-async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     button(page, "Before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&button(page, "Align left").await?)
@@ -83,7 +66,9 @@ async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab leaves; Shift+Tab re-enters at the control focused last.
-async fn tab_leaves_and_reenters(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_leaves_and_reenters(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    focus_button(page, "Align right").await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&button(page, "After").await?).await?;
     page.send_keys(Key::Shift + Key::Tab).await?;
@@ -98,23 +83,24 @@ async fn tab_leaves_and_reenters(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The arrow keys stop at either end.
-async fn no_wrapping(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_wrapping(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    focus_button(page, "Align right").await?;
     page.send_keys(Key::Left).await?;
     page.send_keys(Key::Left).await?;
     page.wait_for_focus(&button(page, "Align left").await?)
         .await?;
     page.send_keys(Key::Left).await?;
     page.focus_stays(&button(page, "Align left").await?).await?;
-    button(page, "Zoom out").await?.click().await?;
-    page.wait_for_focus(&button(page, "Zoom out").await?)
-        .await?;
+    focus_button(page, "Zoom out").await?;
     page.send_keys(Key::Right).await?;
     page.focus_stays(&button(page, "Zoom out").await?).await?;
     Ok(())
 }
 
 /// "supports keyboard navigation with orientation vertical".
-async fn vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let vertical = page.element("[aria-label=Vertical]").await?;
     assert_that!(vertical.attr("aria-orientation").await?)
         .get_some()
@@ -130,7 +116,8 @@ async fn vertical(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports RTL": the arrow keys follow the reading direction.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     button(page, "RTL 1").await?.click().await?;
     page.send_keys(Key::Left).await?;
     page.wait_for_focus(&button(page, "RTL 2").await?).await?;
@@ -140,7 +127,8 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports RTL with orientation vertical": up and down move; left and right don't.
-async fn right_to_left_vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left_vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     button(page, "RV 1").await?.click().await?;
     page.send_keys(Key::Down).await?;
     page.wait_for_focus(&button(page, "RV 2").await?).await?;
@@ -154,7 +142,8 @@ async fn right_to_left_vertical(page: &Page<'_>) -> Result<(), Report> {
 
 /// "supports all the aria example children": toggle buttons, a checkbox and a link, without
 /// wrapping at the end.
-async fn aria_example_children(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_example_children(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-toolbar-input-before")
         .await?
         .click()

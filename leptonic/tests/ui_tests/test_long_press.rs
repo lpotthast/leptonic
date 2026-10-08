@@ -1,8 +1,11 @@
 // Upstream: react-aria/test/interactions/useLongPress.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+//! Long presses through `use_press`: start, end and the long press after the threshold, which
+//! cancels the press; cancelled when released early; a custom threshold; the accessibility
+//! description; no context menu on touch (only during the press); nothing for the keyboard.
+use std::time::Duration;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,34 +13,7 @@ use crate::{
     polling::expect,
 };
 
-/// Long presses through `use_press`: start, end and the long press after the threshold, which
-/// cancels the press; cancelled when released early; a custom threshold; the accessibility
-/// description; no context menu on touch (only during the press); nothing for the keyboard.
-pub struct LongPressTests {}
-
-#[async_trait]
-impl BrowserTest<str> for LongPressTests {
-    fn name(&self) -> Cow<'_, str> {
-        "long_press_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/long-press").await?;
-
-        cases!(
-            long_press(&page),
-            cancelled_when_released_early(&page),
-            cancels_other_press_events(&page),
-            keeps_press_events_when_released_early(&page),
-            custom_threshold(&page),
-            accessibility_description(&page),
-            prevents_context_menu_during_touch(&page),
-            no_long_press_by_keyboard(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/long-press";
 
 /// The log of press and long press events.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -73,7 +49,8 @@ fn touch(kind: &str) -> SyntheticEvent {
 
 /// "should perform a long press": start, then end and the long press once the 500 ms threshold
 /// passed; the release adds nothing.
-async fn long_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn long_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let basic = target(page, "basic").await?;
     basic.dispatch(touch("pointerdown")).await?;
@@ -93,7 +70,8 @@ async fn long_press(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should cancel if pointer ends before timeout": no long press, also past the threshold.
-async fn cancelled_when_released_early(page: &Page<'_>) -> Result<(), Report> {
+pub async fn cancelled_when_released_early(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let basic = target(page, "basic").await?;
     basic.dispatch(touch("pointerdown")).await?;
@@ -110,7 +88,8 @@ async fn cancelled_when_released_early(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should cancel other press events".
-async fn cancels_other_press_events(page: &Page<'_>) -> Result<(), Report> {
+pub async fn cancels_other_press_events(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let with_press = target(page, "with-press").await?;
     with_press.dispatch(touch("pointerdown")).await?;
     log(page)
@@ -126,7 +105,8 @@ async fn cancels_other_press_events(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not cancel press events if pointer ends before timer".
-async fn keeps_press_events_when_released_early(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keeps_press_events_when_released_early(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let with_press = target(page, "with-press").await?;
     with_press.dispatch(touch("pointerdown")).await?;
     with_press.dispatch(touch("pointerup")).await?;
@@ -143,7 +123,8 @@ async fn keeps_press_events_when_released_early(page: &Page<'_>) -> Result<(), R
 
 /// "allows changing the threshold": with 1500 ms, nothing after 600 ms (beyond the default's
 /// 500 ms), the long press later.
-async fn custom_threshold(page: &Page<'_>) -> Result<(), Report> {
+pub async fn custom_threshold(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let threshold = target(page, "threshold").await?;
     threshold.dispatch(touch("pointerdown")).await?;
@@ -165,7 +146,8 @@ async fn custom_threshold(page: &Page<'_>) -> Result<(), Report> {
 
 /// "supports accessibilityDescription", "does not show accessibilityDescription if disabled",
 /// "... if no onLongPress handler".
-async fn accessibility_description(page: &Page<'_>) -> Result<(), Report> {
+pub async fn accessibility_description(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(
         target(page, "description")
             .await?
@@ -184,7 +166,8 @@ async fn accessibility_description(page: &Page<'_>) -> Result<(), Report> {
 /// "prevents context menu events on touch", but only during the press: the blocker goes 100 ms
 /// after the pointer up (upstream: "If no contextmenu/click event is fired quickly after
 /// pointerup, remove the handler"), so a later context menu opens.
-async fn prevents_context_menu_during_touch(page: &Page<'_>) -> Result<(), Report> {
+pub async fn prevents_context_menu_during_touch(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let basic = target(page, "basic").await?;
     let context_menu = || SyntheticEvent::mouse("contextmenu");
 
@@ -208,7 +191,8 @@ async fn prevents_context_menu_during_touch(page: &Page<'_>) -> Result<(), Repor
 
 /// "should not fire any events for keyboard interactions" (long press events, that is), also
 /// past the 500 ms threshold.
-async fn no_long_press_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_long_press_by_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     target(page, "with-press").await?.focus().await?;
     page.send_keys(Key::Enter).await?;

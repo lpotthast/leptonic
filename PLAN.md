@@ -103,6 +103,10 @@ The 2026-10-07 react-aria fidelity review was applied the same day by nine agent
   `.test-op-flip-popover[data-placement=bottom]` within 10 s; passes alone).
 - [ ] `TabPanel`s rendered before their `TabList` don't know about tabs disabled through `Tab::is_disabled` (the
   default selection skips them only once the tabs have rendered).
+- [ ] Tree: on a page where the tree never had focus, clicking a row's expand button leaves the focus on the button
+  instead of the row (upstream: `preventFocusOnPress` + `setFocusedKey`). Found 2026-10-08 when the browser test cases
+  became independent (an earlier case had focused the tree); known-issue case `tree::expand_button`. Suspects:
+  `utils/prevent_focus.rs` restoring focus to `<body>`, or the row-focus effect when the tree had no focus before.
 
 ### Families
 - [ ] **Number formatting:** a formatter that knows currencies/units/percent patterns from CLDR (`format_percent`
@@ -213,30 +217,7 @@ Numbers, methods and findings: `documentation/build-performance.md` (measure wit
   git: untrack it (`git rm -r --cached`, the user's call).
 - [ ] `browser-test` is a path dependency on the user's checkout (`../../browser-test`, 0.6.0 unreleased: per-session
   Chrome profiles in `<target>/tmp/browser-test-profiles`, cancellation, `rustls-no-provider` + `ring`, focused
-  session pages, failure reports). Switch to the crates.io release once it is published (the user's call).
-- [ ] Decide (user): make every `cases!` case its own `BrowserTest` (2026-10-08 proposal). Today a test's cases
-  share one session and one page: the first failing case hides every later one (`?`; `FailurePolicy::RunAll` stops
-  at test level), each case inherits the page state the cases before it left behind (6 files have `reset(page)`
-  helpers, 30 reload the page inside cases), `BROWSER_TEST_FILTER` and the run summary only see ~150 tests, not the
-  ~800 cases, and one long test (menu, table resizing) bounds the parallel run's wall time. Plan: each case loads its
-  own page; a flow whose steps belong together stays one test with `step`s; `cases!` goes away. Needs the browser-test
-  proposals below (at least session reuse) and a pilot first: split one file (e.g. `test_checkbox.rs`) and measure
-  page load + hydration per case against the session cost.
-- [ ] browser-test API proposals (for the case split above):
-  - **Session reuse** (essential): a worker resets a session after a passed test and offers it to the next test
-    instead of quitting it (fresh sessions after failures). Reset: close extra windows, release WebDriver actions
-    (pointer position, held keys), `about:blank`, clear cookies and storage (CDP `Storage.clearDataForOrigin` for
-    the visited origins), reset permissions (clipboard tests grant them) and the window size, re-apply the test's
-    timeouts. A runner setting (`with_session_reuse(..)`, default: fresh) and a per-test opt-out
-    (`fn session(&self) -> SessionKind { Reusable | Fresh }`) for tests that change browser state a reset can't
-    restore. Sessions are then bounded by parallelism, not by test count; no need to group tests sequentially just
-    to save sessions (sequential groups stay for tests sharing server state).
-  - **Function tests**: `BrowserTests::with_fn(name, |driver, ctx| async { .. })` (or a `test_fn` adapter), so
-    800 tests don't need 800 structs. (leptonic side: a `page_tests("/atoms/checkbox", [..])` helper building a
-    named group whose tests navigate, then run one case.)
-  - **Qualified names and filtering**: report test names with their named groups (`checkbox / hover`), and filter
-    by them in the runner (`BrowserTests::filtered(..)` or `BROWSER_TEST_FILTER` in browser-test), replacing
-    leptonic's `Selected`.
+  session pages, failure reports, session reuse). Switch to the crates.io release once it is published (the user's call).
 - [ ] browser-test's own runner tests (they kill child runs on purpose) left one empty
   `/tmp/org.chromium.Chromium.scoped_dir.*` (2026-10-08): find which session still lets chromedriver create one.
 - [ ] The test-app's `cargo check` needs `LEPTOS_OUTPUT_NAME=...` set (note it in CLAUDE.md's commands).

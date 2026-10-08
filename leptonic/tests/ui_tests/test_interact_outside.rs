@@ -1,33 +1,13 @@
 // Upstream: react-aria/test/interactions/useInteractOutside.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `use_interact_outside`: a press outside the element (not inside) fires start and the
+//! interaction; other buttons and a pointer up without a pointer down don't; nothing while
+//! disabled.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
-/// `use_interact_outside`: a press outside the element (not inside) fires start and the
-/// interaction; other buttons and a pointer up without a pointer down don't; nothing while
-/// disabled.
-pub struct InteractOutsideTests {}
-
-#[async_trait]
-impl BrowserTest<str> for InteractOutsideTests {
-    fn name(&self) -> Cow<'_, str> {
-        "interact_outside_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/interact-outside").await?;
-        cases!(
-            pointer_events(&page),
-            left_button_only(&page),
-            disabled(&page)
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/interact-outside";
 
 /// The log of interactions outside.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -35,7 +15,8 @@ async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
 }
 
 /// "should fire interact outside events based on pointer events".
-async fn pointer_events(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pointer_events(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     page.element("#test-interact-outside-target")
         .await?
@@ -58,7 +39,8 @@ async fn pointer_events(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should only listen for the left mouse button", "should not fire interact outside if there is
 /// a pointer up event without a pointer down first".
-async fn left_button_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn left_button_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let body = page.element("body").await?;
     for (kind, button) in [("pointerdown", 1), ("pointerup", 1), ("pointerup", 0)] {
         body.dispatch(
@@ -75,7 +57,8 @@ async fn left_button_only(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "does not handle pointer events if disabled".
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-interact-outside-disable")
         .await?
         .virtual_click()

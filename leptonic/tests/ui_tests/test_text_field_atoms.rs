@@ -1,9 +1,8 @@
 // Upstream: react-aria-components/test/TextField.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Form.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The TextField, Input, TextArea, Label, Description, FieldError and Form atoms.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,43 +10,23 @@ use crate::{
     polling::wait_for,
 };
 
-/// The TextField, Input, TextArea, Label, Description, FieldError and Form atoms.
-pub struct TextFieldAtomTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TextFieldAtomTests {
-    fn name(&self) -> Cow<'_, str> {
-        "text_field_atom_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/text-field").await?;
-
-        cases!(
-            provides_slots(&page, "input"),
-            provides_slots(&page, "textarea"),
-            hover_state(&page),
-            focus_visible_state(&page),
-            read_only_and_required_state(&page),
-            native_validation_errors(&page, "tf-native-input"),
-            native_validation_errors(&page, "tf-native-textarea"),
-            customized_validation_errors(&page),
-            invalid_without_message_renders_no_error(&page),
-            id_goes_on_the_input(&page),
-            form_attribute(&page),
-            server_validation_errors(&page),
-            bound_values_keep_the_dom_in_sync(&page),
-            form_validation_behavior(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/text-field";
 
 /// The `TextField` in the fixture section matching `section`.
 async fn field_in(page: &Page<'_>, section: &str) -> Result<WebElement, Report> {
     page.element(format!("{section} .leptonic-TextField")).await
+}
+
+/// "provides slots" of a field with an input.
+pub async fn provides_slots_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    provides_slots(page, "input").await
+}
+
+/// "provides slots" of a field with a text area.
+pub async fn provides_slots_textarea(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    provides_slots(page, "textarea").await
 }
 
 /// "provides slots": the value, `type` (inputs only), data attributes on the field, the label
@@ -76,7 +55,8 @@ async fn provides_slots(page: &Page<'_>, element: &str) -> Result<(), Report> {
     Ok(())
 }
 
-async fn hover_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-slots-input input").await?;
     assert_that!(input.attr("data-hovered").await?).is_none();
     input.hover().await?;
@@ -87,7 +67,8 @@ async fn hover_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-slots-input input").await?;
     assert_that!(input.attr("data-focus-visible").await?).is_none();
     // Tab from the element before the input.
@@ -109,7 +90,8 @@ async fn focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn read_only_and_required_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_and_required_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let plain = field_in(page, "#tf-slots-input").await?;
     assert_that!(plain.attr("data-readonly").await?).is_none();
     assert_that!(plain.attr("data-required").await?).is_none();
@@ -118,6 +100,18 @@ async fn read_only_and_required_state(page: &Page<'_>) -> Result<(), Report> {
     let required = field_in(page, "#tf-required").await?;
     assert_that!(required.attr("data-required").await?).is_some();
     Ok(())
+}
+
+/// "supports validation errors" of a field with an input.
+pub async fn native_validation_errors_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    native_validation_errors(page, "tf-native-input").await
+}
+
+/// "supports validation errors" of a field with a text area.
+pub async fn native_validation_errors_textarea(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    native_validation_errors(page, "tf-native-textarea").await
 }
 
 /// "supports validation errors": with native validation, the error (the browser's validation
@@ -158,7 +152,8 @@ async fn native_validation_errors(page: &Page<'_>, form: &str) -> Result<(), Rep
 }
 
 /// "supports customizing validation errors".
-async fn customized_validation_errors(page: &Page<'_>) -> Result<(), Report> {
+pub async fn customized_validation_errors(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-custom-error input").await?;
     assert_that!(
         page.element("#tf-custom-error")
@@ -180,7 +175,8 @@ async fn customized_validation_errors(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not render the field error div if no error is provided and isInvalid is true".
-async fn invalid_without_message_renders_no_error(page: &Page<'_>) -> Result<(), Report> {
+pub async fn invalid_without_message_renders_no_error(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-invalid-without-message input").await?;
     assert_that!(input.attr("aria-invalid").await?)
         .get_some()
@@ -192,7 +188,8 @@ async fn invalid_without_message_renders_no_error(page: &Page<'_>) -> Result<(),
 
 /// "should render the id attribute only on the input element" / "should link an id on the
 /// input to the label htmlFor".
-async fn id_goes_on_the_input(page: &Page<'_>) -> Result<(), Report> {
+pub async fn id_goes_on_the_input(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-id input").await?;
     assert_that!(input.id().await?)
         .get_some()
@@ -205,7 +202,8 @@ async fn id_goes_on_the_input(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#tf-form-attribute input").await?;
     assert_that!(input.attr("form").await?)
         .get_some()
@@ -214,7 +212,8 @@ async fn form_attribute(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Form: "supports server validation errors".
-async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
+pub async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = page.element("#form-server input").await?;
     assert_that!(input.attr("aria-describedby").await?).is_none();
 
@@ -249,7 +248,8 @@ async fn server_validation_errors(page: &Page<'_>) -> Result<(), Report> {
 
 /// No upstream test (React keeps a controlled input's DOM value in sync by itself): text a bound
 /// value rejects or changes shows as the value holds it.
-async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report> {
+pub async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let fixed = page.element("#tf-rejecting input").await?;
     fixed.focus().await?;
     page.send_keys("x").await?;
@@ -263,7 +263,8 @@ async fn bound_values_keep_the_dom_in_sync(page: &Page<'_>) -> Result<(), Report
 }
 
 /// Form: `Native` by default, `Aria` sets `novalidate`, fields override the form's behavior.
-async fn form_validation_behavior(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_validation_behavior(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     // Boolean attributes read as "true" while present.
     for (form, novalidate, native) in [
         ("form-native", false, true),

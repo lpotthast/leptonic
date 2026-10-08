@@ -1,69 +1,19 @@
 // Upstream: @adobe/react-spectrum/test/color/ColorSlider.test.tsx @ 99e6102368
 // Upstream: react-aria-components/test/ColorSlider.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `ColorSlider` atoms: input attributes, value text and labelling, keyboard steps, a press
+//! on the track, disabled sliders, forms.
+//!
+//! Dragging thumbs and tracks (react-spectrum's `ColorSlider.test.tsx`, "dragging the thumb
+//! works", "... when vertical", "clicking and dragging on the track works when vertical"), the
+//! `Label`'s default text, and parts that mount again.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, report};
 
 use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::wait_for,
 };
-
-/// The `ColorSlider` atoms: input attributes, value text and labelling, keyboard steps, a press
-/// on the track, disabled sliders, forms.
-pub struct ColorSliderTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorSliderTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_slider_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-slider").await?;
-
-        cases!(
-            input_props(&page),
-            hue_value_text_and_label(&page),
-            keyboard(&page),
-            track_click(&page),
-            disabled(&page),
-            forms(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// Dragging thumbs and tracks (react-spectrum's `ColorSlider.test.tsx`, "dragging the thumb
-/// works", "... when vertical", "clicking and dragging on the track works when vertical"), the
-/// `Label`'s default text, and parts that mount again.
-pub struct ColorSliderDragTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorSliderDragTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_slider_drag_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-slider").await?;
-
-        cases!(
-            default_label(&page),
-            drag_thumb(&page),
-            drag_thumb_vertical(&page),
-            drag_track_vertical(&page),
-            mounted_again(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// The range input of the slider `#id`.
 async fn input(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -139,7 +89,8 @@ async fn wait_for_last_hue_near(page: &Page<'_>, kind: &str, expected: f64) -> R
 }
 
 /// "sets input props"; the channel names a slider without labels.
-async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let red = input(page, "test-cs-red").await?;
     assert_that!(red.attr("type").await?)
         .get_some()
@@ -178,7 +129,8 @@ async fn input_props(page: &Page<'_>) -> Result<(), Report> {
 
 /// "sets aria-valuetext to formatted value" (with the hue's name); a `Label` names it; "clicking
 /// on label should focus input".
-async fn hue_value_text_and_label(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hue_value_text_and_label(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let hue = input(page, "test-cs-hue").await?;
     assert_that!(hue.attr("max").await?)
         .get_some()
@@ -196,7 +148,8 @@ async fn hue_value_text_and_label(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "keyboard events": steps, pages, Home/End.
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let red = input(page, "test-cs-red").await?;
     page.element("#test-cs-before").await?.focus().await?;
     page.send_keys(Key::Tab).await?;
@@ -217,7 +170,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "clicking and dragging on the track works": a quarter along (±1, sub-pixel positions).
-async fn track_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn track_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let red = input(page, "test-cs-red").await?;
     let track = page.element("#test-cs-red [role=group]").await?;
     track.scroll_into_view().await?;
@@ -235,7 +189,8 @@ async fn track_click(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "disabled".
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let disabled = input(page, "test-cs-disabled").await?;
     assert_that!(disabled.is_enabled().await?).is_false();
     page.element("#test-cs-a").await?.focus().await?;
@@ -246,7 +201,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports form name", "supports form reset".
-async fn forms(page: &Page<'_>) -> Result<(), Report> {
+pub async fn forms(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let form = input(page, "test-cs-form").await?;
     assert_that!(form.attr("name").await?)
         .get_some()
@@ -264,7 +220,8 @@ async fn forms(page: &Page<'_>) -> Result<(), Report> {
 
 /// "defaults to showing the channel as a label" (react-aria-components: the `Label`'s default
 /// children); it labels the group.
-async fn default_label(page: &Page<'_>) -> Result<(), Report> {
+pub async fn default_label(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let label = page.element("#test-cs-label .leptonic-Label").await?;
     assert_that!(label.inner_text().await?).is_equal_to("Green");
     let group = page.element("#test-cs-label [role=group]").await?;
@@ -275,7 +232,8 @@ async fn default_label(page: &Page<'_>) -> Result<(), Report> {
 
 /// "dragging the thumb works": 80 of 200 pixels is 144°; no change on the press, the input has
 /// focus.
-async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
+pub async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let drag = input(page, "test-cs-drag").await?;
     let thumb = page.element("#test-cs-drag .leptonic-ColorThumb").await?;
     thumb.scroll_into_view().await?;
@@ -295,12 +253,12 @@ async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
     page.driver.action_chain().release().perform().await?;
     wait_for_last_hue(page, "end:144").await?;
     page.wait_for_focus(&drag).await?;
-    clear_hues(page).await?;
     Ok(())
 }
 
 /// "dragging the thumb works when vertical": upwards.
-async fn drag_thumb_vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn drag_thumb_vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let vertical = input(page, "test-cs-vertical").await?;
     assert_that!(vertical.attr("aria-orientation").await?)
         .get_some()
@@ -318,16 +276,18 @@ async fn drag_thumb_vertical(page: &Page<'_>) -> Result<(), Report> {
     wait_for_last_hue(page, "change:144").await?;
     page.driver.action_chain().release().perform().await?;
     wait_for_last_hue(page, "end:144").await?;
-    clear_hues(page).await?;
     Ok(())
 }
 
 /// "clicking and dragging on the track works when vertical": the middle is 180° (±2:
 /// WebDriver's integer center), 40 pixels up 72° more. The keyboard on a vertical slider: Up
 /// increases.
-async fn drag_track_vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn drag_track_vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let vertical = input(page, "test-cs-vertical").await?;
     let track = page.element("#test-cs-vertical [role=group]").await?;
+    // All of it in view: WebDriver's center is that of the part in view.
+    track.scroll_into_view().await?;
     page.driver
         .action_chain()
         .move_to_element_center(&track)
@@ -351,7 +311,8 @@ async fn drag_track_vertical(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Parts mounted again (inside a `<Show>`) render and work.
-async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-slider").await?;
     let toggle = page.element("#test-cs-toggle").await?;
     toggle.click().await?;
     page.wait_for_count("#test-cs-show input[type=range]", 0)

@@ -1,47 +1,18 @@
 // Upstream: react-aria-components/test/Toast.test.js @ 99e6102368
-use std::{
-    borrow::Cow,
-    time::{Duration, Instant},
-};
+//! The toast atoms on one queue: a region (landmark, "n notifications.") showing alert dialogs
+//! labelled by their title and described by their description; closing by button, timeout
+//! (paused while hovered or focused) or programmatically; F6 reaches the region; the focus moves
+//! to a remaining toast and finally back to where it came from.
+use std::time::{Duration, Instant};
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, bail};
 
 use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::{expect, wait_for},
 };
-
-/// The toast atoms on one queue: a region (landmark, "n notifications.") showing alert dialogs
-/// labelled by their title and described by their description; closing by button, timeout
-/// (paused while hovered or focused) or programmatically; F6 reaches the region; the focus moves
-/// to a remaining toast and finally back to where it came from.
-pub struct ToastTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ToastTests {
-    fn name(&self) -> Cow<'_, str> {
-        "toast_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-
-        // Every case loads its fixture: they start without toasts and with fresh timers.
-        cases!(
-            trigger_and_close(&page),
-            timeouts(&page),
-            keyboard_focus(&page),
-            programmatic_close(&page),
-            remaining_time_after_pause(&page),
-            one_at_a_time(&page),
-            focused_toast_after_new_toast(&page),
-        );
-
-        Ok(())
-    }
-}
 
 const TOAST: &str = "[role=alertdialog]";
 const REGION: &str = "[role=region]";
@@ -56,7 +27,7 @@ async fn wait_for_title(toast: &WebElement, title: &str) -> Result<(), Report> {
 }
 
 /// "should trigger a toast", "should restore focus when a toast exits".
-async fn trigger_and_close(page: &Page<'_>) -> Result<(), Report> {
+pub async fn trigger_and_close(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     let add = page.element("#test-toast-add").await?;
     assert_that!(page.count(TOAST).await?).is_equal_to(0);
@@ -113,7 +84,7 @@ async fn trigger_and_close(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "removes a toast via timeout", "pauses timers when hovering", "pauses timers when focusing".
-async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
+pub async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     let add_timed = page.element("#test-toast-add-timed").await?;
     let closed = page.element("#test-toast-closed").await?;
@@ -152,7 +123,7 @@ async fn timeouts(page: &Page<'_>) -> Result<(), Report> {
 
 /// "can focus toast region using F6", "should move focus to remaining toast when a toast exits
 /// and there are more".
-async fn keyboard_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     let add = page.element("#test-toast-add").await?;
     add.click().await?;
@@ -197,7 +168,7 @@ async fn keyboard_focus(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support programmatically closing toasts".
-async fn programmatic_close(page: &Page<'_>) -> Result<(), Report> {
+pub async fn programmatic_close(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     let add = page.element("#test-toast-add").await?;
     let close_newest = page.element("#test-toast-close-newest").await?;
@@ -223,7 +194,7 @@ async fn programmatic_close(page: &Page<'_>) -> Result<(), Report> {
 
 /// "pauses timers when hovering", with upstream's timing: the timeout continues with the time that
 /// was left, it doesn't start over.
-async fn remaining_time_after_pause(page: &Page<'_>) -> Result<(), Report> {
+pub async fn remaining_time_after_pause(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     page.element("#test-toast-add-slow").await?.click().await?;
     let toast = page.element(TOAST).await?;
@@ -253,7 +224,7 @@ async fn remaining_time_after_pause(page: &Page<'_>) -> Result<(), Report> {
 /// react-aria's `useToast.test.js` "moves focus to the next toast when it appears", and "should
 /// support custom aria-label": one toast at a time (`use_toast_state`'s default) in a region named
 /// "Alerts".
-async fn one_at_a_time(page: &Page<'_>) -> Result<(), Report> {
+pub async fn one_at_a_time(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast-single").await?;
     let add = page.element("#test-toast-single-add").await?;
     add.click().await?;
@@ -295,7 +266,7 @@ async fn shown_toast_title(page: &Page<'_>) -> Option<String> {
 /// The focused toast is tracked by its key, not its index: a new toast above it doesn't make the
 /// region lose it, so when it closes the focus still moves to a remaining toast ("should move focus
 /// to remaining toast when a toast exits and there are more").
-async fn focused_toast_after_new_toast(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focused_toast_after_new_toast(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/toast").await?;
     let add = page.element("#test-toast-add").await?;
     add.click().await?;

@@ -3,27 +3,9 @@ use rootcause::Report;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    pages::{ElementActions, PageActions, SyntheticEvent, xpath},
+    pages::{ElementActions, Page, PageActions, SyntheticEvent, xpath},
     polling::{expect, wait_for},
 };
-
-/// The drag and drop fixtures (`/hooks/dnd`, `/hooks/dnd-targets`, `/hooks/dnd-collection`):
-/// event logs, the fixture's mid-drag actions, and native drags synthesized with a `DataTransfer`
-/// and `DragEvent`s.
-pub struct DndPage<'d> {
-    pub driver: &'d WebDriver,
-    pub base_url: &'d str,
-}
-
-impl PageActions for DndPage<'_> {
-    fn driver(&self) -> &WebDriver {
-        self.driver
-    }
-
-    fn base_url(&self) -> &str {
-        self.base_url
-    }
-}
 
 /// A script: a `DragEvent` carries a `DataTransfer`, which no event init from WebDriver can.
 /// Fires a drag event at the center of an element (`arguments[0]`, type `arguments[1]`) with the
@@ -57,9 +39,12 @@ const FIRE_DRAG_EVENT: &str = "
     element.dispatchEvent(event);
     return event.defaultPrevented;";
 
-impl DndPage<'_> {
+/// Actions on the drag and drop fixtures (`/hooks/dnd`, `/hooks/dnd-targets`,
+/// `/hooks/dnd-collection`): event logs, the fixture's mid-drag actions, and native drags
+/// synthesized with a `DataTransfer` and `DragEvent`s.
+pub trait DndActions: PageActions {
     /// The entries of the log list `#<id>`.
-    pub async fn log(&self, id: &str) -> Result<Vec<String>, Report> {
+    async fn log(&self, id: &str) -> Result<Vec<String>, Report> {
         self.element(format!("#{id}"))
             .await?
             .inner_texts("li")
@@ -67,7 +52,7 @@ impl DndPage<'_> {
     }
 
     /// Waits until the log `#<id>` is exactly `expected`.
-    pub async fn expect_log(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
+    async fn expect_log(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
         wait_for(format!("the log #{id}"))
             .observing(|| self.log(id))
             .to_be_equal_to(expected)
@@ -77,7 +62,7 @@ impl DndPage<'_> {
 
     /// Waits until the log `#<id>` is exactly `expected`, and checks it stays so (nothing more
     /// is logged).
-    pub async fn expect_log_settled(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
+    async fn expect_log_settled(&self, id: &str, expected: &[&str]) -> Result<(), Report> {
         self.expect_log(id, expected).await?;
         expect(format!("the log #{id}"))
             .observing(|| self.log(id))
@@ -88,12 +73,7 @@ impl DndPage<'_> {
 
     /// Dispatches the fixture's custom event `event` with the `action` as its detail on the
     /// element `#<target>`.
-    pub async fn dispatch_action(
-        &self,
-        target: &str,
-        event: &str,
-        action: &str,
-    ) -> Result<(), Report> {
+    async fn dispatch_action(&self, target: &str, event: &str, action: &str) -> Result<(), Report> {
         self.element(format!("#{target}"))
             .await?
             .dispatch(SyntheticEvent::custom(event, action).with("bubbles", false))
@@ -103,7 +83,7 @@ impl DndPage<'_> {
 
     /// Fires the native drag event `kind` (`dragstart` creates a new `DataTransfer`) at the
     /// center of `element`. Returns whether its default was prevented.
-    pub async fn fire_drag_event(
+    async fn fire_drag_event(
         &self,
         element: &WebElement,
         kind: &str,
@@ -115,7 +95,7 @@ impl DndPage<'_> {
 
     /// [`fire_drag_event`](Self::fire_drag_event) at `at` (x, y) from the element's top left
     /// corner instead of its center.
-    pub async fn fire_drag_event_at(
+    async fn fire_drag_event_at(
         &self,
         element: &WebElement,
         kind: &str,
@@ -137,7 +117,7 @@ impl DndPage<'_> {
 
     /// A property of the current native drag's `DataTransfer`, e.g. `effectAllowed`, or
     /// `getData('text/plain')` (`expression` is script, evaluated on the transfer).
-    pub async fn transfer<T: DeserializeOwned>(&self, expression: &str) -> Result<T, Report> {
+    async fn transfer<T: DeserializeOwned>(&self, expression: &str) -> Result<T, Report> {
         self.eval(
             &format!("return window.__dndTransfer.{expression};"),
             vec![],
@@ -146,7 +126,9 @@ impl DndPage<'_> {
     }
 
     /// Whether `element` is inert (itself or through an ancestor).
-    pub async fn is_inert(&self, element: &WebElement) -> Result<bool, Report> {
+    async fn is_inert(&self, element: &WebElement) -> Result<bool, Report> {
         Ok(element.count(xpath("ancestor-or-self::*[@inert]")).await? > 0)
     }
 }
+
+impl DndActions for Page<'_> {}

@@ -1,40 +1,14 @@
 // Upstream: react-aria-components/test/Switch.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the switch hooks (through the `Switch` atom): a native `role="switch"` checkbox
+//! inside a label, toggled by press and Space, focus ring, disabled and read-only states, and a
+//! switch bound to a signal. Spec: react-aria-components `Switch.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, css};
 
-/// Behavior of the switch hooks (through the `Switch` atom): a native `role="switch"` checkbox
-/// inside a label, toggled by press and Space, focus ring, disabled and read-only states, and a
-/// switch bound to a signal. Spec: react-aria-components `Switch.test.js`.
-pub struct SwitchTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SwitchTests {
-    fn name(&self) -> Cow<'_, str> {
-        "switch_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/switch").await?;
-
-        cases!(
-            selected_state(&page),
-            keyboard(&page),
-            virtual_label_click(&page),
-            disabled_state(&page),
-            read_only_state(&page),
-            bound_state(&page),
-            bound_read_only(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/switch";
 
 /// The `<label>` of the switch with the visible text `text`.
 async fn label(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
@@ -51,7 +25,8 @@ async fn input(label: &WebElement) -> Result<WebElement, Report> {
     label.element("input").await
 }
 
-async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
     assert_that!(input.attr("role").await?)
@@ -70,7 +45,8 @@ async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
     page.element("#test-sw-before").await?.click().await?;
@@ -87,7 +63,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A virtual click on the label toggles, as with a native label.
-async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     label.virtual_click().await?;
     value(page).await?.wait_for_inner_text("true").await?;
@@ -96,7 +73,8 @@ async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Disabled").await?;
     assert_that!(label.attr("data-disabled").await?)
         .get_some()
@@ -107,7 +85,8 @@ async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Read only").await?;
     let input = input(&label).await?;
     assert_that!(label.attr("data-readonly").await?)
@@ -122,7 +101,8 @@ async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Bound").await?;
     page.element("#test-sw-bound-flip").await?.click().await?;
     label.wait_for_attr("data-selected", Some("true")).await?;
@@ -136,7 +116,8 @@ async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A bound switch stays read-only, also for Space on the focused input.
-async fn bound_read_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn bound_read_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Bound read only").await?;
     let input = input(&label).await?;
     label.click().await?;

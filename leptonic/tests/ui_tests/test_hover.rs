@@ -1,39 +1,16 @@
 // Upstream: react-aria/test/interactions/useHover.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `use_hover`: hover start/end with the hooked element as target (also over inner elements),
+//! no hover by touch, hover ends when disabled and when the hovered child is removed.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
+const PATH: &str = "/hooks/hover";
+
 const START: &str = "start:mouse:test-hover-target,change:true";
 const START_END: &str =
     "start:mouse:test-hover-target,change:true,end:mouse:test-hover-target,change:false";
-
-/// `use_hover`: hover start/end with the hooked element as target (also over inner elements),
-/// no hover by touch, hover ends when disabled and when the hovered child is removed.
-pub struct HoverTests {}
-
-#[async_trait]
-impl BrowserTest<str> for HoverTests {
-    fn name(&self) -> Cow<'_, str> {
-        "hover_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/hover").await?;
-
-        cases!(
-            target_is_the_hooked_element(&page),
-            no_hover_by_touch(&page),
-            hover_ends_when_disabled(&page),
-            hover_ends_when_the_element_is_removed(&page),
-            hoverable_atom(&page),
-        );
-        Ok(())
-    }
-}
 
 /// The log of hover events.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -52,7 +29,8 @@ async fn reset(page: &Page<'_>) -> Result<(), Report> {
 
 /// "hover event target should be the same element we attached listeners to even if we hover over
 /// inner elements".
-async fn target_is_the_hooked_element(page: &Page<'_>) -> Result<(), Report> {
+pub async fn target_is_the_hooked_element(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let target = page.element("#test-hover-target").await?;
     page.element("#test-hover-away").await?.hover().await?;
@@ -67,7 +45,8 @@ async fn target_is_the_hooked_element(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not fire hover events when pointerType is touch".
-async fn no_hover_by_touch(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_hover_by_touch(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let target = page.element("#test-hover-target").await?;
     for kind in ["pointerenter", "pointerleave"] {
         target
@@ -84,7 +63,8 @@ async fn no_hover_by_touch(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should end hover when disabled" (disabled by a script, the pointer stays), "does not handle
 /// hover events if disabled".
-async fn hover_ends_when_disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_ends_when_disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let target = page.element("#test-hover-target").await?;
     let disable = page.element("#test-hover-disable").await?;
@@ -105,7 +85,8 @@ async fn hover_ends_when_disabled(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should trigger onHoverEnd after an element is removed": the target shrinks, the browser fires
 /// no `pointerleave`, only `pointerover` on what is under the pointer now.
-async fn hover_ends_when_the_element_is_removed(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_ends_when_the_element_is_removed(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let remove = page.element("#test-hover-remove").await?;
     remove.hover().await?;
@@ -126,7 +107,8 @@ async fn hover_ends_when_the_element_is_removed(page: &Page<'_>) -> Result<(), R
 }
 
 /// The `Hoverable` atom sets `data-hovered` on its child.
-async fn hoverable_atom(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hoverable_atom(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let hoverable = page.element("#test-hoverable").await?;
     hoverable.hover().await?;
     hoverable

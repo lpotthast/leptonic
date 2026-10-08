@@ -297,9 +297,12 @@ Tests must not depend on each other or on shared server state; checks of the who
   and is registered in `FIXTURES` (`testing/test-app/src/pages/mod.rs`). It is served at `/{group}/{name}`.
 - **Hydration**: the test-app sets `data-hydrated` on `<body>` once hydration finished. `PageActions::goto_path`
   waits for it, so tests never interact with a page whose event handlers aren't attached yet.
-- **Tests**: test implementations in `tests/ui_tests/test_*.rs` (implement `BrowserTest<str>`; the context is the
-  app's base URL; `run` lists its cases with `cases!`; register new tests in `ui_tests::all()`), shared helpers in
-  `tests/pages/` (`PageActions` on a page, `ElementActions` on an element, `Locator`s, `SyntheticEvent`). **Style:**
+- **Tests**: test implementations in `tests/ui_tests/test_*.rs`: every case is a `pub async fn` that loads its
+  page itself and is a test of its own, registered in `ui_tests::all()` (`.case(test_x::case)`, named `x::case`;
+  `tests/cases/mod.rs`). Cases never depend on each other. Sessions return to browser-test's pool after a test and
+  are reset for the next one (`SessionReuse`; `BROWSER_TEST_SESSION_REUSE=0`: a fresh browser per test). Shared
+  helpers in `tests/pages/` (`PageActions` on a page, `ElementActions` on an element, `Locator`s, `SyntheticEvent`).
+  **Style:**
   `documentation/browser-tests.md`: one way per check (find an element with a locator, then its method; every state
   has read / `wait_for_*` / `*_stays`), assertr on settled state; reference `test_checkbox.rs`.
 - **Failures fail `cargo test`**: the runner uses `FailurePolicy::RunAll` and reports every failing test.
@@ -317,14 +320,15 @@ Tests must not depend on each other or on shared server state; checks of the who
 - **Derive tests from react-aria**: react-aria's own tests (`../react-spectrum/packages/react-aria/test/`,
   `react-aria-components/test/`) specify expected behavior. Base our tests on them and name the mirrored upstream test
   file in an `// Upstream:` header of the test file, so `scripts/upstream-drift.sh` reports upstream test changes.
-- **Known issues**: behavior known to be broken lives in `*KnownIssues` tests that only run with
-  `BROWSER_TEST_KNOWN_ISSUES=1` (see `ui_tests::all()`). Move a check into the regular test once it's fixed.
+- **Known issues**: cases of behavior known to be broken are registered only in the known-issues branch of
+  `ui_tests::all()`, which runs with `BROWSER_TEST_KNOWN_ISSUES=1`. Move them to the regular list once fixed.
 - **Hydration**: `test_hydration_ids.rs` compares server-rendered ids with the hydrated DOM and checks id
   references on every fixture the test app's index page lists (in 4 parallel shards; no list to maintain).
   `test_server_panics.rs` (runs last) fails the run if the server panicked.
 - **Running**: `just browser-test`. `BROWSER_TEST_VISIBLE=1` shows the browser, `BROWSER_TEST_PAUSE=1` pauses before
   each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
-  `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid_tests`).
+  `BROWSER_TEST_FILTER=<text>` runs only the tests whose name contains `<text>` (e.g. `grid::` for one fixture's
+  cases, `checkbox::hover` for one case).
   `BROWSER_TEST_PARALLELISM=<n>` sets how many tests run at once (`1`: sequential). `TEST_APP_TARGET_DIR=<dir>`
   builds the test-app there instead of in the inherited `CARGO_TARGET_DIR` (agents:
   `CARGO_TARGET_DIR=<repo>/target/agents TEST_APP_TARGET_DIR=<repo>/testing/test-app/target/agents`). The run summary lists the

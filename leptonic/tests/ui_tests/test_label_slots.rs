@@ -1,9 +1,9 @@
 // Upstream: react-aria/test/label/useLabel.test.js @ 99e6102368
 // Upstream: react-aria/test/label/useField.test.js @ 99e6102368
 // Upstream: react-aria-components/test/FieldError.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! The parts of a field named after its label follow whether the label is rendered: the
+//! select's trigger, the combo box's button, the number field's steppers and the slider's thumb.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,9 +11,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// The parts of a field named after its label follow whether the label is rendered: the
-/// select's trigger, the combo box's button, the number field's steppers and the slider's thumb.
-pub struct LabelSlotsTests {}
+const PATH: &str = "/atoms/label-slots";
 
 /// The fields: their id suffix, the part named after the label, the label's text.
 const PARTS: [(&str, &str, &str); 4] = [
@@ -23,31 +21,35 @@ const PARTS: [(&str, &str, &str); 4] = [
     ("slider", "input", "Volume"),
 ];
 
-#[async_trait]
-impl BrowserTest<str> for LabelSlotsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "label_slots_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/label-slots").await?;
-        cases!(
-            expect_parts(&page, false),
-            toggle_labels(&page, true),
-            toggle_labels(&page, false),
-        );
-        Ok(())
-    }
+/// Without labels, no part is named after one.
+pub async fn no_labels(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    expect_parts(page, false).await
 }
 
-/// Toggle the labels, then expect them `shown` or not.
-async fn toggle_labels(page: &Page<'_>, shown: bool) -> Result<(), Report> {
+/// Labels rendered later name the parts.
+pub async fn labels_added(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    toggle_labels(page).await?;
+    expect_parts(page, true).await
+}
+
+/// Labels removed after they were rendered no longer name the parts.
+pub async fn labels_removed(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    toggle_labels(page).await?;
+    expect_parts(page, true).await?;
+    toggle_labels(page).await?;
+    expect_parts(page, false).await
+}
+
+/// Render the labels if they aren't, remove them if they are.
+async fn toggle_labels(page: &Page<'_>) -> Result<(), Report> {
     page.element("#test-label-slots-toggle")
         .await?
         .click()
         .await?;
-    expect_parts(page, shown).await
+    Ok(())
 }
 
 /// Every field's label is rendered if `shown`, and labels the field's part then. Otherwise every

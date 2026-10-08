@@ -1,40 +1,14 @@
 // Upstream: react-aria-components/test/TagGroup.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The tag group atoms: default classes, label and description, the focus ring, removing tags
+//! with their buttons and the keyboard, tabbing to the remove buttons, selection, the empty state,
+//! and focus moving to the grid when the last tag that could take it is removed.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, xpath};
 
-/// The tag group atoms: default classes, label and description, the focus ring, removing tags
-/// with their buttons and the keyboard, tabbing to the remove buttons, selection, the empty state,
-/// and focus moving to the grid when the last tag that could take it is removed.
-pub struct TagGroupAtomTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TagGroupAtomTests {
-    fn name(&self) -> Cow<'_, str> {
-        "tag_group_atom_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/tag-group").await?;
-
-        cases!(
-            default_classes_and_slots(&page),
-            label_context_ends_with_the_group(&page),
-            focus_ring(&page),
-            tabbing_to_remove_buttons(&page),
-            selection_state(&page),
-            empty_state(&page),
-            focus_moves_to_the_grid_when_no_tag_can_take_it(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/tag-group";
 
 /// The tag named `name` (its accessible name: its text also holds its remove button's).
 async fn tag(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
@@ -49,9 +23,18 @@ async fn focus_on_tag(page: &Page<'_>, name: &str) -> Result<(), Report> {
     Ok(())
 }
 
+/// Tabs from the button before the main group to its first tag, Cat (as upstream's first
+/// `user.tab()`).
+async fn tab_to_the_first_tag(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-tg-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    focus_on_tag(page, "Cat").await
+}
+
 /// "should render with default classes", "provides slots for description": the tag list is a
 /// grid labelled by the group's label and described by its description.
-async fn default_classes_and_slots(page: &Page<'_>) -> Result<(), Report> {
+pub async fn default_classes_and_slots(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("#test-tg-main .leptonic-TagGroup").await?;
     let grid = group.element(".leptonic-TagList").await?;
     assert_that!(grid.attr("role").await?)
@@ -66,7 +49,8 @@ async fn default_classes_and_slots(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The group's label context ends with the group: a label after it is a plain one.
-async fn label_context_ends_with_the_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn label_context_ends_with_the_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let grid = page.element("#test-tg-main .leptonic-TagList").await?;
     let labelledby = grid.attr("aria-labelledby").await?.unwrap_or_default();
     let outside = page.element("#test-tg-after-group label").await?;
@@ -77,10 +61,9 @@ async fn label_context_ends_with_the_group(page: &Page<'_>) -> Result<(), Report
 
 /// "should support focus ring": Tab focuses the first tag, focus visible; "should support
 /// removing items": the tags allow removing.
-async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
-    page.element("#test-tg-before").await?.click().await?;
-    page.send_keys(Key::Tab).await?;
-    focus_on_tag(page, "Cat").await?;
+pub async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    tab_to_the_first_tag(page).await?;
     let cat = tag(page, "Cat").await?;
     cat.wait_for_attr("data-focus-visible", Some("true"))
         .await?;
@@ -92,13 +75,15 @@ async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support tabbing to remove buttons": Tab reaches the focused tag's remove button
 /// ("Remove"), which Space presses; Delete on it removes the tag too.
-async fn tabbing_to_remove_buttons(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tabbing_to_remove_buttons(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let removed = page.element("#test-tg-removed").await?;
     let remove_count = page.element("#test-tg-remove-count").await?;
     let remove = tag(page, "Cat").await?.element("button").await?;
     assert_that!(remove.attr("aria-label").await?)
         .get_some()
         .is_equal_to("Remove");
+    tab_to_the_first_tag(page).await?;
     page.send_keys(Key::Tab).await?;
     page.wait_for_focus(&remove).await?;
     page.send_keys(" ").await?;
@@ -118,8 +103,12 @@ async fn tabbing_to_remove_buttons(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support selection state": selecting, and removing the selected tags together.
-async fn selection_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let dog = tag(page, "Dog").await?;
+    tab_to_the_first_tag(page).await?;
+    page.send_keys(Key::Right).await?;
+    page.wait_for_focus(&dog).await?;
     page.send_keys(" ").await?;
     dog.wait_for_attr("data-selected", Some("true")).await?;
     assert_that!(dog.attr("data-selection-mode").await?)
@@ -131,7 +120,7 @@ async fn selection_state(page: &Page<'_>) -> Result<(), Report> {
     page.send_keys(Key::Backspace).await?;
     page.element("#test-tg-remove-count")
         .await?
-        .wait_for_inner_text("4")
+        .wait_for_inner_text("1")
         .await?;
     page.element("#test-tg-removed")
         .await?
@@ -141,7 +130,8 @@ async fn selection_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support empty state".
-async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let empty = page.element("#test-tg-empty .leptonic-TagList").await?;
     assert_that!(empty.attr("data-empty").await?)
         .get_some()
@@ -152,7 +142,10 @@ async fn empty_state(page: &Page<'_>) -> Result<(), Report> {
 
 /// "if we cannot restore focus to next, then restore to previous": Grape and Plum are disabled,
 /// so removing Watermelon leaves the focus on the grid.
-async fn focus_moves_to_the_grid_when_no_tag_can_take_it(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_moves_to_the_grid_when_no_tag_can_take_it(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let fruits = page.element("#test-tg-fruits .leptonic-TagList").await?;
     assert_that!(fruits.attr("aria-label").await?)
         .get_some()

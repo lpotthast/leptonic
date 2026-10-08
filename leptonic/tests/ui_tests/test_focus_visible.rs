@@ -1,45 +1,12 @@
 // Upstream: react-aria/test/interactions/useFocusVisible.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Form.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `use_focus_visible`: the interaction modality (keyboard, pointer, virtual) and whether focus
+//! should be visible, including the text input filter, window refocus and invalid forms. Every
+//! case starts on a fresh page.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
-
-/// `use_focus_visible`: the interaction modality (keyboard, pointer, virtual) and whether focus
-/// should be visible, including the text input filter, window refocus and invalid forms. Every
-/// case starts on a fresh page.
-pub struct FocusVisibleTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusVisibleTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_visible_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            click_sets_pointer_modality(&page),
-            tab_sets_keyboard_modality(&page),
-            arrow_key_sets_keyboard_modality(&page),
-            typing_on_non_text_input_sets_keyboard_modality(&page),
-            typing_in_text_input_does_not_set_keyboard_modality(&page),
-            typing_in_text_input_silently_updates_stored_modality(&page),
-            pointer_after_keyboard(&page),
-            escape_sets_keyboard_modality(&page),
-            enter_sets_keyboard_modality(&page),
-            space_sets_keyboard_modality(&page),
-            focus_without_a_preceding_event_is_virtual(&page),
-            programmatic_focus_keeps_the_modality(&page),
-            window_refocus_keeps_the_modality(&page),
-            safari_window_refocus_keeps_the_modality(&page),
-            focus_moved_after_invalid_shows_focus(&page),
-        );
-        Ok(())
-    }
-}
 
 const PATH: &str = "/hooks/focus-visible";
 const BEFORE: &str = "#test-fv-before";
@@ -120,7 +87,7 @@ async fn click_with_pointer(page: &Page<'_>, selector: &str) -> Result<(), Repor
 }
 
 /// Click target: modality=Pointer, visible=false.
-async fn click_sets_pointer_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn click_sets_pointer_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.element("#test-fv-pointer-type")
@@ -131,7 +98,7 @@ async fn click_sets_pointer_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab to target: modality=Keyboard, visible=true.
-async fn tab_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     tab_to_target(page).await?;
     expect_state(page, "Keyboard", true).await?;
@@ -143,7 +110,7 @@ async fn tab_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Click target (pointer), then press ArrowDown: modality switches to Keyboard, visible=true.
-async fn arrow_key_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_key_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.send_keys(Key::Down).await?;
@@ -152,7 +119,9 @@ async fn arrow_key_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// Click target (not a text input), then type "a": modality switches to Keyboard (type-ahead).
-async fn typing_on_non_text_input_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typing_on_non_text_input_sets_keyboard_modality(
+    page: &Page<'_>,
+) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.send_keys("a").await?;
@@ -161,7 +130,7 @@ async fn typing_on_non_text_input_sets_keyboard_modality(page: &Page<'_>) -> Res
 }
 
 /// Click text input (pointer), then type "a": modality stays Pointer (text input filter).
-async fn typing_in_text_input_does_not_set_keyboard_modality(
+pub async fn typing_in_text_input_does_not_set_keyboard_modality(
     page: &Page<'_>,
 ) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -173,7 +142,7 @@ async fn typing_in_text_input_does_not_set_keyboard_modality(
 
 /// Click text input, type "a": the subscriber isn't notified (stays Pointer), but the stored
 /// (global) modality is Keyboard, as react-aria's `currentModality`.
-async fn typing_in_text_input_silently_updates_stored_modality(
+pub async fn typing_in_text_input_silently_updates_stored_modality(
     page: &Page<'_>,
 ) -> Result<(), Report> {
     page.goto_path(PATH).await?;
@@ -188,7 +157,7 @@ async fn typing_in_text_input_silently_updates_stored_modality(
 }
 
 /// Click target (pointer), then press Escape: modality switches to Keyboard, visible=true.
-async fn escape_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn escape_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.send_keys(Key::Escape).await?;
@@ -197,7 +166,7 @@ async fn escape_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Click target (pointer), then press Enter: modality switches to Keyboard, visible=true.
-async fn enter_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn enter_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.send_keys(Key::Enter).await?;
@@ -206,7 +175,7 @@ async fn enter_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Click target (pointer), then press Space: modality switches to Keyboard, visible=true.
-async fn space_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn space_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     click_with_pointer(page, TARGET).await?;
     page.send_keys(" ").await?;
@@ -215,7 +184,7 @@ async fn space_sets_keyboard_modality(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab to target (keyboard), then click target: modality switches to Pointer, visible=false.
-async fn pointer_after_keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pointer_after_keyboard(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     tab_to_target(page).await?;
     expect_state(page, "Keyboard", true).await?;
@@ -225,7 +194,7 @@ async fn pointer_after_keyboard(page: &Page<'_>) -> Result<(), Report> {
 
 /// A focus event without a preceding keyboard or pointer event (e.g. a screen reader moving
 /// focus, the iOS form navigation) switches to virtual modality, which shows focus.
-async fn focus_without_a_preceding_event_is_virtual(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_without_a_preceding_event_is_virtual(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element(TARGET).await?;
     click_with_pointer(page, BEFORE).await?;
@@ -238,7 +207,7 @@ async fn focus_without_a_preceding_event_is_virtual(page: &Page<'_>) -> Result<(
 }
 
 /// Programmatic `focus()` calls don't change the modality (react-aria's `focus` override).
-async fn programmatic_focus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn programmatic_focus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let target = page.element(TARGET).await?;
     click_with_pointer(page, BEFORE).await?;
@@ -250,13 +219,13 @@ async fn programmatic_focus_keeps_the_modality(page: &Page<'_>) -> Result<(), Re
 
 /// Leaving and returning to the window keeps the modality: useFocusVisible.test.js, "returns
 /// positive/negative isFocusVisible result after toggling browser window".
-async fn window_refocus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn window_refocus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
     refocus_keeps_the_modality(page, TOGGLE_WINDOW).await
 }
 
 /// Safari's second element focus mustn't switch to virtual modality. useFocusVisible.test.js,
 /// "... after toggling browser tabs in Safari ...".
-async fn safari_window_refocus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
+pub async fn safari_window_refocus_keeps_the_modality(page: &Page<'_>) -> Result<(), Report> {
     refocus_keeps_the_modality(page, TOGGLE_TABS_SAFARI).await
 }
 
@@ -283,7 +252,7 @@ async fn refocus_keeps_the_modality(page: &Page<'_>, toggle: &str) -> Result<(),
 /// A forms library moving focus to the first invalid field right after the form became invalid
 /// shows focus there: Form.test.js, "shows focus-visible when a form library moves focus to the
 /// first invalid field on submit".
-async fn focus_moved_after_invalid_shows_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_moved_after_invalid_shows_focus(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let required = page.element("#test-fv-required").await?;
     click_with_pointer(page, TARGET).await?;

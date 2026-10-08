@@ -1,13 +1,19 @@
 // Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/menu/Menu.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/menu/MenuTrigger.test.js @ 99e6102368
-use std::{borrow::Cow, time::Duration};
+//! Behavior of an action menu built from the menu hooks, asserted on the DOM/ARIA level so that
+//! these tests keep passing while the collection hooks underneath are rewritten. Elements are
+//! found by role and text, as users perceive them. Spec: react-aria-components `Menu.test.tsx`
+//! and the React Spectrum `Menu`/`MenuTrigger` tests.
+use std::time::Duration;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::pages::{ElementActions, Page, PageActions, role};
+
+const PATH: &str = "/hooks/menu";
 
 /// The menu trigger: the button that opens the menu.
 const TRIGGER: &str = "button[aria-haspopup]";
@@ -15,37 +21,6 @@ const MENU: &str = "[role=menu]";
 /// Longer than the type-ahead timeout (1s in react-aria), after which typing starts a new search.
 const TYPE_AHEAD_RESET: Duration = Duration::from_millis(1100);
 const ACTIONS: [&str; 4] = ["Copy", "Cut", "Paste", "Delete"];
-
-/// Behavior of an action menu built from the menu hooks, asserted on the DOM/ARIA level so that
-/// these tests keep passing while the collection hooks underneath are rewritten. Elements are
-/// found by role and text, as users perceive them. Spec: react-aria-components `Menu.test.tsx`
-/// and the React Spectrum `Menu`/`MenuTrigger` tests.
-pub struct MenuTests {}
-
-#[async_trait]
-impl BrowserTest<str> for MenuTests {
-    fn name(&self) -> Cow<'_, str> {
-        "menu_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/menu").await?;
-        cases!(
-            closed_trigger(&page),
-            open_menu_aria_structure(&page),
-            keyboard_opening_focuses_first_or_last_item(&page),
-            keyboard_navigation_skips_disabled_items(&page),
-            keyboard_activation_closes_and_restores_focus(&page),
-            type_ahead(&page),
-            clicking_an_item(&page),
-            mouse_opening_focuses_the_menu(&page),
-            type_ahead_skips_disabled_items(&page),
-            selection_menu(&page),
-        );
-        Ok(())
-    }
-}
 
 /// The menu item with the text `action`.
 async fn item(page: &Page<'_>, action: &str) -> Result<WebElement, Report> {
@@ -93,7 +68,8 @@ async fn close_with_escape(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The closed trigger announces a menu, collapsed, controlling nothing.
-async fn closed_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn closed_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     assert_that!(trigger.attr("aria-haspopup").await?)
         .get_some()
@@ -109,7 +85,8 @@ async fn closed_trigger(page: &Page<'_>) -> Result<(), Report> {
 
 /// The open menu is controlled and labelled by the trigger and lists the items, Paste disabled.
 /// Escape closes it without an action.
-async fn open_menu_aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn open_menu_aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     open_with_key(page, Key::Down).await?;
     expect_focus(page, "Copy").await?;
@@ -140,7 +117,8 @@ async fn open_menu_aria_structure(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// ArrowDown, Enter and Space focus the first item; ArrowUp focuses the last item.
-async fn keyboard_opening_focuses_first_or_last_item(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_opening_focuses_first_or_last_item(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     for (key, name, expected) in [
         (Key::Down.into(), "ArrowDown", "Copy"),
         (Key::Up.into(), "ArrowUp", "Delete"),
@@ -160,7 +138,8 @@ async fn keyboard_opening_focuses_first_or_last_item(page: &Page<'_>) -> Result<
 }
 
 /// Arrow keys, Home and End move focus, skipping the disabled item and wrapping.
-async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_with_key(page, Key::Down).await?;
     expect_focus(page, "Copy").await?;
     for (key, expected) in [
@@ -183,7 +162,8 @@ async fn keyboard_navigation_skips_disabled_items(page: &Page<'_>) -> Result<(),
 }
 
 /// Enter and Space on an item perform its action, close the menu and restore focus.
-async fn keyboard_activation_closes_and_restores_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_activation_closes_and_restores_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let actions = actions_log(page).await?;
     open_with_key(page, Key::Down).await?;
     expect_focus(page, "Copy").await?;
@@ -212,7 +192,8 @@ async fn keyboard_activation_closes_and_restores_focus(page: &Page<'_>) -> Resul
 }
 
 /// Typing focuses the next item whose text starts with the typed characters.
-async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+pub async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_with_key(page, Key::Down).await?;
     expect_focus(page, "Copy").await?;
     page.send_keys("d").await?;
@@ -233,7 +214,8 @@ async fn type_ahead(page: &Page<'_>) -> Result<(), Report> {
 
 /// Clicking an item performs its action, closes the menu and restores focus to the trigger.
 /// Clicking a disabled item does nothing.
-async fn clicking_an_item(page: &Page<'_>) -> Result<(), Report> {
+pub async fn clicking_an_item(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(TRIGGER).await?;
     let actions = actions_log(page).await?;
     trigger.click().await?;
@@ -241,13 +223,13 @@ async fn clicking_an_item(page: &Page<'_>) -> Result<(), Report> {
     trigger.wait_for_attr("aria-expanded", Some("true")).await?;
 
     item(page, "Paste").await?.click().await?;
-    actions.inner_text_stays("Cut,Copy").await?;
+    actions.inner_text_stays("").await?;
     assert_that!(page.count(MENU).await?)
         .with_detail_message("the menu stays open after clicking a disabled item")
         .is_equal_to(1);
 
     item(page, "Delete").await?.click().await?;
-    actions.wait_for_inner_text("Cut,Copy,Delete").await?;
+    actions.wait_for_inner_text("Delete").await?;
     expect_closed_with_focus_on_trigger(page)
         .await
         .context("after clicking Delete")?;
@@ -256,8 +238,8 @@ async fn clicking_an_item(page: &Page<'_>) -> Result<(), Report> {
 
 /// react-aria opens the menu with a `null` focus strategy for mouse users, which focuses the menu
 /// element itself rather than an item (`useSelectableCollection` with `autoFocus: true`).
-async fn mouse_opening_focuses_the_menu(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/hooks/menu").await?;
+pub async fn mouse_opening_focuses_the_menu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element(TRIGGER).await?.click().await?;
     page.wait_for_focus(&page.element(MENU).await?).await?;
     // ArrowDown then focuses the first item.
@@ -268,8 +250,8 @@ async fn mouse_opening_focuses_the_menu(page: &Page<'_>) -> Result<(), Report> {
 
 /// Type-ahead only considers enabled items (react-aria `ListKeyboardDelegate.getKeyForSearch`
 /// walks with `getNextKey`, which skips disabled keys): "p" only matches the disabled "Paste".
-async fn type_ahead_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/hooks/menu").await?;
+pub async fn type_ahead_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_with_key(page, Key::Down).await?;
     let copy = item(page, "Copy").await?;
     page.wait_for_focus(&copy).await?;
@@ -280,8 +262,8 @@ async fn type_ahead_skips_disabled_items(page: &Page<'_>) -> Result<(), Report> 
 
 /// A menu with multiple selection: `menuitemcheckbox` items with `aria-checked`, grouped into
 /// labelled sections. Checking items by click or Space keeps the menu open; Enter closes it.
-async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
-    page.goto_path("/hooks/menu").await?;
+pub async fn selection_menu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let view = page.element(role("button").text("View")).await?;
     let selection = page.element("#test-menu-view-selection").await?;
     view.click().await?;

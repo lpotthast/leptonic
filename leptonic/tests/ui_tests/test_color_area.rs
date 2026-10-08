@@ -1,72 +1,20 @@
 // Upstream: @adobe/react-spectrum/test/color/ColorArea.test.tsx @ 99e6102368
 // Upstream: react-aria-components/test/ColorArea.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `ColorArea`/`ColorThumb` atoms: the hidden inputs' attributes and labelling, keyboard
+//! steps (arrows, Shift, PageUp/PageDown, Home/End), pressing and dragging, disabled areas,
+//! forms.
+//!
+//! HSV and HSL areas (their gradients' layer order with swapped axes, percentages), right to
+//! left, the inputs' `value` property and `input` event (assistive technology), the thumb's
+//! color without alpha, and a thumb that mounts again.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::wait_for,
 };
-
-/// The `ColorArea`/`ColorThumb` atoms: the hidden inputs' attributes and labelling, keyboard
-/// steps (arrows, Shift, PageUp/PageDown, Home/End), pressing and dragging, disabled areas,
-/// forms.
-pub struct ColorAreaTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorAreaTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_area_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-area").await?;
-
-        cases!(
-            input_props(&page),
-            keyboard(&page),
-            keyboard_steps(&page),
-            press_and_drag(&page),
-            disabled(&page),
-            labelling(&page),
-            forms(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// HSV and HSL areas (their gradients' layer order with swapped axes, percentages), right to
-/// left, the inputs' `value` property and `input` event (assistive technology), the thumb's
-/// color without alpha, and a thumb that mounts again.
-pub struct ColorAreaSpacesTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorAreaSpacesTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_area_spaces_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-area").await?;
-
-        cases!(
-            hsv(&page),
-            gradients(&page),
-            right_to_left(&page),
-            input_event(&page),
-            thumb_without_alpha(&page),
-            mounted_again(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// The x and y inputs of the area `#id`.
 async fn inputs(page: &Page<'_>, id: &str) -> Result<(WebElement, WebElement), Report> {
@@ -137,7 +85,8 @@ async fn gradient_layers(page: &Page<'_>, id: &str) -> Result<Vec<String>, Repor
 }
 
 /// "sets input props".
-async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (x, y) = inputs(page, "test-ca-default").await?;
     for input in [&x, &y] {
         assert_that!(input.attr("type").await?)
@@ -173,7 +122,8 @@ async fn input_props(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Keyboard: "left/right", "up/down".
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (x, y) = inputs(page, "test-ca-default").await?;
     let log = log(page).await?;
     page.element("#test-ca-before").await?.focus().await?;
@@ -198,7 +148,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "shiftleft/shiftright", "shiftup/shiftdown", "pageup/pagedown", "home/end".
-async fn keyboard_steps(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_steps(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (shift_x, _) = inputs(page, "test-ca-shift").await?;
     let log = log(page).await?;
     shift_x.focus().await?;
@@ -221,7 +172,8 @@ async fn keyboard_steps(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "clicking on the area chooses the color at that point", then dragging the thumb.
-async fn press_and_drag(page: &Page<'_>) -> Result<(), Report> {
+pub async fn press_and_drag(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (x, y) = inputs(page, "test-ca-default").await?;
     let area = page.element("#test-ca-default [role=group]").await?;
     // Pointer actions don't scroll: keep the area in view.
@@ -252,7 +204,8 @@ async fn press_and_drag(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "disabled": not focusable, no events.
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (disabled_x, disabled_y) = inputs(page, "test-ca-disabled").await?;
     assert_that!(disabled_x.is_enabled().await?).is_false();
     assert_that!(disabled_y.is_enabled().await?).is_false();
@@ -264,7 +217,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Labelling: "should support a custom aria-label", "... aria-labelledby".
-async fn labelling(page: &Page<'_>) -> Result<(), Report> {
+pub async fn labelling(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (label_x, label_y) = inputs(page, "test-ca-label").await?;
     for input in [&label_x, &label_y] {
         assert_that!(input.attr("aria-label").await?)
@@ -292,7 +246,8 @@ async fn labelling(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports form name", "supports form reset".
-async fn forms(page: &Page<'_>) -> Result<(), Report> {
+pub async fn forms(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (form_x, form_y) = inputs(page, "test-ca-form").await?;
     assert_that!(form_x.attr("name").await?)
         .get_some()
@@ -320,7 +275,8 @@ async fn forms(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// An HSV area: saturation and brightness from 0 to 1, formatted as percentages.
-async fn hsv(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hsv(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (x, y) = inputs(page, "test-ca-hsv").await?;
     for input in [&x, &y] {
         assert_that!(input.attr("min").await?)
@@ -347,7 +303,8 @@ async fn hsv(page: &Page<'_>) -> Result<(), Report> {
 
 /// Gradients: the space's later channel on top (react-aria's `useColorAreaGradient`), whichever
 /// axis it is on.
-async fn gradients(page: &Page<'_>) -> Result<(), Report> {
+pub async fn gradients(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let layers = gradient_layers(page, "test-ca-hsv").await?;
     assert_that!(layers[0].as_str()).contains("rgb(0, 0, 0), rgba(0, 0, 0, 0)");
     let layers = gradient_layers(page, "test-ca-hsv-swapped").await?;
@@ -362,7 +319,8 @@ async fn gradients(page: &Page<'_>) -> Result<(), Report> {
 
 /// Right to left: x grows to the left (a press a quarter in from the left is 75%), and
 /// ArrowLeft increases it.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (rtl_x, rtl_y) = inputs(page, "test-ca-rtl").await?;
     let area = page.element("#test-ca-rtl [role=group]").await?;
     area.scroll_into_view().await?;
@@ -389,7 +347,8 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
 
 /// The `input` event (assistive technology sets the value), then the keyboard: the value property
 /// follows the state.
-async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let (input_x, _) = inputs(page, "test-ca-input").await?;
     input_x.virtual_input("100").await?;
     page.element("#test-ca-input-log")
@@ -403,14 +362,16 @@ async fn input_event(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The thumb shows the color without its alpha (react-aria's `getDisplayColor`).
-async fn thumb_without_alpha(page: &Page<'_>) -> Result<(), Report> {
+pub async fn thumb_without_alpha(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let thumb = page.element("#test-ca-alpha .leptonic-ColorThumb").await?;
     assert_that!(thumb.css_value("background-color").await?).is_equal_to("rgba(255, 0, 255, 1)");
     Ok(())
 }
 
 /// A thumb mounted again (inside a `<Show>`) renders and works.
-async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-area").await?;
     let toggle = page.element("#test-ca-toggle").await?;
     toggle.click().await?;
     page.wait_for_count("#test-ca-show input[type=range]", 0)

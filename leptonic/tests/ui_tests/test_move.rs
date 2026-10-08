@@ -1,37 +1,13 @@
 // Upstream: react-aria/test/interactions/useMove.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `use_move`: pointer movement (start on the first move, deltas, end on pointer up or cancel),
+//! nothing for right clicks, taps or further pointers, no bubbling to a movable parent, arrow
+//! keys, other keys passed on.
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
-/// `use_move`: pointer movement (start on the first move, deltas, end on pointer up or cancel),
-/// nothing for right clicks, taps or further pointers, no bubbling to a movable parent, arrow
-/// keys, other keys passed on.
-pub struct MoveTests {}
-
-#[async_trait]
-impl BrowserTest<str> for MoveTests {
-    fn name(&self) -> Cow<'_, str> {
-        "move_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/move").await?;
-
-        cases!(
-            responds_to_pointer_events(&page),
-            ends_with_pointercancel(&page),
-            ignores_right_clicks_and_taps(&page),
-            ignores_additional_pointers(&page),
-            doesnt_bubble_to_a_movable_parent(&page),
-            responds_to_keys(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/move";
 
 /// The log of move events.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -67,7 +43,8 @@ fn pen(kind: &str, pointer_id: i32, x: i32, y: i32, button: i32) -> SyntheticEve
 }
 
 /// "responds to pointer events": the first move starts, up ends.
-async fn responds_to_pointer_events(page: &Page<'_>) -> Result<(), Report> {
+pub async fn responds_to_pointer_events(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let single = page.element("#test-move-single").await?;
     single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
@@ -83,7 +60,8 @@ async fn responds_to_pointer_events(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "ends with pointercancel".
-async fn ends_with_pointercancel(page: &Page<'_>) -> Result<(), Report> {
+pub async fn ends_with_pointercancel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let single = page.element("#test-move-single").await?;
     single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
     single.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
@@ -97,7 +75,8 @@ async fn ends_with_pointercancel(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "doesn't respond to right click", "doesn't fire anything when tapping".
-async fn ignores_right_clicks_and_taps(page: &Page<'_>) -> Result<(), Report> {
+pub async fn ignores_right_clicks_and_taps(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let single = page.element("#test-move-single").await?;
     single.dispatch(pen("pointerdown", 1, 1, 30, 2)).await?;
     single.dispatch(pen("pointermove", 1, 10, 25, 2)).await?;
@@ -109,7 +88,8 @@ async fn ignores_right_clicks_and_taps(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "ignores any additional pointers".
-async fn ignores_additional_pointers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn ignores_additional_pointers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let log = log(page).await?;
     let single = page.element("#test-move-single").await?;
     single.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
@@ -126,7 +106,8 @@ async fn ignores_additional_pointers(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "doesn't bubble to useMove on parent elements".
-async fn doesnt_bubble_to_a_movable_parent(page: &Page<'_>) -> Result<(), Report> {
+pub async fn doesnt_bubble_to_a_movable_parent(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let child = page.element("#test-move-child").await?;
     child.dispatch(pen("pointerdown", 1, 1, 30, 0)).await?;
     child.dispatch(pen("pointermove", 1, 10, 25, 0)).await?;
@@ -140,7 +121,8 @@ async fn doesnt_bubble_to_a_movable_parent(page: &Page<'_>) -> Result<(), Report
 }
 
 /// "responds to keypresses", "allows handling other key events".
-async fn responds_to_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn responds_to_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-move-single").await?.focus().await?;
     for key in [Key::Up, Key::Down, Key::Left, Key::Right, Key::PageUp] {
         page.send_keys(key).await?;

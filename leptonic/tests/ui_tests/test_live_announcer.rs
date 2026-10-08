@@ -1,9 +1,9 @@
 // No upstream: react-aria has no tests of its own for the live announcer (only components
+//! The live announcer: polite and assertive announcements in one shared announcer, cleared on
+//! request and removed after their timeout. Event handlers run without a reactive owner;
+//! announcing must still work.
 // asserting announcements); this checks leptonic's regions and messages.
-use std::borrow::Cow;
-
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
 use crate::{
@@ -11,27 +11,11 @@ use crate::{
     polling::wait_for,
 };
 
-/// The live announcer: polite and assertive announcements in one shared announcer, cleared on
-/// request and removed after their timeout. Event handlers run without a reactive owner;
-/// announcing must still work.
-pub struct LiveAnnouncerTests {}
-
-#[async_trait]
-impl BrowserTest<str> for LiveAnnouncerTests {
-    fn name(&self) -> Cow<'_, str> {
-        "live_announcer_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/live-announcer").await?;
-        cases!(announcements(&page), clear(&page), timeout(&page),);
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/live-announcer";
 
 /// Polite and assertive announcements go into their regions of one shared announcer.
-async fn announcements(page: &Page<'_>) -> Result<(), Report> {
+pub async fn announcements(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-la-polite").await?.click().await?;
     page.element("[data-live-announcer] [aria-live=polite] div")
         .await?;
@@ -47,7 +31,19 @@ async fn announcements(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Clearing empties both regions.
-async fn clear(page: &Page<'_>) -> Result<(), Report> {
+pub async fn clear(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    page.element("#test-la-polite").await?.click().await?;
+    wait_for("the polite log")
+        .observing(|| log_text(page, "polite"))
+        .to_be_equal_to("Polite hello")
+        .await?;
+    page.element("#test-la-assertive").await?.click().await?;
+    wait_for("the assertive log")
+        .observing(|| log_text(page, "assertive"))
+        .to_be_equal_to("Urgent hello")
+        .await?;
+
     page.element("#test-la-clear").await?.click().await?;
     wait_for("the polite log")
         .observing(|| log_text(page, "polite"))
@@ -61,7 +57,8 @@ async fn clear(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Announcements are removed after their timeout.
-async fn timeout(page: &Page<'_>) -> Result<(), Report> {
+pub async fn timeout(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-la-short").await?.click().await?;
     page.element("[data-live-announcer] [aria-live=polite] div")
         .await?;

@@ -1,9 +1,22 @@
 // Upstream: react-aria-components/test/ComboBox.test.js @ 99e6102368
 // Upstream: react-stately/test/combobox/useComboBoxState.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The combo boxes of `/atoms/combobox-forms` with custom values: committing typed text on blur,
+//! Enter and Escape keeps it and clears the selection (react-stately's `commitCustomValue`), and
+//! the text is submitted with the form.
+//!
+//! "should support validation errors" (native validation reaching the combo box's input), and
+//! ARIA validation with `validate`.
+//!
+//! "should support multiple selection", "should support deselection if multiple selection is
+//! enabled", "should support isRequired with multiple selection", "should support formValue".
+//!
+//! `menuTrigger` focus and manual (react-stately's `useComboBoxState`: `open` with a trigger,
+//! showing all items), and `on_open_change` with what opened the popover.
+//!
+//! "should support filtering sections", disabled keys, Enter without a focused option, and the
+//! option count announcement.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -12,111 +25,6 @@ use crate::{
 };
 
 const LISTBOX: &str = "[role=listbox]";
-
-/// The combo boxes of `/atoms/combobox-forms` with custom values: committing typed text on blur,
-/// Enter and Escape keeps it and clears the selection (react-stately's `commitCustomValue`), and
-/// the text is submitted with the form.
-pub struct ComboBoxCustomValueTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxCustomValueTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_custom_value_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox-forms").await?;
-        cases!(
-            select_an_option(&page),
-            custom_text_on_blur(&page),
-            escape_keeps_custom_text(&page),
-            enter_commits_custom_text(&page),
-        );
-        Ok(())
-    }
-}
-
-/// "should support validation errors" (native validation reaching the combo box's input), and
-/// ARIA validation with `validate`.
-pub struct ComboBoxValidationTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxValidationTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_validation_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox-forms").await?;
-        cases!(native_validation(&page), aria_validation(&page));
-        Ok(())
-    }
-}
-
-/// "should support multiple selection", "should support deselection if multiple selection is
-/// enabled", "should support isRequired with multiple selection", "should support formValue".
-pub struct ComboBoxMultipleTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxMultipleTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_multiple_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox-forms").await?;
-        cases!(
-            multiple_selection(&page),
-            multiple_form_reset(&page),
-            required_with_multiple_selection(&page),
-            form_value(&page),
-        );
-        Ok(())
-    }
-}
-
-/// `menuTrigger` focus and manual (react-stately's `useComboBoxState`: `open` with a trigger,
-/// showing all items), and `on_open_change` with what opened the popover.
-pub struct ComboBoxMenuTriggerTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxMenuTriggerTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_menu_trigger_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox-forms").await?;
-        cases!(focus_trigger(&page), manual_trigger(&page));
-        Ok(())
-    }
-}
-
-/// "should support filtering sections", disabled keys, Enter without a focused option, and the
-/// option count announcement.
-pub struct ComboBoxSectionsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ComboBoxSectionsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "combobox_sections_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/combobox-forms").await?;
-        cases!(
-            filtering_sections(&page),
-            disabled_option_is_skipped(&page),
-            enter_without_a_focused_option(&page),
-        );
-        Ok(())
-    }
-}
 
 /// The combo box input inside `container`.
 async fn input_in(page: &Page<'_>, container: &str) -> Result<WebElement, Report> {
@@ -179,8 +87,9 @@ async fn hidden_values(page: &Page<'_>, container: &str) -> Result<Vec<(String, 
     Ok(values)
 }
 
-/// Selecting an option with the keyboard.
-async fn select_an_option(page: &Page<'_>) -> Result<(), Report> {
+/// Selecting an option with the keyboard (Kangaroo, key 3).
+pub async fn select_an_option(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-custom").await?;
     input.click().await?;
     input.send_keys("Kan").await?;
@@ -197,7 +106,9 @@ async fn select_an_option(page: &Page<'_>) -> Result<(), Report> {
 
 /// Typed text matching no option is kept when focus leaves and clears the selection; the form
 /// submits the text (`allows_custom_value` submits the text, not the key).
-async fn custom_text_on_blur(page: &Page<'_>) -> Result<(), Report> {
+pub async fn custom_text_on_blur(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
+    select_an_option(page).await?;
     let input = input_in(page, "#cbf-custom").await?;
     input.send_keys(Key::Control + "a").await?;
     input.send_keys("Wombat").await?;
@@ -219,17 +130,19 @@ async fn custom_text_on_blur(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Escape without a selection keeps the custom text (react-stately `revert`).
-async fn escape_keeps_custom_text(page: &Page<'_>) -> Result<(), Report> {
+pub async fn escape_keeps_custom_text(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-custom").await?;
     input.click().await?;
     input.send_keys("x").await?;
     input.send_keys(Key::Escape).await?;
-    input.prop_stays("value", "Wombatx").await?;
+    input.prop_stays("value", "x").await?;
     Ok(())
 }
 
-/// Enter commits custom text too; the (empty) value doesn't change again.
-async fn enter_commits_custom_text(page: &Page<'_>) -> Result<(), Report> {
+/// Enter commits custom text too; the value (no selection) doesn't change.
+pub async fn enter_commits_custom_text(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-custom").await?;
     input.send_keys(Key::Control + "a").await?;
     input.send_keys("Emu").await?;
@@ -237,14 +150,15 @@ async fn enter_commits_custom_text(page: &Page<'_>) -> Result<(), Report> {
     input.prop_stays("value", "Emu").await?;
     page.element("#cbf-custom-changes")
         .await?
-        .inner_text_stays("[3]|[]")
+        .inner_text_stays("")
         .await?;
     Ok(())
 }
 
 /// Native: `required` on the input, the error once the form is checked; it stays until the
 /// value is committed (focus leaves).
-async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-required").await?;
     let root = page.element("#cbf-required .leptonic-ComboBox").await?;
     assert_that!(input.attr("required").await?).is_some();
@@ -283,7 +197,8 @@ async fn native_validation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// ARIA: `validate` runs on the value, its message shows right away.
-async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-validate").await?;
     input.click().await?;
     input.send_keys("Do").await?;
@@ -309,7 +224,8 @@ async fn aria_validation(page: &Page<'_>) -> Result<(), Report> {
 
 /// Multiple selection: the popover stays open, the input stays empty, the form submits every
 /// key; pressing a selected option deselects it.
-async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-multiple").await?;
     let changes = page.element("#cbf-multiple-changes").await?;
     open_with_button(page, "#cbf-multiple").await?;
@@ -343,8 +259,23 @@ async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Form reset restores the (empty) default.
-async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let form = page.element("#cbf-multiple").await?;
+    open_with_button(page, "#cbf-multiple").await?;
+    page.element(role("option").text("Cat"))
+        .await?
+        .click()
+        .await?;
+    wait_for("the submitted animals")
+        .observing(|| form.form_values("animals"))
+        .to_be_equal_to(vec!["1".to_owned()])
+        .await?;
+    input_in(page, "#cbf-multiple")
+        .await?
+        .send_keys(Key::Escape)
+        .await?;
+    page.wait_for_count(LISTBOX, 0).await?;
     page.element("#cbf-multiple-reset").await?.click().await?;
     wait_for("the submitted animals")
         .observing(|| form.form_values("animals"))
@@ -354,7 +285,8 @@ async fn multiple_form_reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Required with multiple selection: required only while nothing is selected.
-async fn required_with_multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn required_with_multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-multiple-required").await?;
     let root = page
         .element("#cbf-multiple-required .leptonic-ComboBox")
@@ -394,7 +326,8 @@ async fn required_with_multiple_selection(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// `form_value`: the key in a hidden input (the input has no name), or the text.
-async fn form_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-key").await?;
     assert_that!(input.attr("name").await?).is_none();
     assert_that!(input.value().await?)
@@ -418,7 +351,8 @@ async fn form_value(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Focus opens the popover with all options, though the input holds "Do"; typing filters again.
-async fn focus_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-focus").await?;
     let open_changes = page.element("#cbf-focus-open").await?;
     input.click().await?;
@@ -435,7 +369,8 @@ async fn focus_trigger(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Manual: typing doesn't open, ArrowDown does (with all options).
-async fn manual_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn manual_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-manual").await?;
     input.click().await?;
     input.send_keys("a").await?;
@@ -452,7 +387,8 @@ async fn manual_trigger(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// One group per section with matches, named by its heading; sections without matches are gone.
-async fn filtering_sections(page: &Page<'_>) -> Result<(), Report> {
+pub async fn filtering_sections(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-sections").await?;
     input.click().await?;
     input.send_keys("o").await?;
@@ -469,9 +405,11 @@ async fn filtering_sections(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The disabled option is skipped by the keyboard.
-async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-sections").await?;
-    input.send_keys(Key::Backspace).await?;
+    input.click().await?;
+    input.send_keys("o").await?;
     expect_options(page, &["Dog", "Owl", "Parrot"]).await?;
     let dog = page.element(role("option").text("Dog")).await?;
     assert_that!(dog.attr("aria-disabled").await?)
@@ -491,7 +429,8 @@ async fn disabled_option_is_skipped(page: &Page<'_>) -> Result<(), Report> {
 /// Enter with the popover closed submits the form; with the popover open but no focused option
 /// it only commits (reverting the text). The number of options is announced when the popover
 /// opens without a focused option.
-async fn enter_without_a_focused_option(page: &Page<'_>) -> Result<(), Report> {
+pub async fn enter_without_a_focused_option(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/combobox-forms").await?;
     let input = input_in(page, "#cbf-submit").await?;
     let submits = page.element("#cbf-submits").await?;
     input.click().await?;

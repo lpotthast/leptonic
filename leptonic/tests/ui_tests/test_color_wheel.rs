@@ -1,66 +1,18 @@
 // Upstream: @adobe/react-spectrum/test/color/ColorWheel.test.tsx @ 99e6102368
 // Upstream: react-aria/test/color/useColorWheel.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! The `ColorWheel` atoms: input attributes and labelling, keyboard steps wrapping around 0°,
+//! a press on the ring (0° at 3 o'clock, clockwise), disabled wheels, forms.
+//!
+//! Dragging the thumb, the input's `value` property and `input` event (assistive technology),
+//! RGB colors (the hue of their HSL form), and parts that mount again.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::wait_for,
 };
-
-/// The `ColorWheel` atoms: input attributes and labelling, keyboard steps wrapping around 0°,
-/// a press on the ring (0° at 3 o'clock, clockwise), disabled wheels, forms.
-pub struct ColorWheelTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorWheelTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_wheel_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-wheel").await?;
-
-        cases!(
-            input_props(&page),
-            keyboard(&page),
-            ring_press(&page),
-            disabled(&page),
-            forms(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// Dragging the thumb, the input's `value` property and `input` event (assistive technology),
-/// RGB colors (the hue of their HSL form), and parts that mount again.
-pub struct ColorWheelInteractionTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorWheelInteractionTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_wheel_interaction_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-wheel").await?;
-
-        cases!(
-            drag_thumb(&page),
-            input_event(&page),
-            rgb_colors(&page),
-            mounted_again(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// The range input of the wheel `#id`.
 async fn input(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -101,7 +53,8 @@ async fn wait_for_last_log(page: &Page<'_>, expected: &str) -> Result<(), Report
 }
 
 /// "sets input props"; the hue channel names a wheel without labels.
-async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let wheel = input(page, "test-cw-default").await?;
     assert_that!(wheel.attr("type").await?)
         .get_some()
@@ -122,7 +75,8 @@ async fn input_props(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Keyboard: arrows step, Shift and PageUp/PageDown by 15°, around 0°.
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let wheel = input(page, "test-cw-default").await?;
     page.element("#test-cw-before").await?.focus().await?;
     page.send_keys(Key::Tab).await?;
@@ -146,7 +100,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A press on the ring below the center: 90°.
-async fn ring_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn ring_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let track = page.element("#test-cw-default > div > div").await?;
     track.scroll_into_view().await?;
     page.driver
@@ -163,7 +118,8 @@ async fn ring_press(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "disabled".
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let disabled = input(page, "test-cw-disabled").await?;
     assert_that!(disabled.is_enabled().await?).is_false();
     page.element("#test-cw-a").await?.focus().await?;
@@ -174,7 +130,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// An `aria_label`; "supports form name", "supports form reset".
-async fn forms(page: &Page<'_>) -> Result<(), Report> {
+pub async fn forms(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let form = input(page, "test-cw-form").await?;
     assert_that!(form.attr("aria-label").await?)
         .get_some()
@@ -191,7 +148,8 @@ async fn forms(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Dragging the thumb (at 0°, 3 o'clock, 87 pixels from the center) to below the center: 90°.
-async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
+pub async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let wheel = input(page, "test-cw-default").await?;
     let thumb = page
         .element("#test-cw-default .leptonic-ColorThumb")
@@ -212,7 +170,8 @@ async fn drag_thumb(page: &Page<'_>) -> Result<(), Report> {
 
 /// The `input` event (assistive technology sets the value), then the keyboard: the value property
 /// follows the state.
-async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+pub async fn input_event(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let wheel = input(page, "test-cw-default").await?;
     wheel.virtual_input("200").await?;
     wait_for_last_log(page, "change:200").await?;
@@ -228,7 +187,8 @@ async fn input_event(page: &Page<'_>) -> Result<(), Report> {
 
 /// An RGB color: the wheel changes the hue of its HSL form and keeps the RGB type. A gray has no
 /// hue in RGB: the wheel keeps the hue it set (the color stays gray).
-async fn rgb_colors(page: &Page<'_>) -> Result<(), Report> {
+pub async fn rgb_colors(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let rgb = input(page, "test-cw-rgb").await?;
     rgb.focus().await?;
     page.send_keys(Key::Right).await?;
@@ -251,7 +211,8 @@ async fn rgb_colors(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Track and thumb mounted again (inside a `<Show>`) render and work.
-async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mounted_again(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/color-wheel").await?;
     let toggle = page.element("#test-cw-toggle").await?;
     toggle.click().await?;
     page.wait_for_count("#test-cw-show input[type=range]", 0)

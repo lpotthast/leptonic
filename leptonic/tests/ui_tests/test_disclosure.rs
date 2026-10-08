@@ -1,19 +1,17 @@
 // Upstream: react-aria-components/test/Disclosure.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The disclosure atoms: the trigger controls its panel (`aria-expanded`, `aria-controls`,
+//! `aria-labelledby`), which is `hidden="until-found"` while collapsed; other buttons in the
+//! disclosure don't toggle it; nested disclosures toggle independently; groups expand one or
+//! several; a disabled group disables its triggers; `beforematch` (find in page) expands; the
+//! focus ring within; controlled disclosures and groups; a group's `on_expanded_change`; nested
+//! groups.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent, role};
 
-/// The disclosure atoms: the trigger controls its panel (`aria-expanded`, `aria-controls`,
-/// `aria-labelledby`), which is `hidden="until-found"` while collapsed; other buttons in the
-/// disclosure don't toggle it; nested disclosures toggle independently; groups expand one or
-/// several; a disabled group disables its triggers; `beforematch` (find in page) expands; the
-/// focus ring within; controlled disclosures and groups; a group's `on_expanded_change`; nested
-/// groups.
-pub struct DisclosureTests {}
+const PATH: &str = "/atoms/disclosure";
 
 /// The panel controlled by the trigger `trigger`.
 async fn panel_of(page: &Page<'_>, trigger: &WebElement) -> Result<WebElement, Report> {
@@ -40,38 +38,9 @@ async fn expect_expanded(
     Ok(())
 }
 
-#[async_trait]
-impl BrowserTest<str> for DisclosureTests {
-    fn name(&self) -> Cow<'_, str> {
-        "disclosure_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/disclosure").await?;
-
-        cases!(
-            trigger_controls_its_panel(&page),
-            adjacent_interactive_elements(&page),
-            toggles_by_press_and_enter(&page),
-            find_in_page_expands(&page),
-            nested_disclosures(&page),
-            one_expanded_at_a_time(&page),
-            multiple_expanded(&page),
-            panel_as_landmark(&page),
-            repeated_keydown_toggles_once(&page),
-            disabled_group(&page),
-            focus_ring(&page),
-            controlled(&page),
-            groups(&page),
-        );
-
-        Ok(())
-    }
-}
-
 /// The trigger controls its panel, a group labelled by the trigger, collapsed at first.
-async fn trigger_controls_its_panel(page: &Page<'_>) -> Result<(), Report> {
+pub async fn trigger_controls_its_panel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-disc-trigger").await?;
     let panel = panel_of(page, &trigger).await?;
     assert_that!(panel.attr("role").await?)
@@ -86,7 +55,8 @@ async fn trigger_controls_its_panel(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support interactive elements adjacent to heading": the menu opens, the disclosure
 /// stays collapsed.
-async fn adjacent_interactive_elements(page: &Page<'_>) -> Result<(), Report> {
+pub async fn adjacent_interactive_elements(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-disc-trigger").await?;
     page.element("#test-disc-menu-trigger")
         .await?
@@ -100,7 +70,8 @@ async fn adjacent_interactive_elements(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should toggle expanded state when trigger is clicked"; Enter toggles once.
-async fn toggles_by_press_and_enter(page: &Page<'_>) -> Result<(), Report> {
+pub async fn toggles_by_press_and_enter(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-disc-trigger").await?;
     let changes = page.element("#test-disc-changes").await?;
     trigger.click().await?;
@@ -118,7 +89,8 @@ async fn toggles_by_press_and_enter(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Find in page (`beforematch`, which doesn't bubble) expands the collapsed panel.
-async fn find_in_page_expands(page: &Page<'_>) -> Result<(), Report> {
+pub async fn find_in_page_expands(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-disc-trigger").await?;
     expect_expanded(page, &trigger, false).await?;
     panel_of(page, &trigger)
@@ -130,7 +102,8 @@ async fn find_in_page_expands(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support nested Disclosures".
-async fn nested_disclosures(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_disclosures(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let outer = page.element(role("button").text("Outer")).await?;
     let inner = page.element(role("button").text("Inner")).await?;
     outer.click().await?;
@@ -145,7 +118,8 @@ async fn nested_disclosures(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should only allow one Disclosure to be expanded at a time by default".
-async fn one_expanded_at_a_time(page: &Page<'_>) -> Result<(), Report> {
+pub async fn one_expanded_at_a_time(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let a = page.element(role("button").text("Group A")).await?;
     let b = page.element(role("button").text("Group B")).await?;
     a.click().await?;
@@ -157,7 +131,8 @@ async fn one_expanded_at_a_time(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should allow multiple Disclosures to be expanded when allowsMultipleExpanded is true".
-async fn multiple_expanded(page: &Page<'_>) -> Result<(), Report> {
+pub async fn multiple_expanded(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let c = page.element(role("button").text("Multi C")).await?;
     let d = page.element(role("button").text("Multi D")).await?;
     c.click().await?;
@@ -168,7 +143,8 @@ async fn multiple_expanded(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A panel as a landmark: the role the panel asks for, on the server and the client.
-async fn panel_as_landmark(page: &Page<'_>) -> Result<(), Report> {
+pub async fn panel_as_landmark(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let region = page.element(role("button").text("Region")).await?;
     assert_that!(panel_of(page, &region).await?.attr("role").await?)
         .get_some()
@@ -184,7 +160,8 @@ async fn panel_as_landmark(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not expand or collapse on repeat keydown events": Enter held down toggles once.
-async fn repeated_keydown_toggles_once(page: &Page<'_>) -> Result<(), Report> {
+pub async fn repeated_keydown_toggles_once(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let region = page.element(role("button").text("Region")).await?;
     region.click().await?;
     expect_expanded(page, &region, true).await?;
@@ -194,7 +171,8 @@ async fn repeated_keydown_toggles_once(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should disable all Disclosures when DisclosureGroup is disabled".
-async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element(role("button").text("Disabled E")).await?;
     assert_that!(trigger.is_enabled().await?).is_false();
     assert_that!(trigger.attr("data-disabled").await?)
@@ -204,7 +182,8 @@ async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support focus ring": `data-focus-visible-within` while keyboard focus is within.
-async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let disclosure = page.element("#test-disc-main").await?;
     let trigger = page.element("#test-disc-trigger").await?;
     trigger.click().await?;
@@ -231,7 +210,8 @@ async fn focus_ring(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support controlled isExpanded prop", "should expand a disabled disclosure via
 /// isExpanded", "should not expand when beforematch event occurs if controlled and closed".
-async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let disclosure = page.element(".test-disc-controlled").await?;
     let trigger = page.element(role("button").text("Controlled")).await?;
     assert_that!(disclosure.attr("data-expanded").await?)
@@ -277,7 +257,8 @@ async fn controlled(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should call onExpandedChange when a Disclosure is toggled", "should support controlled
 /// expandedKeys prop", "should support nested DisclosureGroups".
-async fn groups(page: &Page<'_>) -> Result<(), Report> {
+pub async fn groups(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let keys = page.element("#test-disc-group-keys").await?;
     page.element(role("button").text("Report 1"))
         .await?

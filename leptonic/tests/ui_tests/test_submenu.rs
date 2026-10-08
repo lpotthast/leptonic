@@ -1,8 +1,9 @@
 // Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! Submenus ("Submenus" in RAC's `Menu.test.tsx`): opening by hover and the arrow key, the trigger
+//! item's ARIA attributes, actions in (nested) submenus closing the whole tree, ArrowLeft and
+//! Escape returning to the trigger, focusing another item and interacting outside closing them.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,35 +11,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Submenus ("Submenus" in RAC's `Menu.test.tsx`): opening by hover and the arrow key, the trigger
-/// item's ARIA attributes, actions in (nested) submenus closing the whole tree, ArrowLeft and
-/// Escape returning to the trigger, focusing another item and interacting outside closing them.
-pub struct SubmenuTests {}
-
-#[async_trait]
-impl BrowserTest<str> for SubmenuTests {
-    fn name(&self) -> Cow<'_, str> {
-        "submenu_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/submenu").await?;
-        cases!(
-            supports_a_submenu_trigger(&page),
-            supports_nested_submenu_triggers(&page),
-            keyboard(&page),
-            focusing_another_item_closes_the_submenu(&page),
-            interacting_outside_closes_all(&page),
-            context_menu(&page),
-            subdialog(&page),
-            subdialog_with_dialog(&page),
-            right_to_left(&page),
-            safe_triangle(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/submenu";
 
 const MENU: &str = "[role=menu]";
 
@@ -79,7 +52,8 @@ async fn click_outside(page: &Page<'_>, context: bool) -> Result<(), Report> {
 
 /// "should support a submenu trigger": the trigger item announces and controls its submenu,
 /// which it names; hovering opens it; an action closes every menu.
-async fn supports_a_submenu_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn supports_a_submenu_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_root(page).await?;
     let share = item(page, "Share…").await?;
     assert_that!(share.attr("aria-haspopup").await?)
@@ -116,7 +90,8 @@ async fn supports_a_submenu_trigger(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support nested submenu triggers".
-async fn supports_nested_submenu_triggers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn supports_nested_submenu_triggers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_root(page).await?;
     let share = item(page, "Share…").await?;
     share.hover().await?;
@@ -126,10 +101,7 @@ async fn supports_nested_submenu_triggers(page: &Page<'_>) -> Result<(), Report>
     email.wait_for_attr("aria-expanded", Some("true")).await?;
 
     item(page, "Work").await?.click().await?;
-    actions_log(page)
-        .await?
-        .wait_for_inner_text("sms, work")
-        .await?;
+    actions_log(page).await?.wait_for_inner_text("work").await?;
     page.wait_for_count(MENU, 0).await?;
     Ok(())
 }
@@ -137,7 +109,8 @@ async fn supports_nested_submenu_triggers(page: &Page<'_>) -> Result<(), Report>
 /// ArrowRight opens the submenu focusing its first item, ArrowLeft and Escape close it returning
 /// focus to the trigger ("should restore focus to menu trigger if submenu is closed with Escape",
 /// "should restore focus to nested submenu trigger if nested submenu is closed with Escape key").
-async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-submenu-trigger").await?;
     trigger.focus().await?;
     page.send_keys(Key::Enter).await?;
@@ -179,7 +152,8 @@ async fn keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Focusing (hovering) another item of the menu closes the open submenu.
-async fn focusing_another_item_closes_the_submenu(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focusing_another_item_closes_the_submenu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_root(page).await?;
     let share = item(page, "Share…").await?;
     share.hover().await?;
@@ -192,7 +166,8 @@ async fn focusing_another_item_closes_the_submenu(page: &Page<'_>) -> Result<(),
 }
 
 /// "should close all submenus if interacting outside root submenu".
-async fn interacting_outside_closes_all(page: &Page<'_>) -> Result<(), Report> {
+pub async fn interacting_outside_closes_all(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_root(page).await?;
     let share = item(page, "Share…").await?;
     share.hover().await?;
@@ -207,7 +182,8 @@ async fn interacting_outside_closes_all(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support a context menu trigger" (a right click opens the menu at the pointer, a
 /// regular press doesn't) and "should close a context menu when right clicking outside".
-async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
+pub async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-context-trigger").await?;
     // Not announced as opening a menu.
     assert_that!(trigger.attr("aria-haspopup").await?).is_none();
@@ -245,7 +221,7 @@ async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
     item(page, "Paste").await?.click().await?;
     actions_log(page)
         .await?
-        .wait_for_inner_text("sms, work, paste")
+        .wait_for_inner_text("paste")
         .await?;
     page.wait_for_count(MENU, 0).await?;
 
@@ -271,7 +247,8 @@ async fn context_menu(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should contain focus for subdialogs": a submenu trigger opening a dialog; its popover is the
 /// dialog and contains focus; Escape closes it, returning focus to the trigger item.
-async fn subdialog(page: &Page<'_>) -> Result<(), Report> {
+pub async fn subdialog(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     open_root(page).await?;
     let signup = item(page, "Sign up…").await?;
     assert_that!(signup.attr("aria-haspopup").await?)
@@ -300,8 +277,9 @@ async fn subdialog(page: &Page<'_>) -> Result<(), Report> {
 
 /// A subdialog whose popover holds a `Dialog`: opened by keyboard, focus moves into it; Escape
 /// closes it and returns focus to the trigger item, the menu stays open.
-async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
+pub async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
     const DIALOG: &str = "[role=dialog][aria-label=Properties]";
+    page.goto_path(PATH).await?;
     page.element("#test-submenu-trigger").await?.focus().await?;
     page.send_keys(Key::Enter).await?;
     expect_focus(page, "Open").await?;
@@ -332,7 +310,8 @@ async fn subdialog_with_dialog(page: &Page<'_>) -> Result<(), Report> {
 /// Right-to-left ("should open/close submenu with ArrowLeft/ArrowRight in RTL", useSubmenuTrigger):
 /// the trigger opens the menu by click and by ArrowDown; ArrowLeft opens a submenu, ArrowRight
 /// returns to its trigger.
-async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-submenu-rtl-trigger").await?;
     trigger.click().await?;
     page.element(MENU).await?;
@@ -362,7 +341,8 @@ async fn right_to_left(page: &Page<'_>) -> Result<(), Report> {
 /// The pointer's way to an open submenu (`useSafelyMouseToSubmenu`): moving diagonally towards
 /// it across other items, the root menu ignores pointer events, so the submenu stays open; at rest,
 /// the menu takes them again.
-async fn safe_triangle(page: &Page<'_>) -> Result<(), Report> {
+pub async fn safe_triangle(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     // Opened by a click: the hook only works for pointer modality.
     open_root(page).await?;
     let share = item(page, "Share…").await?;

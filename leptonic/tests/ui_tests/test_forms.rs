@@ -4,10 +4,12 @@
 // Upstream: react-aria-components/test/RadioGroup.test.js @ 99e6102368
 // Upstream: react-aria-components/test/Switch.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/radio/Radio.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Checkboxes, checkbox groups, radio groups and switches in forms: form reset restores their
+//! defaults (not when the reset is canceled), Enter submits their form, right-to-left arrow keys,
+//! realtime re-validation of a checkbox group, and the `CheckboxField`/`SwitchField`/`RadioField`
+//! atoms.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -15,32 +17,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Checkboxes, checkbox groups, radio groups and switches in forms: form reset restores their
-/// defaults (not when the reset is canceled), Enter submits their form, right-to-left arrow keys,
-/// realtime re-validation of a checkbox group, and the `CheckboxField`/`SwitchField`/`RadioField`
-/// atoms.
-pub struct FormsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FormsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "forms_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/forms").await?;
-        cases!(
-            form_reset(&page),
-            canceled_form_reset(&page),
-            implicit_submission_with_enter(&page),
-            right_to_left_arrow_keys(&page),
-            checkbox_group_realtime_validation(&page),
-            field_atoms(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/forms";
 
 /// The `<label>` with the visible text `text`.
 async fn label(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
@@ -76,7 +53,8 @@ async fn reset_form_values(page: &Page<'_>) -> Result<Vec<Vec<String>>, Report> 
 }
 
 /// "should call onReset on reset" (react-aria `useFormReset`), for each control.
-async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let initial = [vec![], vec!["cats"], vec!["m"], vec!["on"]];
     assert_that!(reset_form_values(page).await?).contains_exactly(&initial);
 
@@ -109,7 +87,8 @@ async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not call onReset if reset is cancelled" (react-aria `useFormReset`).
-async fn canceled_form_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn canceled_form_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let kept = label(page, "Kept").await?;
     let kept_switch = label(page, "Kept switch").await?;
     kept.click().await?;
@@ -132,7 +111,8 @@ async fn canceled_form_reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support implicit form submission from a focused checkbox/radio/switch on Enter".
-async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Report> {
+pub async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     for (submits, text) in [
         ("1", "Submit checkbox"),
         ("2", "Submit radio"),
@@ -160,7 +140,8 @@ async fn implicit_submission_with_enter(page: &Page<'_>) -> Result<(), Report> {
 /// Right to left: in a horizontal group ArrowRight selects the previous radio and ArrowLeft the
 /// next; a vertical group keeps them (react-spectrum `Radio.test.js`, "rtl + horizontal" and
 /// "rtl + vertical").
-async fn right_to_left_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_to_left_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     for (group, right_selects, left_selects) in
         [("RTL horizontal", "C", "A"), ("RTL vertical", "B", "A")]
     {
@@ -186,7 +167,8 @@ async fn right_to_left_arrow_keys(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should re-validate in realtime" (react-aria `useCheckboxGroup`): checking a checkbox of a
 /// required group makes it valid, unchecking it invalid again.
-async fn checkbox_group_realtime_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn checkbox_group_realtime_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page
         .element(xpath(
             "//*[@role='group'][.//span[normalize-space(.)='Favorite pet']]",
@@ -220,7 +202,8 @@ async fn wait_for_description(input: &WebElement, expected: &str) -> Result<(), 
 /// react-aria-components' `CheckboxField` tests ("should render a checkbox with default class",
 /// "should support DOM props", "supports help text", "should support required state"), and
 /// `SwitchField`/`RadioField` with descriptions.
-async fn field_atoms(page: &Page<'_>) -> Result<(), Report> {
+pub async fn field_atoms(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let checkbox = label(page, "Field checkbox").await?;
     let field = checkbox.parent().await?;
     assert_that!(field.tag_name().await?).is_equal_to("div");

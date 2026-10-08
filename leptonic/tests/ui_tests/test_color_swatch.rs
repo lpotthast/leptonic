@@ -1,38 +1,14 @@
 // Upstream: react-aria-components/test/ColorSwatch.test.js @ 99e6102368
 // Upstream: react-aria-components/test/ColorSwatchPicker.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `ColorSwatch` atom (named after its color, the label added) and the `ColorSwatchPicker`
+//! atoms (a listbox of swatches, picked with the keyboard).
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// The `ColorSwatch` atom (named after its color, the label added) and the `ColorSwatchPicker`
-/// atoms (a listbox of swatches, picked with the keyboard).
-pub struct ColorSwatchTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ColorSwatchTests {
-    fn name(&self) -> Cow<'_, str> {
-        "color_swatch_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/color-swatch").await?;
-
-        cases!(
-            swatches(&page),
-            picker_default_value(&page),
-            picker_keyboard(&page),
-            picker_disabled_items(&page),
-            swatch_in_item(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/color-swatch";
 
 /// The swatch inside `#id`.
 async fn img(page: &Page<'_>, id: &str) -> Result<WebElement, Report> {
@@ -45,7 +21,8 @@ async fn options(page: &Page<'_>, id: &str) -> Result<Vec<WebElement>, Report> {
 }
 
 /// "should render a swatch", "custom aria-label", "custom aria-labelledby", "custom colorName".
-async fn swatches(page: &Page<'_>) -> Result<(), Report> {
+pub async fn swatches(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let plain = img(page, "test-csw-plain").await?;
     assert_that!(plain.attr("aria-label").await?)
         .get_some()
@@ -71,7 +48,8 @@ async fn swatches(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "renders a listbox", "supports defaultValue".
-async fn picker_default_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn picker_default_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let listbox = page.element("#test-csw-default [role=listbox]").await?;
     assert_that!(listbox.attr("aria-label").await?)
         .get_some()
@@ -89,7 +67,8 @@ async fn picker_default_value(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "handles keyboard input".
-async fn picker_keyboard(page: &Page<'_>) -> Result<(), Report> {
+pub async fn picker_keyboard(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let swatches = options(page, "test-csw-keyboard").await?;
     page.element("#test-csw-before").await?.focus().await?;
     page.send_keys(Key::Tab).await?;
@@ -108,7 +87,8 @@ async fn picker_keyboard(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "isDisabled" items: not selectable, skipped by the arrow keys.
-async fn picker_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+pub async fn picker_disabled_items(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let items = options(page, "test-csw-disabled").await?;
     assert_that!(items[1].attr("aria-disabled").await?)
         .get_some()
@@ -121,7 +101,8 @@ async fn picker_disabled_items(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A swatch in an item shows the item's color, also inside a `ColorPicker`.
-async fn swatch_in_item(page: &Page<'_>) -> Result<(), Report> {
+pub async fn swatch_in_item(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let in_picker = options(page, "test-csw-in-picker").await?;
     let swatch = in_picker[1].element("[role=img]").await?;
     assert_that!(swatch.attr("aria-label").await?)

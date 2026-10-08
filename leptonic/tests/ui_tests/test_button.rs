@@ -1,40 +1,18 @@
 // Upstream: react-aria-components/test/Button.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The `Button` atom: presses, the disabled state, ARIA and form props, the state as data
+//! attributes (hover, press, focus ring) and the pending state.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// The `Button` atom: presses, the disabled state, ARIA and form props, the state as data
-/// attributes (hover, press, focus ring) and the pending state.
-pub struct ButtonTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ButtonTests {
-    fn name(&self) -> Cow<'_, str> {
-        "button_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/button").await?;
-        cases!(
-            presses_and_props(&page),
-            state_attributes(&page),
-            pending(&page),
-            pending_form_submission(&page),
-            pending_labelled(&page),
-            pending_trigger(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/button";
 
 /// "should render a button with default class", "should support disabled state", "should support
 /// accessibility props", "should support form props".
-async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     // "should render a button with default class".
     let basic = page.element("#test-button-basic").await?;
     assert_that!(basic.attr("class").await?)
@@ -91,7 +69,8 @@ async fn presses_and_props(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support hover", "should support focus ring", "should support press state".
-async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let button = page.element("#test-button-labelled").await?;
     for name in ["data-hovered", "data-pressed", "data-focus-visible"] {
         assert_that!(button.attr(name).await?).is_none();
@@ -125,7 +104,8 @@ async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
 
 /// "displays a spinner when isPending prop is true": pending, the button is `aria-disabled`,
 /// ignores presses and hover, and stays focusable.
-async fn pending(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pending(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let button = page.element("#test-button-pending").await?;
     assert_that!(button.attr("aria-disabled").await?).is_none();
     assert_that!(button.attr("data-pending").await?).is_none();
@@ -156,7 +136,8 @@ async fn pending(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should prevent explicit mouse/keyboard form submission when isPending", "should prevent
 /// implicit form submission when isPending": pending, a submit button is a plain button.
-async fn pending_form_submission(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pending_form_submission(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let submit = page.element("#test-button-pending-submit").await?;
     let submits = page.element("#test-button-pending-submits").await?;
     let toggle = page.element("#test-button-pending-submit-toggle").await?;
@@ -200,7 +181,8 @@ async fn pending_form_submission(page: &Page<'_>) -> Result<(), Report> {
 
 /// Pending, a button named by `aria-label` is named by itself and its progress bar
 /// (`aria-labelledby` wins over `aria-label`).
-async fn pending_labelled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pending_labelled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let button = page.element("#test-button-pending-labelled").await?;
     let progress_id = button
         .element("[role=progressbar]")
@@ -220,7 +202,8 @@ async fn pending_labelled(page: &Page<'_>) -> Result<(), Report> {
 
 /// "disables press when in pending state for context": a pending dialog trigger gets focus but
 /// doesn't open its dialog.
-async fn pending_trigger(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pending_trigger(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-button-pending-trigger")
         .await?
         .click()

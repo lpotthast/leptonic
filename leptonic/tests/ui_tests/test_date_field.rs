@@ -2,10 +2,14 @@
 // Upstream: react-aria-components/test/TimeField.test.js @ 99e6102368
 // Upstream: react-aria-components/test/DatePicker.test.js @ 99e6102368
 // Upstream: react-aria-components/test/DateRangePicker.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the date and time field atoms: structure and labels, typing that moves on when a
+//! segment is full, arrows between and within segments, Backspace, an invalid date committed
+//! constrained when the field is left, form reset, min validation, disabled and read-only
+//! fields, dates with times, zoned values, a 12-hour time field, and a date picker (opening by
+//! press and Alt+ArrowDown, selecting in its calendar, Escape).
+//! Spec: react-aria-components `DateField.test.js`, `TimeField.test.js`, `DatePicker.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -13,43 +17,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Behavior of the date and time field atoms: structure and labels, typing that moves on when a
-/// segment is full, arrows between and within segments, Backspace, an invalid date committed
-/// constrained when the field is left, form reset, min validation, disabled and read-only
-/// fields, dates with times, zoned values, a 12-hour time field, and a date picker (opening by
-/// press and Alt+ArrowDown, selecting in its calendar, Escape).
-/// Spec: react-aria-components `DateField.test.js`, `TimeField.test.js`, `DatePicker.test.js`.
-pub struct DateFieldTests {}
-
-#[async_trait]
-impl BrowserTest<str> for DateFieldTests {
-    fn name(&self) -> Cow<'_, str> {
-        "date_field_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/date-field").await?;
-
-        cases!(
-            structure(&page),
-            typing(&page),
-            arrows_and_backspace(&page),
-            invalid_date_committed_when_left(&page),
-            form_reset(&page),
-            min_validation(&page),
-            disabled_and_read_only(&page),
-            date_and_time(&page),
-            zoned(&page),
-            time_field(&page),
-            date_picker(&page),
-            date_range_picker(&page),
-            group_states(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/date-field";
 
 /// The segment of `kind` (`month`, `day`, `hour`, `literal`, ...) of the field in
 /// `#test-df-<section>`.
@@ -78,6 +46,22 @@ async fn wait_for_value(page: &Page<'_>, section: &str, expected: &str) -> Resul
         .await
 }
 
+/// Types June 15, 2024 into the basic field, tabbing in from the button before it; the focus
+/// stays on the year.
+async fn type_basic_date(page: &Page<'_>) -> Result<(), Report> {
+    page.element("#test-df-basic-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    expect_focus(page, "basic", "month").await?;
+    page.type_text("6").await?;
+    expect_focus(page, "basic", "day").await?;
+    page.type_text("15").await?;
+    expect_focus(page, "basic", "year").await?;
+    page.type_text("2024").await?;
+    wait_for_value(page, "basic", "2024-06-15").await?;
+    expect_focus(page, "basic", "year").await?;
+    Ok(())
+}
+
 /// The id of the label with the text `text` in the section `#test-df-<section>`.
 async fn label_id(page: &Page<'_>, section: &str, text: &str) -> Result<String, Report> {
     let label = page
@@ -96,7 +80,8 @@ fn ids(list: &str) -> Vec<&str> {
 /// A group labelled by its label, segments as spin buttons named by kind and labelled by the
 /// field, placeholders, hidden literals, the description on the first segment only, a hidden
 /// input with the field's name.
-async fn structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("#test-df-basic [role=group]").await?;
     let label_id = label_id(page, "basic", "Birthday").await?;
     let labelledby = group.attr("aria-labelledby").await?.unwrap_or_default();
@@ -139,7 +124,8 @@ async fn structure(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Typing fills a segment and moves on once no further digit fits.
-async fn typing(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typing(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-df-basic-before").await?.click().await?;
     page.send_keys(Key::Tab).await?;
     expect_focus(page, "basic", "month").await?;
@@ -169,7 +155,9 @@ async fn typing(page: &Page<'_>) -> Result<(), Report> {
 
 /// Arrows step a segment and move between them; Backspace deletes a digit, and on an empty
 /// segment moves to the previous one.
-async fn arrows_and_backspace(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrows_and_backspace(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    type_basic_date(page).await?;
     page.send_keys(Key::Up).await?;
     wait_for_value(page, "basic", "2025-06-15").await?;
     page.send_keys(Key::Left).await?;
@@ -200,13 +188,15 @@ async fn arrows_and_backspace(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-/// February 30 stays as typed while the field is edited, and is committed as February 28 when
-/// the field is left.
-async fn invalid_date_committed_when_left(page: &Page<'_>) -> Result<(), Report> {
+/// February 30 stays as typed while the field is edited, and is committed as February 29 (of
+/// the leap year 2024) when the field is left.
+pub async fn invalid_date_committed_when_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    type_basic_date(page).await?;
     segment(page, "basic", "month").await?.click().await?;
     expect_focus(page, "basic", "month").await?;
     page.type_text("2").await?;
-    wait_for_value(page, "basic", "2025-02-05").await?;
+    wait_for_value(page, "basic", "2024-02-15").await?;
     expect_focus(page, "basic", "day").await?;
     page.type_text("30").await?;
     segment(page, "basic", "day")
@@ -216,19 +206,21 @@ async fn invalid_date_committed_when_left(page: &Page<'_>) -> Result<(), Report>
     // "3" made a valid date (February 3), "30" does not.
     value(page, "basic")
         .await?
-        .inner_text_stays("2025-02-03")
+        .inner_text_stays("2024-02-03")
         .await?;
     page.element("#test-df-basic-before").await?.click().await?;
-    wait_for_value(page, "basic", "2025-02-28").await?;
+    wait_for_value(page, "basic", "2024-02-29").await?;
     segment(page, "basic", "day")
         .await?
-        .wait_for_inner_text("28")
+        .wait_for_inner_text("29")
         .await?;
     Ok(())
 }
 
 /// Resetting the form restores the initial value.
-async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    type_basic_date(page).await?;
     page.element("#test-df-reset").await?.click().await?;
     wait_for_value(page, "basic", "none").await?;
     segment(page, "basic", "month")
@@ -239,7 +231,8 @@ async fn form_reset(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A value before the minimum is invalid (shown right away with ARIA validation) until fixed.
-async fn min_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn min_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let month = segment(page, "min", "month").await?;
     month.wait_for_attr("aria-invalid", Some("true")).await?;
     let section = page.element("#test-df-min").await?;
@@ -256,7 +249,8 @@ async fn min_validation(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A disabled field's segments aren't tabbable; a read-only field's don't change.
-async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let disabled = segment(page, "disabled", "month").await?;
     assert_that!(disabled.attr("tabindex").await?).is_none();
     assert_that!(disabled.attr("aria-disabled").await?)
@@ -279,7 +273,8 @@ async fn disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A date with a time (24 hours): hours and minutes follow the date.
-async fn date_and_time(page: &Page<'_>) -> Result<(), Report> {
+pub async fn date_and_time(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     segment(page, "date-time", "month").await?.click().await?;
     page.type_text("6152024").await?;
     expect_focus(page, "date-time", "hour").await?;
@@ -291,7 +286,8 @@ async fn date_and_time(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A zoned value shows its time zone (not editable); stepping the hour keeps the zone.
-async fn zoned(page: &Page<'_>) -> Result<(), Report> {
+pub async fn zoned(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let zone = segment(page, "zoned", "timeZoneName").await?;
     assert_that!(zone.inner_text().await?).is_equal_to("EDT");
     assert_that!(zone.attr("role").await?)
@@ -312,7 +308,8 @@ async fn zoned(page: &Page<'_>) -> Result<(), Report> {
 
 /// A 12-hour time field: the hour moves on after a digit that can't start a two-digit hour,
 /// "p" picks PM.
-async fn time_field(page: &Page<'_>) -> Result<(), Report> {
+pub async fn time_field(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(segment(page, "time", "hour").await?.inner_text().await?).is_equal_to("––");
     segment(page, "time", "hour").await?.click().await?;
     page.type_text("9").await?;
@@ -332,7 +329,8 @@ async fn time_field(page: &Page<'_>) -> Result<(), Report> {
 /// A date picker: a labelled group with the field and a button opening a dialog with a calendar;
 /// selecting a date closes it and fills the field; Alt+ArrowDown opens it from the field; Escape
 /// closes it unchanged.
-async fn date_picker(page: &Page<'_>) -> Result<(), Report> {
+pub async fn date_picker(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("#test-df-picker [role=group]").await?;
     assert_that!(group.attr("aria-labelledby").await?).is_some();
     // The field inside has no role of its own (the group labels and describes it); its
@@ -440,7 +438,8 @@ async fn range_segment(page: &Page<'_>, field: usize, kind: &str) -> Result<WebE
 
 /// A date range picker: start and end fields named as such; a range selected in the popover
 /// fills both; arrows move across both fields (not to the button); a reversed range is invalid.
-async fn date_range_picker(page: &Page<'_>) -> Result<(), Report> {
+pub async fn date_range_picker(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let start_month = range_segment(page, 0, "month").await?;
     assert_that!(start_month.attr("aria-label").await?)
         .get_some()
@@ -502,7 +501,7 @@ async fn date_range_picker(page: &Page<'_>) -> Result<(), Report> {
 
 /// The field and the picker's group show hover and focus like react-aria-components' `Group`:
 /// `data-focus-within`, and `data-focus-visible` only with the keyboard.
-async fn group_states(page: &Page<'_>) -> Result<(), Report> {
+pub async fn group_states(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/atoms/date-field").await?;
     let input = page
         .element(xpath(

@@ -1,9 +1,9 @@
 // Upstream: react-aria-components/test/NumberField.test.js @ 99e6102368
 // Upstream: @adobe/react-spectrum/test/numberfield/NumberField.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The NumberField atoms: slots, states, form value, validation, keyboard, typing, paste,
+//! commit behavior and typed values.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,44 +11,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// The NumberField atoms: slots, states, form value, validation, keyboard, typing, paste,
-/// commit behavior and typed values.
-pub struct NumberFieldAtomTests {}
-
-#[async_trait]
-impl BrowserTest<str> for NumberFieldAtomTests {
-    fn name(&self) -> Cow<'_, str> {
-        "number_field_atom_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/number-field").await?;
-
-        cases!(
-            provides_slots(&page),
-            hover_and_focus_visible_state(&page),
-            read_only_state(&page),
-            form_value(&page),
-            validation_errors(&page),
-            arrow_keys(&page),
-            programmatic_clicks_on_steppers(&page),
-            deleting_the_first_digit_before_a_group_separator(&page),
-            typing_and_enter_commit(&page),
-            no_grouping_characters_without_grouping(&page),
-            no_grouping_characters_in_german(&page),
-            scroll_wheel(&page),
-            pasting_into_a_format(&page),
-            rejected_values_keep_the_text(&page),
-            server_errors_survive_an_unchanged_blur(&page),
-            validate_commit_behavior(&page),
-            validate_commit_behavior_and_enter_submit(&page),
-            typed_values(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/number-field";
 
 /// The `NumberField` in the fixture section matching `section`.
 async fn field_in(page: &Page<'_>, section: &str) -> Result<WebElement, Report> {
@@ -110,7 +73,8 @@ async fn wait_for_error(input: &WebElement) -> Result<(), Report> {
 }
 
 /// "provides slots".
-async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
+pub async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("#nf-slots [role=group]").await?;
     assert_that!(group.attr("role").await?)
         .get_some()
@@ -151,7 +115,8 @@ async fn provides_slots(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support hover state" / "should support focus visible state".
-async fn hover_and_focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_and_focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("#nf-keys [role=group]").await?;
     group.hover().await?;
     group.wait_for_attr("data-hovered", Some("true")).await?;
@@ -169,7 +134,8 @@ async fn hover_and_focus_visible_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let plain = field_in(page, "#nf-slots").await?;
     assert_that!(plain.attr("data-readonly").await?).is_none();
     let read_only = field_in(page, "#nf-read-only").await?;
@@ -178,7 +144,8 @@ async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support form value" / "should support disabled when having a form value".
-async fn form_value(page: &Page<'_>) -> Result<(), Report> {
+pub async fn form_value(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let hidden = page.element("#nf-form-value input[name=test]").await?;
     assert_that!(hidden.value().await?)
         .get_some()
@@ -197,7 +164,8 @@ async fn form_value(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports validation errors".
-async fn validation_errors(page: &Page<'_>) -> Result<(), Report> {
+pub async fn validation_errors(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-native").await?;
     let field = field_in(page, "#nf-native").await?;
     assert_that!(input.attr("required").await?).is_some();
@@ -225,7 +193,8 @@ async fn validation_errors(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support repeat keydown events when holding an arrow key".
-async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-keys").await?;
     tab_into(page, &input).await?;
     for _ in 0..3 {
@@ -244,25 +213,24 @@ async fn arrow_keys(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should trigger onChange via programmatic click() on stepper buttons".
-async fn programmatic_clicks_on_steppers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn programmatic_clicks_on_steppers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let decrease = page.element("#nf-keys button[aria-label=Decrease]").await?;
     let increase = page.element("#nf-keys button[aria-label=Increase]").await?;
     let changes = page.element("#nf-changes").await?;
-    let before = changes.inner_text().await?;
     increase.virtual_click().await?;
-    changes
-        .wait_for_inner_text(&format!("{before} 1025"))
-        .await?;
+    changes.wait_for_inner_text("1025").await?;
     decrease.virtual_click().await?;
-    changes
-        .wait_for_inner_text(&format!("{before} 1025 1024"))
-        .await?;
+    changes.wait_for_inner_text("1025 1024").await?;
     Ok(())
 }
 
 /// "should allow you to delete the first digit in a number if it is followed by a group
 /// separator".
-async fn deleting_the_first_digit_before_a_group_separator(page: &Page<'_>) -> Result<(), Report> {
+pub async fn deleting_the_first_digit_before_a_group_separator(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-keys").await?;
     tab_into(page, &input).await?;
     // The caret after the first digit.
@@ -278,31 +246,26 @@ async fn deleting_the_first_digit_before_a_group_separator(page: &Page<'_>) -> R
     Ok(())
 }
 
-/// "supports onChange".
-async fn typing_and_enter_commit(page: &Page<'_>) -> Result<(), Report> {
+/// "supports onChange". Upstream types 1024 over a default of 200; the fixture's field starts at
+/// 1024, so the case types 2048.
+pub async fn typing_and_enter_commit(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-keys").await?;
     tab_into(page, &input).await?;
     clear(&input).await?;
-    page.send_keys("1024").await?;
+    page.send_keys("2048").await?;
     page.send_keys(Key::Enter).await?;
-    input.wait_for_prop("value", "1,024").await?;
-    let changes = page.element("#nf-changes").await?;
-    wait_for("the last change")
-        .observing(|| async {
-            Ok(changes
-                .inner_text()
-                .await?
-                .split_whitespace()
-                .last()
-                .map(str::to_owned))
-        })
-        .to_be_equal_to(Some("1024".to_owned()))
+    input.wait_for_prop("value", "2,048").await?;
+    page.element("#nf-changes")
+        .await?
+        .wait_for_inner_text("2048")
         .await?;
     Ok(())
 }
 
 /// "should not type the grouping characters when useGrouping is false".
-async fn no_grouping_characters_without_grouping(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_grouping_characters_without_grouping(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-no-grouping").await?;
     tab_into(page, &input).await?;
     page.send_keys("102,4").await?;
@@ -316,7 +279,8 @@ async fn no_grouping_characters_without_grouping(page: &Page<'_>) -> Result<(), 
 }
 
 /// "should not type the grouping characters when useGrouping is false and in German locale".
-async fn no_grouping_characters_in_german(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_grouping_characters_in_german(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-no-grouping-de").await?;
     tab_into(page, &input).await?;
     page.send_keys("102.4").await?;
@@ -332,7 +296,8 @@ async fn no_grouping_characters_in_german(page: &Page<'_>) -> Result<(), Report>
 /// React Spectrum's scroll wheel tests: "cannot scroll to step when not focused", "increment
 /// value when scrolling upwards", "decrement value when scrolling downwards", "should not fire
 /// increment or decrement if it is a zoom event".
-async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
+pub async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-wheel").await?;
     let changes = page.element("#nf-wheel-changes").await?;
     let up = || SyntheticEvent::wheel().with("deltaY", -10.0);
@@ -357,7 +322,8 @@ async fn scroll_wheel(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support pasting into a format".
-async fn pasting_into_a_format(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pasting_into_a_format(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-currency").await?;
     tab_into(page, &input).await?;
     clear(&input).await?;
@@ -367,7 +333,8 @@ async fn pasting_into_a_format(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not change the input value if the new value is not accepted".
-async fn rejected_values_keep_the_text(page: &Page<'_>) -> Result<(), Report> {
+pub async fn rejected_values_keep_the_text(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-rejecting").await?;
     tab_into(page, &input).await?;
     clear(&input).await?;
@@ -379,7 +346,8 @@ async fn rejected_values_keep_the_text(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should not reset validation errors on blur when value has not changed".
-async fn server_errors_survive_an_unchanged_blur(page: &Page<'_>) -> Result<(), Report> {
+pub async fn server_errors_survive_an_unchanged_blur(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-server-form").await?;
     let field = field_in(page, "#nf-server-form").await?;
     field.wait_for_attr("data-invalid", Some("true")).await?;
@@ -396,7 +364,8 @@ async fn server_errors_survive_an_unchanged_blur(page: &Page<'_>) -> Result<(), 
 }
 
 /// "should not change the edited input value when value snapping is disabled".
-async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
+pub async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-validate").await?;
     assert_that!(input.is_valid().await?).is_true();
 
@@ -446,7 +415,8 @@ async fn validate_commit_behavior(page: &Page<'_>) -> Result<(), Report> {
 /// No upstream test: with `CommitBehavior::Validate` and native validation, Enter doesn't submit
 /// an out-of-range value, and submits once it is corrected (the range's custom validity is
 /// cleared).
-async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Result<(), Report> {
+pub async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let input = input(page, "nf-validate-submit").await?;
     tab_into(page, &input).await?;
     clear(&input).await?;
@@ -472,7 +442,8 @@ async fn validate_commit_behavior_and_enter_submit(page: &Page<'_>) -> Result<()
 }
 
 /// Integers beyond `f64` stay exact; unsigned fields reject a minus sign.
-async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
+pub async fn typed_values(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let big = input(page, "nf-u64").await?;
     let increment = page.element("#nf-u64 button[aria-label=Increase]").await?;
     increment.click().await?;

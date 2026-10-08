@@ -1,8 +1,27 @@
 // No upstream: `VirtualList` is a leptonic addition (react-aria has no virtualized plain list).
-use std::{borrow::Cow, time::Duration};
+//! A virtualized log (`VirtualList`, no react-aria equivalent): it renders a slice of its 2,000
+//! lines and follows its end while lines are appended; scrolling away stops following, toggling
+//! it on scrolls back to the end; rows holding the text selection stay rendered; the rows' text
+//! is selectable.
+//!
+//! A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
+//! a hook's props: the old owner's handlers must be gone (agnite dev-ui, 2026-10-07: a click
+//! panicked on disposed signals).
+//!
+//! Attributes spread onto a component (`<Comp {..props.into_attrs()} />`, with
+//! `--cfg=erase_components`: a `Vec<AnyAttribute>`) whose view is rebuilt in place: Leptos'
+//! `Vec<AnyAttribute>::rebuild` removes the old attributes by key but not the old event
+//! listeners, so the disposed owner's handlers still run (and panic). A bug in tachys (0.2.19 and
+//! its main branch, 2026-03-14), not in leptonic.
+//!
+//! Following turns off when the user scrolls away from the end: measured row sizes must survive
+//! that (the layout options change, but only `anchor_to`), else the content jumps and every row is
+//! measured again. A behavior guard: the original bug didn't reproduce here (its timing); the
+//! regression test is the unit test `anchoring_changes_keep_measured_sizes`.
+use std::time::Duration;
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
@@ -10,97 +29,6 @@ use crate::{
     pages::{ElementActions, Page, PageActions},
     polling::{expect, wait_for},
 };
-
-/// A virtualized log (`VirtualList`, no react-aria equivalent): it renders a slice of its 2,000
-/// lines and follows its end while lines are appended; scrolling away stops following, toggling
-/// it on scrolls back to the end; rows holding the text selection stay rendered; the rows' text
-/// is selectable.
-pub struct VirtualListTests {}
-
-#[async_trait]
-impl BrowserTest<str> for VirtualListTests {
-    fn name(&self) -> Cow<'_, str> {
-        "virtual_list_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/virtual_list").await?;
-
-        cases!(
-            follows_its_end(&page),
-            appended_lines_come_into_view(&page),
-            scroll_jumps_render_rows_in_order(&page),
-            scrolling_away_stops_following(&page),
-            selected_row_stays_rendered(&page),
-            turning_following_on_scrolls_to_the_end(&page),
-        );
-        Ok(())
-    }
-}
-
-/// A view rebuilt in place (the same type, a new owner: tachys reuses the DOM) whose elements carry
-/// a hook's props: the old owner's handlers must be gone (agnite dev-ui, 2026-10-07: a click
-/// panicked on disposed signals).
-pub struct VirtualListRebuildTests {}
-
-#[async_trait]
-impl BrowserTest<str> for VirtualListRebuildTests {
-    fn name(&self) -> Cow<'_, str> {
-        "virtual_list_rebuild_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/virtual_list").await?;
-
-        cases!(rebuilt_views_drop_the_old_handlers(&page));
-        Ok(())
-    }
-}
-
-/// Attributes spread onto a component (`<Comp {..props.into_attrs()} />`, with
-/// `--cfg=erase_components`: a `Vec<AnyAttribute>`) whose view is rebuilt in place: Leptos'
-/// `Vec<AnyAttribute>::rebuild` removes the old attributes by key but not the old event
-/// listeners, so the disposed owner's handlers still run (and panic). A bug in tachys (0.2.19 and
-/// its main branch, 2026-03-14), not in leptonic.
-pub struct ComponentSpreadRebuildKnownIssues {}
-
-#[async_trait]
-impl BrowserTest<str> for ComponentSpreadRebuildKnownIssues {
-    fn name(&self) -> Cow<'_, str> {
-        "component_spread_rebuild_known_issues".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/virtual_list").await?;
-
-        cases!(rebuilt_component_spread_drops_the_old_handlers(&page));
-        Ok(())
-    }
-}
-
-/// Following turns off when the user scrolls away from the end: measured row sizes must survive
-/// that (the layout options change, but only `anchor_to`), else the content jumps and every row is
-/// measured again. A behavior guard: the original bug didn't reproduce here (its timing); the
-/// regression test is the unit test `anchoring_changes_keep_measured_sizes`.
-pub struct VirtualListFollowToggleTests {}
-
-#[async_trait]
-impl BrowserTest<str> for VirtualListFollowToggleTests {
-    fn name(&self) -> Cow<'_, str> {
-        "virtual_list_follow_toggle_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/virtual_list").await?;
-
-        cases!(follow_toggle_keeps_measured_sizes(&page));
-        Ok(())
-    }
-}
 
 /// Runs `script` with `log` bound to the log element and `arg` to `arg`; `script` returns its
 /// result (`return ...`) if any.
@@ -176,6 +104,15 @@ async fn wait_for_rendered(page: &Page<'_>, line: &str) -> Result<(), Report> {
         .await
 }
 
+/// Scrolls the log to its top, which stops following.
+async fn scroll_to_the_top(page: &Page<'_>) -> Result<(), Report> {
+    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
+    page.element("#test-vl-follow")
+        .await?
+        .wait_for_inner_text("not following")
+        .await
+}
+
 /// The rendered rows' tops are in visual order in the DOM.
 async fn assert_rows_in_visual_order(page: &Page<'_>) -> Result<(), Report> {
     let tops = on_log::<Vec<f64>>(page, ROW_TOPS, ()).await?;
@@ -204,7 +141,8 @@ const ANCHOR: &str = "
 
 /// Following: at the end, with the last line rendered, and only a slice of all lines; the lines'
 /// text is selectable.
-async fn follows_its_end(page: &Page<'_>) -> Result<(), Report> {
+pub async fn follows_its_end(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     wait_for_the_end(page).await?;
     wait_for_rendered(page, "Line 1999").await?;
     assert_that!(page.count("#test-vl-log .line").await?).is_less_than(100);
@@ -214,7 +152,8 @@ async fn follows_its_end(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Appended lines come into view, in visual order in the DOM.
-async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report> {
+pub async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     page.element("#test-vl-append").await?.click().await?;
     wait_for_rendered(page, "Line 2049").await?;
     wait_for_the_end(page).await?;
@@ -224,7 +163,8 @@ async fn appended_lines_come_into_view(page: &Page<'_>) -> Result<(), Report> {
 
 /// After scroll jumps too, the rows are in visual order; a selection from one visible row to
 /// another holds exactly the rows between.
-async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     for top in [10_000, 5_000, 20_000] {
         on_log::<()>(page, "log.scrollTop = arg;", top).await?;
         wait_for(format!("the rendered rows, scrolled to {top}"))
@@ -246,12 +186,9 @@ async fn scroll_jumps_render_rows_in_order(page: &Page<'_>) -> Result<(), Report
 }
 
 /// Scrolling away stops following; appended lines don't move the view.
-async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Report> {
-    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
-    page.element("#test-vl-follow")
-        .await?
-        .wait_for_inner_text("not following")
-        .await?;
+pub async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
+    scroll_to_the_top(page).await?;
     page.element("#test-vl-append").await?.click().await?;
     wait_for_rendered(page, "Line 1").await?;
     assert_that!(on_log::<f64>(page, "return log.scrollTop;", ()).await?).is_equal_to(0.0);
@@ -260,7 +197,10 @@ async fn scrolling_away_stops_following(page: &Page<'_>) -> Result<(), Report> {
 
 /// A row holding the text selection stays rendered while scrolled away; without the selection,
 /// it goes.
-async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
+    scroll_to_the_top(page).await?;
+    wait_for_rendered(page, "Line 1").await?;
     on_log::<()>(
         page,
         "const line = Array.from(log.querySelectorAll('.line')).find(l => l.textContent === arg);
@@ -289,7 +229,7 @@ async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
         })
         .to_be_equal_to("following")
         .await?;
-    wait_for_rendered(page, "Line 2099").await?;
+    wait_for_rendered(page, "Line 1999").await?;
     assert_that!(on_log::<Vec<String>>(page, RENDERED_LINES, ()).await?)
         .contains("Line 1".to_owned());
     assert_that!(on_log::<String>(page, "return window.getSelection().toString();", ()).await?)
@@ -306,20 +246,21 @@ async fn selected_row_stays_rendered(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Turning following on scrolls to the end.
-async fn turning_following_on_scrolls_to_the_end(page: &Page<'_>) -> Result<(), Report> {
+pub async fn turning_following_on_scrolls_to_the_end(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
+    scroll_to_the_top(page).await?;
     let follow = page.element("#test-vl-follow").await?;
-    on_log::<()>(page, "log.scrollTop = arg;", 0).await?;
-    follow.wait_for_inner_text("not following").await?;
     follow.click().await?;
     follow.wait_for_inner_text("following").await?;
-    wait_for_rendered(page, "Line 2099").await?;
+    wait_for_rendered(page, "Line 1999").await?;
     wait_for_the_end(page).await?;
     Ok(())
 }
 
 /// Rebuilding the view three times: clicks on the rebuilt list and the plain element, and Tab, hit
 /// only live handlers (a disposed owner's handler panics, which fails the test).
-async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     page.element("#test-vl-rebuilt-list .line").await?;
     for round in 1..=3 {
         page.element("#test-vl-source").await?.click().await?;
@@ -338,7 +279,10 @@ async fn rebuilt_views_drop_the_old_handlers(page: &Page<'_>) -> Result<(), Repo
 }
 
 /// A click on the rebuilt component with spread attributes hits only live handlers.
-async fn rebuilt_component_spread_drops_the_old_handlers(page: &Page<'_>) -> Result<(), Report> {
+pub async fn rebuilt_component_spread_drops_the_old_handlers(
+    page: &Page<'_>,
+) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     page.element("#test-vl-source").await?.click().await?;
     page.element("#test-vl-rebuilt-plain")
         .await?
@@ -354,7 +298,8 @@ async fn rebuilt_component_spread_drops_the_old_handlers(page: &Page<'_>) -> Res
 /// A user scroll up from the end and down again (so the rows above the stop were rendered and
 /// measured) turns following off; the content doesn't move, and no measured row height goes back
 /// to the estimate.
-async fn follow_toggle_keeps_measured_sizes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn follow_toggle_keeps_measured_sizes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/virtual_list").await?;
     wait_for_the_end(page).await?;
     wait_for_rendered(page, "Line 1999").await?;
 

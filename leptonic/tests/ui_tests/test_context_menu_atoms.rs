@@ -1,37 +1,17 @@
 // Upstream: react-aria-components/test/Menu.test.tsx @ 99e6102368
 // Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
+//! Context menus on collection rows (`ContextMenuTrigger` around a `GridList`): a right click on a
+//! row opens the menu at the pointer, labelled by the row; an action knows the row; the focus
+//! returns to the row when the menu closes. The keyboard opens it with Shift+F10.
 // (Row-level context menus are a leptonic addition; the menu behavior mirrors MenuTrigger
 // trigger="contextMenu" in Menu.test.tsx.)
-use std::borrow::Cow;
-
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, role};
 
-/// Context menus on collection rows (`ContextMenuTrigger` around a `GridList`): a right click on a
-/// row opens the menu at the pointer, labelled by the row; an action knows the row; the focus
-/// returns to the row when the menu closes. The keyboard opens it with Shift+F10.
-pub struct ContextMenuAtomsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ContextMenuAtomsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "context_menu_atoms_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/context-menu").await?;
-        cases!(
-            right_click_opens_at_the_pointer(&page),
-            escape_returns_focus_to_the_row(&page),
-            shift_f10_opens_it(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/context-menu";
 
 const MENU: &str = "[role=menu]";
 
@@ -52,7 +32,8 @@ async fn context_click(page: &Page<'_>, element: &WebElement) -> Result<(), Repo
 
 /// A right click on "Pictures" opens the menu at the pointer (the row's center, not its start),
 /// labelled by the row; an action knows its row; the focus returns to the row.
-async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(page.count(MENU).await?).is_equal_to(0);
     let pictures = row(page, "Pictures").await?;
     context_click(page, &pictures).await?;
@@ -77,7 +58,8 @@ async fn right_click_opens_at_the_pointer(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// Escape closes it; the focus returns to the row it opened on.
-async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let music = row(page, "Music").await?;
     context_click(page, &music).await?;
     page.element(MENU).await?;
@@ -88,7 +70,15 @@ async fn escape_returns_focus_to_the_row(page: &Page<'_>) -> Result<(), Report> 
 }
 
 /// From the keyboard: Shift+F10 on the focused row.
-async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
+pub async fn shift_f10_opens_it(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    // Tab into the list (its first row), then down to "Music".
+    page.element("#test-cm-before").await?.click().await?;
+    page.send_keys(Key::Tab).await?;
+    page.wait_for_focus(&row(page, "Documents").await?).await?;
+    page.send_keys(Key::Down).await?;
+    page.wait_for_focus(&row(page, "Pictures").await?).await?;
+    page.send_keys(Key::Down).await?;
     let music = row(page, "Music").await?;
     page.wait_for_focus(&music).await?;
     page.send_keys(Key::Shift + Key::F10).await?;

@@ -1,34 +1,14 @@
 // Upstream: react-aria/test/interactions/useContextMenu.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_context_menu` on a non-Apple platform: a right click requests the menu at its position
+//! relative to the element, prevents the browser's menu and stops propagation; without a handler
+//! nothing happens; Ctrl+Enter is macOS-only. (The macOS and iOS paths need those platforms.)
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{Dispatched, ElementActions, Page, PageActions, SyntheticEvent};
 
-/// `use_context_menu` on a non-Apple platform: a right click requests the menu at its position
-/// relative to the element, prevents the browser's menu and stops propagation; without a handler
-/// nothing happens; Ctrl+Enter is macOS-only. (The macOS and iOS paths need those platforms.)
-pub struct ContextMenuTests {}
-
-#[async_trait]
-impl BrowserTest<str> for ContextMenuTests {
-    fn name(&self) -> Cow<'_, str> {
-        "context_menu_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/context-menu").await?;
-        cases!(
-            right_click_requests_the_menu(&page),
-            without_a_handler_nothing_happens(&page),
-            ctrl_enter_is_mac_only(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/context-menu";
 
 /// The fixture's log of handled context menus.
 async fn log(page: &Page<'_>) -> Result<WebElement, Report> {
@@ -64,7 +44,8 @@ async fn right_click(element: &WebElement) -> Result<(Dispatched, f64, f64), Rep
 
 /// "calls onContextMenu on right click", "prevents default and stops propagation on contextmenu
 /// event".
-async fn right_click_requests_the_menu(page: &Page<'_>) -> Result<(), Report> {
+pub async fn right_click_requests_the_menu(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let element = page.element("#test-context-menu-handler").await?;
     let (dispatched, x, y) = right_click(&element).await?;
     assert_that!(dispatched.default_prevented).is_true();
@@ -78,7 +59,8 @@ async fn right_click_requests_the_menu(page: &Page<'_>) -> Result<(), Report> {
 
 /// "does not call onContextMenu when prop is not provided": the event reaches the wrapper, the
 /// browser's menu isn't prevented.
-async fn without_a_handler_nothing_happens(page: &Page<'_>) -> Result<(), Report> {
+pub async fn without_a_handler_nothing_happens(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let element = page.element("#test-context-menu-none").await?;
     let (dispatched, ..) = right_click(&element).await?;
     assert_that!(dispatched.default_prevented).is_false();
@@ -88,7 +70,8 @@ async fn without_a_handler_nothing_happens(page: &Page<'_>) -> Result<(), Report
 }
 
 /// "does not trigger on Ctrl+Enter on non-macOS".
-async fn ctrl_enter_is_mac_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn ctrl_enter_is_mac_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-context-menu-handler")
         .await?
         .focus()

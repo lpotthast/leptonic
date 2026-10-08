@@ -31,10 +31,7 @@ impl BrowserTest<str> for HydrationIdTests {
     async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
         let page = Page { driver, base_url };
         page.goto_path("/").await?;
-
-        cases!(fixtures_keep_their_ids(&page, self.shard, self.shards));
-
-        Ok(())
+        fixtures_keep_their_ids(&page, self.shard, self.shards).await
     }
 }
 

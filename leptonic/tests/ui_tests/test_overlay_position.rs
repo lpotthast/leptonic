@@ -1,37 +1,13 @@
 // Upstream: react-aria/test/overlays/useOverlayPosition.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! Positioning with `use_overlay_position` (through the `Popover` atom): a popover placed above its
+//! trigger sits `offset` above it, centered, with its arrow at the trigger's center (hidden from
+//! assistive technology) and `--trigger-width` set; a popover without room above flips below.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// Positioning with `use_overlay_position` (through the `Popover` atom): a popover placed above its
-/// trigger sits `offset` above it, centered, with its arrow at the trigger's center (hidden from
-/// assistive technology) and `--trigger-width` set; a popover without room above flips below.
-pub struct OverlayPositionTests {}
-
-#[async_trait]
-impl BrowserTest<str> for OverlayPositionTests {
-    fn name(&self) -> Cow<'_, str> {
-        "overlay_position_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/overlay-position").await?;
-
-        cases!(
-            placed_above(&page),
-            reopened_with_arrow(&page),
-            flips_below(&page),
-            reopened_unplaced(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/overlay-position";
 
 const ABOVE: &str = ".test-op-above-popover";
 const FLIP: &str = ".test-op-flip-popover";
@@ -44,7 +20,8 @@ async fn scroll_to_page_top(page: &Page<'_>) -> Result<(), Report> {
 /// Above the trigger, `offset` (10px) away, centered, the arrow (hidden from assistive technology)
 /// at the trigger's center, `--trigger-width` set. Non-modal: focus stays on the trigger, which
 /// toggles the popover.
-async fn placed_above(page: &Page<'_>) -> Result<(), Report> {
+pub async fn placed_above(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-op-above-trigger").await?;
     trigger.click().await?;
     let popover = page.element(format!("{ABOVE}[data-placement=top]")).await?;
@@ -89,7 +66,8 @@ async fn placed_above(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Reopened, the popover has its arrow again.
-async fn reopened_with_arrow(page: &Page<'_>) -> Result<(), Report> {
+pub async fn reopened_with_arrow(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let trigger = page.element("#test-op-above-trigger").await?;
     trigger.click().await?;
     page.element(format!("{ABOVE} .test-op-arrow[data-placement=top]"))
@@ -101,7 +79,8 @@ async fn reopened_with_arrow(page: &Page<'_>) -> Result<(), Report> {
 
 /// No room above the trigger at the top of the page: the popover flips below, at the default
 /// offset (8px).
-async fn flips_below(page: &Page<'_>) -> Result<(), Report> {
+pub async fn flips_below(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     scroll_to_page_top(page).await?;
     let trigger = page.element("#test-op-flip-trigger").await?;
     trigger.click().await?;
@@ -124,7 +103,8 @@ async fn flips_below(page: &Page<'_>) -> Result<(), Report> {
 
 /// Reopened where it fits above, the popover doesn't start from the previous opening's position
 /// (below): it is inserted unplaced, then placed above.
-async fn reopened_unplaced(page: &Page<'_>) -> Result<(), Report> {
+pub async fn reopened_unplaced(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-op-shift").await?.click().await?;
     scroll_to_page_top(page).await?;
     // Records the placement each change of `data-placement` replaced.

@@ -1,43 +1,17 @@
 // Upstream: react-aria/test/interactions/useFocusWithin.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_focus_within`: focus entering and leaving an element tree, also when the focused element
+//! is removed or disabled. Every case starts on a fresh page.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
-
-/// `use_focus_within`: focus entering and leaving an element tree, also when the focused element
-/// is removed or disabled. Every case starts on a fresh page.
-pub struct FocusWithinTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusWithinTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_within_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            basic_focus_within(&page),
-            disabled(&page),
-            change_callback(&page),
-            tab_into_and_out_of_container(&page),
-            nested_focus_within(&page),
-            focus_outside_after_a_hidden_blur(&page),
-            removal_of_the_focused_child(&page),
-            disabling_the_focused_element(&page),
-        );
-        Ok(())
-    }
-}
 
 const PATH: &str = "/hooks/focus-within";
 
 /// Basic focus within behavior: enter, move within, leave, re-enter ("does handle focus events on
 /// children").
-async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
+pub async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input_a = page.element("#test-fw-input-a").await?;
     let input_b = page.element("#test-fw-input-b").await?;
@@ -71,7 +45,7 @@ async fn basic_focus_within(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "does not handle focus events if disabled".
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#test-fw-disabled-input").await?;
     let outside = page.element("#test-fw-outside").await?;
@@ -89,7 +63,7 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `on_focus_within_change` fires true on focus enter, false on focus leave.
-async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
+pub async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input = page.element("#test-fw-change-input").await?;
     let outside = page.element("#test-fw-outside").await?;
@@ -113,7 +87,7 @@ async fn change_callback(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab navigation into and out of the container.
-async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let input_a = page.element("#test-fw-input-a").await?;
     let input_b = page.element("#test-fw-input-b").await?;
@@ -140,7 +114,7 @@ async fn tab_into_and_out_of_container(page: &Page<'_>) -> Result<(), Report> {
 
 /// Focusing a deeply nested input sets focus within on both containers ("events bubble by
 /// default": focus within doesn't stop the focus events).
-async fn nested_focus_within(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_focus_within(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let outer = page
         .element("#test-fw-nested-outer-is-focus-within")
@@ -162,7 +136,7 @@ async fn nested_focus_within(page: &Page<'_>) -> Result<(), Report> {
 /// "should fire onBlur when focus occurs outside": no blur reached the container (a child stopped
 /// its `focusout`), so the next focus outside ends focus within, with a blur on the container. The
 /// outside input stops its `focusin` too, so this needs the capture-phase `focus` listener.
-async fn focus_outside_after_a_hidden_blur(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_outside_after_a_hidden_blur(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let events = page.element("#test-fw-removal-events").await?;
     let outer = page.element("#test-fw-removal-outer").await?;
@@ -182,7 +156,7 @@ async fn focus_outside_after_a_hidden_blur(page: &Page<'_>) -> Result<(), Report
 }
 
 /// Removing the focused child ends focus within (Chrome fires a blur for the removed element).
-async fn removal_of_the_focused_child(page: &Page<'_>) -> Result<(), Report> {
+pub async fn removal_of_the_focused_child(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
 
     page.element("#test-fw-removal-hide").await?.click().await?;
@@ -196,7 +170,7 @@ async fn removal_of_the_focused_child(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should fire onBlur when a focused element is disabled" (Firefox fires no blur then; the
 /// synthetic blur observer dispatches one).
-async fn disabling_the_focused_element(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabling_the_focused_element(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path(PATH).await?;
     let disable = page.element("#test-fw-removal-disable").await?;
     let events = page.element("#test-fw-removal-events").await?;

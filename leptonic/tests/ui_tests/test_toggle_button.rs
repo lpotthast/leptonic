@@ -1,48 +1,22 @@
 // Upstream: react-aria-components/test/ToggleButton.test.js @ 99e6102368
 // Upstream: react-aria-components/test/ToggleButtonGroup.test.js @ 99e6102368
 // Upstream: react-aria/test/toolbar/useToolbar.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the toggle button hooks (through the `ToggleButton` and `ToggleButtonGroup`
+//! atoms): `aria-pressed`, press and keyboard toggling, disabled buttons; groups with single
+//! selection (`radiogroup` of `radio`s) and multiple selection (`toolbar`), the toolbar's arrow
+//! key navigation in both orientations, Tab leaving it and re-entering at the last focused
+//! button, and disabled groups. Spec: react-aria-components `ToggleButton.test.js`,
+//! `ToggleButtonGroup.test.js`, react-aria `useToolbar.test.tsx`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, role};
 
-/// Behavior of the toggle button hooks (through the `ToggleButton` and `ToggleButtonGroup`
-/// atoms): `aria-pressed`, press and keyboard toggling, disabled buttons; groups with single
-/// selection (`radiogroup` of `radio`s) and multiple selection (`toolbar`), the toolbar's arrow
-/// key navigation in both orientations, Tab leaving it and re-entering at the last focused
-/// button, and disabled groups. Spec: react-aria-components `ToggleButton.test.js`,
-/// `ToggleButtonGroup.test.js`, react-aria `useToolbar.test.tsx`.
-pub struct ToggleButtonTests {}
+const PATH: &str = "/atoms/toggle-button";
 
-#[async_trait]
-impl BrowserTest<str> for ToggleButtonTests {
-    fn name(&self) -> Cow<'_, str> {
-        "toggle_button_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/toggle-button").await?;
-
-        cases!(
-            toggle_button(&page),
-            disabled_toggle_button(&page),
-            single_selection(&page),
-            multiple_selection(&page),
-            horizontal_navigation(&page),
-            tab_leaves_and_restores(&page),
-            vertical_navigation(&page),
-            disabled_group(&page),
-        );
-
-        Ok(())
-    }
-}
-
-async fn toggle_button(page: &Page<'_>) -> Result<(), Report> {
+pub async fn toggle_button(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let toggle = page.element(role("button").text("Toggle")).await?;
     assert_that!(toggle.attr("aria-pressed").await?)
         .get_some()
@@ -73,7 +47,8 @@ async fn toggle_button(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn disabled_toggle_button(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_toggle_button(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let toggle = page.element(role("button").text("Disabled toggle")).await?;
     assert_that!(toggle.is_enabled().await?).is_false();
     assert_that!(toggle.attr("data-disabled").await?)
@@ -84,7 +59,8 @@ async fn disabled_toggle_button(page: &Page<'_>) -> Result<(), Report> {
 
 /// Single selection: a `radiogroup` of `radio`s with `aria-checked`; selecting one deselects
 /// the other, pressing the selected one deselects it.
-async fn single_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn single_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[aria-label='Single']").await?;
     assert_that!(group.attr("role").await?)
         .get_some()
@@ -122,7 +98,8 @@ async fn single_selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Multiple selection: a `toolbar` of buttons with `aria-pressed`.
-async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[aria-label='Multiple']").await?;
     assert_that!(group.attr("role").await?)
         .get_some()
@@ -154,7 +131,8 @@ async fn multiple_selection(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The arrow keys move focus within the toolbar (without wrapping).
-async fn horizontal_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn horizontal_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let a = page.element(role("button").text("Multiple A")).await?;
     let b = page.element(role("button").text("Multiple B")).await?;
     let c = page.element(role("button").text("Multiple C")).await?;
@@ -177,23 +155,29 @@ async fn horizontal_navigation(page: &Page<'_>) -> Result<(), Report> {
 
 /// Tab leaves the toolbar from wherever focus is; Shift+Tab back into a toolbar restores the
 /// button focused last.
-async fn tab_leaves_and_restores(page: &Page<'_>) -> Result<(), Report> {
-    // Focus is on Multiple B (previous step).
+pub async fn tab_leaves_and_restores(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
+    // Single B, then Multiple B gets the focus: the button focused last in each group.
+    let previous = page.element(role("radio").text("Single B")).await?;
+    previous.click().await?;
+    page.wait_for_focus(&previous).await?;
     let b = page.element(role("button").text("Multiple B")).await?;
+    b.click().await?;
+    page.wait_for_focus(&b).await?;
     page.send_keys(Key::Tab).await?;
     let next = page.element(role("button").text("Vertical A")).await?;
     page.wait_for_focus(&next).await?;
     page.send_keys(Key::Shift + Key::Tab).await?;
     page.wait_for_focus(&b).await?;
     // The single selection group before it is a toolbar too: entering it restores its button
-    // focused last (Single B, which focus left for Multiple A).
+    // focused last (Single B, which focus left for Multiple B).
     page.send_keys(Key::Shift + Key::Tab).await?;
-    let previous = page.element(role("radio").text("Single B")).await?;
     page.wait_for_focus(&previous).await?;
     Ok(())
 }
 
-async fn vertical_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn vertical_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[aria-label='Vertical']").await?;
     assert_that!(group.attr("aria-orientation").await?)
         .get_some()
@@ -212,7 +196,8 @@ async fn vertical_navigation(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[aria-label='Disabled']").await?;
     assert_that!(group.attr("aria-disabled").await?)
         .get_some()

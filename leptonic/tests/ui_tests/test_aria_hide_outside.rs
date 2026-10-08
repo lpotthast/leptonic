@@ -1,8 +1,11 @@
 // Upstream: react-aria/test/overlays/ariaHideOutside.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! `aria_hide_outside`: hides everything under the root except the targets (not traversing into
+//! hidden containers), keeps author-set `aria-hidden`, hides the cells of a hidden row as well,
+//! stacks hides restored in any order, hides a root that doesn't contain a target, shows
+//! overlays registered from inside after its observer hid them, follows elements added while it
+//! is active (outside, into hidden containers, inside a target, top-layer, reparented), and
+//! restores rows that were reordered while hidden.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
 use rootcause::Report;
 
 use crate::{
@@ -10,13 +13,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// `aria_hide_outside`: hides everything under the root except the targets (not traversing into
-/// hidden containers), keeps author-set `aria-hidden`, hides the cells of a hidden row as well,
-/// stacks hides restored in any order, hides a root that doesn't contain a target, shows
-/// overlays registered from inside after its observer hid them, follows elements added while it
-/// is active (outside, into hidden containers, inside a target, top-layer, reparented), and
-/// restores rows that were reordered while hidden.
-pub struct AriaHideOutsideTests {}
+const PATH: &str = "/hooks/aria-hide-outside";
 
 /// Waits until the elements `hidden` are hidden and the elements `visible` are not.
 async fn expect_hidden(page: &Page<'_>, hidden: &[&str], visible: &[&str]) -> Result<(), Report> {
@@ -47,31 +44,6 @@ async fn expect_stays_visible(page: &Page<'_>, visible: &[&str]) -> Result<(), R
     Ok(())
 }
 
-#[async_trait]
-impl BrowserTest<str> for AriaHideOutsideTests {
-    fn name(&self) -> Cow<'_, str> {
-        "aria_hide_outside_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/aria-hide-outside").await?;
-
-        cases!(
-            hides_everything_but_the_target(&page),
-            hides_the_cells_of_a_hidden_row(&page),
-            nested_hides_restored_out_of_order(&page),
-            nested_hides_restored_in_order(&page),
-            hides_a_root_without_the_target(&page),
-            shows_overlays_registered_late(&page),
-            mutations(&page),
-            unhide_after_reorder(&page),
-        );
-
-        Ok(())
-    }
-}
-
 /// Click the fixture button `#id`.
 async fn click(page: &Page<'_>, id: &str) -> Result<(), Report> {
     page.element(format!("#{id}")).await?.click().await?;
@@ -80,7 +52,8 @@ async fn click(page: &Page<'_>, id: &str) -> Result<(), Report> {
 
 /// "should hide everything except the provided element", "should not traverse into an already
 /// hidden container", "should not overwrite an existing aria-hidden prop".
-async fn hides_everything_but_the_target(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hides_everything_but_the_target(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-basic").await?;
     expect_hidden(
         page,
@@ -107,7 +80,8 @@ async fn hides_everything_but_the_target(page: &Page<'_>) -> Result<(), Report> 
 
 /// "should hide everything except the provided element [row]": the hidden row's cell is hidden as
 /// well (VoiceOver on iOS), not the cell's content.
-async fn hides_the_cells_of_a_hidden_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hides_the_cells_of_a_hidden_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-row").await?;
     expect_hidden(
         page,
@@ -129,7 +103,8 @@ const NESTED_CHECKBOXES: [&str; 2] = ["test-aho-n-c1", "test-aho-n-c2"];
 const NESTED_RADIOS: [&str; 2] = ["test-aho-n-r1", "test-aho-n-r2"];
 
 /// "work when called multiple times and restored out of order".
-async fn nested_hides_restored_out_of_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_hides_restored_out_of_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let all = [NESTED_CHECKBOXES, NESTED_RADIOS].concat();
     click(page, "test-aho-hide-nested-1").await?;
     expect_hidden(page, &NESTED_CHECKBOXES, &NESTED_RADIOS).await?;
@@ -143,7 +118,8 @@ async fn nested_hides_restored_out_of_order(page: &Page<'_>) -> Result<(), Repor
 }
 
 /// "work when called multiple times", restored in order.
-async fn nested_hides_restored_in_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_hides_restored_in_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-nested-1").await?;
     click(page, "test-aho-hide-nested-2").await?;
     click(page, "test-aho-revert-nested-2").await?;
@@ -154,7 +130,8 @@ async fn nested_hides_restored_in_order(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The root itself is hidden when the target is outside it.
-async fn hides_a_root_without_the_target(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hides_a_root_without_the_target(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-outer").await?;
     expect_hidden(page, &["test-aho-outer-root"], &[]).await?;
     click(page, "test-aho-revert-outer").await?;
@@ -165,7 +142,8 @@ async fn hides_a_root_without_the_target(page: &Page<'_>) -> Result<(), Report> 
 /// Overlays opened from inside a hide, registered only after its observer hid them (Leptos
 /// effects run after the observer's callback; agnite dev-ui's combo box in a modal): they become
 /// visible again, the rest stays hidden.
-async fn shows_overlays_registered_late(page: &Page<'_>) -> Result<(), Report> {
+pub async fn shows_overlays_registered_late(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-late").await?;
     expect_hidden(page, &["test-aho-late-outside"], &["test-aho-late-dialog"]).await?;
     click(page, "test-aho-late-open-popover").await?;
@@ -202,7 +180,8 @@ async fn shows_overlays_registered_late(page: &Page<'_>) -> Result<(), Report> {
 /// "should handle when a new element is added outside while active", "... added to an already
 /// hidden container", "... added inside a target element", "... added along with a top layer
 /// element", "... added and then reparented", "... reparented to a hidden container".
-async fn mutations(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mutations(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-mo").await?;
     expect_hidden(page, &["test-aho-mo-container"], &["test-aho-mo-target"]).await?;
 
@@ -266,7 +245,8 @@ async fn mutations(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should unhide after item reorder": rows moved while hidden are visible again after the
 /// revert.
-async fn unhide_after_reorder(page: &Page<'_>) -> Result<(), Report> {
+pub async fn unhide_after_reorder(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     click(page, "test-aho-hide-reorder").await?;
     page.element("#test-aho-reorder > [role=presentation][aria-hidden=true]")
         .await?;

@@ -1,69 +1,20 @@
 // Upstream: react-aria-components/test/GridList.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Keyboard navigation into rows' children: "ArrowLeft/Right cycles through children and row
+//! element" (`focusMode="child"`), "ArrowDown from child navigates to first child of next item",
+//! Tab navigation ("Tab into list focuses row, Tab from row enters child, Shift+Tab returns to
+//! row"), "allowsArrowNavigation allows arrow key row navigation when focused on child", and
+//! text inputs in rows keeping their keys.
+//!
+//! "should support onAction on items", `selectionBehavior="replace"` (Ctrl toggles, the action
+//! on double click), links, type-ahead, sections ("should support sections") and descriptions.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::{Report, prelude::ResultExt};
 
 use crate::{
     pages::{ElementActions, Page, PageActions, xpath},
     polling::wait_for,
 };
-
-/// Keyboard navigation into rows' children: "ArrowLeft/Right cycles through children and row
-/// element" (`focusMode="child"`), "ArrowDown from child navigates to first child of next item",
-/// Tab navigation ("Tab into list focuses row, Tab from row enters child, Shift+Tab returns to
-/// row"), "allowsArrowNavigation allows arrow key row navigation when focused on child", and
-/// text inputs in rows keeping their keys.
-pub struct GridListChildNavigationTests {}
-
-#[async_trait]
-impl BrowserTest<str> for GridListChildNavigationTests {
-    fn name(&self) -> Cow<'_, str> {
-        "grid_list_child_navigation_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/grid-list-features").await?;
-
-        cases!(
-            arrows_cycle_through_children_and_row(&page),
-            arrows_are_mirrored_right_to_left(&page),
-            tab_walks_the_children(&page),
-            arrows_move_between_children_of_rows(&page),
-            text_input_keeps_its_keys(&page),
-        );
-
-        Ok(())
-    }
-}
-
-/// "should support onAction on items", `selectionBehavior="replace"` (Ctrl toggles, the action
-/// on double click), links, type-ahead, sections ("should support sections") and descriptions.
-pub struct GridListActionsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for GridListActionsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "grid_list_actions_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/grid-list-features").await?;
-
-        cases!(
-            hover_on_rows_with_an_action(&page),
-            actions_without_selection(&page),
-            replace_selection_behavior(&page),
-            links_open_on_press(&page),
-            sections_and_descriptions(&page),
-        );
-
-        Ok(())
-    }
-}
 
 /// Focuses a fresh focusable element right before the grid list in `container` (so Tab enters
 /// the grid list).
@@ -102,7 +53,8 @@ async fn row(page: &Page<'_>, container: &str, text: &str) -> Result<WebElement,
 
 /// Rows whose first child takes focus: ArrowRight walks the children, then the row; ArrowLeft
 /// back; ArrowDown/Up move to the first child of the next/previous row.
-async fn arrows_cycle_through_children_and_row(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrows_cycle_through_children_and_row(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let item_1 = row_labelled(page, "#glf-children", "Item 1").await?;
     let first = button(page, "Item 1 first").await?;
     let last = button(page, "Item 1 last").await?;
@@ -131,7 +83,8 @@ async fn arrows_cycle_through_children_and_row(page: &Page<'_>) -> Result<(), Re
 }
 
 /// Right to left ("ArrowLeft/Right RTL cycle"): ArrowLeft moves forward, ArrowRight back.
-async fn arrows_are_mirrored_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrows_are_mirrored_right_to_left(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let row = row_labelled(page, "#glf-children-rtl", "RTL 1").await?;
     let first = button(page, "RTL first").await?;
     let last = button(page, "RTL last").await?;
@@ -148,7 +101,8 @@ async fn arrows_are_mirrored_right_to_left(page: &Page<'_>) -> Result<(), Report
 }
 
 /// Tab enters the row, then walks the row's children; Shift+Tab goes back to the row.
-async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let row = row_labelled(page, "#glf-tab", "Tab 1").await?;
     let first = button(page, "Tab first").await?;
     let last = button(page, "Tab last").await?;
@@ -171,7 +125,8 @@ async fn tab_walks_the_children(page: &Page<'_>) -> Result<(), Report> {
 
 /// Rows whose child takes focus and that allow arrow navigation are no tab stops; arrows move
 /// between the rows' children.
-async fn arrows_move_between_children_of_rows(page: &Page<'_>) -> Result<(), Report> {
+pub async fn arrows_move_between_children_of_rows(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let rows = page.elements("#glf-child-arrows [role=row]").await?;
     assert_that!(&rows).has_length(3);
     for row in &rows {
@@ -188,7 +143,8 @@ async fn arrows_move_between_children_of_rows(page: &Page<'_>) -> Result<(), Rep
 }
 
 /// A text input in a row keeps its arrow keys, typed text, Space and Enter.
-async fn text_input_keeps_its_keys(page: &Page<'_>) -> Result<(), Report> {
+pub async fn text_input_keeps_its_keys(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let apple = row_labelled(page, "#glf-input", "Apple").await?;
     let input = page.element("#glf-input input").await?;
     focus_before(page, "#glf-input").await?;
@@ -211,7 +167,8 @@ async fn text_input_keeps_its_keys(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Rows with an action show hover; rows without selection or action don't.
-async fn hover_on_rows_with_an_action(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover_on_rows_with_an_action(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let apple = row(page, "#glf-action", "Apple").await?;
     apple.hover().await?;
     apple.wait_for_attr("data-hovered", Some("true")).await?;
@@ -223,7 +180,8 @@ async fn hover_on_rows_with_an_action(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Actions without selection: by press and by Enter; type-ahead moves focus.
-async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
+pub async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let actions = page.element("#glf-action-actions").await?;
     let apple = row(page, "#glf-action", "Apple").await?;
     apple.click().await?;
@@ -240,7 +198,8 @@ async fn actions_without_selection(page: &Page<'_>) -> Result<(), Report> {
 
 /// Replace selection behavior: a press replaces the selection, Ctrl+press toggles, a double
 /// click runs the action (and selects the row).
-async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
+pub async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let selection = page.element("#glf-replace-selection").await?;
     row(page, "#glf-replace", "Apple").await?.click().await?;
     selection.wait_for_inner_text("Apple").await?;
@@ -270,7 +229,8 @@ async fn replace_selection_behavior(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Link rows navigate on press.
-async fn links_open_on_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn links_open_on_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     row(page, "#glf-links", "One").await?.click().await?;
     wait_for("the URL's fragment")
         .observing(|| async {
@@ -288,7 +248,8 @@ async fn links_open_on_press(page: &Page<'_>) -> Result<(), Report> {
 
 /// Sections are row groups labelled by their header rows, which arrow keys skip; a row with a
 /// description is labelled by its text and the description.
-async fn sections_and_descriptions(page: &Page<'_>) -> Result<(), Report> {
+pub async fn sections_and_descriptions(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/atoms/grid-list-features").await?;
     let groups = page.elements("#glf-sections [role=rowgroup]").await?;
     assert_that!(&groups).has_length(2);
     assert_that!(groups[0].referenced_text("aria-labelledby").await?).is_equal_to("Fruit");

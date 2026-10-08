@@ -1,32 +1,16 @@
 // Upstream: react-aria/test/interactions/focusSafely.test.js @ 99e6102368
-use std::borrow::Cow;
-
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+//! `focus_safely` with virtual modality: "should focus on the element if it's connected",
+//! "should not focus on the element if it's no longer connected"; SVG elements are focused too.
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions};
 
-/// `focus_safely` with virtual modality: "should focus on the element if it's connected",
-/// "should not focus on the element if it's no longer connected"; SVG elements are focused too.
-pub struct FocusSafelyTests {}
-
-#[async_trait]
-impl BrowserTest<str> for FocusSafelyTests {
-    fn name(&self) -> Cow<'_, str> {
-        "focus_safely_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/focus-safely").await?;
-        cases!(connected(&page), no_longer_connected(&page), svg(&page));
-        Ok(())
-    }
-}
+const PATH: &str = "/hooks/focus-safely";
 
 /// "should focus on the element if it's connected": a virtual click has no pointer (virtual
 /// modality), so focusing is deferred.
-async fn connected(page: &Page<'_>) -> Result<(), Report> {
+pub async fn connected(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-focus-safely-focus")
         .await?
         .virtual_click()
@@ -42,7 +26,8 @@ async fn connected(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should not focus on the element if it's no longer connected": removed before the deferred
 /// focus, focus stays where it was.
-async fn no_longer_connected(page: &Page<'_>) -> Result<(), Report> {
+pub async fn no_longer_connected(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let remove = page.element("#test-focus-safely-remove").await?;
     remove.focus().await?;
     remove.virtual_click().await?;
@@ -52,7 +37,8 @@ async fn no_longer_connected(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// SVG elements are focused too.
-async fn svg(page: &Page<'_>) -> Result<(), Report> {
+pub async fn svg(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.element("#test-focus-safely-focus-svg")
         .await?
         .click()

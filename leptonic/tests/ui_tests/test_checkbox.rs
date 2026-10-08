@@ -1,9 +1,12 @@
 // Upstream: react-aria-components/test/Checkbox.test.js @ 99e6102368
 // Upstream: react-aria-components/test/CheckboxGroup.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the checkbox hooks (through the `Checkbox` and `CheckboxGroup` atoms): a native
+//! checkbox inside a label, toggled by pressing the label or with Space; hover, focus ring,
+//! indeterminate, disabled, read-only, invalid and required states; a checkbox bound to a
+//! signal; groups (shared name, description, disabled and read-only groups, native required
+//! validation). Spec: react-aria-components `Checkbox.test.js`, `CheckboxGroup.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -11,41 +14,7 @@ use crate::{
     polling::wait_for,
 };
 
-/// Behavior of the checkbox hooks (through the `Checkbox` and `CheckboxGroup` atoms): a native
-/// checkbox inside a label, toggled by pressing the label or with Space; hover, focus ring,
-/// indeterminate, disabled, read-only, invalid and required states; a checkbox bound to a
-/// signal; groups (shared name, description, disabled and read-only groups, native required
-/// validation). Spec: react-aria-components `Checkbox.test.js`, `CheckboxGroup.test.js`.
-pub struct CheckboxTests {}
-
-#[async_trait]
-impl BrowserTest<str> for CheckboxTests {
-    fn name(&self) -> Cow<'_, str> {
-        "checkbox_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/checkbox").await?;
-        cases!(
-            selected_state(&page),
-            keyboard_and_focus_ring(&page),
-            virtual_label_click(&page),
-            hover(&page),
-            indeterminate_state(&page),
-            disabled_state(&page),
-            read_only_state(&page),
-            invalid_state(&page),
-            required_state(&page),
-            bound_state(&page),
-            bound_read_only_and_on_change(&page),
-            group(&page),
-            group_disabled_and_read_only(&page),
-            group_validation(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/checkbox";
 
 /// The `<label>` of the checkbox with the text `text`.
 async fn label(page: &Page<'_>, text: &str) -> Result<WebElement, Report> {
@@ -64,7 +33,8 @@ async fn basic_value(page: &Page<'_>) -> Result<WebElement, Report> {
 
 /// Pressing the label toggles the checkbox: `data-selected` on the label, the native `checked`
 /// state, and the state the atom reports.
-async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
     let value = basic_value(page).await?;
@@ -87,7 +57,8 @@ async fn selected_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Tab focuses the checkbox with a focus ring; Space toggles it.
-async fn keyboard_and_focus_ring(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_and_focus_ring(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     let input = input(&label).await?;
     let value = basic_value(page).await?;
@@ -111,7 +82,8 @@ async fn keyboard_and_focus_ring(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A virtual click on the label toggles, as with a native label.
-async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     let value = basic_value(page).await?;
     label.virtual_click().await?;
@@ -122,7 +94,8 @@ async fn virtual_label_click(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// The pointer over the label sets `data-hovered`; leaving clears it.
-async fn hover(page: &Page<'_>) -> Result<(), Report> {
+pub async fn hover(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Basic").await?;
     assert_that!(label.attr("data-hovered").await?).is_none();
     label.hover().await?;
@@ -132,7 +105,8 @@ async fn hover(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn indeterminate_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn indeterminate_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Indeterminate").await?;
     let input = input(&label).await?;
     assert_that!(label.attr("data-indeterminate").await?)
@@ -145,7 +119,8 @@ async fn indeterminate_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A disabled checkbox ignores presses.
-async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Disabled").await?;
     let input = input(&label).await?;
     assert_that!(label.attr("data-disabled").await?)
@@ -160,7 +135,8 @@ async fn disabled_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A read-only checkbox keeps its state; the DOM follows the state, not the rejected press.
-async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Read only").await?;
     let input = input(&label).await?;
     assert_that!(label.attr("data-readonly").await?)
@@ -180,7 +156,8 @@ async fn read_only_state(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn invalid_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn invalid_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Invalid").await?;
     let input = input(&label).await?;
     assert_that!(label.attr("data-invalid").await?)
@@ -194,7 +171,8 @@ async fn invalid_state(page: &Page<'_>) -> Result<(), Report> {
 
 /// Native validation uses `required`, ARIA validation `aria-required`. The native error shows
 /// once the form is validated, and clears when checked.
-async fn required_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn required_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let native = label(page, "Required native").await?;
     let native_input = input(&native).await?;
     assert_that!(native.attr("data-required").await?)
@@ -220,7 +198,8 @@ async fn required_state(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A checkbox bound to a signal follows changes from outside and writes the signal.
-async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
+pub async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let label = label(page, "Bound").await?;
     let input = input(&label).await?;
     let flip = page.element("#test-cb-bound-flip").await?;
@@ -236,7 +215,8 @@ async fn bound_state(page: &Page<'_>) -> Result<(), Report> {
 
 /// A bound checkbox stays read-only (by press and by Space), and reports changes to
 /// `on_change` (react-aria: `useToggleState` gets `isReadOnly` and `onChange` either way).
-async fn bound_read_only_and_on_change(page: &Page<'_>) -> Result<(), Report> {
+pub async fn bound_read_only_and_on_change(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let read_only = label(page, "Bound read only").await?;
     let input = input(&read_only).await?;
     read_only.click().await?;
@@ -253,7 +233,8 @@ async fn bound_read_only_and_on_change(page: &Page<'_>) -> Result<(), Report> {
 
 /// A group: labelled and described, its checkboxes share the group's name and submit their keys;
 /// the state lists the checked keys; a disabled checkbox in an enabled group ignores presses.
-async fn group(page: &Page<'_>) -> Result<(), Report> {
+pub async fn group(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let group = page.element("[role=group]").await?;
     assert_that!(group.referenced_text("aria-labelledby").await?).is_equal_to("Pets");
     assert_that!(group.referenced_text("aria-describedby").await?).is_equal_to("Pick your pets.");
@@ -297,7 +278,8 @@ async fn group(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A disabled group disables its checkboxes; a read-only group keeps their states.
-async fn group_disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+pub async fn group_disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let disabled_group = page
         .element("[role=group][aria-label='Disabled group']")
         .await?;
@@ -336,7 +318,8 @@ async fn group_disabled_and_read_only(page: &Page<'_>) -> Result<(), Report> {
 /// A required group (native validation): every checkbox is `required` while none is checked;
 /// validating the form marks the group invalid and adds the browser's validation message to its
 /// description; checking one clears both.
-async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn group_validation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let form = page.element("#test-cb-group-form").await?;
     let group = form.element("[role=group]").await?;
     let a = label(page, "Required group A").await?;

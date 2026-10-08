@@ -1,8 +1,12 @@
 // Upstream: react-aria-components/test/Tabs.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! Behavior of the tabs hooks (through the `Tabs` atoms): ARIA structure (tabs control their
+//! panel, the panel is labelled by its tab), selection by press and by arrow keys (automatic and
+//! manual activation, wrapping, vertical orientation, right to left), disabled tabs (also by
+//! `Tab::is_disabled`), state as data attributes, force-mounted panels, a bound selected key,
+//! added and removed tabs, and nested tabs.
+//! Spec: react-aria-components `Tabs.test.js`.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,46 +14,7 @@ use crate::{
     polling::{expect, wait_for},
 };
 
-/// Behavior of the tabs hooks (through the `Tabs` atoms): ARIA structure (tabs control their
-/// panel, the panel is labelled by its tab), selection by press and by arrow keys (automatic and
-/// manual activation, wrapping, vertical orientation, right to left), disabled tabs (also by
-/// `Tab::is_disabled`), state as data attributes, force-mounted panels, a bound selected key,
-/// added and removed tabs, and nested tabs.
-/// Spec: react-aria-components `Tabs.test.js`.
-pub struct TabsTests {}
-
-#[async_trait]
-impl BrowserTest<str> for TabsTests {
-    fn name(&self) -> Cow<'_, str> {
-        "tabs_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/tabs").await?;
-
-        cases!(
-            aria_structure(&page),
-            selection_by_press(&page),
-            keyboard_navigation(&page),
-            disabled_tab(&page),
-            disabled_first_tab(&page),
-            all_tabs_disabled(&page),
-            vertical(&page),
-            manual_activation(&page),
-            rtl_vertical(&page),
-            data_attributes(&page),
-            force_mount(&page),
-            tab_is_disabled(&page),
-            controlled(&page),
-            dynamic(&page),
-            nested(&page),
-            tab_panels(&page),
-        );
-
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/tabs";
 
 async fn tablist(page: &Page<'_>, name: &str) -> Result<WebElement, Report> {
     page.element(format!("[role=tablist][aria-label='{name}']"))
@@ -103,7 +68,8 @@ async fn expect_selected(page: &Page<'_>, name: &str, index: usize) -> Result<()
     Ok(())
 }
 
-async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+pub async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let list = tablist(page, "basic").await?;
     assert_that!(list.attr("aria-orientation").await?)
         .get_some()
@@ -127,7 +93,8 @@ async fn aria_structure(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     tabs(page, "basic").await?[1].click().await?;
     page.element("#test-tabs-basic-selection")
         .await?
@@ -150,7 +117,8 @@ async fn selection_by_press(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Arrow keys select the next/previous tab (wrapping); Home/End the first/last.
-async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "basic").await?;
     expect_focus(page, "basic", 0).await?;
     page.send_keys(Key::Right).await?;
@@ -172,7 +140,8 @@ async fn keyboard_navigation(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn disabled_tab(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_tab(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let tabs = tabs(page, "disabled-tab").await?;
     assert_that!(tabs[1].attr("aria-disabled").await?)
         .get_some()
@@ -185,7 +154,8 @@ async fn disabled_tab(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Without a default, the first enabled tab is selected.
-async fn disabled_first_tab(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_first_tab(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let tabs = tabs(page, "first-disabled").await?;
     assert_that!(tabs[0].attr("aria-disabled").await?)
         .get_some()
@@ -199,7 +169,8 @@ async fn disabled_first_tab(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// With all tabs disabled, the first is selected, and Tab moves past the tabs to the panel.
-async fn all_tabs_disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn all_tabs_disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     expect_selected(page, "all-disabled", 0).await?;
     enter(page, "all-disabled").await?;
     let panel = panel(page, "all-disabled").await?;
@@ -207,7 +178,8 @@ async fn all_tabs_disabled(page: &Page<'_>) -> Result<(), Report> {
     Ok(())
 }
 
-async fn vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let list = tablist(page, "vertical").await?;
     assert_that!(list.attr("aria-orientation").await?)
         .get_some()
@@ -225,7 +197,8 @@ async fn vertical(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// With manual activation, arrow keys only move focus; Enter selects.
-async fn manual_activation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn manual_activation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "manual").await?;
     expect_focus(page, "manual", 0).await?;
     page.send_keys(Key::Right).await?;
@@ -244,7 +217,8 @@ async fn manual_activation(page: &Page<'_>) -> Result<(), Report> {
 
 /// "allows user to change tab item selection via arrow keys with vertical tabs (rtl)": up and down
 /// move, and left/right follow the reading direction (left is next).
-async fn rtl_vertical(page: &Page<'_>) -> Result<(), Report> {
+pub async fn rtl_vertical(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     enter(page, "rtl-vertical").await?;
     expect_selected(page, "rtl-vertical", 0).await?;
     page.send_keys(Key::Down).await?;
@@ -260,7 +234,8 @@ async fn rtl_vertical(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support render props", "should support hover", "should support focus ring", "should
 /// support press state", "should support disabled state on tab".
-async fn data_attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn data_attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let tabs = tabs(page, "disabled-tab").await?;
     tabs[0].click().await?;
     expect_selected(page, "disabled-tab", 0).await?;
@@ -332,7 +307,8 @@ async fn all_panels(page: &Page<'_>, name: &str) -> Result<Vec<WebElement>, Repo
 
 /// "should support shouldForceMount": every panel is rendered; unselected ones are inert and no
 /// tab panels (react-aria-components drops their panel props).
-async fn force_mount(page: &Page<'_>) -> Result<(), Report> {
+pub async fn force_mount(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let expect_panels = |selected: usize| async move {
         let panels = all_panels(page, "force").await?;
         assert_that!(panels.as_slice()).has_length(3);
@@ -366,7 +342,8 @@ async fn force_mount(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support isDisabled prop on tab", "finds the first non-disabled tab" (disabled by the
 /// `Tab`).
-async fn tab_is_disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_is_disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let list = tabs(page, "tab-disabled").await?;
     assert_that!(list[1].attr("aria-disabled").await?)
         .get_some()
@@ -396,7 +373,8 @@ async fn tab_is_disabled(page: &Page<'_>) -> Result<(), Report> {
 
 /// A bound selected key: shown, written on selection, followed when the app changes it; a
 /// disabled bound key stays selected (as react-aria's controlled `selectedKey`).
-async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controlled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     expect_selected(page, "controlled", 1).await?;
     let list = tabs(page, "controlled").await?;
     assert_that!(list[1].attr("aria-disabled").await?)
@@ -433,7 +411,8 @@ async fn dynamic_tabs(page: &Page<'_>) -> Result<Vec<WebElement>, Report> {
 /// selects the new or the new last tab; the app's changes aren't reported as selections. Pressing
 /// the selected tab reports it again (`useSingleSelectListState`: "Always fire
 /// onSelectionChange, even if the key is the same").
-async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let list = dynamic_tabs(page).await?;
     assert_that!(list.as_slice()).has_length(3);
     let changes = page.element("#test-tabs-dynamic-changes").await?;
@@ -469,7 +448,8 @@ async fn dynamic(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "supports nested tabs": each tab list holds its own tabs.
-async fn nested(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let outer = tabs(page, "Outer").await?;
     assert_that!(outer.as_slice()).has_length(2);
     assert_that!(outer[0].inner_text().await?).is_equal_to("Foo");
@@ -496,7 +476,8 @@ async fn nested(page: &Page<'_>) -> Result<(), Report> {
 
 /// `TabPanels` ("should detect block-size in transition for TabPanels"): while the selection
 /// changes, its size variables hold pixel sizes (animated by its transition), then `auto` again.
-async fn tab_panels(page: &Page<'_>) -> Result<(), Report> {
+pub async fn tab_panels(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(panel_height(page).await?).is_equal_to("auto");
     tabs(page, "Animated").await?[1].click().await?;
     wait_for("--tab-panel-height")

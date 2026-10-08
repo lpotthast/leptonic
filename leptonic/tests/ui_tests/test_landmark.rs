@@ -1,8 +1,13 @@
 // Upstream: react-aria/test/landmark/useLandmark.test.tsx @ 99e6102368
-use std::borrow::Cow;
-
+//! `use_landmark`: F6/Shift+F6 move between landmarks in document order and wrap; Alt+F6 goes to
+//! the main landmark; a landmark regains the element focused in it last; `aria-hidden` landmarks
+//! are skipped; added and removed landmarks are followed; a cancelable event fires before
+//! wrapping; the focused landmark is `tabindex="-1"` until the focus leaves it; labels update;
+//! nested landmarks go in document order; a
+//! `LandmarkController` moves between them; landmarks sharing a role without distinct labels are
+//! reported.
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,43 +15,11 @@ use crate::{
     polling::{expect, wait_for},
 };
 
-/// `use_landmark`: F6/Shift+F6 move between landmarks in document order and wrap; Alt+F6 goes to
-/// the main landmark; a landmark regains the element focused in it last; `aria-hidden` landmarks
-/// are skipped; added and removed landmarks are followed; a cancelable event fires before
-/// wrapping; the focused landmark is `tabindex="-1"` until the focus leaves it; labels update;
-/// nested landmarks go in document order; a
-/// `LandmarkController` moves between them; landmarks sharing a role without distinct labels are
-/// reported.
-pub struct LandmarkTests {}
-
-#[async_trait]
-impl BrowserTest<str> for LandmarkTests {
-    fn name(&self) -> Cow<'_, str> {
-        "landmark_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        cases!(
-            navigation_order(&page),
-            restores_last_focused(&page),
-            alt_f6_to_main(&page),
-            added_and_removed(&page),
-            wrap_event(&page),
-            label_updates(&page),
-            nested_order(&page),
-            controller(&page),
-            duplicate_role_warnings(&page),
-        );
-        Ok(())
-    }
-}
-
 /// "can F6 to a landmark region", "can F6 to the next landmark region", "landmark navigation
 /// forward wraps", "can shift+F6 to the previous landmark region", "landmark navigation backward
 /// wraps", "skips over aria-hidden landmarks", "landmark has tabIndex="-1" when focused", "loses
 /// the tabIndex=-1 if something else is focused".
-async fn navigation_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn navigation_order(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     let nav = page.element("#test-lm-nav").await?;
     let main = page.element("#test-lm-main").await?;
@@ -72,7 +45,7 @@ async fn navigation_order(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "F6 should focus the last focused element in a landmark region".
-async fn restores_last_focused(page: &Page<'_>) -> Result<(), Report> {
+pub async fn restores_last_focused(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     page.element("#test-lm-home").await?.focus().await?;
     page.send_keys(Key::Tab).await?;
@@ -89,7 +62,7 @@ async fn restores_last_focused(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "can alt+F6 to main landmark".
-async fn alt_f6_to_main(page: &Page<'_>) -> Result<(), Report> {
+pub async fn alt_f6_to_main(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     page.element("#test-lm-home").await?.focus().await?;
     page.send_keys(Key::Alt + Key::F6).await?;
@@ -100,7 +73,7 @@ async fn alt_f6_to_main(page: &Page<'_>) -> Result<(), Report> {
 
 /// "Should navigate to a landmark that has been added to the DOM" (as a child of an existing
 /// landmark), "Should not navigate to a landmark that has been removed from the DOM".
-async fn added_and_removed(page: &Page<'_>) -> Result<(), Report> {
+pub async fn added_and_removed(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     page.element("#test-lm-toggle").await?.click().await?;
     page.element("#test-lm-extra").await?;
@@ -130,7 +103,7 @@ async fn added_and_removed(page: &Page<'_>) -> Result<(), Report> {
 
 /// "landmark navigation fires custom event when wrapping forward": a listener preventing it keeps
 /// the focus where it is.
-async fn wrap_event(page: &Page<'_>) -> Result<(), Report> {
+pub async fn wrap_event(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     let nav = page.element("#test-lm-nav").await?;
     let main = page.element("#test-lm-main").await?;
@@ -155,7 +128,7 @@ async fn wrap_event(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "updates the landmark if the label changes".
-async fn label_updates(page: &Page<'_>) -> Result<(), Report> {
+pub async fn label_updates(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark").await?;
     let main = page.element("#test-lm-main").await?;
     assert_that!(main.attr("aria-label").await?)
@@ -168,7 +141,7 @@ async fn label_updates(page: &Page<'_>) -> Result<(), Report> {
 
 /// "goes in dom order with two nested landmarks", "can F6 to a nested landmark region that is
 /// first".
-async fn nested_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_order(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
     for landmark in [
         "#test-lmn-main",
@@ -194,7 +167,7 @@ async fn call_controller(page: &Page<'_>, selector: &str) -> Result<(), Report> 
 
 /// `LandmarkController`: "should navigate forward", "should navigate backward", "should focus
 /// main", from the focused element.
-async fn controller(page: &Page<'_>) -> Result<(), Report> {
+pub async fn controller(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
     page.element("#test-lmn-first").await?.click().await?;
     call_controller(page, "#test-lmn-next").await?;
@@ -220,7 +193,7 @@ async fn warnings(page: &Page<'_>) -> Result<Vec<String>, Report> {
 /// "Should warn if 2+ landmarks with same role are used but not labelled.", "Should warn if 2+
 /// landmarks with same role and same label", "Should allow 2+ landmarks with same role if they are
 /// labelled." (the two regions of the page).
-async fn duplicate_role_warnings(page: &Page<'_>) -> Result<(), Report> {
+pub async fn duplicate_role_warnings(page: &Page<'_>) -> Result<(), Report> {
     page.goto_path("/hooks/landmark-nested").await?;
     // The two distinctly labelled regions don't warn.
     expect("the warnings")

@@ -1,96 +1,45 @@
 // Upstream: react-aria/test/interactions/usePress.test.js @ 99e6102368
-use std::borrow::Cow;
+//! `use_press` on a Mac (emulated: Chrome on Linux fires every key up): macOS fires no key up for
+//! keys released while Meta is held, so releasing Meta ends their presses ("should fire press
+//! events when Meta key is held to work around macOS bug").
 
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::pages::{ElementActions, Page, PageActions, SyntheticEvent};
 
-pub struct PressTests {}
-
-#[async_trait]
-impl BrowserTest<str> for PressTests {
-    fn name(&self) -> Cow<'_, str> {
-        "press_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/press").await?;
-
-        cases!(
-            mouse_click_fires_all_events_in_order(&page),
-            keyboard_enter_and_space_press(&page),
-            releasing_outside_does_not_press(&page),
-            disabled_element_ignores_presses(&page),
-            becoming_disabled_cancels_active_press(&page),
-            enter_on_checkbox_submits_form(&page),
-            prevent_focus_on_press_keeps_the_focus(&page),
-            nested_press_stops_by_default(&page),
-            nested_press_propagates_when_continued(&page),
-            keyboard_press_ends_when_key_up_is_stopped(&page),
-            a_drag_inside_cancels_the_press(&page),
-            a_child_stopping_the_click_cancels_the_press(&page),
-            focus_moving_before_key_up_ends_without_press(&page),
-            repeating_key_downs_are_ignored(&page),
-            dragging_out_and_back_in(&page),
-            cancel_on_pointer_exit(&page),
-            pointer_cancel_cancels_the_press(&page),
-            space_on_a_link_with_button_role(&page),
-            double_press(&page),
-            press_propagation_continue(&page),
-            virtual_click(&page),
-            removed_while_pressed(&page),
-        );
-        Ok(())
-    }
-}
-
-/// `use_press` on a Mac (emulated: Chrome on Linux fires every key up): macOS fires no key up for
-/// keys released while Meta is held, so releasing Meta ends their presses ("should fire press
-/// events when Meta key is held to work around macOS bug").
-pub struct PressMacTests {}
-
-#[async_trait]
-impl BrowserTest<str> for PressMacTests {
-    fn name(&self) -> Cow<'_, str> {
-        "press_mac_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        // Before the page loads: the platform is detected once.
-        driver
-            .cdp()
-            .send_raw(
-                "Emulation.setUserAgentOverride",
-                serde_json::json!({
-                    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
-                                  AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 \
-                                  Safari/537.36",
-                    "platform": "MacIntel",
-                    "userAgentMetadata": {
-                        "platform": "macOS",
-                        "platformVersion": "15.0.0",
-                        "architecture": "arm",
-                        "model": "",
-                        "mobile": false,
-                        "brands": [{ "brand": "Chromium", "version": "140" }],
-                    },
-                }),
-            )
-            .await?;
-        let page = Page { driver, base_url };
-        page.goto_path("/hooks/press").await?;
-
-        cases!(meta_release_ends_held_key_presses(&page));
-        Ok(())
-    }
+/// Opens the fixture in a browser that says it runs on a Mac. The user agent is set before the
+/// page loads: the platform is detected once.
+async fn open_on_a_mac(page: &Page<'_>) -> Result<(), Report> {
+    page.driver
+        .cdp()
+        .send_raw(
+            "Emulation.setUserAgentOverride",
+            serde_json::json!({
+                "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+                              AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 \
+                              Safari/537.36",
+                "platform": "MacIntel",
+                "userAgentMetadata": {
+                    "platform": "macOS",
+                    "platformVersion": "15.0.0",
+                    "architecture": "arm",
+                    "model": "",
+                    "mobile": false,
+                    "brands": [{ "brand": "Chromium", "version": "140" }],
+                },
+            }),
+        )
+        .await?;
+    page.goto_path("/hooks/press").await?;
+    Ok(())
 }
 
 /// Meta held, Enter pressed; Meta released while Enter is still down: the press ends at the Meta
 /// key up, the Enter key up adds nothing.
-async fn meta_release_ends_held_key_presses(page: &Page<'_>) -> Result<(), Report> {
+pub async fn meta_release_ends_held_key_presses(page: &Page<'_>) -> Result<(), Report> {
+    open_on_a_mac(page).await?;
     let platform: String = page.eval("return navigator.platform;", vec![]).await?;
     assert_that!(platform).is_equal_to("MacIntel");
 
@@ -140,7 +89,8 @@ async fn clear_log(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should fire press events based on pointer events": start, up, end, press, in order; text
 /// selection is disabled on the pressed element (not on the text inside it) and restored.
-async fn mouse_click_fires_all_events_in_order(page: &Page<'_>) -> Result<(), Report> {
+pub async fn mouse_click_fires_all_events_in_order(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     clear_log(page).await?;
     page.element("#test-press-target").await?.click().await?;
     log(page)
@@ -160,7 +110,8 @@ async fn mouse_click_fires_all_events_in_order(page: &Page<'_>) -> Result<(), Re
 }
 
 /// "should fire press events for keyboard events": Enter and Space each press once.
-async fn keyboard_enter_and_space_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_enter_and_space_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     // Focus the target first, then start from a clean log.
     page.element("#test-press-target").await?.click().await?;
     clear_log(page).await?;
@@ -187,7 +138,8 @@ async fn keyboard_enter_and_space_press(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should fire press change events when moving pointer outside target": released outside, the
 /// press ends without a press (also none from the click fallback).
-async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     clear_log(page).await?;
     let target = page.element("#test-press-target").await?;
     let elsewhere = page.element("#test-press-elsewhere").await?;
@@ -227,7 +179,8 @@ async fn releasing_outside_does_not_press(page: &Page<'_>) -> Result<(), Report>
 }
 
 /// "should not fire press events when disabled".
-async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     page.element("#test-press-toggle-disabled")
         .await?
         .click()
@@ -244,7 +197,8 @@ async fn disabled_element_ignores_presses(page: &Page<'_>) -> Result<(), Report>
 
 /// Upstream fix (react-spectrum #9813): an element that becomes disabled while pressed must end
 /// the press instead of staying pressed (a spin button would otherwise keep spinning).
-async fn becoming_disabled_cancels_active_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn becoming_disabled_cancels_active_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let target = page.element("#test-press-self-disabling").await?;
     page.driver
         .action_chain()
@@ -273,7 +227,8 @@ async fn becoming_disabled_cancels_active_press(page: &Page<'_>) -> Result<(), R
 
 /// Upstream fix (react-spectrum #9972): Enter on a checkbox must trigger the form's implicit
 /// submission instead of being swallowed.
-async fn enter_on_checkbox_submits_form(page: &Page<'_>) -> Result<(), Report> {
+pub async fn enter_on_checkbox_submits_form(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     page.element("#test-press-checkbox").await?.click().await?;
     page.element("#test-press-checkbox")
         .await?
@@ -288,7 +243,8 @@ async fn enter_on_checkbox_submits_form(page: &Page<'_>) -> Result<(), Report> {
 
 /// "event bubbling: should stop propagation by default": the outer pressable sees nothing of a
 /// press on the inner one.
-async fn nested_press_stops_by_default(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_press_stops_by_default(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let id = "test-press-nested-stop";
     page.element(format!("#{id}-inner")).await?.click().await?;
     page.element(format!("#{id}-inner-log"))
@@ -309,7 +265,8 @@ async fn nested_press_stops_by_default(page: &Page<'_>) -> Result<(), Report> {
 
 /// "event bubbling: should allow propagation if continuePropagation is called": the outer
 /// pressable is pressed along with the inner one.
-async fn nested_press_propagates_when_continued(page: &Page<'_>) -> Result<(), Report> {
+pub async fn nested_press_propagates_when_continued(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let id = "test-press-nested-continue";
     page.element(format!("#{id}-inner")).await?.click().await?;
     page.element(format!("#{id}-inner-log"))
@@ -325,7 +282,8 @@ async fn nested_press_propagates_when_continued(page: &Page<'_>) -> Result<(), R
 
 /// "should not focus the element on click if preventFocusOnPress is true": the focus stays on
 /// the previously focused input, which sees no blur, and the press still happens.
-async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+pub async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     page.element("#test-press-keep-input")
         .await?
         .focus()
@@ -347,7 +305,8 @@ async fn prevent_focus_on_press_keeps_the_focus(page: &Page<'_>) -> Result<(), R
 /// The document listens to the keyup in the capture phase (as react-aria): a keyup handler on the
 /// pressed element that stops the event (`use_keyboard` with `on_key_up`) doesn't leave the press
 /// stuck.
-async fn keyboard_press_ends_when_key_up_is_stopped(page: &Page<'_>) -> Result<(), Report> {
+pub async fn keyboard_press_ends_when_key_up_is_stopped(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     page.element("#test-press-keyup").await?.focus().await?;
     page.wait_for_focus(&page.element("#test-press-keyup").await?)
         .await?;
@@ -378,7 +337,8 @@ async fn keyboard_press_ends_when_key_up_is_stopped(page: &Page<'_>) -> Result<(
 
 /// A drag starting inside the pressable cancels its press (react-aria's `onDragStart`), with the
 /// drag event: press end runs (no panic on a constructed event without a current target), no press.
-async fn a_drag_inside_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn a_drag_inside_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let image = page.element("#test-press-drag-image").await?;
     page.driver
         .action_chain()
@@ -405,7 +365,8 @@ async fn a_drag_inside_cancels_the_press(page: &Page<'_>) -> Result<(), Report> 
 
 /// "should cancel press if onClick propagation is stopped": a child stops the click, so the click
 /// fallback (80 ms after pointer up) cancels the press instead of completing it.
-async fn a_child_stopping_the_click_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn a_child_stopping_the_click_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let log = page.element("#test-press-click-stop-log").await?;
     page.element("#test-press-click-stop-child")
         .await?
@@ -418,7 +379,8 @@ async fn a_child_stopping_the_click_cancels_the_press(page: &Page<'_>) -> Result
 
 /// "should handle when focus moves between keydown and keyup": the key up happens on another
 /// element (focus moved there on press start): press end without press up or press.
-async fn focus_moving_before_key_up_ends_without_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn focus_moving_before_key_up_ends_without_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let log = page.element("#test-press-focus-move-log").await?;
     page.element("#test-press-focus-move")
         .await?
@@ -436,7 +398,8 @@ async fn focus_moving_before_key_up_ends_without_press(page: &Page<'_>) -> Resul
 }
 
 /// "should ignore repeating keyboard events".
-async fn repeating_key_downs_are_ignored(page: &Page<'_>) -> Result<(), Report> {
+pub async fn repeating_key_downs_are_ignored(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     clear_log(page).await?;
     let target = page.element("#test-press-target").await?;
     target
@@ -452,7 +415,8 @@ async fn repeating_key_downs_are_ignored(page: &Page<'_>) -> Result<(), Report> 
 
 /// "should fire press change events when moving pointer outside target", on a `display: contents`
 /// element (no box: the pointer's position can't be compared with its bounds).
-async fn dragging_out_and_back_in(page: &Page<'_>) -> Result<(), Report> {
+pub async fn dragging_out_and_back_in(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let log = page.element("#test-press-contents-log").await?;
     let child = page.element("#test-press-contents-child").await?;
     let elsewhere = page.element("#test-press-elsewhere").await?;
@@ -475,7 +439,8 @@ async fn dragging_out_and_back_in(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should cancel press when moving outside and the shouldCancelOnPointerExit option is set".
-async fn cancel_on_pointer_exit(page: &Page<'_>) -> Result<(), Report> {
+pub async fn cancel_on_pointer_exit(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let log = page.element("#test-press-cancel-exit-log").await?;
     let target = page.element("#test-press-cancel-exit").await?;
     let elsewhere = page.element("#test-press-elsewhere").await?;
@@ -501,7 +466,8 @@ async fn cancel_on_pointer_exit(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should handle pointer cancel events".
-async fn pointer_cancel_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn pointer_cancel_cancels_the_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     clear_log(page).await?;
     let target = page.element("#test-press-target").await?;
     page.driver
@@ -539,7 +505,8 @@ async fn pointer_cancel_cancels_the_press(page: &Page<'_>) -> Result<(), Report>
 /// "should explicitly call click method when Space key is triggered on a link with href and
 /// role=button": one press (the link's click opened by the press isn't a second, virtual press)
 /// and the link is followed.
-async fn space_on_a_link_with_button_role(page: &Page<'_>) -> Result<(), Report> {
+pub async fn space_on_a_link_with_button_role(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let log = page.element("#test-press-link-log").await?;
     page.element("#test-press-link").await?.focus().await?;
     page.wait_for_focus(&page.element("#test-press-link").await?)
@@ -556,7 +523,8 @@ async fn space_on_a_link_with_button_role(page: &Page<'_>) -> Result<(), Report>
 
 /// `on_double_press` fires on a double click, after both presses; also through press props merged
 /// with hover props.
-async fn double_press(page: &Page<'_>) -> Result<(), Report> {
+pub async fn double_press(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let target = page.element("#test-press-double").await?;
     page.driver
         .action_chain()
@@ -583,7 +551,8 @@ async fn double_press(page: &Page<'_>) -> Result<(), Report> {
 
 /// `PressPropagation::Continue`: every press event of the inner pressable propagates, so the
 /// outer one is pressed too.
-async fn press_propagation_continue(page: &Page<'_>) -> Result<(), Report> {
+pub async fn press_propagation_continue(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     page.element("#test-press-continue-inner")
         .await?
         .click()
@@ -601,7 +570,8 @@ async fn press_propagation_continue(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should fire press events events for virtual click events from screen readers" (a click
 /// without a pointer: `element.click()`).
-async fn virtual_click(page: &Page<'_>) -> Result<(), Report> {
+pub async fn virtual_click(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     clear_log(page).await?;
     page.element("#test-press-target")
         .await?
@@ -615,7 +585,8 @@ async fn virtual_click(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A pressable removed while pressed: no press, no panic when the pointer is released.
-async fn removed_while_pressed(page: &Page<'_>) -> Result<(), Report> {
+pub async fn removed_while_pressed(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path("/hooks/press").await?;
     let target = page.element("#test-press-removed").await?;
     page.driver
         .action_chain()

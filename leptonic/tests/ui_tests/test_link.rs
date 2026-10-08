@@ -1,8 +1,11 @@
 // Upstream: react-aria-components/test/Link.test.js @ 99e6102368
-use std::borrow::Cow;
-
+//! The link atom: `aria-current` by route (prefix or exact), client-side navigation, `replace`,
+//! `target`/`rel` for new tabs, a disabled link (no `href`, `aria-disabled`, not followed, no
+//! presses), the props of a surrounding trigger, hover/focus/press state, Enter, a disabled
+//! `use_link` anchor, and `AnchorLink` (scrolls, sets the hash without a history entry, leaves
+//! modified clicks to the browser).
 use assertr::prelude::*;
-use browser_test::{BrowserTest, async_trait, thirtyfour::prelude::*};
+use browser_test::thirtyfour::prelude::*;
 use rootcause::Report;
 
 use crate::{
@@ -10,39 +13,11 @@ use crate::{
     polling::wait_for,
 };
 
-/// The link atom: `aria-current` by route (prefix or exact), client-side navigation, `replace`,
-/// `target`/`rel` for new tabs, a disabled link (no `href`, `aria-disabled`, not followed, no
-/// presses), the props of a surrounding trigger, hover/focus/press state, Enter, a disabled
-/// `use_link` anchor, and `AnchorLink` (scrolls, sets the hash without a history entry, leaves
-/// modified clicks to the browser).
-pub struct LinkTests {}
-
-#[async_trait]
-impl BrowserTest<str> for LinkTests {
-    fn name(&self) -> Cow<'_, str> {
-        "link_tests".into()
-    }
-
-    async fn run(&self, driver: &WebDriver, base_url: &str) -> Result<(), Report> {
-        let page = Page { driver, base_url };
-        page.goto_path("/atoms/link").await?;
-        cases!(
-            current_page(&page),
-            new_tab(&page),
-            trigger_props(&page),
-            disabled(&page),
-            state_attributes(&page),
-            disabled_hook_anchor(&page),
-            anchor_link(&page),
-            replace(&page),
-            client_side_navigation(&page),
-        );
-        Ok(())
-    }
-}
+const PATH: &str = "/atoms/link";
 
 /// The current page by route: a prefix matches unless the link is exact.
-async fn current_page(page: &Page<'_>) -> Result<(), Report> {
+pub async fn current_page(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     assert_that!(
         page.element("#test-link-self")
             .await?
@@ -70,7 +45,8 @@ async fn current_page(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// A new tab gets `noopener`.
-async fn new_tab(page: &Page<'_>) -> Result<(), Report> {
+pub async fn new_tab(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let external = page.element("#test-link-external").await?;
     assert_that!(external.attr("target").await?)
         .get_some()
@@ -83,7 +59,8 @@ async fn new_tab(page: &Page<'_>) -> Result<(), Report> {
 
 /// A link as a trigger gets the trigger's props (react-aria's menu triggers:
 /// `aria-haspopup="true"`).
-async fn trigger_props(page: &Page<'_>) -> Result<(), Report> {
+pub async fn trigger_props(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let menu = page.element("#test-link-menu").await?;
     assert_that!(menu.attr("aria-haspopup").await?)
         .get_some()
@@ -95,7 +72,8 @@ async fn trigger_props(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// "should support disabled state", "should not navigate if disabled".
-async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let presses = page.element("#test-link-presses").await?;
     let toggle = page.element("#test-link-toggle-disabled").await?;
     page.element(".test-link-disableable")
@@ -120,7 +98,8 @@ async fn disabled(page: &Page<'_>) -> Result<(), Report> {
 
 /// "should support hover", "should support focus ring", "should support press state"; Enter
 /// presses a focused link once.
-async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
+pub async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let link = page.element("a.test-link-disableable").await?;
     for name in ["data-hovered", "data-pressed", "data-focus-visible"] {
         assert_that!(link.attr(name).await?)
@@ -166,7 +145,8 @@ async fn state_attributes(page: &Page<'_>) -> Result<(), Report> {
 
 /// A disabled anchor has no `href`, so it keeps the link role explicitly (useLink.test.js
 /// "handles isDisabled").
-async fn disabled_hook_anchor(page: &Page<'_>) -> Result<(), Report> {
+pub async fn disabled_hook_anchor(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let link = page.element("#test-link-hook-disabled").await?;
     assert_that!(link.attr("href").await?).is_none();
     assert_that!(link.attr("role").await?)
@@ -181,7 +161,8 @@ async fn disabled_hook_anchor(page: &Page<'_>) -> Result<(), Report> {
 
 /// `AnchorLink`: a modified click is the browser's (no scrolling, no hash, the default action not
 /// prevented); a press scrolls the target into view and sets the hash, without a history entry.
-async fn anchor_link(page: &Page<'_>) -> Result<(), Report> {
+pub async fn anchor_link(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let hash_before = hash(page).await?;
     let link = page.element("#test-link-anchor").await?;
     let presses = page.element("#test-link-anchor-presses").await?;
@@ -226,7 +207,8 @@ async fn anchor_link(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// `replace`: no history entry.
-async fn replace(page: &Page<'_>) -> Result<(), Report> {
+pub async fn replace(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     let before = history_length(page).await?;
     page.element("#test-link-replace").await?.click().await?;
     wait_for("the query of the URL")
@@ -239,7 +221,8 @@ async fn replace(page: &Page<'_>) -> Result<(), Report> {
 }
 
 /// Client-side navigation: the page isn't reloaded.
-async fn client_side_navigation(page: &Page<'_>) -> Result<(), Report> {
+pub async fn client_side_navigation(page: &Page<'_>) -> Result<(), Report> {
+    page.goto_path(PATH).await?;
     page.eval::<()>("window.__testLinkNoReload = true;", vec![])
         .await?;
     page.element("#test-link-toolbar").await?.click().await?;
